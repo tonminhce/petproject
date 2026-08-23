@@ -1,0 +1,207 @@
+# =============================================================================
+#  Common Library — platform-wide defaults
+# -----------------------------------------------------------------------------
+#  Every microservice that depends on `com.shop.microservices:common-spring`
+#  inherits this configuration. Service-specific overrides belong in the
+#  service's own `application.yml` / environment variables.
+#
+#  Sensitive values (DB passwords, secrets, OAuth2 client secrets) are
+#  intentionally NOT defaulted here — they must come from the environment
+#  (Spring Cloud Config, Kubernetes secrets, .env file, ...).
+# =============================================================================
+
+spring:
+  application:
+    # Logical service name. Override per service via `SPRING_APPLICATION_NAME`.
+    # We bind a literal default; do NOT reference the key itself in a placeholder
+    # because Spring Boot 4.x's strict resolver rejects self-references.
+    name: shop-service
+
+  profiles:
+    # Default profile. Activate with `--spring.profiles.active=dev|prod|...`.
+    active: dev
+
+  threads:
+    virtual:
+      # Spring Boot 3.2+ virtual threads. Disable on services that need
+      # thread-local semantics (e.g. security context, MDC).
+      enabled: ${VIRTUAL_THREADS_ENABLED:false}
+
+# -----------------------------------------------------------------------------
+#  HTTP server
+# -----------------------------------------------------------------------------
+server:
+  port: ${SERVER_PORT:8080}
+  # Graceful shutdown gives in-flight requests a chance to drain.
+  shutdown: graceful
+  # Trust the X-Forwarded-* headers set by the ingress / load balancer.
+  forward-headers-strategy: framework
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+    include-exception: false
+
+# -----------------------------------------------------------------------------
+#  Observability — actuator + Prometheus
+# -----------------------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expose health, info, Prometheus scrape, and metrics by default.
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      # Don't leak internals to anonymous probes.
+      show-details: when-authorized
+      probes:
+        # Enable Kubernetes-style liveness/readiness probes.
+        enabled: true
+    prometheus:
+      access: read_only
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  # Sensible defaults for the http / jvm / system / process metrics.
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+    tags:
+      application: ${spring.application.name}
+
+# -----------------------------------------------------------------------------
+#  Logging
+# -----------------------------------------------------------------------------
+logging:
+  level:
+    root: INFO
+    com.shop: INFO
+  pattern:
+    # Prepend the correlation ID (trace + span) to every log line.
+    # `%X{traceId:-}` and `%X{spanId:-}` fall back to empty strings when no
+    # MDC value is present, keeping the format compact for non-traced logs.
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+
+# -----------------------------------------------------------------------------
+#  OpenAPI / Swagger UI
+# -----------------------------------------------------------------------------
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  # Path selectors are configured per service in its own application.yml.
+
+# -----------------------------------------------------------------------------
+#  Platform security defaults — see SecurityProperties for full schema.
+# -----------------------------------------------------------------------------
+shop:
+  security:
+    # Public endpoints are merged with platform defaults at runtime.
+    issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true
+    public-endpoints:
+      - /actuator/**
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /webjars/**
+    cors:
+      enabled: ${ECOMMERCE_CORS_ENABLED:true}
+      allowed-origin-patterns:
+        - ${CORS_ALLOWED_ORIGIN_PATTERNS:*}
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - "*"
+      allow-credentials: false
+      max-age-seconds: 3600
+
+  # ---------------------------------------------------------------------------
+  #  Platform Keycloak admin client defaults — see KeycloakProperties.
+  # ---------------------------------------------------------------------------
+  keycloak:
+    server-url: ${KEYCLOAK_SERVER_URL:http://keycloak:8080}
+    public-server-url: ${KEYCLOAK_PUBLIC_SERVER_URL:http://localhost:9090}
+    realm: ${KEYCLOAK_REALM:ecommerce}
+    client-id: ${KEYCLOAK_CLIENT_ID:shop-backend}
+    admin:
+      realm: ${KEYCLOAK_ADMIN_REALM:master}
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+      username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+
+  # ---------------------------------------------------------------------------
+  #  Performance-logging AOP defaults — see PerformanceLogProperties.
+  # ---------------------------------------------------------------------------
+  web:
+    logging:
+      performance:
+        enabled: ${PERF_LOG_ENABLED:true}
+        threshold-ms: ${PERF_LOG_THRESHOLD_MS:50}
+
+  # ---------------------------------------------------------------------------
+  #  Common-platform aggregator — see CommonProperties.
+  # ---------------------------------------------------------------------------
+  common:
+    service:
+      name: shop-service
+      description: ${SERVICE_DESCRIPTION:Shop microservice}
+      version: ${SERVICE_VERSION:1.0.0}
+    security:
+      enabled: true
+    keycloak:
+      enabled: true
+    logging:
+      correlation-id: true
+      level: INFO
+      performance-threshold-ms: 50
+    kafka:
+      enabled: false
+    storage:
+      enabled: false
+    defaults:
+      server-port: ${SERVER_PORT:8080}
+      shutdown-grace-period: 30s
+      max-http-header-size: 8192
+
+# -----------------------------------------------------------------------------
+#  Resilience4j defaults — applied to every service that pulls in the starter.
+# -----------------------------------------------------------------------------
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 100
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        exponential-max-wait-duration: 10s
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+        cancel-running-future: true

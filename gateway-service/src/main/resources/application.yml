@@ -1,0 +1,56 @@
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: gateway-service
+  main:
+    banner-mode: off
+  jackson:
+    default-property-inclusion: non_null
+  codec:
+    max-in-memory-size: 2MB
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
+
+gateway:
+  keycloak-issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
+  cors-allowed-origin-patterns:
+    - ${CORS_ALLOWED_ORIGIN_PATTERNS:*}
+  public-endpoints:
+    - /actuator/health
+    - /actuator/health/**
+    - /actuator/info
+    - /actuator/prometheus
+    - /v3/api-docs/**
+    - /swagger-ui/**
+    - /webjars/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.shop.gateway: INFO
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO

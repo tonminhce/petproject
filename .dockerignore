@@ -1,0 +1,11 @@
+target/
+.idea/
+*.iml
+.run/
+.vscode/
+*.log
+.git/
+.gitignore
+README.md
+plan.md
+docker-README.md

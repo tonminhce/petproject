@@ -1,0 +1,514 @@
+# ============================================================
+# E-commerce Microservices - Docker Compose
+# ============================================================
+# Build images locally first:    mvn jib:dockerBuild
+# Start all services:            docker compose up -d
+# Start only infrastructure:     docker compose up -d postgres redis kafka elasticsearch keycloak rustfs
+# ============================================================
+
+# ------------------------------------------------------------
+# YAML Anchors (DRY) - merged into services via `<<:` keys
+# ------------------------------------------------------------
+x-restart: &restart
+  restart: unless-stopped
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-jwt: &jwt
+  JWT_ISSUER_URI: http://keycloak:8080/realms/ecommerce
+
+x-pg-creds: &pg-creds
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+x-healthcheck-defaults: &hc-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 60s
+
+services:
+
+  # ============================================================
+  # INFRASTRUCTURE
+  # ============================================================
+
+  # ----- PostgreSQL -----
+  # Single instance hosts Keycloak + all 12 service databases
+  # (per-service DBs are created by docker/postgres/init/create-all-databases.sql)
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    <<: [*restart, *logging]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - ecommerce-network
+
+  # ----- Redis -----
+  redis:
+    image: redis:7.4-alpine
+    container_name: redis
+    <<: [*restart, *logging]
+    command: redis-server --requirepass "${REDIS_PASSWORD}" --appendonly yes
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a '${REDIS_PASSWORD}' --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ecommerce-network
+
+  # ----- Kafka (KRaft mode - no Zookeeper needed) -----
+  # KRaft (KIP-500) combines controller+broker roles, simplifies ops
+  # Single-node cluster: replication factors pinned to 1
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: kafka
+    <<: [*restart, *logging]
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+    networks:
+      - ecommerce-network
+
+  # ----- Elasticsearch (single-node, no security for dev) -----
+  # Heap pinned to 512m to keep dev footprint small; disable xpack
+  # security because TLS/auth would require certs we don't ship here
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: elasticsearch
+    <<: [*restart, *logging]
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+    networks:
+      - ecommerce-network
+
+  # ----- RustFS (S3-compatible object storage for media) -----
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs
+    <<: [*restart, *logging]
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ecommerce-network
+
+  # ----- Keycloak (Identity Provider) -----
+  # Stores realm in Postgres; --import-realm auto-loads ecommerce-realm.json
+  # start_period: 90s because Keycloak boot is slow on first start
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    <<: [*restart, *logging]
+    command: start-dev --http-port=8080 --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_PORT: 5432
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./docker/keycloak/import:/opt/keycloak/data/import:ro
+    ports:
+      - "9090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    networks:
+      - ecommerce-network
+
+  # ============================================================
+  # GATEWAY (Spring Cloud Gateway - new)
+  # ============================================================
+  # Single entry point on :8080. Routes traffic to backend services
+  # via container DNS names. Validates JWTs against Keycloak.
+  gateway-service:
+    image: gateway-service:latest
+    container_name: gateway-service
+    <<: [*restart, *logging]
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *jwt
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ============================================================
+  # BACKEND MICROSERVICES (Jib local builds - <service>:latest)
+  # ============================================================
+
+  # ----- Auth Service -----
+  auth-service:
+    image: auth-service:latest
+    container_name: auth-service
+    <<: [*restart, *logging]
+    ports:
+      - "8088:8088"
+    environment:
+      <<: [*jwt, *pg-creds]
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_SERVER_URL: ${KEYCLOAK_PUBLIC_SERVER_URL}
+      SSO_BACKEND_CALLBACK_URL: http://localhost:8088/api/v1/auth/callback
+      SSO_DEFAULT_FRONTEND_REDIRECT: http://localhost:3000/auth/callback
+      SSO_ALLOWED_REDIRECT_URIS: http://localhost:3000/auth/callback,http://localhost:3001/auth/callback
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/authservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Product Service -----
+  product-service:
+    image: product-service:latest
+    container_name: product-service
+    <<: [*restart, *logging]
+    ports:
+      - "8086:8086"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Order Service (Kafka producer/consumer) -----
+  order-service:
+    image: order-service:latest
+    container_name: order-service
+    <<: [*restart, *logging]
+    ports:
+      - "8084:8084"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Payment Service (Kafka producer/consumer) -----
+  payment-service:
+    image: payment-service:latest
+    container_name: payment-service
+    <<: [*restart, *logging]
+    ports:
+      - "8085:8085"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Shipping Service -----
+  shipping-service:
+    image: shipping-service:latest
+    container_name: shipping-service
+    <<: [*restart, *logging]
+    ports:
+      - "8087:8087"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shippingservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8087/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Inventory Service -----
+  inventory-service:
+    image: inventory-service:latest
+    container_name: inventory-service
+    <<: [*restart, *logging]
+    ports:
+      - "8082:8082"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventoryservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Favourite Service -----
+  favourite-service:
+    image: favourite-service:latest
+    container_name: favourite-service
+    <<: [*restart, *logging]
+    ports:
+      - "8081:8081"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/favouriteservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Rating Service -----
+  rating-service:
+    image: rating-service:latest
+    container_name: rating-service
+    <<: [*restart, *logging]
+    ports:
+      - "8089:8089"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ratingservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Media Service (uses RustFS for object storage) -----
+  media-service:
+    image: media-service:latest
+    container_name: media-service
+    <<: [*restart, *logging]
+    ports:
+      - "8083:8083"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mediaservice
+      STORAGE_ENDPOINT: http://rustfs:9000
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_BUCKET: ${STORAGE_BUCKET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Tax Service -----
+  tax-service:
+    image: tax-service:latest
+    container_name: tax-service
+    <<: [*restart, *logging]
+    ports:
+      - "8091:8091"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taxservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8091/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Promotion Service -----
+  promotion-service:
+    image: promotion-service:latest
+    container_name: promotion-service
+    <<: [*restart, *logging]
+    ports:
+      - "8093:8093"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotionservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8093/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Search Service (Elasticsearch + Kafka) -----
+  search-service:
+    image: search-service:latest
+    container_name: search-service
+    <<: [*restart, *logging]
+    ports:
+      - "8094:8094"
+    environment:
+      <<: *jwt
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
+      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8094/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Notification Service (Kafka consumer + SMTP) -----
+  notification-service:
+    image: notification-service:latest
+    container_name: notification-service
+    <<: [*restart, *logging]
+    ports:
+      - "8090:8090"
+    environment:
+      <<: *jwt
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_SERVERS: kafka:9092
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8090/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+# ============================================================
+# NETWORKS & VOLUMES
+# ============================================================
+networks:
+  ecommerce-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  elasticsearch_data:
+  rustfs_data:
