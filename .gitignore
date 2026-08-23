@@ -1,0 +1,160 @@
+# ============================================================
+# Maven build artifacts
+# ============================================================
+target/
+**/target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Maven Flatten Plugin output (generated .flattened-pom.xml in every module)
+/.flattened-pom.xml
+**/.flattened-pom.xml
+.flattened-pom.xml
+
+# Maven Wrapper (keep the jar)
+.mvn/wrapper/maven-wrapper.jar
+!**/.mvn/wrapper/maven-wrapper.jar
+
+# ============================================================
+# Environment & secrets
+# ============================================================
+# Ignore actual env file (may contain real secrets)
+.env
+.env.*
+!.env.example
+!.env.template
+
+# ============================================================
+# Logs
+# ============================================================
+*.log
+logs/
+**/logs/
+
+# ============================================================
+# IntelliJ IDEA
+# ============================================================
+.idea/
+!.idea/.gitignore
+!.idea/encodings.xml
+!.idea/jarRepositories.xml
+!/.idea/runConfigurations/
+
+# IntelliJ user-specific files (these contain local paths/state)
+*.iml
+*.ipr
+*.iws
+*.iws.xml
+
+# ============================================================
+# Eclipse
+# ============================================================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# ============================================================
+# NetBeans
+# ============================================================
+nbproject/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# ============================================================
+# VS Code
+# ============================================================
+.vscode/
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ============================================================
+# Spring Boot / Java
+# ============================================================
+HELP.md
+**/*.original
+**/*.bak
+
+# Compiled class files (outside target/)
+*.class
+
+# ============================================================
+# OS / Shell
+# ============================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Temp / backup files
+# ============================================================
+*.tmp
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# ============================================================
+# Docker / Container artifacts
+# ============================================================
+# Keep Dockerfile, .dockerignore, docker-compose.yml tracked
+# Ignore generated Docker data
+docker-data/
+**/docker-data/
+
+# ============================================================
+# IDE run configurations (generated)
+# ============================================================
+# Local-only configs; keep shared ones in .run/ if you commit them
+# Comment out the next line if you WANT to commit .run/ shared configs
+.run/
+
+# ============================================================
+# Build output (custom)
+# ============================================================
+build/
+**/build/
+out/
+**/out/
+
+# ============================================================
+# Coverage / Test reports
+# ============================================================
+*.gcov
+*.lcov
+coverage/
+**/coverage/
+test-output/
+**/test-output/
+*.html
+!docs/**/*.html
+
+# ============================================================
+# Kubernetes / Helm secrets
+# ============================================================
+**/secrets.yaml
+!**/secrets.example.yaml
+!**/secrets.template.yaml
+.kube/
+kubeconfig*
+
+# ============================================================
+# Local development artifacts
+# ============================================================
+tmp/
+**/tmp/
+scratch/
+**/scratch/
