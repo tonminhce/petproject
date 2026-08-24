@@ -1,5 +1,6 @@
 package com.shop.authservice.mapper;
 
+import com.shop.authservice.dto.request.RegisterRequest;
 import com.shop.authservice.dto.response.UserResponse;
 import com.shop.authservice.entity.User;
 import org.modelmapper.ModelMapper;
