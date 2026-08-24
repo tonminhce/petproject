@@ -38,7 +38,7 @@ public record PageResponse<T>(
                 totalElements,
                 totalPages,
                 page == 0,
-                totalPages == 0 || page + 1 >= totalPages
+                page >= totalPages - 1
         );
     }
 

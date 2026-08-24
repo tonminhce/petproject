@@ -89,6 +89,33 @@ logging:
     correlation: "[%X{traceId:-},%X{spanId:-}] "
 
 # -----------------------------------------------------------------------------
+#  Platform web defaults — see WebAutoConfiguration + I18nAutoConfiguration
+# -----------------------------------------------------------------------------
+shop:
+  web:
+    correlation:
+      enabled: ${WEB_CORRELATION_ENABLED:true}
+    logging:
+      request:
+        enabled: ${WEB_LOG_REQUEST_ENABLED:false}
+        include-body: false
+        max-body-bytes: 4096
+      response:
+        enabled: ${WEB_LOG_RESPONSE_ENABLED:false}
+        include-body: false
+        max-body-bytes: 4096
+    exception-handler:
+      enabled: ${WEB_EXCEPTION_HANDLER_ENABLED:true}
+  i18n:
+    default-locale: ${I18N_DEFAULT_LOCALE:vi}
+    fallback-to-system-locale: true
+    use-code-as-default-message: false
+    encoding: UTF-8
+    cache-duration: 5m
+    basenames:
+      - classpath:messages/messages
+
+# -----------------------------------------------------------------------------
 #  OpenAPI / Swagger UI
 # -----------------------------------------------------------------------------
 springdoc:

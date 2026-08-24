@@ -35,15 +35,15 @@ public record ApiResponse<T>(
     public static final String SUCCESS_CODE = "OK";
 
     public static <T> ApiResponse<T> ok(T data) {
-        return success(SUCCESS_CODE, null, data);
+        return success(null, data);
     }
 
     public static <T> ApiResponse<T> ok(T data, String message) {
-        return success(SUCCESS_CODE, message, data);
+        return success(message, data);
     }
 
     public static ApiResponse<Void> message(String message) {
-        return success(SUCCESS_CODE, message, null);
+        return success(message, null);
     }
 
     public static ApiResponse<Void> error(String code, String message, String path) {
@@ -54,8 +54,8 @@ public record ApiResponse<T>(
         return new ApiResponse<>(false, code, message, null, errors, path, currentTraceId(), Instant.now());
     }
 
-    private static <T> ApiResponse<T> success(String code, String message, T data) {
-        return new ApiResponse<>(true, code, message, data, null, null, currentTraceId(), Instant.now());
+    private static <T> ApiResponse<T> success(String message, T data) {
+        return new ApiResponse<>(true, ApiResponse.SUCCESS_CODE, message, data, null, null, currentTraceId(), Instant.now());
     }
 
     private static String currentTraceId() {

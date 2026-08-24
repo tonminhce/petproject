@@ -13,3 +13,6 @@ com.shop.common.security.config.SecurityAutoConfiguration
 com.shop.common.keycloak.config.KeycloakAutoConfiguration
 com.shop.common.storage.config.ObjectStorageAutoConfiguration
 com.shop.common.kafka.config.KafkaAutoConfiguration
+com.shop.common.spring.autoconfigure.I18nAutoConfiguration
+com.shop.common.spring.autoconfigure.WebAutoConfiguration
+com.shop.common.spring.autoconfigure.ModelMapperAutoConfiguration
