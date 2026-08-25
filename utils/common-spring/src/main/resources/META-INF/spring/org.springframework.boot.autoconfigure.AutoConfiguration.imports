@@ -7,7 +7,6 @@
 #  Spring Boot deduplicates auto-configurations so the double registration
 #  is harmless and only documented for discoverability.
 # =============================================================================
-com.shop.common.core.i18n.MessagesAutoConfiguration
 com.shop.common.logging.config.LoggingAutoConfiguration
 com.shop.common.security.config.SecurityAutoConfiguration
 com.shop.common.keycloak.config.KeycloakAutoConfiguration

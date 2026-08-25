@@ -1,0 +1,5 @@
+databaseChangeLog:
+  - include:
+      file: changeset/001-create-users-and-roles.yaml
+  - include:
+      file: changeset/002-add-soft-delete.yaml

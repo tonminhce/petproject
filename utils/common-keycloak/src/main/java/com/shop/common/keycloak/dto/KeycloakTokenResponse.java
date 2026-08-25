@@ -1,14 +1,10 @@
-package com.shop.common.keycloak.client;
+package com.shop.common.keycloak.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Snake-case payload returned by Keycloak's
- * {@code /protocol/openid-connect/token} endpoint.
- *
- * <p>Each field is optional because Keycloak may omit some of them depending
- * on the grant type (e.g. {@code refresh_token} is absent for the
- * {@code client_credentials} grant).</p>
+ * OAuth2 token response from Keycloak.
+ * Maps to the JSON response from /protocol/openid-connect/token endpoint.
  */
 public record KeycloakTokenResponse(
         @JsonProperty("access_token") String accessToken,

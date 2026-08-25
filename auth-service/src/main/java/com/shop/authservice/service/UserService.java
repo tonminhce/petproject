@@ -16,8 +16,22 @@ public interface UserService {
 
     String changePassword(ChangePasswordRequest request);
 
-    String delete(UUID id);
+    /**
+     * Soft-deletes the user. The row stays in the DB for audit; subsequent
+     * find queries will skip it via {@code @SQLRestriction}. Returns a
+     * human-readable status string for the controller.
+     */
+    String delete(UUID id, String deletedBy);
 
+    /**
+     * Restores a previously soft-deleted user (admin only).
+     */
+    String restore(UUID id);
+
+    /**
+     * Finds a user by id, excluding soft-deleted records. To look up a deleted
+     * record (admin restore flow), call {@code repository.findByIdIncludingDeleted}.
+     */
     User findById(UUID userId);
 
     User findByUsername(String userName);

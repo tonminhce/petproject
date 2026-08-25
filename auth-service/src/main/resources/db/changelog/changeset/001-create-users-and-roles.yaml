@@ -1,0 +1,115 @@
+databaseChangeLog:
+  # ---- roles table ----
+  - changeSet:
+      id: 001-create-roles
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: roles
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: role_name
+                  type: varchar(60)
+                  constraints:
+                    nullable: false
+                    unique: true
+
+  # ---- users table ----
+  - changeSet:
+      id: 001-create-users
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: gender
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone_number
+                  type: varchar(15)
+                  constraints:
+                    unique: true
+              - column:
+                  name: avatar
+                  type: text
+              - column:
+                  name: keycloak_user_id
+                  type: varchar(255)
+                  constraints:
+                    unique: true
+
+  # ---- user_role join table ----
+  - changeSet:
+      id: 001-create-user-role-join
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: user_role
+            columns:
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_role_user
+                    references: users(user_id)
+              - column:
+                  name: role_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_role_role
+                    references: roles(id)
+
+  # ---- seed canonical roles ----
+  - changeSet:
+      id: 001-seed-roles
+      author: shop-platform
+      changes:
+        - insert:
+            tableName: roles
+            columns:
+              - column: { name: id,             valueComputed: "gen_random_uuid()" }
+              - column: { name: role_name,      value: "USER" }
+        - insert:
+            tableName: roles
+            columns:
+              - column: { name: id,             valueComputed: "gen_random_uuid()" }
+              - column: { name: role_name,      value: "PM" }
+        - insert:
+            tableName: roles
+            columns:
+              - column: { name: id,             valueComputed: "gen_random_uuid()" }
+              - column: { name: role_name,      value: "ADMIN" }

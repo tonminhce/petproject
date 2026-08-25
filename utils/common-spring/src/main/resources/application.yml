@@ -104,6 +104,9 @@ shop:
         enabled: ${WEB_LOG_RESPONSE_ENABLED:false}
         include-body: false
         max-body-bytes: 4096
+      performance:
+        enabled: ${PERF_LOG_ENABLED:true}
+        threshold-ms: ${PERF_LOG_THRESHOLD_MS:50}
     exception-handler:
       enabled: ${WEB_EXCEPTION_HANDLER_ENABLED:true}
   i18n:
@@ -114,25 +117,7 @@ shop:
     cache-duration: 5m
     basenames:
       - classpath:messages/messages
-
-# -----------------------------------------------------------------------------
-#  OpenAPI / Swagger UI
-# -----------------------------------------------------------------------------
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    operations-sorter: method
-    tags-sorter: alpha
-  # Path selectors are configured per service in its own application.yml.
-
-# -----------------------------------------------------------------------------
-#  Platform security defaults — see SecurityProperties for full schema.
-# -----------------------------------------------------------------------------
-shop:
   security:
-    # Public endpoints are merged with platform defaults at runtime.
     issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
     csrf-disabled: true
     stateless-session: true
@@ -156,33 +141,15 @@ shop:
         - "*"
       allow-credentials: false
       max-age-seconds: 3600
-
-  # ---------------------------------------------------------------------------
-  #  Platform Keycloak admin client defaults — see KeycloakProperties.
-  # ---------------------------------------------------------------------------
   keycloak:
     server-url: ${KEYCLOAK_SERVER_URL:http://keycloak:8080}
     public-server-url: ${KEYCLOAK_PUBLIC_SERVER_URL:http://localhost:9090}
     realm: ${KEYCLOAK_REALM:ecommerce}
     client-id: ${KEYCLOAK_CLIENT_ID:shop-backend}
-    admin:
-      realm: ${KEYCLOAK_ADMIN_REALM:master}
-      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
-      username: ${KEYCLOAK_ADMIN_USERNAME:admin}
-      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
-
-  # ---------------------------------------------------------------------------
-  #  Performance-logging AOP defaults — see PerformanceLogProperties.
-  # ---------------------------------------------------------------------------
-  web:
-    logging:
-      performance:
-        enabled: ${PERF_LOG_ENABLED:true}
-        threshold-ms: ${PERF_LOG_THRESHOLD_MS:50}
-
-  # ---------------------------------------------------------------------------
-  #  Common-platform aggregator — see CommonProperties.
-  # ---------------------------------------------------------------------------
+    admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
+    admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+    admin-username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    admin-password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
   common:
     service:
       name: shop-service
@@ -204,6 +171,17 @@ shop:
       server-port: ${SERVER_PORT:8080}
       shutdown-grace-period: 30s
       max-http-header-size: 8192
+
+# -----------------------------------------------------------------------------
+#  OpenAPI / Swagger UI
+# -----------------------------------------------------------------------------
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
 
 # -----------------------------------------------------------------------------
 #  Resilience4j defaults — applied to every service that pulls in the starter.
