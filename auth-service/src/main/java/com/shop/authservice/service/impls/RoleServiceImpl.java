@@ -29,7 +29,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public Optional<Role> findByName(RoleName name) {
-        return Optional.ofNullable(roleRepository.findByName(name)
+        return Optional.of(roleRepository.findByName(name)
                 .orElseThrow(() -> BusinessException.notFound("auth.role.not.found.with.name", name)));
     }
 
