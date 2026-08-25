@@ -1,0 +1,40 @@
+# =============================================================================
+#  auth-service — Authentication & user management.
+#  Identity is delegated to Keycloak (login/refresh/logout + admin user ops);
+#  this service keeps a local shadow copy of users for fast lookups.
+#
+#  Platform-wide defaults live in `common-spring/application.yml` (inherited).
+#  Only service-specific overrides belong here.
+# =============================================================================
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/authservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Schema is owned by Liquibase — never let Hibernate mutate it.
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  # Override the common-spring default 8080.
+  port: 8088
+  shutdown: graceful
+
+shop:
+  application:
+    name: auth-service
+  security:
+    # Auth entrypoints must stay public: sign-up / login / refresh / logout.
+    # (actuator, swagger, api-docs are public via common-security platform defaults)
+    public-endpoints:
+      - /api/v1/auth/**

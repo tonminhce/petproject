@@ -36,7 +36,7 @@
 | Area | Gap | Reference |
 |------|-----|-----------|
 | Backend code (12) | product/order/payment/shipping/inventory/favourite/rating/media/tax/promotion/search/notification = `Application.java` only | [per-service tree](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/order-service) |
-| auth-service infra | Missing `application.yml` (datasource/JPA/security), `SecurityConfig`, `RoleController`, tests | [ref: auth-service application.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
+| auth-service infra | `application.yml` ✅ (datasource/JPA/Liquibase/security), `RoleController` ✅, 37 unit + slice tests ✅; chỉ còn thiếu SmokeIT (Testcontainers) | [ref: auth-service application.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
 | Liquibase (12) | 12 services have no master changelogs/DDL/seed (auth-service ✅ has master + 2 changesets) | [ref: db/changelog](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/auth-service/src/main/resources/db) |
 | API docs | OpenAPI/Swagger not exercised (common-spring has springdoc auto-config) | [ref: springdoc](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
 | Tests | 0 unit, 0 integration tests (only 1 context-load in common-spring) | workspace gap |
@@ -434,13 +434,17 @@ For every workspace artifact, the corresponding file in the reference repo.
 
 ## 8. Next Steps (Immediate)
 
-auth-service core is already implemented (commits 24–25/08, incl. the
-`KeycloakAuthClient` → `TokenClient`/`AdminClient` refactor). The sequence now:
+auth-service is now feature-complete (commits 24–25/08 + latest): controllers,
+services, Liquibase, `application.yml`, `RoleController`, 37 unit + slice
+tests. Note: a per-service `SecurityConfig.java` is **intentionally skipped** —
+`common-security` auto-configures the exact same chain
+(`@ConditionalOnMissingBean`), config-drive via `shop.security.*` (DRY).
+The sequence now:
 
-1. **Close auth-service gaps** — add `application.yml` (datasource/JPA/security),
-   `config/SecurityConfig.java`, and tests (SmokeIT + controller tests) so the
-   pattern is fully locked. Optionally expose `RoleController` (the
-   `RoleService`/`RoleServiceImpl` already exist).
+1. **Add auth-service SmokeIT** — `@SpringBootTest` with Testcontainers
+   Postgres + Keycloak asserting `POST /api/v1/auth/sign-up` creates a user
+   (this is the only remaining auth gap), then copy the IT skeleton to every
+   service.
 
 2. **Implement product-service** (next core service) — entities, repository,
    DTO, ModelMapper helper, controllers under `/api/v1/products` +

@@ -71,19 +71,15 @@ Source: [AuthController.java](../auth-service/src/main/java/com/shop/authservice
 
 Source: [UserController.java](../auth-service/src/main/java/com/shop/authservice/controller/UserController.java).
 
-### 1.4 Endpoints — `/api/v1/roles` (RoleController) ⏳ NOT implemented
+### 1.4 Endpoints — `/api/v1/roles` (RoleController) ✅ implemented (ADMIN only)
 
-`RoleService` + `RoleServiceImpl` exist (`findByName` / `assignRole` /
-`revokeRole` / `getUserRoles`) but no controller exposes them yet. Planned
-endpoints (reference):
+| M | Path | Auth | Body | Resp | Notes |
+|---|------|------|------|------|-------|
+| `POST` | `/api/v1/roles/users/{userId}/assign` | ADMIN | `RoleRequest { roleName }` | `ApiResponse<Boolean>` | `true` = assigned, `false` = already had |
+| `POST` | `/api/v1/roles/users/{userId}/revoke` | ADMIN | `RoleRequest { roleName }` | `ApiResponse<Boolean>` | `true` = revoked, `false` = didn't have |
+| `GET` | `/api/v1/roles/users/{userId}` | ADMIN | — | `ApiResponse<List<String>>` | User's role names |
 
-| M | Path | Auth | Body | Resp |
-|---|------|------|------|------|
-| `POST` | `/api/v1/roles/users/{userId}/assign` | ADMIN | `"USER"` (raw role name) | `ApiResponse<Void>` |
-| `POST` | `/api/v1/roles/users/{userId}/revoke` | ADMIN | `"USER"` | `ApiResponse<Void>` |
-| `GET` | `/api/v1/roles/users/{userId}` | ADMIN | — | `ApiResponse<List<String>>` |
-
-Source: [RoleController.java (reference)](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/RoleController.java).
+Source: [RoleController.java](../auth-service/src/main/java/com/shop/authservice/controller/RoleController.java).
 
 ### 1.5 Service dependencies
 
