@@ -25,7 +25,9 @@
 | Common libs (7) | `utils/{common-core, common-security, common-logging, common-keycloak, common-kafka, common-spring, common-storage}` | [ref: common-lib](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib) |
 | Docker infra | `docker-compose.yml` — Postgres 16, Redis 7, Kafka 3.9, Elasticsearch 8.15, Keycloak 26, RustFS | [ref: docker-compose.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/docker-compose.yml) |
 | Lifecycle scripts | `start-docker.sh`, `stop-docker.sh` | workspace only |
-| Gateway | `gateway-service/` — Spring Cloud Gateway, JWT validation, route table, 14 routes | workspace decision (replaces APISIX) |
+| Gateway | `gateway-service/` — Spring Cloud Gateway, JWT validation, route table, 15 routes (13 services + users/roles via auth) | workspace decision (replaces APISIX) |
+| auth-service (core) | Controllers (auth/users), services, entities, repositories, DTOs, ModelMapper, Liquibase (2 changesets + seed), soft-delete | [ref: auth-service](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/auth-service) |
+| common-keycloak | `KeycloakAuthClient` refactored → `KeycloakTokenClient` + `KeycloakAdminClient` (RestClient, no admin SDK) | workspace decision (modern) |
 | Docker images | 14 built via Jib (gateway + 13 services) | workspace only |
 | Live verification | gateway health 200, protected 401, JWT validation works | verified manually |
 
@@ -33,11 +35,11 @@
 
 | Area | Gap | Reference |
 |------|-----|-----------|
-| Backend code | 13 services = `Application.java` only — no controllers, entities, repositories, services, DTOs, mappers, exceptions | [ref: auth-service](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/auth-service) etc. |
-| `application.yml` | Each service needs full YAML (datasource, JPA, security, kafka, observability) | [ref: auth-service application.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
-| Liquibase | No master changelogs, no DDL, no seed data | [ref: db/changelog](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/auth-service/src/main/resources/db) |
-| API docs | OpenAPI/Swagger disabled in scaffolds (common-spring has springdoc auto-config) | [ref: springdoc](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
-| Tests | 0 unit, 0 integration tests | workspace gap |
+| Backend code (12) | product/order/payment/shipping/inventory/favourite/rating/media/tax/promotion/search/notification = `Application.java` only | [per-service tree](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/order-service) |
+| auth-service infra | Missing `application.yml` (datasource/JPA/security), `SecurityConfig`, `RoleController`, tests | [ref: auth-service application.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
+| Liquibase (12) | 12 services have no master changelogs/DDL/seed (auth-service ✅ has master + 2 changesets) | [ref: db/changelog](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/auth-service/src/main/resources/db) |
+| API docs | OpenAPI/Swagger not exercised (common-spring has springdoc auto-config) | [ref: springdoc](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml) |
+| Tests | 0 unit, 0 integration tests (only 1 context-load in common-spring) | workspace gap |
 | Frontend | Missing (Next.js 16 / React 19) | [ref: frontend](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/frontend) |
 | K8s manifests | Missing | [ref: k8s/](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/k8s) |
 | CI/CD | Missing (GH Actions, SonarCloud, GHCR, ArgoCD) | [ref: .github/](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/.github) |
@@ -57,7 +59,7 @@
         │   Spring Cloud Gateway  :8080  (workspace)                    │
         │   ──────────────────────────────────────────────────────────── │
         │   • JWT validation (OAuth2 Resource Server → Keycloak JWK)     │
-        │   • 14 routes  /api/v1/{auth,products,orders,…}/*              │
+        │   • 15 routes  /api/v1/{auth,users,roles,products,orders,…}/*  │
         │   • Correlation-ID propagation (X-Correlation-Id)              │
         │   • Rate-limit (Redis bucket) · CORS · Resilience4j filters    │
         └────────────────┬───────────────────────────────────────────────┘
@@ -138,7 +140,7 @@ This is the reference implementation we will clone first. See
 |----------|-------|
 | Package | `com.shop.authservice` |
 | Base path | `/api/v1/auth`, `/api/v1/users`, `/api/v1/roles` |
-| Keycloak integration | `KeycloakAuthClient` (in `common-keycloak`) |
+| Keycloak integration | `KeycloakTokenClient` + `KeycloakAdminClient` (in `common-keycloak`) |
 | External deps | Keycloak (token verification) |
 | Ref controller | [AuthController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/AuthController.java) (538 LOC incl. SSO flow) |
 | Ref entity | [User.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/entity/User.java) |
@@ -171,6 +173,12 @@ Every backend service MUST adopt these conventions (all taken from
    on by default in SB 4.x; keep it).
 7. **JWT auth** — `oauth2ResourceServer.jwt(...)` chain in `SecurityConfig`,
    with `/v3/api-docs/**`, `/swagger-ui/**`, `/actuator/**` whitelisted.
+8. **Path convention = `/api/v1/*`** — every controller serves under
+   `/api/v1/...` using the `ApiPaths` constants. The gateway forwards the FULL
+   path (`/api/v1/{resource}/**` → service, **no StripPrefix/rewrite**), so a
+   service MUST map the same prefix its route declares. This deliberately
+   deviates from the reference repo (e.g. reference product-service serves
+   `/api/products`; workspace will serve `/api/v1/products`).
 
 ---
 
@@ -414,7 +422,7 @@ For every workspace artifact, the corresponding file in the reference repo.
 | `utils/common-core/...` | `common-lib/common-core/...` ([ref](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-core/src/main/java/com/ecommerce/commonlib)) | Direct adaptation. Confirmed packages: `constants`, `exception`, `i18n`, `util`, `viewmodel` |
 | `utils/common-spring/...` | `common-lib/common-spring/...` ([ref](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-spring/src/main/java/com/ecommerce/commonlib)) | Confirmed packages: `autoconfigure`, `csv`, `data`, `mapper`, `openapi`, `web` |
 | `utils/common-security/...` | `common-lib/common-security/...` ([ref](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-security)) | — |
-| `utils/common-keycloak/...` | `common-lib/common-keycloak/...` ([ref](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-keycloak)) | Provides `KeycloakAuthClient`, `KeycloakTokenResponse`, `KeycloakClientProperties`, `RoleService`, `UserService` |
+| `utils/common-keycloak/...` | `common-lib/common-keycloak/...` ([ref](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-keycloak)) | Workspace provides `KeycloakTokenClient` + `KeycloakAdminClient` (RestClient) — replaces reference `KeycloakAuthClient`, `KeycloakClientProperties`, `UserService`, `RoleService`, `RealmService`, `TokenService` |
 | `utils/common-kafka/...` | `common-lib/common-kafka/...` ([ref](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-kafka)) | Provides `KafkaMessagePublisher`, `BaseKafkaConsumer`, JSON serdes |
 | `utils/common-logging/...` | `common-lib/common-logging/...` | `@LogPerformance` AOP + request/response logging filter |
 | `utils/common-storage/...` | `common-lib/common-storage/...` | `ObjectStorageService` (S3-compatible) |
@@ -426,31 +434,26 @@ For every workspace artifact, the corresponding file in the reference repo.
 
 ## 8. Next Steps (Immediate)
 
-After this roadmap is approved, the immediate sequence is:
+auth-service core is already implemented (commits 24–25/08, incl. the
+`KeycloakAuthClient` → `TokenClient`/`AdminClient` refactor). The sequence now:
 
-1. **Lock the auth-service pattern** — copy
-   [`AuthController.java`](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/AuthController.java),
-   [`UserServiceImpl.java`](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/service/UserServiceImpl.java),
-   [`User.java`](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/entity/User.java),
-   [`UserRepository.java`](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/repository/UserRepository.java),
-   [`SecurityConfig.java`](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/config/SecurityConfig.java) and the [application.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/application.yml)
-   into `auth-service/src/main/java/com/shop/authservice/...`. Apply package
-   rename `com.ecommerce.*` → `com.shop.*`.
+1. **Close auth-service gaps** — add `application.yml` (datasource/JPA/security),
+   `config/SecurityConfig.java`, and tests (SmokeIT + controller tests) so the
+   pattern is fully locked. Optionally expose `RoleController` (the
+   `RoleService`/`RoleServiceImpl` already exist).
 
-2. **Add Liquibase master** at
-   `auth-service/src/main/resources/db/changelog/db.changelog-master.yaml`
-   (include `ddl/*.yaml`) — mirrors [ref](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/resources/db/changelog/db.changelog-master.yaml).
+2. **Implement product-service** (next core service) — entities, repository,
+   DTO, ModelMapper helper, controllers under `/api/v1/products` +
+   `/api/v1/categories` (workspace path convention, NOT reference
+   `/api/products`), Liquibase DDL, unit + slice tests.
 
-3. **Add a SmokeIT** — `@SpringBootTest` with Testcontainers Postgres + Keycloak,
-   asserting `POST /api/v1/auth/signup` creates a user, returns `201`, and
-   `GET /actuator/health` returns `{"status":"UP"}`.
+3. **Promote the pattern to the remaining 11 services** using the per-service
+   [reference tree](https://github.com/hoangtien2k3/ecommerce-microservices) as
+   the source of truth, renaming `com.ecommerce.*` → `com.shop.*` and pinning
+   each base path to `/api/v1/*`.
 
-4. **Promote the auth-service pattern** to the other 12 services. Use the
-   per-service [reference tree](https://github.com/hoangtien2k3/ecommerce-microservices) as the source of truth.
-
-5. **Open a service-catalog PR** that updates
-   [`docs/SERVICE-CATALOG.md`](./SERVICE-CATALOG.md) with the exact endpoint
-   table once each service ships.
+4. **Keep docs in sync** — update [`docs/SERVICE-CATALOG.md`](./SERVICE-CATALOG.md)
+   per service as it ships.
 
 ---
 
@@ -493,4 +496,4 @@ After this roadmap is approved, the immediate sequence is:
 ---
 
 **Document owners** — backend platform team. Update whenever a phase completes.
-Last revision: 2026-08-23.
+Last revision: 2026-08-25.

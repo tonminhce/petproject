@@ -15,7 +15,7 @@
         ┌──────────────────────────────────────────────────────────────┐
         │  Spring Cloud Gateway :8080                                  │
         │  ──────────────────────────────────────────────────────────  │
-        │  Routes  /api/v1/* → strip prefix → forward to backend       │
+        │  Routes  /api/v1/* → forward full path (no rewrite)           │
         │  Filters  • Spring Security OAuth2 Resource Server           │
         │           • Correlation-Id (X-Correlation-Id, MDC)           │
         │           • Rate-limit (Redis bucket, 100 rps)               │
@@ -57,6 +57,13 @@
 ```
 
 ## 2. Request flow — login
+
+> ⚠️ **Current workspace status (2026-08-25)**: auth-service implements
+> **ROPC** (`POST /api/v1/auth/login` via `KeycloakTokenClient.login(...)`),
+> NOT the redirect-based SSO below. This diagram is the **target SSO flow**
+> from the reference and the deferred design; see
+> [`SERVICE-CATALOG.md §1.2`](./SERVICE-CATALOG.md) for the implemented
+> endpoints.
 
 ```
 Browser           Gateway :8080          auth-service :8088       Keycloak :8080       Postgres
@@ -230,7 +237,7 @@ shop-microservices/                       # parent aggregator (pom)
 | API envelope | `ApiResponse<T>` (success+code+message+data+errors+path+traceId+timestamp) | `common-core/viewmodel/ApiResponse.java` |
 | Path constants | `ApiPaths.AUTH`, `ApiPaths.PRODUCTS`, … (no string literals) | `common-core/constants/ApiPaths.java` |
 | Domain errors | `BusinessException.of(ErrorCode.X)` | `common-core/exception/BusinessException.java` |
-| Global handler | `@RestControllerAdvice` translating `BusinessException` → `ApiResponse.error` | `common-spring/web/GlobalExceptionHandler.java` |
+| Global handler | `@RestControllerAdvice` translating `BusinessException` → `ApiResponse.error` | `common-spring/web/exception/ApiExceptionHandler.java` |
 | Performance log | `@LogPerformance(title="…", thresholdMs=50)` | `common-logging` |
 | Request/response log | Servlet filter, body up to 2048 bytes | `common-spring/web/HttpLoggingFilter.java` |
 | Correlation ID | `X-Correlation-Id` header → MDC (`MdcKey.TRACE_ID`) → response header | `common-spring/web` |
@@ -238,7 +245,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Validation | `jakarta.validation.constraints.*` + `@Valid` on DTOs | Spring Boot starter-validation |
 | Mapping | `MapStruct` interfaces + Lombok | `common-spring/mapper` |
 | Auth | OAuth2 Resource Server (JWT) | `common-security` |
-| Keycloak admin | `KeycloakAdminClient`, `RoleService`, `UserService`, `TokenService` | `common-keycloak` |
+| Keycloak admin | `KeycloakTokenClient` (login/refresh) + `KeycloakAdminClient` (user mgmt) | `common-keycloak` |
 | Kafka | `KafkaMessagePublisher`, `BaseKafkaConsumer`, JSON serdes | `common-kafka` |
 | Object storage | `ObjectStorageService` (put/get/delete/presigned URL) | `common-storage` |
 | Resilience | `@CircuitBreaker(name="product-service", fallbackMethod="…")` on inter-service HTTP | Resilience4j 2.4 |

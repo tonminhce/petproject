@@ -6,10 +6,11 @@
 > the workspace should reproduce them 1:1, with `com.ecommerce.*` renamed to
 > `com.shop.*`.
 >
-> Convention: **M** = method · **Path** = full path (gateway strips
-> `/api/v1`, but we document the full path so frontend devs see what to call) ·
-> **Auth** = required JWT scope/role · **Body** = request DTO · **Resp** =
-> response envelope (`ApiResponse<T>`) · **Source** = reference URL.
+> Convention: **M** = method · **Path** = full path served by the service —
+> every service maps `/api/v1/...` (the gateway forwards the full path with no
+> rewrite; see [ROADMAP §3.3](./ROADMAP.md)) · **Auth** = required JWT
+> scope/role · **Body** = request DTO · **Resp** = response envelope
+> (`ApiResponse<T>`) · **Source** = reference URL.
 
 ---
 
@@ -42,40 +43,47 @@
 Source: [User.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/entity/User.java),
 [Role.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/entity/Role.java).
 
-### 1.2 Endpoints — `/api/v1/auth` (AuthenticationController)
+### 1.2 Endpoints — `/api/v1/auth` (AuthController) ✅ implemented
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `POST` | `/api/v1/auth/signup` | public | `RegisterRequest { username, email, fullName, password, phone, gender, roles? }` | `ApiResponse<Void>` | Creates user in Keycloak (via admin API) then mirrors into local DB. Compensating delete on failure |
-| `GET` | `/api/v1/auth/login` | public | — | `302 Found` → Keycloak authorize URL | Backend-mediated SSO step 1 |
-| `GET` | `/api/v1/auth/callback` | public | — | `302 Found` → frontend redirect + `?ticket=…` | Backend-mediated SSO step 2 |
-| `GET` | `/api/v1/auth/session?ticket=…` | public | — | `ApiResponse<KeycloakTokenResponse>` | Step 3: exchange single-use ticket for tokens |
-| `POST` | `/api/v1/auth/refresh` | public | `RefreshTokenRequest { refreshToken }` | `ApiResponse<KeycloakTokenResponse>` | Forward to Keycloak |
-| `POST` | `/api/v1/auth/logout` | public | `RefreshTokenRequest { refreshToken }` | `ApiResponse<Void>` | Forward to Keycloak |
+| `POST` | `/api/v1/auth/sign-up` | public | `RegisterRequest { username, email, fullName, password, phone, gender, roles? }` | `ApiResponse<Void>` | Creates user in Keycloak (admin API) then mirrors local DB. Compensating delete on failure |
+| `POST` | `/api/v1/auth/login` | public | `LoginRequest { username, password }` | `ApiResponse<TokenResponse>` | **ROPC** grant via `KeycloakTokenClient` (workspace SSO-lite, not the reference's redirect SSO) |
+| `POST` | `/api/v1/auth/refresh` | public | `RefreshTokenRequest { refreshToken }` | `ApiResponse<TokenResponse>` | Forward to Keycloak |
+| `POST` | `/api/v1/auth/logout` | public | `RefreshTokenRequest { refreshToken }` | `ApiResponse<Void>` | Revoke refresh token |
 
-Source: [AuthController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/AuthController.java).
+**Deferred (reference SSO)**: `GET /api/v1/auth/login` (302), `GET /callback`,
+`GET /session` — not implemented; workspace uses ROPC instead.
 
-### 1.3 Endpoints — `/api/v1/users` (UserController)
+Source: [AuthController.java](../auth-service/src/main/java/com/shop/authservice/controller/AuthController.java).
 
-| M | Path | Auth | Body | Resp | Notes |
-|---|------|------|------|------|-------|
-| `GET` | `/api/v1/users?username=` | USER/ADMIN | — | `ApiResponse<UserResponse>` | Lookup by username |
-| `GET` | `/api/v1/users/{id}` | USER/ADMIN | — | `ApiResponse<UserResponse>` | Lookup by id |
-| `GET` | `/api/v1/users/all?page=&size=&sortBy=&sortOrder=` | ADMIN | — | `ApiResponse<Page<UserResponse>>` | Paginated list |
-| `GET` | `/api/v1/users/me` | any authenticated | — | `ApiResponse<UserResponse>` | Current user from JWT subject |
-| `PUT` | `/api/v1/users/{id}` | USER | `UpdateUserRequest { fullName?, email?, gender?, phone?, avatar? }` | `ApiResponse<UserResponse>` | |
-| `PUT` | `/api/v1/users/me/password` | USER | `ChangePasswordRequest { oldPassword, newPassword }` | `ApiResponse<Void>` | Currently returns 400 (password managed by Keycloak) |
-| `DELETE` | `/api/v1/users/{id}` | USER/ADMIN | — | `ApiResponse<Void>` | |
-
-### 1.4 Endpoints — `/api/v1/roles` (RoleController)
+### 1.3 Endpoints — `/api/v1/users` (UserController) ✅ implemented
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `POST` | `/api/v1/roles/users/{userId}/assign` | ADMIN | `"USER"` (raw role name) | `ApiResponse<Void>` | Assign role to user (also in Keycloak) |
-| `POST` | `/api/v1/roles/users/{userId}/revoke` | ADMIN | `"USER"` | `ApiResponse<Void>` | Revoke role |
-| `GET` | `/api/v1/roles/users/{userId}` | ADMIN | — | `ApiResponse<List<String>>` | List user's roles |
+| `GET` | `/api/v1/users/me` | authenticated | — | `ApiResponse<UserResponse>` | Current user from JWT subject |
+| `PUT` | `/api/v1/users/me` | authenticated | `UpdateUserRequest { fullName?, email?, gender?, phone?, avatar? }` | `ApiResponse<UserResponse>` | |
+| `PUT` | `/api/v1/users/me/password` | authenticated | `ChangePasswordRequest { oldPassword, newPassword, confirmPassword }` | `ApiResponse<Void>` | Verifies old password via Keycloak before reset |
+| `DELETE` | `/api/v1/users/me` | authenticated | — | `ApiResponse<Void>` | Soft delete current user |
+| `GET` | `/api/v1/users/{id}` | ADMIN | — | `ApiResponse<UserResponse>` | Lookup by id |
+| `GET` | `/api/v1/users?page=&size=&sortBy=&sortOrder=` | ADMIN | — | `ApiResponse<Page<UserResponse>>` | Paginated list |
+| `PUT` | `/api/v1/users/{id}/restore` | ADMIN | — | `ApiResponse<Void>` | Restore soft-deleted user |
 
-Source: [RoleController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/RoleController.java).
+Source: [UserController.java](../auth-service/src/main/java/com/shop/authservice/controller/UserController.java).
+
+### 1.4 Endpoints — `/api/v1/roles` (RoleController) ⏳ NOT implemented
+
+`RoleService` + `RoleServiceImpl` exist (`findByName` / `assignRole` /
+`revokeRole` / `getUserRoles`) but no controller exposes them yet. Planned
+endpoints (reference):
+
+| M | Path | Auth | Body | Resp |
+|---|------|------|------|------|
+| `POST` | `/api/v1/roles/users/{userId}/assign` | ADMIN | `"USER"` (raw role name) | `ApiResponse<Void>` |
+| `POST` | `/api/v1/roles/users/{userId}/revoke` | ADMIN | `"USER"` | `ApiResponse<Void>` |
+| `GET` | `/api/v1/roles/users/{userId}` | ADMIN | — | `ApiResponse<List<String>>` |
+
+Source: [RoleController.java (reference)](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/RoleController.java).
 
 ### 1.5 Service dependencies
 
@@ -141,29 +149,29 @@ Source: [Product.java](https://github.com/hoangtien2k3/ecommerce-microservices/b
 [Category.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/entity/Category.java),
 [AbstractMappedEntity.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/entity/AbstractMappedEntity.java) (created/updated/last-modified).
 
-### 2.2 Endpoints — `/api/products`
+### 2.2 Endpoints — `/api/v1/products` (workspace path; reference uses `/api/products`)
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/products` | USER/ADMIN | — | `ResponseEntity<List<ProductDto>>` |
-| `GET` | `/api/products/{productId}` | USER/ADMIN | — | `ResponseEntity<ProductDto>` |
-| `POST` | `/api/products` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
-| `PUT` | `/api/products` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
-| `PUT` | `/api/products/{productId}` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
-| `DELETE` | `/api/products/{productId}` | ADMIN | — | `ResponseEntity<Boolean>` |
+| `GET` | `/api/v1/products` | USER/ADMIN | — | `ResponseEntity<List<ProductDto>>` |
+| `GET` | `/api/v1/products/{productId}` | USER/ADMIN | — | `ResponseEntity<ProductDto>` |
+| `POST` | `/api/v1/products` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
+| `PUT` | `/api/v1/products` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
+| `PUT` | `/api/v1/products/{productId}` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
+| `DELETE` | `/api/v1/products/{productId}` | ADMIN | — | `ResponseEntity<Boolean>` |
 
 Source: [ProductController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/controller/ProductController.java).
 
-### 2.3 Endpoints — `/api/categories`
+### 2.3 Endpoints — `/api/v1/categories` (workspace path; reference uses `/api/categories`)
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/categories` | USER/ADMIN | — | `List<CategoryDto>` |
-| `GET` | `/api/categories/{categoryId}` | USER/ADMIN | — | `CategoryDto` |
-| `POST` | `/api/categories` | ADMIN | `CategoryDto` | `CategoryDto` |
-| `PUT` | `/api/categories` | ADMIN | `CategoryDto` | `CategoryDto` |
-| `PUT` | `/api/categories/{categoryId}` | ADMIN | `CategoryDto` | `CategoryDto` |
-| `DELETE` | `/api/categories/{categoryId}` | ADMIN | — | `Boolean` |
+| `GET` | `/api/v1/categories` | USER/ADMIN | — | `List<CategoryDto>` |
+| `GET` | `/api/v1/categories/{categoryId}` | USER/ADMIN | — | `CategoryDto` |
+| `POST` | `/api/v1/categories` | ADMIN | `CategoryDto` | `CategoryDto` |
+| `PUT` | `/api/v1/categories` | ADMIN | `CategoryDto` | `CategoryDto` |
+| `PUT` | `/api/v1/categories/{categoryId}` | ADMIN | `CategoryDto` | `CategoryDto` |
+| `DELETE` | `/api/v1/categories/{categoryId}` | ADMIN | — | `Boolean` |
 
 ### 2.4 Kafka events
 
@@ -193,30 +201,30 @@ Source: [ProductController.java](https://github.com/hoangtien2k3/ecommerce-micro
 Source: [Order.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/entity/Order.java),
 [Cart.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/entity/Cart.java).
 
-### 3.2 Endpoints — `/api/orders`
+### 3.2 Endpoints — `/api/v1/orders` (workspace path; reference uses `/api/orders`)
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/orders` | USER/ADMIN | — | `List<OrderDto>` | All orders (filter on userId in body in real impl) |
-| `GET` | `/api/orders/all?page=&size=&sortBy=&sortOrder=` | USER/ADMIN | — | `Page<OrderDto>` | Paginated |
-| `GET` | `/api/orders/{orderId}` | USER/ADMIN | — | `OrderDto` | |
-| `POST` | `/api/orders` | USER | `OrderDto` | `OrderDto` | Reserve stock + publish `OrderCreated` |
-| `PUT` | `/api/orders` | ADMIN | `OrderDto` | `OrderDto` | Force update |
-| `PUT` | `/api/orders/{orderId}` | USER | `OrderDto` | `OrderDto` | Update with id |
-| `DELETE` | `/api/orders/{orderId}` | USER/ADMIN | — | `Boolean` | |
-| `GET` | `/api/orders/existOrderId?orderId=` | any | — | `Boolean` | Existence check |
+| `GET` | `/api/v1/orders` | USER/ADMIN | — | `List<OrderDto>` | All orders (filter on userId in body in real impl) |
+| `GET` | `/api/v1/orders/all?page=&size=&sortBy=&sortOrder=` | USER/ADMIN | — | `Page<OrderDto>` | Paginated |
+| `GET` | `/api/v1/orders/{orderId}` | USER/ADMIN | — | `OrderDto` | |
+| `POST` | `/api/v1/orders` | USER | `OrderDto` | `OrderDto` | Reserve stock + publish `OrderCreated` |
+| `PUT` | `/api/v1/orders` | ADMIN | `OrderDto` | `OrderDto` | Force update |
+| `PUT` | `/api/v1/orders/{orderId}` | USER | `OrderDto` | `OrderDto` | Update with id |
+| `DELETE` | `/api/v1/orders/{orderId}` | USER/ADMIN | — | `Boolean` | |
+| `GET` | `/api/v1/orders/existOrderId?orderId=` | any | — | `Boolean` | Existence check |
 
 Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/controller/OrderController.java).
 
-### 3.3 Endpoints — `/api/carts`
+### 3.3 Endpoints — `/api/v1/carts` (workspace path; reference uses `/api/carts`)
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/carts` | USER | — | `List<CartDto>` |
-| `GET` | `/api/carts/{cartId}` | USER | — | `CartDto` |
-| `POST` | `/api/carts` | USER | `CartDto` | `CartDto` |
-| `PUT` | `/api/carts` | USER | `CartDto` | `CartDto` |
-| `DELETE` | `/api/carts/{cartId}` | USER | — | `Boolean` |
+| `GET` | `/api/v1/carts` | USER | — | `List<CartDto>` |
+| `GET` | `/api/v1/carts/{cartId}` | USER | — | `CartDto` |
+| `POST` | `/api/v1/carts` | USER | `CartDto` | `CartDto` |
+| `PUT` | `/api/v1/carts` | USER | `CartDto` | `CartDto` |
+| `DELETE` | `/api/v1/carts/{cartId}` | USER | — | `Boolean` |
 
 ### 3.4 Kafka events
 
@@ -229,8 +237,8 @@ Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microse
 
 | Calls | Direction |
 |-------|-----------|
-| product-service `GET /api/products/{id}` | outbound (Feign client `CallAPI.java`) |
-| inventory-service `GET /api/inventory/{productId}` | outbound |
+| product-service `GET /api/v1/products/{id}` | outbound (Feign client `CallAPI.java`) |
+| inventory-service `GET /api/v1/inventory/{productId}` | outbound |
 | tax-service `GET /api/v1/backoffice/tax-rates/{id}` | outbound |
 | promotion-service `POST /api/v1/backoffice/promotions/apply` | outbound |
 | Kafka `order.created.v1`, `order.updated.v1` | outbound |
@@ -531,53 +539,51 @@ Split base paths — storefront is for end users, backoffice is for admins.
 ## 14. Quick reference — all routes through the gateway
 
 ```
-POST   /api/v1/auth/signup
-GET    /api/v1/auth/login
-GET    /api/v1/auth/callback
-GET    /api/v1/auth/session
+POST   /api/v1/auth/sign-up
+POST   /api/v1/auth/login
 POST   /api/v1/auth/refresh
 POST   /api/v1/auth/logout
 
-GET    /api/v1/users?username=
 GET    /api/v1/users/me
-GET    /api/v1/users/all
-GET    /api/v1/users/{id}
-PUT    /api/v1/users/{id}
+PUT    /api/v1/users/me
 PUT    /api/v1/users/me/password
-DELETE /api/v1/users/{id}
+DELETE /api/v1/users/me
+GET    /api/v1/users/{id}
+GET    /api/v1/users?page=&size=&sortBy=&sortOrder=
+PUT    /api/v1/users/{id}/restore
 
 POST   /api/v1/roles/users/{userId}/assign
 POST   /api/v1/roles/users/{userId}/revoke
 GET    /api/v1/roles/users/{userId}
 
-GET    /api/products
-GET    /api/products/{id}
-POST   /api/products
-PUT    /api/products
-PUT    /api/products/{id}
-DELETE /api/products/{id}
+GET    /api/v1/products
+GET    /api/v1/products/{id}
+POST   /api/v1/products
+PUT    /api/v1/products
+PUT    /api/v1/products/{id}
+DELETE /api/v1/products/{id}
 
-GET    /api/categories
-GET    /api/categories/{id}
-POST   /api/categories
-PUT    /api/categories
-PUT    /api/categories/{id}
-DELETE /api/categories/{id}
+GET    /api/v1/categories
+GET    /api/v1/categories/{id}
+POST   /api/v1/categories
+PUT    /api/v1/categories
+PUT    /api/v1/categories/{id}
+DELETE /api/v1/categories/{id}
 
-GET    /api/orders
-GET    /api/orders/all
-GET    /api/orders/{id}
-POST   /api/orders
-PUT    /api/orders
-PUT    /api/orders/{id}
-DELETE /api/orders/{id}
-GET    /api/orders/existOrderId
+GET    /api/v1/orders
+GET    /api/v1/orders/all
+GET    /api/v1/orders/{id}
+POST   /api/v1/orders
+PUT    /api/v1/orders
+PUT    /api/v1/orders/{id}
+DELETE /api/v1/orders/{id}
+GET    /api/v1/orders/existOrderId
 
-GET    /api/carts
-GET    /api/carts/{id}
-POST   /api/carts
-PUT    /api/carts
-DELETE /api/carts/{id}
+GET    /api/v1/carts
+GET    /api/v1/carts/{id}
+POST   /api/v1/carts
+PUT    /api/v1/carts
+DELETE /api/v1/carts/{id}
 
 POST   /api/v1/payments
 GET    /api/v1/payments/{id}

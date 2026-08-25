@@ -25,11 +25,12 @@
 utils/
 ├── common-core/        ← contracts, exceptions, viewmodels, constants
 │   └── src/main/java/com/shop/common/core/
-│       ├── constants/        ApiPaths, HeaderConstants, MdcKey, PageableConstant
-│       ├── exception/        BusinessException, ErrorCode, ResourceNotFoundException
-│       ├── i18n/             Messages, MessagesAutoConfiguration
-│       ├── util/             CollectionUtils, DateTimeUtils, StringUtils
-│       └── viewmodel/        ApiResponse, ErrorResponse, PageResponse
+│       ├── constants/        ApiPaths, MdcKey, PageableConstant
+│       ├── data/             SoftDeletable (soft-delete base)
+│       ├── exception/        BusinessException, ErrorCode
+│       ├── i18n/             Messages
+│       ├── util/             DateTimeUtils
+│       └── viewmodel/        ApiResponse, PageResponse
 │
 ├── common-security/     ← JWT, OAuth2 resource server, CORS
 │   └── src/main/java/com/shop/common/security/
@@ -43,14 +44,12 @@ utils/
 │       ├── config/           LoggingAutoConfiguration, PerformanceLogProperties
 │       └── *.java            LogPerformance, Loggable, LogField
 │
-├── common-keycloak/     ← Keycloak admin REST client
+├── common-keycloak/     ← Keycloak clients (token + admin, REST via RestClient)
 │   └── src/main/java/com/shop/common/keycloak/
-│       ├── client/           KeycloakAdminClient, KeycloakClientFactory,
-│       │                     KeycloakTokenResponse
+│       ├── client/           KeycloakTokenClient, KeycloakAdminClient
 │       ├── config/           KeycloakAutoConfiguration, KeycloakProperties
-│       ├── exception/        KeycloakOperationException
-│       ├── model/            KeycloakCredential, KeycloakRole, KeycloakUser
-│       └── service/          RealmService, RoleService, TokenService, UserService
+│       ├── dto/              KeycloakTokenResponse
+│       └── exception/        KeycloakClientException
 │
 ├── common-kafka/        ← KafkaTemplate wrapper, base consumer
 │   └── src/main/java/com/shop/common/kafka/
@@ -256,16 +255,13 @@ try {
 }
 ```
 
-### 2.5 `HeaderConstants` — well-known header names
+### 2.5 `HeaderConstants` — removed
 
-[Workspace source](../utils/common-core/src/main/java/com/shop/common/core/constants/HeaderConstants.java)
-
-```java
-public static final String AUTHORIZATION = "Authorization";
-public static final String CORRELATION_ID = "X-Correlation-Id";
-public static final String IDEMPOTENCY_KEY = "Idempotency-Key";
-public static final String X_FORWARDED_FOR = "X-Forwarded-For";
-```
+`HeaderConstants`, `CollectionUtils`, `StringUtils`, `ErrorResponse` and
+`ResourceNotFoundException` from the reference were **not ported** to the
+workspace `common-core`. Use `MdcKey` for the correlation header,
+`ApiResponse.error(...)` for the error shape, and `BusinessException`
+(`badRequest/unauthorized/notFound/...`) for typed errors.
 
 ### 2.6 `PageableConstant` — pagination defaults
 
@@ -427,14 +423,17 @@ server filter in common-security does that automatically).
 [Workspace source](../utils/common-keycloak/) ·
 [Reference](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-keycloak)
 
+> The reference's single `KeycloakAuthClient` was split in workspace commit
+> `2c6c35c` into two focused clients backed by Spring `RestClient` (no
+> Keycloak admin SDK).
+
 | Bean | Purpose |
 |------|---------|
-| `KeycloakAuthClient` | high-level facade |
-| `KeycloakAdminClient` | low-level REST |
-| `KeycloakClientFactory` | builds `Keycloak` admin client |
+| `KeycloakTokenClient` | login (ROPC) / refresh / logout / auth-code exchange |
+| `KeycloakAdminClient` | admin ops: create/delete user, reset password, assign realm roles |
 | `KeycloakTokenResponse` | record for token JSON |
 | `KeycloakProperties` | `shop.keycloak.*` config |
-| `UserService`, `RoleService`, `RealmService`, `TokenService` | domain ops |
+| `KeycloakClientException` | unchecked wrapper over Keycloak HTTP errors |
 
 ### 5.3 Configuration
 
@@ -459,12 +458,12 @@ shop:
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private final UserService keycloakUserService;   // from common-keycloak
+    private final KeycloakAdminClient keycloakAdminClient;   // from common-keycloak
 
     @Override
     @Transactional
     public User register(RegisterRequest req) {
-        String keycloakId = keycloakUserService.createUser(
+        String keycloakId = keycloakAdminClient.createUser(
             req.getUsername(),
             req.getEmail(),
             req.getFullName(),
@@ -479,12 +478,13 @@ public class UserServiceImpl implements UserService {
 Reference user creation flow:
 [UserServiceImpl.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/service/UserServiceImpl.java).
 
-### 5.5 SSO (auth-service only)
+### 5.5 SSO (auth-service only — not yet wired)
 
-The auth-service uses `KeycloakAuthClient` for the backend-mediated SSO
-flow. See
-[AuthController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/AuthController.java)
-for the full redirect-based flow.
+The reference auth-service uses `KeycloakAuthClient` for a backend-mediated SSO
+flow. Workspace auth-service currently uses `KeycloakTokenClient.login(...)`
+(ROPC, `POST /api/v1/auth/login`) instead — the redirect-based SSO flow is
+deferred. If later needed, the full flow is in the reference
+[AuthController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/AuthController.java).
 
 ## 6. common-kafka — publish + consume
 
@@ -622,12 +622,14 @@ A single dependency on `common-spring` registers every auto-configuration in
 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`:
 
 ```text
-com.shop.common.core.i18n.MessagesAutoConfiguration
 com.shop.common.logging.config.LoggingAutoConfiguration
 com.shop.common.security.config.SecurityAutoConfiguration
 com.shop.common.keycloak.config.KeycloakAutoConfiguration
 com.shop.common.storage.config.ObjectStorageAutoConfiguration
 com.shop.common.kafka.config.KafkaAutoConfiguration
+com.shop.common.spring.autoconfigure.I18nAutoConfiguration
+com.shop.common.spring.autoconfigure.WebAutoConfiguration
+com.shop.common.spring.autoconfigure.ModelMapperAutoConfiguration
 ```
 
 Spring Boot dedupes; the other 6 modules' auto-configurations are
@@ -701,7 +703,8 @@ shop:
 | Log a request body | `@Loggable` | `@Loggable(in=true, out=true)` |
 | Publish to Kafka | `KafkaMessagePublisher` | `publisher.publish(topic, key, payload)` |
 | Consume from Kafka | extend `BaseKafkaConsumer<T>` | override `handle(event, ack)` |
-| Call Keycloak admin | `KeycloakAuthClient` / `UserService` | injected via DI |
+| Login / refresh / logout against Keycloak | `KeycloakTokenClient` | injected via DI |
+| Keycloak admin ops (create user, roles) | `KeycloakAdminClient` | injected via DI |
 | Upload a file | `ObjectStorageService` | `storage.put(key, bytes, contentType)` |
 | Presigned URL | `ObjectStorageService` | `storage.presignGet(key, Duration.ofMinutes(5))` |
 | Get correlation ID | `MdcKey` | `MDC.get(MdcKey.TRACE_ID)` (don't, ApiResponse does it) |

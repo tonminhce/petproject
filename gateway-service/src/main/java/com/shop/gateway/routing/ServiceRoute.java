@@ -3,6 +3,8 @@ package com.shop.gateway.routing;
 public enum ServiceRoute {
 
     AUTH("auth-service", "auth", "auth-service", 8088),
+    USERS("auth-users", "users", "auth-service", 8088),
+    ROLES("auth-roles", "roles", "auth-service", 8088),
     FAVOURITE("favourite-service", "favourites", "favourite-service", 8081),
     INVENTORY("inventory-service", "inventory", "inventory-service", 8082),
     MEDIA("media-service", "media", "media-service", 8083),

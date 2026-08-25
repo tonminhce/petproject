@@ -4,6 +4,19 @@
 
 **Total: ~28 files** across 9 packages + Liquibase changelog + tests.
 
+> **STATUS (2026-08-25)** — core implemented: `AuthController` (sign-up / login /
+> refresh / logout), `UserController` (me / profile / soft-delete / restore),
+> entities `User`+`Role` (UUID, soft-delete via `SoftDeletable`), repositories,
+> DTOs, ModelMapper, `AuthServiceImpl` / `UserServiceImpl` / `RoleServiceImpl`,
+> Liquibase (master + 2 changesets + seed). **Deviations from this plan**:
+> login is **ROPC** (`POST /api/v1/auth/login`) — the SSO flow
+> (`GET /login`→302, `/callback`, `/session`), `RoleController`,
+> `SecurityConfig`, `SsoProperties`, `SsoSessionStore`, per-service
+> `application.yml` and tests are **not yet done**. `KeycloakAuthClient` was
+> refactored to `KeycloakTokenClient` + `KeycloakAdminClient` (RestClient).
+> This doc remains the target design; current reality is summarized in
+> [`SERVICE-CATALOG.md §1`](./SERVICE-CATALOG.md).
+
 ---
 
 ## Phase 0 — Pre-flight checklist
@@ -11,7 +24,7 @@
 Before writing code, confirm these from the common-lib port:
 
 - [x] `utils/common-core` has `BusinessException`, `ErrorCode`, `ApiResponse`
-- [x] `utils/common-keycloak` has `KeycloakAuthClient`, `KeycloakClientProperties`, `KeycloakTokenResponse`
+- [x] `utils/common-keycloak` has `KeycloakTokenClient`, `KeycloakAdminClient`, `KeycloakProperties`, `KeycloakTokenResponse` (refactored from `KeycloakAuthClient` in commit `2c6c35c`)
 - [x] `utils/common-spring` has `ApiExceptionHandler`, `I18nAutoConfiguration`, message bundles
 - [ ] Postgres running (see `docker-compose.yml`)
 - [ ] Keycloak running with realm `ecommerce` configured
@@ -307,7 +320,7 @@ Methods: `register`, `update`, `changePassword`, `delete`, `findById`, `findByUs
 Key implementation details:
 - `@Transactional @LogPerformance` on `register`
 - Check uniqueness BEFORE calling Keycloak (avoid orphan Keycloak users)
-- Call `keycloakAuthClient.createUser(...)` to get Keycloak UUID
+- Call `keycloakAdminClient.createUser(...)` (from `common-keycloak`) to get Keycloak UUID
 - Save local shadow copy with `keycloakUserId`
 - On any RuntimeException → rollback: `keycloakAuthClient.deleteUser(keycloakUserId)`
 - `changePassword` throws `BusinessException.badRequest("auth.password.managed.by.keycloak")`
@@ -344,7 +357,7 @@ Methods: `createLoginState`, `consumeLoginState`, `storeTokens`, `consumeTokens`
 | `POST` | `/refresh` | Refresh access token via refresh_token |
 | `POST` | `/logout` | Logout via refresh_token |
 
-Inject: `UserService`, `KeycloakAuthClient`, `KeycloakClientProperties`, `SsoProperties`, `SsoSessionStore`.
+Inject: `UserService`, `KeycloakTokenClient` + `KeycloakAdminClient`, `KeycloakProperties`, `SsoProperties`, `SsoSessionStore`.
 
 **SSO flow** (the interesting part):
 ```
@@ -355,7 +368,7 @@ Browser → Keycloak login page
    ↓ user enters credentials
 Keycloak → 302 to /api/v1/auth/callback?code=XYZ&state=ABC123
    ↓ auth-service validates state, consumes it
-   ↓ exchanges code for tokens via KeycloakAuthClient
+   ↓ exchanges code for tokens via KeycloakTokenClient.exchangeAuthorizationCode
    ↓ creates ticket=DEF456, stores tokens
    ↓ 302 to frontendRedirect?ticket=DEF456
 Frontend → GET /api/v1/auth/session?ticket=DEF456
