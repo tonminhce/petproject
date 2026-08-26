@@ -3,31 +3,35 @@
 > Companion to [`ROADMAP.md`](./ROADMAP.md). All diagrams reference the
 > source-of-truth repo
 > [hoangtien2k3/ecommerce-microservices](https://github.com/hoangtien2k3/ecommerce-microservices).
+> See [`docs/RATE-LIMIT.md`](./RATE-LIMIT.md) for the two-layer rate-limit design.
 
 ## 1. Component map
 
 ```
                         ┌────────────────────────────────────────┐
-                        │            Browser / Mobile             │
+                        │            Browser / Mobile            │
                         └────────────────────┬───────────────────┘
                                              │  HTTPS (PKCE w/ Keycloak)
                                              ▼
-        ┌──────────────────────────────────────────────────────────────┐
-        │  Spring Cloud Gateway :8080                                  │
-        │  ──────────────────────────────────────────────────────────  │
-        │  Routes  /api/v1/* → forward full path (no rewrite)           │
-        │  Filters  • Spring Security OAuth2 Resource Server           │
-        │           • Correlation-Id (X-Correlation-Id, MDC)           │
-        │           • Rate-limit (Redis bucket, 100 rps)               │
-        │           • Circuit breaker (Resilience4j)                   │
-        │           • Logging filter (request/response)                │
-        │  Health  :8080/actuator/health (liveness + readiness)       │
-        └──────┬───────┬───────┬───────┬───────┬───────┬───────┬───────┘
-               │       │       │       │       │       │       │
-        ┌──────▼─┐ ┌───▼───┐ ┌─▼────┐ ┌▼─────┐ ┌▼─────┐ ┌▼─────┐ ┌▼──────┐
-        │ auth   │ │product│ │order │ │payment│ │shipping│ │inventory│ │favourite│
-        │ :8088  │ │ :8086 │ │ :8084│ │ :8085 │ │ :8087  │ │  :8082  │ │  :8081 │
-        └────────┘ └───────┘ └──────┘ └───────┘ └────────┘ └─────────┘ └────────┘
+         ┌──────────────────────────────────────────────────────────────┐
+         │  Spring Cloud Gateway :8080                                  │
+         │  ──────────────────────────────────────────────────────────  │
+         │  Routes  /api/v1/* → forward full path (no rewrite)          │
+         │  Filters  • Spring Security OAuth2 Resource Server           │
+         │           • Correlation-Id (X-Correlation-Id, MDC)           │
+         │           • Global rate-limit (Redis, system bucket,         │
+         │             HIGHEST_PRECEDENCE — flash-sale guard)           │
+         │           • Per-route rate-limit (Redis, user|ip × route)    │
+         │             — see docs/RATE-LIMIT.md                         │
+         │           • Circuit breaker (Resilience4j, future)           │
+         │           • Logging filter (request/response)                │
+         │  Health  :8080/actuator/health (liveness + readiness)        │
+         └──────┬───────┬───────┬───────┬─────────┬──────────┬───────────┬───────┘
+                │       │       │       │         │          │           │
+         ┌──────▼─┐ ┌───▼───┐ ┌─▼────┐ ┌▼──────┐ ┌▼───────┐ ┌▼────────┐ ┌▼────────┐
+         │ auth   │ │product│ │order │ │payment│ │shipping│ │inventory│ │favourite│
+         │ :8088  │ │ :8086 │ │ :8084│ │ :8085 │ │ :8087  │ │  :8082  │ │  :8081  │
+         └────────┘ └───────┘ └──────┘ └───────┘ └────────┘ └─────────┘ └─────────┘
                │       │       │       │       │       │       │
         ┌──────▼─┐ ┌───▼───┐ ┌─▼────┐ ┌▼─────┐ ┌▼─────┐ ┌▼─────┐ ┌▼──────┐
         │ rating │ │media  │ │ notif│ │search│ │  tax │ │promo │ │        │
@@ -224,7 +228,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Store | Used by | Database / index | Notes |
 |-------|---------|------------------|-------|
 | Postgres 16 | every backend service | one DB per service (`authservice`, `productservice`, `orderservice`, `paymentservice`, `shippingservice`, `inventoryservice`, `favouriteservice`, `ratingservice`, `mediaservice`, `taxservice`, `promotionservice`, `notificationservice`) + `keycloak` | Created by `docker/postgres/init/create-all-databases.sql` |
-| Redis 7 | gateway (rate limit), auth (SSO session store), order (cart cache) | DB 0–15 logical | `spring.session.store-type=redis` (when wired) |
+| Redis 7 | gateway (rate limit — global system bucket + per-route bucket, see [`docs/RATE-LIMIT.md`](./RATE-LIMIT.md)), auth (SSO session store), order (cart cache) | DB 0–15 logical | `spring.session.store-type=redis` (when wired); key schema `request_rate_limiter.{routeId}.{key}.tokens` |
 | Kafka 3.9 | order → payment/notification/search; product → search | topics above | KRaft mode (no Zookeeper), one broker is fine for dev |
 | Elasticsearch 8.15 | search-service (products, ratings), optional logs | `products`, `ratings`, `logs-*` | Single-node, security off in dev |
 | Keycloak 26 | all services (JWT issuer) | `keycloak` DB on the same Postgres | Realm `ecommerce`, clients `ecommerce-client`, `swagger-ui` |
@@ -249,6 +253,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Kafka | `KafkaMessagePublisher`, `BaseKafkaConsumer`, JSON serdes | `common-kafka` |
 | Object storage | `ObjectStorageService` (put/get/delete/presigned URL) | `common-storage` |
 | Resilience | `@CircuitBreaker(name="product-service", fallbackMethod="…")` on inter-service HTTP | Resilience4j 2.4 |
+| Rate limit | Two-layer Redis token bucket: global system (flash-sale guard, `Ordered.HIGHEST_PRECEDENCE`) + per-client + per-route (key = `user:<sub>` or `ip:<client>`). Default: 100/200/1 per route, 2000/4000/1 system. See [`docs/RATE-LIMIT.md`](./RATE-LIMIT.md) for full design | `spring-cloud-gateway` `RedisRateLimiter` + Lua script |
 | Observability | Micrometer + Prometheus (`management.endpoints.web.exposure.include: health,info,metrics,prometheus`) | SB Actuator |
 
 ## 7. Network & ports

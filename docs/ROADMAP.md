@@ -10,6 +10,7 @@
 >
 > **Companion docs** —
 > [ARCHITECTURE.md](./ARCHITECTURE.md) ·
+> [RATE-LIMIT.md](./RATE-LIMIT.md) ·
 > [SERVICE-CATALOG.md](./SERVICE-CATALOG.md) ·
 > [COMMON-LIB-REFERENCE.md](./COMMON-LIB-REFERENCE.md)
 
@@ -26,6 +27,7 @@
 | Docker infra | `docker-compose.yml` — Postgres 16, Redis 7, Kafka 3.9, Elasticsearch 8.15, Keycloak 26, RustFS | [ref: docker-compose.yml](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/docker-compose.yml) |
 | Lifecycle scripts | `start-docker.sh`, `stop-docker.sh` | workspace only |
 | Gateway | `gateway-service/` — Spring Cloud Gateway, JWT validation, route table, 15 routes (13 services + users/roles via auth) | workspace decision (replaces APISIX) |
+| Gateway rate limit | Two-layer Redis token bucket at gateway: (1) global system bucket, default `2000 req/s` · burst `4000`, ordered `HIGHEST_PRECEDENCE` for flash-sale guard; (2) per-client + per-route bucket, default `100 req/s` · burst `200`, key = `user:<sub>` or `ip:<client>`. Implemented via `spring-cloud-gateway` `RedisRateLimiter` Lua script. 17 unit + slice tests pass; smoke verified against real Redis. See [`RATE-LIMIT.md`](./RATE-LIMIT.md) | workspace decision (replaces APISIX rate-limit) |
 | auth-service (core) | Controllers (auth/users), services, entities, repositories, DTOs, ModelMapper, Liquibase (2 changesets + seed), soft-delete | [ref: auth-service](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/auth-service) |
 | common-keycloak | `KeycloakAuthClient` refactored → `KeycloakTokenClient` + `KeycloakAdminClient` (RestClient, no admin SDK) | workspace decision (modern) |
 | Docker images | 14 built via Jib (gateway + 13 services) | workspace only |
