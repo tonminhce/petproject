@@ -1,0 +1,66 @@
+%% Rate-limit architecture — simplified for senior-architect review
+%% Source of truth: docs/RATE-LIMIT.md
+%% Two-layer token-bucket guard at the API gateway, backed by Redis.
+%% Step order: 1 request → 2 JWT auth → 3 global guard → 4 per-client guard → 5 forward
+flowchart TD
+
+  classDef gwNode fill:#1f4e79,stroke:#0d2840,stroke-width:2px,color:#ffffff
+  classDef kcNode fill:#7d3c98,stroke:#4a235a,stroke-width:2px,color:#ffffff
+  classDef beanGlobal fill:#f1c40f,stroke:#9a7d0a,stroke-width:2px,color:#1a1a1a
+  classDef beanRoute fill:#0d6efd,stroke:#084298,stroke-width:2px,color:#ffffff
+  classDef decision fill:#e67e22,stroke:#a04000,stroke-width:2px,color:#ffffff
+  classDef backendNode fill:#34495e,stroke:#1b2631,stroke-width:2px,color:#ffffff
+  classDef greenBold fill:#1e7e34,stroke:#155724,stroke-width:2px,color:#ffffff
+  classDef redBold fill:#c0392b,stroke:#922b21,stroke-width:2px,color:#ffffff
+
+  client["Browser / Mobile"]
+
+  gw["API Gateway<br/>single entry point"]:::gwNode
+
+  keycloak["Keycloak<br/>JWT issuer"]:::kcNode
+
+  subgraph GFILT[" "]
+    direction TB
+    gFilter["Global rate limiter<br/>guards total cluster capacity"]
+    gKnob["2000 req/s · burst 4000<br/>shared across all traffic"]:::beanGlobal
+    gDec{allow?}:::decision
+  end
+
+  subgraph RFILT[" "]
+    direction TB
+    rFilter["Per-client rate limiter<br/>one bucket per user or IP × route"]
+    rKnob["100 req/s · burst 200<br/>fairness per client"]:::beanRoute
+    rDec{allow?}:::decision
+  end
+
+  redis[("Redis<br/>token bucket store<br/>shared by both layers")]:::backendNode
+
+  auth["auth-service"]:::backendNode
+  backends["12 backend services<br/>(product, order, payment, ...)"]:::backendNode
+
+  ok["200 OK"]:::greenBold
+  reject["429 — too many requests"]:::redBold
+
+  %% Flow
+  client -->|"1 request"| gw
+
+  gw -. "2 JWT validate" .-> keycloak
+  keycloak -. "verified" .-> gw
+
+  gw -->|"3 chain"| gFilter
+  gFilter --> gKnob
+  gKnob <-->|"atomic"| redis
+  gKnob --> gDec
+  gDec -->|"deny"| reject
+  gDec -->|"allow"| rFilter
+
+  rFilter --> rKnob
+  rKnob <-->|"atomic"| redis
+  rKnob --> rDec
+  rDec -->|"deny"| reject
+
+  rDec -->|"5 allow → forward"| auth
+  rDec -->|"5 allow → forward"| backends
+
+  auth --> ok
+  backends --> ok
