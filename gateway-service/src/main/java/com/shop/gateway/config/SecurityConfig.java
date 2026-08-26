@@ -17,7 +17,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private static final String[] HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"};
-    private static final List<String> EXPOSED_HEADERS = List.of("Authorization", "Content-Type", "X-Request-Id");
+    private static final List<String> EXPOSED_HEADERS = List.of(
+            "Authorization",
+            "Content-Type",
+            "X-Request-Id",
+            "X-RateLimit-Remaining",
+            "X-RateLimit-Replenish-Rate",
+            "X-RateLimit-Burst-Capacity",
+            "X-RateLimit-Requested-Tokens");
     private static final long MAX_AGE_SECONDS = 3600L;
 
     private final GatewayProperties properties;

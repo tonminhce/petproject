@@ -3,7 +3,9 @@ package com.shop.gateway.ratelimit;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -37,6 +39,19 @@ class RateLimitKeyResolverTest {
                         .remoteAddress(new InetSocketAddress("192.0.2.10", 8080))
                         .build(),
                 Mono.<Principal>empty());
+
+        assertThat(resolver.resolve(exchange).block()).isEqualTo("ip:192.0.2.10");
+    }
+
+    @Test
+    void anonymousAuthenticationTokenUsesRemoteIpKey() {
+        var resolver = new RateLimitKeyResolver(0);
+        var exchange = exchangeWith(
+                MockServerHttpRequest.get("/api/v1/auth/login")
+                        .remoteAddress(new InetSocketAddress("192.0.2.10", 8080))
+                        .build(),
+                Mono.<Principal>just(new AnonymousAuthenticationToken(
+                        "key", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"))));
 
         assertThat(resolver.resolve(exchange).block()).isEqualTo("ip:192.0.2.10");
     }

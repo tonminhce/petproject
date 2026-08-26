@@ -261,7 +261,8 @@ ROADMAP).
 |---|---|---|
 | `RateLimitPropertiesTest` | 3 | constructor validation: `trustedProxyHops >= 0`, `burstCapacity >= requestedTokens`, defaults |
 | `GlobalRateLimitPropertiesTest` | 2 | constructor validation, defaults (2000/4000/1) |
-| `RateLimitKeyResolverTest` | 4 | `user:<sub>` cho authenticated, `ip:<remote>` cho anonymous, `ip:<XFF>` cho trusted-forwarded, empty key khi không có principal lẫn remote |
+| `RateLimitKeyResolverTest` | 5 | `user:<sub>` cho authenticated, `ip:<remote>` cho anonymous, `AnonymousAuthenticationToken` → `ip:<remote>`, `ip:<XFF>` cho trusted-forwarded, empty key khi không có principal lẫn remote |
+| `SecurityConfigTest` | 1 | CORS expose đủ các header rate-limit cho browser client |
 | `GlobalRateLimitFilterTest` | 4 | allowed → chain filter; denied → 429 + copy headers + chain không gọi; disabled → bypass Redis; `Order = HIGHEST_PRECEDENCE` |
 | `RoutesConfigTest` | 2 | 15 routes + 1 filter mỗi route khi enabled; 15 routes + 0 filter khi disabled |
 | `GatewayRateLimitContextTest` | 2 | Bean wiring: 2 `RedisRateLimiter`, `KeyResolver`, `GlobalRateLimitFilter`; routes có đúng 1 filter |
@@ -289,7 +290,7 @@ DNS fail vì backend chưa chạy). Xác nhận Lua atomic chặn ngay tại t�
   có thể fake `X-Forwarded-For` để bypass → chỉ set khi đã verify chain proxy.
 - **Anonymous user chưa authenticated**: `Principal` không null nhưng là
   `AnonymousAuthenticationToken` → `isUsableAuthentication` trả false → rơi vào IP fallback.
-  Test này có trong source nhưng không có unit test riêng (xem §10.3).
+  Test `anonymousAuthenticationTokenUsesRemoteIpKey` bao phủ nhánh này.
 - **Disabled cả hai tầng** (`enabled=false`): global filter bypass, route filter bypass.
   Routes vẫn hoạt động, không có filter. Test `canDisableRateLimiterWithoutRemovingRoutes`.
 - **Bucket đầy nhưng tokens = 0**: route bucket trống → `429` ngay, không retry.
