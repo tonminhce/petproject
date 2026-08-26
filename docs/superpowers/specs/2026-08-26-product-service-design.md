@@ -194,6 +194,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @EntityGraph(attributePaths = {"category", "brand"})
     Optional<Product> findWithRelationsBySlugAndDeletedFalse(String slug);
 
+    // Update / delete dùng method này — không fetch relations (không cần cho update flow)
+    Optional<Product> findByIdAndDeletedFalse(Long id);
+
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
     boolean existsBySlugAndDeletedFalse(String slug);
@@ -203,7 +206,17 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 }
 ```
 
-`CategoryRepository`, `BrandRepository`, `OutboxEventRepository` tương tự.
+`CategoryRepository`, `BrandRepository` tương tự (CRUD + existsBySlugAndDeletedFalse variants + findAllByDeletedFalse).
+
+`OutboxEventRepository`:
+```java
+public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
+    // Poller dùng — Pageable để respect batch-size config
+    List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
+
+    long countByStatus(OutboxStatus status);  // cho metrics gauge
+}
+```
 
 **N+1 strategy:**
 - **Detail endpoint** (find by id/slug): `@EntityGraph` fetch category + brand trong 1 query
@@ -289,13 +302,16 @@ public class ProductEventPublisher {
         e.setAggregateId(p.getId());
         e.setEventType(eventType);
         e.setTopic("shop.product.lifecycle.v1");
-        e.setPayload(objectMapper.writeValueAsString(Map.of(
-            "eventId", e.getEventId(),
-            "eventType", eventType,
-            "occurredAt", Instant.now().toString(),
-            "productId", p.getId(),
-            "slug", p.getSlug(),
-            "status", p.getStatus().name())));
+        // HashMap (không phải Map.of) để tránh NPE nếu slug/status null —
+        // service đã đảm bảo validation trước khi publish, nhưng defensive code
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("eventId", e.getEventId());
+        payload.put("eventType", eventType);
+        payload.put("occurredAt", Instant.now().toString());
+        payload.put("productId", p.getId());
+        payload.put("slug", p.getSlug());
+        payload.put("status", p.getStatus() != null ? p.getStatus().name() : null);
+        e.setPayload(objectMapper.writeValueAsString(payload));
         e.setStatus(OutboxStatus.PENDING);
         e.setRetryCount(0);
         outboxRepository.save(e);
@@ -318,7 +334,8 @@ public class OutboxRelay {
 
     @Scheduled(fixedDelayString = "${product.outbox.poll-interval-ms:5000}")
     public void relay() {  // KHÔNG @Transactional — mỗi save() tự commit
-        List<OutboxEvent> pending = outboxRepo.findTop100ByStatusOrderByIdAsc(OutboxStatus.PENDING);
+        List<OutboxEvent> pending = outboxRepo.findByStatusOrderByIdAsc(
+            OutboxStatus.PENDING, PageRequest.of(0, batchSize));
         for (OutboxEvent event : pending) {
             try {
                 kafkaPublisher.publish(event.getTopic(),
@@ -428,6 +445,7 @@ auth.anyRequest().authenticated();
 @AutoConfiguration
 @ConditionalOnClass(AuditingHandler.class)
 @EnableConfigurationProperties(JpaAuditingProperties.class)
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
 public class JpaAuditingAutoConfiguration {
 
     @Bean
@@ -443,7 +461,7 @@ public class JpaAuditingAutoConfiguration {
 }
 ```
 
-> `AbstractMappedEntity` tự có `@EntityListeners(AuditingEntityListener.class)`, không cần `@EnableJpaAuditing` riêng trên từng service — chỉ cần `AuditorAware` bean.
+> `@EnableJpaAuditing` ở common-spring tự kích hoạt `AuditingHandler` cho toàn bộ service dùng `common-spring`. `AbstractMappedEntity` chỉ cần `@EntityListeners(AuditingEntityListener.class)` để listener được trigger; không cần thêm annotation trên từng service.
 
 ### 7.2 Product-service application.yml
 
@@ -578,9 +596,8 @@ public class ProductMetrics {
     public ProductMetrics(MeterRegistry registry) {
         this.cacheHit = Counter.builder("product.cache.hit").register(registry);
         this.cacheMiss = Counter.builder("product.cache.miss").register(registry);
-        this.eventsPublished = Counter.builder("product.events.published")
-            .tag("event_type", "unknown")  // override khi increment
-            .register(registry);
+        // eventsPublished base — tag sẽ được add per-increment, Micrometer tự tạo counter riêng theo tag value
+        this.eventsPublished = Counter.builder("product.events.published").register(registry);
         this.relayDuration = Timer.builder("product.outbox.relay.duration").register(registry);
         Gauge.builder("product.outbox.pending.count", pendingOutboxCount, AtomicInteger::get)
             .register(registry);
