@@ -16,6 +16,18 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-spring</artifactId>
         </dependency>
+        <!-- test-jar brings in TestSecurityConfig + other shared test helpers
+             so integration tests can @Import com.shop.common.spring.test.* without
+             duplicating the stub JwtDecoder (which would force a real Keycloak
+             JWKS fetch at startup). Version is inherited from the parent pom's
+             <dependencyManagement> entry. -->
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-spring</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <!-- common-kafka is <optional> in common-spring → declare it explicitly to get
              KafkaMessagePublisher + the shop.kafka.* binding used by the outbox relay. -->
         <dependency>

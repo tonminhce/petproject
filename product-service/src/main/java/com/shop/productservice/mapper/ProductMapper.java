@@ -57,23 +57,11 @@ public class ProductMapper {
     }
 
     public Product toEntity(ProductCreateRequest request) {
-        // Manual copy — ModelMapper 3.2.6 STRICT + field-matching mode does not
-        // see Java record components as source properties, so the auto-map leaves
-        // every field null. A platform-level ModelMapper ValueReader fix is tracked
-        // as a follow-up; until then, every mapper that takes a record source
-        // must do this manual copy.
-        Product p = new Product();
-        p.setId(null);
-        p.setTitle(request.title());
-        p.setSlug(request.slug());
-        p.setDescription(request.description());
-        p.setSku(request.sku());
-        p.setPriceUnit(request.priceUnit());
-        p.setQuantity(request.quantity());
-        p.setStatus(request.status());
-        p.setImageUrl(request.imageUrl());
-        p.setWeight(request.weight());
-        p.setDimensions(request.dimensions());
+        // RecordValueReader (registered in common-spring) lets STRICT + field-
+        // matching mode see Java record components as source properties, so this
+        // map is no longer a silent no-op (it was before the platform fix).
+        Product p = modelMapper.map(request, Product.class);
+        p.setId(null);   // force identity insert even if request carried an id
         return p;
     }
 

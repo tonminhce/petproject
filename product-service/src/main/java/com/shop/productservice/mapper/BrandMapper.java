@@ -27,6 +27,8 @@ public class BrandMapper {
     }
 
     public Brand toEntity(BrandCreateRequest request) {
+        // See ProductMapper#toEntity — RecordValueReader (common-spring) lets
+        // this work for record sources.
         Brand b = modelMapper.map(request, Brand.class);
         b.setId(null);
         return b;

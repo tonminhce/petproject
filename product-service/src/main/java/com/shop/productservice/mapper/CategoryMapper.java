@@ -42,6 +42,8 @@ public class CategoryMapper {
     }
 
     public Category toEntity(CategoryCreateRequest request) {
+        // See ProductMapper#toEntity — RecordValueReader (common-spring) lets
+        // this work for record sources.
         Category c = modelMapper.map(request, Category.class);
         c.setId(null);
         return c;

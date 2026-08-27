@@ -1,5 +1,6 @@
 package com.shop.common.spring.autoconfigure;
 
+import com.shop.common.spring.mapping.RecordValueReader;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -12,14 +13,11 @@ import org.springframework.context.annotation.Bean;
  * the ModelMapper library. Configured with STRICT matching + skip-null to match the
  * platform's "PATCH = only update non-null fields" semantics.
  *
- * <p><strong>Java record support caveat:</strong> ModelMapper 3.2.6 in STRICT +
- * field-matching mode does not see Java record components as source properties
- * — only the canonical accessor methods (e.g. {@code title()}, not the private
- * field {@code title}). The working fix is per-mapper manual setter copy
- * (see {@code product-service/.../ProductMapper.toEntity}). A platform-level
- * fix via a custom {@code ValueReader} is tracked as a follow-up — the
- * ModelMapper 3 SPI requires a non-trivial adapter that should be designed
- * carefully rather than rushed here.</p>
+ * <p>Also registers a {@link RecordValueReader} so request DTOs that are
+ * Java records (canonical accessors like {@code title()}, not JavaBean-style
+ * {@code getTitle()}) work as mapping sources — without it,
+ * {@code setFieldMatchingEnabled(true)} leaves record-to-entity mapping
+ * silently empty.</p>
  */
 @AutoConfiguration
 @ConditionalOnClass(ModelMapper.class)
@@ -32,7 +30,8 @@ public class ModelMapperAutoConfiguration {
         mapper.getConfiguration()
                 .setMatchingStrategy(MatchingStrategies.STRICT)
                 .setSkipNullEnabled(true)
-                .setFieldMatchingEnabled(true);
+                .setFieldMatchingEnabled(true)
+                .addValueReader(new RecordValueReader());
         return mapper;
     }
 }
