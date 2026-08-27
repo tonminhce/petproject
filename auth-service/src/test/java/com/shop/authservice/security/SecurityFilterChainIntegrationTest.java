@@ -74,12 +74,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
                 "shop.security.issuer-uri=http://localhost:9999/realms/test",
-                // ObjectStorageAutoConfiguration is on the classpath
-                // (transitively via common-spring -> common-storage) and would
-                // otherwise try to connect to a real S3-compatible server
-                // (RustFS at http://localhost:9000). Disable it — the security
-                // filter chain is independent of object storage.
-                "shop.storage.enabled=false",
                 // Strip JPA / datasource / liquibase autoconfigs so the
                 // test does not require a running PostgreSQL. The
                 // mocked services (@MockitoBean UserService etc.)
