@@ -57,10 +57,11 @@ public class ProductMapper {
     }
 
     public Product toEntity(ProductCreateRequest request) {
-        // Manual copy — ModelMapper's STRICT mode with field matching does not
+        // Manual copy — ModelMapper 3.2.6 STRICT + field-matching mode does not
         // see Java record components as source properties, so the auto-map leaves
-        // every field null. Doing this by hand is also explicit and avoids any
-        // future reflection surprises.
+        // every field null. A platform-level ModelMapper ValueReader fix is tracked
+        // as a follow-up; until then, every mapper that takes a record source
+        // must do this manual copy.
         Product p = new Product();
         p.setId(null);
         p.setTitle(request.title());
