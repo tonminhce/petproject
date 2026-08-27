@@ -53,25 +53,6 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--
-            common-spring's META-INF AutoConfiguration.imports advertises
-            autoconfigs from these two modules, but they are declared
-            <optional>true</optional> in common-spring's pom, so the production
-            classpath does NOT pull them in transitively. The test must
-            therefore add them itself, otherwise Spring Boot's
-            AutoConfigurationSorter fails with FileNotFoundException before
-            the filter-chain bean is even instantiated.
-        -->
-        <dependency>
-            <groupId>com.shop.microservices</groupId>
-            <artifactId>common-kafka</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.shop.microservices</groupId>
-            <artifactId>common-storage</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     <build>
         <plugins>

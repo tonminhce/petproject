@@ -1,17 +1,14 @@
 # =============================================================================
-#  Auto-configurations registered by `com.shop.microservices:common-spring`.
+#  Auto-configurations owned by `common-spring` only.
 # -----------------------------------------------------------------------------
-#  Listing them here gives operators a single place to see every cross-cutting
-#  concern the starter wires in. Each individual module also registers its
-#  own auto-configuration through its own META-INF/spring/...imports file;
-#  Spring Boot deduplicates auto-configurations so the double registration
-#  is harmless and only documented for discoverability.
+#  Per-module autoconfigs (logging, security, keycloak, storage, kafka) are
+#  registered by their own META-INF/...imports file under each module — NOT
+#  re-exported here. Re-exporting them here caused `AutoConfigurationSorter`
+#  to load class metadata for autoconfigs whose parent modules were declared
+#  `<optional>true</optional>` in `common-spring/pom.xml`, raising
+#  `FileNotFoundException` for services that pulled `common-spring` without
+#  pulling those optional modules (see commit history).
 # =============================================================================
-com.shop.common.logging.config.LoggingAutoConfiguration
-com.shop.common.security.config.SecurityAutoConfiguration
-com.shop.common.keycloak.config.KeycloakAutoConfiguration
-com.shop.common.storage.config.ObjectStorageAutoConfiguration
-com.shop.common.kafka.config.KafkaAutoConfiguration
 com.shop.common.spring.autoconfigure.I18nAutoConfiguration
 com.shop.common.spring.autoconfigure.WebAutoConfiguration
 com.shop.common.spring.autoconfigure.ModelMapperAutoConfiguration
