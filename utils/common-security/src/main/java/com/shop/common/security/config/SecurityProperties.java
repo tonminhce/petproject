@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.http.HttpMethod;
 import org.springframework.validation.annotation.Validated;
 
 import java.net.URI;
@@ -26,9 +27,9 @@ import java.util.List;
  *   security:
  *     enabled: true
  *     issuer-uri: http://keycloak:8080/realms/ecommerce
- *     public-endpoints:
- *       - /api/v1/auth/login
- *       - /api/v1/auth/refresh
+ *     public-paths:
+ *       - path: /api/v1/auth/login
+ *       - path: /api/v1/auth/refresh
  *     cors:
  *       enabled: true
  *       allowed-origin-patterns: ["http://localhost:3000"]
@@ -40,7 +41,9 @@ import java.util.List;
  * @param csrfDisabled       whether to disable CSRF protection (recommended for
  *                           stateless JWT resource servers)
  * @param statelessSession   whether to force {@code SessionCreationPolicy.STATELESS}
- * @param publicEndpoints    service-specific allow-list merged with platform defaults
+ * @param publicPaths        service-specific allow-list merged with platform defaults;
+ *                           each {@link EndpointRule} binds an optional {@link HttpMethod}
+ *                           and a required path string
  * @param cors               CORS sub-configuration
  */
 @Validated
@@ -50,9 +53,21 @@ public record SecurityProperties(
         @NotBlank String issuerUri,
         @DefaultValue("true") boolean csrfDisabled,
         @DefaultValue("true") boolean statelessSession,
-        @DefaultValue List<String> publicEndpoints,
+        @DefaultValue List<EndpointRule> publicPaths,
         @Valid @DefaultValue Cors cors
 ) {
+
+    /**
+     * Method+path rule for a public endpoint. A {@code null} {@code method}
+     * means "any HTTP method"; the {@code path} must be non-blank.
+     */
+    public record EndpointRule(HttpMethod method, String path) {
+        public EndpointRule {
+            if (path == null || path.isBlank()) {
+                throw new IllegalArgumentException("EndpointRule.path must not be blank");
+            }
+        }
+    }
 
     /**
      * CORS sub-properties. Kept as a nested record so callers can override
@@ -93,8 +108,8 @@ public record SecurityProperties(
 
     /** Convenience constructor used by Spring Boot's relaxed binding. */
     public SecurityProperties {
-        if (publicEndpoints == null) {
-            publicEndpoints = List.of();
+        if (publicPaths == null) {
+            publicPaths = List.of();
         }
         if (cors == null) {
             cors = new Cors(true, List.of("*"), List.of(), List.of("*"), List.of(), false, 3600L);
@@ -104,7 +119,7 @@ public record SecurityProperties(
     /** Effective allow-list = service-provided paths ∪ platform defaults. */
     public List<String> resolvedPublicPaths() {
         return java.util.stream.Stream
-                .concat(PlatformDefaults.PUBLIC_PATHS.stream(), publicEndpoints.stream())
+                .concat(PlatformDefaults.PUBLIC_PATHS.stream(), publicPaths.stream().map(EndpointRule::path))
                 .distinct()
                 .toList();
     }
