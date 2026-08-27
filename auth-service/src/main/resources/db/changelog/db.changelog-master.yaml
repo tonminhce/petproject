@@ -1,5 +1,7 @@
 databaseChangeLog:
   - include:
       file: changeset/001-create-users-and-roles.yaml
+      relativeToChangelogFile: true
   - include:
       file: changeset/002-add-soft-delete.yaml
+      relativeToChangelogFile: true
