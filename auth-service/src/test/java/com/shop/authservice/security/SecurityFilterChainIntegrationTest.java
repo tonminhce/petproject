@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -73,11 +74,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
                 "shop.security.issuer-uri=http://localhost:9999/realms/test",
-                // ObjectStorageAutoConfiguration is on the test classpath
-                // (via the test-scope common-storage dep) and would otherwise
-                // try to connect to a real S3-compatible server (RustFS at
-                // http://localhost:9000). Disable it — the security filter
-                // chain is independent of object storage.
+                // ObjectStorageAutoConfiguration is on the classpath
+                // (transitively via common-spring -> common-storage) and would
+                // otherwise try to connect to a real S3-compatible server
+                // (RustFS at http://localhost:9000). Disable it — the security
+                // filter chain is independent of object storage.
                 "shop.storage.enabled=false",
                 // Strip JPA / datasource / liquibase autoconfigs so the
                 // test does not require a running PostgreSQL. The
@@ -93,6 +94,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "spring.config.import=classpath:security-filter-chain-fixture.yml")
 class SecurityFilterChainIntegrationTest {
 
     private static final String SIGN_UP_BODY = """

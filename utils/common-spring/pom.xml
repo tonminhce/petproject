@@ -36,6 +36,7 @@
         <dependency>
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-storage</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
