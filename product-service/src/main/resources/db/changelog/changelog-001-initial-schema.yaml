@@ -1,0 +1,225 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  categories — created FIRST so products can point a FK at it.
+  #  Self-referencing tree: parent_id NULL means "root".
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-categories
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: categories
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: title,      type: varchar(100), constraints: { nullable: false } }
+              - column: { name: slug,       type: varchar(100), constraints: { nullable: false } }
+              - column: { name: image_url,  type: varchar(500) }
+              - column: { name: parent_id,  type: bigint }
+              - column: { name: created_at, type: timestamp, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamp }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        - addForeignKeyConstraint:
+            baseTableName: categories
+            baseColumnNames: parent_id
+            constraintName: fk_categories_parent
+            referencedTableName: categories
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Partial unique index: a slug may be reused once the old row is soft-deleted.
+        # Liquibase's createIndex has no `where` attribute, so raw SQL it is.
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX idx_categories_slug_unique_active
+              ON categories (slug) WHERE deleted = false
+
+        - createIndex:
+            tableName: categories
+            indexName: idx_categories_parent_id
+            columns:
+              - column: { name: parent_id }
+
+  # ===========================================================================
+  #  brands — created before products (FK target).
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-brands
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: brands
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: name,        type: varchar(100), constraints: { nullable: false } }
+              - column: { name: slug,        type: varchar(100), constraints: { nullable: false } }
+              - column: { name: logo_url,    type: varchar(500) }
+              - column: { name: description, type: varchar(1000) }
+              - column: { name: created_at,  type: timestamp, constraints: { nullable: false } }
+              - column: { name: updated_at,  type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_by,  type: varchar(100) }
+              - column: { name: updated_by,  type: varchar(100) }
+              - column: { name: deleted,     type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,  type: timestamp }
+              - column: { name: deleted_by,  type: varchar(255) }
+
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX idx_brands_slug_unique_active
+              ON brands (slug) WHERE deleted = false
+
+  # ===========================================================================
+  #  products — after categories + brands so both FKs resolve.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-products
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: products
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: title,       type: varchar(200), constraints: { nullable: false } }
+              - column: { name: slug,        type: varchar(200), constraints: { nullable: false } }
+              - column: { name: description, type: varchar(2000) }
+              - column: { name: sku,         type: varchar(50), constraints: { nullable: false } }
+              - column: { name: price_unit,  type: "numeric(15,2)", constraints: { nullable: false } }
+              - column: { name: quantity,    type: integer, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: status,      type: varchar(20), constraints: { nullable: false } }
+              - column: { name: image_url,   type: varchar(500) }
+              - column: { name: weight,      type: "numeric(8,3)" }
+              - column: { name: dimensions,  type: varchar(50) }
+              - column: { name: category_id, type: bigint }
+              - column: { name: brand_id,    type: bigint }
+              - column: { name: created_at,  type: timestamp, constraints: { nullable: false } }
+              - column: { name: updated_at,  type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_by,  type: varchar(100) }
+              - column: { name: updated_by,  type: varchar(100) }
+              - column: { name: deleted,     type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,  type: timestamp }
+              - column: { name: deleted_by,  type: varchar(255) }
+
+        - addForeignKeyConstraint:
+            baseTableName: products
+            baseColumnNames: category_id
+            constraintName: fk_products_categories
+            referencedTableName: categories
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        - addForeignKeyConstraint:
+            baseTableName: products
+            baseColumnNames: brand_id
+            constraintName: fk_products_brands
+            referencedTableName: brands
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # slug + sku stay unique among live rows only — soft-deleted rows must not
+        # block a re-create with the same natural key.
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX idx_products_slug_unique_active
+              ON products (slug) WHERE deleted = false
+
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX idx_products_sku_unique_active
+              ON products (sku) WHERE deleted = false
+
+        - createIndex:
+            tableName: products
+            indexName: idx_products_category_id
+            columns:
+              - column: { name: category_id }
+
+        - createIndex:
+            tableName: products
+            indexName: idx_products_brand_id
+            columns:
+              - column: { name: brand_id }
+
+        - createIndex:
+            tableName: products
+            indexName: idx_products_status
+            columns:
+              - column: { name: status }
+
+        - createIndex:
+            tableName: products
+            indexName: idx_products_deleted
+            columns:
+              - column: { name: deleted }
+
+  # ===========================================================================
+  #  outbox_events — transactional outbox for product lifecycle events.
+  #  Carries the soft-delete columns because the entity extends
+  #  AbstractMappedEntity (which extends SoftDeletable); they stay false.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-outbox-events
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: event_id,       type: varchar(36), constraints: { nullable: false, unique: true } }
+              - column: { name: aggregate_type, type: varchar(50), constraints: { nullable: false } }
+              - column: { name: aggregate_id,   type: bigint, constraints: { nullable: false } }
+              - column: { name: event_type,     type: varchar(50), constraints: { nullable: false } }
+              - column: { name: topic,          type: varchar(100), constraints: { nullable: false } }
+              - column: { name: payload,        type: text, constraints: { nullable: false } }
+              - column: { name: status,         type: varchar(20), constraints: { nullable: false } }
+              - column: { name: retry_count,    type: integer, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: sent_at,        type: timestamp }
+              - column: { name: last_error,     type: varchar(1000) }
+              - column: { name: created_at,     type: timestamp, constraints: { nullable: false } }
+              - column: { name: updated_at,     type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_by,     type: varchar(100) }
+              - column: { name: updated_by,     type: varchar(100) }
+              - column: { name: deleted,        type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,     type: timestamp }
+              - column: { name: deleted_by,     type: varchar(255) }
+
+        # Poller query: WHERE status = 'PENDING' ORDER BY id.
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_status
+            columns:
+              - column: { name: status }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_aggregate_id
+            columns:
+              - column: { name: aggregate_id }
