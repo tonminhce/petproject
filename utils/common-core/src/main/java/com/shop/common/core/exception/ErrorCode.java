@@ -44,6 +44,11 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND("PRD-2001", "product.not.found", HttpStatus.NOT_FOUND),
     PRODUCT_NAME_EXISTS("PRD-2002", "product.name.exists", HttpStatus.CONFLICT),
     CATEGORY_NOT_FOUND("PRD-2003", "category.not.found", HttpStatus.NOT_FOUND),
+    PRODUCT_SLUG_EXISTS("PRD-2004", "product.slug.exists", HttpStatus.CONFLICT),
+    PRODUCT_SKU_EXISTS("PRD-2005", "product.sku.exists", HttpStatus.CONFLICT),
+    BRAND_NOT_FOUND("PRD-2006", "brand.not.found", HttpStatus.NOT_FOUND),
+    BRAND_SLUG_EXISTS("PRD-2007", "brand.slug.exists", HttpStatus.CONFLICT),
+    CATEGORY_SLUG_EXISTS("PRD-2008", "category.slug.exists", HttpStatus.CONFLICT),
 
     // ---- Inventory domain ----
     WAREHOUSE_NOT_FOUND("INV-3001", "warehouse.not.found", HttpStatus.NOT_FOUND),
