@@ -1,6 +1,7 @@
 package com.shop.productservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
+import com.shop.productservice.dto.request.CategoryUpdateRequest;
 import com.shop.productservice.dto.response.CategoryTreeResponse;
 import com.shop.productservice.entity.Category;
 import com.shop.productservice.mapper.CategoryMapper;
@@ -49,6 +50,18 @@ class CategoryServiceImplTest {
         assertThat(rootResp.children()).hasSize(2);
         assertThat(rootResp.children().stream().filter(c -> c.title().equals("Phones")).findFirst().orElseThrow().children())
             .extracting(CategoryTreeResponse::title).containsExactly("iPhone");
+    }
+
+    @Test
+    void update_throwsConflictOnDuplicateSlug() {
+        Category existing = Category.builder().id(1L).title("Electronics").slug("electronics").build();
+        CategoryUpdateRequest req = new CategoryUpdateRequest(null, "taken", null, null);
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(repo.existsBySlugAndIdNot("taken", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.update(1L, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2008"));
     }
 
     @Test

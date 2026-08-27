@@ -71,7 +71,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse create(CategoryCreateRequest request) {
         if (repo.existsBySlug(request.slug())) {
-            throw BusinessException.conflict("category.slug.exists");
+            throw BusinessException.of(ErrorCode.CATEGORY_SLUG_EXISTS);
         }
         Category category = mapper.toEntity(request);
         if (request.parentId() != null) {
@@ -87,6 +87,9 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse update(Long id, CategoryUpdateRequest request) {
         Category existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
+        if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
+            throw BusinessException.of(ErrorCode.CATEGORY_SLUG_EXISTS);
+        }
         mapper.partialUpdate(existing, request);
         if (request.parentId() != null) {
             Category parent = repo.findById(request.parentId())

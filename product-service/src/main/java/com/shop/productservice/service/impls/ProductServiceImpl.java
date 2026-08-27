@@ -91,10 +91,10 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public ProductDetailResponse create(ProductCreateRequest request) {
         if (repo.existsBySlug(request.slug())) {
-            throw BusinessException.conflict("product.slug.exists");
+            throw BusinessException.of(ErrorCode.PRODUCT_SLUG_EXISTS);
         }
         if (repo.existsBySku(request.sku())) {
-            throw BusinessException.conflict("product.sku.exists");
+            throw BusinessException.of(ErrorCode.PRODUCT_SKU_EXISTS);
         }
         Product product = mapper.toEntity(request);
         if (request.categoryId() != null) {
@@ -119,13 +119,11 @@ public class ProductServiceImpl implements ProductService {
     public ProductDetailResponse update(Long id, ProductUpdateRequest request) {
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
-        if (request.slug() != null && !request.slug().equals(existing.getSlug())
-            && repo.existsBySlug(request.slug())) {
-            throw BusinessException.conflict("product.slug.exists");
+        if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
+            throw BusinessException.of(ErrorCode.PRODUCT_SLUG_EXISTS);
         }
-        if (request.sku() != null && !request.sku().equals(existing.getSku())
-            && repo.existsBySku(request.sku())) {
-            throw BusinessException.conflict("product.sku.exists");
+        if (request.sku() != null && repo.existsBySkuAndIdNot(request.sku(), id)) {
+            throw BusinessException.of(ErrorCode.PRODUCT_SKU_EXISTS);
         }
         mapper.partialUpdate(existing, request);
         if (request.categoryId() != null) {

@@ -104,6 +104,32 @@ class ProductServiceImplTest {
     }
 
     @Test
+    void update_throwsConflictOnDuplicateSlug() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, "taken", null, null,
+            null, null, null, null, null, null, null, null);
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(repo.existsBySlugAndIdNot("taken", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.update(1L, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2004"));
+    }
+
+    @Test
+    void update_throwsConflictOnDuplicateSku() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, "taken-sku",
+            null, null, null, null, null, null, null, null);
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(repo.existsBySkuAndIdNot("taken-sku", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.update(1L, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2005"));
+    }
+
+    @Test
     void update_appliesPartialUpdateAndPublishes() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, "new desc", null,

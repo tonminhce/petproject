@@ -48,7 +48,7 @@ public class BrandServiceImpl implements BrandService {
     @Transactional
     public BrandResponse create(BrandCreateRequest request) {
         if (repo.existsBySlug(request.slug())) {
-            throw BusinessException.conflict("brand.slug.exists");
+            throw BusinessException.of(ErrorCode.BRAND_SLUG_EXISTS);
         }
         Brand brand = mapper.toEntity(request);
         return mapper.toResponse(repo.save(brand));
@@ -59,6 +59,9 @@ public class BrandServiceImpl implements BrandService {
     public BrandResponse update(Long id, BrandUpdateRequest request) {
         Brand existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
+        if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
+            throw BusinessException.of(ErrorCode.BRAND_SLUG_EXISTS);
+        }
         mapper.partialUpdate(existing, request);
         return mapper.toResponse(repo.save(existing));
     }

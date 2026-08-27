@@ -75,6 +75,18 @@ class BrandServiceImplTest {
     }
 
     @Test
+    void update_throwsConflictOnDuplicateSlug() {
+        Brand existing = Brand.builder().id(1L).name("Acme").slug("acme").build();
+        BrandUpdateRequest req = new BrandUpdateRequest(null, "taken", null, null);
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(repo.existsBySlugAndIdNot("taken", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.update(1L, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2007"));
+    }
+
+    @Test
     void update_appliesPartialUpdate() {
         Brand existing = Brand.builder().id(1L).name("Acme").slug("acme").description("old").build();
         BrandUpdateRequest req = new BrandUpdateRequest(null, null, null, "new");
