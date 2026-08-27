@@ -8,6 +8,8 @@ import com.shop.productservice.entity.Product;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
 public class ProductMapper {
 
@@ -31,9 +33,9 @@ public class ProductMapper {
     }
 
     public ProductDetailResponse toDetailResponse(Product product) {
-        Long categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
+        UUID categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
         String categoryTitle = product.getCategory() != null ? product.getCategory().getTitle() : null;
-        Long brandId = product.getBrand() != null ? product.getBrand().getId() : null;
+        UUID brandId = product.getBrand() != null ? product.getBrand().getId() : null;
         String brandName = product.getBrand() != null ? product.getBrand().getName() : null;
         return new ProductDetailResponse(
             product.getId(),

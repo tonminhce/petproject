@@ -24,6 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -129,7 +130,7 @@ class ProductRepositoryTest {
         Product p = Product.builder().title("T").slug("t").sku("T").priceUnit(BigDecimal.ONE).quantity(1).status(ProductStatus.ACTIVE).build();
         em.persistAndFlush(p);
 
-        assertThat(productRepository.existsBySlugAndIdNot("t", 999L)).isTrue();
+        assertThat(productRepository.existsBySlugAndIdNot("t", UUID.randomUUID())).isTrue();
         assertThat(productRepository.existsBySlugAndIdNot("t", p.getId())).isFalse();
         assertThat(productRepository.existsBySlugAndIdNot("other", p.getId())).isFalse();
     }

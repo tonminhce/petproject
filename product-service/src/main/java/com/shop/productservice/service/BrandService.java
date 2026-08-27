@@ -6,15 +6,17 @@ import com.shop.productservice.dto.request.BrandUpdateRequest;
 import com.shop.productservice.dto.response.BrandResponse;
 import org.springframework.data.domain.Pageable;
 
+import java.util.UUID;
+
 public interface BrandService {
 
     PageResponse<BrandResponse> findAll(Pageable pageable);
 
-    BrandResponse findById(Long id);
+    BrandResponse findById(UUID id);
 
     BrandResponse create(BrandCreateRequest request);
 
-    BrandResponse update(Long id, BrandUpdateRequest request);
+    BrandResponse update(UUID id, BrandUpdateRequest request);
 
-    void delete(Long id);
+    void delete(UUID id);
 }

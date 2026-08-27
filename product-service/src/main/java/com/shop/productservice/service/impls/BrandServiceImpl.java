@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class BrandServiceImpl implements BrandService {
@@ -38,7 +40,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
-    public BrandResponse findById(Long id) {
+    public BrandResponse findById(UUID id) {
         return repo.findById(id)
             .map(mapper::toResponse)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
@@ -56,7 +58,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional
-    public BrandResponse update(Long id, BrandUpdateRequest request) {
+    public BrandResponse update(UUID id, BrandUpdateRequest request) {
         Brand existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
         if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
@@ -68,7 +70,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional
-    public void delete(Long id) {
+    public void delete(UUID id) {
         Brand existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
         existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));

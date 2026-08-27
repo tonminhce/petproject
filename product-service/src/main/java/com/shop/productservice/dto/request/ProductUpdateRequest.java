@@ -3,6 +3,7 @@ package com.shop.productservice.dto.request;
 import com.shop.productservice.entity.ProductStatus;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record ProductUpdateRequest(
     String title,
@@ -15,6 +16,6 @@ public record ProductUpdateRequest(
     String imageUrl,
     BigDecimal weight,
     String dimensions,
-    Long categoryId,
-    Long brandId
+    UUID categoryId,
+    UUID brandId
 ) {}

@@ -9,12 +9,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public interface ProductRepository
-        extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+        extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
 
     @EntityGraph(attributePaths = {"category", "brand"})
-    Optional<Product> findWithRelationsById(Long id);
+    Optional<Product> findWithRelationsById(UUID id);
 
     @EntityGraph(attributePaths = {"category", "brand"})
     Optional<Product> findWithRelationsBySlug(String slug);
@@ -23,7 +24,7 @@ public interface ProductRepository
 
     boolean existsBySku(String sku);
 
-    boolean existsBySlugAndIdNot(String slug, Long id);
+    boolean existsBySlugAndIdNot(String slug, UUID id);
 
-    boolean existsBySkuAndIdNot(String sku, Long id);
+    boolean existsBySkuAndIdNot(String sku, UUID id);
 }

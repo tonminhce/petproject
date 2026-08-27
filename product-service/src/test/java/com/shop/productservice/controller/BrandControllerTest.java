@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,22 +28,24 @@ class BrandControllerTest {
     @Autowired MockMvc mockMvc;
     @MockitoBean BrandService brandService;
 
+    private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Test
     void findById_returns200WithApiResponse() throws Exception {
-        BrandResponse resp = new BrandResponse(1L, "Acme", "acme", null, null);
-        when(brandService.findById(1L)).thenReturn(resp);
+        BrandResponse resp = new BrandResponse(ID, "Acme", "acme", null, null);
+        when(brandService.findById(ID)).thenReturn(resp);
 
-        mockMvc.perform(get("/api/v1/brands/{id}", 1L))
+        mockMvc.perform(get("/api/v1/brands/{id}", ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.id").value(1))
+            .andExpect(jsonPath("$.data.id").value("00000000-0000-0000-0000-000000000001"))
             .andExpect(jsonPath("$.data.name").value("Acme"));
     }
 
     @Test
     void create_returns200() throws Exception {
         BrandCreateRequest req = new BrandCreateRequest("Acme", "acme", null, null);
-        BrandResponse resp = new BrandResponse(1L, "Acme", "acme", null, null);
+        BrandResponse resp = new BrandResponse(ID, "Acme", "acme", null, null);
         when(brandService.create(any())).thenReturn(resp);
 
         mockMvc.perform(post("/api/v1/brands")

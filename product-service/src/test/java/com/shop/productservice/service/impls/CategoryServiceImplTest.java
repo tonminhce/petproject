@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,18 +30,23 @@ class CategoryServiceImplTest {
     @Mock CategoryMapper mapper;
     @InjectMocks CategoryServiceImpl service;
 
+    private static final UUID ROOT = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID CHILD1 = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    private static final UUID CHILD2 = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    private static final UUID GRANDCHILD = UUID.fromString("00000000-0000-0000-0000-000000000004");
+
     @Test
     void findTree_buildsNestedStructure() {
-        Category root = Category.builder().id(1L).title("Electronics").slug("electronics").build();
-        Category child1 = Category.builder().id(2L).title("Phones").slug("phones").parent(root).build();
-        Category child2 = Category.builder().id(3L).title("Laptops").slug("laptops").parent(root).build();
-        Category grandchild = Category.builder().id(4L).title("iPhone").slug("iphone").parent(child1).build();
+        Category root = Category.builder().id(ROOT).title("Electronics").slug("electronics").build();
+        Category child1 = Category.builder().id(CHILD1).title("Phones").slug("phones").parent(root).build();
+        Category child2 = Category.builder().id(CHILD2).title("Laptops").slug("laptops").parent(root).build();
+        Category grandchild = Category.builder().id(GRANDCHILD).title("iPhone").slug("iphone").parent(child1).build();
         when(repo.findAllByOrderByTitleAsc())
             .thenReturn(List.of(root, child1, child2, grandchild));
-        when(mapper.toTreeResponse(eq(root),     any())).thenAnswer(inv -> new CategoryTreeResponse(1L, "Electronics", "electronics", null, null, inv.getArgument(1)));
-        when(mapper.toTreeResponse(eq(child1),   any())).thenAnswer(inv -> new CategoryTreeResponse(2L, "Phones", "phones", null, 1L, inv.getArgument(1)));
-        when(mapper.toTreeResponse(eq(child2),   any())).thenAnswer(inv -> new CategoryTreeResponse(3L, "Laptops", "laptops", null, 1L, inv.getArgument(1)));
-        when(mapper.toTreeResponse(eq(grandchild), any())).thenAnswer(inv -> new CategoryTreeResponse(4L, "iPhone", "iphone", null, 2L, inv.getArgument(1)));
+        when(mapper.toTreeResponse(eq(root),     any())).thenAnswer(inv -> new CategoryTreeResponse(ROOT, "Electronics", "electronics", null, null, inv.getArgument(1)));
+        when(mapper.toTreeResponse(eq(child1),   any())).thenAnswer(inv -> new CategoryTreeResponse(CHILD1, "Phones", "phones", null, ROOT, inv.getArgument(1)));
+        when(mapper.toTreeResponse(eq(child2),   any())).thenAnswer(inv -> new CategoryTreeResponse(CHILD2, "Laptops", "laptops", null, ROOT, inv.getArgument(1)));
+        when(mapper.toTreeResponse(eq(grandchild), any())).thenAnswer(inv -> new CategoryTreeResponse(GRANDCHILD, "iPhone", "iphone", null, CHILD1, inv.getArgument(1)));
 
         List<CategoryTreeResponse> tree = service.findTree();
 
@@ -54,20 +60,20 @@ class CategoryServiceImplTest {
 
     @Test
     void update_throwsConflictOnDuplicateSlug() {
-        Category existing = Category.builder().id(1L).title("Electronics").slug("electronics").build();
+        Category existing = Category.builder().id(ROOT).title("Electronics").slug("electronics").build();
         CategoryUpdateRequest req = new CategoryUpdateRequest(null, "taken", null, null);
-        when(repo.findById(1L)).thenReturn(Optional.of(existing));
-        when(repo.existsBySlugAndIdNot("taken", 1L)).thenReturn(true);
+        when(repo.findById(ROOT)).thenReturn(Optional.of(existing));
+        when(repo.existsBySlugAndIdNot("taken", ROOT)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.update(1L, req))
+        assertThatThrownBy(() -> service.update(ROOT, req))
             .isInstanceOfSatisfying(BusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2008"));
     }
 
     @Test
     void findById_throwsWhenNotFound() {
-        when(repo.findById(1L)).thenReturn(Optional.empty());
+        when(repo.findById(ROOT)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.findById(1L)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.findById(ROOT)).isInstanceOf(BusinessException.class);
     }
 }

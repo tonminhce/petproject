@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -72,7 +73,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "product", key = "#id")
-    public ProductDetailResponse findById(Long id) {
+    public ProductDetailResponse findById(UUID id) {
         return repo.findWithRelationsById(id)
             .map(mapper::toDetailResponse)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
@@ -116,7 +117,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @Caching(put = @CachePut(value = "product", key = "#id"),
              evict = @CacheEvict(value = "productBySlug", allEntries = true))
-    public ProductDetailResponse update(Long id, ProductUpdateRequest request) {
+    public ProductDetailResponse update(UUID id, ProductUpdateRequest request) {
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
@@ -144,7 +145,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     @CacheEvict(value = {"product", "productBySlug"}, allEntries = true)
-    public void delete(Long id) {
+    public void delete(UUID id) {
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));

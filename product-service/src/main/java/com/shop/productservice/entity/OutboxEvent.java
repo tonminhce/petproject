@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_events")
@@ -26,7 +27,7 @@ public class OutboxEvent extends AbstractMappedEntity {
     private String aggregateType;
 
     @Column(name = "aggregate_id", nullable = false)
-    private Long aggregateId;
+    private UUID aggregateId;
 
     @Column(name = "event_type", nullable = false, length = 50)
     private String eventType;

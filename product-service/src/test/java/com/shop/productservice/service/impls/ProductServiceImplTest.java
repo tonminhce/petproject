@@ -27,6 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,40 +47,42 @@ class ProductServiceImplTest {
     @Mock AuditorAware<String> auditorAware;
     @InjectMocks ProductServiceImpl service;
 
+    private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     private ProductCreateRequest sampleCreate() {
         return new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
             new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null);
     }
 
     private Product sampleProduct() {
-        return Product.builder().id(1L).title("iPhone 15").slug("iphone-15").sku("IP15-001")
+        return Product.builder().id(ID).title("iPhone 15").slug("iphone-15").sku("IP15-001")
             .priceUnit(new BigDecimal("999.00")).quantity(10).status(ProductStatus.ACTIVE).build();
     }
 
     @Test
     void findById_returnsProduct() {
         Product p = sampleProduct();
-        ProductDetailResponse resp = new ProductDetailResponse(1L, "iPhone 15", "iphone-15",
+        ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
             null, null, null, null, null, null);
-        when(repo.findWithRelationsById(1L)).thenReturn(Optional.of(p));
+        when(repo.findWithRelationsById(ID)).thenReturn(Optional.of(p));
         when(mapper.toDetailResponse(p)).thenReturn(resp);
 
-        assertThat(service.findById(1L)).isEqualTo(resp);
+        assertThat(service.findById(ID)).isEqualTo(resp);
     }
 
     @Test
     void findById_throwsNotFoundWhenMissing() {
-        when(repo.findWithRelationsById(1L)).thenReturn(Optional.empty());
+        when(repo.findWithRelationsById(ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.findById(1L)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.findById(ID)).isInstanceOf(BusinessException.class);
     }
 
     @Test
     void create_persistsAndPublishesEvent() {
         ProductCreateRequest req = sampleCreate();
         Product product = sampleProduct();
-        ProductDetailResponse resp = new ProductDetailResponse(1L, "iPhone 15", "iphone-15",
+        ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
             null, null, null, null, null, null);
         when(repo.existsBySlug("iphone-15")).thenReturn(false);
@@ -108,10 +111,10 @@ class ProductServiceImplTest {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, "taken", null, null,
             null, null, null, null, null, null, null, null);
-        when(repo.findById(1L)).thenReturn(Optional.of(existing));
-        when(repo.existsBySlugAndIdNot("taken", 1L)).thenReturn(true);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(repo.existsBySlugAndIdNot("taken", ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.update(1L, req))
+        assertThatThrownBy(() -> service.update(ID, req))
             .isInstanceOfSatisfying(BusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2004"));
     }
@@ -121,10 +124,10 @@ class ProductServiceImplTest {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, "taken-sku",
             null, null, null, null, null, null, null, null);
-        when(repo.findById(1L)).thenReturn(Optional.of(existing));
-        when(repo.existsBySkuAndIdNot("taken-sku", 1L)).thenReturn(true);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(repo.existsBySkuAndIdNot("taken-sku", ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.update(1L, req))
+        assertThatThrownBy(() -> service.update(ID, req))
             .isInstanceOfSatisfying(BusinessException.class,
                 e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2005"));
     }
@@ -134,14 +137,14 @@ class ProductServiceImplTest {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, "new desc", null,
             new BigDecimal("1099.00"), null, null, null, null, null, null, null);
-        ProductDetailResponse resp = new ProductDetailResponse(1L, "iPhone 15", "iphone-15",
+        ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
             null, null, null, null, null, null, null, null, null);
-        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.save(existing)).thenReturn(existing);
         when(mapper.toDetailResponse(existing)).thenReturn(resp);
 
-        ProductDetailResponse result = service.update(1L, req);
+        ProductDetailResponse result = service.update(ID, req);
 
         assertThat(result.priceUnit()).isEqualByComparingTo("1099.00");
         verify(publisher).publishUpdated(existing);
@@ -150,10 +153,10 @@ class ProductServiceImplTest {
     @Test
     void delete_softDeletesWithActorAndPublishes() {
         Product existing = sampleProduct();
-        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
 
-        service.delete(1L);
+        service.delete(ID);
 
         assertThat(existing.isDeleted()).isTrue();
         assertThat(existing.getDeletedBy()).isEqualTo("alice");
@@ -168,7 +171,7 @@ class ProductServiceImplTest {
             .thenReturn(new PageImpl<>(List.of(p)));
         when(mapper.toSummaryResponse(p)).thenReturn(
             new ProductSummaryResponse(
-                1L, "iPhone 15", "iphone-15", "IP15-001",
+                ID, "iPhone 15", "iphone-15", "IP15-001",
                 new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null));
 
         var result = service.findAll(new ProductFilter(null, null, null), PageRequest.of(0, 10));

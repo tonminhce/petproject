@@ -13,15 +13,14 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: bigint
-                  autoIncrement: true
+                  type: uuid
                   constraints:
                     primaryKey: true
                     nullable: false
               - column: { name: title,      type: varchar(100), constraints: { nullable: false } }
               - column: { name: slug,       type: varchar(100), constraints: { nullable: false } }
               - column: { name: image_url,  type: varchar(500) }
-              - column: { name: parent_id,  type: bigint }
+              - column: { name: parent_id,  type: uuid }
               - column: { name: created_at, type: timestamp, constraints: { nullable: false } }
               - column: { name: updated_at, type: timestamp, constraints: { nullable: false } }
               - column: { name: created_by, type: varchar(100) }
@@ -63,8 +62,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: bigint
-                  autoIncrement: true
+                  type: uuid
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -97,8 +95,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: bigint
-                  autoIncrement: true
+                  type: uuid
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -112,8 +109,8 @@ databaseChangeLog:
               - column: { name: image_url,   type: varchar(500) }
               - column: { name: weight,      type: "numeric(8,3)" }
               - column: { name: dimensions,  type: varchar(50) }
-              - column: { name: category_id, type: bigint }
-              - column: { name: brand_id,    type: bigint }
+              - column: { name: category_id, type: uuid }
+              - column: { name: brand_id,    type: uuid }
               - column: { name: created_at,  type: timestamp, constraints: { nullable: false } }
               - column: { name: updated_at,  type: timestamp, constraints: { nullable: false } }
               - column: { name: created_by,  type: varchar(100) }
@@ -195,7 +192,7 @@ databaseChangeLog:
                     nullable: false
               - column: { name: event_id,       type: varchar(36), constraints: { nullable: false, unique: true } }
               - column: { name: aggregate_type, type: varchar(50), constraints: { nullable: false } }
-              - column: { name: aggregate_id,   type: bigint, constraints: { nullable: false } }
+              - column: { name: aggregate_id,   type: uuid, constraints: { nullable: false } }
               - column: { name: event_type,     type: varchar(50), constraints: { nullable: false } }
               - column: { name: topic,          type: varchar(100), constraints: { nullable: false } }
               - column: { name: payload,        type: text, constraints: { nullable: false } }

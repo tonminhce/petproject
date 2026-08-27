@@ -1,12 +1,13 @@
 package com.shop.productservice.dto.response;
 
 import java.util.List;
+import java.util.UUID;
 
 public record CategoryTreeResponse(
-    Long id,
+    UUID id,
     String title,
     String slug,
     String imageUrl,
-    Long parentId,
+    UUID parentId,
     List<CategoryTreeResponse> children
 ) {}

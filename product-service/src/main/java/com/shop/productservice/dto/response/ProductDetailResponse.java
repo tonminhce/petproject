@@ -4,9 +4,10 @@ import com.shop.productservice.entity.ProductStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 public record ProductDetailResponse(
-    Long id,
+    UUID id,
     String title,
     String slug,
     String description,
@@ -17,9 +18,9 @@ public record ProductDetailResponse(
     String imageUrl,
     BigDecimal weight,
     String dimensions,
-    Long categoryId,
+    UUID categoryId,
     String categoryTitle,
-    Long brandId,
+    UUID brandId,
     String brandName,
     Instant createdAt,
     Instant updatedAt

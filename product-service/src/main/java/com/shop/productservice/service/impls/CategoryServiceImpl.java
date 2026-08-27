@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryTreeResponse> findTree() {
         List<Category> all = repo.findAllByOrderByTitleAsc();
-        Map<Long, CategoryTreeResponse> nodeMap = new LinkedHashMap<>();
+        Map<UUID, CategoryTreeResponse> nodeMap = new LinkedHashMap<>();
         List<CategoryTreeResponse> roots = new ArrayList<>();
         for (Category c : all) {
             nodeMap.put(c.getId(), mapper.toTreeResponse(c, new ArrayList<>()));
@@ -61,7 +62,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public CategoryResponse findById(Long id) {
+    public CategoryResponse findById(UUID id) {
         return repo.findById(id)
             .map(mapper::toResponse)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
@@ -84,7 +85,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public CategoryResponse update(Long id, CategoryUpdateRequest request) {
+    public CategoryResponse update(UUID id, CategoryUpdateRequest request) {
         Category existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
         if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
@@ -101,7 +102,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public void delete(Long id) {
+    public void delete(UUID id) {
         Category existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
         existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));

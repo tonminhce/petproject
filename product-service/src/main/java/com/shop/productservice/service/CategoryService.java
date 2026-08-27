@@ -6,6 +6,7 @@ import com.shop.productservice.dto.response.CategoryResponse;
 import com.shop.productservice.dto.response.CategoryTreeResponse;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface CategoryService {
 
@@ -13,11 +14,11 @@ public interface CategoryService {
 
     List<CategoryTreeResponse> findTree();
 
-    CategoryResponse findById(Long id);
+    CategoryResponse findById(UUID id);
 
     CategoryResponse create(CategoryCreateRequest request);
 
-    CategoryResponse update(Long id, CategoryUpdateRequest request);
+    CategoryResponse update(UUID id, CategoryUpdateRequest request);
 
-    void delete(Long id);
+    void delete(UUID id);
 }

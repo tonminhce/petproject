@@ -3,9 +3,11 @@ package com.shop.productservice.repository;
 import com.shop.productservice.entity.Brand;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface BrandRepository extends JpaRepository<Brand, Long> {
+import java.util.UUID;
+
+public interface BrandRepository extends JpaRepository<Brand, UUID> {
 
     boolean existsBySlug(String slug);
 
-    boolean existsBySlugAndIdNot(String slug, Long id);
+    boolean existsBySlugAndIdNot(String slug, UUID id);
 }

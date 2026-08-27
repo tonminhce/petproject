@@ -4,6 +4,7 @@ import com.shop.productservice.entity.ProductStatus;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record ProductCreateRequest(
     @NotBlank @Size(max = 200) String title,
@@ -16,6 +17,6 @@ public record ProductCreateRequest(
     @Size(max = 500)             String imageUrl,
     @DecimalMin("0.0")           BigDecimal weight,
     @Size(max = 50)              String dimensions,
-    Long categoryId,
-    Long brandId
+    UUID categoryId,
+    UUID brandId
 ) {}

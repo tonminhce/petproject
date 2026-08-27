@@ -3,9 +3,10 @@ package com.shop.productservice.dto.response;
 import com.shop.productservice.entity.ProductStatus;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record ProductSummaryResponse(
-    Long id,
+    UUID id,
     String title,
     String slug,
     String sku,

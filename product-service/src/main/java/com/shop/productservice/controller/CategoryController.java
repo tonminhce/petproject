@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping(ApiPaths.CATEGORIES)
@@ -39,7 +40,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<CategoryResponse> findById(@PathVariable Long id) {
+    public ApiResponse<CategoryResponse> findById(@PathVariable UUID id) {
         return ApiResponse.ok(categoryService.findById(id));
     }
 
@@ -51,14 +52,14 @@ public class CategoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<CategoryResponse> update(@PathVariable Long id,
+    public ApiResponse<CategoryResponse> update(@PathVariable UUID id,
                                                  @Valid @RequestBody CategoryUpdateRequest request) {
         return ApiResponse.ok(categoryService.update(id, request), "Category updated successfully");
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable UUID id) {
         categoryService.delete(id);
         return ApiResponse.message("Category deleted successfully");
     }

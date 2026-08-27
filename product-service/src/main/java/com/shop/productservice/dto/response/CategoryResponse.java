@@ -1,9 +1,11 @@
 package com.shop.productservice.dto.response;
 
+import java.util.UUID;
+
 public record CategoryResponse(
-    Long id,
+    UUID id,
     String title,
     String slug,
     String imageUrl,
-    Long parentId
+    UUID parentId
 ) {}

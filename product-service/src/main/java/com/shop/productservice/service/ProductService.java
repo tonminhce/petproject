@@ -8,17 +8,19 @@ import com.shop.productservice.dto.response.ProductDetailResponse;
 import com.shop.productservice.dto.response.ProductSummaryResponse;
 import org.springframework.data.domain.Pageable;
 
+import java.util.UUID;
+
 public interface ProductService {
 
     PageResponse<ProductSummaryResponse> findAll(ProductFilter filter, Pageable pageable);
 
-    ProductDetailResponse findById(Long id);
+    ProductDetailResponse findById(UUID id);
 
     ProductDetailResponse findBySlug(String slug);
 
     ProductDetailResponse create(ProductCreateRequest request);
 
-    ProductDetailResponse update(Long id, ProductUpdateRequest request);
+    ProductDetailResponse update(UUID id, ProductUpdateRequest request);
 
-    void delete(Long id);
+    void delete(UUID id);
 }

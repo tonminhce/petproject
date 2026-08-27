@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -31,20 +32,22 @@ class ProductControllerTest {
     @Autowired MockMvc mockMvc;
     @MockitoBean ProductService productService;
 
+    private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     private ProductDetailResponse sample() {
-        return new ProductDetailResponse(1L, "iPhone 15", "iphone-15", null, "IP15-001",
+        return new ProductDetailResponse(ID, "iPhone 15", "iphone-15", null, "IP15-001",
             new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null, null, null,
             null, null);
     }
 
     @Test
     void findById_returns200WithApiResponse() throws Exception {
-        when(productService.findById(1L)).thenReturn(sample());
+        when(productService.findById(ID)).thenReturn(sample());
 
-        mockMvc.perform(get("/api/v1/products/{id}", 1L))
+        mockMvc.perform(get("/api/v1/products/{id}", ID))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.id").value(1));
+            .andExpect(jsonPath("$.data.id").value("00000000-0000-0000-0000-000000000001"));
     }
 
     @Test

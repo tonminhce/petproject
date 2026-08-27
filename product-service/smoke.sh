@@ -21,17 +21,6 @@ SVC_URL="http://localhost:8086"          # product-service direct
 GATEWAY_TOKEN_ENDPOINT="$BASE_URL/api/v1/auth/login"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASS="${ADMIN_PASS:-admin}"
-PRODUCT_BODY='{
-  "title":"iPhone 15",
-  "slug":"iphone-15",
-  "description":"Latest iPhone",
-  "sku":"IP15-001",
-  "priceUnit":999.00,
-  "quantity":10,
-  "status":"ACTIVE",
-  "categoryId":1,
-  "brandId":1
-}'
 
 step() { echo; echo "==> $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -97,6 +86,8 @@ CATEGORY_RES=$(curl -fsS -X POST "$BASE_URL/api/v1/categories" \
 echo "$CATEGORY_RES" | jq . 2>/dev/null || echo "$CATEGORY_RES"
 echo "$CATEGORY_RES" | jq -e '.success == true' >/dev/null \
   || fail "category create failed"
+CATEGORY_ID=$(echo "$CATEGORY_RES" | jq -r '.data.id')
+[ -n "$CATEGORY_ID" ] || fail "could not extract category id"
 
 # ---------------------------------------------------------------------------
 step "Step 8 — Create brand"
@@ -107,9 +98,15 @@ BRAND_RES=$(curl -fsS -X POST "$BASE_URL/api/v1/brands" \
 echo "$BRAND_RES" | jq . 2>/dev/null || echo "$BRAND_RES"
 echo "$BRAND_RES" | jq -e '.success == true' >/dev/null \
   || fail "brand create failed"
+BRAND_ID=$(echo "$BRAND_RES" | jq -r '.data.id')
+[ -n "$BRAND_ID" ] || fail "could not extract brand id"
 
 # ---------------------------------------------------------------------------
 step "Step 9 — Create product"
+PRODUCT_BODY=$(jq -n \
+  --arg categoryId "$CATEGORY_ID" \
+  --arg brandId "$BRAND_ID" \
+  '{title:"iPhone 15",slug:"iphone-15",description:"Latest iPhone",sku:"IP15-001",priceUnit:999.00,quantity:10,status:"ACTIVE",categoryId:$categoryId,brandId:$brandId}')
 PROD_RES=$(curl -fsS -X POST "$BASE_URL/api/v1/products" \
   -H "$AUTH" -H "$JSON" \
   -d "$PRODUCT_BODY" \
@@ -120,7 +117,9 @@ echo "$PROD_RES" | jq -e '.success == true' >/dev/null \
 
 # ---------------------------------------------------------------------------
 step "Step 10 — Read product back (anonymous, via gateway)"
-GET_RES=$(curl -fsS "$BASE_URL/api/v1/products/1" || true)
+PRODUCT_ID=$(echo "$PROD_RES" | jq -r '.data.id')
+[ -n "$PRODUCT_ID" ] || fail "could not extract product id"
+GET_RES=$(curl -fsS "$BASE_URL/api/v1/products/$PRODUCT_ID" || true)
 echo "$GET_RES" | jq . 2>/dev/null || echo "$GET_RES"
 echo "$GET_RES" | jq -e '.data.title == "iPhone 15"' >/dev/null \
   || fail "anonymous GET did not return expected product"

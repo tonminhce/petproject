@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping(ApiPaths.PRODUCTS)
 @RequiredArgsConstructor
@@ -34,8 +36,8 @@ public class ProductController {
 
     @GetMapping
     public ApiResponse<PageResponse<ProductSummaryResponse>> findAll(
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID brandId,
             @RequestParam(required = false) ProductStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -45,7 +47,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<ProductDetailResponse> findById(@PathVariable Long id) {
+    public ApiResponse<ProductDetailResponse> findById(@PathVariable UUID id) {
         return ApiResponse.ok(productService.findById(id));
     }
 
@@ -62,14 +64,14 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<ProductDetailResponse> update(@PathVariable Long id,
+    public ApiResponse<ProductDetailResponse> update(@PathVariable UUID id,
                                                      @Valid @RequestBody ProductUpdateRequest request) {
         return ApiResponse.ok(productService.update(id, request), "Product updated successfully");
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable UUID id) {
         productService.delete(id);
         return ApiResponse.message("Product deleted successfully");
     }
