@@ -61,11 +61,19 @@ public class BaseSecurityConfig {
             http.cors(AbstractHttpConfigurer::disable);
         }
 
-        String[] publicPaths = properties.resolvedPublicPaths().toArray(new String[0]);
-
-        http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers(publicPaths).permitAll()
-                        .anyRequest().authenticated())
+        http.authorizeHttpRequests(auth -> {
+                    for (SecurityProperties.EndpointRule rule : properties.publicPaths()) {
+                        if (rule.method() != null) {
+                            auth.requestMatchers(rule.method(), rule.path()).permitAll();
+                        } else {
+                            auth.requestMatchers(rule.path()).permitAll();
+                        }
+                    }
+                    // Platform defaults (actuator, swagger, api-docs) luôn public — KHÔNG được bỏ
+                    auth.requestMatchers(SecurityProperties.PlatformDefaults.PUBLIC_PATHS.toArray(new String[0]))
+                            .permitAll();
+                    auth.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults()));
 
