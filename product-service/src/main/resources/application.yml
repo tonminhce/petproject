@@ -36,8 +36,10 @@ spring:
   cache:
     type: redis
     redis:
-      # Fallback TTL for caches not listed in CacheConfig (600000 ms = 10 minutes).
-      time-to-live: 600000
+      # Global cache config — overridden per-cache in CacheConfig (@EnableCaching). CacheConfig
+      # is the single source of truth for product/productBySlug TTL and null-caching. The defaults
+      # here only apply to any cache not registered by CacheConfig (defensive).
+      time-to-live: 600000          # 10 min
       cache-null-values: false
       use-key-prefix: true
 
