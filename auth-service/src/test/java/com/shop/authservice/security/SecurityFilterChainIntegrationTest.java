@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -166,9 +167,9 @@ class SecurityFilterChainIntegrationTest {
     }
 
     @Test
-    @DisplayName("S4: GET /api/v1/users/me without auth → 401 (anyRequest().authenticated())")
-    void getCurrentUserWithoutAuthIsUnauthorized() throws Exception {
-        mockMvc.perform(get("/api/v1/users/me"))
+    @DisplayName("S4: DELETE /api/v1/users/me without auth → 401 (anyRequest().authenticated() — method-scoped rule does not match DELETE)")
+    void deleteCurrentUserWithoutAuthIsUnauthorized() throws Exception {
+        mockMvc.perform(delete("/api/v1/users/me"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -192,5 +193,19 @@ class SecurityFilterChainIntegrationTest {
     void postToProtectedPathWithoutAuthIsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/v1/users/me"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("S7: POST /api/v1/users/me without auth → 401 (POST does not match the GET-scoped EndpointRule → falls through to anyRequest().authenticated())")
+    void postToMethodScopedRuleWithoutAuthIsUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/users/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("S8: GET /api/v1/users/me without auth → 403 (filter chain's method-scoped EndpointRule MATCHES → request reaches controller; method-level @PreAuthorize('isAuthenticated()') on UserController.getCurrentUser then throws AuthorizationDeniedException → 403. Contrast with S4 (DELETE → 401): if the filter-chain rule had NOT matched, GET would also return 401 like DELETE. The 403 vs 401 split proves the `if (rule.method() != null)` branch in BaseSecurityConfig was exercised.)")
+    void getCurrentUserMatchesMethodScopedPublicRuleWithoutAuth() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me"))
+                .andExpect(status().isForbidden());
     }
 }
