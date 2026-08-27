@@ -57,8 +57,22 @@ public class ProductMapper {
     }
 
     public Product toEntity(ProductCreateRequest request) {
-        Product p = modelMapper.map(request, Product.class);
+        // Manual copy — ModelMapper's STRICT mode with field matching does not
+        // see Java record components as source properties, so the auto-map leaves
+        // every field null. Doing this by hand is also explicit and avoids any
+        // future reflection surprises.
+        Product p = new Product();
         p.setId(null);
+        p.setTitle(request.title());
+        p.setSlug(request.slug());
+        p.setDescription(request.description());
+        p.setSku(request.sku());
+        p.setPriceUnit(request.priceUnit());
+        p.setQuantity(request.quantity());
+        p.setStatus(request.status());
+        p.setImageUrl(request.imageUrl());
+        p.setWeight(request.weight());
+        p.setDimensions(request.dimensions());
         return p;
     }
 
