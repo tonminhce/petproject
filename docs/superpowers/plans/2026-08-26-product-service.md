@@ -6,7 +6,7 @@
 
 **Architecture:** Spring Boot 4.1.1 microservice (`com.shop.productservice`) → PostgreSQL via Spring Data JPA + Liquibase, Redis 7 via Spring Cache (`@Cacheable` / `@CacheEvict` cache-aside), Kafka producer via Transactional Outbox + `@Scheduled` relay. Loose coupling: search-service (future) consumes Kafka events. Auth via Keycloak JWT + `@PreAuthorize`.
 
-**Tech Stack:** Spring Boot 4.1.1, Java 25, JPA + Liquibase + Postgres 16, Redis 7, Apache Kafka, Spring Security Resource Server (JWT), MapStruct 1.6.3, Lombok, JUnit 5 + Mockito + AssertJ, Testcontainers.
+**Tech Stack:** Spring Boot 4.1.1, Java 25, JPA + Liquibase + Postgres 16, Redis 7, Apache Kafka, Spring Security Resource Server (JWT), ModelMapper 3.2.6, Lombok, JUnit 5 + Mockito + AssertJ, Testcontainers.
 
 **Spec:** [`docs/superpowers/specs/2026-08-26-product-service-design.md`](../specs/2026-08-26-product-service-design.md)
 
@@ -17,17 +17,19 @@
 - **Java 25** (per project `.java-version` / parent pom)
 - **Spring Boot 4.1.1** (parent pom `spring-boot-starter-parent.version`)
 - **Package root:** `com.shop.*`
-- **No per-service `SecurityConfig`** — `common-security` auto-configures `SecurityFilterChain` (`@ConditionalOnMissingBean`). Customise via `shop.security.public-endpoints`.
+- **No per-service `SecurityConfig`** — `common-security` auto-configures `SecurityFilterChain` (`@ConditionalOnMissingBean`). Customise via `shop.security.public-paths` (EndpointRule format, đổi tên từ `public-endpoints` cũ).
 - **`open-in-view: false`** in all `application.yml` (no transaction-in-view)
-- **MapStruct over ModelMapper** for product-service. `ModelMapper` remains for auth-service (out of scope).
+- **ModelMapper** (sync theo auth-service + toàn fleet — `UserMapper`/`RoleMapper` `@Component` inject `ModelMapper`). MapStruct bị reject vì làm pattern không nhất quán. `common-spring/ModelMapperAutoConfiguration` đã cấu hình STRICT matching + skip-null.
 - **Liquibase** (not Flyway), changelogs in `src/main/resources/db/changelog/`
 - **All endpoints** wrap responses in `ApiResponse<T>` (from `common-core/viewmodel`)
 - **No new common modules** — only modify `common-core`, `common-spring`, `common-security`, `common-kafka`
 - **Cache key convention:** `product::{id}`, `productBySlug::{slug}`; TTL 600s; `cache-null-values: false`
-- **Kafka topic:** `shop.product.lifecycle.v1`; payload: `{eventId, eventType, occurredAt, productId, slug, status}`
+- **Kafka topic:** `shop.product.lifecycle.v1`; payload: `{eventId, eventType, occurredAt, productId, slug, status}`. **Config qua `shop.kafka.*`** (common-kafka `KafkaProperties`), KHÔNG dùng `spring.kafka.*`
 - **Outbox publisher**: same `@Transactional` boundary as the entity write
-- **Soft delete** via `SoftDeletable` interface (already in `common-core/data/`). Partial unique indexes `WHERE deleted = false`.
-- **Audit fields** populated by `AuditorAware` (from `common-spring`), returns `auth.getName()` or `"system"`
+- **Soft delete** theo pattern auth-service: entity `extends AbstractMappedEntity` (extends `SoftDeletable`) + `@SQLRestriction("deleted = false")`, xóa bằng `markDeleted(actor)` (actor từ `AuditorAware`, fallback "system"). Partial unique indexes `WHERE deleted = false`. KHÔNG dùng method suffix `*AndDeletedFalse` trong repositories
+- **Audit fields** populated by `AuditorAware` (from `common-spring`), returns `Optional.of(auth.getName())` when authenticated (non-null + non-`anonymousUser`) else `Optional.of("system")` (Spring Data 4.x — `AuditorAware.getCurrentAuditor()` returns `Optional<T>`, NOT `T`)
+- **Exceptions** dùng `BusinessException.of(...)` / `notFound("key")` / `conflict("key")` factories — constructor private, KHÔNG `new BusinessException(...)`; message là i18n keys
+- **Test stack Boot 4:** `@MockitoBean` (không `@MockBean`); controller slice uses new package `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`); controller tests `@AutoConfigureMockMvc(addFilters = false)` (không test 403 ở slice); **JPA slice ở Boot 4 đã tách ra 2 artifacts riêng** (verified bằng jar inspection trong Task 1 implementation): `@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`); `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`). Boot 4 cũng KHÔNG cho phép `TestEntityManager` inject qua method param — phải `@Autowired` field. `@DataJpaTest` cần `@Import(LiquibaseAutoConfiguration.class)` (slice không tự chạy Liquibase); Spring Boot auto-wires `TransactionAwareCacheManagerProxy` cho Redis nên `@Cacheable` + `@Transactional(readOnly=true)` OK không cần config thêm.
 
 ---
 
@@ -37,14 +39,18 @@
 
 | File | Change |
 |---|---|
-| `utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java` | **CREATE** — `@MappedSuperclass` with `createdAt/updatedAt/createdBy/updatedBy` |
-| `utils/common-core/src/main/java/com/shop/common/core/data/SoftDeletable.java` | unchanged (already exists) |
+| `utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java` | **CREATE** — `@MappedSuperclass` audit (createdAt/updatedAt/createdBy/updatedBy) **`extends SoftDeletable`** (class có sẵn, `markDeleted()`/`markRestored()`) |
+| `utils/common-core/src/main/java/com/shop/common/core/data/SoftDeletable.java` | unchanged (already exists — class, NOT interface) |
+| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | **MODIFY** — thêm `PRODUCT_SLUG_EXISTS (PRD-2004)`, `PRODUCT_SKU_EXISTS (PRD-2005)`, `BRAND_NOT_FOUND (PRD-2006)`, `BRAND_SLUG_EXISTS (PRD-2007)`, `CATEGORY_SLUG_EXISTS (PRD-2008)` |
+| `utils/common-spring/src/main/resources/messages/messages_en.properties` | **MODIFY** — thêm i18n keys product domain |
+| `utils/common-spring/src/main/resources/messages/messages_vi.properties` | **MODIFY** — thêm i18n keys product domain |
 | `utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/JpaAuditingAutoConfiguration.java` | **CREATE** — wires `AuditorAware` + `@EnableJpaAuditing` |
 | `utils/common-spring/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` | **MODIFY** — add `JpaAuditingAutoConfiguration` |
 | `utils/common-spring/pom.xml` | **MODIFY** — add `spring-boot-starter-data-jpa` (for `@EntityListeners`) |
-| `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java` | **MODIFY** — change `List<String>` → `List<EndpointRule>` |
-| `utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java` | **MODIFY** — loop parse `EndpointRule`, method-aware `permitAll` |
-| `auth-service/src/main/resources/application.yml` | **MODIFY** — convert `public-endpoints` to `EndpointRule` format |
+| `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java` | **MODIFY** — giữ record; `List<String> publicEndpoints` → `List<EndpointRule> publicPaths` (rename field + nested record `EndpointRule(HttpMethod method, String path)`); GIỮ `resolvedPublicPaths()` + `PlatformDefaults` |
+| `utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java` | **MODIFY** — loop `EndpointRule` method-aware + platform defaults + `anyRequest().authenticated()` |
+| `auth-service/src/main/resources/application.yml` | **MODIFY** — rename `public-endpoints` → `public-paths`, convert sang `EndpointRule` format (chỉ `- path: /api/v1/auth/**`, không liệt kê actuator — đã có sẵn platform defaults) |
+| `gateway-service/src/main/resources/application.yml` | **MODIFY** — rename `public-endpoints` → `public-paths`, convert sang `EndpointRule` format (cùng pattern) |
 
 ### New product-service files
 
@@ -74,9 +80,9 @@
 | `product-service/src/main/java/com/shop/productservice/dto/response/CategoryTreeResponse.java` | recursive record for tree endpoint |
 | `product-service/src/main/java/com/shop/productservice/dto/response/BrandResponse.java` | record |
 | `product-service/src/main/java/com/shop/productservice/dto/ProductFilter.java` | optional filter params for list |
-| `product-service/src/main/java/com/shop/productservice/mapper/ProductMapper.java` | MapStruct mapper (toSummary + toDetail + partialUpdate) |
-| `product-service/src/main/java/com/shop/productservice/mapper/CategoryMapper.java` | MapStruct mapper (toResponse + toTreeResponse) |
-| `product-service/src/main/java/com/shop/productservice/mapper/BrandMapper.java` | MapStruct mapper |
+| `product-service/src/main/java/com/shop/productservice/mapper/ProductMapper.java` | ModelMapper `@Component` (toSummary + toDetail + partialUpdate) |
+| `product-service/src/main/java/com/shop/productservice/mapper/CategoryMapper.java` | ModelMapper `@Component` (toResponse + toTreeResponse) |
+| `product-service/src/main/java/com/shop/productservice/mapper/BrandMapper.java` | ModelMapper `@Component` |
 | `product-service/src/main/java/com/shop/productservice/service/ProductService.java` | interface |
 | `product-service/src/main/java/com/shop/productservice/service/impls/ProductServiceImpl.java` | impl with `@Cacheable`/`@CachePut`/`@CacheEvict` |
 | `product-service/src/main/java/com/shop/productservice/service/CategoryService.java` | interface |
@@ -103,55 +109,52 @@
 
 ### Compose
 
-- `docker-compose.yml` — add `postgres-product` service; update `product-service` environment
+- `docker-compose.yml` — **không** tạo postgres-product mới (repo dùng chung 1 Postgres có init script); update `product-service` env: SPRING_DATA_REDIS_HOST, SHOP_KAFKA_BOOTSTRAP_SERVERS, SERVER_PORT; depends_on redis + kafka
 
 ---
 
 ## Phase 0 — Common upgrades
 
-### Task 1: Add `AbstractMappedEntity` to `common-core`
+### Task 1: Add `AbstractMappedEntity` to `common-core` + product ErrorCodes + i18n keys
 
 **Files:**
 - Create: `utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java`
+- Modify: `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` (thêm PRD-2004..2008)
+- Modify: `utils/common-spring/src/main/resources/messages/messages_en.properties` + `messages_vi.properties`
 - Create: `utils/common-core/src/test/java/com/shop/common/core/data/AbstractMappedEntityTest.java`
 
 **Interfaces:**
-- Consumes: JPA `AuditingEntityListener`, `AuditorAware<String>` (added in Task 2)
-- Produces: `AbstractMappedEntity` abstract class with 4 audit fields
+- Consumes: JPA `AuditingEntityListener`, `AuditorAware<String>` (added in Task 2), `SoftDeletable` (có sẵn — class `@MappedSuperclass` với `markDeleted(String)`/`markRestored()`)
+- Produces: `AbstractMappedEntity` abstract class (4 audit fields) **`extends SoftDeletable`**; ErrorCode PRD domain codes; i18n keys
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Viết failing test** (Boot 4 — `@DataJpaTest` ở package mới; `TestEntityManager` phải `@Autowired` field, không inject qua method param)
 
 ```java
 package com.shop.common.core.data;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PersistenceUtil;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.test.context.TestPropertySource;
-
-import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@Import(AbstractMappedEntityTest.DummyConfig.class)
 class AbstractMappedEntityTest {
 
-    static class DummyConfig {
-        @EnableJpaAuditing
-        public static class AuditingConfig {}
-    }
+    @SpringBootConfiguration
+    @EnableAutoConfiguration
+    @EnableJpaAuditing
+    static class AuditingConfig {}
 
     @Entity
-    @EntityListeners(jakarta.persistence.EntityListeners.class)  // not used; kept for compat
     static class TestEntity extends AbstractMappedEntity {
         @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
@@ -161,20 +164,38 @@ class AbstractMappedEntityTest {
         public void setName(String name) { this.name = name; }
     }
 
+    @Autowired TestEntityManager em;
+
     @Test
-    void persistsWithAuditFields(TestEntityManager em) {
+    void persistsWithAuditAndSoftDeleteFields() {
         TestEntity entity = new TestEntity();
         entity.setName("test");
         em.persistAndFlush(entity);
 
         assertThat(entity.getCreatedAt()).isNotNull();
         assertThat(entity.getUpdatedAt()).isNotNull();
-        assertThat(entity.getCreatedAt()).isBeforeOrEqualTo(Instant.now());
+        assertThat(entity.isDeleted()).isFalse();
+    }
+
+    @Test
+    void markDeletedSetsFlags() {
+        TestEntity entity = new TestEntity();
+        entity.setName("test");
+        em.persistAndFlush(entity);
+
+        entity.markDeleted("alice");
+
+        assertThat(entity.isDeleted()).isTrue();
+        assertThat(entity.getDeletedAt()).isNotNull();
+        assertThat(entity.getDeletedBy()).isEqualTo("alice");
     }
 }
 ```
 
-> Note: full audit test requires real `AuditorAware` bean. This test asserts timestamp fields auto-populate. Auditor-aware test deferred to common-spring tests (Task 2).
+> **Boot 4 note (verified Task 1 implementation):** Spring Boot 4 tách **cả WebMvc lẫn JPA** ra artifacts riêng:
+> - `@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*` → artifact `spring-boot-data-jpa-test`
+> - `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*` → artifact `spring-boot-jpa-test`
+> - Plan cũ nói "JPA slice vẫn ở package cũ" — sai, đã fix ở Task 1. Common-core pom giờ thêm 4 deps: `spring-boot-starter-data-jpa` (compile, cho `AuditingEntityListener`), `spring-boot-data-jpa-test`/`spring-boot-jpa-test`/`com.h2database:h2` (test). `TestEntityManager` phải `@Autowired` field — JUnit 5 extension ở Boot 4 không resolve method-param `TestEntityManager`.
 
 - [ ] **Step 2: Run test to verify it fails (compilation error expected since class doesn't exist)**
 
@@ -199,7 +220,7 @@ import java.time.Instant;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-public abstract class AbstractMappedEntity {
+public abstract class AbstractMappedEntity extends SoftDeletable {
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
@@ -224,17 +245,51 @@ public abstract class AbstractMappedEntity {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+> `extends SoftDeletable` — entity chỉ extends MỘT base (Java single inheritance), base này gộp cả audit + soft-delete. `SoftDeletable` đã có `deleted/deletedAt/deletedBy` (deleted_by VARCHAR(255)) + `markDeleted()`/`markRestored()`.
+>
+> ⚠️ **Pattern này MỚI so với auth-service hiện tại.** `auth-service/User.java:32` đang `extends SoftDeletable` trực tiếp (KHÔNG có audit fields, KHÔNG extends `AbstractMappedEntity`); `auth-service/Role.java` không có soft-delete + không có audit. Migration auth sang `AbstractMappedEntity` là Phase-9 follow-up — tracking ở [`ROADMAP §8.1`](/home/tonminh/Documents/petproject/docs/ROADMAP.md). Khi đó cần thêm Liquibase changeset 003 cho `users` (4 audit cols).
+
+- [ ] **Step 4: Thêm ErrorCodes + i18n keys**
+
+`ErrorCode.java` — thêm vào block `// ---- Product domain ----`:
+
+```java
+PRODUCT_NOT_FOUND("PRD-2001", "product.not.found", HttpStatus.NOT_FOUND),        // đã có
+PRODUCT_NAME_EXISTS("PRD-2002", "product.name.exists", HttpStatus.CONFLICT),     // đã có
+CATEGORY_NOT_FOUND("PRD-2003", "category.not.found", HttpStatus.NOT_FOUND),      // đã có
+PRODUCT_SLUG_EXISTS("PRD-2004", "product.slug.exists", HttpStatus.CONFLICT),     // NEW
+PRODUCT_SKU_EXISTS("PRD-2005", "product.sku.exists", HttpStatus.CONFLICT),       // NEW
+BRAND_NOT_FOUND("PRD-2006", "brand.not.found", HttpStatus.NOT_FOUND),            // NEW
+BRAND_SLUG_EXISTS("PRD-2007", "brand.slug.exists", HttpStatus.CONFLICT),         // NEW
+CATEGORY_SLUG_EXISTS("PRD-2008", "category.slug.exists", HttpStatus.CONFLICT);   // NEW
+```
+
+`messages_en.properties` + `messages_vi.properties` — thêm cùng keys (EN + VI):
+
+```properties
+product.not.found=Product {0} not found
+product.slug.exists=Product slug already exists
+product.sku.exists=Product sku already exists
+category.not.found=Category {0} not found
+category.slug.exists=Category slug already exists
+brand.not.found=Brand {0} not found
+brand.slug.exists=Brand slug already exists
+```
+
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `./mvnw test -pl utils/common-core -Dtest=AbstractMappedEntityTest`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java \
+        utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java \
+        utils/common-spring/src/main/resources/messages/messages_en.properties \
+        utils/common-spring/src/main/resources/messages/messages_vi.properties \
         utils/common-core/src/test/java/com/shop/common/core/data/AbstractMappedEntityTest.java
-git commit -m "feat(common-core): add AbstractMappedEntity with audit fields"
+git commit -m "feat(common-core): AbstractMappedEntity (audit + soft-delete) + product ErrorCodes + i18n keys"
 ```
 
 ---
@@ -248,8 +303,8 @@ git commit -m "feat(common-core): add AbstractMappedEntity with audit fields"
 - Create: `utils/common-spring/src/test/java/com/shop/common/spring/autoconfigure/JpaAuditingAutoConfigurationTest.java`
 
 **Interfaces:**
-- Consumes: `AuditingHandler` (from `spring-data-jpa`), Spring Security `Authentication`
-- Produces: `AuditorAware<String>` bean; activates `@EnableJpaAuditing`
+- Consumes: `AuditingEntityListener` (from `spring-data-jpa` — note: `AuditingHandler` đã bị xóa ở Spring Data 4.x), Spring Security `Authentication`
+- Produces: `AuditorAware<String>` bean (returns `Optional<String>`); activates `@EnableJpaAuditing` via nested config (gated on `EntityManagerFactory` bean presence để tránh "JPA metamodel must not be empty" ở JPA-less test contexts)
 
 - [ ] **Step 1: Modify `common-spring/pom.xml` to add JPA dep**
 
@@ -325,18 +380,21 @@ Expected: compilation error — `JpaAuditingAutoConfiguration` not found
 package com.shop.common.spring.autoconfigure;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
-import org.springframework.data.jpa.domain.support.AuditingHandler;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.Optional;
+
 @AutoConfiguration
-@ConditionalOnClass(AuditingHandler.class)
-@EnableJpaAuditing(auditorAwareRef = "auditorAware")
+@ConditionalOnClass(AuditingEntityListener.class)
 public class JpaAuditingAutoConfiguration {
 
     @Bean
@@ -346,10 +404,21 @@ public class JpaAuditingAutoConfiguration {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated()
                 && !"anonymousUser".equals(auth.getPrincipal())) {
-                return auth.getName();
+                return Optional.of(auth.getName());
             }
-            return "system";
+            return Optional.of("system");
         };
+    }
+
+    /**
+     * Activate JPA auditing only when an EntityManagerFactory is present (real services
+     * with JPA). Nested config avoids "JPA metamodel must not be empty" in JPA-less
+     * test contexts (e.g. CommonLibraryStarterTests).
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnBean(jakarta.persistence.EntityManagerFactory.class)
+    @EnableJpaAuditing(auditorAwareRef = "auditorAware")
+    static class JpaAuditingActivation {
     }
 }
 ```
@@ -363,6 +432,8 @@ Edit `utils/common-spring/src/main/resources/META-INF/spring/org.springframework
 
 Run: `./mvnw test -pl utils/common-spring -Dtest=JpaAuditingAutoConfigurationTest`
 Expected: PASS
+
+> Nếu `CommonLibraryStarterTests` fail với "JPA metamodel must not be empty" → kiểm tra `applicationContext` của test runner có `EntityManagerFactory` stub hay không. Có thể cần `.withBean(EntityManagerFactory.class, this::stubEmf)` trong `ApplicationContextRunner`. Smoke test (`CommonLibraryStarterTests`) thực ra đã pass sau khi cập nhật exclude list ở Task 2 implementation — đừng đụng lại trừ khi broke.
 
 - [ ] **Step 7: Commit**
 
@@ -382,56 +453,63 @@ git commit -m "feat(common-spring): auto-configure JPA auditing + AuditorAware b
 - Modify: `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java`
 
 **Interfaces:**
-- Produces: `List<EndpointRule>` field `publicEndpoints` (replaces `List<String>`)
+- Produces: `List<EndpointRule>` field `publicPaths` (replaces `List<String> publicEndpoints` — đổi tên để khớp `COMMON-LIB-REFERENCE §3.4`); **GIỮ NGUYÊN** `resolvedPublicPaths()` + `PlatformDefaults.PUBLIC_PATHS` (actuator/swagger luôn public)
 
 - [ ] **Step 1: Inspect existing `SecurityProperties` to know what to change**
 
-Read `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java` and find:
-- The `publicEndpoints` field declaration
-- The `resolvedPublicPaths()` method (if any)
-- Any `@DefaultValue` annotations on related fields
+Read `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java` — hiện là **record** với:
+- `@DefaultValue List<String> publicEndpoints`
+- `resolvedPublicPaths()` merge service paths ∪ `PlatformDefaults.PUBLIC_PATHS`
+- Constructor compact `SecurityProperties { ... }` cho null-safety
 
-- [ ] **Step 2: Replace `publicEndpoints` with `List<EndpointRule>`**
+> ⚠️ KHÔNG đổi record → class: toàn bộ codebase (auth-service, gateway-service) + convention binding `@DefaultValue` dựa trên record. Chỉ thay kiểu field + thêm nested record + đổi tên.
 
-Add nested class `EndpointRule` inside `SecurityProperties` (or as a separate top-level class in same package):
+- [ ] **Step 2: Replace `publicEndpoints` field type + add nested record + rename**
 
 ```java
-public static class EndpointRule {
-    /** HTTP method (GET, POST, ...). If null, any method. */
-    private HttpMethod method;
+public record SecurityProperties(
+        @DefaultValue("true") boolean enabled,
+        @NotBlank String issuerUri,
+        @DefaultValue("true") boolean csrfDisabled,
+        @DefaultValue("true") boolean statelessSession,
+        @DefaultValue List<EndpointRule> publicPaths,    // renamed từ publicEndpoints
+        @Valid @DefaultValue Cors cors
+) {
 
-    /** URL path pattern (Ant-style: /api/v1/products/**). */
-    private String path;
+    /** method == null → any HTTP method. */
+    public record EndpointRule(HttpMethod method, String path) {
+        public EndpointRule {
+            if (path == null || path.isBlank()) {
+                throw new IllegalArgumentException("EndpointRule.path must not be blank");
+            }
+        }
+    }
 
-    public HttpMethod getMethod() { return method; }
-    public void setMethod(HttpMethod method) { this.method = method; }
-    public String getPath() { return path; }
-    public void setPath(String path) { this.path = path; }
+    // resolvedPublicPaths() CẬP NHẬT: stream publicPaths (extract path) thay vì publicEndpoints
+    public List<String> resolvedPublicPaths() {
+        return java.util.stream.Stream
+                .concat(PlatformDefaults.PUBLIC_PATHS.stream(),
+                        publicPaths.stream().map(EndpointRule::path))
+                .distinct()
+                .toList();
+    }
+
+    // Compact constructor: publicPaths == null → List.of()
 }
 ```
 
-Change field:
-```java
-// OLD: private List<String> publicEndpoints = new ArrayList<>();
-private List<EndpointRule> publicEndpoints = new ArrayList<>();
-```
-
-Keep the rest of the class (issuer-uri, csrf, cors, etc.) unchanged.
-
-- [ ] **Step 3: Add imports**
-
-Ensure imports present:
+Imports cần thêm:
 ```java
 import org.springframework.http.HttpMethod;
-import java.util.ArrayList;
-import java.util.List;
 ```
 
-- [ ] **Step 4: Commit**
+> ⚠️ **Breaking change:** callers of the old field `publicEndpoints` (e.g. `properties.getPublicEndpoints()`) → field renamed to `publicPaths`, record accessor is `properties.publicPaths()` (NOT `properties.getPublicPaths()` — that's bean-style, won't compile). Currently only `BaseSecurityConfig` uses this property (Task 4).
+
+- [ ] **Step 3: Commit**
 
 ```bash
 git add utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java
-git commit -m "feat(common-security): upgrade public-endpoints to EndpointRule (method+path)"
+git commit -m "feat(common-security): public-paths as List<EndpointRule> (rename + method+path), keep platform defaults"
 ```
 
 ---
@@ -442,46 +520,37 @@ git commit -m "feat(common-security): upgrade public-endpoints to EndpointRule (
 - Modify: `utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java`
 
 **Interfaces:**
-- Consumes: `SecurityProperties.getPublicEndpoints()` returning `List<EndpointRule>`
+- Consumes: `SecurityProperties.publicPaths()` (record accessor) returning `List<EndpointRule>`
 - Produces: `SecurityFilterChain` with method-specific permitAll rules
 
 - [ ] **Step 1: Read current `BaseSecurityConfig.securityFilterChain` method**
 
-Find the section where `properties.resolvedPublicPaths()` (or equivalent) is applied to `authorizeHttpRequests`.
+Find the section where `properties.resolvedPublicPaths()` is applied to `authorizeHttpRequests`.
 
-- [ ] **Step 2: Replace path-only loop with method-aware loop**
-
-In the `authorizeHttpRequests` block, replace:
-
-```java
-String[] publicPaths = properties.resolvedPublicPaths().toArray(new String[0]);
-http.authorizeHttpRequests(auth -> auth
-    .requestMatchers(publicPaths).permitAll()
-    .anyRequest().authenticated());
-```
-
-with:
+- [ ] **Step 2: Replace path-only loop with method-aware loop (giữ platform defaults)**
 
 ```java
 http.authorizeHttpRequests(auth -> {
-    for (SecurityProperties.EndpointRule rule : properties.getPublicEndpoints()) {
-        if (rule.getMethod() != null) {
-            auth.requestMatchers(rule.getMethod(), rule.getPath()).permitAll();
+    for (SecurityProperties.EndpointRule rule : properties.getPublicPaths()) {
+        if (rule.method() != null) {
+            auth.requestMatchers(rule.method(), rule.path()).permitAll();
         } else {
-            auth.requestMatchers(rule.getPath()).permitAll();
+            auth.requestMatchers(rule.path()).permitAll();
         }
     }
+    // Platform defaults (actuator, swagger, api-docs) luôn public — KHÔNG được bỏ
+    auth.requestMatchers(SecurityProperties.PlatformDefaults.PUBLIC_PATHS.toArray(new String[0])).permitAll();
     auth.anyRequest().authenticated();
 });
 ```
 
-- [ ] **Step 3: If `resolvedPublicPaths()` method exists, leave it for backward compat (unused now), or delete if no other callers**
+> `SecurityProperties` là record → accessor cho field `publicPaths` là `properties.publicPaths()` (canonical record accessor), KHÔNG phải `getPublicPaths()` (Java-bean style). `EndpointRule` record accessors: `rule.method()`, `rule.path()`.
+
+- [ ] **Step 3: `resolvedPublicPaths()` giữ nguyên** (vẫn được dùng ở nơi khác / backward compat) — KHÔNG xóa
 
 ```bash
-grep -rn "resolvedPublicPaths" utils/
+grep -rn "resolvedPublicPaths" utils/ auth-service/ gateway-service/ product-service/
 ```
-
-If only used in `BaseSecurityConfig`, safe to delete. Otherwise keep.
 
 - [ ] **Step 4: Verify compile**
 
@@ -492,66 +561,53 @@ Expected: BUILD SUCCESS
 
 ```bash
 git add utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java
-git commit -m "feat(common-security): apply method-aware permitAll for public endpoints"
+git commit -m "feat(common-security): method-aware permitAll for EndpointRules, keep platform defaults public"
 ```
 
 ---
 
-### Task 5: Migrate auth-service `application.yml` to EndpointRule format
+### Task 5: Migrate auth-service và gateway-service `application.yml` sang EndpointRule format
 
 **Files:**
 - Modify: `auth-service/src/main/resources/application.yml`
-- Modify: `auth-service/src/test/resources/application.yml` (if present, mirror change)
+- Modify: `gateway-service/src/main/resources/application.yml`
 
 **Interfaces:**
-- Produces: yaml keys in EndpointRule shape for auth-service endpoints
+- Produces: yaml keys ở EndpointRule shape. KHÔNG liệt kê actuator/swagger/api-docs (đã có sẵn platform defaults — nếu thêm lại là duplicate).
 
-- [ ] **Step 1: Find current `shop.security.public-endpoints` block**
+- [ ] **Step 1: Auth-service yml**
 
-```bash
-grep -A 20 "public-endpoints" auth-service/src/main/resources/application.yml
-```
-
-- [ ] **Step 2: Replace list-of-strings with list-of-maps**
-
-OLD:
+OLD (`auth-service/src/main/resources/application.yml`):
 ```yaml
 shop:
   security:
     public-endpoints:
-      - /api/v1/auth/login
-      - /api/v1/auth/refresh
-      - /actuator/health
+      - /api/v1/auth/**
 ```
 
 NEW:
 ```yaml
 shop:
   security:
-    public-endpoints:
-      - path: /api/v1/auth/login
-      - path: /api/v1/auth/refresh
-      - path: /actuator/health
-      - path: /actuator/health/**
-      - path: /actuator/info
-      - path: /actuator/prometheus
-      - path: /v3/api-docs/**
-      - path: /swagger-ui/**
-      - path: /webjars/**
+    public-paths:            # rename từ public-endpoints
+      - path: /api/v1/auth/**
 ```
 
-> Note: Actuator and Swagger endpoints get no `method` field, so they allow any method (preserve existing behavior).
+- [ ] **Step 2: Gateway-service yml**
+
+Tương tự, inspect block `shop.security.public-endpoints` của `gateway-service/src/main/resources/application.yml` rồi convert sang `public-paths` EndpointRule. **Không thêm actuator entries** — defaults lo rồi.
 
 - [ ] **Step 3: Run auth-service tests**
 
 Run: `./mvnw test -pl auth-service`
-Expected: BUILD SUCCESS (all 39 tests pass)
+Expected: BUILD SUCCESS (all 37 tests pass — controller tests dùng `addFilters=false` nên không bị ảnh hưởng)
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add auth-service/src/main/resources/application.yml
-git commit -m "refactor(auth-service): migrate public-endpoints to EndpointRule format"
+git add auth-service/src/main/resources/application.yml \
+        gateway-service/src/main/resources/application.yml
+git commit -m "refactor(auth,gateway): migrate public-endpoints to public-paths EndpointRule"
 ```
 
 ---
@@ -578,7 +634,7 @@ Do NOT proceed to Phase 1 until Phase 0 is fully green.
 **Files:**
 - Modify: `product-service/pom.xml`
 
-- [ ] **Step 1: Add Redis + Kafka + Cache deps inside `<dependencies>`**
+- [ ] **Step 1: Add Redis + Kafka deps inside `<dependencies>`** (ModelMapper đã có sẵn)
 
 ```xml
 <dependency>
@@ -589,25 +645,10 @@ Do NOT proceed to Phase 1 until Phase 0 is fully green.
     <groupId>org.springframework.kafka</groupId>
     <artifactId>spring-kafka</artifactId>
 </dependency>
-<dependency>
-    <groupId>org.lombok</groupId>
-    <artifactId>lombok-mapstruct-binding</artifactId>
-    <version>${lombok-mapstruct-binding.version}</version>
-    <scope>provided</scope>
-</dependency>
 ```
 
-- [ ] **Step 2: Verify versions resolve**
-
-Run: `./mvnw -pl product-service dependency:resolve`
-Expected: BUILD SUCCESS
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add product-service/pom.xml
-git commit -m "build(product-service): add redis, kafka, mapstruct-binding deps"
-```
+> KHÔNG thêm `org.mapstruct:mapstruct` — chốt dùng ModelMapper (sync auth-service).
+> `org.modelmapper:modelmapper` đã có trong pom hiện tại — KHÔNG cần thêm.
 
 ---
 
@@ -640,14 +681,12 @@ spring:
   application:
     name: product-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/product_db}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/productservice}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate.ddl-auto: validate
     open-in-view: false
-    properties:
-      hibernate.jdbc.lob.non_contextual_creation: true
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
@@ -658,14 +697,16 @@ spring:
       time-to-live: 600000
       cache-null-values: false
       use-key-prefix: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+# ⚠️ common-kafka (KafkaProperties) đọc prefix SHOP kafka.*, KHÔNG phải spring.kafka.*
+shop:
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       acks: all
       retries: 3
-      properties:
-        enable.idempotence: true
-        delivery.timeout.ms: 10000
 
 product:
   outbox:
@@ -675,7 +716,7 @@ product:
 
 shop:
   security:
-    public-endpoints:
+    public-paths:
       - method: GET
         path: /api/v1/products/**
       - method: GET
@@ -684,7 +725,7 @@ shop:
         path: /api/v1/brands/**
 
 server:
-  port: ${SERVER_PORT:8083}
+  port: ${SERVER_PORT:8086}
 
 management:
   endpoints:
@@ -692,6 +733,8 @@ management:
       exposure:
         include: health,info,prometheus,metrics
 ```
+
+> Bỏ `enable.idempotence` / `delivery.timeout.ms` (common-kafka `buildProducerProperties()` không hỗ trợ). Bỏ `hibernate.jdbc.lob.non_contextual_creation` (obsolete ở Hibernate 6+).
 
 - [ ] **Step 3: Commit**
 
@@ -771,12 +814,92 @@ databaseChangeLog:
       file: changelog-001-initial-schema.yaml
 ```
 
-- [ ] **Step 2: Create `changelog-001-initial-schema.yaml`**
+- [ ] **Step 2: Create `changelog-001-initial-schema.yaml`** (categories → brands → products(+FKs) → outbox; `deleted_by` VARCHAR(255) match `SoftDeletable`)
 
 ```yaml
 databaseChangeLog:
   # ===========================================================================
-  # products
+  # categories (tạo TRƯỚC để products có thể FK trỏ tới)
+  # ===========================================================================
+  - createTable:
+      tableName: categories
+      columns:
+        - column:
+            name: id
+            type: BIGINT
+            autoIncrement: true
+            constraints:
+              primaryKey: true
+              nullable: false
+        - column: { name: title,     type: VARCHAR(100), constraints: { nullable: false } }
+        - column: { name: slug,      type: VARCHAR(100), constraints: { nullable: false } }
+        - column: { name: image_url, type: VARCHAR(500) }
+        - column: { name: parent_id, type: BIGINT }
+        - column: { name: created_at, type: TIMESTAMP, constraints: { nullable: false } }
+        - column: { name: updated_at, type: TIMESTAMP, constraints: { nullable: false } }
+        - column: { name: created_by, type: VARCHAR(100) }
+        - column: { name: updated_by, type: VARCHAR(100) }
+        - column: { name: deleted,    type: BOOLEAN,     constraints: { nullable: false, defaultValue: false } }
+        - column: { name: deleted_at, type: TIMESTAMP }
+        - column: { name: deleted_by, type: VARCHAR(255) }
+
+  - addForeignKeyConstraint:
+      baseTableName: categories
+      baseColumnNames: parent_id
+      constraintName: fk_categories_parent
+      referencedTableName: categories
+      referencedColumnNames: id
+      onDelete: RESTRICT
+
+  - createIndex:
+      tableName: categories
+      indexName: idx_categories_slug_unique_active
+      unique: true
+      columns:
+        - column: { name: slug }
+      where: deleted = false
+
+  - createIndex:
+      tableName: categories
+      indexName: idx_categories_parent_id
+      columns:
+        - column: { name: parent_id }
+
+  # ===========================================================================
+  # brands (tạo TRƯỚC products)
+  # ===========================================================================
+  - createTable:
+      tableName: brands
+      columns:
+        - column:
+            name: id
+            type: BIGINT
+            autoIncrement: true
+            constraints:
+              primaryKey: true
+              nullable: false
+        - column: { name: name,        type: VARCHAR(100), constraints: { nullable: false } }
+        - column: { name: slug,        type: VARCHAR(100), constraints: { nullable: false } }
+        - column: { name: logo_url,    type: VARCHAR(500) }
+        - column: { name: description, type: VARCHAR(1000) }
+        - column: { name: created_at, type: TIMESTAMP, constraints: { nullable: false } }
+        - column: { name: updated_at, type: TIMESTAMP, constraints: { nullable: false } }
+        - column: { name: created_by, type: VARCHAR(100) }
+        - column: { name: updated_by, type: VARCHAR(100) }
+        - column: { name: deleted,    type: BOOLEAN,     constraints: { nullable: false, defaultValue: false } }
+        - column: { name: deleted_at, type: TIMESTAMP }
+        - column: { name: deleted_by, type: VARCHAR(255) }
+
+  - createIndex:
+      tableName: brands
+      indexName: idx_brands_slug_unique_active
+      unique: true
+      columns:
+        - column: { name: slug }
+      where: deleted = false
+
+  # ===========================================================================
+  # products (sau categories + brands — FK hợp lệ)
   # ===========================================================================
   - createTable:
       tableName: products
@@ -806,7 +929,7 @@ databaseChangeLog:
         - column: { name: updated_by,  type: VARCHAR(100) }
         - column: { name: deleted,     type: BOOLEAN,      constraints: { nullable: false, defaultValue: false } }
         - column: { name: deleted_at,  type: TIMESTAMP }
-        - column: { name: deleted_by,  type: VARCHAR(100) }
+        - column: { name: deleted_by,  type: VARCHAR(255) }
 
   - addForeignKeyConstraint:
       baseTableName: products
@@ -858,88 +981,14 @@ databaseChangeLog:
       columns:
         - column: { name: status }
 
-  # ===========================================================================
-  # categories
-  # ===========================================================================
-  - createTable:
-      tableName: categories
-      columns:
-        - column:
-            name: id
-            type: BIGINT
-            autoIncrement: true
-            constraints:
-              primaryKey: true
-              nullable: false
-        - column: { name: title,     type: VARCHAR(100), constraints: { nullable: false } }
-        - column: { name: slug,      type: VARCHAR(100), constraints: { nullable: false } }
-        - column: { name: image_url, type: VARCHAR(500) }
-        - column: { name: parent_id, type: BIGINT }
-        - column: { name: created_at, type: TIMESTAMP, constraints: { nullable: false } }
-        - column: { name: updated_at, type: TIMESTAMP, constraints: { nullable: false } }
-        - column: { name: created_by, type: VARCHAR(100) }
-        - column: { name: updated_by, type: VARCHAR(100) }
-        - column: { name: deleted,    type: BOOLEAN,     constraints: { nullable: false, defaultValue: false } }
-        - column: { name: deleted_at, type: TIMESTAMP }
-        - column: { name: deleted_by, type: VARCHAR(100) }
-
-  - addForeignKeyConstraint:
-      baseTableName: categories
-      baseColumnNames: parent_id
-      constraintName: fk_categories_parent
-      referencedTableName: categories
-      referencedColumnNames: id
-      onDelete: RESTRICT
-
   - createIndex:
-      tableName: categories
-      indexName: idx_categories_slug_unique_active
-      unique: true
+      tableName: products
+      indexName: idx_products_deleted
       columns:
-        - column: { name: slug }
-      where: deleted = false
-
-  - createIndex:
-      tableName: categories
-      indexName: idx_categories_parent_id
-      columns:
-        - column: { name: parent_id }
+        - column: { name: deleted }
 
   # ===========================================================================
-  # brands
-  # ===========================================================================
-  - createTable:
-      tableName: brands
-      columns:
-        - column:
-            name: id
-            type: BIGINT
-            autoIncrement: true
-            constraints:
-              primaryKey: true
-              nullable: false
-        - column: { name: name,        type: VARCHAR(100), constraints: { nullable: false } }
-        - column: { name: slug,        type: VARCHAR(100), constraints: { nullable: false } }
-        - column: { name: logo_url,    type: VARCHAR(500) }
-        - column: { name: description, type: VARCHAR(1000) }
-        - column: { name: created_at, type: TIMESTAMP, constraints: { nullable: false } }
-        - column: { name: updated_at, type: TIMESTAMP, constraints: { nullable: false } }
-        - column: { name: created_by, type: VARCHAR(100) }
-        - column: { name: updated_by, type: VARCHAR(100) }
-        - column: { name: deleted,    type: BOOLEAN,     constraints: { nullable: false, defaultValue: false } }
-        - column: { name: deleted_at, type: TIMESTAMP }
-        - column: { name: deleted_by, type: VARCHAR(100) }
-
-  - createIndex:
-      tableName: brands
-      indexName: idx_brands_slug_unique_active
-      unique: true
-      columns:
-        - column: { name: slug }
-      where: deleted = false
-
-  # ===========================================================================
-  # outbox_events
+  # outbox_events (kế thừa AbstractMappedEntity extends SoftDeletable → có deleted cols)
   # ===========================================================================
   - createTable:
       tableName: outbox_events
@@ -962,7 +1011,12 @@ databaseChangeLog:
         - column: { name: sent_at,        type: TIMESTAMP }
         - column: { name: last_error,     type: VARCHAR(1000) }
         - column: { name: created_at,     type: TIMESTAMP,    constraints: { nullable: false } }
+        - column: { name: updated_at,     type: TIMESTAMP,    constraints: { nullable: false } }
         - column: { name: created_by,     type: VARCHAR(100) }
+        - column: { name: updated_by,     type: VARCHAR(100) }
+        - column: { name: deleted,        type: BOOLEAN,      constraints: { nullable: false, defaultValue: false } }
+        - column: { name: deleted_at,     type: TIMESTAMP }
+        - column: { name: deleted_by,     type: VARCHAR(255) }
 
   - createIndex:
       tableName: outbox_events
@@ -1038,22 +1092,21 @@ package com.shop.productservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.shop.common.core.data.AbstractMappedEntity;
-import com.shop.common.core.data.SoftDeletable;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "categories")
+@SQLRestriction("deleted = false")     // filter soft-deleted tự động — pattern auth-service
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Category extends AbstractMappedEntity implements SoftDeletable {
+public class Category extends AbstractMappedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -1075,30 +1128,10 @@ public class Category extends AbstractMappedEntity implements SoftDeletable {
     @JsonIgnore
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     private Set<Category> children = new HashSet<>();
-
-    // SoftDeletable implementation
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
-
-    @Column(name = "deleted_by", length = 100)
-    private String deletedBy;
-
-    @Override
-    public void softDelete(String actor) {
-        this.deleted = true;
-        this.deletedAt = Instant.now();
-        this.deletedBy = actor;
-    }
-
-    @Override
-    public boolean isDeleted() {
-        return deleted;
-    }
 }
 ```
+
+> KHÔNG tự khai `deleted/deletedAt/deletedBy`/`softDelete(String)` — base class đã có (qua `AbstractMappedEntity extends SoftDeletable`). Xóa dùng `markDeleted(actor)` (từ `SoftDeletable`).
 
 - [ ] **Step 2: Commit**
 
@@ -1120,20 +1153,18 @@ git commit -m "feat(product-service): Category entity (self-referencing tree)"
 package com.shop.productservice.entity;
 
 import com.shop.common.core.data.AbstractMappedEntity;
-import com.shop.common.core.data.SoftDeletable;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.Instant;
-
 @Entity
 @Table(name = "brands")
+@SQLRestriction("deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Brand extends AbstractMappedEntity implements SoftDeletable {
+public class Brand extends AbstractMappedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -1150,28 +1181,6 @@ public class Brand extends AbstractMappedEntity implements SoftDeletable {
 
     @Column(length = 1000)
     private String description;
-
-    // SoftDeletable implementation
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
-
-    @Column(name = "deleted_by", length = 100)
-    private String deletedBy;
-
-    @Override
-    public void softDelete(String actor) {
-        this.deleted = true;
-        this.deletedAt = Instant.now();
-        this.deletedBy = actor;
-    }
-
-    @Override
-    public boolean isDeleted() {
-        return deleted;
-    }
 }
 ```
 
@@ -1195,21 +1204,20 @@ git commit -m "feat(product-service): Brand entity"
 package com.shop.productservice.entity;
 
 import com.shop.common.core.data.AbstractMappedEntity;
-import com.shop.common.core.data.SoftDeletable;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 @Entity
 @Table(name = "products")
+@SQLRestriction("deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Product extends AbstractMappedEntity implements SoftDeletable {
+public class Product extends AbstractMappedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -1253,28 +1261,6 @@ public class Product extends AbstractMappedEntity implements SoftDeletable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id")
     private Brand brand;
-
-    // SoftDeletable implementation
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
-
-    @Column(name = "deleted_by", length = 100)
-    private String deletedBy;
-
-    @Override
-    public void softDelete(String actor) {
-        this.deleted = true;
-        this.deletedAt = Instant.now();
-        this.deletedBy = actor;
-    }
-
-    @Override
-    public boolean isDeleted() {
-        return deleted;
-    }
 }
 ```
 
@@ -1305,6 +1291,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "outbox_events")
+// KHÔNG @SQLRestriction — relay phải nhìn thấy MỌI event kể cả khi base có deleted flag
 @Getter
 @Setter
 @NoArgsConstructor
@@ -1376,13 +1363,12 @@ import com.shop.productservice.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
-    List<Category> findAllByDeletedFalseOrderByTitleAsc();
-    Optional<Category> findByIdAndDeletedFalse(Long id);
-    boolean existsBySlugAndDeletedFalse(String slug);
-    boolean existsBySlugAndDeletedFalseAndIdNot(String slug, Long id);
+    // findById(Long) — kế thừa, đã tự filter deleted (@SQLRestriction)
+    List<Category> findAllByOrderByTitleAsc();
+    boolean existsBySlug(String slug);
+    boolean existsBySlugAndIdNot(String slug, Long id);
 }
 ```
 
@@ -1392,17 +1378,12 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 package com.shop.productservice.repository;
 
 import com.shop.productservice.entity.Brand;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
-
 public interface BrandRepository extends JpaRepository<Brand, Long> {
-    Page<Brand> findAllByDeletedFalse(Pageable pageable);
-    Optional<Brand> findByIdAndDeletedFalse(Long id);
-    boolean existsBySlugAndDeletedFalse(String slug);
-    boolean existsBySlugAndDeletedFalseAndIdNot(String slug, Long id);
+    // findAll(Pageable) + findById(Long) — kế thừa JpaRepository, đã tự filter deleted
+    boolean existsBySlug(String slug);
+    boolean existsBySlugAndIdNot(String slug, Long id);
 }
 ```
 
@@ -1438,12 +1419,12 @@ git commit -m "feat(product-service): Category, Brand, OutboxEvent repositories"
 **Files:**
 - Create: `product-service/src/main/java/com/shop/productservice/repository/ProductRepository.java`
 - Create: `product-service/src/test/java/com/shop/productservice/repository/ProductRepositoryTest.java`
-- Modify: `product-service/pom.xml` (add `spring-boot-starter-data-redis-test` is NOT needed; `testcontainers` + `spring-boot-testcontainers` are needed)
+- Modify: `product-service/pom.xml` — thêm test deps: `spring-boot-testcontainers`, `org.testcontainers:postgresql`, `org.testcontainers:kafka`, `spring-kafka-test`, `awaitility`. **JPA slice deps (`spring-boot-data-jpa-test`, `spring-boot-jpa-test`, `h2`) đã có sẵn từ `common-core/pom.xml`** (Task 1 transitive). Không cần thêm lại ở product-service pom.
 
 **Interfaces:**
 - Produces: `ProductRepository` with `@EntityGraph` queries and `existsBy*` checks
 
-- [ ] **Step 1: Add Testcontainers to `product-service/pom.xml`**
+- [ ] **Step 1: Add Testcontainers deps to `product-service/pom.xml`**
 
 Add to `<dependencies>`:
 
@@ -1454,13 +1435,33 @@ Add to `<dependencies>`:
     <scope>test</scope>
 </dependency>
 <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-testcontainers</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
     <groupId>org.testcontainers</groupId>
     <artifactId>postgresql</artifactId>
     <scope>test</scope>
 </dependency>
+<dependency>
+    <groupId>org.springframework.kafka</groupId>
+    <artifactId>spring-kafka-test</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>kafka</artifactId>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.awaitility</groupId>
+    <artifactId>awaitility</artifactId>
+    <scope>test</scope>
+</dependency>
 ```
 
-- [ ] **Step 2: Create `ProductRepository`**
+- [ ] **Step 2: Create `ProductRepository`** — bỏ hậu tố `*AndDeletedFalse` (@SQLRestriction tự filter)
 
 ```java
 package com.shop.productservice.repository;
@@ -1479,23 +1480,21 @@ public interface ProductRepository
         extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     @EntityGraph(attributePaths = {"category", "brand"})
-    Optional<Product> findWithRelationsByIdAndDeletedFalse(Long id);
+    Optional<Product> findWithRelationsById(Long id);
 
     @EntityGraph(attributePaths = {"category", "brand"})
-    Optional<Product> findWithRelationsBySlugAndDeletedFalse(String slug);
+    Optional<Product> findWithRelationsBySlug(String slug);
 
-    Optional<Product> findByIdAndDeletedFalse(Long id);
+    // findById(Long), findAll(Pageable), findAll(Spec, Pageable) — kế thừa JpaRepository/JpaSpecificationExecutor
 
-    Page<Product> findAll(Specification<Product> spec, Pageable pageable);
-
-    boolean existsBySlugAndDeletedFalse(String slug);
-    boolean existsBySkuAndDeletedFalse(String sku);
-    boolean existsBySlugAndDeletedFalseAndIdNot(String slug, Long id);
-    boolean existsBySkuAndDeletedFalseAndIdNot(String sku, Long id);
+    boolean existsBySlug(String slug);
+    boolean existsBySku(String sku);
+    boolean existsBySlugAndIdNot(String slug, Long id);
+    boolean existsBySkuAndIdNot(String sku, Long id);
 }
 ```
 
-- [ ] **Step 3: Write the failing test (`ProductRepositoryTest`)**
+- [ ] **Step 3: Write the failing test (`ProductRepositoryTest`)** — Boot 4 packages (verified Task 1) + `@Import(LiquibaseAutoConfiguration.class)` (slice `@DataJpaTest` không tự chạy Liquibase):
 
 ```java
 package com.shop.productservice.repository;
@@ -1505,8 +1504,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -1525,7 +1525,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration.class)
+@Import({
+    com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration.class,
+    LiquibaseAutoConfiguration.class
+})
 class ProductRepositoryTest {
 
     @Container
@@ -1539,6 +1542,7 @@ class ProductRepositoryTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
     }
 
     @Autowired TestEntityManager em;
@@ -1556,7 +1560,7 @@ class ProductRepositoryTest {
     }
 
     @Test
-    void findWithRelationsByIdAndDeletedFalse_returnsProductWithCategoryAndBrand() {
+    void findWithRelationsById_returnsProductWithCategoryAndBrand() {
         Product p = Product.builder()
             .title("iPhone 15").slug("iphone-15").sku("IP15-001")
             .priceUnit(new BigDecimal("999.00")).quantity(10)
@@ -1565,7 +1569,7 @@ class ProductRepositoryTest {
         em.persistAndFlush(p);
         em.clear();
 
-        Optional<Product> result = productRepository.findWithRelationsByIdAndDeletedFalse(p.getId());
+        Optional<Product> result = productRepository.findWithRelationsById(p.getId());
 
         assertThat(result).isPresent();
         assertThat(result.get().getCategory().getTitle()).isEqualTo("Phones");
@@ -1573,7 +1577,7 @@ class ProductRepositoryTest {
     }
 
     @Test
-    void findBySlugAndDeletedFalse_excludesSoftDeleted() {
+    void findWithRelationsBySlug_excludesSoftDeleted() {
         Product active = Product.builder()
             .title("Active").sku("A-1")
             .priceUnit(BigDecimal.ONE).quantity(1)
@@ -1582,13 +1586,13 @@ class ProductRepositoryTest {
             .title("Deleted").sku("D-1")
             .priceUnit(BigDecimal.ONE).quantity(1)
             .status(ProductStatus.DISCONTINUED).slug("deleted").build();
-        deleted.softDelete("test");
+        deleted.markDeleted("test");                                   // SoftDeletable API
         em.persistAndFlush(active);
         em.persistAndFlush(deleted);
         em.clear();
 
-        assertThat(productRepository.findWithRelationsBySlugAndDeletedFalse("active")).isPresent();
-        assertThat(productRepository.findWithRelationsBySlugAndDeletedFalse("deleted")).isEmpty();
+        assertThat(productRepository.findWithRelationsBySlug("active")).isPresent();
+        assertThat(productRepository.findWithRelationsBySlug("deleted")).isEmpty();  // @SQLRestriction tự lo
     }
 
     @Test
@@ -1598,6 +1602,7 @@ class ProductRepositoryTest {
         em.persistAndFlush(p1);
         em.persistAndFlush(p2);
 
+        // KHÔNG cần predicate deleted=false — @SQLRestriction đã filter
         Specification<Product> spec = (root, query, cb) ->
             cb.and(
                 cb.equal(root.get("category").get("id"), category.getId()),
@@ -1611,13 +1616,13 @@ class ProductRepositoryTest {
     }
 
     @Test
-    void existsBySlugAndDeletedFalseAndIdNot_worksForUpdate() {
+    void existsBySlugAndIdNot_worksForUpdate() {
         Product p = Product.builder().title("T").slug("t").sku("T").priceUnit(BigDecimal.ONE).quantity(1).status(ProductStatus.ACTIVE).build();
         em.persistAndFlush(p);
 
-        assertThat(productRepository.existsBySlugAndDeletedFalseAndIdNot("t", 999L)).isTrue();
-        assertThat(productRepository.existsBySlugAndDeletedFalseAndIdNot("t", p.getId())).isFalse();
-        assertThat(productRepository.existsBySlugAndDeletedFalseAndIdNot("other", p.getId())).isFalse();
+        assertThat(productRepository.existsBySlugAndIdNot("t", 999L)).isTrue();
+        assertThat(productRepository.existsBySlugAndIdNot("t", p.getId())).isFalse();
+        assertThat(productRepository.existsBySlugAndIdNot("other", p.getId())).isFalse();
     }
 }
 ```
@@ -1665,7 +1670,7 @@ import java.math.BigDecimal;
 public record ProductCreateRequest(
     @NotBlank @Size(max = 200) String title,
     @NotBlank @Size(max = 200) String slug,
-    @NotBlank @Size(max = 2000) String description,
+    @Size(max = 2000)           String description,   // optional theo spec §3.6
     @NotBlank @Size(max = 50)  String sku,
     @NotNull  @DecimalMin("0.0") BigDecimal priceUnit,
     @NotNull  @Min(0)            Integer quantity,
@@ -1874,12 +1879,14 @@ git commit -m "feat(product-service): request/response DTOs + ProductFilter"
 
 ---
 
-### Task 19: MapStruct Mappers
+### Task 19: ModelMapper mappers (sync auth-service pattern)
 
 **Files:**
 - Create: `product-service/src/main/java/com/shop/productservice/mapper/ProductMapper.java`
 - Create: `product-service/src/main/java/com/shop/productservice/mapper/CategoryMapper.java`
 - Create: `product-service/src/main/java/com/shop/productservice/mapper/BrandMapper.java`
+
+> **Sync pattern auth-service** — `@Component` class inject `ModelMapper` bean (từ `common-spring/ModelMapperAutoConfiguration`, đã config STRICT + skip-null). Mỗi mapper có method `toResponse(entity)` (build DTO thủ công hoặc `modelMapper.map(...)`) + `toEntity(CreateRequest)` + `partialUpdate(@MappingTarget entity, UpdateRequest)` (MapStruct-style null-ignore: `if (req.foo() != null) entity.setFoo(req.foo())`). KHÔNG dùng MapStruct / `BaseMapper` / `EntityCreateUpdateMapper`.
 
 - [ ] **Step 1: Create `ProductMapper`**
 
@@ -1890,30 +1897,66 @@ import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
 import com.shop.productservice.dto.response.ProductSummaryResponse;
+import com.shop.productservice.entity.Category;
 import com.shop.productservice.entity.Product;
-import org.mapstruct.*;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ProductMapper {
+@Component
+public class ProductMapper {
 
-    ProductSummaryResponse toSummaryResponse(Product product);
+    private final ModelMapper modelMapper;
 
-    @Mapping(target = "categoryId",    source = "category.id")
-    @Mapping(target = "categoryTitle", source = "category.title")
-    @Mapping(target = "brandId",      source = "brand.id")
-    @Mapping(target = "brandName",    source = "brand.name")
-    ProductDetailResponse toDetailResponse(Product product);
+    public ProductMapper(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
 
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "brand",    ignore = true)
-    @Mapping(target = "id",       ignore = true)
-    Product toEntity(ProductCreateRequest request);
+    public ProductSummaryResponse toSummaryResponse(Product product) {
+        return new ProductSummaryResponse(
+            product.getId(),
+            product.getTitle(),
+            product.getSlug(),
+            product.getSku(),
+            product.getPriceUnit(),
+            product.getQuantity(),
+            product.getStatus(),
+            product.getImageUrl()
+        );
+    }
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "brand",    ignore = true)
-    @Mapping(target = "id",       ignore = true)
-    void partialUpdate(@MappingTarget Product product, ProductUpdateRequest request);
+    public ProductDetailResponse toDetailResponse(Product product) {
+        ProductDetailResponse r = modelMapper.map(product, ProductDetailResponse.class);
+        // map category/brand relation fields manually (ModelMapper không tự biết)
+        if (product.getCategory() != null) {
+            r.setCategoryId(product.getCategory().getId());
+            r.setCategoryTitle(product.getCategory().getTitle());
+        }
+        if (product.getBrand() != null) {
+            r.setBrandId(product.getBrand().getId());
+            r.setBrandName(product.getBrand().getName());
+        }
+        return r;
+    }
+
+    public Product toEntity(ProductCreateRequest request) {
+        Product p = modelMapper.map(request, Product.class);
+        p.setId(null);   // bảo đảm identity insert
+        return p;
+    }
+
+    public void partialUpdate(Product target, ProductUpdateRequest request) {
+        if (request.title()       != null) target.setTitle(request.title());
+        if (request.slug()        != null) target.setSlug(request.slug());
+        if (request.description() != null) target.setDescription(request.description());
+        if (request.sku()         != null) target.setSku(request.sku());
+        if (request.priceUnit()   != null) target.setPriceUnit(request.priceUnit());
+        if (request.quantity()    != null) target.setQuantity(request.quantity());
+        if (request.status()      != null) target.setStatus(request.status());
+        if (request.imageUrl()    != null) target.setImageUrl(request.imageUrl());
+        if (request.weight()      != null) target.setWeight(request.weight());
+        if (request.dimensions()  != null) target.setDimensions(request.dimensions());
+        // categoryId/brandId set riêng trong service (cần lookup)
+    }
 }
 ```
 
@@ -1927,17 +1970,32 @@ import com.shop.productservice.dto.request.CategoryUpdateRequest;
 import com.shop.productservice.dto.response.CategoryResponse;
 import com.shop.productservice.dto.response.CategoryTreeResponse;
 import com.shop.productservice.entity.Category;
-import org.mapstruct.*;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface CategoryMapper {
+@Component
+public class CategoryMapper {
 
-    CategoryResponse toResponse(Category category);
+    private final ModelMapper modelMapper;
 
-    default CategoryTreeResponse toTreeResponse(Category category, List<CategoryTreeResponse> children) {
+    public CategoryMapper(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
+
+    public CategoryResponse toResponse(Category category) {
+        return new CategoryResponse(
+            category.getId(),
+            category.getTitle(),
+            category.getSlug(),
+            category.getImageUrl(),
+            category.getParent() != null ? category.getParent().getId() : null
+        );
+    }
+
+    public CategoryTreeResponse toTreeResponse(Category category, List<CategoryTreeResponse> children) {
         return new CategoryTreeResponse(
             category.getId(),
             category.getTitle(),
@@ -1948,16 +2006,18 @@ public interface CategoryMapper {
         );
     }
 
-    @Mapping(target = "parent",   ignore = true)
-    @Mapping(target = "children", ignore = true)
-    @Mapping(target = "id",       ignore = true)
-    Category toEntity(CategoryCreateRequest request);
+    public Category toEntity(CategoryCreateRequest request) {
+        Category c = modelMapper.map(request, Category.class);
+        c.setId(null);
+        return c;
+    }
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "parent",   ignore = true)
-    @Mapping(target = "children", ignore = true)
-    @Mapping(target = "id",       ignore = true)
-    void partialUpdate(@MappingTarget Category category, CategoryUpdateRequest request);
+    public void partialUpdate(Category target, CategoryUpdateRequest request) {
+        if (request.title()     != null) target.setTitle(request.title());
+        if (request.slug()      != null) target.setSlug(request.slug());
+        if (request.imageUrl() != null) target.setImageUrl(request.imageUrl());
+        // parentId set riêng trong service (cần lookup)
+    }
 }
 ```
 
@@ -1970,27 +2030,50 @@ import com.shop.productservice.dto.request.BrandCreateRequest;
 import com.shop.productservice.dto.request.BrandUpdateRequest;
 import com.shop.productservice.dto.response.BrandResponse;
 import com.shop.productservice.entity.Brand;
-import org.mapstruct.*;
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface BrandMapper {
+@Component
+public class BrandMapper {
 
-    BrandResponse toResponse(Brand brand);
+    private final ModelMapper modelMapper;
 
-    @Mapping(target = "id", ignore = true)
-    Brand toEntity(BrandCreateRequest request);
+    public BrandMapper(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "id", ignore = true)
-    void partialUpdate(@MappingTarget Brand brand, BrandUpdateRequest request);
+    public BrandResponse toResponse(Brand brand) {
+        return new BrandResponse(
+            brand.getId(),
+            brand.getName(),
+            brand.getSlug(),
+            brand.getLogoUrl(),
+            brand.getDescription()
+        );
+    }
+
+    public Brand toEntity(BrandCreateRequest request) {
+        Brand b = modelMapper.map(request, Brand.class);
+        b.setId(null);
+        return b;
+    }
+
+    public void partialUpdate(Brand target, BrandUpdateRequest request) {
+        if (request.name()        != null) target.setName(request.name());
+        if (request.slug()        != null) target.setSlug(request.slug());
+        if (request.logoUrl()     != null) target.setLogoUrl(request.logoUrl());
+        if (request.description() != null) target.setDescription(request.description());
+    }
 }
 ```
+
+> **DTO là `record`** (Task 18) — mapper dùng constructor trực tiếp `new BrandResponse(brand.getId(), ...)`.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add product-service/src/main/java/com/shop/productservice/mapper/
-git commit -m "feat(product-service): MapStruct mappers (Product, Category, Brand)"
+git commit -m "feat(product-service): ModelMapper mappers (Product, Category, Brand)"
 ```
 
 ---
@@ -2041,11 +2124,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -2058,13 +2141,14 @@ class BrandServiceImplTest {
 
     @Mock BrandRepository repo;
     @Mock BrandMapper mapper;
+    @Mock AuditorAware<String> auditorAware;
     @InjectMocks BrandServiceImpl service;
 
     @Test
     void findById_returnsBrand() {
         Brand brand = Brand.builder().id(1L).name("Acme").slug("acme").build();
         BrandResponse resp = new BrandResponse(1L, "Acme", "acme", null, null);
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(brand));
+        when(repo.findById(1L)).thenReturn(Optional.of(brand));
         when(mapper.toResponse(brand)).thenReturn(resp);
 
         assertThat(service.findById(1L)).isEqualTo(resp);
@@ -2072,7 +2156,7 @@ class BrandServiceImplTest {
 
     @Test
     void findById_throwsWhenNotFound() {
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(Optional.empty());
+        when(repo.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findById(1L))
             .isInstanceOf(BusinessException.class);
@@ -2083,7 +2167,7 @@ class BrandServiceImplTest {
         BrandCreateRequest req = new BrandCreateRequest("Acme", "acme", null, null);
         Brand brand = Brand.builder().id(1L).name("Acme").slug("acme").build();
         BrandResponse resp = new BrandResponse(1L, "Acme", "acme", null, null);
-        when(repo.existsBySlugAndDeletedFalse("acme")).thenReturn(false);
+        when(repo.existsBySlug("acme")).thenReturn(false);
         when(mapper.toEntity(req)).thenReturn(brand);
         when(repo.save(brand)).thenReturn(brand);
         when(mapper.toResponse(brand)).thenReturn(resp);
@@ -2094,7 +2178,7 @@ class BrandServiceImplTest {
     @Test
     void create_throwsConflictOnDuplicateSlug() {
         BrandCreateRequest req = new BrandCreateRequest("Acme", "acme", null, null);
-        when(repo.existsBySlugAndDeletedFalse("acme")).thenReturn(true);
+        when(repo.existsBySlug("acme")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(req))
             .isInstanceOf(BusinessException.class);
@@ -2104,7 +2188,7 @@ class BrandServiceImplTest {
     void update_appliesPartialUpdate() {
         Brand existing = Brand.builder().id(1L).name("Acme").slug("acme").description("old").build();
         BrandUpdateRequest req = new BrandUpdateRequest(null, null, null, "new");
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existing));
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
         when(repo.save(existing)).thenReturn(existing);
         when(mapper.toResponse(existing)).thenReturn(
             new BrandResponse(1L, "Acme", "acme", null, "new"));
@@ -2115,13 +2199,15 @@ class BrandServiceImplTest {
     }
 
     @Test
-    void delete_softDeletes() {
+    void delete_softDeletesWithActor() {
         Brand existing = Brand.builder().id(1L).name("Acme").slug("acme").build();
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existing));
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
 
         service.delete(1L);
 
         assertThat(existing.isDeleted()).isTrue();
+        assertThat(existing.getDeletedBy()).isEqualTo("alice");
         assertThat(existing.getDeletedAt()).isNotNull();
         verify(repo).save(existing);
     }
@@ -2129,7 +2215,7 @@ class BrandServiceImplTest {
     @Test
     void findAll_returnsPage() {
         Page<Brand> page = new PageImpl<>(List.of());
-        when(repo.findAllByDeletedFalse(any(PageRequest.class))).thenReturn(page);
+        when(repo.findAll(any(PageRequest.class))).thenReturn(page);
 
         PageResponse<BrandResponse> result = service.findAll(PageRequest.of(0, 10));
         assertThat(result.content()).isEmpty();
@@ -2158,7 +2244,9 @@ import com.shop.productservice.mapper.BrandMapper;
 import com.shop.productservice.repository.BrandRepository;
 import com.shop.productservice.service.BrandService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -2168,30 +2256,32 @@ public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository repo;
     private final BrandMapper mapper;
+    private final AuditorAware<String> auditorAware;
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<BrandResponse> findAll(Pageable pageable) {
-        return PageResponse.of(repo.findAllByDeletedFalse(pageable)
-            .map(mapper::toResponse).getContent(),
-            pageable.getPageNumber(),
-            pageable.getPageSize(),
-            repo.findAllByDeletedFalse(pageable).getTotalElements());
+        Page<Brand> page = repo.findAll(pageable);                  // 1 query, @SQLRestriction tự filter
+        return PageResponse.of(
+            page.map(mapper::toResponse).getContent(),
+            page.getNumber(),
+            page.getSize(),
+            page.getTotalElements());
     }
 
     @Override
     @Transactional(readOnly = true)
     public BrandResponse findById(Long id) {
-        return repo.findByIdAndDeletedFalse(id)
+        return repo.findById(id)
             .map(mapper::toResponse)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Brand " + id + " not found"));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
     }
 
     @Override
     @Transactional
     public BrandResponse create(BrandCreateRequest request) {
-        if (repo.existsBySlugAndDeletedFalse(request.slug())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Brand slug already exists");
+        if (repo.existsBySlug(request.slug())) {
+            throw BusinessException.conflict("brand.slug.exists");
         }
         Brand brand = mapper.toEntity(request);
         return mapper.toResponse(repo.save(brand));
@@ -2200,8 +2290,8 @@ public class BrandServiceImpl implements BrandService {
     @Override
     @Transactional
     public BrandResponse update(Long id, BrandUpdateRequest request) {
-        Brand existing = repo.findByIdAndDeletedFalse(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Brand " + id + " not found"));
+        Brand existing = repo.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
         mapper.partialUpdate(existing, request);
         return mapper.toResponse(repo.save(existing));
     }
@@ -2209,9 +2299,9 @@ public class BrandServiceImpl implements BrandService {
     @Override
     @Transactional
     public void delete(Long id) {
-        Brand existing = repo.findByIdAndDeletedFalse(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Brand " + id + " not found"));
-        existing.softDelete("system");
+        Brand existing = repo.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
+        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         repo.save(existing);
     }
 }
@@ -2297,7 +2387,7 @@ class CategoryServiceImplTest {
         Category child1 = Category.builder().id(2L).title("Phones").slug("phones").parent(root).build();
         Category child2 = Category.builder().id(3L).title("Laptops").slug("laptops").parent(root).build();
         Category grandchild = Category.builder().id(4L).title("iPhone").slug("iphone").parent(child1).build();
-        when(repo.findAllByDeletedFalseOrderByTitleAsc())
+        when(repo.findAllByOrderByTitleAsc())
             .thenReturn(List.of(root, child1, child2, grandchild));
         when(mapper.toTreeResponse(eq(root),     any())).thenAnswer(inv -> new CategoryTreeResponse(1L, "Electronics", "electronics", null, null, inv.getArgument(1)));
         when(mapper.toTreeResponse(eq(child1),   any())).thenAnswer(inv -> new CategoryTreeResponse(2L, "Phones", "phones", null, 1L, inv.getArgument(1)));
@@ -2316,7 +2406,7 @@ class CategoryServiceImplTest {
 
     @Test
     void findById_throwsWhenNotFound() {
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(java.util.Optional.empty());
+        when(repo.findById(1L)).thenReturn(java.util.Optional.empty());
 
         assertThatThrownBy(() -> service.findById(1L)).isInstanceOf(BusinessException.class);
     }
@@ -2344,6 +2434,7 @@ import com.shop.productservice.mapper.CategoryMapper;
 import com.shop.productservice.repository.CategoryRepository;
 import com.shop.productservice.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -2358,11 +2449,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository repo;
     private final CategoryMapper mapper;
+    private final AuditorAware<String> auditorAware;
 
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponse> findAll() {
-        return repo.findAllByDeletedFalseOrderByTitleAsc().stream()
+        return repo.findAllByOrderByTitleAsc().stream()
             .map(mapper::toResponse)
             .toList();
     }
@@ -2370,7 +2462,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryTreeResponse> findTree() {
-        List<Category> all = repo.findAllByDeletedFalseOrderByTitleAsc();
+        List<Category> all = repo.findAllByOrderByTitleAsc();
         Map<Long, CategoryTreeResponse> nodeMap = new LinkedHashMap<>();
         List<CategoryTreeResponse> roots = new ArrayList<>();
         for (Category c : all) {
@@ -2381,7 +2473,11 @@ public class CategoryServiceImpl implements CategoryService {
             if (c.getParent() == null) {
                 roots.add(node);
             } else {
-                nodeMap.get(c.getParent().getId()).children().add(node);
+                // guard: parent bị soft-delete → child orphan, bỏ qua
+                CategoryTreeResponse parent = nodeMap.get(c.getParent().getId());
+                if (parent != null) {
+                    parent.children().add(node);
+                }
             }
         }
         return roots;
@@ -2390,21 +2486,21 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public CategoryResponse findById(Long id) {
-        return repo.findByIdAndDeletedFalse(id)
+        return repo.findById(id)
             .map(mapper::toResponse)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Category " + id + " not found"));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
     }
 
     @Override
     @Transactional
     public CategoryResponse create(CategoryCreateRequest request) {
-        if (repo.existsBySlugAndDeletedFalse(request.slug())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Category slug already exists");
+        if (repo.existsBySlug(request.slug())) {
+            throw BusinessException.conflict("category.slug.exists");
         }
         Category category = mapper.toEntity(request);
         if (request.parentId() != null) {
-            Category parent = repo.findByIdAndDeletedFalse(request.parentId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Parent category not found"));
+            Category parent = repo.findById(request.parentId())
+                .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.parentId()));
             category.setParent(parent);
         }
         return mapper.toResponse(repo.save(category));
@@ -2413,12 +2509,12 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryResponse update(Long id, CategoryUpdateRequest request) {
-        Category existing = repo.findByIdAndDeletedFalse(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Category " + id + " not found"));
+        Category existing = repo.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
         mapper.partialUpdate(existing, request);
         if (request.parentId() != null) {
-            Category parent = repo.findByIdAndDeletedFalse(request.parentId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Parent category not found"));
+            Category parent = repo.findById(request.parentId())
+                .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.parentId()));
             existing.setParent(parent);
         }
         return mapper.toResponse(repo.save(existing));
@@ -2427,9 +2523,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public void delete(Long id) {
-        Category existing = repo.findByIdAndDeletedFalse(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Category " + id + " not found"));
-        existing.softDelete("system");
+        Category existing = repo.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
+        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         repo.save(existing);
     }
 }
@@ -2554,6 +2650,7 @@ class ProductServiceImplTest {
     @Mock BrandRepository brandRepo;
     @Mock ProductMapper mapper;
     @Mock ProductEventPublisher publisher;
+    @Mock AuditorAware<String> auditorAware;
     @InjectMocks ProductServiceImpl service;
 
     private ProductCreateRequest sampleCreate() {
@@ -2572,7 +2669,7 @@ class ProductServiceImplTest {
         ProductDetailResponse resp = new ProductDetailResponse(1L, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
             null, null, null, null, null, null);
-        when(repo.findWithRelationsByIdAndDeletedFalse(1L)).thenReturn(Optional.of(p));
+        when(repo.findWithRelationsById(1L)).thenReturn(Optional.of(p));
         when(mapper.toDetailResponse(p)).thenReturn(resp);
 
         assertThat(service.findById(1L)).isEqualTo(resp);
@@ -2580,7 +2677,7 @@ class ProductServiceImplTest {
 
     @Test
     void findById_throwsNotFoundWhenMissing() {
-        when(repo.findWithRelationsByIdAndDeletedFalse(1L)).thenReturn(Optional.empty());
+        when(repo.findWithRelationsById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findById(1L)).isInstanceOf(BusinessException.class);
     }
@@ -2592,8 +2689,8 @@ class ProductServiceImplTest {
         ProductDetailResponse resp = new ProductDetailResponse(1L, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
             null, null, null, null, null, null);
-        when(repo.existsBySlugAndDeletedFalse("iphone-15")).thenReturn(false);
-        when(repo.existsBySkuAndDeletedFalse("IP15-001")).thenReturn(false);
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
         when(mapper.toEntity(req)).thenReturn(product);
         when(repo.save(product)).thenReturn(product);
         when(mapper.toDetailResponse(product)).thenReturn(resp);
@@ -2607,7 +2704,7 @@ class ProductServiceImplTest {
     @Test
     void create_throwsConflictOnDuplicateSlug() {
         ProductCreateRequest req = sampleCreate();
-        when(repo.existsBySlugAndDeletedFalse("iphone-15")).thenReturn(true);
+        when(repo.existsBySlug("iphone-15")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(req)).isInstanceOf(BusinessException.class);
         verifyNoInteractions(publisher);
@@ -2621,7 +2718,7 @@ class ProductServiceImplTest {
         ProductDetailResponse resp = new ProductDetailResponse(1L, "iPhone 15", "iphone-15",
             "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
             null, null, null, null, null, null, null, null, null);
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existing));
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
         when(repo.save(existing)).thenReturn(existing);
         when(mapper.toDetailResponse(existing)).thenReturn(resp);
 
@@ -2632,13 +2729,15 @@ class ProductServiceImplTest {
     }
 
     @Test
-    void delete_softDeletesAndPublishes() {
+    void delete_softDeletesWithActorAndPublishes() {
         Product existing = sampleProduct();
-        when(repo.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existing));
+        when(repo.findById(1L)).thenReturn(Optional.of(existing));
+        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
 
         service.delete(1L);
 
         assertThat(existing.isDeleted()).isTrue();
+        assertThat(existing.getDeletedBy()).isEqualTo("alice");
         verify(repo).save(existing);
         verify(publisher).publishDeleted(existing);
     }
@@ -2693,6 +2792,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -2711,13 +2811,14 @@ public class ProductServiceImpl implements ProductService {
     private final BrandRepository brandRepo;
     private final ProductMapper mapper;
     private final ProductEventPublisher publisher;
+    private final AuditorAware<String> auditorAware;
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductSummaryResponse> findAll(ProductFilter filter, Pageable pageable) {
+        // KHÔNG cần predicate deleted=false — @SQLRestriction đã filter
         Specification<Product> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("deleted"), false));
             if (filter.categoryId() != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), filter.categoryId()));
             }
@@ -2731,47 +2832,49 @@ public class ProductServiceImpl implements ProductService {
         };
 
         Page<Product> page = repo.findAll(spec, pageable);
-        List<ProductSummaryResponse> content = page.getContent().stream()
-            .map(mapper::toSummaryResponse).toList();
-        return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), page.getTotalElements());
+        return PageResponse.of(
+            page.map(mapper::toSummaryResponse).getContent(),
+            page.getNumber(),
+            page.getSize(),
+            page.getTotalElements());
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "product", key = "#id")
     public ProductDetailResponse findById(Long id) {
-        return repo.findWithRelationsByIdAndDeletedFalse(id)
+        return repo.findWithRelationsById(id)
             .map(mapper::toDetailResponse)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Product " + id + " not found"));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "productBySlug", key = "#slug")
     public ProductDetailResponse findBySlug(String slug) {
-        return repo.findWithRelationsBySlugAndDeletedFalse(slug)
+        return repo.findWithRelationsBySlug(slug)
             .map(mapper::toDetailResponse)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Product slug " + slug + " not found"));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, "slug=" + slug));
     }
 
     @Override
     @Transactional
     public ProductDetailResponse create(ProductCreateRequest request) {
-        if (repo.existsBySlugAndDeletedFalse(request.slug())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Product slug already exists");
+        if (repo.existsBySlug(request.slug())) {
+            throw BusinessException.conflict("product.slug.exists");
         }
-        if (repo.existsBySkuAndDeletedFalse(request.sku())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Product sku already exists");
+        if (repo.existsBySku(request.sku())) {
+            throw BusinessException.conflict("product.sku.exists");
         }
         Product product = mapper.toEntity(request);
         if (request.categoryId() != null) {
-            Category category = categoryRepo.findByIdAndDeletedFalse(request.categoryId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Category not found"));
+            Category category = categoryRepo.findById(request.categoryId())
+                .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.categoryId()));
             product.setCategory(category);
         }
         if (request.brandId() != null) {
-            Brand brand = brandRepo.findByIdAndDeletedFalse(request.brandId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Brand not found"));
+            Brand brand = brandRepo.findById(request.brandId())
+                .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
             product.setBrand(brand);
         }
         Product saved = repo.save(product);
@@ -2784,25 +2887,25 @@ public class ProductServiceImpl implements ProductService {
     @Caching(put = @CachePut(value = "product", key = "#id"),
              evict = @CacheEvict(value = "productBySlug", allEntries = true))
     public ProductDetailResponse update(Long id, ProductUpdateRequest request) {
-        Product existing = repo.findByIdAndDeletedFalse(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Product " + id + " not found"));
+        Product existing = repo.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         if (request.slug() != null && !request.slug().equals(existing.getSlug())
-            && repo.existsBySlugAndDeletedFalse(request.slug())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Product slug already exists");
+            && repo.existsBySlug(request.slug())) {
+            throw BusinessException.conflict("product.slug.exists");
         }
         if (request.sku() != null && !request.sku().equals(existing.getSku())
-            && repo.existsBySkuAndDeletedFalse(request.sku())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "Product sku already exists");
+            && repo.existsBySku(request.sku())) {
+            throw BusinessException.conflict("product.sku.exists");
         }
         mapper.partialUpdate(existing, request);
         if (request.categoryId() != null) {
-            Category category = categoryRepo.findByIdAndDeletedFalse(request.categoryId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Category not found"));
+            Category category = categoryRepo.findById(request.categoryId())
+                .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.categoryId()));
             existing.setCategory(category);
         }
         if (request.brandId() != null) {
-            Brand brand = brandRepo.findByIdAndDeletedFalse(request.brandId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Brand not found"));
+            Brand brand = brandRepo.findById(request.brandId())
+                .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
             existing.setBrand(brand);
         }
         Product saved = repo.save(existing);
@@ -2814,9 +2917,9 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @CacheEvict(value = {"product", "productBySlug"}, allEntries = true)
     public void delete(Long id) {
-        Product existing = repo.findByIdAndDeletedFalse(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Product " + id + " not found"));
-        existing.softDelete("system");
+        Product existing = repo.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
+        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         repo.save(existing);
         publisher.publishDeleted(existing);
     }
@@ -2910,32 +3013,28 @@ public class BrandController {
 package com.shop.productservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.shop.common.core.viewmodel.ApiResponse;
-import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.productservice.dto.request.BrandCreateRequest;
 import com.shop.productservice.dto.response.BrandResponse;
 import com.shop.productservice.service.BrandService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;   // Boot 4 package
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;          // Boot 4 package
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;     // KHÔNG dùng @MockBean
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(BrandController.class)
+@AutoConfigureMockMvc(addFilters = false)   // TẮT security filter — pattern auth-service; @PreAuthorize test riêng
 class BrandControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @MockBean BrandService brandService;
+    @MockitoBean BrandService brandService;
 
     @Test
     void findById_returns200WithApiResponse() throws Exception {
@@ -2950,25 +3049,12 @@ class BrandControllerTest {
     }
 
     @Test
-    void create_withoutAdmin_returns403() throws Exception {
-        BrandCreateRequest req = new BrandCreateRequest("Acme", "acme", null, null);
-
-        mockMvc.perform(post("/api/v1/brands")
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(req)))
-            .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void create_withAdmin_returns201() throws Exception {
+    void create_returns200() throws Exception {
         BrandCreateRequest req = new BrandCreateRequest("Acme", "acme", null, null);
         BrandResponse resp = new BrandResponse(1L, "Acme", "acme", null, null);
         when(brandService.create(any())).thenReturn(resp);
 
         mockMvc.perform(post("/api/v1/brands")
-                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isOk())
@@ -2977,7 +3063,7 @@ class BrandControllerTest {
 }
 ```
 
-> Note: Spring Security test requires `@WithMockUser` for authenticated requests. Without it, the request goes through anonymous user and gets 403 (since admin role is needed).
+> **Không viết test 403-anonymous ở slice** — `@WebMvcTest` không load common-security's `SecurityAutoConfiguration` (vì không có `@Import(SecurityAutoConfiguration.class)`); với `addFilters=false` thì security filter không active; `@PreAuthorize` được enforce bởi method-security AOP mà slice không bật. Test authorization ở integration test (`@SpringBootTest` + thực sự load common-security chain).
 
 - [ ] **Step 3: Run test to verify it fails (compile error: controller doesn't exist)**
 
@@ -3164,25 +3250,25 @@ import com.shop.productservice.entity.ProductStatus;
 import com.shop.productservice.service.ProductService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;   // Boot 4 package
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;          // Boot 4 package
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProductController.class)
+@AutoConfigureMockMvc(addFilters = false)   // xem ghi chú BrandControllerTest
 class ProductControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @MockBean ProductService productService;
+    @MockitoBean ProductService productService;
 
     private ProductDetailResponse sample() {
         return new ProductDetailResponse(1L, "iPhone 15", "iphone-15", null, "IP15-001",
@@ -3210,26 +3296,11 @@ class ProductControllerTest {
     }
 
     @Test
-    void create_withoutAdmin_returns403() throws Exception {
-        ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", null,
-            "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null);
+    void create_withInvalidDto_returns400() throws Exception {
+        ProductCreateRequest req = new ProductCreateRequest("", "", null, "",
+            null, null, null, null, null, null, null, null);
 
         mockMvc.perform(post("/api/v1/products")
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(req)))
-            .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void create_withInvalidDto_returns400() throws throws Exception {
-        // missing required fields → validation fail
-        ProductCreateRequest req = new ProductCreateRequest("", "", "", "", null, null, null,
-            null, null, null, null, null);
-
-        mockMvc.perform(post("/api/v1/products")
-                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isBadRequest())
@@ -3237,8 +3308,6 @@ class ProductControllerTest {
     }
 }
 ```
-
-> **Fix typo:** `throws throws Exception` → `throws Exception`. (Common copy-paste mistake.)
 
 - [ ] **Step 3: Run test to verify it fails (compile error)**
 
@@ -3264,7 +3333,7 @@ git commit -m "feat(product-service): ProductController with filter params + slu
 ### Task 26: Replace `NoOpProductEventPublisher` with real `TransactionalProductEventPublisher`
 
 **Files:**
-- Modify: `product-service/src/main/java/com/shop/productservice/service/ProductEventPublisher.java` (interface only — remove NoOp class)
+- Modify: `product-service/src/main/java/com/shop/productservice/service/ProductEventPublisher.java` (interface only)
 - Delete: `product-service/src/main/java/com/shop/productservice/service/NoOpProductEventPublisher.java`
 - Create: `product-service/src/main/java/com/shop/productservice/service/impls/TransactionalProductEventPublisher.java`
 
@@ -3278,11 +3347,9 @@ git commit -m "feat(product-service): ProductController with filter params + slu
 rm product-service/src/main/java/com/shop/productservice/service/NoOpProductEventPublisher.java
 ```
 
-- [ ] **Step 2: Change `ProductEventPublisher` to package-private + add impl**
+- [ ] **Step 2: Create `TransactionalProductEventPublisher`**
 
-Move interface to `productservice.service.impls` package (or keep in service and add impl beside). Decision: keep interface in `service` package, impl in `service.impls`.
-
-- [ ] **Step 3: Create `TransactionalProductEventPublisher`**
+> Interface `ProductEventPublisher` đã có ở `service` package (Task 22), giữ nguyên package. Impl mới ở `service.impls` package. KHÔNG cần đổi `ProductEventPublisher` thành package-private — Spring inject theo interface type, không cần giấu.
 
 ```java
 package com.shop.productservice.service.impls;
@@ -3345,12 +3412,12 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
 }
 ```
 
-- [ ] **Step 4: Verify existing ProductServiceImplTest still passes**
+- [ ] **Step 3: Verify existing ProductServiceImplTest still passes**
 
 Run: `./mvnw test -pl product-service -Dtest=ProductServiceImplTest`
 Expected: PASS (uses Mockito mock, so any ProductEventPublisher impl works)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add product-service/src/main/java/com/shop/productservice/service/
@@ -3462,29 +3529,18 @@ public class ProductServiceApplication { ... }
 ```java
 package com.shop.productservice.service;
 
-import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.productservice.dto.request.ProductCreateRequest;
-import com.shop.productservice.entity.OutboxEvent;
 import com.shop.productservice.entity.OutboxStatus;
 import com.shop.productservice.entity.ProductStatus;
 import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.service.ProductService;
 import com.shop.productservice.support.AbstractIntegrationTest;
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.test.utils.ContainerTestUtils;
-import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -3507,11 +3563,11 @@ class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
         // 3. Assert OutboxEvent marked SENT
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
-                long pendingCount = outboxRepo.countByStatus(OutboxStatus.PENDING);
-                long sentCount    = outboxRepo.countByStatus(OutboxStatus.SENT);
-                assertThat(pendingCount).isEqualTo(0);
-                assertThat(sentCount).isGreaterThanOrEqualTo(1);
-            });
+            long pendingCount = outboxRepo.countByStatus(OutboxStatus.PENDING);
+            long sentCount    = outboxRepo.countByStatus(OutboxStatus.SENT);
+            assertThat(pendingCount).isEqualTo(0);
+            assertThat(sentCount).isGreaterThanOrEqualTo(1);
+        });
     }
 
     private OutboxRelay outboxRelay() {
@@ -3519,8 +3575,6 @@ class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
     }
 }
 ```
-
-> Note: This requires `AbstractIntegrationTest` base class. See Task 28.
 
 - [ ] **Step 5: Verify integration test runs**
 
@@ -3550,6 +3604,7 @@ git commit -m "feat(product-service): OutboxRelay @Scheduled poller with Kafka p
 package com.shop.productservice.support;
 
 import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
@@ -3582,16 +3637,21 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+        registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
+        registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("spring.cache.type", () -> "none");  // disable cache in tests
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     protected ApplicationContext applicationContext;
 }
 ```
 
-- [ ] **Step 2: Add `testcontainers` + `await` ily` deps to pom if missing**
+> `@SpringBootTest` đã tự load `LiquibaseAutoConfiguration` (full app context) → không cần `@Import(LiquibaseAutoConfiguration.class)` như `@DataJpaTest` slice.
+
+- [ ] **Step 2: Verify pom.xml có đủ deps**
+
+Task 17 Step 1 đã thêm `spring-boot-testcontainers`, `org.testcontainers:postgresql`, `org.testcontainers:kafka`, `spring-kafka-test` cho `product-service/pom.xml`. Nếu tích hợp test trước Task 17, thêm `awaitility` riêng:
 
 ```xml
 <dependency>
@@ -3600,6 +3660,8 @@ public abstract class AbstractIntegrationTest {
     <scope>test</scope>
 </dependency>
 ```
+
+Verify: `./mvnw -pl product-service dependency:resolve` → BUILD SUCCESS.
 
 - [ ] **Step 3: Commit**
 
@@ -3690,49 +3752,59 @@ git commit -m "feat(product-service): ProductMetrics wired into publisher + rela
 **Files:**
 - Modify: `docker-compose.yml`
 
-- [ ] **Step 1: Add `postgres-product` service**
+> Repo đã có block `product-service` (line ~263, port `8086:8086`, env `SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productservice`). KHÔNG tạo container `postgres-product` mới — repo dùng chung 1 Postgres có init script tạo sẵn DB `productservice` (`docker/postgres/init/create-all-databases.sql`).
 
-Insert after `postgres-auth` (or wherever postgres services are defined):
+- [ ] **Step 1: Verify existing `product-service:` block có đủ**
+
+Kiểm tra trong `docker-compose.yml` block `product-service:` có các env sau (thêm vào nếu thiếu):
+- `SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productservice` (đã có)
+- `SPRING_DATA_REDIS_HOST: redis` (thêm nếu thiếu)
+- `SPRING_DATA_REDIS_PORT: 6379` (thêm nếu thiếu)
+- `SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092` (thêm — lưu ý dùng prefix `SHOP_KAFKA_*` cho common-kafka, không phải `SPRING_KAFKA_*`)
+- `SERVER_PORT: 8086` (đã có hoặc thêm)
+
+Và `depends_on`:
+- `postgres: condition: service_healthy` (đã có)
+- `redis: condition: service_healthy` (thêm)
+- `kafka: condition: service_healthy` (thêm)
+
+Snippet tham khảo (nếu cần thay thế toàn bộ block):
 
 ```yaml
-  postgres-product:
-    image: postgres:16
-    container_name: postgres-product
+  product-service:
+    image: product-service:latest
+    container_name: product-service
+    <<: [*restart, *logging]
+    ports:
+      - "8086:8086"
     environment:
-      POSTGRES_DB: product_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres-product-data:/var/lib/postgresql/data
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productservice
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 8086
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d product_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health > /dev/null 2>&1 || exit 1"]
     networks:
-      - shop-net
+      - ecommerce-network
 ```
 
-- [ ] **Step 2: Add `postgres-product-data` to top-level `volumes:`**
+- [ ] **Step 2: Verify Kafka + Redis đã tồn tại trong compose** (đã có: `redis:7.4-alpine`, `apache/kafka:3.9.0` ở đầu file)
 
-```yaml
-volumes:
-  postgres-product-data:
-```
-
-- [ ] **Step 3: Add `product-service` block (if not already present)**
-
-Verify existing `product-service:` block has:
-- `SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-product:5432/product_db`
-- `SPRING_DATA_REDIS_HOST: redis`
-- `SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092`
-- `depends_on: postgres-product (condition: service_healthy)`, `redis (condition: service_healthy)`, `kafka (condition: service_healthy)`
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add docker-compose.yml
-git commit -m "build(docker): add postgres-product service + wire product-service to it"
+git commit -m "build(docker): wire product-service to redis + kafka (shop.kafka.*); reuse postgres"
 ```
 
 ---
@@ -3748,17 +3820,17 @@ Expected: BUILD SUCCESS, JAR at `product-service/target/product-service-*.jar`
 
 - [ ] **Step 2: Bring up infra**
 
-Run: `docker-compose up -d postgres-product redis kafka product-service`
+Run: `docker compose up -d postgres redis kafka product-service`   (KHÔNG có postgres-product — dùng chung)
 Expected: all containers start, `product-service` connects to all dependencies
 
 - [ ] **Step 3: Verify Liquibase ran**
 
-Run: `docker-compose logs product-service | grep -i liquibase`
+Run: `docker compose logs product-service | grep -i liquibase`
 Expected: "Successfully acquired change log lock" and "Update committed" for changelog-001
 
-- [ ] **Step 4: Hit health endpoint**
+- [ ] **Step 4: Hit health endpoint** (port 8086 theo compose)
 
-Run: `curl http://localhost:8083/actuator/health`
+Run: `curl http://localhost:8086/actuator/health`
 Expected: `{"status":"UP"}`
 
 - [ ] **Step 5: Create a category via gateway (with admin token)**
@@ -3816,7 +3888,7 @@ Expected: JSON payload matching the published event
 
 - [ ] **Step 10: Verify Prometheus metrics**
 
-Run: `curl http://localhost:8083/actuator/prometheus | grep product_`
+Run: `curl http://localhost:8086/actuator/prometheus | grep product_`
 Expected: `product_events_published_total`, `product_outbox_pending_count`
 
 - [ ] **Step 11: Stop containers**
@@ -3855,14 +3927,14 @@ git commit -m "docs: mark product-service phase complete"
 |---|---|
 | §1 Overview | Tasks 7-9 (skeleton), Task 30 (docker) |
 | §2 Architecture | All Phase 1-5 tasks |
-| §3 Data model | Tasks 11-15 (entities), Task 10 (Liquibase) |
-| §4 Repository | Tasks 16-17 |
-| §5 Service | Tasks 20-22, 26-27 |
+| §3 Data model | Tasks 11-15 (entities), Task 10 (Liquibase); Task 1 (`AbstractMappedEntity extends SoftDeletable`) |
+| §4 Repository | Tasks 16-17 (@SQLRestriction, no `*AndDeletedFalse` suffix) |
+| §5 Service | Tasks 20-22, 26-27 (factories + markDeleted + AuditorAware) |
 | §6 Controller | Tasks 23-25 |
-| §7 Common upgrades + Config | Tasks 1-5 (Phase 0), Task 9 (CacheConfig) |
+| §7 Common upgrades + Config | Task 1 (AbstractMappedEntity + ErrorCode + i18n keys), Task 2 (JpaAuditingAutoConfiguration), Tasks 3-4 (EndpointRule + platform defaults), Task 5 (auth + gateway yml), Task 9 (CacheConfig) |
 | §8 Observability | Task 29 (ProductMetrics) |
-| §9 Error handling | Built-in via common `ApiExceptionHandler` |
-| §10 Testing | Task 17 (ProductRepository), Tasks 20-22 (Service), Tasks 23+25 (Controller), Task 27 (Outbox) |
+| §9 Error handling | Task 1 (product ErrorCodes + i18n) + factories `BusinessException.of/notFound/conflict` |
+| §10 Testing | Task 1 (AbstractMappedEntityTest — `@DataJpaTest` Boot 4 package mới `org.springframework.boot.data.jpa.test.autoconfigure.*`, `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*`, `@Autowired` field), Task 17 (ProductRepository — same Boot 4 packages + `@Import(LiquibaseAutoConfiguration.class)`), Tasks 20-22 (Service), Tasks 23+25 (Controller — `@WebMvcTest` Boot 4 package mới + `@MockitoBean` + `addFilters=false`), Task 27 (Outbox integration) |
 | §11 Implementation order | Tasks 1-31 follow Phases 0-6 |
 | §12 Deferred items | Documented in spec, not in plan (intentional) |
 

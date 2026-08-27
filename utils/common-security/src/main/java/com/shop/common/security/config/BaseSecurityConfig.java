@@ -69,7 +69,7 @@ public class BaseSecurityConfig {
                             auth.requestMatchers(rule.path()).permitAll();
                         }
                     }
-                    // Platform defaults (actuator, swagger, api-docs) luôn public — KHÔNG được bỏ
+                    // Platform defaults (actuator, swagger, api-docs) are always public — do NOT drop
                     auth.requestMatchers(SecurityProperties.PlatformDefaults.PUBLIC_PATHS.toArray(new String[0]))
                             .permitAll();
                     auth.anyRequest().authenticated();

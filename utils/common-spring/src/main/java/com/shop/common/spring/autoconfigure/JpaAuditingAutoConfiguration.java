@@ -23,6 +23,10 @@ public class JpaAuditingAutoConfiguration {
     @ConditionalOnMissingBean
     public AuditorAware<String> auditorAware() {
         return () -> {
+            // Note: SecurityContextHolder is ThreadLocal; for reactive (WebFlux) contexts
+            // the lambda may run on a thread without a propagated SecurityContext, returning
+            // "system" for authenticated requests. Override this bean with a
+            // ReactiveSecurityContextHolder-aware AuditorAware in reactive services.
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated()
                 && !"anonymousUser".equals(auth.getPrincipal())) {

@@ -121,11 +121,9 @@ shop:
     issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
     csrf-disabled: true
     stateless-session: true
-    public-endpoints:
-      - /actuator/**
-      - /v3/api-docs/**
-      - /swagger-ui/**
-      - /webjars/**
+    # Note: actuator/swagger/api-docs paths are public via SecurityProperties.PlatformDefaults.PUBLIC_PATHS
+    # (utils/common-security/.../SecurityProperties.java); service-specific paths go in each service's
+    # application.yml under shop.security.public-paths (EndpointRule format).
     cors:
       enabled: ${ECOMMERCE_CORS_ENABLED:true}
       allowed-origin-patterns:
