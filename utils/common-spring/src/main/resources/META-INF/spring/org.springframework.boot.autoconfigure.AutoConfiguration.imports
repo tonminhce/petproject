@@ -15,3 +15,4 @@ com.shop.common.kafka.config.KafkaAutoConfiguration
 com.shop.common.spring.autoconfigure.I18nAutoConfiguration
 com.shop.common.spring.autoconfigure.WebAutoConfiguration
 com.shop.common.spring.autoconfigure.ModelMapperAutoConfiguration
+com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration
