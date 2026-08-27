@@ -105,7 +105,7 @@ public class CategoryServiceImpl implements CategoryService {
     public void delete(UUID id) {
         Category existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
-        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
+        existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         repo.save(existing);
     }
 }

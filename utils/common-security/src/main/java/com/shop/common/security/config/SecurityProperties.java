@@ -116,14 +116,6 @@ public record SecurityProperties(
         }
     }
 
-    /** Effective allow-list = service-provided paths ∪ platform defaults. */
-    public List<String> resolvedPublicPaths() {
-        return java.util.stream.Stream
-                .concat(PlatformDefaults.PUBLIC_PATHS.stream(), publicPaths.stream().map(EndpointRule::path))
-                .distinct()
-                .toList();
-    }
-
     /** Issuer URI parsed as a {@link URI}; throws if malformed. */
     public URI parsedIssuerUri() {
         return URI.create(issuerUri);

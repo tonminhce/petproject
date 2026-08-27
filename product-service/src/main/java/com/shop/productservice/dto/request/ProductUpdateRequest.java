@@ -1,20 +1,23 @@
 package com.shop.productservice.dto.request;
 
 import com.shop.productservice.entity.ProductStatus;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 public record ProductUpdateRequest(
-    String title,
-    String slug,
+    @Size(max = 200)             String title,
+    @Size(max = 200)             String slug,
     String description,
-    String sku,
-    BigDecimal priceUnit,
-    Integer quantity,
+    @Size(max = 50)              String sku,
+    @DecimalMin("0.0")           BigDecimal priceUnit,
+    @Min(0)                      Integer quantity,
     ProductStatus status,
     String imageUrl,
-    BigDecimal weight,
+    @DecimalMin("0.0")           BigDecimal weight,
     String dimensions,
     UUID categoryId,
     UUID brandId

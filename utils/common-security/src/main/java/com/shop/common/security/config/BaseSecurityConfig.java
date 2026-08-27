@@ -22,7 +22,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * <ul>
  *   <li>CSRF disabled (stateless JWT auth)</li>
  *   <li>{@code SessionCreationPolicy.STATELESS}</li>
- *   <li>{@link SecurityProperties#resolvedPublicPaths()} permitted</li>
+ *   <li>Public endpoints from {@link SecurityProperties#publicPaths()} plus
+ *       {@link SecurityProperties.PlatformDefaults#PUBLIC_PATHS} permitted</li>
  *   <li>Everything else requires authentication via OAuth2 resource server</li>
  *   <li>Authorities mapped via {@link JwtRolesConverter}</li>
  *   <li>CORS enabled when a {@link CorsConfigurationSource} bean is available</li>
