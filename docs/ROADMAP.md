@@ -214,7 +214,7 @@ Implement in this exact order (each one unblocks the next):
 | Wk | Service | Why this order |
 |----|---------|----------------|
 | 1 | **auth-service** | all other services validate JWTs issued by Keycloak via this realm |
-| 1–2 | **product-service** | feeds orders, inventory, search |
+| 1–2 | **product-service** | feeds orders, inventory, search · ✅ shipped (CRUD + Liquibase + Redis cache + Kafka outbox + tests) — see [SERVICE-CATALOG §2](./SERVICE-CATALOG.md#2-product-service-8086) |
 | 2 | **inventory-service** | tight coupling with order lifecycle |
 | 2–3 | **order-service** | orchestrator (calls product + inventory + payment + tax + promotion) |
 | 3–4 | **payment-service** | consumes `OrderCreated` Kafka events, publishes `PaymentSucceeded` |
@@ -253,7 +253,7 @@ Per service, the deliverable checklist is:
 | `order.updated.v1` | order-service | notification-service | 3 |
 | `payment.success.v1` | payment-service | order-service, notification-service | 3 |
 | `payment.failed.v1` | payment-service | order-service | 3 |
-| `product.indexed.v1` | product-service | search-service | 6 |
+| `shop.product.lifecycle.v1` | product-service (via Outbox) | search-service | 6 |
 
 ---
 

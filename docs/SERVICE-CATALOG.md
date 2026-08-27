@@ -507,7 +507,7 @@ Split base paths — storefront is for end users, backoffice is for admins.
 
 | Topic | Consumer | Action |
 |-------|----------|--------|
-| `product.indexed.v1` | `ProductIndexListener` | ES `index/update/delete` on `products` index |
+| `shop.product.lifecycle.v1` | `ProductIndexListener` (search-service, future) | ES `index/update/delete` on `products` index |
 | `order.created.v1` | `OrderIndexListener` | update product popularity counter in ES |
 
 ### 12.4 ES client

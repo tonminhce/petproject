@@ -43,7 +43,7 @@
         │            Apache Kafka 3.9 (KRaft mode, no ZK)             │
         │  Topics  order.created.v1 · order.updated.v1 ·              │
         │          payment.success.v1 · payment.failed.v1 ·            │
-        │          product.indexed.v1 · notification.send.v1          │
+        │          shop.product.lifecycle.v1 · notification.send.v1     │
         └──────┬────────────────┬───────────────────┬─────────────────┘
                │                │                   │
         ┌──────▼────┐ ┌─────────▼─────────┐ ┌──────▼─────────┐
