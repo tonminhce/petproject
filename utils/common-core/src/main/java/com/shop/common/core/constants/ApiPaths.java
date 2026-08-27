@@ -18,6 +18,7 @@ public final class ApiPaths {
     // ---- Catalog ----
     public static final String PRODUCTS = API_V1 + "/products";
     public static final String CATEGORIES = API_V1 + "/categories";
+    public static final String BRANDS = API_V1 + "/brands";
 
     // ---- Commerce ----
     public static final String CARTS = API_V1 + "/carts";
