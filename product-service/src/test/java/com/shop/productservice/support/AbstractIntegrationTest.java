@@ -1,6 +1,7 @@
 package com.shop.productservice.support;
 
 import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
+import com.shop.common.spring.test.TestSecurityConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
