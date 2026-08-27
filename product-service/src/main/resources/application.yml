@@ -58,6 +58,14 @@ shop:
   security:
     # Catalog reads are anonymous; writes stay authenticated.
     # (actuator, swagger, api-docs are public via common-security platform defaults)
+    # issuer-uri is set explicitly here even though common-spring's
+    # application.yml has a default — JIB puts each service's
+    # application.yml in /app/resources/ which is searched before the
+    # common-spring jar on the classpath, so the common default is
+    # shadowed if the service yml has any `shop:` block.
+    issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true
     public-paths:
       - method: GET
         path: /api/v1/products/**

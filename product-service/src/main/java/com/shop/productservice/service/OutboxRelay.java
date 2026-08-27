@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -36,6 +37,7 @@ public class OutboxRelay {
 
     private final OutboxEventRepository outboxRepo;
     private final KafkaMessagePublisher kafkaPublisher;
+    private final ProductMetrics metrics;
 
     @Value("${product.outbox.batch-size:100}")
     private int batchSize;
@@ -45,34 +47,40 @@ public class OutboxRelay {
 
     @Scheduled(fixedDelayString = "${product.outbox.poll-interval-ms:5000}")
     public void relay() {
-        List<OutboxEvent> pending = outboxRepo.findByStatusOrderByIdAsc(
-            OutboxStatus.PENDING, PageRequest.of(0, batchSize));
-        if (pending.isEmpty()) {
-            return;
-        }
-
-        log.info("Relaying {} outbox event(s)", pending.size());
-        for (OutboxEvent event : pending) {
-            try {
-                kafkaPublisher.publish(event.getTopic(),
-                    String.valueOf(event.getAggregateId()),
-                    event.getPayload());
-                event.setStatus(OutboxStatus.SENT);
-                event.setSentAt(Instant.now());
-                event.setLastError(null);
-            } catch (Exception ex) {
-                event.setRetryCount(event.getRetryCount() + 1);
-                event.setLastError(ex.getMessage());
-                if (event.getRetryCount() >= maxRetries) {
-                    event.setStatus(OutboxStatus.FAILED);
-                    log.error("Outbox event {} permanently failed after {} retries",
-                        event.getEventId(), maxRetries, ex);
-                } else {
-                    log.warn("Outbox event {} retry {}/{}: {}",
-                        event.getEventId(), event.getRetryCount(), maxRetries, ex.getMessage());
-                }
+        Instant started = Instant.now();
+        try {
+            List<OutboxEvent> pending = outboxRepo.findByStatusOrderByIdAsc(
+                OutboxStatus.PENDING, PageRequest.of(0, batchSize));
+            metrics.setPendingOutboxCount(pending.size());
+            if (pending.isEmpty()) {
+                return;
             }
-            outboxRepo.save(event);
+
+            log.info("Relaying {} outbox event(s)", pending.size());
+            for (OutboxEvent event : pending) {
+                try {
+                    kafkaPublisher.publish(event.getTopic(),
+                        String.valueOf(event.getAggregateId()),
+                        event.getPayload());
+                    event.setStatus(OutboxStatus.SENT);
+                    event.setSentAt(Instant.now());
+                    event.setLastError(null);
+                } catch (Exception ex) {
+                    event.setRetryCount(event.getRetryCount() + 1);
+                    event.setLastError(ex.getMessage());
+                    if (event.getRetryCount() >= maxRetries) {
+                        event.setStatus(OutboxStatus.FAILED);
+                        log.error("Outbox event {} permanently failed after {} retries",
+                            event.getEventId(), maxRetries, ex);
+                    } else {
+                        log.warn("Outbox event {} retry {}/{}: {}",
+                            event.getEventId(), event.getRetryCount(), maxRetries, ex.getMessage());
+                    }
+                }
+                outboxRepo.save(event);
+            }
+        } finally {
+            metrics.recordRelayDuration(Duration.between(started, Instant.now()));
         }
     }
 }

@@ -29,7 +29,11 @@ public class CacheConfig {
 
     @Bean
     public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer() {
+        // enableStatistics() is on RedisCacheManagerBuilder (Spring Data Redis
+        // 4.x), not on the per-cache RedisCacheConfiguration. Wired here so
+        // ProductMetrics can read hit/miss via RedisCache.getStatistics().
         return builder -> builder
+                .enableStatistics()
                 .withCacheConfiguration("product", cacheConfig(PRODUCT_TTL))
                 .withCacheConfiguration("productBySlug", cacheConfig(PRODUCT_TTL));
     }
