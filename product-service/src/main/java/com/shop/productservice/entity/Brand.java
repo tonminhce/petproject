@@ -3,6 +3,7 @@ package com.shop.productservice.entity;
 import com.shop.common.core.data.AbstractMappedEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "brands")

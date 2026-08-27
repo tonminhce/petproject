@@ -10,7 +10,7 @@
     </parent>
     <artifactId>common-core</artifactId>
     <name>Common Library Core</name>
-    <description>Pure-Java contract shared by every service</description>
+    <description>Lightweight JPA-aware base contracts (entities, error codes, i18n, view models) shared by every service</description>
     <dependencies>
         <dependency>
             <groupId>org.springframework</groupId>
