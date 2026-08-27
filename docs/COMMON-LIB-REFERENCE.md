@@ -220,18 +220,20 @@ Throw sites — pick the smallest API that fits:
 import static com.shop.common.core.exception.BusinessException.*;
 import com.shop.common.core.exception.ErrorCode;
 
-// Canonical — preferred
+// Canonical — preferred for NEW services (machine-readable code + i18n message)
 throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND);
 throw BusinessException.of(ErrorCode.AUTH_USERNAME_EXISTS, username);
 
-// Convenience shortcuts (all map to an ErrorCode under the hood)
-throw BusinessException.badRequest("auth.password.too.short");
-throw BusinessException.unauthorized("auth.token.expired");
-throw BusinessException.forbidden("auth.role.missing");
-throw BusinessException.notFound("auth.user.not.found.with.username", username);
-throw BusinessException.conflict("auth.email.exists", email);
+// Convenience shortcuts — all map to an ErrorCode under the hood, message from i18n key
+throw BusinessException.badRequest("auth.password.too.short");   // BAD_REQUEST code
+throw BusinessException.unauthorized("auth.token.expired");       // UNAUTHORIZED code
+throw BusinessException.forbidden("auth.role.missing");            // FORBIDDEN code
+throw BusinessException.notFound("auth.user.not.found.with.username", username);  // NOT_FOUND code
+throw BusinessException.conflict("auth.email.exists", email);     // CONFLICT code
 throw BusinessException.internalServerError("payment.stripe.timeout");
 ```
+
+> **Canonical pattern (for new services):** `BusinessException.of(ErrorCode.X, args...)`. This emits a stable `code` field (e.g. `PRD-2001`, `AUTH-1003`) in `ApiResponse.error(...)` for dashboards. The convenience shortcuts (`notFound("key")`, `conflict("key")`) are acceptable for ad-hoc messages but produce only the i18n message — no machine-readable code. **auth-service** currently uses string keys (`notFound("auth.user.not.found.for.update", id)`); migration to enum is a tracked Phase-9 follow-up — see [`ROADMAP §8.1`](./ROADMAP.md).
 
 `ErrorCode` is an enum that pins `code + httpStatus + messageKey`. New
 error codes are added here so dashboards stay canonical. The
@@ -335,11 +337,65 @@ shop:
       - /api/v1/notifications/health
 ```
 
+`SecurityProperties` is a record with `List<String> publicPaths` and `resolvedPublicPaths()` that merges service paths with `PlatformDefaults.PUBLIC_PATHS` (actuator/swagger/api-docs — always public).
+
+> **Method-aware variant (planned for product-service, see spec §7.1.1):** for services that need GET-only public endpoints (e.g. catalog browse), `publicPaths` will be upgraded to `List<EndpointRule>` with `{ method: HttpMethod.GET, path: /api/v1/products/** }` format. `auth-service` keeps the simple list form. Migration tracked in [`ROADMAP §8.1`](./ROADMAP.md).
+
 Reference: [SecurityProperties.java](../utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java).
 
 ### 3.5 Reference (original)
 
 [common-lib/common-security](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-security)
+
+### 3.6 ModelMapper — single canonical mapping pattern
+
+[Workspace source](../utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/ModelMapperAutoConfiguration.java) ·
+[Reference](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/common-lib/common-spring/src/main/java/com/ecommerce/commonlib/mapper)
+
+> **Single pattern for the whole fleet — KHÔNG dùng MapStruct / BaseMapper / EntityCreateUpdateMapper.** [Workspace decision 2026-08-26] chốt ModelMapper, sync theo auth-service (`UserMapper`/`RoleMapper` là `@Component` inject `ModelMapper`). Nếu MapStruct trong file mới → review fail.
+
+```java
+// common-spring/ModelMapperAutoConfiguration — wired automatically
+@Bean @ConditionalOnMissingBean(ModelMapper.class)
+public ModelMapper modelMapper() {
+    ModelMapper mapper = new ModelMapper();
+    mapper.getConfiguration()
+        .setMatchingStrategy(MatchingStrategies.STRICT)
+        .setSkipNullEnabled(true)
+        .setFieldMatchingEnabled(true);
+    return mapper;
+}
+```
+
+Usage in any service:
+
+```java
+@Component
+public class XxxMapper {
+    private final ModelMapper modelMapper;
+    public XxxMapper(ModelMapper modelMapper) { this.modelMapper = modelMapper; }
+
+    public XxxResponse toResponse(Xxx entity) {
+        // modelMapper.map(...) cho field cùng tên + STRICT match
+        // manual setter cho relations / computed fields
+    }
+
+    public Xxx toEntity(XxxCreateRequest request) {
+        Xxx e = modelMapper.map(request, Xxx.class);
+        e.setId(null);
+        return e;
+    }
+
+    public void partialUpdate(Xxx target, XxxUpdateRequest request) {
+        // DTO là record → null check từng field thủ công
+        if (request.foo() != null) target.setFoo(request.foo());
+    }
+}
+```
+
+**DTO convention**: dùng `record` (compile-time check, immutability), hoặc `@Builder @Getter @Setter @AllArgsConstructor` class (giống auth-service `UserResponse`) — nếu record thì mapper dùng constructor trực tiếp `new XxxResponse(id, ...)`; nếu class thì `XxxResponse.builder()...build()`. Common-spring không ép kiểu.
+
+Exceptions: relationship fields với tên không khớp (vd `Product.category` → DTO `categoryId`/`categoryTitle`) — xử lý thủ công trong mapper, KHÔNG dùng custom ModelConverter trừ khi tái sử dụng nhiều nơi.
 
 ## 4. common-logging — `@LogPerformance` + `@Loggable`
 
@@ -699,6 +755,7 @@ shop:
 | Read the current user | `AuthenticatedUser` | `@AuthenticationPrincipal AuthenticatedUser me;` |
 | Restrict to ADMIN | spring-security | `@PreAuthorize("hasAuthority('ADMIN')")` |
 | Add a public endpoint | `SecurityProperties` | `shop.security.public-paths: [/api/v1/...]` |
+| Map entity ↔ DTO | `ModelMapper` | `@Component xxxMapper(ModelMapper mm)` — xem [`§3.6`](#36-modelmapper--single-canonical-mapping-pattern) |
 | Time a service method | `@LogPerformance` | `@LogPerformance(title="...")` |
 | Log a request body | `@Loggable` | `@Loggable(in=true, out=true)` |
 | Publish to Kafka | `KafkaMessagePublisher` | `publisher.publish(topic, key, payload)` |

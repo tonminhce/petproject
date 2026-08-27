@@ -200,7 +200,7 @@ shop-microservices/                       # parent aggregator (pom)
 │       │   ├── dto/         request/, response/
 │       │   ├── entity/      User.java, Role.java, RoleName.java, AbstractMappedEntity.java
 │       │   ├── exception/   *.java
-│       │   ├── mapper/      UserMapper.java, RoleMapper.java (MapStruct)
+│       │   ├── mapper/      UserMapper.java, RoleMapper.java (ModelMapper @Component)
 │       │   ├── repository/  UserRepository.java, RoleRepository.java
 │       │   └── service/     UserService.java + UserServiceImpl.java, RoleService.java + Impl
 │       └── resources/
@@ -247,7 +247,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Correlation ID | `X-Correlation-Id` header → MDC (`MdcKey.TRACE_ID`) → response header | `common-spring/web` |
 | i18n | ResourceBundle `messages/messages*.properties`, default locale `vi` | `common-core/i18n` |
 | Validation | `jakarta.validation.constraints.*` + `@Valid` on DTOs | Spring Boot starter-validation |
-| Mapping | `MapStruct` interfaces + Lombok | `common-spring/mapper` |
+| Mapping | `ModelMapper` (`@Component` mapper class + STRICT matching + skip-null) — single pattern for all services | `common-spring/mapper` |
 | Auth | OAuth2 Resource Server (JWT) | `common-security` |
 | Keycloak admin | `KeycloakTokenClient` (login/refresh) + `KeycloakAdminClient` (user mgmt) | `common-keycloak` |
 | Kafka | `KafkaMessagePublisher`, `BaseKafkaConsumer`, JSON serdes | `common-kafka` |

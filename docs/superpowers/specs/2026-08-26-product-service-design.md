@@ -43,8 +43,8 @@ service/
   BrandService
   ProductEventPublisher // writes OutboxEvent in same @Transactional
   OutboxRelay        // @Scheduled poller
-mapper/             ProductMapper (MapStruct), CategoryMapper, BrandMapper
-config/             CacheConfig (Redis cache manager), KafkaTopicConfig, SecurityConfig (override if needed), ModelMapperConfig (deferred - use MapStruct)
+mapper/             ProductMapper (ModelMapper @Component), CategoryMapper, BrandMapper
+config/             CacheConfig (Redis cache manager), SecurityConfig (deferred — chỉ override khi cần); ModelMapper bean đã có từ common-spring auto-config
 exception/          (uses common BusinessException, no custom exceptions)
 ```
 
@@ -65,7 +65,7 @@ exception/          (uses common BusinessException, no custom exceptions)
 - **Outbox pattern** giải quyết dual-write problem giữa DB transaction và Kafka publish — guaranteed at-least-once delivery
 - **Cache-aside** giữ consistency đơn giản: write = invalidate, không phải write-through
 - **Loose coupling search**: product-service không biết Elasticsearch tồn tại, chỉ phát events. Đổi search engine sau này → product-service không phải đổi
-- **MapStruct cho mapper** (không ModelMapper) vì compile-time, hiệu năng tốt hơn, ít lỗi runtime. `BaseMapper<M, V>` interface đã có trong `common-spring`
+- **ModelMapper cho mapper** (sync theo auth-service pattern — `UserMapper`/`RoleMapper` `@Component` inject `ModelMapper`). Dùng `ModelMapper` với `MatchingStrategies.STRICT` + `SkipNullEnabled=true` (config đã có ở `ModelMapperAutoConfiguration` trong common-spring). KHÔNG dùng `BaseMapper<M,V>` / MapStruct — chốt 1 pattern duy nhất cho toàn fleet (xem `ARCHITECTURE.md §6` cross-cutting table, dòng "Mapping").
 - **Liquibase thay Flyway** match pattern auth-service đã dùng
 - **Lightweight Kafka payload** chỉ gửi `eventId, eventType, productId, slug, status` — search-service tự enrich qua API khi cần. Trade-off: có thể thêm network call, nhưng tránh payload drift
 
@@ -91,9 +91,11 @@ exception/          (uses common BusinessException, no custom exceptions)
 | `category_id` | FK → categories.id | nullable |
 | `brand_id` | FK → brands.id | nullable |
 | `createdAt` / `updatedAt` / `createdBy` / `updatedBy` | (from `AbstractMappedEntity`) | |
-| `deleted` / `deletedAt` / `deletedBy` | (from `SoftDeletable`) | |
+| `deleted` / `deletedAt` / `deletedBy` | (from `SoftDeletable`, qua `AbstractMappedEntity extends SoftDeletable`) | |
 
 Indexes: `slug` UNIQUE PARTIAL WHERE deleted=false, `sku` UNIQUE PARTIAL WHERE deleted=false, `category_id`, `brand_id`, `status`, `deleted`.
+
+> Entity: `@Entity @Table(name = "products") @SQLRestriction("deleted = false") extends AbstractMappedEntity` — soft-delete filter tự động trên mọi query (không cần `*AndDeletedFalse` trong repository).
 
 ### 3.2 Category (self-referencing tree)
 
@@ -107,6 +109,8 @@ Indexes: `slug` UNIQUE PARTIAL WHERE deleted=false, `sku` UNIQUE PARTIAL WHERE d
 | audit + soft-delete | | |
 
 `@OneToMany(mappedBy = "parent") private Set<Category> children` (lazy, `@JsonIgnore` để tránh recursion khi serialize).
+
+> Entity: `@SQLRestriction("deleted = false") extends AbstractMappedEntity`. Khi soft-delete category có con → con thành orphan; `findTree()` phải guard null parent (xem §5.2).
 
 ### 3.3 Brand
 
@@ -135,8 +139,11 @@ Indexes: `slug` UNIQUE PARTIAL WHERE deleted=false, `sku` UNIQUE PARTIAL WHERE d
 | `sentAt` | `Instant` | nullable |
 | `lastError` | `String` | nullable, length 1000 |
 | `createdAt` | (from `AbstractMappedEntity`) | (createdBy = "system") |
+| `deleted` / `deletedAt` / `deletedBy` | (from `SoftDeletable` qua base — bảng PHẢI có 3 cột này) | luôn `false` (outbox không soft-delete) |
 
 Indexes: `eventId` UNIQUE, `status` (cho poller query), `aggregateId`.
+
+> Entity: `@Entity @Table(name = "outbox_events") extends AbstractMappedEntity` — **KHÔNG** `@SQLRestriction` (relay phải thấy mọi row).
 
 **Rationale:** dùng `String` (TEXT) cho payload thay vì JSONB vì Outbox chỉ cần lưu và gửi nguyên vẹn JSON, không query bên trong. Tránh phức tạp Hibernate JSON mapping.
 
@@ -146,20 +153,27 @@ Indexes: `eventId` UNIQUE, `status` (cho poller query), `aggregateId`.
   ```java
   @MappedSuperclass
   @EntityListeners(AuditingEntityListener.class)
-  public abstract class AbstractMappedEntity {
-      @CreatedDate @Column(updatable = false) private Instant createdAt;
-      @LastModifiedDate @Column                private Instant updatedAt;
-      @CreatedBy @Column(updatable = false, length = 100) private String createdBy;
-      @LastModifiedBy @Column(length = 100)              private String updatedBy;
+  public abstract class AbstractMappedEntity extends SoftDeletable {
+      @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
+      @LastModifiedDate @Column(name = "updated_at", nullable = false)             private Instant updatedAt;
+      @CreatedBy @Column(name = "created_by", updatable = false, length = 100)     private String createdBy;
+      @LastModifiedBy @Column(name = "updated_by", length = 100)                   private String updatedBy;
   }
   ```
-- **`SoftDeletable`** đã có sẵn ở `utils/common-core/data/SoftDeletable.java`
+  > `AbstractMappedEntity extends SoftDeletable` vì Java single inheritance — entity không thể extends 2 mapped-superclass.
+  > OutboxEvent cũng kế thừa base này nên bảng `outbox_events` PHẢI có thêm 3 cột soft-delete (xem §3.7).
+  >
+  > ⚠️ **Pattern MỚI — chưa adopt ở `auth-service`.** `auth-service/User.java` hiện `extends SoftDeletable` trực tiếp (không có 4 audit cols); `Role.java` không có audit + không có soft-delete. Migration auth là Phase-9 task (track ở `ROADMAP §8.1`): thêm Liquibase `users` audit cols, switch `User extends AbstractMappedEntity`, add `SoftDeletable` cho `Role` (cần Liquibase mới).
+- **`SoftDeletable`** — **ĐÃ TỒN TẠI** ở `utils/common-core/data/SoftDeletable.java`, là **`@MappedSuperclass` (class, KHÔNG phải interface)**:
+  - Fields: `deleted` (boolean, not null), `deletedAt` (Instant), `deletedBy` (String, **length 255**)
+  - API: `markDeleted(String actor)` / `markRestored()` — KHÔNG có `softDelete()`/`isDeleted()` override
+  - Filter "deleted = false" được áp per-entity qua `@SQLRestriction("deleted = false")` trên từng entity (pattern auth-service `User`)
 
 ### 3.6 DTOs
 
 **Product:**
 - `ProductCreateRequest` — required: title, slug, sku, priceUnit, quantity, status, categoryId, brandId; optional: description, imageUrl, weight, dimensions
-- `ProductUpdateRequest` — same fields, all optional (PATCH semantics via MapStruct `NullValuePropertyMappingStrategy.IGNORE`)
+- `ProductUpdateRequest` — same fields, all optional (PATCH semantics — mapper manual `if (req.foo() != null) entity.setFoo(req.foo())`)
 - `ProductSummaryResponse` — id, title, slug, sku, priceUnit, status, imageUrl (cho list, không có relations để tránh N+1)
 - `ProductDetailResponse` — summary + description, weight, dimensions, categoryId, categoryTitle, brandId, brandName, createdAt, updatedAt (cho detail, có relations)
 
@@ -180,33 +194,33 @@ product-service/src/main/resources/db/changelog/
 └── changelog-001-initial-schema.yaml     (products, categories, brands, outbox_events)
 ```
 
-Master file include changelog-001. Initial schema tạo 4 tables + indexes + FK constraints. Soft-delete columns: `deleted BOOLEAN NOT NULL DEFAULT false`, `deleted_at TIMESTAMPTZ`, `deleted_by VARCHAR(100)`. **Partial unique indexes `WHERE deleted = false`** cho slug + sku để cho phép tạo lại sau khi soft-delete.
+Master file include changelog-001. Initial schema tạo 4 tables + indexes + FK constraints. **Thứ tự tạo: categories → brands → products (kèm FK) → outbox_events** (FK trỏ tới bảng phải tồn tại trước). Soft-delete columns: `deleted BOOLEAN NOT NULL DEFAULT false`, `deleted_at TIMESTAMPTZ`, `deleted_by VARCHAR(255)` — khớp `SoftDeletable` (255, không phải 100). **Partial unique indexes `WHERE deleted = false`** cho slug + sku để cho phép tạo lại sau khi soft-delete. `outbox_events` có thêm 3 cột soft-delete (vì kế thừa `AbstractMappedEntity extends SoftDeletable`).
 
 ---
 
 ## 4. Repository layer
 
+> Entity có `@SQLRestriction("deleted = false")` → KHÔNG cần `*AndDeletedFalse` trong tên method (filter tự động, pattern auth-service).
+
 ```java
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
     @EntityGraph(attributePaths = {"category", "brand"})
-    Optional<Product> findWithRelationsByIdAndDeletedFalse(Long id);
+    Optional<Product> findWithRelationsById(Long id);
 
     @EntityGraph(attributePaths = {"category", "brand"})
-    Optional<Product> findWithRelationsBySlugAndDeletedFalse(String slug);
+    Optional<Product> findWithRelationsBySlug(String slug);
 
-    // Update / delete dùng method này — không fetch relations (không cần cho update flow)
-    Optional<Product> findByIdAndDeletedFalse(Long id);
-
+    // findById(Long) kế thừa — đã tự filter deleted
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
-    boolean existsBySlugAndDeletedFalse(String slug);
-    boolean existsBySkuAndDeletedFalse(String sku);
-    boolean existsBySlugAndDeletedFalseAndIdNot(String slug, Long id);
-    boolean existsBySkuAndDeletedFalseAndIdNot(String sku, Long id);
+    boolean existsBySlug(String slug);
+    boolean existsBySku(String sku);
+    boolean existsBySlugAndIdNot(String slug, Long id);
+    boolean existsBySkuAndIdNot(String sku, Long id);
 }
 ```
 
-`CategoryRepository`, `BrandRepository` tương tự (CRUD + existsBySlugAndDeletedFalse variants + findAllByDeletedFalse).
+`CategoryRepository`, `BrandRepository` tương tự (`existsBySlug`, `existsBySlugAndIdNot`, `findAllByOrderByTitleAsc` — không suffix DeletedFalse).
 
 `OutboxEventRepository`:
 ```java
@@ -221,7 +235,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 **N+1 strategy:**
 - **Detail endpoint** (find by id/slug): `@EntityGraph` fetch category + brand trong 1 query
 - **List endpoint**: KHÔNG fetch relations → trả `ProductSummaryResponse` không có `categoryTitle`/`brandName`. Client gọi detail nếu cần denormalized fields
-- **Specification** luôn default `deleted = false` kể cả filter rỗng
+- **Specification** chỉ cần filter categoryId/brandId/status — `deleted = false` đã do `@SQLRestriction` lo
 
 ---
 
@@ -234,9 +248,9 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 @Transactional
 @Cacheable(value = "product", key = "#id")   // cache-null-values: false ở config
 public ProductDetailResponse findById(Long id) {
-    return productRepository.findWithRelationsByIdAndDeletedFalse(id)
+    return productRepository.findWithRelationsById(id)
         .map(productMapper::toDetailResponse)
-        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Product " + id + " not found"));
+        .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
 }
 
 @Override
@@ -257,12 +271,16 @@ public void delete(Long id) { ... }
 ```
 
 > **Note:** `@Cacheable` không hoạt động với self-invocation (gọi từ method khác trong cùng class). Controller gọi qua Spring proxy nên OK. Nếu cần gọi nội bộ phải inject self.
+>
+> **Exception:** KHÔNG `new BusinessException(...)` — constructor private. Dùng factories: `BusinessException.of(ErrorCode.X, args...)`, `BusinessException.notFound("msg.key", args)`, `BusinessException.conflict("msg.key", args)`. ErrorCode đã có sẵn `PRODUCT_NOT_FOUND (PRD-2001)`, `PRODUCT_NAME_EXISTS (PRD-2002)`, `CATEGORY_NOT_FOUND (PRD-2003)`; Phase 0 bổ sung `PRODUCT_SLUG_EXISTS`, `PRODUCT_SKU_EXISTS`, `BRAND_NOT_FOUND`, `BRAND_SLUG_EXISTS`, `CATEGORY_SLUG_EXISTS` + i18n keys vào `utils/common-spring/src/main/resources/messages/messages_{en,vi}.properties`.
+>
+> **Soft-delete:** dùng `markDeleted(actor)` từ `SoftDeletable` — actor lấy từ `AuditorAware<String>` (`auditorAware.getCurrentAuditor().orElse("system")`), KHÔNG hardcode "system".
 
 ### 5.2 CategoryService.findTree() — build tree from flat list
 
 ```java
 public List<CategoryTreeResponse> findTree() {
-    List<Category> all = categoryRepository.findAllByDeletedFalseOrderByTitleAsc();
+    List<Category> all = categoryRepository.findAllByOrderByTitleAsc();
     Map<Long, CategoryTreeResponse> nodeMap = new LinkedHashMap<>();
     List<CategoryTreeResponse> roots = new ArrayList<>();
     for (Category c : all) {
@@ -270,10 +288,13 @@ public List<CategoryTreeResponse> findTree() {
     }
     for (Category c : all) {
         CategoryTreeResponse node = nodeMap.get(c.getId());
-        if (c.getParentId() == null) {
+        if (c.getParent() == null) {
             roots.add(node);
         } else {
-            nodeMap.get(c.getParentId()).children().add(node);
+            CategoryTreeResponse parent = nodeMap.get(c.getParent().getId());
+            if (parent != null) {           // guard: parent bị soft-delete → child orphan, bỏ qua
+                parent.children().add(node);
+            }
         }
     }
     return roots;
@@ -311,7 +332,11 @@ public class ProductEventPublisher {
         payload.put("productId", p.getId());
         payload.put("slug", p.getSlug());
         payload.put("status", p.getStatus() != null ? p.getStatus().name() : null);
-        e.setPayload(objectMapper.writeValueAsString(payload));
+        try {
+            e.setPayload(objectMapper.writeValueAsString(payload));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Outbox payload serialization failed", ex);
+        }
         e.setStatus(OutboxStatus.PENDING);
         e.setRetryCount(0);
         outboxRepository.save(e);
@@ -410,34 +435,45 @@ Tất cả wrapped trong `ApiResponse<T>`:
 
 #### 7.1.1 `common-security` upgrade — method + path public endpoints
 
-**Old:** `public-endpoints: List<String>` (path only)
-**New:** `public-endpoints: List<EndpointRule>` (method + path)
+**Old:** `public-paths: List<String>` (path only) — chỉ permitAll theo path, không phân biệt method
+**New:** `public-paths: List<EndpointRule>` (method + path) — giữ nguyên record, giữ `resolvedPublicPaths()` + `PlatformDefaults`:
 
 ```java
-public class SecurityProperties {
-    private List<EndpointRule> publicEndpoints = new ArrayList<>();
-
-    public static class EndpointRule {
-        private HttpMethod method;  // nullable = any method
-        private String path;
-        // getters/setters
+    public record SecurityProperties(
+            @DefaultValue("true") boolean enabled,
+            @NotBlank String issuerUri,
+            @DefaultValue("true") boolean csrfDisabled,
+            @DefaultValue("true") boolean statelessSession,
+            @DefaultValue List<EndpointRule> publicPaths,        // renamed từ publicEndpoints
+            @Valid @DefaultValue Cors cors
+    ) {
+    public record EndpointRule(HttpMethod method, String path) {
+        public EndpointRule {
+            if (path == null || path.isBlank()) {
+                throw new IllegalArgumentException("EndpointRule.path must not be blank");
+            }
+        }
     }
+    // ... resolvedPublicPaths() GIỮ NGUYÊN (vẫn merge PlatformDefaults)
 }
 ```
 
-`BaseSecurityConfig.securityFilterChain`:
+`BaseSecurityConfig.securityFilterChain` — áp rules method-aware, rồi defaults, rồi authenticated:
 ```java
-for (EndpointRule rule : properties.getPublicEndpoints()) {
-    if (rule.getMethod() != null) {
-        auth.requestMatchers(rule.getMethod(), rule.getPath()).permitAll();
-    } else {
-        auth.requestMatchers(rule.getPath()).permitAll();
+http.authorizeHttpRequests(auth -> {
+    for (SecurityProperties.EndpointRule rule : properties.getPublicPaths()) {
+        if (rule.method() != null) {
+            auth.requestMatchers(rule.method(), rule.path()).permitAll();
+        } else {
+            auth.requestMatchers(rule.path()).permitAll();
+        }
     }
-}
-auth.anyRequest().authenticated();
+    auth.requestMatchers(SecurityProperties.PlatformDefaults.PUBLIC_PATHS.toArray(new String[0])).permitAll();
+    auth.anyRequest().authenticated();
+});
 ```
 
-> **No backward compat:** auth-service được update sang format mới luôn (3-5 endpoints, không nhiều).
+> **Breaking change 2 chiều:** (1) field đổi `publicEndpoints` → `publicPaths` (cùng với việc đổi type sang `List<EndpointRule>`); (2) tất cả service có `public-endpoints` trong yml phải migrate sang `public-paths` EndpointRule format — hiện có 2: `auth-service` và `gateway-service`. KHÔNG cần liệt kê actuator/swagger (đã có sẵn trong PlatformDefaults).
 
 #### 7.1.2 `common-spring` new: `JpaAuditingAutoConfiguration`
 
@@ -485,13 +521,18 @@ spring:
       cache-null-values: false
       use-key-prefix: true
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    # ⚠️ common-kafka đọc prefix SHOP kafka.* (KafkaProperties), KHÔNG phải spring.kafka.*
+    # (spring.kafka.* chỉ có tác dụng với auto-config Kafka của Boot, common-kafka không dùng)
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       acks: all
       retries: 3
-      properties:
-        enable.idempotence: true
-        delivery.timeout.ms: 10000
+    # Lưu ý: enable.idempotence / delivery.timeout.ms hiện KHÔNG được common-kafka
+    # buildProducerProperties() hỗ trợ (chỉ acks/retries + max.in.flight=1).
+    # Nếu cần idempotence → mở rộng KafkaProperties.buildProducerProperties() ở Phase 0.
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
 product:
   outbox:
@@ -501,7 +542,7 @@ product:
 
 shop:
   security:
-    public-endpoints:
+    public-paths:
       - method: GET
         path: /api/v1/products/**
       - method: GET
@@ -542,32 +583,22 @@ public class CacheConfig {
 
 ### 7.4 docker-compose
 
+> **Không tạo container `postgres-product` mới** — repo dùng 1 Postgres chung với init script tạo sẵn DB `productservice` (`docker/postgres/init/create-all-databases.sql`). Chỉ bổ sung env cho service:
+
 ```yaml
 product-service:
   environment:
-    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-product:5432/product_db
+    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productservice
     SPRING_DATA_REDIS_HOST: redis
     SPRING_DATA_REDIS_PORT: 6379
-    SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   depends_on:
-    postgres-product:
+    postgres:
       condition: service_healthy
     redis:
       condition: service_healthy
     kafka:
       condition: service_healthy
-
-postgres-product:
-  image: postgres:16
-  environment:
-    POSTGRES_DB: product_db
-    POSTGRES_USER: postgres
-    POSTGRES_PASSWORD: postgres
-  healthcheck:
-    test: ["CMD-SHELL", "pg_isready -U postgres -d product_db"]
-    interval: 5s
-    timeout: 5s
-    retries: 5
 ```
 
 ---
@@ -613,7 +644,7 @@ public class ProductMetrics {
 }
 ```
 
-Scrape qua `/actuator/prometheus` (đã trong public-endpoints).
+Scrape qua `/actuator/prometheus` (đã trong PlatformDefaults).
 
 ### 8.3 Audit
 
@@ -624,9 +655,9 @@ Scrape qua `/actuator/prometheus` (đã trong public-endpoints).
 ## 9. Error handling
 
 - Bean Validation fail → `MethodArgumentNotValidException` → `ApiExceptionHandler` → `ApiResponse.error("VALIDATION_FAILED", ..., List<field errors>, path)` với HTTP 400
-- Business exception → throw `BusinessException(ErrorCode.X, message)` → map HTTP status tự động qua `ApiExceptionHandler`
-- Common codes: `NOT_FOUND` (404), `CONFLICT` (409), `BAD_REQUEST` (400), `UNAUTHORIZED` (401), `FORBIDDEN` (403), `INTERNAL_SERVER_ERROR` (500)
-- Custom codes có thể thêm vào `common-core/exception/ErrorCode.java` nếu cần
+- Business exception → **`BusinessException.of(ErrorCode.X, args...)` / `BusinessException.notFound("key")` / `.conflict("key")`** (constructor private — KHÔNG `new BusinessException`) → map HTTP status tự động qua `ApiExceptionHandler`
+- ErrorCode đã có sẵn product domain codes: `PRODUCT_NOT_FOUND (PRD-2001)`, `PRODUCT_NAME_EXISTS (PRD-2002)`, `CATEGORY_NOT_FOUND (PRD-2003)`; Phase 0 bổ sung `PRODUCT_SLUG_EXISTS (PRD-2004)`, `PRODUCT_SKU_EXISTS (PRD-2005)`, `BRAND_NOT_FOUND (PRD-2006)`, `BRAND_SLUG_EXISTS (PRD-2007)`, `CATEGORY_SLUG_EXISTS (PRD-2008)` vào `common-core/exception/ErrorCode.java` + i18n keys vào `common-spring/src/main/resources/messages/messages_{en,vi}.properties`
+- Generic codes dùng khi không có domain code: `NOT_FOUND`, `CONFLICT`, `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_SERVER_ERROR`
 
 ---
 
@@ -644,11 +675,11 @@ Scrape qua `/actuator/prometheus` (đã trong public-endpoints).
 ### 10.2 Test classes (~40-50 tests target)
 
 ```java
-// Repository — @DataJpaTest + Testcontainers Postgres
+// Repository — @DataJpaTest + Testcontainers Postgres (+ @Import LiquibaseAutoConfiguration)
 ProductRepositoryTest:        findWithRelations returns product with category/brand,
-                              findBySlug excludes soft-deleted,
-                              findAll with filter (categoryId, brandId, status),
-                              existsBySlugAndDeletedFalseAndIdNot works for update
+                              findBySlug excludes soft-deleted (via @SQLRestriction),
+                              findAll with filter (categoryId, brandId, status) — no deleted predicate needed,
+                              existsBySlugAndIdNot works for update
 
 // Service — pure unit, mock repo + publisher
 ProductServiceImplTest:       create persists and publishes event,
@@ -674,9 +705,14 @@ OutboxRelayIntegrationTest:   relay sends PENDING events to Kafka,
                               relay marks SENT on success,
                               relay increments retry on KafkaPublishException,
                               relay marks FAILED after max retries
-                              @DynamicPropertySource cho spring.kafka.bootstrap-servers
+                              @DynamicPropertySource cho shop.kafka.bootstrap-servers
 ```
 
+> **Test stack (Spring Boot 4.1.1, verified Task 1 implementation):** slice tests dùng package mới của Boot 4:
+> - `@WebMvcTest` ở `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`)
+> - `@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`); `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`)
+>
+> `@MockitoBean` (KHÔNG `@MockBean` — đã bị xóa ở Boot 4). Controller tests dùng `@AutoConfigureMockMvc(addFilters = false)` như auth-service — `@PreAuthorize` KHÔNG được enforce trong slice, nên KHÔNG viết test 403-anonymous ở slice; authorization được bảo đảm bởi common-security chain + `@PreAuthorize` (test riêng ở tầng integration nếu cần). `TestEntityManager` Boot 4 phải inject qua `@Autowired` field (JUnit 5 extension không resolve method param). `@DataJpaTest` slice không chạy Liquibase → test repo phải `@Import(LiquibaseAutoConfiguration.class)` (hoặc schema tạo riêng).
 > Security test dùng `@WithMockUser(roles="ADMIN")` cho admin endpoints; anonymous mặc định cho public endpoints (không cần annotation).
 
 ---
@@ -686,8 +722,8 @@ OutboxRelayIntegrationTest:   relay sends PENDING events to Kafka,
 **Phase 0 — Common upgrades (foundation)**
 1. `common-core`: tạo `AbstractMappedEntity`
 2. `common-spring`: tạo `JpaAuditingAutoConfiguration` (`AuditorAware` bean)
-3. `common-security`: upgrade `SecurityProperties` (List<EndpointRule>), update `BaseSecurityConfig`
-4. `auth-service`: đổi `application.yml` sang EndpointRule format, verify tests
+3. `common-security`: upgrade `SecurityProperties` (`List<EndpointRule>` + rename `publicEndpoints` → `publicPaths`), update `BaseSecurityConfig`
+4. `auth-service`: đổi `application.yml` sang `public-paths` EndpointRule format, verify tests
 5. Verify: `./mvnw test` green toàn bộ modules
 
 **Phase 1 — product-service skeleton + persistence**
@@ -695,11 +731,11 @@ OutboxRelayIntegrationTest:   relay sends PENDING events to Kafka,
 7. `CacheConfig` class (`@EnableCaching` + `RedisCacheManagerBuilderCustomizer`)
 8. Tạo entities: `Product`, `Category`, `Brand`, `OutboxEvent`
 9. Tạo Liquibase changelog-001 (4 tables, partial unique constraints)
-10. Verify: docker-compose up postgres-product + Liquibase migrate OK
+10. Verify: docker compose up postgres redis kafka product-service + Liquibase migrate OK
 
 **Phase 2 — Repository + Service + cache + DTOs**
 11. Tạo request/response DTOs (validation annotations)
-12. Tạo MapStruct mappers (ProductMapper, CategoryMapper, BrandMapper)
+12. Tạo ModelMapper mappers (ProductMapper, CategoryMapper, BrandMapper) — `@Component` inject `ModelMapper`
 13. Tạo repositories với custom queries + `@EntityGraph`
 14. Tạo services với `@Cacheable` / `@CachePut` / `@CacheEvict`
 15. Tests: ProductServiceImplTest, ProductRepositoryTest, CategoryServiceImplTest
@@ -707,7 +743,7 @@ OutboxRelayIntegrationTest:   relay sends PENDING events to Kafka,
 
 **Phase 3 — Controllers + security**
 17. Tạo 3 controllers với `@PreAuthorize`
-18. Wire `shop.security.public-endpoints` trong product-service `application.yml`
+18. Wire `shop.security.public-paths` trong product-service `application.yml`
 19. Tests: ProductControllerTest với `@WithMockUser`
 20. Verify: `./mvnw test` full green
 
@@ -723,9 +759,9 @@ OutboxRelayIntegrationTest:   relay sends PENDING events to Kafka,
 27. Verify: scrape `/actuator/prometheus` thấy custom metrics
 
 **Phase 6 — docker-compose + e2e smoke**
-28. Update `docker-compose.yml`: thêm `postgres-product`, env vars
+28. Update `docker-compose.yml`: thêm env `SHOP_KAFKA_BOOTSTRAP_SERVERS`, `SPRING_DATA_REDIS_HOST/PORT`, `SERVER_PORT: 8086` cho `product-service`; depends_on redis + kafka
 29. `./mvnw clean package -DskipTests`
-30. `docker-compose up -d postgres-product redis kafka product-service`
+30. `docker compose up -d postgres redis kafka product-service`
 31. Smoke: curl gateway `/api/v1/products` → verify response
 
 ---
@@ -743,6 +779,10 @@ OutboxRelayIntegrationTest:   relay sends PENDING events to Kafka,
 | Per-route rate limit override (gateway) | Project-wide rate limit OK cho phase 1 | Phase sau |
 | `Retry-After` header cho 429 | Global filter đã có X-RateLimit-* headers | Phase sau nếu cần |
 | Search-service implementation | Consumer của Kafka events, độc lập | Sau khi product-service stable |
+| Delete category/brand đang có products → 409 thay vì FK RESTRICT 500 | FK `onDelete: RESTRICT` hiện trả DB error → 500; cần check count products trước khi delete | Phase sau (hoặc sớm nếu admin hay xóa category) |
+| Category update không thể clear `parentId` (set null) | PATCH semantics — cần `Optional<Long>` hoặc sentinel value | Phase sau |
+| Cache stale khi category/brand đổi tên | `ProductDetailResponse` denormalize categoryTitle/brandName, cache 10 phút | Khi có event category/brand → invalidate |
+| Kafka idempotence producer | common-kafka `buildProducerProperties()` chưa hỗ trợ `enable.idempotence` | Mở rộng common-kafka nếu cần |
 
 ---
 

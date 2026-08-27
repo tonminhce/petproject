@@ -114,10 +114,10 @@ The reference repo uses `com.ecommerce.*`; the workspace will keep `com.shop.*`
 
 ### 3.1 Master table
 
-| Service | Port | Domain entities (ref) | API endpoints (ref) | DB schema (ref) | Complexity |
-|---------|------|-----------------------|---------------------|-----------------|------------|
+| Service | Port | Domain entities | API endpoints | DB schema | Complexity |
+|---------|------|-----------------|---------------|-----------|------------|
 | auth-service | 8088 | `User`, `Role`, `RoleName` | 9 endpoints under `/api/v1/{auth,users,roles}` | `users`, `roles`, `user_role` | **L** |
-| product-service | 8086 | `Product`, `Category` | 6 endpoints `/api/products` + `/api/categories` | `products`, `categories` | **M** |
+| product-service | 8086 | `Product`, `Category`, `Brand`, `OutboxEvent` (workspace) | 6 `/api/v1/products` + 6 `/api/v1/categories` + 5 `/api/v1/brands` (+ `/slug/{slug}` + `/categories/tree`) | `products`, `categories`, `brands`, `outbox_events` | **L** (cache + outbox + Kafka) |
 | order-service | 8084 | `Order`, `Cart` | 7 endpoints `/api/orders` + 5 `/api/carts` | `orders`, `carts` | **L** (Kafka + state mgmt) |
 | payment-service | 8085 | `Payment` (inferred) | CRUD `/api/v1/payments` | `payments` | **L** (Stripe integration) |
 | inventory-service | 8082 | `Inventory` | CRUD `/api/v1/inventory` | `inventory` | **M** |
@@ -169,8 +169,7 @@ Every backend service MUST adopt these conventions (all taken from
    `GlobalExceptionHandler` translates to `ApiResponse.error(...)`.
 4. **`@LogPerformance(title = "...")` AOP** — annotate any service method that
    should be timed (default threshold 50 ms). Source: `common-logging`.
-5. **`MapStruct` mappers** — `Entity ↔ DTO` via `xxxMapper.java` interfaces
-   (`@Mapper`, generated at compile time).
+5. **`ModelMapper` mappers** — `Entity ↔ DTO` qua `xxxMapper.java` class (`@Component` inject `ModelMapper` bean từ `common-spring/ModelMapperAutoConfiguration`). Single pattern cho toàn fleet — xem [`COMMON-LIB-REFERENCE §3.5`](#common-library-reference) (MapStruct đã bị reject vì làm pattern không nhất quán).
 6. **Virtual threads** — `spring.threads.virtual.enabled: true` in YAML (already
    on by default in SB 4.x; keep it).
 7. **JWT auth** — `oauth2ResourceServer.jwt(...)` chain in `SecurityConfig`,
@@ -227,10 +226,10 @@ Per service, the deliverable checklist is:
       [`Product.java`](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/entity/Product.java) for the canonical `@Entity` pattern.
 - [ ] Repositories (Spring Data JPA + custom queries where needed)
 - [ ] DTOs in `dto/request` + `dto/response`
-- [ ] MapStruct mappers
+- [ ] ModelMapper mappers (`@Component` inject `ModelMapper`)
 - [ ] `Service` interface + `ServiceImpl`
 - [ ] Controllers wired through `@RequestMapping(ApiPaths.X)`
-- [ ] `BusinessException` thrown on validation failures
+- [ ] `BusinessException.of(ErrorCode.X)` thrown on domain errors
 - [ ] Liquibase DDL
 - [ ] Unit tests (`@ExtendWith(MockitoExtension.class)`) for services
 - [ ] REST-assured controller test (`@WebMvcTest`)
@@ -460,6 +459,18 @@ The sequence now:
 
 4. **Keep docs in sync** — update [`docs/SERVICE-CATALOG.md`](./SERVICE-CATALOG.md)
    per service as it ships.
+
+### 8.1 Known cross-service follow-ups (from product-service design sync 2026-08-26)
+
+Three patterns were locked in for product-service that **auth-service does not yet adopt**. They are out-of-scope for product-service but tracked here so the gap is visible. Each is a single Phase-9 candidate task (~0.5–1 d):
+
+| Pattern | Where it lands | Auth-service gap |
+|---|---|---|
+| `BusinessException.of(ErrorCode.X)` (enum) instead of `notFound("auth.user.not.found.xyz")` (string key) | `utils/common-core/.../ErrorCode.java` already has `AUTH_USER_NOT_FOUND (AUTH-1006)`, `AUTH_USERNAME_EXISTS (AUTH-1003)`, `AUTH_EMAIL_EXISTS (AUTH-1004)`, etc. | `UserServiceImpl` (`AuthControllerTest`-style) — convert 9 throw sites to enum. Verify 37 tests still pass |
+| `AbstractMappedEntity` + `JpaAuditingAutoConfiguration` | New `utils/common-core/.../AbstractMappedEntity.java` + `utils/common-spring/.../JpaAuditingAutoConfiguration.java` (created in product-service Phase 0) | `User` entity stays as `extends SoftDeletable` only — no audit fields. If adopted: add Liquibase changeset 003 to add `created_at`, `updated_at`, `created_by`, `updated_by` columns; switch `User` to extend `AbstractMappedEntity` |
+| `public-paths: List<EndpointRule>` (rename + method-aware) | `common-security/SecurityProperties.java` record updated in product-service Phase 0 | `auth-service/application.yml` migrates from `public-endpoints: [-/api/v1/auth/**]` to `public-paths: [-path:/api/v1/auth/**]` |
+
+> **Why not bundle into product-service Phase 0**: each migration touches auth-service's 37 tests and would expand product-service Phase 0 scope by ~3 tasks (refactor auth). Better scoped as a focused Phase-9 task.
 
 ---
 

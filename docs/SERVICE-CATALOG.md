@@ -134,53 +134,79 @@ CREATE INDEX idx_users_keycloak ON users(keycloak_user_id);
 
 ## 2. product-service `:8086`
 
+> **Workspace divergence** — workspace adds 3rd domain entity `Brand` (e-commerce brands are first-class catalog data) + Redis cache + Transactional Outbox pattern for Kafka. Endpoint surface is broader than reference. See spec: [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./superpowers/specs/2026-08-26-product-service-design.md).
+
 ### 2.1 Domain model
 
 | Entity | Table | Key fields |
 |--------|-------|------------|
-| `Category` | `categories` | `category_id`, `category_title`, `image_url`, `parent_id` (self-FK, optional) |
-| `Product` | `products` | `product_id`, `product_title`, `image_url`, `sku` (unique), `price_unit` (decimal), `quantity`, `category_id` (FK) |
+| `Product` | `products` | `id`, `title`, `slug` (unique partial), `description`, `sku` (unique partial), `price_unit` (decimal 15,2), `quantity`, `status` (DRAFT/ACTIVE/OUT_OF_STOCK/DISCONTINUED), `image_url`, `weight` (8,3), `dimensions`, `category_id` (FK), `brand_id` (FK), audit + soft-delete fields |
+| `Category` | `categories` | `id`, `title`, `slug` (unique partial), `image_url`, `parent_id` (self-FK, optional), audit + soft-delete fields |
+| `Brand` | `brands` | `id`, `name`, `slug` (unique partial), `logo_url`, `description`, audit + soft-delete fields |
+| `OutboxEvent` | `outbox_events` | `id`, `event_id` (UUID unique), `aggregate_type`, `aggregate_id`, `event_type`, `topic`, `payload` (TEXT JSON), `status` (PENDING/SENT/FAILED), `retry_count`, `sent_at`, `last_error`, audit + soft-delete fields |
 
-Source: [Product.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/entity/Product.java),
-[Category.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/entity/Category.java),
-[AbstractMappedEntity.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/entity/AbstractMappedEntity.java) (created/updated/last-modified).
+Source: [`product-service/entity/Product.java`](../product-service/src/main/java/com/shop/productservice/entity/Product.java),
+[`Category.java`](../product-service/src/main/java/com/shop/productservice/entity/Category.java),
+[`Brand.java`](../product-service/src/main/java/com/shop/productservice/entity/Brand.java),
+[`OutboxEvent.java`](../product-service/src/main/java/com/shop/productservice/entity/OutboxEvent.java).
+All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-core) + `@SQLRestriction("deleted = false")` for auto-filtered queries.
 
-### 2.2 Endpoints — `/api/v1/products` (workspace path; reference uses `/api/products`)
+### 2.2 Endpoints — `/api/v1/products`
 
-| M | Path | Auth | Body | Resp |
-|---|------|------|------|------|
-| `GET` | `/api/v1/products` | USER/ADMIN | — | `ResponseEntity<List<ProductDto>>` |
-| `GET` | `/api/v1/products/{productId}` | USER/ADMIN | — | `ResponseEntity<ProductDto>` |
-| `POST` | `/api/v1/products` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
-| `PUT` | `/api/v1/products` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
-| `PUT` | `/api/v1/products/{productId}` | ADMIN | `ProductDto` | `ResponseEntity<ProductDto>` |
-| `DELETE` | `/api/v1/products/{productId}` | ADMIN | — | `ResponseEntity<Boolean>` |
+| M | Path | Auth | Body | Resp | Notes |
+|---|------|------|------|------|-------|
+| `GET` | `/api/v1/products` | public (gateway: USER/ADMIN) | — `?categoryId=&brandId=&status=&page=&size=` | `ApiResponse<PageResponse<ProductSummaryResponse>>` | Filter (categoryId, brandId, status) + paging; returns summary (no relations) |
+| `GET` | `/api/v1/products/{id}` | public | — | `ApiResponse<ProductDetailResponse>` | Detail with `categoryTitle`/`brandName` denormalized; Redis cached `@Cacheable("product")` |
+| `GET` | `/api/v1/products/slug/{slug}` | public | — | `ApiResponse<ProductDetailResponse>` | Slug lookup; Redis cached `@Cacheable("productBySlug")` |
+| `POST` | `/api/v1/products` | ADMIN | `ProductCreateRequest { title, slug, description?, sku, priceUnit, quantity, status, imageUrl?, weight?, dimensions?, categoryId?, brandId? }` | `ApiResponse<ProductDetailResponse>` | Persists + emits `ProductCreated` outbox event in same TX |
+| `PUT` | `/api/v1/products/{id}` | ADMIN | `ProductUpdateRequest { ... all optional ... }` | `ApiResponse<ProductDetailResponse>` | Partial update; cache put+evict; emits `ProductUpdated` |
+| `DELETE` | `/api/v1/products/{id}` | ADMIN | — | `ApiResponse<Void>` | Soft-delete; cache evict all; emits `ProductDeleted` |
 
-Source: [ProductController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/product-service/src/main/java/com/ecommerce/productservice/controller/ProductController.java).
+### 2.3 Endpoints — `/api/v1/categories`
 
-### 2.3 Endpoints — `/api/v1/categories` (workspace path; reference uses `/api/categories`)
+| M | Path | Auth | Body | Resp | Notes |
+|---|------|------|------|------|-------|
+| `GET` | `/api/v1/categories` | public | — | `ApiResponse<List<CategoryResponse>>` | Flat list ordered by title |
+| `GET` | `/api/v1/categories/tree` | public | — | `ApiResponse<List<CategoryTreeResponse>>` | Self-referencing tree; guards orphan children (parent soft-deleted) |
+| `GET` | `/api/v1/categories/{id}` | public | — | `ApiResponse<CategoryResponse>` | Single |
+| `POST` | `/api/v1/categories` | ADMIN | `CategoryCreateRequest { title, slug, imageUrl?, parentId? }` | `ApiResponse<CategoryResponse>` | |
+| `PUT` | `/api/v1/categories/{id}` | ADMIN | `CategoryUpdateRequest { ... all optional ... }` | `ApiResponse<CategoryResponse>` | |
+| `DELETE` | `/api/v1/categories/{id}` | ADMIN | — | `ApiResponse<Void>` | Soft-delete; ON DELETE RESTRICT for products FK → currently 500 (open item) |
 
-| M | Path | Auth | Body | Resp |
-|---|------|------|------|------|
-| `GET` | `/api/v1/categories` | USER/ADMIN | — | `List<CategoryDto>` |
-| `GET` | `/api/v1/categories/{categoryId}` | USER/ADMIN | — | `CategoryDto` |
-| `POST` | `/api/v1/categories` | ADMIN | `CategoryDto` | `CategoryDto` |
-| `PUT` | `/api/v1/categories` | ADMIN | `CategoryDto` | `CategoryDto` |
-| `PUT` | `/api/v1/categories/{categoryId}` | ADMIN | `CategoryDto` | `CategoryDto` |
-| `DELETE` | `/api/v1/categories/{categoryId}` | ADMIN | — | `Boolean` |
+### 2.4 Endpoints — `/api/v1/brands` (workspace addition)
 
-### 2.4 Kafka events
+| M | Path | Auth | Body | Resp | Notes |
+|---|------|------|------|------|-------|
+| `GET` | `/api/v1/brands` | public | — `?page=&size=` | `ApiResponse<PageResponse<BrandResponse>>` | Paginated |
+| `GET` | `/api/v1/brands/{id}` | public | — | `ApiResponse<BrandResponse>` | |
+| `POST` | `/api/v1/brands` | ADMIN | `BrandCreateRequest { name, slug, logoUrl?, description? }` | `ApiResponse<BrandResponse>` | |
+| `PUT` | `/api/v1/brands/{id}` | ADMIN | `BrandUpdateRequest { ... all optional ... }` | `ApiResponse<BrandResponse>` | |
+| `DELETE` | `/api/v1/brands/{id}` | ADMIN | — | `ApiResponse<Void>` | Soft-delete |
+
+### 2.5 Kafka events
 
 | Topic | Event | Payload |
 |-------|-------|---------|
-| `product.indexed.v1` | `ProductIndexedEvent { productId, action: CREATED\|UPDATED\|DELETED, snapshot }` | sent by product-service, consumed by search-service |
+| `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }` — sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed |
 
-### 2.5 Service dependencies
+> **Reference uses different topic** (`product.indexed.v1`) — workspace follows the outbox + Kafka envelope pattern from common-kafka. Search-service consumers are decoupled from this event format.
+
+### 2.6 Cache
+
+| Cache name | Key | TTL | Strategy |
+|---|---|---|---|
+| `product` | `product::{id}` | 10 min (600 000 ms) | `@Cacheable` on `findById`; `@CachePut` + `@CacheEvict(productBySlug)` on `update` |
+| `productBySlug` | `productBySlug::{slug}` | 10 min | `@Cacheable` on `findBySlug`; `@CacheEvict(allEntries=true)` on `update`/`delete` |
+
+> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName` — cache stale up to 10 min if those are renamed. Future: invalidate on `Category`/`Brand` updates (open item).
+
+### 2.7 Service dependencies
 
 | Calls | Direction |
 |-------|-----------|
-| Kafka `product.indexed.v1` | outbound |
-| Postgres `productservice` | inbound |
+| Postgres `productservice` | inbound (Liquibase-managed schema: 4 tables, partial unique indexes `WHERE deleted = false`) |
+| Redis 7 | cache (via `@EnableCaching` + `RedisCacheManagerBuilderCustomizer`) |
+| Kafka `shop.product.lifecycle.v1` | outbound (via Outbox + `KafkaMessagePublisher` from `common-kafka`) |
 
 ---
 
@@ -554,17 +580,25 @@ GET    /api/v1/roles/users/{userId}
 
 GET    /api/v1/products
 GET    /api/v1/products/{id}
+GET    /api/v1/products/slug/{slug}
 POST   /api/v1/products
 PUT    /api/v1/products
 PUT    /api/v1/products/{id}
 DELETE /api/v1/products/{id}
 
 GET    /api/v1/categories
+GET    /api/v1/categories/tree
 GET    /api/v1/categories/{id}
 POST   /api/v1/categories
 PUT    /api/v1/categories
 PUT    /api/v1/categories/{id}
 DELETE /api/v1/categories/{id}
+
+GET    /api/v1/brands
+GET    /api/v1/brands/{id}
+POST   /api/v1/brands
+PUT    /api/v1/brands/{id}
+DELETE /api/v1/brands/{id}
 
 GET    /api/v1/orders
 GET    /api/v1/orders/all

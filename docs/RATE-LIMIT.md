@@ -193,16 +193,17 @@ hoặc đơn giản back-off vài giây. Nếu cần thêm, có thể inject m�
 ### 6.1 application.yml (workspace hiện tại)
 
 ```yaml
-gateway:
-  public-endpoints:                                   # public cho SecurityConfig
-    - /actuator/health
-    - /actuator/health/**
-    - /actuator/info
-    - /actuator/prometheus
-    - /v3/api-docs/**
-    - /swagger-ui/**
-    - /webjars/**
-    - /api/v1/auth/**
+shop:
+  security:
+    public-paths:                                       # public cho SecurityFilterChain (path-only; đã đổi tên từ public-endpoints + sẽ lên EndpointRule cho method-aware)
+      - /actuator/health
+      - /actuator/health/**
+      - /actuator/info
+      - /actuator/prometheus
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /webjars/**
+      - /api/v1/auth/**
   rate-limit:                                         # per-client + per-route (route bucket)
     enabled: ${GATEWAY_RATE_LIMIT_ENABLED:true}
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:100}

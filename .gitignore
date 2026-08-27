@@ -159,3 +159,4 @@ tmp/
 scratch/
 **/scratch/
 .reference/
+.superpowers/
