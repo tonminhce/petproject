@@ -202,8 +202,18 @@ class SecurityFilterChainIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Method-scoped EndpointRule (GET-only) matches the request, so the filter
+     * chain permits it. {@code UserController.getCurrentUser} has
+     * {@code @PreAuthorize("isAuthenticated()")} which then rejects the anonymous
+     * caller with {@code AuthorizationDeniedException} → 403. Contrast with S4
+     * (DELETE → 401): if the rule had NOT matched the GET, both S4 and S8
+     * would return 401, so the 401/403 split is the proof the
+     * {@code if (rule.method() != null)} branch in {@code BaseSecurityConfig}
+     * was exercised.
+     */
     @Test
-    @DisplayName("S8: GET /api/v1/users/me without auth → 403 (filter chain's method-scoped EndpointRule MATCHES → request reaches controller; method-level @PreAuthorize('isAuthenticated()') on UserController.getCurrentUser then throws AuthorizationDeniedException → 403. Contrast with S4 (DELETE → 401): if the filter-chain rule had NOT matched, GET would also return 401 like DELETE. The 403 vs 401 split proves the `if (rule.method() != null)` branch in BaseSecurityConfig was exercised.)")
+    @DisplayName("S8: GET /api/v1/users/me without auth → 403")
     void getCurrentUserMatchesMethodScopedPublicRuleWithoutAuth() throws Exception {
         mockMvc.perform(get("/api/v1/users/me"))
                 .andExpect(status().isForbidden());
