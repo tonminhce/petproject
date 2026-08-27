@@ -7,6 +7,7 @@ import com.shop.productservice.entity.OutboxStatus;
 import com.shop.productservice.entity.Product;
 import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.service.ProductEventPublisher;
+import com.shop.productservice.service.ProductMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final ProductMetrics metrics;
 
     @Override
     public void publishCreated(Product product) {
@@ -78,5 +80,6 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         event.setStatus(OutboxStatus.PENDING);
         event.setRetryCount(0);
         outboxRepository.save(event);
+        metrics.recordEventPublished(eventType);
     }
 }
