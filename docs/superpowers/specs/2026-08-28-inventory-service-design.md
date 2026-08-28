@@ -28,7 +28,7 @@ và lifecycle **reserve → commit / release** qua entity `Reservation` riêng. 
 | Persistence | PostgreSQL 16 + Liquibase + Spring Data JPA |
 | Cache | Redis 7 + Spring Cache (cache-aside, TTL 60s) |
 | Events | Apache Kafka + Transactional Outbox (giống product-service) |
-| Locking | `@Version` optimistic locking + `spring-retry` (@Retryable) |
+| Locking | `@Version` optimistic locking + manual retry loop (ReservationService) |
 | Auth | Keycloak JWT + `@PreAuthorize` (admin + SERVICE role cho internal) |
 | Common | `common-spring`, `common-core`, `common-security`, `common-kafka`, `common-logging` |
 
@@ -71,8 +71,9 @@ mapper/             InventoryMapper (ModelMapper @Component)
   - Outbox → Kafka dành cho **các service khác** consume.
   - Không self-consume event để invalidate cache (tránh độ trễ + thêm điểm lỗi).
 - **Reservation entity riêng (Cách B):** đầy đủ lifecycle, trace lịch sử.
-- **Optimistic locking (`@Version`) + `@Retryable`:** retry tự động khi conflict, max 3 attempts,
-  throw `INVENTORY_VERSION_CONFLICT` nếu vẫn fail.
+- **Optimistic locking (`@Version`) + manual retry loop (max 3 attempts, backoff 50ms):**
+  wrap trong `ReservationService` (§5.7), throw `INVENTORY_VERSION_CONFLICT` nếu vẫn fail.
+  (KHÔNG dùng `@Retryable` — cần `@EnableRetry` chưa có, self-invocation không proxy.)
 - **Hard delete:** stock là transactional data — xóa thật, không soft-delete. **Chỉ xóa khi không còn
   reservation PENDING/COMMITTED** (xem §4.1).
 - **Outbox pattern:** kế thừa product-service (`OutboxEvent` entity + `@Scheduled` relay).
@@ -95,6 +96,9 @@ mapper/             InventoryMapper (ModelMapper @Component)
 | `lastUpdated` | `Instant` | on update |
 
 > **Không extends `AbstractMappedEntity`** (hard delete). Chỉ giữ `lastUpdated`.
+> **Null cache:** `disableCachingNullValues()` — productId không tồn tại không được cache.
+> Rủi ro: attacker có thể spam productId giả → load DB. Có thể cache null với TTL ngắn (30s)
+> nếu cần chống spam, nhưng chấp nhận hiện tại.
 
 Entity: `@Entity @Table(name = "inventory") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder`.
 
@@ -176,9 +180,11 @@ Thứ tự tạo: `inventory` → `reservations` → `outbox_events`.
 | `POST` | `/api/v1/inventory/reservations/{reservationId}/commit` | SERVICE | — | `ApiResponse<Void>` | Commit |
 | `POST` | `/api/v1/inventory/reservations/{reservationId}/release` | SERVICE | — | `ApiResponse<Void>` | Release |
 
-> **Bảo mật internal:** dùng Keycloak role `SERVICE`. Order-service lấy token qua
+> **Bảo mật internal:** dùng Keycloak realm role `SERVICE`. Order-service lấy token qua
 > client-credentials grant (client id riêng, scope `inventory:write`).
-> `@PreAuthorize("hasAuthority('SERVICE') or hasAuthority('ROLE_SERVICE')`).
+> `JwtRolesConverter` (common-security) emit cả `SERVICE` và `ROLE_SERVICE` → dùng
+> `@PreAuthorize("hasRole('SERVICE')` (Spring Security tự map `ROLE_SERVICE` prefix).
+> Xem `JwtRolesConverter.java` để biết authority mapping chi tiết.
 
 ### 4.3 Response DTOs
 
@@ -213,16 +219,16 @@ public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) 
 > Với `transactionAware(true)`, `@CacheEvict` trên method service chỉ thực sự xóa Redis
 > sau khi transaction commit thành công. Rollback → không xóa.
 
-### 5.1 Reserve flow (write path, optimistic lock + retry)
+### 5.1 Reserve flow (write path, optimistic lock)
 
 ```java
-@Retryable(retryFor = OptimisticLockingFailureException.class, maxAttempts = 3,
-           backoff = @Backoff(delay = 50))
 @Transactional
-@CacheEvict(value = "inventory", key = "#productId")
+@CacheEvict(value = "inventory", key = "#productId")   // productId là tham số method → SpEL OK
 public ReservationResponse reserve(UUID productId, ReserveRequest request) {
     Inventory inv = inventoryRepository.findByProductId(productId)
         .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+    // Release expired reservations trước khi tính available (chống tồn kho ảo)
+    releaseExpiredReservations(productId);
     int available = inv.getAvailableQuantity() - inv.getReservedQuantity();
     if (available < request.quantity()) {
         throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, productId);
@@ -243,16 +249,17 @@ public ReservationResponse reserve(UUID productId, ReserveRequest request) {
 ```
 
 - Cache evict: `@CacheEvict` + transactionAware cache → evict sau commit.
-- Nếu retry 3 lần vẫn `OptimisticLockingFailureException` → `@Recover` throw
-  `BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT)`.
+- **Optimistic lock retry:** KHÔNG dùng `@Retryable` ở đây — wrap qua `ReservationService.reserveWithRetry` (§5.7)
+  vì `@Retryable` cần `@EnableRetry` (chưa có) và self-invocation không proxy được.
 
 ### 5.2 Commit flow
 
+> **Cache evict:** KHÔNG dùng `@CacheEvict` với SpEL `#r.productId` (r không phải tham số method — lỗi runtime).
+> Dùng `inventoryCacheService.evictAfterCommit(r.getProductId())` thủ công — helper bọc
+> `TransactionSynchronizationManager.registerSynchronization(afterCommit)` để evict chỉ chạy sau commit.
+
 ```java
-@Retryable(retryFor = OptimisticLockingFailureException.class, maxAttempts = 3,
-           backoff = @Backoff(delay = 50))
 @Transactional
-@CacheEvict(value = "inventory", key = "#r.productId", allEntries = false)
 public void commit(UUID reservationId) {
     Reservation r = reservationRepository.findById(reservationId)
         .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
@@ -273,16 +280,18 @@ public void commit(UUID reservationId) {
     inventoryRepository.save(inv);
     reservationRepository.save(r);
     inventoryEventPublisher.publishCommitted(inv, r);
+    inventoryCacheService.evictAfterCommit(r.getProductId());   // evict sau commit
 }
 ```
 
+**Optimistic lock retry cho commit:** wrap trong `ReservationService` (tầng gọi) — xem §5.7.
+
 ### 5.3 Release flow
 
+> **Cache evict:** dùng `inventoryCacheService.evictAfterCommit(r.getProductId())` thủ công (sau commit).
+
 ```java
-@Retryable(retryFor = OptimisticLockingFailureException.class, maxAttempts = 3,
-           backoff = @Backoff(delay = 50))
 @Transactional
-@CacheEvict(value = "inventory", key = "#r.productId", allEntries = false)
 public void release(UUID reservationId) {
     Reservation r = reservationRepository.findById(reservationId)
         .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
@@ -302,8 +311,11 @@ public void release(UUID reservationId) {
     inventoryRepository.save(inv);
     reservationRepository.save(r);
     inventoryEventPublisher.publishReleased(inv, r);
+    inventoryCacheService.evictAfterCommit(r.getProductId());   // evict sau commit
 }
 ```
+
+**Optimistic lock retry cho release:** wrap trong `ReservationService` — xem §5.7.
 
 ### 5.4 Read path (cache-aside)
 
@@ -343,10 +355,14 @@ public class InventoryOutboxRelay {
 
     @Scheduled(fixedDelayString = "${inventory.outbox.poll-interval-ms:5000}")
     public void relay() {
-        // findFirst100ByStatusOrderByIdAsc — sắp xếp theo id → thứ tự tạo
+        // Repository signature: findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable)
+        // → List<OutboxEvent> hoặc Page<OutboxEvent> (Spring Data JPA support cả hai)
         List<OutboxEvent> pending = outboxRepo.findByStatusOrderByIdAsc(
             OutboxStatus.PENDING, PageRequest.of(0, batchSize));
         for (OutboxEvent event : pending) {   // single-thread, tuần tự
+            // ⚠️ Nếu event gửi thất bại → dừng vòng lặp (break) để giữ thứ tự.
+            // Event fail sẽ được retry ở lần poll sau. Không skip — vì event sau
+            // có thể phụ thuộc thứ tự (cùng productId).
             try {
                 kafkaPublisher.publish(event.getTopic(),
                     event.getAggregateId().toString(),  // Kafka key = productId
@@ -369,6 +385,65 @@ public class InventoryOutboxRelay {
 
 > **Thứ tự:** query `ORDER BY id ASC` + publish tuần tự single-thread → event của cùng productId
 > được gửi theo đúng thứ tự tạo. Không dùng parallel — inventory throughput không cao.
+
+---
+
+
+### 5.7 ReservationService — optimistic lock retry wrapper
+
+Vì `@CacheEvict` không dùng SpEL (fix 1), retry optimistic lock được wrap ở tầng gọi
+(`ReservationService`) thay vì trên chính method `@Transactional`:
+
+```java
+@Service
+@RequiredArgsConstructor
+public class ReservationService {
+
+    private final InventoryService inventoryService;   // method @Transactional bên trong
+
+    /** Retry reserve khi OptimisticLockingFailureException (tối đa 3 lần). */
+    public ReservationResponse reserveWithRetry(UUID productId, ReserveRequest request) {
+        int attempts = 0;
+        while (true) {
+            try {
+                return inventoryService.reserve(productId, request);
+            } catch (OptimisticLockingFailureException ex) {
+                if (++attempts >= 3) {
+                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, productId);
+                }
+                sleep(50L * attempts);   // backoff 50ms, 100ms
+            }
+        }
+    }
+
+    public void commitWithRetry(UUID reservationId) {
+        int attempts = 0;
+        while (true) {
+            try {
+                inventoryService.commit(reservationId);
+                return;
+            } catch (OptimisticLockingFailureException ex) {
+                if (++attempts >= 3) throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, reservationId);
+                sleep(50L * attempts);
+            }
+        }
+    }
+
+    public void releaseWithRetry(UUID reservationId) {
+        // tương tự commitWithRetry
+    }
+
+    private void sleep(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+}
+```
+
+> **Chọn manual retry loop thay vì `@Retryable`:** `@Retryable` (spring-retry) cần
+> `@EnableRetry` + dependency riêng (chưa có trong common-spring). Resilience4j `@Retry`
+> đã có sẵn nhưng yêu cầu `@Retry(name=...)` + fallback — thêm phức tạp cho optimistic lock
+> (cần re-read entity mới sau retry, self-invocation không proxy được). Manual loop đơn giản,
+> dễ test, không phụ thuộc thêm.
 
 ---
 
@@ -433,9 +508,6 @@ inventory:
     batch-size: 100
     max-retries: 10
 
-spring.retry:
-  max-attempts: 3
-  backoff-delay: 50
 ```
 
 > **Cache TTL:** dùng `CacheConfig` bean tường minh (transactionAware) — cấu hình properties
@@ -466,8 +538,13 @@ i18n keys thêm vào `messages_en.properties` + `messages_vi.properties`.
 | Slice | `@WebMvcTest` + `@MockitoBean` | InventoryController, ReservationController |
 | Integration | `@SpringBootTest` + Testcontainers | OutboxRelay end-to-end (reserve → event → Kafka), optimistic lock retry |
 
-Test stack (Boot 4): `@MockitoBean`, `@WebMvcTest` ở `org.springframework.boot.webmvc.test.autoconfigure.*`,
-`@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*`, `@Import(LiquibaseAutoConfiguration.class)`.
+Test stack (Boot 4.1.1 — verified từ product-service source):
+- `@WebMvcTest` ở `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`)
+- `@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`)
+- `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`)
+- `@MockitoBean` ở `org.springframework.test.context.bean.override.mockito.MockitoBean` (không phải `@MockBean`)
+- `@Import` cần `org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration` (package `boot.liquibase.autoconfigure`, KHÔNG phải `boot.autoconfigure.liquibase`)
+- `@AutoConfigureMockMvc(addFilters = false)` — tắt security filter ở slice (pattern auth-service)
 
 ---
 
@@ -502,3 +579,7 @@ Test stack (Boot 4): `@MockitoBean`, `@WebMvcTest` ở `org.springframework.boot
   lock, single-thread outbox relay ordering, outbox aggregate_id = productId, delete policy khi còn
   reservation, Bean Validation, SERVICE role cho internal endpoints, expired cleanup plan, CacheConfig
   tường minh, validation DTO.
+- 2026-08-28 (rev 3): Fix 7 review points — (1) SpEL `#r.productId` → `evictAfterCommit()` thủ công,
+  (2) bỏ `spring.retry` yml sai chuẩn, (3) `hasRole('SERVICE')` thống nhất JwtRolesConverter,
+  (4) OutboxRelay stop-on-error giữ thứ tự, (5) releaseExpiredReservations trong reserve,
+  (6) null cache note, (7) test package verify từ source (boot.liquibase.autoconfigure).
