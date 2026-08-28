@@ -1,90 +1,112 @@
 databaseChangeLog:
-  - createTable:
-      tableName: inventory
-      columns:
-        - column:
-            name: id
-            type: UUID
-            constraints:
-              primaryKey: true
-              nullable: false
-        - column: { name: product_id,         type: UUID,   constraints: { nullable: false } }
-        - column: { name: available_quantity, type: INTEGER, constraints: { nullable: false, defaultValueNumeric: 0 } }
-        - column: { name: reserved_quantity,  type: INTEGER, constraints: { nullable: false, defaultValueNumeric: 0 } }
-        - column: { name: version,            type: BIGINT,  constraints: { nullable: false, defaultValueNumeric: 0 } }
-        - column: { name: last_updated,       type: TIMESTAMP }
 
-  - addUniqueConstraint:
-      tableName: inventory
-      columnNames: product_id
-      constraintName: uk_inventory_product
+  # ===========================================================================
+  #  001-create-inventory
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-inventory
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: inventory
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: product_id,        type: UUID,    constraints: { nullable: false } }
+              - column: { name: available_quantity, type: INTEGER, constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: reserved_quantity,  type: INTEGER, constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: version,            type: BIGINT,  constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: last_updated,       type: TIMESTAMP }
 
-  - createIndex:
-      tableName: inventory
-      indexName: idx_inventory_product_id
-      columns:
-        - column: { name: product_id }
+        - addUniqueConstraint:
+            tableName: inventory
+            columnNames: product_id
+            constraintName: uk_inventory_product
 
-  - createTable:
-      tableName: reservations
-      columns:
-        - column:
-            name: id
-            type: UUID
-            constraints:
-              primaryKey: true
-              nullable: false
-        - column: { name: product_id,   type: UUID,    constraints: { nullable: false } }
-        - column: { name: quantity,     type: INTEGER, constraints: { nullable: false } }
-        - column: { name: status,       type: VARCHAR(20), constraints: { nullable: false } }
-        - column: { name: created_at,   type: TIMESTAMP,  constraints: { nullable: false } }
-        - column: { name: expires_at,   type: TIMESTAMP,  constraints: { nullable: false } }
-        - column: { name: committed_at, type: TIMESTAMP }
-        - column: { name: released_at,  type: TIMESTAMP }
-        - column: { name: order_id,     type: UUID }
+        - createIndex:
+            tableName: inventory
+            indexName: idx_inventory_product_id
+            columns:
+              - column: { name: product_id }
 
-  - createIndex:
-      tableName: reservations
-      indexName: idx_reservations_product_id
-      columns:
-        - column: { name: product_id }
+  # ===========================================================================
+  #  002-create-reservations
+  # ===========================================================================
+  - changeSet:
+      id: 002-create-reservations
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: reservations
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: product_id,   type: UUID,        constraints: { nullable: false } }
+              - column: { name: quantity,     type: INTEGER,     constraints: { nullable: false } }
+              - column: { name: status,       type: VARCHAR(20), constraints: { nullable: false } }
+              - column: { name: created_at,   type: TIMESTAMP,   constraints: { nullable: false } }
+              - column: { name: expires_at,   type: TIMESTAMP,   constraints: { nullable: false } }
+              - column: { name: committed_at, type: TIMESTAMP }
+              - column: { name: released_at,  type: TIMESTAMP }
+              - column: { name: order_id,     type: UUID }
 
-  - createIndex:
-      tableName: reservations
-      indexName: idx_reservations_status_expires
-      columns:
-        - column: { name: status }
-        - column: { name: expires_at }
+        - createIndex:
+            tableName: reservations
+            indexName: idx_reservations_product_id
+            columns:
+              - column: { name: product_id }
 
-  - createTable:
-      tableName: outbox_events
-      columns:
-        - column:
-            name: id
-            type: BIGSERIAL
-            autoIncrement: true
-            constraints:
-              primaryKey: true
-              nullable: false
-        - column: { name: event_id,       type: VARCHAR(36), constraints: { nullable: false, unique: true } }
-        - column: { name: aggregate_type, type: VARCHAR(50), constraints: { nullable: false } }
-        - column: { name: aggregate_id,   type: UUID,        constraints: { nullable: false } }
-        - column: { name: event_type,     type: VARCHAR(50), constraints: { nullable: false } }
-        - column: { name: topic,          type: VARCHAR(100), constraints: { nullable: false } }
-        - column: { name: payload,        type: TEXT,        constraints: { nullable: false } }
-        - column: { name: status,         type: VARCHAR(20), constraints: { nullable: false } }
-        - column: { name: retry_count,    type: INTEGER,     constraints: { nullable: false, defaultValueNumeric: 0 } }
-        - column: { name: sent_at,        type: TIMESTAMP }
-        - column: { name: last_error,     type: VARCHAR(1000) }
+        - createIndex:
+            tableName: reservations
+            indexName: idx_reservations_status_expires
+            columns:
+              - column: { name: status }
+              - column: { name: expires_at }
 
-  - createIndex:
-      tableName: outbox_events
-      indexName: idx_outbox_status
-      columns:
-        - column: { name: status }
+  # ===========================================================================
+  #  003-create-outbox-events
+  # ===========================================================================
+  - changeSet:
+      id: 003-create-outbox-events
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: event_id,       type: VARCHAR(36),  constraints: { nullable: false, unique: true } }
+              - column: { name: aggregate_type, type: VARCHAR(50),  constraints: { nullable: false } }
+              - column: { name: aggregate_id,   type: UUID,         constraints: { nullable: false } }
+              - column: { name: event_type,     type: VARCHAR(50),  constraints: { nullable: false } }
+              - column: { name: topic,          type: VARCHAR(100), constraints: { nullable: false } }
+              - column: { name: payload,        type: TEXT,         constraints: { nullable: false } }
+              - column: { name: status,         type: VARCHAR(20),  constraints: { nullable: false } }
+              - column: { name: retry_count,    type: INTEGER,      constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: sent_at,        type: TIMESTAMP }
+              - column: { name: last_error,     type: VARCHAR(1000) }
 
-  - createIndex:
-      tableName: outbox_events
-      indexName: idx_outbox_aggregate_id
-      columns:
-        - column: { name: aggregate_id }
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_status
+            columns:
+              - column: { name: status }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_aggregate_id
+            columns:
+              - column: { name: aggregate_id }
