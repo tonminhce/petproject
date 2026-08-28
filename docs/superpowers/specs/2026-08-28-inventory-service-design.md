@@ -230,10 +230,12 @@ public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) 
 @Transactional
 @CacheEvict(value = "inventory", key = "#productId")   // productId là tham số method → SpEL OK
 public ReservationResponse reserve(UUID productId, ReserveRequest request) {
+    // 1. Release expired TRƯỚC khi đọc Inventory (method này cập nhật Inventory + tăng @Version)
+    releaseExpiredReservations(productId);
+    // 2. Đọc Inventory sau khi đã release expired — dữ liệu mới nhất
     Inventory inv = inventoryRepository.findByProductId(productId)
         .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
-    // Release expired reservations trước khi tính available (chống tồn kho ảo)
-    releaseExpiredReservations(productId);
+    // 3. Tính available trên bản inventory đã được release expired
     int available = inv.getAvailableQuantity() - inv.getReservedQuantity();
     if (available < request.quantity()) {
         throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, productId);
@@ -400,6 +402,7 @@ public class InventoryOutboxRelay {
                 event.setStatus(OutboxStatus.SENT);
                 event.setSentAt(Instant.now());
                 event.setLastError(null);
+                outboxRepo.save(event);
             } catch (Exception ex) {
                 event.setRetryCount(event.getRetryCount() + 1);
                 event.setLastError(ex.getMessage());
@@ -408,10 +411,8 @@ public class InventoryOutboxRelay {
                 }
                 outboxRepo.save(event);
                 break;   // ⚠️ STOP: fail event → dừng ngay, KHÔNG gửi event sau.
-                         // Giữ thứ tự per-aggregate (event sau có thể phụ thuộc event trước).
-                         // Event fail vẫn PENDING → retry ở poll tiếp theo.
+                         // Giữ thứ tự per-aggregate. Event fail vẫn PENDING → retry poll sau.
             }
-            outboxRepo.save(event);
         }
     }
 }
