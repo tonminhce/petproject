@@ -1,0 +1,631 @@
+{
+  "info": {
+    "name": "E-commerce Auth + Product E2E",
+    "description": "End-to-end test for auth-service (8088) + product-service (8086). Keycloak realm 'ecommerce' with seed users testuser/testpass (USER) and adminuser/adminpass (ADMIN+MANAGER).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "authBase",
+      "value": "http://localhost:8088/api/v1"
+    },
+    {
+      "key": "productBase",
+      "value": "http://localhost:8086/api/v1"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "adminAccessToken",
+      "value": ""
+    },
+    {
+      "key": "brandId",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "productSlug",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. SETUP - Health Checks",
+      "item": [
+        {
+          "name": "Auth Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8088/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "Product Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8086/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "Auth Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8088/swagger-ui.html"
+            }
+          }
+        },
+        {
+          "name": "Product Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8086/swagger-ui.html"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. AUTH - Login Flows",
+      "item": [
+        {
+          "name": "Login as testuser (USER role)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('accessToken', j.data.accessToken); pm.collectionVariables.set('refreshToken', j.data.refreshToken); console.log('USER token stored'); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/auth/login"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login as adminuser (ADMIN role)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('adminAccessToken', j.data.accessToken); console.log('ADMIN token stored'); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/auth/login"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminuser\",\n  \"password\": \"adminpass\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login with WRONG password (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/auth/login"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"wrongpass\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token (USER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/auth/refresh"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. AUTH - Self-service (USER token)",
+      "item": [
+        {
+          "name": "GET /users/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/users/me"
+            }
+          }
+        },
+        {
+          "name": "GET /users/{id} WITHOUT ADMIN (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/users/00000000-0000-0000-0000-000000000000"
+            }
+          }
+        },
+        {
+          "name": "GET /users/{id} WITH ADMIN (expect 200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/users/00000000-0000-0000-0000-000000000000"
+            }
+          }
+        },
+        {
+          "name": "GET /users (admin list) WITH ADMIN",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/users?page=0&size=10&sortBy=id&sortOrder=ASC"
+            }
+          }
+        },
+        {
+          "name": "Anonymous GET /users/me (expect 401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{authBase}}/users/me"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. PRODUCT - Anonymous Reads",
+      "item": [
+        {
+          "name": "List brands (anonymous)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/brands?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "List categories (anonymous)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/categories"
+            }
+          }
+        },
+        {
+          "name": "Get category tree (anonymous)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/categories/tree"
+            }
+          }
+        },
+        {
+          "name": "List products (anonymous)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products?page=0&size=20"
+            }
+          }
+        },
+        {
+          "name": "GET non-existent product (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products/00000000-0000-0000-0000-000000000000"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. PRODUCT - Admin creates catalog",
+      "item": [
+        {
+          "name": "Create Brand (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('brandId', j.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/brands"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Apple\",\n  \"slug\": \"apple-{{$timestamp}}\",\n  \"logoUrl\": \"https://example.com/apple-logo.png\",\n  \"description\": \"Premium electronics brand\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Category (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('categoryId', j.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/categories"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Smartphones\",\n  \"slug\": \"smartphones-{{$timestamp}}\",\n  \"imageUrl\": \"https://example.com/smartphones.png\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Product (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('productId', j.data.id); pm.collectionVariables.set('productSlug', j.data.slug); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/products"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"iPhone 15 Pro\",\n  \"slug\": \"iphone-15-pro-{{$timestamp}}\",\n  \"description\": \"The latest flagship phone\",\n  \"sku\": \"IP15-PRO-{{$timestamp}}\",\n  \"priceUnit\": 999.00,\n  \"quantity\": 50,\n  \"status\": \"ACTIVE\",\n  \"imageUrl\": \"https://example.com/iphone15pro.png\",\n  \"weight\": 0.187,\n  \"dimensions\": \"146.6 x 70.6 x 8.25 mm\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"brandId\": \"{{brandId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Product WITH USER token (expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/products"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hack attempt\",\n  \"slug\": \"hack-{{$timestamp}}\",\n  \"sku\": \"HACK-{{$timestamp}}\",\n  \"priceUnit\": 1.00,\n  \"quantity\": 1,\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Product with DUPLICATE slug (expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/products"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Duplicate\",\n  \"slug\": \"{{productSlug}}\",\n  \"sku\": \"DUP-{{$timestamp}}\",\n  \"priceUnit\": 1.00,\n  \"quantity\": 1,\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Product with INVALID body (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/products"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"slug\": \"\",\n  \"sku\": \"\",\n  \"priceUnit\": -1,\n  \"quantity\": -1\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. PRODUCT - Reads (cache test)",
+      "item": [
+        {
+          "name": "Get product by ID (populates Redis cache)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "Get product by slug (populates cache)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products/slug/{{productSlug}}"
+            }
+          }
+        },
+        {
+          "name": "Get product again (should hit cache)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "List products filtered by category",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products?categoryId={{categoryId}}&page=0&size=5"
+            }
+          }
+        },
+        {
+          "name": "List products filtered by brand+status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products?brandId={{brandId}}&status=ACTIVE&page=0&size=5"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. PRODUCT - Update (cache evict)",
+      "item": [
+        {
+          "name": "Update Product (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/products/{{productId}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priceUnit\": 1099.00,\n  \"quantity\": 45,\n  \"description\": \"Updated - slightly more expensive due to new camera\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get updated product (cache repopulated)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. PRODUCT - Soft-delete",
+      "item": [
+        {
+          "name": "Soft-delete Product (ADMIN, outbox event)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{productBase}}/products/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "Get deleted product (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{productBase}}/products/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. AUTH - Logout",
+      "item": [
+        {
+          "name": "Logout USER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{authBase}}/auth/logout"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

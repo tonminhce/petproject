@@ -1,7 +1,7 @@
 databaseChangeLog:
+  # Liquibase 5.0+ ignores `relativeToChangelogFile: true` — use absolute paths
+  # from the classpath root so the include resolver finds the changeset files.
   - include:
-      file: changeset/001-create-users-and-roles.yaml
-      relativeToChangelogFile: true
+      file: db/changelog/changeset/001-create-users-and-roles.yaml
   - include:
-      file: changeset/002-add-soft-delete.yaml
-      relativeToChangelogFile: true
+      file: db/changelog/changeset/002-add-soft-delete.yaml

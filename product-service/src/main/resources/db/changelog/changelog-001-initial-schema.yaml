@@ -3,6 +3,8 @@ databaseChangeLog:
   # ===========================================================================
   #  categories — created FIRST so products can point a FK at it.
   #  Self-referencing tree: parent_id NULL means "root".
+  #  audit columns (created_at/updated_at) use CURRENT_TIMESTAMP defaults so
+  #  inserts don't fail if @EnableJpaAuditing hasn't kicked in yet.
   # ===========================================================================
   - changeSet:
       id: 001-create-categories
@@ -21,8 +23,8 @@ databaseChangeLog:
               - column: { name: slug,       type: varchar(100), constraints: { nullable: false } }
               - column: { name: image_url,  type: varchar(500) }
               - column: { name: parent_id,  type: uuid }
-              - column: { name: created_at, type: timestamp, constraints: { nullable: false } }
-              - column: { name: updated_at, type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
               - column: { name: created_by, type: varchar(100) }
               - column: { name: updated_by, type: varchar(100) }
               - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
@@ -70,8 +72,8 @@ databaseChangeLog:
               - column: { name: slug,        type: varchar(100), constraints: { nullable: false } }
               - column: { name: logo_url,    type: varchar(500) }
               - column: { name: description, type: varchar(1000) }
-              - column: { name: created_at,  type: timestamp, constraints: { nullable: false } }
-              - column: { name: updated_at,  type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_at,  type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at,  type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
               - column: { name: created_by,  type: varchar(100) }
               - column: { name: updated_by,  type: varchar(100) }
               - column: { name: deleted,     type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
@@ -111,8 +113,8 @@ databaseChangeLog:
               - column: { name: dimensions,  type: varchar(50) }
               - column: { name: category_id, type: uuid }
               - column: { name: brand_id,    type: uuid }
-              - column: { name: created_at,  type: timestamp, constraints: { nullable: false } }
-              - column: { name: updated_at,  type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_at,  type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at,  type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
               - column: { name: created_by,  type: varchar(100) }
               - column: { name: updated_by,  type: varchar(100) }
               - column: { name: deleted,     type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
@@ -200,8 +202,8 @@ databaseChangeLog:
               - column: { name: retry_count,    type: integer, defaultValueNumeric: 0, constraints: { nullable: false } }
               - column: { name: sent_at,        type: timestamp }
               - column: { name: last_error,     type: varchar(1000) }
-              - column: { name: created_at,     type: timestamp, constraints: { nullable: false } }
-              - column: { name: updated_at,     type: timestamp, constraints: { nullable: false } }
+              - column: { name: created_at,     type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at,     type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
               - column: { name: created_by,     type: varchar(100) }
               - column: { name: updated_by,     type: varchar(100) }
               - column: { name: deleted,        type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }

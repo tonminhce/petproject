@@ -17,6 +17,13 @@ import java.util.Optional;
 
 @AutoConfiguration
 @ConditionalOnClass(AuditingEntityListener.class)
+// @EnableJpaAuditing MUST be on the outer @AutoConfiguration class — when
+// placed on a nested static @Configuration, Spring's auto-config scanner
+// sometimes skips it (depends on bean creation order), and the auditing
+// listener never registers. Symptom: created_at / updated_at columns stay
+// NULL on insert, violating the NOT NULL constraint in Liquibase-managed
+// schemas.
+@org.springframework.data.jpa.repository.config.EnableJpaAuditing(auditorAwareRef = "auditorAware")
 public class JpaAuditingAutoConfiguration {
 
     @Bean
@@ -34,11 +41,5 @@ public class JpaAuditingAutoConfiguration {
             }
             return Optional.of("system");
         };
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    @ConditionalOnBean(EntityManagerFactory.class)
-    @EnableJpaAuditing(auditorAwareRef = "auditorAware")
-    static class EnableJpaAuditingConfiguration {
     }
 }
