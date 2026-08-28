@@ -39,7 +39,8 @@ và lifecycle **reserve → commit / release** qua entity `Reservation` riêng. 
 ### 2.1 Package structure (`com.shop.inventoryservice.*`)
 
 ```
-config/             CacheConfig (Redis cache manager, transactionAware), RetryConfig
+config/             CacheConfig (Redis cache manager, transactionAware), RetryConfig (@EnableRetry)
+                 + ReservationRetryProperties (max-attempts, backoff-ms)
 controller/         InventoryController (CRUD + reserve/commit/release)
 dto/
   request/          InventoryUpsertRequest, ReserveRequest, ...
@@ -200,7 +201,23 @@ Thứ tự tạo: `inventory` → `reservations` → `outbox_events`.
 
 ## 5. Service layer
 
-### 5.0 Cache transaction-awareness (CacheConfig)
+### 5.0 Retry config + Cache transaction-awareness
+
+**RetryConfig** (nếu cần dùng `@Retryable` về sau):
+
+```java
+@Configuration
+@EnableRetry
+public class RetryConfig {
+    // Không cần bean — @Retryable(maxAttempts=3, backoff=@Backoff(delay=50))
+    // tự động đọc annotation. @EnableRetry kích hoạt proxy retry.
+}
+```
+
+> Hiện tại retry optimistic lock dùng **manual loop** trong `ReservationService` (§5.7) —
+> không cần `@EnableRetry`. `RetryConfig` chỉ thêm vào nếu sau này chuyển sang `@Retryable`.
+
+**Cache transaction-awareness (CacheConfig):**
 
 ```java
 @Bean
@@ -483,9 +500,11 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
+  # Cache: KHÔNG cấu hình spring.cache.redis.* — CacheConfig bean là single source of truth
+  # (entryTtl 60s, disableCachingNullValues, transactionAware). Các thuộc tính yml sẽ bị
+  # bỏ qua khi bean RedisCacheManager được khai báo tường minh.
   cache:
     type: redis
-    redis: { time-to-live: 60000, cache-null-values: false, use-key-prefix: true }
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
@@ -583,3 +602,6 @@ Test stack (Boot 4.1.1 — verified từ product-service source):
   (2) bỏ `spring.retry` yml sai chuẩn, (3) `hasRole('SERVICE')` thống nhất JwtRolesConverter,
   (4) OutboxRelay stop-on-error giữ thứ tự, (5) releaseExpiredReservations trong reserve,
   (6) null cache note, (7) test package verify từ source (boot.liquibase.autoconfigure).
+- 2026-08-28 (rev 4): Cleanup — (1) xác nhận spring.retry đã bỏ, (2) @PreAuthorize hasRole('SERVICE'),
+  (3) outbox relay break-on-error giữ thứ tự, (4) bỏ spring.cache.redis.* (CacheConfig single source
+  of truth), (5) thêm @EnableRetry trong RetryConfig (chỉ khi chuyển sang @Retryable).
