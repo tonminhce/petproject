@@ -1,0 +1,46 @@
+databaseChangeLog:
+  # ===============================================================================
+  # favourites table
+  #   11 columns: id + 2 domain (user_id, product_id) + 4 audit (AbstractMappedEntity)
+  #               + 3 soft-delete (SoftDeletable: deleted, deleted_at, deleted_by)
+  #   2 indexes: partial unique on (user_id, product_id) WHERE deleted=false (raw SQL)
+  #              + lookup index on (user_id)
+  #   No FK to product-service.products (cross-schema coupling avoided per spec §6.1)
+  # ===============================================================================
+  - changeSet:
+      id: 001-create-favourites
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: favourites
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: user_id,    type: uuid,         constraints: { nullable: false } }
+              - column: { name: product_id, type: uuid,         constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamp,    constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamp,    constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamp }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        # Partial unique index: same (user_id, product_id) may be re-favourited after
+        # soft-delete. Liquibase's createIndex has no `where` attribute, so raw SQL.
+        # Matches product-service pattern for `idx_categories_slug_unique_active`.
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX idx_favourites_user_product_unique_active
+              ON favourites (user_id, product_id) WHERE deleted = false
+
+        - createIndex:
+            tableName: favourites
+            indexName: idx_favourites_user_id
+            columns:
+              - column:
+                  name: user_id
