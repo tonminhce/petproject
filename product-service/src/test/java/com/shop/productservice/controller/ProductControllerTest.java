@@ -18,9 +18,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,5 +71,21 @@ class ProductControllerTest {
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("ERR-0422-V"));
+    }
+
+    @Test
+    void update_rejectsOversizedField() throws Exception {
+        String str = "x".repeat(2001);
+        String body = String.format("""
+            {"description": "%s"}
+            """, str);
+
+        mockMvc.perform(put("/api/v1/products/{id}", ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false));
+
+        verifyNoInteractions(productService);
     }
 }
