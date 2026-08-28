@@ -1,0 +1,38 @@
+# =============================================================================
+#  favourite-service — User wishlist (favourites).
+#  Pure user-scoped CRUD. No Kafka, no Redis, no external service calls.
+#
+#  Platform-wide defaults live in `common-spring/application.yml` (inherited).
+#  Only service-specific overrides belong here.
+# =============================================================================
+spring:
+  application:
+    name: favourite-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/favouriteservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Schema is owned by Liquibase — never let Hibernate mutate it.
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  # Override the common-spring default 8080 (compose maps 8081:8081).
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+
+shop:
+  application:
+    name: favourite-service
+  security:
+    # Every endpoint requires a valid JWT — favourite data is private to its owner.
+    # Platform defaults (actuator/swagger/api-docs) stay public via common-security.
+    public-paths: []
