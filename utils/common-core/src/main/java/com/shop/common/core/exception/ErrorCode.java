@@ -53,6 +53,11 @@ public enum ErrorCode {
     // ---- Inventory domain ----
     WAREHOUSE_NOT_FOUND("INV-3001", "warehouse.not.found", HttpStatus.NOT_FOUND),
     STOCK_INSUFFICIENT("INV-3002", "stock.insufficient", HttpStatus.CONFLICT),
+    RESERVATION_NOT_FOUND("INV-3003", "reservation.not.found", HttpStatus.NOT_FOUND),
+    RESERVATION_EXPIRED("INV-3004", "reservation.expired", HttpStatus.CONFLICT),
+    RESERVATION_INVALID_STATE("INV-3005", "reservation.invalid.state", HttpStatus.CONFLICT),
+    INVENTORY_ALREADY_EXISTS("INV-3006", "inventory.already.exists", HttpStatus.CONFLICT),
+    INVENTORY_VERSION_CONFLICT("INV-3007", "inventory.version.conflict", HttpStatus.CONFLICT),
 
     // ---- Order domain ----
     ORDER_NOT_FOUND("ORD-4001", "order.not.found", HttpStatus.NOT_FOUND),
