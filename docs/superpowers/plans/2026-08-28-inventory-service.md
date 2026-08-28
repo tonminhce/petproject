@@ -22,7 +22,12 @@
 - **ModelMapper** — `@Component` inject `ModelMapper` (pattern product-service). KHÔNG MapStruct.
 - **Liquibase** (không Flyway), changelogs trong `src/main/resources/db/changelog/`
 - **All endpoints** wrap trong `ApiResponse<T>` (from `common-core/viewmodel`)
-- **Cache key:** `inventory::{productId}`; TTL 60s; `disableCachingNullValues`; `transactionAware(true)`
+- **Cache key:** `inventory::{productId}`; TTL 60s; `disableCachingNullValues`. Evict sau commit qua
+  `InventoryCacheService.evictAfterCommit()` ở MỌI write path (KHÔNG dùng `@CacheEvict`); `.transactionAware()`
+  no-arg trên builder là defense-in-depth (⚠️ API chỉ có no-arg — `transactionAware(boolean)` không tồn tại)
+- **`@EnableScheduling`** trên `InventoryServiceApplication` — bắt buộc, nếu không `@Scheduled` relay/cleanup
+  sẽ không bao giờ chạy
+- **KHÔNG khai báo `shop.security.public-paths`** — mọi endpoint yêu cầu JWT (raw stock nhạy cảm, fail-closed)
 - **Kafka topic:** `shop.inventory.events.v1`; partition key = `aggregateId` (= productId). Config qua `shop.kafka.*`
 - **Optimistic locking:** `@Version` trên Inventory; retry manual loop trong `ReservationService` (KHÔNG `@Retryable`)
 - **Hard delete** — Inventory KHÔNG extends `AbstractMappedEntity` (không soft-delete)
@@ -71,6 +76,8 @@
 | `inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryEventPublisher.java` | interface |
 | `inventory-service/src/main/java/com/shop/inventoryservice/service/impls/TransactionalInventoryEventPublisher.java` | writes OutboxEvent same TX |
 | `inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryOutboxRelay.java` | `@Scheduled` single-thread relay |
+| `inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java` | `@Scheduled` quét PENDING hết hạn → release stock (Task 22) |
+| `inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java` | `@Scheduled` purge outbox SENT > 7 ngày (Task 22) |
 | `inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryCacheService.java` | cache-aside read + `evictAfterCommit` |
 | `inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java` | CRUD + reserve/commit/release |
 | `inventory-service/src/main/resources/application.yml` | config (datasource, redis, kafka, security) |
@@ -91,7 +98,13 @@
 
 ## Phase 0 — Common upgrades
 
-### Task 1: Add inventory ErrorCodes + i18n keys
+### Task 1: Verify existing inventory ErrorCodes + add INVENTORY_NOT_FOUND (INV-3008)
+
+> ⚠️ **REV 5 — Task này KHÔNG còn thêm INV-3003..3007 nữa.** Verified trong repo:
+> 5 ErrorCodes `RESERVATION_NOT_FOUND`(INV-3003) → `INVENTORY_VERSION_CONFLICT`(INV-3007)
+> **đã tồn tại** tại `ErrorCode.java:56-60`, và 5 i18n keys tương ứng đã có ở
+> `messages_en.properties:69-73` + `messages_vi.properties:69-73`. Thêm lại = duplicate
+> enum constant → compile error. Việc duy nhất còn lại: thêm `INVENTORY_NOT_FOUND` (INV-3008).
 
 **Files:**
 - Modify: `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java`
@@ -99,50 +112,45 @@
 - Modify: `utils/common-spring/src/main/resources/messages/messages_vi.properties`
 
 **Interfaces:**
-- Produces: ErrorCodes `RESERVATION_NOT_FOUND (INV-3003)`, `RESERVATION_EXPIRED (INV-3004)`, `RESERVATION_INVALID_STATE (INV-3005)`, `INVENTORY_ALREADY_EXISTS (INV-3006)`, `INVENTORY_VERSION_CONFLICT (INV-3007)`; i18n keys (EN + VI)
+- Produces: ErrorCode `INVENTORY_NOT_FOUND (INV-3008)` + i18n key `inventory.not.found` (EN + VI)
 
-- [ ] **Step 1: Add 5 ErrorCodes to ErrorCode.java**
+- [ ] **Step 1: Verify existing codes (không sửa gì)**
 
-Thêm sau dòng `STOCK_INSUFFICIENT("INV-3002", "stock.insufficient", HttpStatus.CONFLICT),`:
+```bash
+rg -n "INV-300[3-7]" utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java
+rg -n "reservation\.|inventory\.(already|version)" utils/common-spring/src/main/resources/messages/messages_en.properties
+```
+Expected: cả 5 codes + 5 keys đã có. Nếu thiếu cái nào (repo đã đổi), bổ sung đúng nội dung
+bên đây trước khi sang Step 2.
+
+- [ ] **Step 2: Add INVENTORY_NOT_FOUND (INV-3008)**
+
+Trong `ErrorCode.java`, section `// ---- Inventory domain ----` — sửa dòng cuối của block từ
+dấu `;` thành `,` rồi thêm:
 
 ```java
-    RESERVATION_NOT_FOUND("INV-3003", "reservation.not.found", HttpStatus.NOT_FOUND),
-    RESERVATION_EXPIRED("INV-3004", "reservation.expired", HttpStatus.CONFLICT),
-    RESERVATION_INVALID_STATE("INV-3005", "reservation.invalid.state", HttpStatus.CONFLICT),
-    INVENTORY_ALREADY_EXISTS("INV-3006", "inventory.already.exists", HttpStatus.CONFLICT),
-    INVENTORY_VERSION_CONFLICT("INV-3007", "inventory.version.conflict", HttpStatus.CONFLICT);
+    INVENTORY_NOT_FOUND("INV-3008", "inventory.not.found", HttpStatus.NOT_FOUND);
 ```
 
-> Lưu ý: thay dấu `;` cuối `STOCK_INSUFFICIENT` bằng `,`.
+> Lý do: `findByProductId` miss hiện tái dùng `WAREHOUSE_NOT_FOUND` ("Warehouse {0} not found")
+> — sai ngữ nghĩa. Service layer (Task 16) sẽ dùng `INVENTORY_NOT_FOUND` thay thế.
 
-- [ ] **Step 2: Add i18n keys (EN)**
+- [ ] **Step 3: Add i18n keys (EN + VI)**
 
-Thêm vào cuối `utils/common-spring/src/main/resources/messages/messages_en.properties`:
-
+`messages_en.properties` — append:
 ```properties
-reservation.not.found=Reservation {0} not found
-reservation.expired=Reservation {0} has expired
-reservation.invalid.state=Reservation {0} is in invalid state
-inventory.already.exists=Inventory already exists for product {0}
-inventory.version.conflict=Inventory was modified concurrently. Please retry.
+inventory.not.found=Inventory for product {0} was not found
 ```
 
-- [ ] **Step 3: Add i18n keys (VI)**
-
-Thêm vào cuối `utils/common-spring/src/main/resources/messages/messages_vi.properties`:
-
+`messages_vi.properties` — append:
 ```properties
-reservation.not.found=Không tìm thấy đơn giữ hàng {0}.
-reservation.expired=Đơn giữ hàng {0} đã hết hạn.
-reservation.invalid.state=Đơn giữ hàng {0} ở trạng thái không hợp lệ.
-inventory.already.exists=Tồn kho đã tồn tại cho sản phẩm {0}.
-inventory.version.conflict=Tồn kho đã bị thay đổi đồng thời. Vui lòng thử lại.
+inventory.not.found=Không tìm thấy tồn kho cho sản phẩm {0}.
 ```
 
 - [ ] **Step 4: Verify**
 
-Run: `./mvnw -pl utils/common-spring test -Dtest=...` (hoặc `./mvnw -pl utils/common-core compile`)
-Expected: BUILD SUCCESS (compile không lỗi — enum mới không phá vỡ gì)
+Run: `./mvnw -pl utils/common-core,utils/common-spring -am test -q`
+Expected: BUILD SUCCESS (enum mới không phá vỡ gì).
 
 - [ ] **Step 5: Commit**
 
@@ -150,144 +158,42 @@ Expected: BUILD SUCCESS (compile không lỗi — enum mới không phá vỡ g�
 git add utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java \
         utils/common-spring/src/main/resources/messages/messages_en.properties \
         utils/common-spring/src/main/resources/messages/messages_vi.properties
-git commit -m "feat(common-core): inventory ErrorCodes (INV-3003..3007) + i18n keys"
+git commit -m "feat(common-core): INVENTORY_NOT_FOUND (INV-3008) + i18n keys"
 ```
 
 ---
 
 ## Phase 1 — Skeleton + persistence
 
-### Task 2: Update inventory-service pom.xml
+### Task 2: Verify inventory-service pom.xml (đã đủ deps — verify-only)
+
+> ⚠️ **REV 5 — verify-only.** Verified trong repo: `inventory-service/pom.xml` ĐÃ có sẵn
+> `common-spring` (+ test-jar), `common-kafka`, `spring-boot-starter-data-redis`,
+> `spring-boot-starter-cache`, `liquibase-core`, `spring-boot-starter-liquibase`,
+> modelmapper, lombok, và toàn bộ test stack (`spring-boot-starter-webmvc-test`,
+> `spring-boot-data-jpa-test`, `spring-boot-jpa-test`, testcontainers, awaitility).
+> KHÔNG replace nguyên khối `<dependencies>` — sẽ xoá mất deps đã thêm đúng.
 
 **Files:**
-- Modify: `inventory-service/pom.xml`
+- Verify (no edit): `inventory-service/pom.xml`
 
 **Interfaces:**
-- Produces: deps cho redis, kafka, cache, modelmapper, testcontainers (giống product-service pom)
+- Consumes: parent reactor BOM (Boot 4.1.1 manages mọi version)
 
-- [ ] **Step 1: Copy deps từ product-service pom**
-
-Thay toàn bộ `<dependencies>` trong `inventory-service/pom.xml` bằng (copy từ product-service pom lines 14-127):
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>com.shop.microservices</groupId>
-        <artifactId>common-spring</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>com.shop.microservices</groupId>
-        <artifactId>common-spring</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>com.shop.microservices</groupId>
-        <artifactId>common-kafka</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-redis</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-cache</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.kafka</groupId>
-        <artifactId>spring-kafka</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.liquibase</groupId>
-        <artifactId>liquibase-core</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-liquibase</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <scope>runtime</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.modelmapper</groupId>
-        <artifactId>modelmapper</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <optional>true</optional>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-webmvc-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-data-jpa-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-jpa-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>testcontainers-junit-jupiter</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-testcontainers</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>testcontainers-postgresql</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.kafka</groupId>
-        <artifactId>spring-kafka-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>testcontainers-kafka</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.awaitility</groupId>
-        <artifactId>awaitility</artifactId>
-        <scope>test</scope>
-    </dependency>
-</dependencies>
-```
-
-- [ ] **Step 2: Verify**
-
-Run: `./mvnw -pl inventory-service -am compile`
-Expected: BUILD SUCCESS (deps resolve)
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 1: Verify required deps present**
 
 ```bash
-git add inventory-service/pom.xml
-git commit -m "feat(inventory-service): add redis, kafka, cache, modelmapper, test deps"
+rg -n "common-spring|common-kafka|data-redis|starter-cache|spring-kafka|liquibase|modelmapper|webmvc-test|data-jpa-test|jpa-test|testcontainers|awaitility" inventory-service/pom.xml
 ```
+Expected: tất cả đều match. Thiếu dep nào → bổ sung ĐỒNG BỘ với version pattern của
+product-service pom (không hardcode version — BOM quản).
+
+- [ ] **Step 2: Verify compile**
+
+Run: `./mvnw -pl inventory-service -am compile`
+Expected: BUILD SUCCESS
+
+> Nếu BUILD SUCCESS ngay từ đầu → task này chỉ là checkpoint, không commit (không có change).
 
 ---
 ### Task 3: Application entrypoint + application.yml
@@ -301,15 +207,17 @@ git commit -m "feat(inventory-service): add redis, kafka, cache, modelmapper, te
 
 - [ ] **Step 1: Verify InventoryServiceApplication.java**
 
-Đã tồn tại đúng skeleton:
+Skeleton phải có `@EnableScheduling` — nếu chưa, sửa thành:
 
 ```java
 package com.shop.inventoryservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class InventoryServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(InventoryServiceApplication.class, args);
@@ -317,7 +225,11 @@ public class InventoryServiceApplication {
 }
 ```
 
-> Không cần `@EnableJpaAuditing` — inventory không dùng audit fields (hard delete). Không cần `@EnableCaching` ở đây — CacheConfig lo.
+> ⚠️ `@EnableScheduling` là **BẮT BUỘC**: thiếu nó thì `@Scheduled` của
+> `InventoryOutboxRelay` (Task 18), `ReservationCleanupScheduler` + `OutboxRetentionScheduler`
+> (Task 22) không bao giờ fire — app vẫn boot xanh, silent failure (không event nào ra Kafka).
+> Không cần `@EnableJpaAuditing` — inventory không dùng audit fields (hard delete).
+> Không cần `@EnableCaching` ở đây — CacheConfig lo.
 
 - [ ] **Step 2: Create application.yml**
 
@@ -374,18 +286,21 @@ shop:
       acks: all
       retries: 3
   security:
-    # Inventory reads are authenticated (USER/ADMIN); GET detail cached.
-    # (actuator, swagger, api-docs are public via common-security platform defaults)
-    public-paths:
-      - method: GET
-        path: /api/v1/inventory/**
+    # KHÔNG khai báo public-paths — mọi endpoint (kể cả GET) yêu cầu JWT.
+    # Raw stock level là dữ liệu nhạy cảm (đối thủ scrape được full tồn kho) → fail-closed.
+    # (actuator, swagger, api-docs public qua common-security platform defaults)
 
 inventory:
   reservation-ttl-seconds: 900          # 15 min
+  # Scheduled jobs (Task 22) — defaults khớp code, khai báo rõ để ops thấy được
+  reservation-cleanup-interval-ms: 60000   # expired sweep mỗi 60s
+  reservation-cleanup-batch-size: 500      # sweep query theo batch (chống OOM backlog)
+  reservation-retention-cron: "0 0 4 * * *"   # purge EXPIRED > 30 ngày, 04:00 hằng ngày
   outbox:
     poll-interval-ms: 5000
     batch-size: 100
     max-retries: 10
+    retention-cron: "0 0 3 * * *"            # purge SENT > 7 ngày, 03:00 hằng ngày
 ```
 
 - [ ] **Step 3: Verify boot**
@@ -409,7 +324,7 @@ git commit -m "feat(inventory-service): application entrypoint + application.yml
 - Create: `inventory-service/src/main/java/com/shop/inventoryservice/config/CacheConfig.java`
 
 **Interfaces:**
-- Produces: `RedisCacheManager` bean (transactionAware, TTL 60s, no-null, prefix `inventory::`)
+- Produces: `RedisCacheManagerBuilderCustomizer` bean — per-cache TTL 60s + `transactionAware()` (no-arg, defense-in-depth cho `evictAfterCommit` thủ công)
 
 - [ ] **Step 1: Implement CacheConfig**
 
@@ -432,6 +347,12 @@ import java.time.Duration;
  * customises the per-cache entries. Note the Boot 4 package:
  * {@code RedisCacheManagerBuilderCustomizer} lives in
  * {@code org.springframework.boot.cache.autoconfigure}.</p>
+ *
+ * <p>{@code transactionAware()} (NO-ARG — {@code transactionAware(boolean)} does NOT
+ * exist on the builder, verified against spring-data-redis 4.1.1) defers any
+ * {@code @CacheEvict} to after-commit. The primary invalidation mechanism is the
+ * manual {@code InventoryCacheService.evictAfterCommit(productId)} called by every
+ * write path; this flag is defense-in-depth for future {@code @CacheEvict} usage.</p>
  */
 @Configuration
 @EnableCaching
@@ -443,7 +364,9 @@ public class CacheConfig {
     @Bean
     public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer() {
         return builder -> builder
-            .withCacheConfiguration("inventory", cacheConfig());
+            .cacheDefaults(cacheConfig())
+            .withCacheConfiguration("inventory", cacheConfig())
+            .transactionAware();   // ⚠️ no-arg ONLY — defer evict tới sau commit
     }
 
     private RedisCacheConfiguration cacheConfig() {
@@ -455,16 +378,15 @@ public class CacheConfig {
 }
 ```
 
-> **Note:** `transactionAware(true)` — khi cần (nếu dùng `@CacheEvict` với transaction), set trên
-> `RedisCacheManager.builder(connectionFactory).transactionAware(true)`. Với pattern hiện tại
-> (dùng `InventoryCacheService.evictAfterCommit` thủ công), không bắt buộc — nhưng spec yêu cầu
-> transactionAware để `@CacheEvict` an toàn. Xem Task 14 (InventoryCacheService) cho cách dùng.
+> **Note:** cơ chế chống premature-evict chính là `InventoryCacheService.evictAfterCommit()`
+> (Task 14) — mọi write path gọi thủ công (Task 16). `transactionAware()` chỉ đảm bảo
+> `@CacheEvict` (nếu thêm sau này) cũng defer tới after-commit. Rollback TX → cache không đụng.
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add inventory-service/src/main/java/com/shop/inventoryservice/config/CacheConfig.java
-git commit -m "feat(inventory-service): CacheConfig with per-cache TTL (60s)"
+git commit -m "feat(inventory-service): CacheConfig — TTL 60s + transactionAware() defense-in-depth"
 ```
 
 ---
@@ -918,7 +840,11 @@ package com.shop.inventoryservice.repository;
 
 import com.shop.inventoryservice.entity.Reservation;
 import com.shop.inventoryservice.entity.ReservationStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -928,6 +854,18 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     List<Reservation> findByProductIdAndStatusAndExpiresAtBefore(
             UUID productId, ReservationStatus status, Instant expiresBefore);
+
+    // ReservationCleanupScheduler (Task 22) — sweep TOÁN BỘ, dùng index idx_reservations_status_expires.
+    // ⚠️ Bắt buộc Pageable (batch) — query không giới hạn có thể load 50K+ entities sau 1 thời gian
+    // vận hành (backlog khi job downtime / traffic flash-sale) → memory pressure.
+    List<Reservation> findByStatusAndExpiresAtBefore(
+            ReservationStatus status, Instant expiresBefore, Pageable pageable);
+
+    // ReservationCleanupScheduler.purgeOldExpiredReservations (Task 22) — retention EXPIRED
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Reservation r WHERE r.status = :status AND r.createdAt < :cutoff")
+    int deleteByStatusAndCreatedAtBefore(@Param("status") ReservationStatus status,
+                                         @Param("cutoff") Instant cutoff);
 
     long countByProductIdAndStatusIn(UUID productId, List<ReservationStatus> statuses);
 }
@@ -942,13 +880,25 @@ import com.shop.inventoryservice.entity.OutboxEvent;
 import com.shop.inventoryservice.entity.OutboxStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
 
     // Poller dùng — sắp xếp theo id ASC giữ thứ tự per-aggregate
     List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
+
+    // OutboxRetentionScheduler (Task 22) — bulk delete, không load entity.
+    // clearAutomatically: dọn persistence context sau bulk delete để stale entity refs
+    // không tồn tại trong các thao tác tiếp theo (hardening — hiện scheduler đứng riêng).
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
+    int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status,
+                                      @Param("cutoff") Instant cutoff);
 }
 ```
 
@@ -1333,33 +1283,41 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
 
     @Override
     public void publishReserved(Inventory inventory, Reservation reservation) {
-        save(inventory, "inventory.reserved.v1", Map.of(
-            "productId", inventory.getProductId(),
-            "reservationId", reservation.getId(),
-            "quantity", reservation.getQuantity(),
-            "orderId", reservation.getOrderId(),
-            "expiresAt", reservation.getExpiresAt().toString()
-        ));
+        // ⚠️ HashMap + null-guard — Map.of THROW NPE với value null.
+        // orderId là OPTIONAL (spec §4.4) → reserve không orderId là flow chính.
+        Map<String, Object> data = new HashMap<>();
+        data.put("productId", inventory.getProductId());
+        data.put("reservationId", reservation.getId());
+        data.put("quantity", reservation.getQuantity());
+        if (reservation.getOrderId() != null) {
+            data.put("orderId", reservation.getOrderId());
+        }
+        data.put("expiresAt", reservation.getExpiresAt().toString());
+        save(inventory, "inventory.reserved.v1", data);
     }
 
     @Override
     public void publishCommitted(Inventory inventory, Reservation reservation) {
-        save(inventory, "inventory.committed.v1", Map.of(
-            "productId", inventory.getProductId(),
-            "reservationId", reservation.getId(),
-            "quantity", reservation.getQuantity(),
-            "orderId", reservation.getOrderId()
-        ));
+        Map<String, Object> data = new HashMap<>();
+        data.put("productId", inventory.getProductId());
+        data.put("reservationId", reservation.getId());
+        data.put("quantity", reservation.getQuantity());
+        if (reservation.getOrderId() != null) {
+            data.put("orderId", reservation.getOrderId());
+        }
+        save(inventory, "inventory.committed.v1", data);
     }
 
     @Override
     public void publishReleased(Inventory inventory, Reservation reservation) {
-        save(inventory, "inventory.released.v1", Map.of(
-            "productId", inventory.getProductId(),
-            "reservationId", reservation.getId(),
-            "quantity", reservation.getQuantity(),
-            "orderId", reservation.getOrderId()
-        ));
+        Map<String, Object> data = new HashMap<>();
+        data.put("productId", inventory.getProductId());
+        data.put("reservationId", reservation.getId());
+        data.put("quantity", reservation.getQuantity());
+        if (reservation.getOrderId() != null) {
+            data.put("orderId", reservation.getOrderId());
+        }
+        save(inventory, "inventory.released.v1", data);
     }
 
     @Override
@@ -1701,7 +1659,7 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponse findById(UUID productId) {
         return inventoryRepository.findByProductId(productId)
             .map(mapper::toResponse)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
     }
 
     @Override
@@ -1722,7 +1680,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public InventoryResponse update(UUID productId, InventoryUpsertRequest request) {
         Inventory existing = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         mapper.partialUpdate(existing, request);
         existing.setLastUpdated(Instant.now());
         Inventory saved = inventoryRepository.save(existing);
@@ -1735,7 +1693,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public void delete(UUID productId) {
         Inventory existing = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         long active = reservationRepository.countByProductIdAndStatusIn(
             productId, List.of(ReservationStatus.PENDING, ReservationStatus.COMMITTED));
         if (active > 0) {
@@ -1753,7 +1711,7 @@ public class InventoryServiceImpl implements InventoryService {
         releaseExpiredReservations(productId);
         // 2. Đọc Inventory sau khi đã release expired — dữ liệu mới nhất
         Inventory inventory = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         // 3. Tính available chính xác
         int available = inventory.getAvailableQuantity() - inventory.getReservedQuantity();
         if (available < request.quantity()) {
@@ -1787,12 +1745,13 @@ public class InventoryServiceImpl implements InventoryService {
             throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
         }
         if (r.getExpiresAt().isBefore(Instant.now())) {
-            r.setStatus(ReservationStatus.EXPIRED);
-            reservationRepository.save(r);
+            // KHÔNG save(EXPIRED) ở đây: BusinessException (RuntimeException) rollback TX
+            // → write trước throw là dead code. Status EXPIRED do
+            // ReservationCleanupScheduler (Task 22) / lazy release trong reserve() materialize.
             throw BusinessException.of(ErrorCode.RESERVATION_EXPIRED, reservationId);
         }
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, r.getProductId()));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
         inventory.setAvailableQuantity(inventory.getAvailableQuantity() - r.getQuantity());
         inventory.setReservedQuantity(inventory.getReservedQuantity() - r.getQuantity());
         inventory.setLastUpdated(Instant.now());
@@ -1813,12 +1772,13 @@ public class InventoryServiceImpl implements InventoryService {
             throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
         }
         if (r.getExpiresAt().isBefore(Instant.now())) {
-            r.setStatus(ReservationStatus.EXPIRED);
-            reservationRepository.save(r);
+            // KHÔNG save(EXPIRED) ở đây: BusinessException (RuntimeException) rollback TX
+            // → write trước throw là dead code. Status EXPIRED do
+            // ReservationCleanupScheduler (Task 22) / lazy release trong reserve() materialize.
             throw BusinessException.of(ErrorCode.RESERVATION_EXPIRED, reservationId);
         }
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, r.getProductId()));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
         inventory.setReservedQuantity(inventory.getReservedQuantity() - r.getQuantity());
         inventory.setLastUpdated(Instant.now());
         r.setStatus(ReservationStatus.RELEASED);
@@ -1843,7 +1803,7 @@ public class InventoryServiceImpl implements InventoryService {
             return;
         }
         Inventory inventory = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         int total = expired.stream().mapToInt(Reservation::getQuantity).sum();
         inventory.setReservedQuantity(inventory.getReservedQuantity() - total);
         inventory.setLastUpdated(Instant.now());
@@ -2201,6 +2161,9 @@ git commit -m "feat(inventory-service): InventoryOutboxRelay single-thread with 
 package com.shop.inventoryservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
+import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.InventoryResponse;
@@ -2212,6 +2175,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -2227,6 +2191,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(InventoryController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(ApiExceptionHandler.class)   // fleet convention — validation/error responses dùng ApiResponse envelope
 class InventoryControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -2272,6 +2237,17 @@ class InventoryControllerTest {
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.reservationId").value(reservationId.toString()));
+    }
+
+    @Test
+    void findById_throwsNotFound_returns404Envelope() throws Exception {
+        when(inventoryService.findById(productId))
+            .thenThrow(BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
+
+        mockMvc.perform(get("/api/v1/inventory/{productId}", productId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("INV-3008"));
     }
 
     @Test
@@ -2395,7 +2371,7 @@ public class InventoryController {
 - [ ] **Step 4: Run test — expect PASS**
 
 Run: `./mvnw -pl inventory-service test -Dtest=InventoryControllerTest`
-Expected: PASS (5 tests)
+Expected: PASS (6 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -2471,6 +2447,11 @@ class InventoryOutboxRelayIntegrationTest {
         registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("spring.cache.type", () -> "none");
+        // Copy từ product-service AbstractIntegrationTest — giữ test độc lập với env JWT_ISSUER_URI;
+        // JwtDecoder thật bị thay bằng stub của TestSecurityConfig (@ConditionalOnMissingBean).
+        registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
+        registry.add("shop.security.csrf-disabled", () -> "true");
+        registry.add("shop.security.stateless-session", () -> "true");
         registry.add("inventory.outbox.poll-interval-ms", () -> "200");
     }
 
@@ -2582,9 +2563,311 @@ git commit -m "chore(docker-compose): inventory-service env redis + kafka"
 
 ---
 
+### Task 22: Scheduled jobs — expired-reservation sweep + outbox retention
+
+> **REV 5 (mới):** Trước đây "expired cleanup" bị defer — không chấp nhận được: giữa lúc
+> reservation hết hạn và lần `reserve()` kế tiếp, `reservedQuantity` inflated →
+> `available` đọc thấp hơn thực tế → user khác bị `STOCK_INSUFFICIENT` oan. Đồng thời
+> `outbox_events` grow unbounded nếu không purge. Cả 2 job nằm trong MVP.
+> Yêu cầu `@EnableScheduling` — đã thêm ở Task 3.
+
+**Files:**
+- Create: `inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java`
+- Create: `inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java`
+- Create: `inventory-service/src/test/java/com/shop/inventoryservice/service/ReservationCleanupSchedulerTest.java`
+
+**Interfaces:**
+- Consumes: `ReservationRepository.findByStatusAndExpiresAtBefore(status, before, Pageable)` +
+  `deleteByStatusAndCreatedAtBefore` (Task 10), `OutboxEventRepository.deleteByStatusAndSentAtBefore` (Task 10)
+- Produces: 3 background jobs (xem spec §5.8): expired sweep (batch), outbox retention, reservation retention
+
+- [ ] **Step 1: Implement ReservationCleanupScheduler**
+
+```java
+package com.shop.inventoryservice.service;
+
+import com.shop.inventoryservice.entity.Inventory;
+import com.shop.inventoryservice.entity.Reservation;
+import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.repository.InventoryRepository;
+import com.shop.inventoryservice.repository.ReservationRepository;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Background jobs:
+ * <ol>
+ *   <li>{@link #releaseAllExpiredReservations()} — releases stock held by PENDING
+ *       reservations whose TTL elapsed. Without it, reservedQuantity stays inflated
+ *       between expiry and the next reserve() call → spurious STOCK_INSUFFICIENT.
+ *       Runs in BATCHES (never loads the whole backlog — a job downtime or flash-sale
+ *       can leave tens of thousands of expired rows) with flush+clear per batch to
+ *       bound persistence-context memory.</li>
+ *   <li>{@link #purgeOldExpiredReservations()} — retention purge for terminal
+ *       EXPIRED rows.</li>
+ * </ol>
+ *
+ * <p>Race with reserve(): both bump Inventory @Version; the loser's transaction
+ * rolls back (OptimisticLockingFailureException) and retries on the next poll —
+ * the sweep is idempotent so this converges safely.</p>
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ReservationCleanupScheduler {
+
+    private final ReservationRepository reservationRepository;
+    private final InventoryRepository inventoryRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;   // flush/clear per batch
+
+    @Value("${inventory.reservation-cleanup-batch-size:500}")
+    private int batchSize;
+
+    /**
+     * Whole sweep in ONE transaction — invoking through the scheduler goes via the
+     * Spring proxy, so @Transactional IS honored here (the pitfall is only
+     * self-invocation between methods, which we avoid). Per-product ordering:
+     * mark reservations EXPIRED and adjust reservedQuantity in the same TX so a
+     * crash can never double-release or permanently leak stock.
+     */
+    @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}")
+    @Transactional
+    public void releaseAllExpiredReservations() {
+        int total = 0;
+        while (true) {
+            List<Reservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
+                ReservationStatus.PENDING, Instant.now(), PageRequest.of(0, batchSize));
+            if (batch.isEmpty()) {
+                break;
+            }
+            releaseBatch(batch);
+            total += batch.size();
+            // FlushModeType.AUTO flushes pending updates before the next query, so the
+            // next iteration only sees still-PENDING rows; clear() bounds PC memory.
+            entityManager.flush();
+            entityManager.clear();
+        }
+        if (total > 0) {
+            log.info("Expired-reservation sweep released {} reservation(s)", total);
+        }
+    }
+
+    /** Private helper WITHOUT @Transactional — participates in the caller's TX (no self-invocation trap). */
+    private void releaseBatch(List<Reservation> batch) {
+        Map<UUID, List<Reservation>> byProduct = batch.stream()
+            .collect(Collectors.groupingBy(Reservation::getProductId));
+        byProduct.forEach((productId, reservations) -> {
+            int quantity = reservations.stream().mapToInt(Reservation::getQuantity).sum();
+            inventoryRepository.findByProductId(productId).ifPresent(inv -> {
+                inv.setReservedQuantity(Math.max(0, inv.getReservedQuantity() - quantity));
+                inv.setLastUpdated(Instant.now());
+                reservations.forEach(r -> r.setStatus(ReservationStatus.EXPIRED));
+                inventoryRepository.save(inv);            // bumps @Version
+                reservationRepository.saveAll(reservations);
+            });
+        });
+    }
+
+    /**
+     * Retention: EXPIRED rows are terminal — purge after 30 days so the reservations
+     * table doesn't grow unbounded. RELEASED/COMMITTED rows are KEPT for
+     * audit/dispute resolution (retention policy is a business decision — spec §10).
+     *
+     * <p>Single bulk statement → no partial state; try/catch only for ops-visible
+     * logging. (Uncaught @Scheduled exceptions ARE logged at ERROR by Spring, but an
+     * explicit domain message makes alerting rules actionable.)</p>
+     */
+    @Scheduled(cron = "${inventory.reservation-retention-cron:0 0 4 * * *}")   // 04:00 daily
+    @Transactional
+    public void purgeOldExpiredReservations() {
+        try {
+            int deleted = reservationRepository.deleteByStatusAndCreatedAtBefore(
+                ReservationStatus.EXPIRED, Instant.now().minus(30, ChronoUnit.DAYS));
+            if (deleted > 0) {
+                log.info("Purged {} EXPIRED reservations older than 30 days", deleted);
+            }
+        } catch (Exception ex) {
+            log.error("Reservation retention purge failed — needs ops attention", ex);
+        }
+    }
+}
+```
+
+> ⚠️ KHÔNG tách `@Transactional` xuống method con được gọi nội bộ — self-invocation
+> không đi qua proxy (cùng lý do plan từ chối `@Retryable`). Helper `releaseBatch` ở trên
+> là private KHÔNG khai báo `@Transactional` — chỉ tham gia TX của caller.
+> Nếu OLE ném ra giữa chừng, cả sweep rollback và poll kế tiếp retry lại — an toàn vì
+> sweep idempotent (chỉ chọn đúng PENDING + expiresAt < now).
+>
+> ℹ️ Test note: `MockitoExtension` tạo mock MỚI cho mỗi test method (per-method lifecycle)
+> → không có mock state leak giữa các test, KHÔNG cần `Mockito.reset()`.
+
+- [ ] **Step 2: Implement OutboxRetentionScheduler**
+
+```java
+package com.shop.inventoryservice.service;
+
+import com.shop.inventoryservice.entity.OutboxStatus;
+import com.shop.inventoryservice.repository.OutboxEventRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+/**
+ * Purges SENT outbox rows older than the retention window — without this the
+ * table grows unbounded (one row per domain event forever). FAILED rows are
+ * NOT purged: they need manual root-cause before deletion (ops runbook).
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class OutboxRetentionScheduler {
+
+    private final OutboxEventRepository outboxRepository;
+
+    @Scheduled(cron = "${inventory.outbox.retention-cron:0 0 3 * * *}")   // 03:00 daily
+    @Transactional
+    public void purgeOldSentEvents() {
+        try {
+            int deleted = outboxRepository.deleteByStatusAndSentAtBefore(
+                OutboxStatus.SENT, Instant.now().minus(7, ChronoUnit.DAYS));
+            if (deleted > 0) {
+                log.info("Purged {} SENT outbox events older than 7 days", deleted);
+            }
+        } catch (Exception ex) {
+            // Single bulk statement — no partial state. Explicit domain log makes
+            // alerting rules actionable (Spring đã log ERROR cho uncaught, nhưng
+            // message chung chung "Unexpected error occurred in scheduled task").
+            log.error("Outbox retention purge failed — needs ops attention", ex);
+        }
+    }
+}
+```
+
+- [ ] **Step 3: Write unit test for cleanup scheduler**
+
+```java
+package com.shop.inventoryservice.service;
+
+import com.shop.inventoryservice.entity.Inventory;
+import com.shop.inventoryservice.entity.Reservation;
+import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.repository.InventoryRepository;
+import com.shop.inventoryservice.repository.ReservationRepository;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ReservationCleanupSchedulerTest {
+
+    @Mock ReservationRepository reservationRepository;
+    @Mock InventoryRepository inventoryRepository;
+    @Mock EntityManager entityManager;
+    @InjectMocks ReservationCleanupScheduler scheduler;
+
+    private final UUID productId = UUID.randomUUID();
+    private Inventory inventory;
+
+    @BeforeEach
+    void setUp() {
+        inventory = Inventory.builder()
+            .id(UUID.randomUUID()).productId(productId)
+            .availableQuantity(100).reservedQuantity(8).build();
+    }
+
+    @Test
+    void sweep_releasesExpiredAndAdjustsReservedQuantity() {
+        Reservation expired = Reservation.builder()
+            .id(UUID.randomUUID()).productId(productId).quantity(5)
+            .status(ReservationStatus.PENDING)
+            .expiresAt(Instant.now().minusSeconds(60)).build();
+        // Batch loop: lần gọi 1 trả 1 batch, lần 2 trả rỗng để thoát loop
+        when(reservationRepository.findByStatusAndExpiresAtBefore(
+                eq(ReservationStatus.PENDING), any(Instant.class), any(PageRequest.class)))
+            .thenReturn(List.of(expired))
+            .thenReturn(List.of());
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+
+        scheduler.releaseAllExpiredReservations();
+
+        assertThat(inventory.getReservedQuantity()).isEqualTo(3);   // 8 - 5
+        assertThat(expired.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        verify(inventoryRepository).save(inventory);
+        verify(reservationRepository).saveAll(List.of(expired));
+        verify(entityManager).flush();
+        verify(entityManager).clear();
+    }
+
+    @Test
+    void sweep_noExpired_noWrites() {
+        when(reservationRepository.findByStatusAndExpiresAtBefore(
+                eq(ReservationStatus.PENDING), any(Instant.class), any(PageRequest.class)))
+            .thenReturn(List.of());
+
+        scheduler.releaseAllExpiredReservations();
+
+        verify(inventoryRepository, never()).findByProductId(any());
+        verify(reservationRepository, never()).saveAll(any());
+        verify(entityManager, never()).flush();
+    }
+}
+```
+
+- [ ] **Step 4: Run test — expect PASS**
+
+Run: `./mvnw -pl inventory-service test -Dtest=ReservationCleanupSchedulerTest`
+Expected: PASS (2 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java \
+        inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java \
+        inventory-service/src/test/java/com/shop/inventoryservice/service/ReservationCleanupSchedulerTest.java
+git commit -m "feat(inventory-service): scheduled expired-reservation sweep + outbox retention"
+```
+
+---
+
 ## Phase 4 — Verification
 
-### Task 22: Full reactor build + smoke
+### Task 23: Full reactor build + smoke
 
 - [ ] **Step 1: Full build**
 
@@ -2640,19 +2923,19 @@ docker compose exec kafka kafka-console-consumer.sh --bootstrap-server localhost
 | §4.2 Reserve/commit/release internal | Task 19 |
 | §4.3 DTOs | Task 11 |
 | §4.4 Validation | Task 11 |
-| §5.0 CacheConfig transactionAware | Task 4 |
+| §5.0 CacheConfig (customizer + transactionAware() no-arg) | Task 4 |
 | §5.1 Reserve flow | Task 16 |
 | §5.2 Commit flow | Task 16 |
 | §5.3 Release flow | Task 16 |
 | §5.4 Read cache-aside | Task 16 (findById) |
-| §5.5 Event publisher | Task 15 |
+| §5.5 Event publisher (HashMap null-guard) | Task 15 |
 | §5.6 Outbox relay | Task 18 |
 | §5.7 ReservationService retry | Task 17 |
+| §5.8 Scheduled jobs (expired sweep + retention) | Task 22 |
 | §6 Kafka events | Task 15 + 18 |
-| §7 application.yml | Task 3 |
-| §8 ErrorCodes | Task 1 |
+| §7 application.yml (@EnableScheduling, no public-paths) | Task 3 |
+| §8 ErrorCodes (verify 3003..3007 + add INV-3008) | Task 1 |
 | §9 Testing | Tasks 16-20 |
-| §10 Open items | Deferred (documented) |
 
 ### 2. Placeholder scan
 

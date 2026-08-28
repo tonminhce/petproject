@@ -39,7 +39,7 @@ và lifecycle **reserve → commit / release** qua entity `Reservation` riêng. 
 ### 2.1 Package structure (`com.shop.inventoryservice.*`)
 
 ```
-config/             CacheConfig (Redis cache manager, transactionAware)
+config/             CacheConfig (Redis customizer — transactionAware defense-in-depth)
 controller/         InventoryController (CRUD + reserve/commit/release)
 dto/
   request/          InventoryUpsertRequest, ReserveRequest, ...
@@ -51,9 +51,15 @@ service/
   ReservationService      interface + ReservationServiceImpl
   InventoryEventPublisher // writes OutboxEvent in same @Transactional
   InventoryOutboxRelay    // @Scheduled single-thread poller → Kafka
-  InventoryCacheService   // cache-aside read + sync invalidation (transactionAware)
+  ReservationCleanupScheduler // @Scheduled quét reservation PENDING hết hạn (§5.8)
+  OutboxRetentionScheduler    // @Scheduled dọn outbox SENT cũ (§5.8)
+  InventoryCacheService   // cache-aside read + sync invalidation (afterCommit)
 mapper/             InventoryMapper (ModelMapper @Component)
 ```
+
+> **Entrypoint:** `InventoryServiceApplication` = `@SpringBootApplication` **+ `@EnableScheduling`**.
+> Bắt buộc — thiếu `@EnableScheduling` thì `InventoryOutboxRelay` (§5.6) và 2 scheduler ở §5.8
+> sẽ **không bao giờ chạy** (silent failure: app vẫn boot, không có event nào được publish).
 
 ### 2.2 Integrations map
 
@@ -67,7 +73,9 @@ mapper/             InventoryMapper (ModelMapper @Component)
 ### 2.3 Decisions & rationale
 
 - **Kiến trúc Y — Sync write + async outbox (user đã phê duyệt):**
-  - Cache invalidation xảy ra **sau commit DB** (transactionAware cache / afterCommit hook).
+  - Cache invalidation xảy ra **sau commit DB** — cơ chế chính là
+    `InventoryCacheService.evictAfterCommit()` (afterCommit hook, dùng ở MỌI write path).
+    `transactionAware()` trên cache manager chỉ là defense-in-depth (xem §5.0).
   - Outbox → Kafka dành cho **các service khác** consume.
   - Không self-consume event để invalidate cache (tránh độ trễ + thêm điểm lỗi).
 - **Reservation entity riêng (Cách B):** đầy đủ lifecycle, trace lịch sử.
@@ -93,7 +101,7 @@ mapper/             InventoryMapper (ModelMapper @Component)
 | `availableQuantity` | `Integer` | not null, default 0, >= 0 |
 | `reservedQuantity` | `Integer` | not null, default 0, >= 0 |
 | `version` | `Long` | `@Version` — optimistic lock |
-| `lastUpdated` | `Instant` | on update |
+| `lastUpdated` | `Instant` | set thủ công trong service layer ở mọi write path (không dùng auditing vì entity không extends `AbstractMappedEntity`) |
 
 > **Không extends `AbstractMappedEntity`** (hard delete). Chỉ giữ `lastUpdated`.
 > **Null cache:** `disableCachingNullValues()` — productId không tồn tại không được cache.
@@ -170,7 +178,8 @@ Thứ tự tạo: `inventory` → `reservations` → `outbox_events`.
 | `DELETE` | `/api/v1/inventory/{productId}` | ADMIN | — | `ApiResponse<Void>` | Hard delete — **chỉ khi không còn reservation PENDING/COMMITTED** (nếu còn → 409 `RESERVATION_INVALID_STATE`) |
 
 > **Chính sách delete:** kiểm tra `reservationRepository.countByProductIdAndStatusIn(productId, [PENDING, COMMITTED]) > 0`
-> → throw 409. Nếu không có, hard delete inventory. (Tự động release expired reservations là job riêng — §10.)
+> → throw 409. Nếu không có, hard delete inventory. (Release expired reservations là job nền
+> `ReservationCleanupScheduler` — §5.8, chạy mỗi 60s.)
 
 ### 4.2 Reservation endpoints — internal (order-service)
 
@@ -202,6 +211,10 @@ Thứ tự tạo: `inventory` → `reservations` → `outbox_events`.
 
 ### 5.0 Cache transaction-awareness (CacheConfig)
 
+> ⚠️ **API note (verified qua javap spring-data-redis 4.1.1):** `RedisCacheManagerBuilder`
+> chỉ có **`transactionAware()` (no-arg)** — KHÔNG tồn tại `transactionAware(boolean)`.
+> Code `.transactionAware(true)` ở rev trước **không compile được**.
+
 > **Retry optimistic lock:** KHÔNG dùng `@Retryable` / `@EnableRetry` (cần thêm dependency
 > + không proxy được self-invocation). Dùng **manual retry loop** trong `ReservationService`
 > (§5.7). Nếu sau này chuyển sang `@Retryable`, thêm `RetryConfig` với `@EnableRetry`
@@ -209,38 +222,41 @@ Thứ tự tạo: `inventory` → `reservations` → `outbox_events`.
 
 ```java
 @Bean
-public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-    RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-        .entryTtl(Duration.ofSeconds(60))
-        .disableCachingNullValues()
-        .computePrefixWith(name -> name + "::");
-    return RedisCacheManager.builder(connectionFactory)
-        .cacheDefaults(config)
-        .transactionAware(true)   // evict chạy SAU commit — chống cache-miss oan
-        .build();
+public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer() {
+    return builder -> builder
+        .cacheDefaults(cacheConfig())            // base: TTL 60s, no-null, prefix "inventory::"
+        .withCacheConfiguration("inventory", cacheConfig())
+        .transactionAware();                      // ⚠️ no-arg — evict defer tới sau commit
 }
 ```
 
-> Với `transactionAware(true)`, `@CacheEvict` trên method service chỉ thực sự xóa Redis
-> sau khi transaction commit thành công. Rollback → không xóa.
+> **Phân tầng chống premature-evict:**
+> 1. **Cơ chế chính** — mọi write path (reserve/commit/release/upsert/delete) gọi
+>    `inventoryCacheService.evictAfterCommit(productId)` thủ công (§5.1–§5.3). Helper này
+>    đăng ký `TransactionSynchronization.afterCommit` → chỉ evict khi commit thành công,
+>    rollback → không đụng cache. Không phụ thuộc cache manager.
+> 2. **Defense-in-depth** — `transactionAware()` trên builder: nếu sau này ai thêm
+>    `@CacheEvict` mới, nó cũng được defer tới sau commit.
+>
+> Với cả 2 tầng, rollback TX → cache không bị xóa oan → không cache-miss sai.
 
 ### 5.1 Reserve flow (write path, optimistic lock)
 
 ```java
 @Transactional
-@CacheEvict(value = "inventory", key = "#productId")   // productId là tham số method → SpEL OK
 public ReservationResponse reserve(UUID productId, ReserveRequest request) {
     // 1. Release expired TRƯỚC khi đọc Inventory (method này cập nhật Inventory + tăng @Version)
     releaseExpiredReservations(productId);
     // 2. Đọc Inventory sau khi đã release expired — dữ liệu mới nhất
     Inventory inv = inventoryRepository.findByProductId(productId)
-        .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+        .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
     // 3. Tính available trên bản inventory đã được release expired
     int available = inv.getAvailableQuantity() - inv.getReservedQuantity();
     if (available < request.quantity()) {
         throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, productId);
     }
     inv.setReservedQuantity(inv.getReservedQuantity() + request.quantity());
+    inv.setLastUpdated(Instant.now());
     inventoryRepository.save(inv);
 
     Reservation reservation = Reservation.builder()
@@ -251,11 +267,13 @@ public ReservationResponse reserve(UUID productId, ReserveRequest request) {
     reservationRepository.save(reservation);
 
     inventoryEventPublisher.publishReserved(inv, reservation);  // outbox same TX
+    inventoryCacheService.evictAfterCommit(productId);          // evict SAU commit (không dùng @CacheEvict)
     return mapper.toReservationResponse(reservation);
 }
 ```
 
-- Cache evict: `@CacheEvict` + transactionAware cache → evict sau commit.
+- **KHÔNG dùng `@CacheEvict` trên reserve** — dùng `evictAfterCommit()` thủ công giống
+  commit/release để nhất quán (xem §5.0 phân tầng). Tránh luôn SpEL pitfall.
 - **Optimistic lock retry:** KHÔNG dùng `@Retryable` ở đây — wrap qua `ReservationService.reserveWithRetry` (§5.7)
   vì `@Retryable` cần `@EnableRetry` (chưa có) và self-invocation không proxy được.
 
@@ -271,7 +289,7 @@ private void releaseExpiredReservations(UUID productId) {
     if (expired.isEmpty()) return;
 
     Inventory inv = inventoryRepository.findByProductId(productId).orElseThrow(
-        () -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+        () -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
     int total = expired.stream().mapToInt(Reservation::getQuantity).sum();
     inv.setReservedQuantity(inv.getReservedQuantity() - total);
     expired.forEach(r -> r.setStatus(ReservationStatus.EXPIRED));
@@ -302,12 +320,13 @@ public void commit(UUID reservationId) {
         throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
     }
     if (r.getExpiresAt().isBefore(Instant.now())) {
-        r.setStatus(ReservationStatus.EXPIRED);
-        reservationRepository.save(r);
+        // KHÔNG save(EXPIRED) ở đây: BusinessException (RuntimeException) sẽ rollback TX —
+        // write trước throw là dead code. Status EXPIRED được materialize bởi
+        // ReservationCleanupScheduler (§5.8) hoặc lazy release trong reserve (§5.1).
         throw BusinessException.of(ErrorCode.RESERVATION_EXPIRED, reservationId);
     }
     Inventory inv = inventoryRepository.findByProductId(r.getProductId()).orElseThrow(
-        () -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, r.getProductId()));
+        () -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
     inv.setAvailableQuantity(inv.getAvailableQuantity() - r.getQuantity());
     inv.setReservedQuantity(inv.getReservedQuantity() - r.getQuantity());
     r.setStatus(ReservationStatus.COMMITTED);
@@ -334,12 +353,11 @@ public void release(UUID reservationId) {
         throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
     }
     if (r.getExpiresAt().isBefore(Instant.now())) {
-        r.setStatus(ReservationStatus.EXPIRED);
-        reservationRepository.save(r);
+        // KHÔNG save(EXPIRED) — lý do giống §5.2 (rollback xoá sạch write).
         throw BusinessException.of(ErrorCode.RESERVATION_EXPIRED, reservationId);
     }
     Inventory inv = inventoryRepository.findByProductId(r.getProductId()).orElseThrow(
-        () -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, r.getProductId()));
+        () -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
     inv.setReservedQuantity(inv.getReservedQuantity() - r.getQuantity());
     r.setStatus(ReservationStatus.RELEASED);
     r.setReleasedAt(Instant.now());
@@ -359,7 +377,7 @@ public void release(UUID reservationId) {
 public InventoryResponse findById(UUID productId) {
     return inventoryRepository.findByProductId(productId)
         .map(mapper::toResponse)
-        .orElseThrow(() -> BusinessException.of(ErrorCode.WAREHOUSE_NOT_FOUND, productId));
+        .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
 }
 ```
 
@@ -369,13 +387,19 @@ Giống hệt `TransactionalProductEventPublisher` — viết `OutboxEvent` row 
 
 ```java
 public void publishReserved(Inventory inv, Reservation r) {
-    save("inventory.reserved.v1", inv.getProductId(), Map.of(
-        "eventId", eventId, "eventType", "inventory.reserved.v1",
-        "occurredAt", Instant.now().toString(),
-        "productId", inv.getProductId(), "quantity", r.getQuantity(),
-        "reservationId", r.getId(), "orderId", r.getOrderId()));
+    // ⚠️ Dùng HashMap — Map.of THROW NPE với value null. orderId là OPTIONAL (§4.4)
+    // nên reserve không orderId là flow chính → Map.of ở đây crash 100% at runtime.
+    Map<String, Object> data = new HashMap<>();
+    data.put("productId", inv.getProductId());
+    data.put("reservationId", r.getId());
+    data.put("quantity", r.getQuantity());
+    if (r.getOrderId() != null) {
+        data.put("orderId", r.getOrderId());
+    }
+    data.put("expiresAt", r.getExpiresAt().toString());
+    save("inventory.reserved.v1", inv.getProductId(), data);
 }
-// + publishCommitted, publishReleased, publishAdjusted (upsert), publishDeleted
+// + publishCommitted, publishReleased (cùng null-guard orderId), publishAdjusted (upsert), publishDeleted
 ```
 
 ### 5.6 Outbox relay — single-thread, giữ thứ tự per-aggregate
@@ -482,6 +506,96 @@ public class ReservationService {
 
 ---
 
+### 5.8 Scheduled jobs — expired sweep + outbox retention
+
+Hai job nền chạy cùng `@Scheduled` (app phải có `@EnableScheduling` — §2.1):
+
+**1. `ReservationCleanupScheduler`** — giải phóng stock của reservation PENDING đã hết hạn.
+Không có job này thì giữa lúc reservation hết hạn và lần `reserve()` tiếp theo,
+`reservedQuantity` bị inflated → `available` đọc thấp hơn thực tế → user khác bị
+`STOCK_INSUFFICIENT` oan (lazy-only là không đủ).
+
+```java
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ReservationCleanupScheduler {
+
+    private final ReservationRepository reservationRepository;
+    private final InventoryRepository inventoryRepository;
+
+    /**
+     * Whole sweep in ONE transaction — @Scheduled invocation goes through the Spring
+     * proxy nên @Transactional được honor (pitfall chỉ xảy ra với self-invocation).
+     * Chạy THEO BATCH (Pageable + flush/clear mỗi batch) — không load toàn bộ backlog
+     * vào memory (job downtime / flash-sale có thể để lại hàng chục nghìn row expired).
+     */
+    @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}")
+    @Transactional
+    public void releaseAllExpiredReservations() {
+        int total = 0;
+        while (true) {
+            List<Reservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
+                ReservationStatus.PENDING, Instant.now(), PageRequest.of(0, batchSize));
+            if (batch.isEmpty()) break;
+            // group theo productId → adjust reservedQuantity đúng 1 lần / product
+            batch.stream().collect(Collectors.groupingBy(Reservation::getProductId))
+                .forEach((productId, reservations) -> {
+                    int q = reservations.stream().mapToInt(Reservation::getQuantity).sum();
+                    inventoryRepository.findByProductId(productId).ifPresent(inv -> {
+                        inv.setReservedQuantity(Math.max(0, inv.getReservedQuantity() - q));
+                        inv.setLastUpdated(Instant.now());
+                        reservations.forEach(r -> r.setStatus(ReservationStatus.EXPIRED));
+                        inventoryRepository.save(inv);           // tăng @Version
+                        reservationRepository.saveAll(reservations);
+                    });
+                });
+            total += batch.size();
+            entityManager.flush();
+            entityManager.clear();   // bound persistence-context memory
+        }
+        if (total > 0) log.info("Expired-reservation sweep released {}", total);
+    }
+
+    /** Retention: EXPIRED là terminal — purge sau 30 ngày (RELEASED/COMMITTED giữ cho audit). */
+    @Scheduled(cron = "${inventory.reservation-retention-cron:0 0 4 * * *}")
+    @Transactional
+    public void purgeOldExpiredReservations() {
+        try {
+            int deleted = reservationRepository.deleteByStatusAndCreatedAtBefore(
+                ReservationStatus.EXPIRED, Instant.now().minus(30, ChronoUnit.DAYS));
+            if (deleted > 0) log.info("Purged {} EXPIRED reservations > 30 days", deleted);
+        } catch (Exception ex) {
+            log.error("Reservation retention purge failed — needs ops attention", ex);
+        }
+    }
+}
+```
+
+> Race với `reserve()`: cả 2 đều tăng `@Version` → bên thua nhận
+> `OptimisticLockingFailureException` → TX rollback → poll kế tiếp retry lại.
+> Sweep idempotent (chỉ chọn PENDING + expiresAt < now) nên hội tụ an toàn.
+>
+> **UX note (chấp nhận cho MVP):** nếu sweep thắng race với user commit/release đúng
+> biên TTL, user có thể nhận 409 `RESERVATION_EXPIRED` dù gọi trong window. Idempotent,
+> retry an toàn — không cần xử lý thêm cho MVP.
+
+**2. `OutboxRetentionScheduler`** — `outbox_events` grow unbounded nếu không dọn.
+
+```java
+@Scheduled(cron = "${inventory.outbox.retention-cron:0 0 3 * * *}")   // 03:00 hằng ngày
+public void purgeOldSentEvents() {
+    int deleted = outboxRepository.deleteByStatusAndSentAtBefore(
+        OutboxStatus.SENT, Instant.now().minus(7, ChronoUnit.DAYS));
+    if (deleted > 0) log.info("Purged {} SENT outbox events older than 7 days", deleted);
+}
+```
+
+> Row `FAILED` không tự xóa — cần ops chạy thủ công sau khi root-cause (tránh mất bằng
+> chứng debug). Ghi vào runbook khi ship.
+
+---
+
 ## 6. Kafka events
 
 Topic: `shop.inventory.events.v1`. Partition key = `aggregateId` (= productId).
@@ -534,16 +648,22 @@ shop:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer: { acks: all, retries: 3 }
   security:
-    public-paths:
-      - method: GET
-        path: /api/v1/inventory/**
+    # KHÔNG khai báo public-paths — mọi endpoint (kể cả GET) đều yêu cầu JWT.
+    # Raw stock level là dữ liệu nhạy cảm kinh doanh (đối thủ scrape được full tồn kho
+    # toàn sàn) → fail-closed. Storefront chỉ cần "còn/hết hàng" — đã thuộc product-service.
+    # (actuator, swagger, api-docs vẫn public qua platform defaults của common-security)
 
 inventory:
   reservation-ttl-seconds: 900          # 15 min
+  # Scheduled jobs (§5.8) — defaults khớp code, khai báo rõ để ops thấy được
+  reservation-cleanup-interval-ms: 60000   # expired sweep mỗi 60s
+  reservation-cleanup-batch-size: 500      # sweep query theo batch (chống OOM backlog)
+  reservation-retention-cron: "0 0 4 * * *"   # purge EXPIRED > 30 ngày, 04:00
   outbox:
     poll-interval-ms: 5000
     batch-size: 100
     max-retries: 10
+    retention-cron: "0 0 3 * * *"            # purge SENT > 7 ngày, 03:00
 
 ```
 
@@ -554,15 +674,19 @@ inventory:
 
 ## 8. Error handling
 
-| ErrorCode (add) | Value | HTTP |
-|---|---|---|
-| `RESERVATION_NOT_FOUND` | `INV-3003` | NOT_FOUND |
-| `RESERVATION_EXPIRED` | `INV-3004` | CONFLICT |
-| `RESERVATION_INVALID_STATE` | `INV-3005` | CONFLICT |
-| `INVENTORY_ALREADY_EXISTS` | `INV-3006` | CONFLICT |
-| `INVENTORY_VERSION_CONFLICT` | `INV-3007` | CONFLICT (optimistic lock retry exhausted) |
+> ⚠️ **Trạng thái hiện tại (verified trong repo):** `RESERVATION_NOT_FOUND` (INV-3003) →
+> `INVENTORY_VERSION_CONFLICT` (INV-3007) và các i18n keys tương ứng **ĐÃ TỒN TẠI** trong
+> `ErrorCode.java:56-60` + `messages_en/vi.properties:69-73`. KHÔNG thêm lại (duplicate
+> enum constant = compile error). Việc duy nhất cần thêm là:
 
-i18n keys thêm vào `messages_en.properties` + `messages_vi.properties`.
+| ErrorCode (add) | Value | HTTP | Ghi chú |
+|---|---|---|---|
+| `INVENTORY_NOT_FOUND` | `INV-3008` | NOT_FOUND | Mới — thay việc tái dùng `WAREHOUSE_NOT_FOUND` cho "inventory record không tồn tại" (message "Warehouse {0} not found" gây nhiễu ngữ nghĩa) |
+
+i18n key thêm: `inventory.not.found=Inventory for product {0} was not found` (+ VI).
+Các code dùng trong service: `INVENTORY_NOT_FOUND` (404 khi findByProductId miss),
+`STOCK_INSUFFICIENT` (409), `RESERVATION_*` (404/409), `INVENTORY_ALREADY_EXISTS` (409),
+`INVENTORY_VERSION_CONFLICT` (409 khi retry cạn).
 
 ---
 
@@ -572,7 +696,7 @@ i18n keys thêm vào `messages_en.properties` + `messages_vi.properties`.
 |---|---|---|
 | Unit | JUnit5 + Mockito + AssertJ | InventoryService (reserve/commit/release/upsert/delete), ReservationService |
 | Slice | `@DataJpaTest` + Testcontainers | InventoryRepository (optimistic lock), ReservationRepository |
-| Slice | `@WebMvcTest` + `@MockitoBean` | InventoryController, ReservationController |
+| Slice | `@WebMvcTest` + `@MockitoBean` + `@Import(ApiExceptionHandler.class)` | InventoryController (CRUD + reserve, gồm error-path 404/409) |
 | Integration | `@SpringBootTest` + Testcontainers | OutboxRelay end-to-end (reserve → event → Kafka), optimistic lock retry |
 
 Test stack (Boot 4.1.1 — verified từ product-service source):
@@ -591,18 +715,24 @@ Test stack (Boot 4.1.1 — verified từ product-service source):
 
 | Item | Reason | When |
 |---|---|---|
-| Expired reservation cleanup scheduler | Job quét reservation EXPIRED → release stock | **Phase sau nhưng có plan tạm:** `@Scheduled` trong service (release expired) |
+| ~~Expired reservation cleanup scheduler~~ | **IN SCOPE** — `ReservationCleanupScheduler`, xem §5.8 + Plan Task 22 | Implement cùng MVP |
+| ~~Outbox retention policy~~ | **IN SCOPE** — `OutboxRetentionScheduler` (purge SENT > 7 ngày), xem §5.8 + Plan Task 22 | Implement cùng MVP |
+| Reservations retention (RELEASED/COMMITTED) | EXPIRED đã purge ở §5.8; RELEASED/COMMITTED giữ cho audit/dispute — chính sách giữ bao lâu là quyết định business | Khi có yêu cầu compliance |
 | Debezium CDC thay vì @Scheduled relay | Độ trễ thấp hơn, cần Kafka Connect | Khi scale |
 | processed_events table cho consumer | Inventory không self-consume — cần khi có consumer ngoài | Khi order/notification consume |
 | ShedLock cho OutboxRelay multi-instance | Hiện 1 instance | Khi scale > 1 |
 | Flash-sale Redis Lua check&trừ | Hiệu năng cực cao, kiến trúc khác | Deferred |
 | Product-service sync khởi tạo inventory | Khi product created → tạo inventory record | Có thể thêm consumer product events sau |
+| Filter/search cho findAll | MVP chỉ `?page=&size=` — **không có filter (intentional)** | Khi có use-case admin thực tế |
 
 ---
 
 ## 11. Cross-references
 
-- `docs/RATE-LIMIT.md` — gateway rate limit (inventory qua gateway)
+- `docs/RATE-LIMIT.md` — gateway rate limit. **Scope cho inventory:** public reads (GET qua
+  gateway) chịu rate-limit gateway như mọi route khác; internal endpoints reserve/commit/release
+  gọi point-to-point service-to-service (không qua gateway) → không rate-limit ở gateway,
+  bảo vệ bằng JWT SERVICE role + optimistic lock retry thay thế.
 - `docs/ARCHITECTURE.md` — §1 component map, §5 data stores, §6 cross-cutting
 - `docs/ROADMAP.md` — Phase 7 status (inventory = next core service)
 - `product-service` — mẫu outbox + cache + mapper pattern (đã shipped)
@@ -625,3 +755,22 @@ Test stack (Boot 4.1.1 — verified từ product-service source):
 - 2026-08-28 (rev 4): Cleanup — (1) xác nhận spring.retry đã bỏ, (2) @PreAuthorize hasRole('SERVICE'),
   (3) outbox relay break-on-error giữ thứ tự, (4) bỏ spring.cache.redis.* (CacheConfig single source
   of truth), (5) thêm @EnableRetry trong RetryConfig (chỉ khi chuyển sang @Retryable).
+- 2026-08-28 (rev 5): Deep review fixes — (1) `transactionAware(true)` → `transactionAware()` no-arg
+  (API cũ không tồn tại, không compile được) + phân tầng evict: `evictAfterCommit()` thủ công là cơ chế
+  chính, bỏ `@CacheEvict` khỏi reserve; (2) thêm `@EnableScheduling` vào §2.1 (thiếu = relay không chạy);
+  (3) §5.8 mới: `ReservationCleanupScheduler` (expired sweep 60s) + `OutboxRetentionScheduler`
+  (purge SENT > 7 ngày) — không còn lazy-only; (4) commit/release: bỏ save-then-throw EXPIRED
+  (BusinessException rollback TX → write là dead code); (5) §5.5 publisher: `Map.of` → HashMap
+  null-guard (orderId optional, Map.of NPE với null); (6) remove public-paths GET /api/v1/inventory/**
+  (mâu thuẫn §4.1, stock data nhạy cảm → fail-closed); (7) `WAREHOUSE_NOT_FOUND` → `INVENTORY_NOT_FOUND`
+  (INV-3008 mới); (8) §8: đánh dấu INV-3003..3007 đã tồn tại trong repo; (9) rate-limit scope clarify;
+  (10) §9/§10: sửa typo ReservationController, expired sweep + retention chuyển IN SCOPE, ghi rõ
+  findAll không có filter trong MVP.
+- 2026-08-28 (rev 6): Review lần 2 — (1) ReservationCleanupScheduler chạy THEO BATCH
+  (Pageable + flush/clear mỗi batch, chống OOM khi backlog lớn); (2) thêm retention purge cho
+  reservations EXPIRED > 30 ngày (`purgeOldExpiredReservations`, cron 04:00) — trước đây chỉ
+  outbox có retention; (3) `@Modifying(clearAutomatically = true)` cho bulk delete outbox;
+  (4) bỏ field `intervalMs` dead code; (5) try/catch + log.error cho 2 purge jobs (alerting
+  ops); (6) UX note race sweep-vs-release. Refuted: mock state leak giữa test methods
+  (MockitoExtension per-method lifecycle — không tồn tại); AssertJ `isInstanceOfSatisfying`
+  đã verify có trong 3.27.x (Boot BOM).
