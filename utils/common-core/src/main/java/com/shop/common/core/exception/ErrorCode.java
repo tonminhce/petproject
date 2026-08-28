@@ -66,7 +66,12 @@ public enum ErrorCode {
 
     // ---- Payment domain ----
     PAYMENT_FAILED("PAY-5001", "payment.failed", HttpStatus.BAD_REQUEST),
-    PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND);
+    PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND),
+
+    // ---- Favourite domain ---- (range 6xxx — PAY already owns 5xxx)
+    FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
+    FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
+    FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String messageKey;
