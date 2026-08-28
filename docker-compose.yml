@@ -381,8 +381,15 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventoryservice
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     healthcheck:
       <<: *hc-defaults

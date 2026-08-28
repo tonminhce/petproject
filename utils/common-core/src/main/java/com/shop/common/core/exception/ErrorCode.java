@@ -58,6 +58,7 @@ public enum ErrorCode {
     RESERVATION_INVALID_STATE("INV-3005", "reservation.invalid.state", HttpStatus.CONFLICT),
     INVENTORY_ALREADY_EXISTS("INV-3006", "inventory.already.exists", HttpStatus.CONFLICT),
     INVENTORY_VERSION_CONFLICT("INV-3007", "inventory.version.conflict", HttpStatus.CONFLICT),
+    INVENTORY_NOT_FOUND("INV-3008", "inventory.not.found", HttpStatus.NOT_FOUND),
 
     // ---- Order domain ----
     ORDER_NOT_FOUND("ORD-4001", "order.not.found", HttpStatus.NOT_FOUND),
