@@ -1,7 +1,7 @@
 databaseChangeLog:
   # ===============================================================================
   # favourites table
-  #   11 columns: id + 2 domain (user_id, product_id) + 4 audit (AbstractMappedEntity)
+  #   10 columns: id + user_id + product_id + 4 audit (AbstractMappedEntity)
   #               + 3 soft-delete (SoftDeletable: deleted, deleted_at, deleted_by)
   #   2 indexes: partial unique on (user_id, product_id) WHERE deleted=false (raw SQL)
   #              + lookup index on (user_id)
