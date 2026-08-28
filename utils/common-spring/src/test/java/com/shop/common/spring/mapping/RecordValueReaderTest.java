@@ -111,6 +111,7 @@ public class RecordValueReaderTest {
 
         assertThat(member).isNotNull();
         assertThat(member.getValueType()).isEqualTo(String.class);
+        assertThat(member.get(new SourceRequest("T", "s", 3), "title")).isEqualTo("T");
     }
 
     @Test
