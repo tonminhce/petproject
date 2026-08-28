@@ -56,11 +56,8 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("spring.cache.type", () -> "none");
-        // SecurityProperties declares @NotBlank issuerUri; the platform default
-        // (`${JWT_ISSUER_URI:http://keycloak:8080/...}`) lives in
-        // common-spring's application.yml but the property is bound before
-        // classpath YAML is consulted in test scope, so provide a literal
-        // dummy issuer here. JWT validation is stubbed in TestSecurityConfig.
+        // Literal issuer to keep tests independent of any JWT_ISSUER_URI env var;
+        // JWT validation itself is stubbed in TestSecurityConfig.
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
