@@ -1,0 +1,64 @@
+# =============================================================================
+#  inventory-service — Stock management + reservation lifecycle.
+#  Reads/writes Postgres, caches hot reads in Redis (cache-aside TTL 60s),
+#  publishes stock events to Kafka through a transactional outbox.
+#
+#  Platform-wide defaults live in common-spring/application.yml (inherited).
+#  Only service-specific overrides belong here.
+# =============================================================================
+spring:
+  application:
+    name: inventory-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/inventoryservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Schema is owned by Liquibase — never let Hibernate mutate it.
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      # Empty means "no AUTH" — the compose Redis runs with --requirepass.
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+  # Cache: KHÔNG cấu hình spring.cache.redis.* — CacheConfig bean là single source of truth
+  # (entryTtl 60s, disableCachingNullValues, transactionAware).
+  cache:
+    type: redis
+
+server:
+  # Override the common-spring default 8080 (compose maps 8082:8082).
+  port: ${SERVER_PORT:8082}
+
+shop:
+  kafka:
+    # common-kafka binds shop.kafka.* (KafkaProperties) — NOT spring.kafka.*.
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      # Durability over throughput: the outbox relay must not lose events.
+      acks: all
+      retries: 3
+  security:
+    # Inventory reads are authenticated (USER/ADMIN); GET detail cached.
+    # (actuator, swagger, api-docs are public via common-security platform defaults)
+    public-paths:
+      - method: GET
+        path: /api/v1/inventory/**
+
+inventory:
+  reservation-ttl-seconds: 900          # 15 min
+  outbox:
+    poll-interval-ms: 5000
+    batch-size: 100
+    max-retries: 10
