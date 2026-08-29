@@ -15,7 +15,7 @@
 - Package `com.shop.*` (never `org.shop.`). Boot 4.1.1, Java 25.
 - `@WebMvcTest` import: `org.springframework.boot.webmvc.test.autoconfigure` (Boot 4 package). Seed `JwtAuthenticationToken` — `TestingAuthenticationToken` breaks `AuthenticatedUser.current()`. `@Import(ApiExceptionHandler.class)`.
 - Shared i18n bundle: `utils/common-spring/src/main/resources/messages/messages_en.properties` + `messages_vi.properties`. Keys are fleet-global — order keys `order.*`, inventory keys already exist (`reservation.*` = INV codes).
-- ErrorCode enum: `PAYMENT_NOT_FOUND` ("PAY-5002") is the LAST entry and ends with `;`. Any insertion before it ends with `,`.
+- ErrorCode enum (verified 2026-08-29): **`ORDER_DUPLICATE_REQUEST` ("ORD-4010") is the LAST entry and ends with `;`** (`PAYMENT_NOT_FOUND` sits mid-file since ORD-4003..4010 were appended in the order-service release). Insertion rule: convert ORD-4010's `;` → `,`, append the new entry ending `;`.
 - WireMock = `org.wiremock:wiremock-standalone` (already in order-service pom). Classic API (`com.github.tomakehurst.wiremock.*`).
 - Liquibase: `defaultValueBoolean` for booleans; partial indexes via raw SQL (`createIndex` drops `where`).
 - `lombok.config` with `copyableAnnotations += Qualifier` exists at repo root (from order-service implementation) — VERIFY, don't recreate.
@@ -63,13 +63,13 @@
 
 - [ ] **Step 1: Add enum entry**
 
-In `ErrorCode.java`, find `ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT),` — insert AFTER it (before `PAYMENT_NOT_FOUND`):
+In `ErrorCode.java`, the enum currently ENDS with `ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT);` (verified — PAYMENT_NOT_FOUND is mid-file). Change that line's terminator `;` → `,` and append:
 
 ```java
-    CONFIRM_COMMIT_FAILED("ORD-4011", "order.confirm.commit.failed", HttpStatus.CONFLICT),
+    CONFIRM_COMMIT_FAILED("ORD-4011", "order.confirm.commit.failed", HttpStatus.CONFLICT);
 ```
 
-Verify: `PAYMENT_NOT_FOUND("PAY-5002", ...);` remains the last entry with `;`.
+Verify: `CONFIRM_COMMIT_FAILED` is now the last entry, ending `;`; `ORDER_DUPLICATE_REQUEST` ends `,`.
 
 - [ ] **Step 2: Add i18n keys**
 
@@ -376,7 +376,7 @@ public record ReservationStateResponse(String status) {}
 
 ```java
 .requestInitializer(req -> {
-    String corrId = MDC.get(MdcKey.CORRELATION_ID);   // com.shop.common.spring.logging.MdcKey (verify exact package via IDE)
+    String corrId = MDC.get(MdcKey.CORRELATION_ID);   // com.shop.common.core.constants.MdcKey (verified)
     if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);
 })
 ```

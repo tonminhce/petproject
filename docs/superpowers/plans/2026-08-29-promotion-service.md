@@ -16,7 +16,7 @@
 - **Never** edit `order-service` in this plan — its integration ships via `2026-08-29-order-service-confirm-hardening.md`.
 - `@WebMvcTest`: `org.springframework.boot.webmvc.test.autoconfigure` + seed `JwtAuthenticationToken` (TestingAuthenticationToken breaks `AuthenticatedUser.current()`) + `@Import(ApiExceptionHandler.class)`.
 - Shared i18n bundle (`utils/common-spring/src/main/resources/messages/`): promotion keys are namespaced `promotion.*` — `reservation.not.found` is TAKEN (INV-3003).
-- ErrorCode: insert PRO block after the FAV-6xxx block; every entry ends `,` — `PAYMENT_NOT_FOUND("PAY-5002",...);` must remain the ONLY `;` terminator.
+- ErrorCode (verified 2026-08-29): the enum currently ENDS with `ORDER_DUPLICATE_REQUEST("ORD-4010", ..., HttpStatus.CONFLICT);` — the FAV-6xxx block and `PAYMENT_NOT_FOUND` sit BEFORE it (ORD-4003..4010 were appended by the order-service release). Insert rule: convert ORD-4010's `;` → `,`, append the PRO block, block's LAST entry ends `;`.
 - Liquibase: `defaultValueBoolean` for `deleted`; partial unique index via raw SQL (`createIndex` silently drops `where`).
 - Money: `BigDecimal`, column `NUMERIC(19,2)`; percent math scale 2 `HALF_UP`.
 - Optimistic-retry pattern everywhere = mirror `inventory-service/.../ReservationServiceImpl` (3 attempts, backoff `50ms * attempt`, exhausted → version-conflict code).
@@ -54,7 +54,7 @@
 - Produces: `PRO-7001..7011` constants; compile-able module.
 
 - [ ] **Step 1: pom** — verify scaffold, ADD (keep existing entries incl. resilience4j): `common-core`, `common-spring`, `common-security`, `common-keycloak`, `spring-boot-starter-data-jpa`, `spring-boot-starter-liquibase` (`org.springframework.boot:spring-boot-starter-liquibase`), `org.postgresql:postgresql` (runtime), `spring-kafka`, `common-kafka`, `lombok` (annotationProcessor + provided). Test deps: `spring-boot-starter-test`, `spring-boot-webmvc-test`, `spring-boot-data-jpa-test`, `testcontainers-{junit-jupiter,postgresql,kafka}`, `spring-boot-testcontainers`, `awaitility`. (Mirror inventory-service pom versions — copy dependency blocks verbatim from there.)
-- [ ] **Step 2: ErrorCode block** — insert after the last `FAV-` entry:
+- [ ] **Step 2: ErrorCode block** — the enum currently ENDS with `ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT);`. Change that terminator `;` → `,`, then append:
 
 ```java
     CAMPAIGN_NOT_FOUND("PRO-7001", "promotion.campaign.not.found", HttpStatus.NOT_FOUND),
@@ -67,10 +67,10 @@
     PROMOTION_RESERVATION_NOT_FOUND("PRO-7008", "promotion.reservation.not.found", HttpStatus.NOT_FOUND),
     PROMOTION_RESERVATION_EXPIRED("PRO-7009", "promotion.reservation.expired", HttpStatus.CONFLICT),
     PROMOTION_RESERVATION_INVALID_STATE("PRO-7010", "promotion.reservation.invalid.state", HttpStatus.CONFLICT),
-    PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", "promotion.reservation.version.conflict", HttpStatus.CONFLICT),
+    PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", "promotion.reservation.version.conflict", HttpStatus.CONFLICT);
 ```
 
-(Constant names avoid clashing with INV's `RESERVATION_*`; keys stay fully namespaced.) Verify `PAYMENT_NOT_FOUND(...);` still last with `;`.
+(Constant names avoid clashing with INV's `RESERVATION_*`; keys stay fully namespaced.) Verify: `PROMOTION_RESERVATION_VERSION_CONFLICT` is the last entry, ending `;`.
 
 - [ ] **Step 3: i18n** — EN: `Promotion campaign {0} not found` / `Campaign code {0} already exists` / `Campaign {0} has recorded usage and cannot be deleted` / `Campaign {0} is not active` / `Order amount {0} is below the minimum for campaign {1}` / `User {0} already reached the usage limit for {1}` / `Campaign {0} budget is exhausted` / `Promotion reservation {0} not found` / `Promotion reservation {0} has expired` / `Promotion reservation {0} is in invalid state` / `Promotion reservation {0} version conflict — retry`. VI equivalents (đầy đủ 11 keys, giữ placeholder `{0}`/`{1}` đúng vị trí).
 - [ ] **Step 4: `./mvnw -pl promotion-service -am compile` + commit** — `feat(promotion-service): deps + PRO-7xxx error codes + i18n`
@@ -98,7 +98,15 @@
 **Interfaces:**
 - Produces: `enum UsageStatus { PENDING, COMMITTED, RELEASED, EXPIRED }`; `Campaign` builder (Lombok `@Builder @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Entity`, extends the same `AbstractMappedEntity` base `Order`/`Cart` extend — copy the exact import from `order-service/.../entity/Order.java`); `CouponUsageReservation` mirrors inventory `Reservation` (NO AbstractMappedEntity — spec D10): plain `@Entity` + explicit `created` audit only (`reservedAt` serves).
 
-- [ ] **Step 1:** Write both entities exactly per schema Task 2 (field names = column names camelCased). `Campaign` gets convenience `activate()`/`deactivate()` setting status.
+- [ ] **Step 1:** Write both entities exactly per schema Task 2 (field names = column names camelCased). `Campaign` MUST declare its optimistic lock explicitly (mirror `Order.java:68-71`):
+
+```java
+    @Version
+    @Column(name = "version")
+    private Long version = 0L;
+```
+
+(with `jakarta.persistence.Version` import). `Campaign` gets convenience `activate()`/`deactivate()` setting status.
 - [ ] **Step 2:** Compile + JPA validate boot + commit — `feat(promotion-service): Campaign + CouponUsageReservation entities`
 
 ---
@@ -211,7 +219,22 @@ public final class DiscountCalculator {
     }
 ```
 
-`doReserve` (transactional, in `CampaignServiceImpl`-style transactional bean): load campaign (`findByCodeAndDeletedFalse` → NOT_FOUND); run checks 2-6 in spec §5.1 order; `campaign.setVersionTouch()` is implicit — **bump campaign row to serialize concurrent reserves**: `campaign.setUpdatedAt(Instant.now()); campaignRepository.saveAndFlush(campaign);` (forces `@Version` increment → competing reserves retry). Build reservation (`discountAmount = DiscountCalculator.compute(...)`, `status=PENDING`, `expiresAt=clock.instant().plusSeconds(ttl)`), save, publish outbox event, return `ReservationResponse.from`.
+`doReserve` (transactional, in `CampaignServiceImpl`-style transactional bean): load campaign (`findByCodeAndDeletedFalse` → NOT_FOUND); run checks 2-6 in spec §5.1 order; then **serialize concurrent reserves by forcing the campaign's `@Version` to bump**:
+
+```java
+        // ⚠️ Race protection (spec §5.2) — explicit choice: version-touch on the campaign row.
+        // Checks 2c-2e are check-then-insert against the reservation table; under READ_COMMITTED
+        // two concurrent reserves can both pass. Touching ANY mapped field + saveAndFlush makes
+        // THIS tx do an UPDATE on campaign → the flush compares @Version: the loser gets
+        // OptimisticLockingFailureException → the retry wrapper re-reads (now seeing the
+        // winner's committed PENDING row) and re-validates → correctly rejected.
+        campaign.setUpdatedAt(clock.instant());
+        campaignRepository.saveAndFlush(campaign);
+```
+
+**Rejected alternatives (review round 1):** (A) `EntityManager.lock(campaign, PESSIMISTIC_WRITE)` — correct but the fleet never uses pessimistic locks; retry wrapper is the established idiom. (B) denormalized counter column (`currentReservations`) — matches inventory's `reservedQuantity` in spirit, but here it must be maintained across FOUR lifecycle transitions (reserve +1, release/expire −1, commit keep) plus the sweep — state replication of what is already derivable from the reservation table (source of truth) = drift risk for zero benefit; the counts in §5.1 keep reading the reservation table. (C) accept over-reserve + commit-side check — violates D4/D5 hard guarantees. The version-touch keeps counts derived, not replicated.
+
+Build reservation (`discountAmount = DiscountCalculator.compute(...)`, `status=PENDING`, `expiresAt=clock.instant().plusSeconds(ttl)`), save, publish outbox event, return `ReservationResponse.from`.
 - [ ] **Step 3: PASS + commit** — `feat(promotion-service): reserve with validation chain + optimistic guard (spec §5.1)`
 
 ---
