@@ -10,6 +10,9 @@ public record ReservationResponse(
     UUID productId,
     Integer quantity,
     ReservationStatus status,
+    Instant reservedAt,
     Instant expiresAt,
+    Instant committedAt,
+    Instant releasedAt,
     UUID orderId
 ) {}

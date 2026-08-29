@@ -28,4 +28,6 @@ public interface InventoryService {
     void release(UUID reservationId);
 
     void releaseCommitted(UUID reservationId);
+
+    ReservationResponse getState(UUID reservationId);
 }

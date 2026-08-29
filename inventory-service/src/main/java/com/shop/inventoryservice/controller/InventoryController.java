@@ -98,4 +98,10 @@ public class InventoryController {
         reservationService.releaseCommittedWithRetry(reservationId);
         return ApiResponse.ok(null);
     }
+
+    @GetMapping("/reservations/{reservationId}/state")
+    @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
+    public ApiResponse<ReservationResponse> state(@PathVariable UUID reservationId) {
+        return ApiResponse.ok(inventoryService.getState(reservationId));
+    }
 }

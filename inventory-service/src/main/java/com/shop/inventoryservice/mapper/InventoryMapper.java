@@ -46,7 +46,10 @@ public class InventoryMapper {
             reservation.getProductId(),
             reservation.getQuantity(),
             reservation.getStatus(),
+            reservation.getCreatedAt(),
             reservation.getExpiresAt(),
+            reservation.getCommittedAt(),
+            reservation.getReleasedAt(),
             reservation.getOrderId()
         );
     }

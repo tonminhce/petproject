@@ -71,7 +71,8 @@ class InventoryControllerTest {
     void reserve_returnsReservation() throws Exception {
         ReserveRequest req = new ReserveRequest(5, null);
         ReservationResponse resp = new ReservationResponse(
-            reservationId, productId, 5, ReservationStatus.PENDING, Instant.now().plusSeconds(900), null);
+            reservationId, productId, 5, ReservationStatus.PENDING,
+            Instant.now(), Instant.now().plusSeconds(900), null, null, null);
         when(reservationService.reserveWithRetry(eq(productId), any(ReserveRequest.class))).thenReturn(resp);
 
         mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)

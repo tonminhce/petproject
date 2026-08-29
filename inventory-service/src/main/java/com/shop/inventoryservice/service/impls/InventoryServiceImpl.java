@@ -240,6 +240,18 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     /**
+     * Read-only reservation state projection for reconciliation polling
+     * (hardening spec §7.3). No retries needed — a single consistent read.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public ReservationResponse getState(UUID reservationId) {
+        Reservation r = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
+        return mapper.toReservationResponse(r);
+    }
+
+    /**
      * Release all EXPIRED PENDING reservations for a product and adjust the
      * inventory reservedQuantity accordingly. Called FIRST in reserve()
      * so the inventory read reflects freed capacity. Runs in the callers

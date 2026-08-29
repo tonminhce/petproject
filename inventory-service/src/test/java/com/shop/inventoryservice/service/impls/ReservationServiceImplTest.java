@@ -31,7 +31,8 @@ class ReservationServiceImplTest {
     void reserveWithRetry_retriesOnOptimisticLockFailure() {
         ReserveRequest req = new ReserveRequest(5, null);
         ReservationResponse resp = new ReservationResponse(
-            reservationId, productId, 5, ReservationStatus.PENDING, Instant.now().plusSeconds(900), null);
+            reservationId, productId, 5, ReservationStatus.PENDING,
+            Instant.now(), Instant.now().plusSeconds(900), null, null, null);
 
         when(inventoryService.reserve(productId, req))
             .thenThrow(new OptimisticLockingFailureException("conflict"))
@@ -58,7 +59,8 @@ class ReservationServiceImplTest {
     void reserveWithRetry_passesThroughSuccess() {
         ReserveRequest req = new ReserveRequest(5, null);
         ReservationResponse resp = new ReservationResponse(
-            reservationId, productId, 5, ReservationStatus.PENDING, Instant.now().plusSeconds(900), null);
+            reservationId, productId, 5, ReservationStatus.PENDING,
+            Instant.now(), Instant.now().plusSeconds(900), null, null, null);
         when(inventoryService.reserve(productId, req)).thenReturn(resp);
 
         assertThat(service.reserveWithRetry(productId, req)).isEqualTo(resp);

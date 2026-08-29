@@ -118,7 +118,7 @@ class InventoryServiceImplTest {
         when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
         when(mapper.toReservationResponse(any(Reservation.class)))
             .thenReturn(new ReservationResponse(reservationId, productId, 5, ReservationStatus.PENDING,
-                reservation.getExpiresAt(), null));
+                reservation.getCreatedAt(), reservation.getExpiresAt(), null, null, null));
 
         var result = service.reserve(productId, req);
 
@@ -187,6 +187,37 @@ class InventoryServiceImplTest {
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
         verify(publisher).publishReleased(inventory, reservation, "PENDING");
         verify(cacheService).evictAfterCommit(productId);
+    }
+
+    @Test
+    void getState_returnsMappedReservationResponse() {
+        Instant createdAt = Instant.now();
+        Instant expiresAt = createdAt.plusSeconds(900);
+        reservation.setCreatedAt(createdAt);
+        reservation.setExpiresAt(expiresAt);
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(mapper.toReservationResponse(reservation)).thenReturn(new ReservationResponse(
+            reservationId, productId, 5, ReservationStatus.PENDING,
+            createdAt, expiresAt, null, null, null));
+
+        var result = service.getState(reservationId);
+
+        assertThat(result.reservationId()).isEqualTo(reservationId);
+        assertThat(result.status()).isEqualTo(ReservationStatus.PENDING);
+        assertThat(result.reservedAt()).isEqualTo(createdAt);
+        assertThat(result.expiresAt()).isEqualTo(expiresAt);
+        assertThat(result.committedAt()).isNull();
+        assertThat(result.releasedAt()).isNull();
+        verify(cacheService, never()).evictAfterCommit(any());
+    }
+
+    @Test
+    void getState_throwsReservationNotFound() {
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getState(reservationId))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("INV-3003"));
     }
 
     @Test
