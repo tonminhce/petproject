@@ -7,7 +7,7 @@ import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.client.TaxServiceClient;
 import com.shop.orderservice.dto.internal.PricingBreakdown;
 import com.shop.orderservice.dto.internal.ProductSnapshot;
-import com.shop.orderservice.dto.internal.PromotionApplyRequest;
+import com.shop.orderservice.dto.internal.PromotionReserveRequest;
 import com.shop.orderservice.dto.internal.TaxCalculateRequest;
 import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.service.PricingService;
@@ -49,10 +49,13 @@ public class PricingServiceImpl implements PricingService {
         }
 
         // 2. Apply promotion if coupon provided
+        // Behavior-neutral bridge (Task 5): apply() → reserve(); reservationId is
+        // ignored here — order/confirm semantics land in Task 7. orderId is not
+        // known at pricing time (passed as null).
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (couponCode != null && !couponCode.isBlank()) {
-            var promoResp = promotionClient.apply(
-                new PromotionApplyRequest(couponCode, subtotal, userId)
+            var promoResp = promotionClient.reserve(
+                new PromotionReserveRequest(couponCode, subtotal, userId, null)
             );
             discountAmount = promoResp.discountAmount();
         }

@@ -1,5 +1,7 @@
 package com.shop.orderservice.config;
 
+import com.shop.common.core.constants.MdcKey;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -51,6 +53,12 @@ public class RestClientConfig {
             .baseUrl(baseUrl)
             .requestFactory(factory)
             .defaultHeader("Accept", "application/json")
+            // hardening §2/D9 — propagate the correlation id to every downstream
+            // service call (product/inventory/tax/promotion all share this builder).
+            .requestInitializer(req -> {
+                String corrId = MDC.get(MdcKey.CORRELATION_ID);
+                if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);
+            })
             .build();
     }
 

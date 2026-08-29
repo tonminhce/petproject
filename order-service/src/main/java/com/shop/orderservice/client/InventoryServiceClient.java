@@ -5,6 +5,7 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.orderservice.dto.internal.ReserveRequest;
 import com.shop.orderservice.dto.internal.ReservationResponse;
+import com.shop.orderservice.dto.internal.ReservationStateResponse;
 import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.security.ServiceTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,9 @@ public class InventoryServiceClient {
     private final ServiceTokenProvider serviceTokenProvider;   // P0-7 — SERVICE-role token
 
     private static final ParameterizedTypeReference<ApiResponse<ReservationResponse>> RESERVE_RESPONSE =
+        new ParameterizedTypeReference<>() {};
+
+    private static final ParameterizedTypeReference<ApiResponse<ReservationStateResponse>> STATE_RESPONSE =
         new ParameterizedTypeReference<>() {};
 
     public UUID reserve(UUID productId, ReserveRequest request) {
@@ -69,6 +73,38 @@ public class InventoryServiceClient {
         } catch (Exception ex) {
             log.error("Failed to release reservation {}", reservationId, ex);
             // DO NOT throw — compensation failures are best-effort, logged for ops review
+        }
+    }
+
+    public void releaseCommitted(UUID reservationId) {
+        try {
+            restClient.post()
+                .uri("/api/v1/inventory/reservations/{id}/release-committed", reservationId)
+                .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
+                .retrieve()
+                .toBodilessEntity();
+        } catch (Exception ex) {
+            log.error("Failed to release committed reservation {}", reservationId, ex);
+            // DO NOT throw — same best-effort compensation convention as release()
+        }
+    }
+
+    public ReservationStateResponse getReservationState(UUID reservationId) {
+        try {
+            ApiResponse<ReservationStateResponse> resp = restClient.get()
+                .uri("/api/v1/inventory/reservations/{id}/state", reservationId)
+                .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
+                .retrieve()
+                .body(STATE_RESPONSE);
+            return resp.data();
+        } catch (HttpClientErrorException ex) {
+            log.warn("Inventory state lookup failed for reservation {}: {}", reservationId, ex.getMessage());
+            // 404 lets reconciliation (releases a reservation that already finalized)
+            // distinguish "already gone" from a real failure (hardening §7.3).
+            if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId);
+            }
+            throw BusinessException.of(ErrorCode.INTERNAL_SERVER_ERROR, "inventory");
         }
     }
 }
