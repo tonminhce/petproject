@@ -10,6 +10,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -77,7 +79,8 @@ class FavouriteRepositoryTest {
                 .setParameter("id", tombstoned.getId())
                 .executeUpdate();
 
-        List<Favourite> result = repo.findByUserIdOrderByCreatedAtDesc(alice);
+        Pageable page = PageRequest.of(0, 20);
+        List<Favourite> result = repo.findByUserIdOrderByCreatedAtDesc(alice, page).getContent();
 
         assertThat(result).extracting(Favourite::getId).containsExactly(active.getId());
     }
@@ -100,7 +103,7 @@ class FavouriteRepositoryTest {
         assertThat(raw.getDeletedAt()).isNotNull();
         assertThat(raw.getDeletedBy()).isEqualTo("alice");
         // Repository finder still skips soft-deleted rows.
-        assertThat(repo.findByUserIdOrderByCreatedAtDesc(alice)).isEmpty();
+        assertThat(repo.findByUserIdOrderByCreatedAtDesc(alice, PageRequest.of(0, 20))).isEmpty();
     }
 
     @Test

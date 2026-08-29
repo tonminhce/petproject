@@ -1,4 +1,4 @@
-package com.shop.favouriteservice.config;
+package com.shop.inventoryservice.config;
 
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
@@ -8,11 +8,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * NOTE: deliberately NO {@code @EnableJpaAuditing} here — tests that need it
- * {@code @Import} the platform's {@code JpaAuditingAutoConfiguration}, which is
- * the single sanctioned home of that annotation. Duplicating it here registers
- * {@code jpaAuditingHandler} twice and fails the context with a
- * BeanDefinitionOverrideException.
+ * Mirrors product-service's / favourite-service's TestLiquibaseConfig so JPA
+ * slice tests run the real Liquibase schema against Testcontainers Postgres.
+ *
+ * <p>NOTE: deliberately NO {@code @EnableJpaAuditing} here — tests that need
+ * it {@code @Import} the platform's {@code JpaAuditingAutoConfiguration},
+ * which is the single sanctioned home of that annotation. Duplicating it here
+ * registers {@code jpaAuditingHandler} twice and fails the context with a
+ * BeanDefinitionOverrideException (the exact bug the favourite-service copy
+ * shipped with).</p>
  */
 @Configuration(proxyBeanMethods = false)
 public class TestLiquibaseConfig {

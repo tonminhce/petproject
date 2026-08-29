@@ -17,6 +17,13 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Stock held for a pending order. Hard-delete (retention purge) semantics.
+ * Deliberately does NOT extend {@code AbstractMappedEntity}: its lifecycle is
+ * fully described by created/expires/committed/released timestamps — there is
+ * nothing to audit (no updated_at/updated_by churn), and terminal rows are
+ * purged after 30 days, so tombstones would be dead weight.
+ */
 @Entity
 @Table(name = "reservations")
 @Getter

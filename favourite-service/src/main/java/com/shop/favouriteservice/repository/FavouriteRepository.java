@@ -1,22 +1,24 @@
 package com.shop.favouriteservice.repository;
 
 import com.shop.favouriteservice.entity.Favourite;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
 
     /**
-     * Returns the current user's favourites, newest first. {@code @SQLRestriction}
-     * on the entity auto-filters soft-deleted rows — no {@code AndDeletedFalse} suffix needed.
+     * Returns the current user's favourites, newest first, paginated.
+     * {@code @SQLRestriction} on the entity auto-filters soft-deleted rows —
+     * no {@code AndDeletedFalse} suffix needed.
      */
-    List<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    Page<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     /**
      * Finds a favourite by id scoped to its owning user. Returns empty when the row

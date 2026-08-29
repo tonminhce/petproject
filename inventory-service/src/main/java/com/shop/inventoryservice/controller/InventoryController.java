@@ -1,5 +1,7 @@
 package com.shop.inventoryservice.controller;
 
+import com.shop.common.core.constants.ApiPaths;
+import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
@@ -26,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/inventory")
+@RequestMapping(ApiPaths.INVENTORY)
 @RequiredArgsConstructor
 public class InventoryController {
 
@@ -36,9 +38,10 @@ public class InventoryController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<PageResponse<InventoryResponse>> findAll(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
+        // Cap page size — PageableConstant.MAX_PAGE_SIZE guards against ?size=100000 dumps.
+        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         return ApiResponse.ok(inventoryService.findAll(pageable));
     }
 

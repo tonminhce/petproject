@@ -19,6 +19,10 @@
       {
         "name": "MANAGER",
         "description": "Manager role"
+      },
+      {
+        "name": "SERVICE",
+        "description": "Machine-to-machine role for internal service calls (e.g. inventory reserve/commit/release)"
       }
     ]
   },

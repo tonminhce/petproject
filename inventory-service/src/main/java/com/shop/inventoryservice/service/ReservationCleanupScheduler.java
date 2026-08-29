@@ -50,20 +50,27 @@ public class ReservationCleanupScheduler {
     @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}")
     @Transactional
     public void releaseAllExpiredReservations() {
-        int total = 0;
-        while (true) {
-            List<Reservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
-                ReservationStatus.PENDING, Instant.now(), PageRequest.of(0, batchSize));
-            if (batch.isEmpty()) {
-                break;
+        try {
+            int total = 0;
+            while (true) {
+                List<Reservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
+                    ReservationStatus.PENDING, Instant.now(), PageRequest.of(0, batchSize));
+                if (batch.isEmpty()) {
+                    break;
+                }
+                releaseBatch(batch);
+                total += batch.size();
+                entityManager.flush();
+                entityManager.clear();
             }
-            releaseBatch(batch);
-            total += batch.size();
-            entityManager.flush();
-            entityManager.clear();
-        }
-        if (total > 0) {
-            log.info("Expired-reservation sweep released {} reservation(s)", total);
+            if (total > 0) {
+                log.info("Expired-reservation sweep released {} reservation(s)", total);
+            }
+        } catch (Exception ex) {
+            // Same posture as the retention jobs below: log at ERROR with full
+            // context instead of letting the scheduler swallow the stack trace.
+            // Batches already flushed stay committed; the next cycle continues.
+            log.error("Expired-reservation sweep failed - will retry next cycle", ex);
         }
     }
 

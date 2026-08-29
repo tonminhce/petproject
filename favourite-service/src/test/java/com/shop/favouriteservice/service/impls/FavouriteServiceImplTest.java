@@ -1,6 +1,7 @@
 package com.shop.favouriteservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.favouriteservice.dto.request.FavouriteCreateRequest;
 import com.shop.favouriteservice.dto.response.FavouriteResponse;
 import com.shop.favouriteservice.entity.Favourite;
@@ -13,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -55,15 +58,18 @@ class FavouriteServiceImplTest {
     }
 
     @Test
-    void findAllByCurrentUser_returnsMappedList() {
+    void findAllByCurrentUser_returnsMappedPage() {
         Favourite fav = sampleFavourite();
-        when(repo.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(fav));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(repo.findByUserIdOrderByCreatedAtDesc(userId, pageable))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(fav), pageable, 1));
         when(mapper.toResponse(fav)).thenReturn(sampleResponse());
 
-        List<FavouriteResponse> result = service.findAllByCurrentUser(userId);
+        PageResponse<FavouriteResponse> result = service.findAllByCurrentUser(userId, pageable);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).id()).isEqualTo(favouriteId);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).id()).isEqualTo(favouriteId);
+        assertThat(result.totalElements()).isEqualTo(1);
     }
 
     @Test

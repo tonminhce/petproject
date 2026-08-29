@@ -32,10 +32,15 @@ spring:
       # Empty means "no AUTH" — the compose Redis runs with --requirepass.
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
-  # Cache: KHÔNG cấu hình spring.cache.redis.* — CacheConfig bean là single source of truth
-  # (entryTtl 60s, disableCachingNullValues, transactionAware).
   cache:
     type: redis
+    redis:
+      # Defensive fallback for any cache NOT registered by CacheConfig — the
+      # CacheConfig bean is the single source of truth for the "inventory"
+      # cache (entryTtl 60s, JSON serializer, disableCachingNullValues).
+      time-to-live: 60000           # 60s — matches CacheConfig.INVENTORY_TTL
+      cache-null-values: false
+      use-key-prefix: true
 
 server:
   # Override the common-spring default 8080 (compose maps 8082:8082).
@@ -50,15 +55,23 @@ shop:
       acks: all
       retries: 3
   security:
-    # Inventory reads are authenticated (USER/ADMIN); GET detail cached.
+    # Every endpoint requires a valid JWT — stock levels are business-sensitive.
+    # Reads: authenticated (USER/ADMIN). Writes: ADMIN. Reservations: SERVICE/ADMIN
+    # (method-level @PreAuthorize on InventoryController; empty public-paths here,
+    # matching favourite-service).
     # (actuator, swagger, api-docs are public via common-security platform defaults)
-    public-paths:
-      - method: GET
-        path: /api/v1/inventory/**
+    public-paths: []
 
 inventory:
   reservation-ttl-seconds: 900          # 15 min
+  # Scheduled jobs — values MUST match the inline @Value/@Scheduled defaults in
+  # ReservationCleanupScheduler / OutboxRetentionScheduler. Declared explicitly
+  # (spec §7.1) so ops can see what runs when without grepping Java sources.
+  reservation-cleanup-interval-ms: 60000      # expired sweep every 60s
+  reservation-cleanup-batch-size: 500         # sweep in batches (memory guard)
+  reservation-retention-cron: "0 0 4 * * *"   # purge EXPIRED > 30 days, 04:00 daily
   outbox:
     poll-interval-ms: 5000
     batch-size: 100
     max-retries: 10
+    retention-cron: "0 0 3 * * *"             # purge SENT > 7 days, 03:00 daily

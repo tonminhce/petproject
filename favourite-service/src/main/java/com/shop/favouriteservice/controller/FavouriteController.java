@@ -1,23 +1,27 @@
 package com.shop.favouriteservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.favouriteservice.dto.request.FavouriteCreateRequest;
 import com.shop.favouriteservice.dto.response.FavouriteResponse;
 import com.shop.favouriteservice.service.FavouriteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 // NO @PreAuthorize (rev 2): auth is enforced by BaseSecurityConfig filter chain
@@ -32,8 +36,12 @@ public class FavouriteController {
     private final FavouriteService service;
 
     @GetMapping
-    public ApiResponse<List<FavouriteResponse>> findAll() {
-        return ApiResponse.ok(service.findAllByCurrentUser(currentUserId()));
+    public ApiResponse<PageResponse<FavouriteResponse>> findAll(
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
+        // Cap page size — PageableConstant.MAX_PAGE_SIZE guards against ?size=100000 dumps.
+        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        return ApiResponse.ok(service.findAllByCurrentUser(currentUserId(), pageable));
     }
 
     @GetMapping("/{favouriteId}")

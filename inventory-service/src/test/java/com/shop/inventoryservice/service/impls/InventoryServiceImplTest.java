@@ -201,12 +201,23 @@ class InventoryServiceImplTest {
     }
 
     @Test
-    void delete_throwsWhenReservationActive() {
+    void delete_throwsInventoryInUse_whenReservationActive() {
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
         when(reservationRepository.countByProductIdAndStatusIn(eq(productId), anyList())).thenReturn(1L);
 
         assertThatThrownBy(() -> service.delete(productId))
-            .isInstanceOf(BusinessException.class);
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("INV-3009"));
         verify(inventoryRepository, never()).delete(any());
+    }
+
+    @Test
+    void update_throwsBadRequest_whenBodyProductIdMismatch() {
+        InventoryUpsertRequest req = new InventoryUpsertRequest(UUID.randomUUID(), 50);
+
+        assertThatThrownBy(() -> service.update(productId, req))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("ERR-0400"));
+        verify(inventoryRepository, never()).save(any());
     }
 }

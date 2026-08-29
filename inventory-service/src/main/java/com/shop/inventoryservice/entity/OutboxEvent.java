@@ -19,8 +19,15 @@ import java.util.UUID;
 
 /**
  * Transactional outbox row. Written in the SAME transaction as the inventory
- * change; a relay drains PENDING rows to Kafka. Hard delete - no soft-delete
- * columns (spec section 3.4). aggregateId = productId (used as Kafka partition key).
+ * change; a relay drains PENDING rows to Kafka. Hard delete - no audit or
+ * soft-delete columns (spec section 3.4). aggregateId = productId (used as
+ * Kafka partition key).
+ *
+ * <p>Deliberately does NOT extend product-service's
+ * {@code AbstractMappedEntity}-based OutboxEvent: outbox rows are bulk-purged
+ * by retention, so audit + soft-delete columns would be dead weight, and the
+ * relay lifecycle is PENDING → SENT/FAILED — never a soft delete. This
+ * divergence from product-service is intentional; do not "align" it.</p>
  */
 @Entity
 @Table(name = "outbox_events")

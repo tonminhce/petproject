@@ -8,6 +8,7 @@ import com.shop.inventoryservice.entity.OutboxStatus;
 import com.shop.inventoryservice.entity.Reservation;
 import com.shop.inventoryservice.repository.OutboxEventRepository;
 import com.shop.inventoryservice.service.InventoryEventPublisher;
+import com.shop.inventoryservice.service.InventoryMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,13 @@ import java.util.UUID;
  * Writes one {@link OutboxEvent} row per domain action in the SAME
  * {@code @Transactional} boundary as the inventory change. The relay
  * ({@code InventoryOutboxRelay}) drains the table to Kafka.
+ *
+ * <p>Event contract: topic {@code shop.inventory.events.v1}, event types in
+ * dot.case ({@code inventory.reserved.v1}, …) — a deliberate CloudEvents-style
+ * contract (same style as {@code notification.send.v1}), NOT a typo of
+ * product-service's PascalCase {@code shop.product.lifecycle.v1} /
+ * {@code ProductCreated}. Both are registered in docs/SERVICE-CATALOG.md; any
+ * consumer handles exactly one of the two styles.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -32,11 +40,12 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final InventoryMetrics metrics;
 
     @Override
     public void publishReserved(Inventory inventory, Reservation reservation) {
-        // HashMap + null-guard - Map.of THROW NPE voi value null.
-        // orderId la OPTIONAL (spec 4.4) -> reserve khong orderId la flow chinh.
+        // HashMap + null-guard: Map.of throws NPE on null values. orderId is
+        // OPTIONAL (spec 4.4) — reserving without an orderId is a mainline flow.
         Map<String, Object> data = new HashMap<>();
         data.put("productId", inventory.getProductId());
         data.put("reservationId", reservation.getId());
@@ -110,5 +119,6 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
         event.setStatus(OutboxStatus.PENDING);
         event.setRetryCount(0);
         outboxRepository.save(event);
+        metrics.recordEventPublished(eventType);
     }
 }

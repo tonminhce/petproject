@@ -59,6 +59,7 @@ public enum ErrorCode {
     INVENTORY_ALREADY_EXISTS("INV-3006", "inventory.already.exists", HttpStatus.CONFLICT),
     INVENTORY_VERSION_CONFLICT("INV-3007", "inventory.version.conflict", HttpStatus.CONFLICT),
     INVENTORY_NOT_FOUND("INV-3008", "inventory.not.found", HttpStatus.NOT_FOUND),
+    INVENTORY_IN_USE("INV-3009", "inventory.in.use", HttpStatus.CONFLICT),
 
     // ---- Order domain ----
     ORDER_NOT_FOUND("ORD-4001", "order.not.found", HttpStatus.NOT_FOUND),

@@ -2,6 +2,7 @@ package com.shop.favouriteservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.favouriteservice.dto.request.FavouriteCreateRequest;
 import com.shop.favouriteservice.dto.response.FavouriteResponse;
 import com.shop.favouriteservice.entity.Favourite;
@@ -10,10 +11,11 @@ import com.shop.favouriteservice.repository.FavouriteRepository;
 import com.shop.favouriteservice.service.FavouriteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -26,11 +28,13 @@ public class FavouriteServiceImpl implements FavouriteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<FavouriteResponse> findAllByCurrentUser(UUID userId) {
-        return repo.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
+    public PageResponse<FavouriteResponse> findAllByCurrentUser(UUID userId, Pageable pageable) {
+        Page<Favourite> page = repo.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        return PageResponse.of(
+            page.map(mapper::toResponse).getContent(),
+            page.getNumber(),
+            page.getSize(),
+            page.getTotalElements());
     }
 
     @Override
@@ -69,7 +73,7 @@ public class FavouriteServiceImpl implements FavouriteService {
         String actor = auditorAware.getCurrentAuditor().orElse("system");
         int affected = repo.softDeleteByUserIdAndProductId(userId, productId, actor);
         if (affected == 0) {
-            // FAV-6003 — message đúng ngữ cảnh product (không tái dùng FAV-6001)
+            // FAV-6003 — product-scoped message, do NOT reuse FAV-6001 here.
             throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
         }
     }

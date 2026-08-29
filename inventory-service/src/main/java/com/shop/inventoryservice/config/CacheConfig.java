@@ -1,10 +1,16 @@
 package com.shop.inventoryservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCustomizer;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
@@ -35,10 +41,31 @@ public class CacheConfig {
             .transactionAware();   // NO-ARG ONLY — defer evict to after-commit
     }
 
+    /**
+     * Base cache configuration: fixed TTL, JSON value serializer, no null
+     * caching (a miss must stay a miss so deletes are not masked), and
+     * {@code <cacheName>::<key>} key layout.
+     *
+     * <p>The JSON serializer is REQUIRED, not optional: Spring Boot 4 +
+     * Spring Data Redis 4.x default to {@code JdkSerializationRedisSerializer},
+     * which cannot round-trip the {@link InventoryResponse} record (and would
+     * fail on its {@code Instant} field even if it could). Mirrors the setup
+     * in product-service's CacheConfig.</p>
+     */
     private RedisCacheConfiguration cacheConfig() {
+        ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        GenericJackson2JsonRedisSerializer serializer = GenericJackson2JsonRedisSerializer.builder()
+            .objectMapper(mapper)
+            .defaultTyping(true)
+            .typeHintPropertyName("@class")
+            .build();
         return RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(INVENTORY_TTL)
             .disableCachingNullValues()
-            .computePrefixWith(name -> name + "::");
+            .computePrefixWith(name -> name + "::")
+            .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer));
     }
 }

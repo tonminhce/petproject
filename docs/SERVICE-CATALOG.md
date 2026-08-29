@@ -188,6 +188,7 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 | Topic | Event | Payload |
 |-------|-------|---------|
 | `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }` — sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed |
+| `shop.inventory.events.v1` | `inventory.reserved.v1` / `inventory.committed.v1` / `inventory.released.v1` / `inventory.adjusted.v1` / `inventory.deleted.v1` | `{ eventId, eventType, occurredAt, productId, … }` — via Transactional Outbox (`InventoryOutboxRelay`, break-on-error to preserve per-aggregate ordering). Naming note: inventory uses CloudEvents-style dot.case event types (like `notification.send.v1`), deliberately NOT product's PascalCase — consumers handle exactly one style. Partition key = productId |
 
 > **Reference uses different topic** (`product.indexed.v1`) — workspace follows the outbox + Kafka envelope pattern from common-kafka. Search-service consumers are decoupled from this event format.
 
@@ -319,14 +320,14 @@ Note: ref uses `model/` not `entity/` — workspace should keep `entity/` for co
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/inventory` | USER/ADMIN | — | `List<InventoryDto>` |
+| `GET` | `/api/v1/inventory` | USER/ADMIN | — `?page=&size=` (size capped at 200, `PageableConstant.MAX_PAGE_SIZE`) | `ApiResponse<PageResponse<InventoryResponse>>` |
 | `GET` | `/api/v1/inventory/{productId}` | USER/ADMIN | — | `InventoryDto` |
 | `POST` | `/api/v1/inventory` | ADMIN | `InventoryDto { productId, availableQuantity }` | `InventoryDto` |
 | `PUT` | `/api/v1/inventory/{productId}` | ADMIN | `InventoryDto` | `InventoryDto` |
-| `POST` | `/api/v1/inventory/{productId}/reserve` | internal (order-service) | `ReserveRequest { quantity }` | `ReserveResponse { reservationId, expiresAt }` |
+| `POST` | `/api/v1/inventory/{productId}/reserve` | internal (order-service) — requires `SERVICE` or `ADMIN` realm role | `ReserveRequest { quantity }` | `ReserveResponse { reservationId, expiresAt }` |
 | `POST` | `/api/v1/inventory/reservations/{reservationId}/commit` | internal | — | `Void` |
 | `POST` | `/api/v1/inventory/reservations/{reservationId}/release` | internal | — | `Void` |
-| `DELETE` | `/api/v1/inventory/{productId}` | ADMIN | — | `Boolean` |
+| `DELETE` | `/api/v1/inventory/{productId}` | ADMIN | — | `ApiResponse<Void>` (409 `INV-3009` when active reservations exist) |
 
 ---
 
@@ -364,11 +365,11 @@ Note: ref uses `model/` not `entity/` — workspace should keep `entity/` for co
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/favourites` | USER | — | `List<FavouriteDto>` (current user's favourites) |
+| `GET` | `/api/v1/favourites` | USER | — `?page=&size=` (size capped at 200, `PageableConstant.MAX_PAGE_SIZE`) | `ApiResponse<PageResponse<FavouriteResponse>>` (current user's favourites, newest first) |
 | `GET` | `/api/v1/favourites/{favouriteId}` | USER | — | `FavouriteDto` |
 | `POST` | `/api/v1/favourites` | USER | `FavouriteCreateRequest { productId }` | `FavouriteDto` |
-| `DELETE` | `/api/v1/favourites/{favouriteId}` | USER | — | `Boolean` |
-| `DELETE` | `/api/v1/favourites/by-product/{productId}` | USER | — | `Boolean` |
+| `DELETE` | `/api/v1/favourites/{favouriteId}` | USER | — | `ApiResponse<Void>` (soft-delete) |
+| `DELETE` | `/api/v1/favourites/by-product/{productId}` | USER | — | `ApiResponse<Void>` (soft-delete) |
 
 Source: [favourite-service tree](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/favourite-service/src/main/java/com/ecommerce/favouriteservice).
 

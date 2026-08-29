@@ -26,8 +26,10 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InventoryController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -56,7 +58,7 @@ class InventoryControllerTest {
     void create_returns200() throws Exception {
         InventoryUpsertRequest req = new InventoryUpsertRequest(productId, 50);
         InventoryResponse resp = new InventoryResponse(productId, 50, 0, Instant.now());
-        when(inventoryService.create(any())).thenReturn(resp);
+        when(inventoryService.create(any(InventoryUpsertRequest.class))).thenReturn(resp);
 
         mockMvc.perform(post("/api/v1/inventory")
                 .contentType(MediaType.APPLICATION_JSON)

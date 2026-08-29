@@ -18,6 +18,7 @@ import com.shop.inventoryservice.service.InventoryEventPublisher;
 import com.shop.inventoryservice.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,8 +52,15 @@ public class InventoryServiceImpl implements InventoryService {
             page.getTotalElements());
     }
 
+    /**
+     * Cache-aside read — populated here, invalidated by
+     * {@code InventoryCacheService.evictAfterCommit} on every write path
+     * (create/update/delete/reserve/commit/release), so a hot read never
+     * outlives the write that stale-dated it.
+     */
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "inventory", key = "#productId")
     public InventoryResponse findById(UUID productId) {
         return inventoryRepository.findByProductId(productId)
             .map(mapper::toResponse)
@@ -76,6 +84,11 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public InventoryResponse update(UUID productId, InventoryUpsertRequest request) {
+        if (request.productId() != null && !request.productId().equals(productId)) {
+            // Body productId (if present) must agree with the path — never silently
+            // update a different row than the caller addressed.
+            throw BusinessException.badRequest("inventory.product.id.mismatch", request.productId(), productId);
+        }
         Inventory existing = inventoryRepository.findByProductId(productId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         mapper.partialUpdate(existing, request);
@@ -94,7 +107,9 @@ public class InventoryServiceImpl implements InventoryService {
         long active = reservationRepository.countByProductIdAndStatusIn(
             productId, List.of(ReservationStatus.PENDING, ReservationStatus.COMMITTED));
         if (active > 0) {
-            throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, productId);
+            // INV-3009 — the conflict is about the INVENTORY having active
+            // reservations, not about a reservation being in an invalid state.
+            throw BusinessException.of(ErrorCode.INVENTORY_IN_USE, productId);
         }
         inventoryRepository.delete(existing);
         publisher.publishDeleted(existing);

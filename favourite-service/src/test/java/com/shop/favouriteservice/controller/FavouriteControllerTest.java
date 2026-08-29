@@ -1,6 +1,7 @@
 package com.shop.favouriteservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.favouriteservice.dto.request.FavouriteCreateRequest;
 import com.shop.favouriteservice.dto.response.FavouriteResponse;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -74,14 +76,32 @@ class FavouriteControllerTest {
     }
 
     @Test
-    void findAll_returns200WithEnvelope() throws Exception {
-        when(favouriteService.findAllByCurrentUser(any(UUID.class))).thenReturn(List.of(sampleResponse()));
+    void findAll_returns200WithPagedEnvelope() throws Exception {
+        when(favouriteService.findAllByCurrentUser(any(UUID.class), any(Pageable.class)))
+                .thenReturn(PageResponse.of(List.of(sampleResponse()), 0, 20, 1));
 
         mockMvc.perform(get("/api/v1/favourites"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].id").value(favouriteId.toString()))
-                .andExpect(jsonPath("$.data[0].productId").value(productId.toString()));
+                .andExpect(jsonPath("$.data.content[0].id").value(favouriteId.toString()))
+                .andExpect(jsonPath("$.data.content[0].productId").value(productId.toString()))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @Test
+    void findAll_rejectsMalformedSubjectWith401() throws Exception {
+        Jwt jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "none")
+                .subject("not-a-uuid")
+                .claim("preferred_username", "alice")
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(jwt, Collections.emptyList()));
+
+        mockMvc.perform(get("/api/v1/favourites"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("ERR-0401"));
     }
 
     @Test
