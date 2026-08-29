@@ -19,6 +19,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -80,6 +82,29 @@ class OrderRepositoryTest {
         var result = repo.findByUserIdOrderByCreatedAtDesc(alice, PageRequest.of(0, 10));
 
         assertThat(result.getContent()).isEmpty();
+    }
+
+    /** Task 12 — reconciliation candidates: only PENDING orders older than the cutoff. */
+    @Test
+    void findByStatusAndCreatedAtBefore_returnsOnlyPendingOlderThanCutoff() {
+        var oldPending = persistOrder(alice, OrderStatus.PENDING);
+        var recentPending = persistOrder(alice, OrderStatus.PENDING);
+        var oldConfirmed = persistOrder(alice, OrderStatus.CONFIRMED);
+        backdateCreatedAt(oldPending, Instant.now().minus(Duration.ofMinutes(45)));
+        backdateCreatedAt(recentPending, Instant.now());
+        backdateCreatedAt(oldConfirmed, Instant.now().minus(Duration.ofHours(2)));
+
+        Instant cutoff = Instant.now().minus(Duration.ofMinutes(30));
+
+        var result = repo.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
+        assertThat(result).extracting(Order::getId).containsExactly(oldPending.getId());
+        assertThat(repo.countByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff)).isEqualTo(1L);
+    }
+
+    private void backdateCreatedAt(Order order, Instant createdAt) {
+        em.getEntityManager().createQuery("UPDATE Order o SET o.createdAt = :t WHERE o.id = :id")
+            .setParameter("t", createdAt).setParameter("id", order.getId()).executeUpdate();
+        em.clear();
     }
 
     private Order persistOrder(UUID userId, OrderStatus status) {

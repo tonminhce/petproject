@@ -71,3 +71,7 @@ order:
     # ship with payment + refund flows). Declared here so ops sees the planned knobs.
     expired-cart-days: 7
     cancelled-order-days: 90
+  reconciliation:
+    # Stuck-PENDING sweep (hardening §6) — env-overridable for ops tuning.
+    interval-ms: ${ORDER_RECONCILIATION_INTERVAL_MS:300000}
+    stuck-minutes: ${ORDER_RECONCILIATION_STUCK_MINUTES:30}
