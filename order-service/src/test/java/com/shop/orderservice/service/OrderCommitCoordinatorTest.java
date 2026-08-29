@@ -33,6 +33,7 @@ class OrderCommitCoordinatorTest {
     @Mock InventoryServiceClient inventoryClient;
 
     private SimpleMeterRegistry meterRegistry;
+    private OrderConfirmMetrics confirmMetrics;
     private OrderCommitCoordinator coordinator;
 
     private final UUID orderId = UUID.randomUUID();
@@ -48,7 +49,8 @@ class OrderCommitCoordinatorTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        coordinator = new OrderCommitCoordinator(promotionClient, inventoryClient, meterRegistry);
+        confirmMetrics = new OrderConfirmMetrics(meterRegistry);
+        coordinator = new OrderCommitCoordinator(promotionClient, inventoryClient, meterRegistry, confirmMetrics);
     }
 
     private Order orderWithPromotion() {
@@ -79,6 +81,15 @@ class OrderCommitCoordinatorTest {
         verify(inventoryClient, never()).releaseCommitted(any());
         assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "success").count())
             .isEqualTo(1.0);
+        // deferred ledger assertions — nothing went wrong in the happy path
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
+            .isZero();
+        assertThat(meterRegistry.counter("order.commit.rollback.failed").count()).isZero();
+        // §8 phase timers — one recorded sample per decorated phase (task 10)
+        assertThat(meterRegistry.get("order.confirm.duration").tag("phase", "commit_promotion").timer().count())
+            .isEqualTo(1L);
+        assertThat(meterRegistry.get("order.confirm.duration").tag("phase", "commit_inventory").timer().count())
+            .isEqualTo(1L);
     }
 
     /** Scenario 2 — promotion 5xx: rethrow, nothing else called, no compensation. */
@@ -94,6 +105,14 @@ class OrderCommitCoordinatorTest {
         verify(inventoryClient, never()).commit(any());
         verify(promotionClient, never()).releaseCommitted(any());
         verify(inventoryClient, never()).releaseCommitted(any());
+        // deferred ledger assertion — compensation ran (empty targets) and was counted
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
+            .isEqualTo(1.0);
+        // compensated path: promotion phase was timed before it failed; inventory phase never reached
+        assertThat(meterRegistry.get("order.confirm.duration").tag("phase", "commit_promotion").timer().count())
+            .isEqualTo(1L);
+        assertThat(meterRegistry.find("order.confirm.duration").tag("phase", "commit_inventory").timer())
+            .isNull();
     }
 
     /** Scenario 3 — item 2 of 3 fails: releaseCommitted in REVERSE order (item-1 then promotion), then rethrow. */
@@ -119,6 +138,11 @@ class OrderCommitCoordinatorTest {
         inOrder.verify(promotionClient).releaseCommitted(promoId);
         assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
             .isEqualTo(1.0);
+        // compensated path timers — inventory phase records the region up to the failing commit (task 10)
+        assertThat(meterRegistry.get("order.confirm.duration").tag("phase", "commit_promotion").timer().count())
+            .isEqualTo(1L);
+        assertThat(meterRegistry.get("order.confirm.duration").tag("phase", "commit_inventory").timer().count())
+            .isEqualTo(1L);
     }
 
     /** Scenario 4 — reservationId == null item (legacy): skipped, flow continues (D5). */
