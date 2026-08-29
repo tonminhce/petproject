@@ -26,7 +26,7 @@
 - **No new common modules** — only modify `common-core`, `common-spring` for the 2 ErrorCodes + 3 i18n keys.
 - **Favourite-service dependency baseline** (mirror product-service/pom.xml minus Kafka/Redis and without `spring-security-test` — controller slice uses `addFilters=false` so security isn't on the path; JPA slices don't need it either): `common-spring`, `spring-boot-starter-data-jpa`, `spring-boot-starter-liquibase`, `liquibase-core`, `postgresql`, `modelmapper`, `lombok`. Test: `spring-boot-starter-test`, `spring-boot-starter-webmvc-test` (Boot 4), `spring-boot-data-jpa-test`, `spring-boot-jpa-test`, `testcontainers-junit-jupiter`, `spring-boot-testcontainers`, `testcontainers-postgresql`, `awaitility`.
 - **Schema rules:** entity `extends AbstractMappedEntity` (auto `created_at`/`updated_at`/`created_by`/`updated_by` + `deleted`/`deleted_at`/`deleted_by`) + `@SQLRestriction("deleted = false")`. UUID primary key. Partial unique indexes `WHERE deleted = false`. FK `onDelete: RESTRICT` (but favourite-service declares **no FK** to product-service per §6.1).
-- **Auth pattern:** `@PreAuthorize("isAuthenticated()")` at class level; current user via `AuthenticatedUser.requireCurrent().id()` (parsed to `UUID` at controller boundary). NOT `@AuthenticationPrincipal AuthenticatedUser` — Spring's resolver matches on `Jwt` principal type, not the custom record. See spec §2.3 for full rationale.
+- **Auth pattern:** KHÔNG gắn `@PreAuthorize` (class hay method) — auth được enforce bởi `BaseSecurityConfig` filter chain (`anyRequest().authenticated()`, do `public-paths: []`); current user via `AuthenticatedUser.requireCurrent().id()` (parsed to `UUID` at controller boundary). NOT `@AuthenticationPrincipal AuthenticatedUser` — Spring's resolver matches on `Jwt` principal type, not the custom record. See spec §2.3 for full rationale.
 - **Exceptions** dùng `BusinessException.of(ErrorCode.X, args...)` factories — constructor private, KHÔNG `new BusinessException(...)`; message là i18n keys.
 - **Test stack Boot 4:** `@MockitoBean` (không `@MockBean`); controller slice uses new package `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`); controller tests `@AutoConfigureMockMvc(addFilters = false)` (không test 403 ở slice — common-security chain test ở integration). JPA slice ở Boot 4 đã tách artifacts riêng: `@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`); `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`). Boot 4 cũng KHÔNG cho phép `TestEntityManager` inject qua method param — phải `@Autowired` field. `@DataJpaTest` cần `@Import(LiquibaseAutoConfiguration.class)` (slice không tự chạy Liquibase).
 - **No Kafka.** No Redis. No `@EnableCaching`. No `@Scheduled`. No cross-service HTTP. No Resilence4j. No common-keycloak dep. No common-storage dep. No common-kafka dep.
@@ -38,9 +38,9 @@
 ### Modified common modules
 | File | Change |
 |---|---|
-| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | Add `FAVOURITE_NOT_FOUND ("FAV-6001")` + `FAVOURITE_ALREADY_EXISTS ("FAV-6002")` in a new "// ---- Favourite domain ----" section (range 6xxx — PAY already owns 5xxx) |
-| `utils/common-spring/src/main/resources/messages/messages_en.properties` | Add `favourite.not.found`, `favourite.already.exists`, `favourite.user.subject.malformed` |
-| `utils/common-spring/src/main/resources/messages/messages_vi.properties` | Add Vietnamese variants of the same 3 keys |
+| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | Add `FAVOURITE_NOT_FOUND ("FAV-6001")`, `FAVOURITE_ALREADY_EXISTS ("FAV-6002")`, `FAVOURITE_PRODUCT_NOT_FOUND ("FAV-6003")` in a new "// ---- Favourite domain ----" section (range 6xxx — PAY already owns 5xxx) |
+| `utils/common-spring/src/main/resources/messages/messages_en.properties` | Add `favourite.not.found`, `favourite.already.exists`, `favourite.product.not.found`, `favourite.user.subject.malformed` |
+| `utils/common-spring/src/main/resources/messages/messages_vi.properties` | Add Vietnamese variants of the same 4 keys |
 
 ### New favourite-service files (main)
 | File | Responsibility |
@@ -54,7 +54,7 @@
 | `favourite-service/src/main/java/com/shop/favouriteservice/mapper/FavouriteMapper.java` | `@Component` `ModelMapper` injected; only `toResponse()` — entity is built directly with `.builder()` in service (simpler than a record→entity round-trip) |
 | `favourite-service/src/main/java/com/shop/favouriteservice/service/FavouriteService.java` | interface: 5 methods |
 | `favourite-service/src/main/java/com/shop/favouriteservice/service/impls/FavouriteServiceImpl.java` | `@Service` + `@RequiredArgsConstructor` (no `@LogPerformance` — annotation exists in `common-logging` but product-service fleet doesn't use it; ponytail-lite keeps the service minimal) |
-| `favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java` | `@RequestMapping(ApiPaths.FAVOURITES)`, class-level `@PreAuthorize("isAuthenticated()")`, 5 endpoints, static `currentUserId()` helper |
+| `favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java` | `@RequestMapping(ApiPaths.FAVOURITES)`, KHÔNG `@PreAuthorize` (filter chain enforce), 5 endpoints, static `currentUserId()` helper |
 | `favourite-service/src/main/resources/application.yml` | port 8081, datasource, JPA validate, Liquibase, empty `shop.security.public-paths` |
 | `favourite-service/src/main/resources/db/changelog/db.changelog-master.yaml` | include 001 |
 | `favourite-service/src/main/resources/db/changelog/changelog-001-initial-schema.yaml` | 1 table + 2 indexes (partial unique + user_id) |
@@ -63,8 +63,9 @@
 | File | Coverage |
 |---|---|
 | `favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java` | 10 unit tests (Mockito `@Mock` repo + mapper + `AuditorAware`, `@InjectMocks` service) |
-| `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java` | 3 JPA slice tests (`@DataJpaTest` + `@Import(LiquibaseAutoConfiguration.class)` + `@Autowired TestEntityManager` field + Testcontainers Postgres) |
-| `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` | 6 MVC slice tests (`@WebMvcTest(FavouriteController.class)` + `@AutoConfigureMockMvc(addFilters=false)` + `@MockitoBean(FavouriteService)` + `@Import(ApiExceptionHandler.class)`) |
+| `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java` | 3 JPA slice tests (`@DataJpaTest` + `@Import({JpaAuditingAutoConfiguration, LiquibaseAutoConfiguration, TestLiquibaseConfig})` + `@Autowired TestEntityManager` field + Testcontainers Postgres) |
+| `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` | 6 MVC slice tests (`@WebMvcTest(FavouriteController.class)` + `@AutoConfigureMockMvc(addFilters=false)` + `@MockitoBean(FavouriteService)` + `@Import(ApiExceptionHandler.class)` + seed `JwtAuthenticationToken` vào SecurityContext) |
+| `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java` | Test-only `SpringLiquibase` bean + `@EnableJpaAuditing` — mirror `product-service/src/test/.../config/TestLiquibaseConfig.java` (repo slice cần nó để Liquibase chạy trong `@DataJpaTest`) |
 
 ### Modified infra
 | File | Change |
@@ -82,7 +83,7 @@
 - Modify: `utils/common-spring/src/main/resources/messages/messages_vi.properties`
 
 **Interfaces:**
-- Produces: 2 new `ErrorCode` enum constants; 3 new i18n keys each in `messages_en.properties` + `messages_vi.properties`
+- Produces: 3 new `ErrorCode` enum constants; 4 new i18n keys each in `messages_en.properties` + `messages_vi.properties`
 
 - [ ] **Step 1: Add ErrorCode constants**
 
@@ -91,10 +92,15 @@ Open `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.j
 ```java
     // ---- Favourite domain ---- (range 6xxx — PAY already owns 5xxx)
     FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
-    FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT);
+    FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
+    FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
 ```
 
-Note the **semicolon** at the end of `FAVOURITE_ALREADY_EXISTS(...);` — that becomes the last entry, so the existing semicolon on the prior line (`PAYMENT_NOT_FOUND(...);`) must be removed first.
+> **FAV-6003** dành cho `DELETE /by-product/{productId}` miss — tái dùng FAV-6001 sẽ in
+> `Favourite <product-uuid> not found`, sai ngữ cảnh (uuid đó là productId). Message key
+> riêng: `favourite.product.not.found` = "No favourite found for product {0}".
+
+Note the **semicolon** at the end of `FAVOURITE_PRODUCT_NOT_FOUND(...);` — that becomes the last entry, so the existing semicolon on the prior line (`PAYMENT_NOT_FOUND(...);`) must be removed first.
 
 Find the line:
 ```java
@@ -113,6 +119,7 @@ Open `utils/common-spring/src/main/resources/messages/messages_en.properties`. A
 ```properties
 favourite.not.found=Favourite {0} not found
 favourite.already.exists=Favourite already exists
+favourite.product.not.found=No favourite found for product {0}
 favourite.user.subject.malformed=Authentication token subject is not a valid user id
 ```
 
@@ -123,6 +130,7 @@ Open `utils/common-spring/src/main/resources/messages/messages_vi.properties`. A
 ```properties
 favourite.not.found=Không tìm thấy mục yêu thích {0}
 favourite.already.exists=Mục yêu thích đã tồn tại
+favourite.product.not.found=Không tìm thấy mục yêu thích cho sản phẩm {0}
 favourite.user.subject.malformed=Token xác thực không chứa user id hợp lệ
 ```
 
@@ -140,7 +148,7 @@ Expected: `BUILD SUCCESS` for both modules. No new tests added — only additive
 git add utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java \
         utils/common-spring/src/main/resources/messages/messages_en.properties \
         utils/common-spring/src/main/resources/messages/messages_vi.properties
-git commit -m "feat(common): FAVOURITE_NOT_FOUND + FAVOURITE_ALREADY_EXISTS ErrorCodes + i18n keys"
+git commit -m "feat(common): FAVOURITE ErrorCodes (FAV-6001..6003) + i18n keys"
 ```
 
 ---
@@ -379,7 +387,7 @@ databaseChangeLog:
             type: BOOLEAN
             constraints:
               nullable: false
-              defaultValue: false
+              defaultValueBoolean: false
         - column:
             name: deleted_at
             type: TIMESTAMP
@@ -639,12 +647,9 @@ Create `favourite-service/src/main/java/com/shop/favouriteservice/dto/response/F
 ```java
 package com.shop.favouriteservice.dto.response;
 
-import lombok.Builder;
-
 import java.time.Instant;
 import java.util.UUID;
 
-@Builder
 public record FavouriteResponse(
         UUID id,
         UUID userId,
@@ -653,7 +658,9 @@ public record FavouriteResponse(
 ) {}
 ```
 
-(The `@Builder` lets the mapper use `FavouriteResponse.builder()...build()` if preferred; manual `new FavouriteResponse(...)` also works.)
+> **Không `@Builder` (rev 2):** mapper dùng `new FavouriteResponse(...)` thủ công
+> (4 fields) — annotation chỉ tạo 2 code paths cho cùng 1 việc. Nhất quán với
+> spec §9 và `InventoryResponse` của inventory plan.
 
 - [ ] **Step 3: Create FavouriteMapper**
 
@@ -779,12 +786,7 @@ class FavouriteServiceImplTest {
     }
 
     private FavouriteResponse sampleResponse() {
-        return FavouriteResponse.builder()
-                .id(favouriteId)
-                .userId(userId)
-                .productId(productId)
-                .createdAt(Instant.now())
-                .build();
+        return new FavouriteResponse(favouriteId, userId, productId, Instant.now());
     }
 
     @Test
@@ -815,8 +817,8 @@ class FavouriteServiceImplTest {
         when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.findById(favouriteId, userId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("not found");
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6001"));
     }
 
     @Test
@@ -851,8 +853,8 @@ class FavouriteServiceImplTest {
 
         assertThatThrownBy(() -> service.create(userId,
                 new FavouriteCreateRequest(productId)))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("already exists");
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6002"));
     }
 
     @Test
@@ -871,8 +873,8 @@ class FavouriteServiceImplTest {
         when(repo.softDeleteByIdAndUserId(eq(favouriteId), eq(userId), eq("alice"))).thenReturn(0);
 
         assertThatThrownBy(() -> service.deleteById(favouriteId, userId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("not found");
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6001"));
     }
 
     @Test
@@ -891,11 +893,16 @@ class FavouriteServiceImplTest {
         when(repo.softDeleteByUserIdAndProductId(userId, productId, "alice")).thenReturn(0);
 
         assertThatThrownBy(() -> service.deleteByProductId(userId, productId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("not found");
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6003"));
     }
 }
 ```
+
+> **REV 2 — vì sao assert `getErrorCode()` thay vì message text:** `BusinessException.of()`
+> resolve message qua `Messages.get()` → fallback `ResourceBundle.getBundle(..., LocaleContextHolder.getLocale())`.
+> Trên máy locale vi_VN, message trả về tiếng Việt → `.hasMessageContaining("not found")`
+> FAIL. `getErrorCode()` (vd `"FAV-6001"`) là locale-independent contract.
 
 - [ ] **Step 2: Run test to verify it fails to compile (interface not yet defined)**
 
@@ -1008,7 +1015,8 @@ public class FavouriteServiceImpl implements FavouriteService {
         String actor = auditorAware.getCurrentAuditor().orElse("system");
         int affected = repo.softDeleteByUserIdAndProductId(userId, productId, actor);
         if (affected == 0) {
-            throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, productId);
+            // FAV-6003 — message đúng ngữ cảnh product (không tái dùng FAV-6001)
+            throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
         }
     }
 
@@ -1059,12 +1067,17 @@ import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.favouriteservice.dto.request.FavouriteCreateRequest;
 import com.shop.favouriteservice.dto.response.FavouriteResponse;
 import com.shop.favouriteservice.service.FavouriteService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.webmvc.WebMvcTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -1099,13 +1112,27 @@ class FavouriteControllerTest {
     private final UUID favouriteId = UUID.randomUUID();
     private final UUID productId = UUID.randomUUID();
 
-    private FavouriteResponse sampleResponse() {
-        return FavouriteResponse.builder()
-                .id(favouriteId)
-                .userId(userId)
-                .productId(productId)
-                .createdAt(Instant.now())
+    // ⚠️ BẮT BUỘC (rev 2): currentUserId() gọi AuthenticatedUser.requireCurrent() trong
+    // body method — nếu SecurityContext rỗng thì throw IllegalStateException → mọi test 500.
+    // ⚠️ AuthenticatedUser.current() CHỈ nhận JwtAuthenticationToken — TestingAuthenticationToken
+    // hay @WithMockUser đều rơi vào nhánh Optional.empty() → KHÔNG dùng được.
+    @BeforeEach
+    void seedSecurityContext() {
+        Jwt jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "none")
+                .subject(userId.toString())                              // sub = UUID string
+                .claim("preferred_username", "alice")
                 .build();
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();   // không leak sang test khác
+    }
+
+    private FavouriteResponse sampleResponse() {
+        return new FavouriteResponse(favouriteId, userId, productId, Instant.now());
     }
 
     @Test
@@ -1198,7 +1225,6 @@ import com.shop.favouriteservice.dto.response.FavouriteResponse;
 import com.shop.favouriteservice.service.FavouriteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -1210,10 +1236,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+// KHÔNG @PreAuthorize (rev 2): auth enforce bởi BaseSecurityConfig filter chain
+// (anyRequest().authenticated() — public-paths rỗng). Class-level annotation redundant
+// và gây vùng xám method-security trong @WebMvcTest slice. Khớp ProductController pattern.
 @RestController
 @RequestMapping(ApiPaths.FAVOURITES)
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class FavouriteController {
 
     private final FavouriteService service;
@@ -1286,6 +1314,45 @@ git commit -m "feat(favourite-service): FavouriteController + 6 MVC slice tests"
 - Consumes: `FavouriteRepository` (Task 5), `Favourite` entity (Task 4), Liquibase schema (Task 3)
 - Produces: 3 integration assertions on `@SQLRestriction`, soft-delete UPDATE, and partial unique constraint behavior
 
+> ⚠️ **REV 2:** mirror ĐẦY ĐỦ pattern của `ProductRepositoryTest` — gồm cả
+> `TestLiquibaseConfig` (test-only `SpringLiquibase` bean + `@EnableJpaAuditing`).
+> Thiếu class này, Liquibase có thể không chạy trong slice →
+> `relation "favourites" does not exist` → cả 3 tests fail. Image cũng đồng bộ
+> `postgres:16` (không `-alpine`) để khớp fleet.
+
+- [ ] **Step 0: Create TestLiquibaseConfig (test-only)**
+
+Create `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java`
+(copy nguyên văn từ `product-service/src/test/java/com/shop/productservice/config/TestLiquibaseConfig.java`):
+
+```java
+package com.shop.favouriteservice.config;
+
+import javax.sql.DataSource;
+import liquibase.integration.spring.SpringLiquibase;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+@Configuration(proxyBeanMethods = false)
+@EnableJpaAuditing(auditorAwareRef = "auditorAware")
+public class TestLiquibaseConfig {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SpringLiquibase springLiquibase(DataSource dataSource,
+                                           @Value("${spring.liquibase.change-log:classpath:db/changelog/db.changelog-master.yaml}") String changeLog) {
+        SpringLiquibase liquibase = new SpringLiquibase();
+        liquibase.setDataSource(dataSource);
+        liquibase.setChangeLog(changeLog);
+        return liquibase;
+    }
+}
+```
+
 - [ ] **Step 1: Write the failing test class**
 
 Create `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java`:
@@ -1294,6 +1361,7 @@ Create `favourite-service/src/test/java/com/shop/favouriteservice/repository/Fav
 package com.shop.favouriteservice.repository;
 
 import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
+import com.shop.favouriteservice.config.TestLiquibaseConfig;
 import com.shop.favouriteservice.entity.Favourite;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1316,21 +1384,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Mirrors product-service's {@code ProductRepositoryTest} pattern exactly so the
  * fleet stays consistent: {@code @DataJpaTest} with {@code Replace.NONE}, explicit
- * imports for {@code JpaAuditingAutoConfiguration} + {@code LiquibaseAutoConfiguration},
- * a static {@code @Container} + {@code @DynamicPropertySource} (NOT
- * {@code @ServiceConnection}).
+ * imports for {@code JpaAuditingAutoConfiguration} + {@code LiquibaseAutoConfiguration}
+ * + {@code TestLiquibaseConfig}, a static {@code @Container} + {@code @DynamicPropertySource}
+ * (NOT {@code @ServiceConnection}).
  */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
     JpaAuditingAutoConfiguration.class,
-    LiquibaseAutoConfiguration.class
+    LiquibaseAutoConfiguration.class,
+    TestLiquibaseConfig.class
 })
 class FavouriteRepositoryTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
         .withDatabaseName("favourite_test")
         .withUsername("test")
         .withPassword("test");
@@ -1420,7 +1489,8 @@ Expected: `BUILD SUCCESS` — 3 tests passed. (This task establishes the contrac
 - [ ] **Step 3: Commit**
 
 ```bash
-git add favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java
+git add favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java \
+        favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java
 git commit -m "test(favourite-service): FavouriteRepositoryTest — soft-delete filter + UPDATE + partial unique"
 ```
 

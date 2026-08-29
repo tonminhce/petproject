@@ -21,7 +21,7 @@ Favourite-service là microservice quản lý wishlist/favourites của user —
 | Persistence | PostgreSQL 16 + Liquibase + Spring Data JPA | Same as auth-service + product-service |
 | Cache | **None (deliberate, see §6.2)** | Per-user private data; cache invalidation dominates benefit |
 | Events | **None** | No downstream consumers identified |
-| Auth | Keycloak JWT + `@PreAuthorize("isAuthenticated()")` | All endpoints authenticated |
+| Auth | Keycloak JWT (`AuthenticatedUser.requireCurrent()`) | All endpoints authenticated via `anyRequest().authenticated()` filter chain |
 | Common | `common-spring`, `common-core`, `common-security`, `common-logging` | Same fleet baseline |
 
 **Out of scope (deliberate):**
@@ -252,7 +252,9 @@ public class FavouriteServiceImpl implements FavouriteService {
         int affected = repo.softDeleteByUserIdAndProductId(
                 userId, productId, auditorAware.getCurrentAuditor().orElse("system"));
         if (affected == 0) {
-            throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, productId);
+            // Code riêng cho by-product: message "Favourite {0} not found" với UUID
+            // sản phẩm đọc sai ngữ cảnh. Xem §7.2 (FAV-6003).
+            throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
         }
     }
 
@@ -316,12 +318,18 @@ Unlike product-service (which required `AbstractMappedEntity`, `JpaAuditingAutoC
 // In a new // ---- Favourite domain ---- section (range 6xxx — PAY already owns 5xxx):
 FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
 FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
+FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
 ```
+
+> **FAV-6003 (rev 2):** `DELETE /by-product/{productId}` miss cần message đúng ngữ cảnh
+> ("no favourite found for product {0}") — tái dùng FAV-6001 sẽ in ra
+> `Favourite <product-uuid> not found`, gây nhầm đó là favourite id.
 
 `utils/common-spring/src/main/resources/messages/messages_en.properties` (and `messages_vi.properties`):
 ```properties
 favourite.not.found=Favourite {0} not found
 favourite.already.exists=Favourite already exists
+favourite.product.not.found=No favourite found for product {0}
 favourite.user.subject.malformed=Authentication token subject is not a valid user id
 ```
 
@@ -329,6 +337,7 @@ Vietnamese (`messages_vi.properties`):
 ```properties
 favourite.not.found=Không tìm thấy mục yêu thích {0}
 favourite.already.exists=Mục yêu thích đã tồn tại
+favourite.product.not.found=Không tìm thấy mục yêu thích cho sản phẩm {0}
 favourite.user.subject.malformed=Token xác thực không chứa user id hợp lệ
 ```
 
@@ -379,6 +388,10 @@ shop:
 ### 7.4 No per-service `SecurityConfig`
 `common-security` auto-configures JWT chain via `BaseSecurityConfig.securityFilterChain` (`@ConditionalOnMissingBean`). The empty `public-paths` list means everything goes through `anyRequest().authenticated()` plus platform defaults (actuator/swagger/api-docs always public).
 
+> **CSRF (rev 2):** đã tắt sẵn — `SecurityProperties.csrfDisabled` default `true`
+> (`SecurityProperties.java:54`) và `common-spring/application.yml:122` set
+> `shop.security.csrf-disabled: true`. Service không cần làm gì thêm (stateless JWT).
+
 ### 7.5 docker-compose.yml delta
 Add `favourite-service` block (env vars + depends_on postgres). Mirror the pattern used by `product-service` block — but WITHOUT Redis/Kafka dependencies.
 
@@ -390,7 +403,6 @@ Add `favourite-service` block (env vars + depends_on postgres). Mirror the patte
 @RestController
 @RequestMapping(ApiPaths.FAVOURITES)
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class FavouriteController {
 
     private final FavouriteService service;
@@ -435,7 +447,17 @@ public class FavouriteController {
 }
 ```
 
-**Class-level `@PreAuthorize("isAuthenticated()")`** guards every endpoint; matches the design intent that favourite data is private. Owner check (`userId` match) happens in service layer.
+**KHÔNG có class-level `@PreAuthorize` (rev 2):** auth đã được enforce ở tầng filter chain
+bởi `BaseSecurityConfig` (`anyRequest().authenticated()` — do `public-paths: []`), nên
+annotation class-level là redundant. Bỏ nó còn giúp `@WebMvcTest` slice không rơi vào
+vùng xám method-security (xem §12.2 — test vẫn phải seed `SecurityContext` vì
+`requireCurrent()` chạy trong body method). Khớp pattern `ProductController` (chỉ dùng
+method-level `@PreAuthorize` cho admin ops).
+
+**REST convention note (rev 2):** `DELETE /by-product/{productId}` là deviation có chủ ý
+khỏi resource-as-collection (`/products/{id}/favourite`) — giữ URL phẳng dưới cùng 1
+resource `/favourites`, dễ map gateway route + permission theo prefix. ĐÃ CHẤP NHẬN,
+không debate lại khi review.
 
 **Why `AuthenticatedUser.requireCurrent()` static rather than `@AuthenticationPrincipal`:** see §2.3 — Spring Security's resolver matches on principal type (`Jwt`), not on the custom `AuthenticatedUser` record. Static call goes through `SecurityContextHolder` which is the documented `common-security` idiom.
 
@@ -493,7 +515,8 @@ public class FavouriteMapper {
 
 ## 11. Error handling
 
-- **No favourite found** → `BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id)` → HTTP 404, code `FAV-6001`.
+- **No favourite found** (by id) → `BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id)` → HTTP 404, code `FAV-6001`.
+- **No favourite for product** (delete-by-product miss) → `BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId)` → HTTP 404, code `FAV-6003`.
 - **Duplicate (user, product)** → `BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS)` → HTTP 409, code `FAV-6002`.
 - **Owner mismatch** (someone else's favouriteId) → treat as `FAVOURITE_NOT_FOUND` (do NOT throw FORBIDDEN — don't leak existence).
 - **Bean Validation fail** on `FavouriteCreateRequest` → `ApiExceptionHandler` → 400 + validation errors array.
@@ -540,6 +563,18 @@ No per-service `@ExceptionHandler`. Centralized in `common-spring/web/exception/
 5. `deleteById_returns200WithMessageEnvelope`
 6. `deleteByProduct_returns200WithMessageEnvelope`
 
+> ⚠️ **REV 2 — SecurityContext seeding là BẮT BUỘC:** `currentUserId()` gọi
+> `AuthenticatedUser.requireCurrent()` ngay trong body method — với `addFilters=false`
+> và SecurityContext rỗng, nó throw `IllegalStateException` → **cả 6 tests fail 500**.
+> Phải seed trong `@BeforeEach` một `JwtAuthenticationToken` bọc `Jwt` có claim `sub` =
+> UUID string (⚠️ `AuthenticatedUser.current()` CHỈ nhận `JwtAuthenticationToken` —
+> `TestingAuthenticationToken`/`@WithMockUser` KHÔNG chạy, sẽ rơi vào nhánh
+> `Optional.empty()`), rồi `SecurityContextHolder.clearContext()` trong `@AfterEach`.
+> Lưu ý `@PreAuthorize` không phải vấn đề ở slice: `@EnableMethodSecurity` nằm trong
+> common-security `SecurityAutoConfiguration`, không thuộc WebMvcTest slice imports
+> → method security không kích hoạt trong slice; và controller (rev 2) không còn
+> class-level `@PreAuthorize` nữa. Xem code hoàn chỉnh ở Plan Task 8.
+
 Total **~19 tests** across 3 classes.
 
 **Fleet convention:** every `@WebMvcTest` controller-slice class must `@Import(ApiExceptionHandler.class)` so validation failures populate `errors[]` in the response envelope. Confirmed pattern in `product-service/src/test/java/com/shop/productservice/controller/ProductControllerTest.java:31`.
@@ -568,8 +603,8 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 ### Modified common modules
 | File | Change |
 |---|---|
-| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | Add `FAVOURITE_NOT_FOUND`, `FAVOURITE_ALREADY_EXISTS` |
-| `utils/common-spring/src/main/resources/messages/messages_en.properties` | Add `favourite.not.found`, `favourite.already.exists` |
+| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | Add `FAVOURITE_NOT_FOUND` (FAV-6001), `FAVOURITE_ALREADY_EXISTS` (FAV-6002), `FAVOURITE_PRODUCT_NOT_FOUND` (FAV-6003) |
+| `utils/common-spring/src/main/resources/messages/messages_en.properties` | Add `favourite.not.found`, `favourite.already.exists`, `favourite.product.not.found` |
 | `utils/common-spring/src/main/resources/messages/messages_vi.properties` | Add Vietnamese versions |
 
 ### New favourite-service files
@@ -594,6 +629,7 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 | `favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java` | 10 unit tests |
 | `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java` | 3 JPA slice tests |
 | `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` | 6 MVC slice tests |
+| `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java` | Test-only `SpringLiquibase` bean + `@EnableJpaAuditing` — mirror `product-service` repo-slice pattern (§12.2) |
 
 ### Modified parent / docker
 | File | Change |
@@ -668,3 +704,4 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 ## 18. Changelog
 
 - 2026-08-28: Initial design (this document). Drafted from brainstorm: scope = favourite-service, no cross-service validation, soft-delete, no Redis cache, no Kafka events.
+- 2026-08-28 (rev 2): Deep review fixes — (1) thêm `FAVOURITE_PRODUCT_NOT_FOUND` (FAV-6003) + i18n key cho delete-by-product miss (message sai ngữ cảnh khi tái dùng FAV-6001); (2) bỏ class-level `@PreAuthorize` khỏi FavouriteController (redundant với `anyRequest().authenticated()`, khớp ProductController); (3) §12.2: bắt buộc seed `JwtAuthenticationToken` trong controller test (`requireCurrent()` throw ISE nếu SecurityContext rỗng — cả 6 tests sẽ fail 500; TestingAuthenticationToken KHÔNG hoạt động vì `AuthenticatedUser.current()` chỉ nhận JWT token type); (4) §7.4: ghi rõ CSRF đã tắt sẵn qua defaults; (5) ghi rõ `/by-product/` là REST deviation có chủ ý.
