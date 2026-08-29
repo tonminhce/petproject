@@ -5,6 +5,7 @@ import com.shop.inventoryservice.entity.Reservation;
 import com.shop.inventoryservice.entity.ReservationStatus;
 import com.shop.inventoryservice.repository.InventoryRepository;
 import com.shop.inventoryservice.repository.ReservationRepository;
+import com.shop.inventoryservice.service.InventoryCacheService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class ReservationCleanupScheduler {
 
     private final ReservationRepository reservationRepository;
     private final InventoryRepository inventoryRepository;
+    private final InventoryCacheService cacheService;
 
     @jakarta.persistence.PersistenceContext
     private EntityManager entityManager;
@@ -85,6 +87,10 @@ public class ReservationCleanupScheduler {
                 reservations.forEach(r -> r.setStatus(ReservationStatus.EXPIRED));
                 inventoryRepository.save(inv);
                 reservationRepository.saveAll(reservations);
+                // Same invariant as the service-layer write paths: any mutation to
+                // Inventory.reservedQuantity must drop the cached entry, otherwise a
+                // hot GET /api/v1/inventory/{id} reads a stale value for up to 60s.
+                cacheService.evictAfterCommit(productId);
             });
         });
     }

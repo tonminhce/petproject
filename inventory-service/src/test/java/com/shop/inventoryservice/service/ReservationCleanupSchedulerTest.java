@@ -5,6 +5,7 @@ import com.shop.inventoryservice.entity.Reservation;
 import com.shop.inventoryservice.entity.ReservationStatus;
 import com.shop.inventoryservice.repository.InventoryRepository;
 import com.shop.inventoryservice.repository.ReservationRepository;
+import com.shop.inventoryservice.service.InventoryCacheService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class ReservationCleanupSchedulerTest {
     @Mock ReservationRepository reservationRepository;
     @Mock InventoryRepository inventoryRepository;
     @Mock EntityManager entityManager;
+    @Mock InventoryCacheService cacheService;
     @InjectMocks ReservationCleanupScheduler scheduler;
 
     private final UUID productId = UUID.randomUUID();
@@ -64,6 +66,9 @@ class ReservationCleanupSchedulerTest {
         assertThat(expired.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
         verify(inventoryRepository).save(inventory);
         verify(reservationRepository).saveAll(List.of(expired));
+        // Cache invariant — every batch that mutates Inventory.reservedQuantity
+        // must drop the corresponding cache entry.
+        verify(cacheService).evictAfterCommit(productId);
         verify(entityManager).flush();
         verify(entityManager).clear();
     }
@@ -78,6 +83,7 @@ class ReservationCleanupSchedulerTest {
 
         verify(inventoryRepository, never()).findByProductId(any());
         verify(reservationRepository, never()).saveAll(any());
+        verify(cacheService, never()).evictAfterCommit(any());
         verify(entityManager, never()).flush();
     }
 }

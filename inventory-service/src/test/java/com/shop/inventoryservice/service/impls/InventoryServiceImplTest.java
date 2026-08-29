@@ -220,4 +220,84 @@ class InventoryServiceImplTest {
                 assertThat(ex.getErrorCode()).isEqualTo("ERR-0400"));
         verify(inventoryRepository, never()).save(any());
     }
+
+    // -----------------------------------------------------------------
+    // Cache-invariants: every write path that touches Inventory must drop the
+    // cached entry via InventoryCacheService.evictAfterCommit. These tests are
+    // the regression net — if a new write method is added and forgets the evict,
+    // the suite goes red.
+    // -----------------------------------------------------------------
+
+    @Test
+    void create_evictsCacheAfterCommit() {
+        InventoryUpsertRequest req = new InventoryUpsertRequest(productId, 50);
+        when(inventoryRepository.existsByProductId(productId)).thenReturn(false);
+        when(mapper.toEntity(req)).thenReturn(inventory);
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(mapper.toResponse(inventory)).thenReturn(new InventoryResponse(productId, 50, 0, null));
+
+        service.create(req);
+
+        verify(cacheService).evictAfterCommit(productId);
+    }
+
+    @Test
+    void update_evictsCacheAfterCommit() {
+        InventoryUpsertRequest req = new InventoryUpsertRequest(productId, 75);
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(mapper.toResponse(inventory)).thenReturn(new InventoryResponse(productId, 75, 0, null));
+
+        service.update(productId, req);
+
+        verify(cacheService).evictAfterCommit(productId);
+    }
+
+    @Test
+    void delete_evictsCacheAfterCommit() {
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+        when(reservationRepository.countByProductIdAndStatusIn(eq(productId), anyList())).thenReturn(0L);
+
+        service.delete(productId);
+
+        verify(cacheService).evictAfterCommit(productId);
+    }
+
+    @Test
+    void reserve_evictsCacheAfterCommit() {
+        ReserveRequest req = new ReserveRequest(5, null);
+        when(reservationRepository.findByProductIdAndStatusAndExpiresAtBefore(
+                eq(productId), eq(ReservationStatus.PENDING), any(Instant.class))).thenReturn(List.of());
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
+
+        service.reserve(productId, req);
+
+        verify(cacheService, atLeastOnce()).evictAfterCommit(productId);
+    }
+
+    @Test
+    void commit_evictsCacheAfterCommit() {
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+        service.commit(reservationId);
+
+        verify(cacheService).evictAfterCommit(productId);
+    }
+
+    @Test
+    void release_evictsCacheAfterCommit() {
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+        service.release(reservationId);
+
+        verify(cacheService).evictAfterCommit(productId);
+    }
 }

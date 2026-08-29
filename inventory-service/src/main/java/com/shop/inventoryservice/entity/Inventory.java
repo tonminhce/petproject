@@ -25,8 +25,8 @@ import java.util.UUID;
  * mutable numeric state, not an audited business record — it carries a single
  * {@code lastUpdated} marker instead of the audit columns, which keeps the
  * hot reserve/commit/release writes free of extra UPDATE-wide column churn.
- * Contrast with this module's {@link OutboxEvent}, which DOES extend it to
- * match product-service's outbox.</p>
+ * {@code OutboxEvent} in this module is also a flat class — the divergence
+ * from product-service is intentional on both entities (see spec §3.4).</p>
  */
 @Entity
 @Table(name = "inventory")

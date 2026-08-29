@@ -17,9 +17,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     List<Reservation> findByProductIdAndStatusAndExpiresAtBefore(
             UUID productId, ReservationStatus status, Instant expiresBefore);
 
-    // ReservationCleanupScheduler (Task 22) - sweep TOAN BO, dung index idx_reservations_status_expires.
-    // BAT BUOC Pageable (batch) - query khong gioi han co the load 50K+ entities sau 1 thoi gian
-    // van hanh (backlog khi job downtime / traffic flash-sale) -> memory pressure.
+    // ReservationCleanupScheduler - sweep ALL pending-and-expired in pages.
+    // Pageable is REQUIRED: an unbounded query can pull 50K+ entities after extended
+    // downtime or a flash-sale backlog, blowing the persistence-context heap.
+    // Hits idx_reservations_status_expires.
     List<Reservation> findByStatusAndExpiresAtBefore(
             ReservationStatus status, Instant expiresBefore, Pageable pageable);
 

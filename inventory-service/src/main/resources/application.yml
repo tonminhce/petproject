@@ -44,6 +44,7 @@ spring:
 
 server:
   # Override the common-spring default 8080 (compose maps 8082:8082).
+  # (shutdown: graceful is inherited from common-spring/application.yml.)
   port: ${SERVER_PORT:8082}
 
 shop:
