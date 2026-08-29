@@ -91,4 +91,11 @@ public class InventoryController {
         reservationService.releaseWithRetry(reservationId);
         return ApiResponse.message("Reservation released successfully");
     }
+
+    @PostMapping("/reservations/{reservationId}/release-committed")
+    @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
+    public ApiResponse<Void> releaseCommitted(@PathVariable UUID reservationId) {
+        reservationService.releaseCommittedWithRetry(reservationId);
+        return ApiResponse.ok(null);
+    }
 }

@@ -185,7 +185,7 @@ class InventoryServiceImplTest {
 
         assertThat(inventory.getReservedQuantity()).isEqualTo(0);
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
-        verify(publisher).publishReleased(inventory, reservation);
+        verify(publisher).publishReleased(inventory, reservation, "PENDING");
         verify(cacheService).evictAfterCommit(productId);
     }
 

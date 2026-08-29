@@ -201,7 +201,41 @@ public class InventoryServiceImpl implements InventoryService {
         r.setReleasedAt(Instant.now());
         inventoryRepository.save(inventory);
         reservationRepository.save(r);
-        publisher.publishReleased(inventory, r);
+        publisher.publishReleased(inventory, r, "PENDING");
+        cacheService.evictAfterCommit(r.getProductId());
+    }
+
+    /**
+     * ⚠️ Hardening spec §7.2 — half-commit rollback. COMMITTED → RELEASED
+     * with restock: commit() already moved the quantity out of
+     * {@code reservedQuantity} and deducted {@code availableQuantity}, so
+     * releasing a committed reservation credits the stock back instead of
+     * freeing the hold.
+     */
+    @Override
+    @Transactional
+    public void releaseCommitted(UUID reservationId) {
+        Reservation r = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
+        // Idempotent retry: quota already restored — safe no-op (hardening spec §7.2)
+        if (r.getStatus() == ReservationStatus.RELEASED
+            || r.getStatus() == ReservationStatus.EXPIRED) {
+            log.info("Reservation {} already terminalized (idempotent retry)", reservationId);
+            return;
+        }
+        if (r.getStatus() != ReservationStatus.COMMITTED) {
+            // PENDING rows belong to the plain release() path.
+            throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
+        }
+        Inventory inv = inventoryRepository.findByProductId(r.getProductId())
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
+        inv.setAvailableQuantity(inv.getAvailableQuantity() + r.getQuantity());
+        inv.setLastUpdated(Instant.now());
+        r.setStatus(ReservationStatus.RELEASED);
+        r.setReleasedAt(Instant.now());
+        inventoryRepository.save(inv);
+        reservationRepository.save(r);
+        publisher.publishReleased(inv, r, "COMMITTED");
         cacheService.evictAfterCommit(r.getProductId());
     }
 

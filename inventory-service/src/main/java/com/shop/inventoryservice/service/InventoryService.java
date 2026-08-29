@@ -26,4 +26,6 @@ public interface InventoryService {
     void commit(UUID reservationId);
 
     void release(UUID reservationId);
+
+    void releaseCommitted(UUID reservationId);
 }

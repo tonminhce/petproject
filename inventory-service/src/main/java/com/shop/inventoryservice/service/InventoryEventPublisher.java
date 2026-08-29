@@ -9,7 +9,7 @@ public interface InventoryEventPublisher {
 
     void publishCommitted(Inventory inventory, Reservation reservation);
 
-    void publishReleased(Inventory inventory, Reservation reservation);
+    void publishReleased(Inventory inventory, Reservation reservation, String previousStatus);
 
     void publishAdjusted(Inventory inventory);
 

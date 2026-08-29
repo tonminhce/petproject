@@ -74,6 +74,22 @@ public class ReservationServiceImpl implements ReservationService {
         }
     }
 
+    @Override
+    public void releaseCommittedWithRetry(UUID reservationId) {
+        int attempt = 0;
+        while (true) {
+            try {
+                inventoryService.releaseCommitted(reservationId);
+                return;
+            } catch (OptimisticLockingFailureException ex) {
+                if (++attempt >= MAX_ATTEMPTS) {
+                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, reservationId);
+                }
+                sleep(BACKOFF_BASE_MS * attempt);
+            }
+        }
+    }
+
     private void sleep(long ms) {
         try {
             Thread.sleep(ms);

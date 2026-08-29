@@ -70,7 +70,7 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
     }
 
     @Override
-    public void publishReleased(Inventory inventory, Reservation reservation) {
+    public void publishReleased(Inventory inventory, Reservation reservation, String previousStatus) {
         Map<String, Object> data = new HashMap<>();
         data.put("productId", inventory.getProductId());
         data.put("reservationId", reservation.getId());
@@ -78,6 +78,10 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
         if (reservation.getOrderId() != null) {
             data.put("orderId", reservation.getOrderId());
         }
+        // previousStatus ("PENDING"|"COMMITTED") — hardening spec §7.2: lets
+        // consumers distinguish a plain release from a half-commit rollback
+        // (restock) without a separate event type.
+        data.put("previousStatus", previousStatus);
         save(inventory, "inventory.released.v1", data);
     }
 

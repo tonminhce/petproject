@@ -12,4 +12,6 @@ public interface ReservationService {
     void commitWithRetry(UUID reservationId);
 
     void releaseWithRetry(UUID reservationId);
+
+    void releaseCommittedWithRetry(UUID reservationId);
 }
