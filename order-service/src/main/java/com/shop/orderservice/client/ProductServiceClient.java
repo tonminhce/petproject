@@ -1,11 +1,14 @@
 package com.shop.orderservice.client;
 
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.orderservice.dto.internal.ProductSnapshot;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -32,10 +35,17 @@ public class ProductServiceClient {
 
     @Cacheable(value = "productPrice", key = "#productId")
     public ProductSnapshot getProduct(UUID productId) {
-        ApiResponse<ProductSnapshot> resp = restClient.get()
-            .uri("/api/v1/products/{id}", productId)
-            .retrieve()
-            .body(RESPONSE_TYPE);
+        ApiResponse<ProductSnapshot> resp;
+        try {
+            resp = restClient.get()
+                .uri("/api/v1/products/{id}", productId)
+                .retrieve()
+                .body(RESPONSE_TYPE);
+        } catch (HttpClientErrorException.NotFound ex) {
+            // A 404 from product-service must surface as the platform 404, not a raw
+            // RestClient error (which the caller would turn into a 500) — review M7.
+            throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, productId);
+        }
         return resp.data();
     }
 }

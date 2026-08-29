@@ -1,6 +1,7 @@
 package com.shop.orderservice.entity;
 
 import com.shop.common.core.data.AbstractMappedEntity;
+import com.shop.orderservice.constant.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -57,4 +58,15 @@ public class Order extends AbstractMappedEntity {
 
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
+
+    /**
+     * Optimistic-lock guard for status transitions (review I3): without it, a
+     * concurrent confirm + cancel both pass the state machine and last-write-wins,
+     * leaving e.g. a CANCELLED order with confirmedAt set and both lifecycle events
+     * published. Mirrors inventory-service's Inventory/Reservation precedent.
+     */
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
 }

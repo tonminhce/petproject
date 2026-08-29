@@ -2,7 +2,7 @@ package com.shop.orderservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.service.OrderStatusService;
 import org.springframework.stereotype.Service;
 

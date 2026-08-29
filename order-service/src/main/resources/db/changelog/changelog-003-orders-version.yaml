@@ -1,0 +1,22 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  Optimistic-lock version column on orders (review I3): concurrent status
+  #  transitions (e.g. admin confirm racing a user cancel) previously did
+  #  read-validate-write with no guard — last write won and the state machine
+  #  could be bypassed. Backfills 0 for existing rows; Hibernate bumps it on
+  #  every UPDATE from then on.
+  # ===========================================================================
+  - changeSet:
+      id: 003-add-orders-version
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

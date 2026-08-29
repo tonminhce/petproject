@@ -14,10 +14,10 @@ import java.time.Duration;
  * {@code inventoryRestClient}, etc.) — clients inject by name with
  * {@code @Qualifier("productRestClient")}.
  *
- * <p>⚠️ P1-3 — NO auth header set HERE (shared builder). Authorization được set
- * PER-CALL trong từng client method (Task 11) — chỉ {@code InventoryServiceClient}
- * cần token (product GET là public-path; tax/promotion disabled trong MVP).
- * Header lấy từ {@code ServiceTokenProvider.getToken()} (Task 2).</p>
+ * <p>P1-3 — no auth header is set HERE (shared builders). Authorization is attached
+ * PER-CALL inside each client method — only {@code InventoryServiceClient} needs a
+ * token (product GET is a public path; tax/promotion are disabled in the MVP). The
+ * header value comes from {@code ServiceTokenProvider.getToken()}.</p>
  */
 @Configuration
 public class RestClientConfig {

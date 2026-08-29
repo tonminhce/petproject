@@ -255,6 +255,15 @@ Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microse
 
 ### 3.4 Kafka events
 
+> **Workspace divergence** — the workspace order-service publishes topic
+> `shop.order.lifecycle.v1` (Transactional Outbox + `OrderOutboxRelay`, Kafka key =
+> orderId) with three dot-case event types: `order.created.v1` (orderId, userId, status,
+> items[], subtotal, taxAmount, discountAmount, total, couponCode, createdAt),
+> `order.updated.v1` (orderId, status, transitionedAt) and `order.cancelled.v1`
+> (orderId, cancelledAt, refunded=false until payment-service ships). Outbound HTTP
+> uses `RestClient` + `ApiResponse` envelope unwrapping (not Feign/`CallAPI`).
+> payment-service is the intended consumer of `order.created.v1`.
+
 | Topic | Producer | Consumer | Payload |
 |-------|----------|----------|---------|
 | `order.created.v1` | order-service | payment, search, notification | `OrderCreatedEvent { orderId, userId, items[], totalAmount }` |

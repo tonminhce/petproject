@@ -1,6 +1,6 @@
 package com.shop.orderservice.dto.response;
 
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;

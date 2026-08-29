@@ -1,5 +1,6 @@
 package com.shop.orderservice.entity;
 
+import com.shop.common.core.constants.OutboxStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -39,7 +39,8 @@ public class InventoryServiceClient {
         try {
             ApiResponse<ReservationResponse> resp = restClient.post()
                 .uri("/api/v1/inventory/{productId}/reserve", productId)
-                // ⚠️ P0-7 — reserve yêu cầu SERVICE role (inventory §4.2). Không có header = 401.
+                // P0-7 — reserve requires the SERVICE role (inventory §4.2); a missing
+                // header would fail with 401 before anything else is checked.
                 .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
                 .body(request)
                 .retrieve()
@@ -47,7 +48,10 @@ public class InventoryServiceClient {
             return resp.data().reservationId();
         } catch (HttpClientErrorException ex) {
             log.warn("Inventory reserve failed for product {}: {}", productId, ex.getMessage());
-            if (ex.getStatusCode() == HttpStatus.CONFLICT) {
+            // 409 = insufficient stock; 404 = no inventory row for the product. Both are
+            // "this item cannot be reserved" — route both through the compensation
+            // exception instead of surfacing a 500 (review M7).
+            if (ex.getStatusCode() == HttpStatus.CONFLICT || ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new StockReservationFailedException(productId, ex);
             }
             throw BusinessException.of(ErrorCode.INTERNAL_SERVER_ERROR, "inventory");

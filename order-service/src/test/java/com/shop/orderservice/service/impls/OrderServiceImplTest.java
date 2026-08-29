@@ -5,7 +5,7 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.Order;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.mapper.OrderMapper;
 import com.shop.orderservice.repository.*;
@@ -90,6 +90,11 @@ class OrderServiceImplTest {
     void cancelOrder_throwsOnDelivered() {
         order.setStatus(OrderStatus.DELIVERED);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        // orderStatusService is a mock — encode the real state-machine contract
+        // (DELIVERED is terminal) instead of relying on service internals.
+        doThrow(BusinessException.of(ErrorCode.ORDER_INVALID_STATE_TRANSITION,
+                OrderStatus.DELIVERED, OrderStatus.CANCELLED))
+            .when(orderStatusService).validateTransition(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
 
         assertThatThrownBy(() -> service.cancelOrder(orderId, userId, true))
             .isInstanceOf(BusinessException.class);
@@ -127,7 +132,7 @@ class OrderServiceImplTest {
     void confirmOrder_setsConfirmedAt() {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-        service.confirmOrder(orderId, true);
+        service.confirmOrder(orderId);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(order.getConfirmedAt()).isNotNull();
@@ -138,7 +143,7 @@ class OrderServiceImplTest {
         order.setStatus(OrderStatus.CONFIRMED);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-        service.shipOrder(orderId, true);
+        service.shipOrder(orderId);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
         assertThat(order.getShippedAt()).isNotNull();
@@ -149,7 +154,7 @@ class OrderServiceImplTest {
         order.setStatus(OrderStatus.SHIPPED);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-        service.deliverOrder(orderId, true);
+        service.deliverOrder(orderId);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERED);
         assertThat(order.getDeliveredAt()).isNotNull();

@@ -3,11 +3,12 @@ package com.shop.orderservice.service.impls;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.entity.OrderItem;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.entity.OutboxEvent;
-import com.shop.orderservice.entity.OutboxStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.orderservice.repository.OutboxEventRepository;
 import com.shop.orderservice.service.OrderEventPublisher;
+import com.shop.orderservice.service.OrderMetrics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final OrderMetrics metrics;
 
     @Override
     public void publishCreated(Order order, List<OrderItem> items) {
@@ -99,6 +101,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
         event.setStatus(OutboxStatus.PENDING);
         event.setRetryCount(0);
         outboxRepository.save(event);
+        metrics.recordEventPublished(eventType);
     }
 
     private static Map<String, Object> itemToMap(OrderItem item) {

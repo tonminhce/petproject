@@ -12,6 +12,10 @@ public interface IdempotencyService {
     /** Update in-flight row with final response (same TX as saga). */
     void complete(String key, UUID userId, OrderResponse response, int status);
 
-    /** Best-effort delete in-flight row on saga failure (REQUIRES_NEW). */
-    void abort(String key, UUID userId);
+    /**
+     * Best-effort delete in-flight row on saga failure (REQUIRES_NEW).
+     * {@code requestHash} guards against ever deleting a row this execution
+     * does not own — only an in-flight row with the identical hash is removed.
+     */
+    void abort(String key, UUID userId, String requestHash);
 }

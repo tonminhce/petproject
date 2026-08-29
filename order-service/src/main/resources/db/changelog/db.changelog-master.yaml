@@ -2,3 +2,9 @@ databaseChangeLog:
   - include:
       file: changelog-001-initial-schema.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-002-outbox-pending-index.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-003-orders-version.yaml
+      relativeToChangelogFile: true

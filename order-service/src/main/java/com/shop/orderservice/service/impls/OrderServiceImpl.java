@@ -13,7 +13,7 @@ import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.entity.OrderItem;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.mapper.OrderMapper;
 import com.shop.orderservice.repository.CartItemRepository;
@@ -40,6 +40,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,16 +68,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // 1. Idempotency pre-insert (REQUIRES_NEW — commits in-flight row before saga)
-        Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId, hash(request));
-        if (cached.isPresent()) return cached.get();  // ← rev 2 fix O-N1 (REPLAY — DO NOT re-run saga)
+        // 1. Idempotency pre-insert (in-flight row commits in its own TX, before the saga)
+        String requestHash = hash(request);
+        Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId, requestHash);
+        if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the saga
 
         // 2. Delegate to doCreateOrder — all-or-nothing failure wrapped in single catch
         try {
             return doCreateOrder(userId, request, idempotencyKey);
         } catch (RuntimeException ex) {
-            // rev 2 fix O-N2: single catch covers validation, pricing, reserve, etc.
-            idempotencyService.abort(idempotencyKey, userId);
+            // Single catch covers validation, pricing, reserve, etc. begin() throws are
+            // deliberately OUTSIDE this try: a collision 409 must never delete another
+            // execution's in-flight row; the requestHash guard in abort() is the second lock.
+            idempotencyService.abort(idempotencyKey, userId, requestHash);
             throw ex;
         }
     }
@@ -93,7 +97,12 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> BusinessException.of(ErrorCode.CART_NOT_FOUND, request.cartId()))
             : cartRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.CART_EMPTY));
-        List<CartItem> items = cartItemRepository.findByCartId(cart.getId());
+        // Deterministic reserve order (sorted by productId): the compensation path
+        // must not depend on arbitrary DB row order — a stable sequence makes
+        // partial-failure outcomes reproducible and testable.
+        List<CartItem> items = cartItemRepository.findByCartId(cart.getId()).stream()
+            .sorted(java.util.Comparator.comparing(CartItem::getProductId))
+            .toList();
         if (items.isEmpty()) throw BusinessException.of(ErrorCode.CART_EMPTY);
 
         // 2. Pricing (remote: product + tax + promotion)
@@ -139,9 +148,9 @@ public class OrderServiceImpl implements OrderService {
             throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getProductId());
         }
 
-        // 5. Clear cart
+        // 5. Clear cart — actor is the requesting user (same convention as clearCart)
         cartItemRepository.deleteAll(items);
-        cart.markDeleted("system");
+        cart.markDeleted(userId.toString());
         cartRepository.save(cart);
 
         // 6. Publish OrderCreated event (same TX — atomic with order insert)
@@ -196,19 +205,18 @@ public class OrderServiceImpl implements OrderService {
             throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
         }
 
-        // Policy: USER chỉ cancel PENDING (chưa charge); ADMIN cancel PENDING + CONFIRMED.
-        // SHIPPED/DELIVERED/CANCELLED: không ai cancel được.
+        // Policy: USER may cancel PENDING only (not yet confirmed); ADMIN may cancel
+        // PENDING + CONFIRMED. SHIPPED/DELIVERED/CANCELLED are terminal for everyone —
+        // validateTransition is the single source of truth for both roles.
         if (!isAdmin && order.getStatus() != OrderStatus.PENDING) {
             throw BusinessException.of(ErrorCode.ORDER_INVALID_STATE, orderId);
         }
         orderStatusService.validateTransition(order.getStatus(), OrderStatus.CANCELLED);
-        if (order.getStatus() == OrderStatus.DELIVERED) {
-            throw BusinessException.of(ErrorCode.ORDER_INVALID_STATE, orderId);
-        }
 
-        // Release stock CHỈ khi PENDING (reservations còn PENDING trong inventory).
-        // CONFIRMED: reservations đã COMMITTED — release endpoint sẽ throw RESERVATION_INVALID_STATE.
-        // Restock cho CONFIRMED: refund flow (Phase 8) hoặc admin adjust thủ công.
+        // Release stock only when PENDING (reservations are still PENDING in inventory).
+        // CONFIRMED: reservations are already COMMITTED — the release endpoint would
+        // reject them; restocking a confirmed order belongs to the refund flow
+        // (Phase 8) or a manual admin stock adjustment.
         if (order.getStatus() == OrderStatus.PENDING) {
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
@@ -240,25 +248,27 @@ public class OrderServiceImpl implements OrderService {
     // STATUS TRANSITIONS (admin / service-to-service in Phase 8)
     // ========================================================================
 
+    // Endpoint-level authz lives on OrderStatusController (SERVICE or ADMIN); the
+    // service layer only enforces the state machine.
     @Override
     @Transactional
-    public OrderResponse confirmOrder(UUID orderId, boolean isAdmin) {
-        return transitionStatus(orderId, OrderStatus.CONFIRMED, isAdmin, () -> Instant.now());
+    public OrderResponse confirmOrder(UUID orderId) {
+        return transitionStatus(orderId, OrderStatus.CONFIRMED, () -> Instant.now());
     }
 
     @Override
     @Transactional
-    public OrderResponse shipOrder(UUID orderId, boolean isAdmin) {
-        return transitionStatus(orderId, OrderStatus.SHIPPED, isAdmin, () -> Instant.now());
+    public OrderResponse shipOrder(UUID orderId) {
+        return transitionStatus(orderId, OrderStatus.SHIPPED, () -> Instant.now());
     }
 
     @Override
     @Transactional
-    public OrderResponse deliverOrder(UUID orderId, boolean isAdmin) {
-        return transitionStatus(orderId, OrderStatus.DELIVERED, isAdmin, () -> Instant.now());
+    public OrderResponse deliverOrder(UUID orderId) {
+        return transitionStatus(orderId, OrderStatus.DELIVERED, () -> Instant.now());
     }
 
-    private OrderResponse transitionStatus(UUID orderId, OrderStatus to, boolean isAdmin,
+    private OrderResponse transitionStatus(UUID orderId, OrderStatus to,
                                           java.util.function.Supplier<Instant> timestampSupplier) {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
@@ -295,8 +305,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public Page<OrderResponse> findMyOrders(UUID userId, Pageable pageable) {
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
-            .map(order -> orderMapper.toResponse(order, orderItemRepository.findByOrderId(order.getId())));
+        Page<Order> page = orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        return withItems(page);
     }
 
     @Override
@@ -305,6 +315,20 @@ public class OrderServiceImpl implements OrderService {
         Page<Order> page = (status != null)
             ? orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
             : orderRepository.findAllByOrderByCreatedAtDesc(pageable);
-        return page.map(order -> orderMapper.toResponse(order, orderItemRepository.findByOrderId(order.getId())));
+        return withItems(page);
+    }
+
+    /**
+     * Batch-loads order items in ONE query for the whole page (review finding M4 —
+     * the per-row {@code findByOrderId} was an N+1: a page of 20 issued 21 queries).
+     */
+    private Page<OrderResponse> withItems(Page<Order> page) {
+        List<UUID> orderIds = page.map(Order::getId).getContent();
+        Map<UUID, List<OrderItem>> itemsByOrder = orderIds.isEmpty()
+            ? Map.of()
+            : orderItemRepository.findByOrderIdIn(orderIds).stream()
+                .collect(java.util.stream.Collectors.groupingBy(OrderItem::getOrderId));
+        return page.map(order -> orderMapper.toResponse(
+            order, itemsByOrder.getOrDefault(order.getId(), List.of())));
     }
 }

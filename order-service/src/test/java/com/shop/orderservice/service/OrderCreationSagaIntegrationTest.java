@@ -5,8 +5,8 @@ import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
 import com.shop.orderservice.config.TestLiquibaseConfig;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
-import com.shop.orderservice.entity.OrderStatus;
-import com.shop.orderservice.entity.OutboxStatus;
+import com.shop.orderservice.constant.OrderStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.orderservice.repository.CartItemRepository;
 import com.shop.orderservice.repository.CartRepository;
 import com.shop.orderservice.repository.OrderItemRepository;
@@ -18,7 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -39,7 +38,8 @@ import static org.assertj.core.api.Assertions.*;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-@EmbeddedKafka
+// Kafka comes from the KafkaContainer below (bound via shop.kafka.bootstrap-servers);
+// @EmbeddedKafka would spin up a second, unused broker.
 @Import({JpaAuditingAutoConfiguration.class, TestLiquibaseConfig.class})
 class OrderCreationSagaIntegrationTest {
 
@@ -76,10 +76,11 @@ class OrderCreationSagaIntegrationTest {
         // ⚠️ P0-8 — point Keycloak issuer to WireMock to avoid connection refused at boot
         r.add("shop.security.issuer-uri", () -> "http://localhost:" + keycloakServer.port() + "/realms/test");
         r.add("shop.security.csrf-disabled", () -> "true");
-        // P0-7 — ServiceTokenProvider lấy token từ WireMock (stub trả dummy-jwt ở @BeforeAll)
+        // P0-7 — ServiceTokenProvider fetches its token from WireMock (the stub
+        // returns a dummy JWT from the @BeforeAll stubbing below).
         r.add("shop.services.keycloak.token-url",
             () -> "http://localhost:" + keycloakServer.port() + "/realms/test/protocol/openid-connect/token");
-        // ponytail: tests call OrderService directly (not via HTTP), so disable JWT/security stack entirely
+        // Tests call OrderService directly (not via HTTP), so the JWT/security stack is disabled.
         r.add("shop.security.enabled", () -> "false");
     }
 
@@ -89,10 +90,9 @@ class OrderCreationSagaIntegrationTest {
         productServer.start();
         inventoryServer = new WireMockServer(0);
         inventoryServer.start();
-        // ⚠️ P0-8 — Stub Keycloak OIDC endpoints so Boot's JwtDecoder doesn't
-        // connection-refuse at startup. Đồng thời cấp token cho ServiceTokenProvider
-        // (Task 2): shop.services.keycloak.token-url trỏ về keycloakServer (props bên dưới).
-        // but BaseSecurityConfig still tries to resolve issuer at boot.
+        // P0-8 — stub Keycloak's OIDC discovery + token endpoints so Boot's JwtDecoder
+        // gets a resolvable issuer at boot AND ServiceTokenProvider can exchange for a
+        // service token (shop.services.keycloak.token-url points at this WireMock).
         keycloakServer = new WireMockServer(0);
         keycloakServer.start();
         keycloakServer.stubFor(get(urlMatching("/realms/.*/.well-known/openid-configuration"))
@@ -198,13 +198,21 @@ class OrderCreationSagaIntegrationTest {
 
     @Test
     void partialReservationFailure_releasesReservedItems() {
-        // 2 cart items — item 1 reserves successfully, item 2 fails.
-        // Spec §9 requires release endpoint called for each successful reservation
-        // when 1 fails (compensation invariant).
-        UUID productId2 = UUID.randomUUID();
+        // 2 cart items — item 1 reserves successfully, item 2 fails. The saga now
+        // processes items in productId order (deterministic), so we pin fixed UUIDs:
+        // productA sorts first (succeeds), productB second (409).
+        // Spec §9 requires the release endpoint to be called for each successful
+        // reservation once one fails (compensation invariant).
+        UUID productA = UUID.fromString("00000000-0000-0000-0000-0000000000a1");
+        UUID productB = UUID.fromString("00000000-0000-0000-0000-0000000000a2");
         var cart = cartRepository.findByUserIdAndDeletedFalse(userId).orElseThrow();
+        // Replace the random-product item from @BeforeEach with the two fixed ones.
+        cartItemRepository.deleteAll(cartItemRepository.findByCartId(cart.getId()));
         cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
-            .cartId(cart.getId()).productId(productId2)
+            .cartId(cart.getId()).productId(productA)
+            .productTitle("Test A").unitPrice(new BigDecimal("100.00")).quantity(2).build());
+        cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
+            .cartId(cart.getId()).productId(productB)
             .productTitle("Test 2").unitPrice(new BigDecimal("50.00")).quantity(1).build());
 
         productServer.stubFor(get(urlMatching("/api/v1/products/.*"))
@@ -213,11 +221,11 @@ class OrderCreationSagaIntegrationTest {
                 """)));
 
         UUID item1ReservationId = UUID.randomUUID();
-        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId + "/reserve"))
+        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productA + "/reserve"))
             .willReturn(okJson("""
                 {"success":true,"code":"OK","data":{"reservationId":"%s","productId":"%s","quantity":2}}
-                """.formatted(item1ReservationId, productId))));
-        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId2 + "/reserve"))
+                """.formatted(item1ReservationId, productA))));
+        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productB + "/reserve"))
             .willReturn(aResponse().withStatus(409)));
 
         // Execute + verify saga throws
@@ -227,9 +235,8 @@ class OrderCreationSagaIntegrationTest {
             .hasMessageContaining("Failed to reserve stock");
 
         // COMPENSATION VERIFIED — the successful reservation was released after the
-        // second one failed. findByCartId has no ORDER BY, so item processing order is
-        // DB-determined; both stubs succeed/fail regardless of which item is processed
-        // first. We assert the released reservationId matches the one that returned 200.
+        // second one failed. With deterministic ordering, exactly one release of
+        // item 1's reservation must have been issued.
         var releaseRequests = inventoryServer.findAll(postRequestedFor(
             urlMatching("/api/v1/inventory/reservations/.*/release")));
         assertThat(releaseRequests).hasSize(1);

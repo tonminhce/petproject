@@ -8,48 +8,95 @@ import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.IdempotencyKey;
 import com.shop.orderservice.repository.IdempotencyKeyRepository;
 import com.shop.orderservice.service.IdempotencyService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class IdempotencyServiceImpl implements IdempotencyService {
 
     private final IdempotencyKeyRepository repository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Programmatic REQUIRES_NEW template for the in-flight insert. Hibernate sees an
+     * {@code @IdClass} with a non-null PK as "managed/merged" — {@code saveAndFlush}
+     * would bypass the INSERT and silently merge, so {@code DataIntegrityViolation}
+     * never fires on a plain save; the explicit existence check is what short-circuits
+     * replays, and the unique composite PK is the final arbiter on concurrent inserts.
+     *
+     * <p>The insert runs in its own committed transaction (independent of the caller's
+     * saga TX) so other requests can observe the in-flight row during the saga. Because
+     * it owns a dedicated transaction, a lost same-key race rolls back cleanly and the
+     * subsequent re-read stays on a fresh persistence context (review finding I1).</p>
+     */
+    private final TransactionTemplate requiresNewTemplate;
+
+    /** TTL from spec §3.7 — wired to the {@code order.idempotency.ttl-hours} knob. */
+    @Value("${order.idempotency.ttl-hours:24}")
+    private long ttlHours;
+
+    public IdempotencyServiceImpl(IdempotencyKeyRepository repository,
+                                  ObjectMapper objectMapper,
+                                  PlatformTransactionManager transactionManager) {
+        this.repository = repository;
+        this.objectMapper = objectMapper;
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.requiresNewTemplate = template;
+    }
+
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<OrderResponse> begin(String key, UUID userId, String requestHash) {
         if (key == null) return Optional.empty();
 
-        // ponytail: Hibernate sees @IdClass with non-null PK as "managed/merged" — saveAndFlush
-        // bypasses the INSERT and silently merges, so DataIntegrityViolation never fires.
-        // Check existence explicitly so the replay path actually short-circuits.
         Optional<IdempotencyKey> preExisting = repository.findByUserIdAndKey(userId, key);
         if (preExisting.isPresent()) {
-            IdempotencyKey existing = preExisting.get();
-            if (existing.getResponseStatus() != 0) {
-                // Complete — but spec §5.6 requires hash match before replay.
-                // Same key + different payload is a 409, not a silent replay.
-                if (!existing.getRequestHash().equals(requestHash)) {
-                    throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
-                }
-                return Optional.of(deserialize(existing.getResponseBody()));
-            }
-            // In-flight — reject
-            throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
+            return resolve(preExisting.get(), requestHash, key);
         }
 
+        IdempotencyKey ik = newInFlight(key, userId, requestHash);
+        try {
+            requiresNewTemplate.executeWithoutResult(status -> repository.saveAndFlush(ik));
+            return Optional.empty();  // owner — proceed with saga
+        } catch (DataIntegrityViolationException ex) {
+            // Lost a same-key race: the winner's insert committed first. The failed
+            // template TX is discarded, so this re-read hits a fresh persistence
+            // context. Resolve exactly like any other collision — never leak a raw
+            // constraint violation as a 500 (review finding I1).
+            IdempotencyKey winner = repository.findByUserIdAndKey(userId, key)
+                .orElseThrow(() -> ex);
+            return resolve(winner, requestHash, key);
+        }
+    }
+
+    private Optional<OrderResponse> resolve(IdempotencyKey existing, String requestHash, String key) {
+        if (existing.getResponseStatus() != 0) {
+            // Complete — but spec §5.6 requires hash match before replay.
+            // Same key + different payload is a 409, not a silent replay.
+            if (!existing.getRequestHash().equals(requestHash)) {
+                throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
+            }
+            return Optional.of(deserialize(existing.getResponseBody()));
+        }
+        // In-flight — reject
+        throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
+    }
+
+    private IdempotencyKey newInFlight(String key, UUID userId, String requestHash) {
         IdempotencyKey ik = new IdempotencyKey();
         ik.setUserId(userId);
         ik.setKey(key);
@@ -57,10 +104,8 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         ik.setResponseStatus(0);  // in-flight
         ik.setResponseBody("");
         ik.setCreatedAt(Instant.now());
-        ik.setExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS));  // TTL from spec §3.7
-
-        repository.saveAndFlush(ik);
-        return Optional.empty();  // owner — proceed with saga
+        ik.setExpiresAt(Instant.now().plus(ttlHours, ChronoUnit.HOURS));
+        return ik;
     }
 
     @Override
@@ -76,11 +121,14 @@ public class IdempotencyServiceImpl implements IdempotencyService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void abort(String key, UUID userId) {
+    public void abort(String key, UUID userId, String requestHash) {
         if (key == null) return;
         try {
             repository.findByUserIdAndKey(userId, key)
                 .filter(ik -> ik.getResponseStatus() == 0)
+                // Defense-in-depth: only ever delete the row THIS execution created —
+                // a hash mismatch means the row belongs to a different payload.
+                .filter(ik -> Objects.equals(ik.getRequestHash(), requestHash))
                 .ifPresent(repository::delete);
         } catch (Exception ex) {
             log.warn("Failed to abort in-flight idempotency key {}/{}: {}", userId, key, ex.getMessage());

@@ -4,7 +4,7 @@ import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 
 import java.util.UUID;
 
@@ -14,9 +14,9 @@ public interface OrderService {
 
     OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin);
 
-    OrderResponse confirmOrder(UUID orderId, boolean isAdmin);
-    OrderResponse shipOrder(UUID orderId, boolean isAdmin);
-    OrderResponse deliverOrder(UUID orderId, boolean isAdmin);
+    OrderResponse confirmOrder(UUID orderId);
+    OrderResponse shipOrder(UUID orderId);
+    OrderResponse deliverOrder(UUID orderId);
 
     OrderResponse findById(UUID orderId, UUID userId, boolean isAdmin);
 

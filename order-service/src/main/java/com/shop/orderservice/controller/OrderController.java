@@ -1,12 +1,14 @@
 package com.shop.orderservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.common.core.constants.PageableConstant;
+import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +29,18 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    // ⚠️ P2-6 — DO NOT use @PreAuthorize("hasRole('USER')"): Keycloak users may not have
-    // explicit realm role "USER" → 403 oan. Filter chain already authenticated (isAuthenticated()
-    // at class level); service-layer owner check ensures users can only access their own orders.
+    // P2-6 — deliberately NOT @PreAuthorize("hasRole('USER')"): Keycloak users may
+    // lack an explicit USER realm role, which would surface as an unhelpful 403. The
+    // filter chain already enforces authentication (class level); the service-layer
+    // owner check ensures users only ever touch their own orders.
     public ApiResponse<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        // The idempotency_keys.key column is varchar(64) — reject longer headers with
+        // a 400 instead of a DB constraint violation (review M5).
+        if (idempotencyKey != null && idempotencyKey.length() > 64) {
+            throw BusinessException.badRequest("order.idempotency.key.tooLong", 64);
+        }
         return ApiResponse.ok(
             orderService.createOrder(currentUserId(), request, idempotencyKey),
             "Order created successfully");
@@ -40,9 +48,9 @@ public class OrderController {
 
     @GetMapping("/me")
     public ApiResponse<PageResponse<OrderResponse>> findMyOrders(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         Page<OrderResponse> result = orderService.findMyOrders(currentUserId(), pageable);
         return ApiResponse.ok(PageResponse.of(
             result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));
@@ -52,9 +60,9 @@ public class OrderController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<OrderResponse>> findAll(
             @RequestParam(required = false) OrderStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size);
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         Page<OrderResponse> result = orderService.findAll(status, pageable);
         return ApiResponse.ok(PageResponse.of(
             result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));

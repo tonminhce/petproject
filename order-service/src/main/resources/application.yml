@@ -67,5 +67,7 @@ order:
     retention-cron: "0 0 3 * * *"
   cleanup:
     idempotency-cron: "0 0 4 * * *"
+    # Phase 8 reserved — no scheduler consumes these yet (cart/order purge schedulers
+    # ship with payment + refund flows). Declared here so ops sees the planned knobs.
     expired-cart-days: 7
     cancelled-order-days: 90

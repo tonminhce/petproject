@@ -1,0 +1,19 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  Outbox poller index — the relay drains with
+  #    WHERE status = 'PENDING' ORDER BY id ASC LIMIT <batch-size>
+  #  A partial index over (id) restricted to PENDING rows serves both the filter
+  #  and the ordering (no sort step), keeping drain latency flat as the
+  #  SENT/FAILED history grows. idx_outbox_status (001) stays for the other
+  #  status lookups. Liquibase's createIndex has no 'where' attribute — raw SQL,
+  #  same as the partial unique indexes in 001.
+  # ===========================================================================
+  - changeSet:
+      id: 002-create-outbox-pending-index
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              CREATE INDEX idx_outbox_pending_id
+              ON outbox_events (id) WHERE status = 'PENDING'

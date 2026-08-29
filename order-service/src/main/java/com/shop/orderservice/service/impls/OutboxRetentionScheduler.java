@@ -1,6 +1,6 @@
 package com.shop.orderservice.service.impls;
 
-import com.shop.orderservice.entity.OutboxStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.orderservice.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

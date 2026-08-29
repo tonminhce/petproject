@@ -3,7 +3,7 @@ package com.shop.orderservice.repository;
 import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
 import com.shop.orderservice.config.TestLiquibaseConfig;
 import com.shop.orderservice.entity.Order;
-import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.constant.OrderStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
