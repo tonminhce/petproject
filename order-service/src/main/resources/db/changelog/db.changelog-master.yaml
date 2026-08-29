@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       file: changelog-003-orders-version.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-004-confirm-hardening.yaml
+      relativeToChangelogFile: true

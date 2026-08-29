@@ -47,6 +47,13 @@ public class Order extends AbstractMappedEntity {
     @Column(name = "coupon_code", length = 50)
     private String couponCode;
 
+    /**
+     * Set when the promotion coordinator reserves a discount; commit/release on
+     * confirm/cancel, reconciliation after crashes (hardening §3).
+     */
+    @Column(name = "promotion_reservation_id")
+    private UUID promotionReservationId;
+
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
 

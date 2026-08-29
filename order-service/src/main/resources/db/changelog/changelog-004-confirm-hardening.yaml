@@ -1,0 +1,17 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  promotion_reservation_id on orders (hardening §3): set when the promotion
+  #  coordinator reserves a discount, used to commit/release it on confirm/
+  #  cancel and to reconcile after crashes. NO index needed: lookups are by
+  #  reservation id via coordinator; order_id reconciliation uses
+  #  idx_orders_status_created (exists, changelog-001:116).
+  # ===========================================================================
+  - changeSet:
+      id: 004-order-promotion-reservation-id
+      author: hardening
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column: { name: promotion_reservation_id, type: uuid }
