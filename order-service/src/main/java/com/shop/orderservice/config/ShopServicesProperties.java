@@ -1,13 +1,10 @@
 package com.shop.orderservice.config;
 
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.validation.annotation.Validated;
 
 /**
- * Bind {@code shop.services.*} — endpoints, credentials, and tokens for downstream
- * inter-service calls (product / inventory / tax / promotion) plus the Keycloak
- * service-token endpoint (client_credentials flow).
+ * Bind {@code shop.services.*} — endpoints, timeouts, feature flags, and the
+ * Keycloak service-token endpoint (client_credentials flow).
  *
  * <p>Local to order-service deliberately: NOT {@code shop.keycloak} (owned by
  * {@code common-keycloak KeycloakProperties}) — see Task 2 P0-7b rationale.</p>
@@ -18,7 +15,6 @@ import org.springframework.validation.annotation.Validated;
  * @param promotion  base URL of promotion-service
  * @param keycloak   client_credentials settings (token-url, client-id, client-secret)
  */
-@Validated
 @ConfigurationProperties(prefix = "shop.services")
 public record ShopServicesProperties(
         Service product,
@@ -28,11 +24,18 @@ public record ShopServicesProperties(
         Keycloak keycloak
 ) {
 
-    public record Service(@NotBlank String url) {}
+    /**
+     * @param url        base URL of the downstream service (e.g. {@code http://localhost:8086})
+     * @param timeoutMs  HTTP request/response timeout in milliseconds (default 5000)
+     * @param enabled    optional feature flag — when null or true, RestClient bean is registered
+     *                   (used by sibling services to skip disabled downstreams like tax/promotion
+     *                   before they ship). See {@link #isEnabled()}.
+     */
+    public record Service(String url, int timeoutMs, Boolean enabled) {
+        public boolean isEnabled() {
+            return enabled == null || enabled;
+        }
+    }
 
-    public record Keycloak(
-            @NotBlank String tokenUrl,
-            @NotBlank String clientId,
-            @NotBlank String clientSecret
-    ) {}
+    public record Keycloak(String tokenUrl, String clientId, String clientSecret) {}
 }
