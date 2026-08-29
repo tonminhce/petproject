@@ -11,7 +11,9 @@ import java.util.function.Supplier;
 /**
  * Confirm-flow metrics wrapper — hardening §8.
  * Names/tags are contractual (dashboards alert on them):
- * order.confirm.duration{phase}, order.confirm.attempts, order.commit.stuck, order.reconciliation.mixed.
+ * order.confirm.duration{phase}, order.confirm.attempts, order.commit.stuck, order.reconciliation.mixed,
+ * order.confirm.commit.outcome{result=success|compensated|rollback_failed}.
+ * Publish/rollback phase timers are deferred — not contractual yet.
  */
 @Component
 @RequiredArgsConstructor

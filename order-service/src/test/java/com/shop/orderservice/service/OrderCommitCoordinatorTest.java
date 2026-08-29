@@ -84,7 +84,8 @@ class OrderCommitCoordinatorTest {
         // deferred ledger assertions — nothing went wrong in the happy path
         assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
             .isZero();
-        assertThat(meterRegistry.counter("order.commit.rollback.failed").count()).isZero();
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "rollback_failed").count())
+            .isZero();
         // §8 phase timers — one recorded sample per decorated phase (task 10)
         assertThat(meterRegistry.get("order.confirm.duration").tag("phase", "commit_promotion").timer().count())
             .isEqualTo(1L);
@@ -178,7 +179,7 @@ class OrderCommitCoordinatorTest {
         verify(promotionClient).releaseCommitted(promoId);
     }
 
-    /** Scenario 6 — rollback HTTP failure: swallowed, order.commit.rollback.failed counter incremented. */
+    /** Scenario 6 — rollback HTTP failure: swallowed, order.confirm.commit.outcome{result=rollback_failed} incremented. */
     @Test
     void commit_rollbackFailure_swallowed_counterIncremented_originalRethrown() {
         Order order = orderWithPromotion();
@@ -196,7 +197,8 @@ class OrderCommitCoordinatorTest {
         inOrder.verify(inventoryClient).releaseCommitted(r1);
         inOrder.verify(promotionClient).releaseCommitted(promoId);
         verify(inventoryClient, never()).releaseCommitted(r2);   // never committed → never compensated
-        assertThat(meterRegistry.counter("order.commit.rollback.failed").count()).isEqualTo(1.0);
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "rollback_failed").count())
+            .isEqualTo(1.0);
         assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
             .isEqualTo(1.0);
     }

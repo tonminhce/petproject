@@ -163,7 +163,7 @@ class InventoryServiceImplTest {
     }
 
     @Test
-    void commit_throwsWhenNotPending() {
+    void commit_throwsWhenWrongWayTerminal() {
         // COMMITTED is now an idempotent no-op (hardening §7.1) — wrong-way
         // terminal states must still be rejected.
         reservation.setStatus(ReservationStatus.RELEASED);
@@ -186,6 +186,27 @@ class InventoryServiceImplTest {
         assertThat(inventory.getReservedQuantity()).isEqualTo(0);
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
         verify(publisher).publishReleased(inventory, reservation, "PENDING");
+        verify(cacheService).evictAfterCommit(productId);
+    }
+
+    @Test
+    void releaseCommitted_restocksAndPublishesPreviousStatusCommitted() {
+        inventory.setReservedQuantity(5);
+        inventory.setAvailableQuantity(95);
+        reservation.setStatus(ReservationStatus.COMMITTED);
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+        service.releaseCommitted(reservationId);
+
+        // §7.2 half-commit rollback: commit() moved the quantity out of both
+        // counters, so release credits it back to available (not reserved).
+        assertThat(inventory.getAvailableQuantity()).isEqualTo(100);
+        assertThat(inventory.getReservedQuantity()).isEqualTo(5);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
+        verify(publisher).publishReleased(inventory, reservation, "COMMITTED");
         verify(cacheService).evictAfterCommit(productId);
     }
 

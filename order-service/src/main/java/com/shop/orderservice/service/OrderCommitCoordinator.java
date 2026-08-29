@@ -74,7 +74,7 @@ public class OrderCommitCoordinator {
                 else inventoryClient.releaseCommitted(t.id());
             } catch (Exception ex) {
                 log.error("Failed to rollback {} reservation {} — reconciliation owns it", t.type(), t.id(), ex);
-                meterRegistry.counter("order.commit.rollback.failed").increment();
+                meterRegistry.counter("order.confirm.commit.outcome", "result", "rollback_failed").increment();
             }
         }
     }
