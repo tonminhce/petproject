@@ -1,32 +1,15 @@
 package com.shop.orderservice.service;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
-import com.shop.orderservice.config.TestLiquibaseConfig;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
-import com.shop.orderservice.constant.OrderStatus;
 import com.shop.common.core.constants.OutboxStatus;
-import com.shop.orderservice.repository.CartItemRepository;
-import com.shop.orderservice.repository.CartRepository;
-import com.shop.orderservice.repository.OrderItemRepository;
-import com.shop.orderservice.repository.OrderRepository;
-import com.shop.orderservice.repository.OutboxEventRepository;
-import org.junit.jupiter.api.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
+import com.shop.orderservice.entity.Cart;
+import com.shop.orderservice.entity.CartItem;
+import com.shop.orderservice.support.AbstractOrderServiceIT;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -34,99 +17,12 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Testcontainers
-// Kafka comes from the KafkaContainer below (bound via shop.kafka.bootstrap-servers);
-// @EmbeddedKafka would spin up a second, unused broker.
-@Import({JpaAuditingAutoConfiguration.class, TestLiquibaseConfig.class})
-class OrderCreationSagaIntegrationTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
-        .withDatabaseName("order_saga_test").withUsername("test").withPassword("test");
-
-    @Container
-    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
-
-    @Container
-    @SuppressWarnings("resource")
-    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-        .withExposedPorts(6379);
-
-    static WireMockServer productServer;
-    static WireMockServer inventoryServer;
-    static WireMockServer keycloakServer;
-    static WireMockServer promotionServer;
-
-    @DynamicPropertySource
-    static void props(DynamicPropertyRegistry r) {
-        r.add("spring.datasource.url", postgres::getJdbcUrl);
-        r.add("spring.datasource.username", postgres::getUsername);
-        r.add("spring.datasource.password", postgres::getPassword);
-        r.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
-        r.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        r.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
-        r.add("spring.data.redis.host", redis::getHost);
-        r.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-        r.add("shop.services.product.url", () -> "http://localhost:" + productServer.port());
-        r.add("shop.services.inventory.url", () -> "http://localhost:" + inventoryServer.port());
-        r.add("shop.services.tax.enabled", () -> "false");
-        // Task 7 — promotion reserve is part of the saga now: enabled + WireMock-backed.
-        // Coupon-less tests never reach reserve (P1-5 only triggers with a coupon), so
-        // this changes nothing for them.
-        r.add("shop.services.promotion.enabled", () -> "true");
-        r.add("shop.services.promotion.url", () -> "http://localhost:" + promotionServer.port());
-        // ⚠️ P0-8 — point Keycloak issuer to WireMock to avoid connection refused at boot
-        r.add("shop.security.issuer-uri", () -> "http://localhost:" + keycloakServer.port() + "/realms/test");
-        r.add("shop.security.csrf-disabled", () -> "true");
-        // P0-7 — ServiceTokenProvider fetches its token from WireMock (the stub
-        // returns a dummy JWT from the @BeforeAll stubbing below).
-        r.add("shop.services.keycloak.token-url",
-            () -> "http://localhost:" + keycloakServer.port() + "/realms/test/protocol/openid-connect/token");
-        // Tests call OrderService directly (not via HTTP), so the JWT/security stack is disabled.
-        r.add("shop.security.enabled", () -> "false");
-    }
-
-    @BeforeAll
-    static void startWireMock() {
-        productServer = new WireMockServer(0);
-        productServer.start();
-        inventoryServer = new WireMockServer(0);
-        inventoryServer.start();
-        promotionServer = new WireMockServer(0);
-        promotionServer.start();
-        // P0-8 — stub Keycloak's OIDC discovery + token endpoints so Boot's JwtDecoder
-        // gets a resolvable issuer at boot AND ServiceTokenProvider can exchange for a
-        // service token (shop.services.keycloak.token-url points at this WireMock).
-        keycloakServer = new WireMockServer(0);
-        keycloakServer.start();
-        keycloakServer.stubFor(get(urlMatching("/realms/.*/.well-known/openid-configuration"))
-            .willReturn(okJson("""
-                {"issuer":"http://localhost:%d/realms/test","jwks_uri":"http://localhost:%d/realms/test/protocol/openid-connect/certs"}
-                """.formatted(keycloakServer.port(), keycloakServer.port()))));
-        keycloakServer.stubFor(post(urlMatching("/realms/.*/protocol/openid-connect/token"))
-            .willReturn(okJson("""
-                {"access_token":"dummy-jwt","expires_in":3600,"token_type":"Bearer"}
-                """)));
-    }
-
-    @AfterAll
-    static void stopWireMock() {
-        productServer.stop();
-        inventoryServer.stop();
-        keycloakServer.stop();
-        promotionServer.stop();
-    }
-
-    @Autowired private OrderService orderService;
-    @Autowired private CartRepository cartRepository;
-    @Autowired private CartItemRepository cartItemRepository;
-    @Autowired private OrderRepository orderRepository;
-    @Autowired private OrderItemRepository orderItemRepository;
-    @Autowired private OutboxEventRepository outboxEventRepository;
-    @Autowired private com.shop.orderservice.client.ProductServiceClient productServiceClient;
+/**
+ * Order-creation saga IT — infrastructure lives in {@link AbstractOrderServiceIT}
+ * (factored out for task 13; test bodies unchanged, tax now suite-wide enabled
+ * with a zero-rate default stub so totals stay identical).
+ */
+class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
 
     private UUID userId;
     private UUID productId;
@@ -136,15 +32,11 @@ class OrderCreationSagaIntegrationTest {
         userId = UUID.randomUUID();
         productId = UUID.randomUUID();
         // Seed cart with 1 item
-        var cart = cartRepository.save(com.shop.orderservice.entity.Cart.builder()
+        var cart = cartRepository.save(Cart.builder()
             .userId(userId).subtotal(BigDecimal.ZERO).build());
-        cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
+        cartItemRepository.save(CartItem.builder()
             .cartId(cart.getId()).productId(productId)
             .productTitle("Test Product").unitPrice(new BigDecimal("100.00")).quantity(2).build());
-
-        productServer.resetAll();
-        inventoryServer.resetAll();
-        promotionServer.resetAll();
     }
 
     @Test
@@ -184,7 +76,7 @@ class OrderCreationSagaIntegrationTest {
         // 2 cart items, only 1 reserves successfully — second fails
         UUID productId2 = UUID.randomUUID();
         var cart = cartRepository.findByUserIdAndDeletedFalse(userId).orElseThrow();
-        cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
+        cartItemRepository.save(CartItem.builder()
             .cartId(cart.getId()).productId(productId2)
             .productTitle("Test 2").unitPrice(new BigDecimal("50.00")).quantity(1).build());
 
@@ -218,10 +110,10 @@ class OrderCreationSagaIntegrationTest {
         var cart = cartRepository.findByUserIdAndDeletedFalse(userId).orElseThrow();
         // Replace the random-product item from @BeforeEach with the two fixed ones.
         cartItemRepository.deleteAll(cartItemRepository.findByCartId(cart.getId()));
-        cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
+        cartItemRepository.save(CartItem.builder()
             .cartId(cart.getId()).productId(productA)
             .productTitle("Test A").unitPrice(new BigDecimal("100.00")).quantity(2).build());
-        cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
+        cartItemRepository.save(CartItem.builder()
             .cartId(cart.getId()).productId(productB)
             .productTitle("Test 2").unitPrice(new BigDecimal("50.00")).quantity(1).build());
 
@@ -283,7 +175,7 @@ class OrderCreationSagaIntegrationTest {
         OrderResponse response = orderService.createOrder(userId,
             new OrderCreateRequest(null, "SAVE10"), "promo-key-1");
 
-        // subtotal 200, discount 20, tax disabled → 0, total 180
+        // subtotal 200, discount 20, tax 0 (suite-wide zero-rate stub), total 180
         assertThat(response.subtotal()).isEqualByComparingTo(new BigDecimal("200.00"));
         assertThat(response.discountAmount()).isEqualByComparingTo(new BigDecimal("20.00"));
         assertThat(response.total()).isEqualByComparingTo(new BigDecimal("180.00"));

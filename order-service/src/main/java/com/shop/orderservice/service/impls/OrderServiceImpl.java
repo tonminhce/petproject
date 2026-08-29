@@ -320,7 +320,16 @@ public class OrderServiceImpl implements OrderService {
             // inventory/promotion commits succeed (coordinator compensates on failure).
             // Phase timing (commit_inventory/commit_promotion) is owned by the
             // coordinator — no caller-side timer (would double-count §8 latencies).
-            commitCoordinator.commitForConfirm(order, items);
+            // ANY coordinator throw — including the clients' BusinessException mappings
+            // for remote 4xx/5xx — surfaces as 409 ORD-4011 (task 13 IT: a remote 500
+            // must not leak as 503). validateTransition's guard sits BEFORE this inner
+            // try and is rethrown unchanged by the outer catch.
+            try {
+                commitCoordinator.commitForConfirm(order, items);
+            } catch (RuntimeException commitEx) {
+                log.error("Confirm commit failed for order {}", orderId, commitEx);
+                throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
+            }
 
             order.setConfirmedAt(Instant.now());
             order.setStatus(OrderStatus.CONFIRMED);
