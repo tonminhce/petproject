@@ -66,7 +66,7 @@ Keep `isEnabled()` and its defensive zero-discount fallback unchanged — `Prici
 - `Order` gains `promotion_reservation_id UUID NULL` (one reservation per order — promotion usage is order-scoped, unlike per-item inventory reservations).
 - New Liquibase changeset: `addColumn order.promotion_reservation_id`, nullable, **no backfill** (existing rows simply have no promotion reservation — D5/D6 compatibility).
 - **No new index needed for reconciliation:** `idx_orders_status_created` on `(status, created_at)` already exists (`changelog-001-initial-schema.yaml:116-118`) and serves `findByStatusAndCreatedAtBefore(PENDING, cutoff)` — do not create a duplicate.
-- **Pre-generated orderId:** `doCreateOrder` currently creates the order at step 3 (`OrderServiceImpl.java:115-121`) *after* pricing (step 2, line 112) — but `PromotionReserveRequest` needs `orderId`. Change: generate `UUID orderId = UUID.randomUUID()` at the top of the saga, set on the entity before persisting (`order.setId(orderId)`). `@GeneratedValue(strategy = GenerationType.UUID)` (`Order.java:19-21`) respects a manually assigned id (Hibernate generates only when null) — **the plan must include a sandbox test proving this before the refactor lands**; fallback if violated: switch the entity to `@UuidGenerator` + assigned-when-present, same semantics.
+- **OrderId known before pricing — persist-early (rev 3):** `PromotionReserveRequest` needs `orderId`, so the saga inserts the `Order` row inside its transaction **before** pricing — `PENDING` with zero amounts (`OrderServiceImpl.doCreateOrder` :123-130) — then feeds the Hibernate-generated id to `pricingService.calculate(order.getId(), …)` and updates the same row in the same transaction with totals + `promotionReservationId` + `couponCode`. Rationale (ruled after the task-7 sandbox): **Hibernate ORM 7.4.5.Final rejects assigned ids** on generated-identifier entities (`EntityExistsException`/`PropertyValueException` from entity-state classification, before any generator runs), and the originally spec'd `@UuidGenerator` fallback does not implement assigned-when-present either — persist-early keeps `GenerationType.UUID` untouched at the cost of a longer write transaction; the PENDING row only becomes visible if the saga commits.
 
 ## 4. Saga changes (`doCreateOrder`)
 
@@ -199,12 +199,13 @@ New `OrderConfirmMetrics` (Mirror `ProductMetrics` if present; else plain `Meter
 
 ## 10. Configuration additions (order-service `application.yml`)
 
+Rev 3: reconciliation knobs live under the **top-level `order:` namespace** (`order.reconciliation.*`), matching the repo convention — not nested under `shop.`:
+
 ```yaml
-shop:
-  order:
-    reconciliation:
-      interval-ms: 300000
-      stuck-minutes: 30
+order:
+  reconciliation:
+    interval-ms: ${ORDER_RECONCILIATION_INTERVAL_MS:300000}
+    stuck-minutes: ${ORDER_RECONCILIATION_STUCK_MINUTES:30}
 ```
 
 No new Keycloak/URL config — promotion reuses `shop.services.promotion.{url,timeout-ms,enabled}` (already present, `application.yml:50-53`).
@@ -237,6 +238,8 @@ No new Keycloak/URL config — promotion reuses `shop.services.promotion.{url,ti
 - `order-service/.../IdempotencyServiceImpl.java` — begin/complete/abort reuse for confirm.
 
 ## 14. Changelog
+
+- 2026-08-29 (rev 3): Final whole-branch review amendments. §3 — order-id-before-pricing shipped as **persist-early** (row inserted `PENDING`/zero amounts inside the saga TX before pricing; generated id feeds the promotion reserve; same-TX update) after the sandbox proved Hibernate ORM 7.4.5.Final rejects assigned ids — including the `@UuidGenerator` fallback (task-7 BLOCKED report + re-attempt ruling, commit `ae381d1`). §10 — reconciliation config namespace corrected to top-level `order:` → `order.reconciliation.*`, matching repo convention (shipped `application.yml:59-80`). §8 contract unchanged: `order.confirm.commit.outcome{result=success|compensated|rollback_failed}` (the untagged `order.commit.rollback.failed` variant was never shipped as contractual); publish/rollback phase timers remain deferred (§12).
 
 - 2026-08-29 (rev 2): Review round 1 (concerns O1–O4): D6 — keyless concurrent confirm proven safe via `Order @Version` (O1); Idempotency-Key now "recommended" for clients. D9 split — `X-Correlation-Id` outbound propagation included via `requestInitializer` (O2, filter/MDC verified pre-existing), OTel stays deferred. O3 moot — `idx_orders_status_created` already exists, spec references it instead of adding a duplicate changeset. O4 — silent-swallow compensation refactor recorded as a tracked follow-up (§12).
 - 2026-08-29 (rev 1): Initial design from brainstorming: design A (confirm-driven commit) + production hardening. Corrections applied to the reviewed proposal: compensation targets as (type,id) pairs (Guava `Lists.reverse` dropped), confirm idempotency scoped by admin userId (not orderId-in-userId-column), `RESERVATION_NOT_FOUND` fails instead of silently succeeding (D4), OTel deferred after verifying `RestClientConfig` propagates nothing today, Resilience4j already present in promotion pom but WireMock fault injection chosen for tests, impact re-measured as LOW/2-symbols.

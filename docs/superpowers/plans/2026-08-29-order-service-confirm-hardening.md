@@ -426,6 +426,8 @@ git add order-service && git commit -m "feat(order-service): promotion_reservati
 
 ### Task 7: Order — pre-generate orderId (sandbox proof first) + saga reserve promotion
 
+> **rev 2 — implemented as persist-early per ledger ruling:** the Step-1 sandbox proved Hibernate ORM 7.4.5 rejects assigned ids (and `@UuidGenerator` is not assigned-when-present), so the mechanism changed: insert the Order row (`PENDING`, zero amounts) inside the saga TX before pricing, feed the generated id to `calculate(order.getId(), …)`, then update totals + `promotionReservationId` in the same TX (commit `ae381d1`). Steps below preserved as originally planned.
+
 **Files:**
 - Modify: `order-service/.../service/PricingService.java`, `service/impls/PricingServiceImpl.java`, `service/impls/OrderServiceImpl.java` (`doCreateOrder` :96-166, compensation :148-152)
 - Test: `OrderIdAssignmentSandboxTest.java` (new, may be deleted after proof), update pricing tests, saga IT (Task 14)
