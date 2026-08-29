@@ -71,7 +71,17 @@ public enum ErrorCode {
     // ---- Favourite domain ---- (range 6xxx — PAY already owns 5xxx)
     FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
     FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
-    FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
+    FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND),
+
+    // ---- Order domain (continued) — ORD-4003..4010 ----
+    ORDER_INVALID_STATE("ORD-4003", "order.invalid.state", HttpStatus.CONFLICT),
+    ORDER_INVALID_STATE_TRANSITION("ORD-4004", "order.invalid.transition", HttpStatus.CONFLICT),
+    CART_EMPTY("ORD-4005", "cart.empty", HttpStatus.CONFLICT),
+    CART_ITEM_NOT_FOUND("ORD-4006", "cart.item.not.found", HttpStatus.NOT_FOUND),
+    ORDER_RESERVATION_FAILED("ORD-4007", "order.reservation.failed", HttpStatus.CONFLICT),
+    ORDER_PROMOTION_INVALID("ORD-4008", "order.promotion.invalid", HttpStatus.BAD_REQUEST),
+    ORDER_TAX_CALCULATION_FAILED("ORD-4009", "order.tax.calculation.failed", HttpStatus.BAD_REQUEST),
+    ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;
