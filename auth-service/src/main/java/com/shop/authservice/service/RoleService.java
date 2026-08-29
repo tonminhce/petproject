@@ -1,6 +1,6 @@
 package com.shop.authservice.service;
 
-import com.shop.authservice.config.RoleName;
+import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.entity.Role;
 
 import java.util.List;

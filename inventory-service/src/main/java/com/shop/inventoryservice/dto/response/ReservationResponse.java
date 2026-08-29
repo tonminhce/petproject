@@ -1,6 +1,6 @@
 package com.shop.inventoryservice.dto.response;
 
-import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.constant.ReservationStatus;
 
 import java.time.Instant;
 import java.util.UUID;

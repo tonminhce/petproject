@@ -1,6 +1,6 @@
 package com.shop.authservice.repository;
 
-import com.shop.authservice.config.RoleName;
+import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

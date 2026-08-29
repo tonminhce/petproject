@@ -1,5 +1,6 @@
 package com.shop.inventoryservice.entity;
 
+import com.shop.inventoryservice.constant.ReservationStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

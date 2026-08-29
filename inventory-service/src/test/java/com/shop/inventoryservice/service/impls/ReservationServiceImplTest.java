@@ -3,7 +3,7 @@ package com.shop.inventoryservice.service.impls;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.ReservationResponse;
-import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.constant.ReservationStatus;
 import com.shop.inventoryservice.service.InventoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

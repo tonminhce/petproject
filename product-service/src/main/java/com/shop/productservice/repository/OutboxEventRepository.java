@@ -1,7 +1,7 @@
 package com.shop.productservice.repository;
 
 import com.shop.productservice.entity.OutboxEvent;
-import com.shop.productservice.entity.OutboxStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -4,7 +4,7 @@ import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
 import com.shop.productservice.entity.Brand;
 import com.shop.productservice.entity.Category;
 import com.shop.productservice.entity.Product;
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

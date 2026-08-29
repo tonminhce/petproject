@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.service.ProductService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

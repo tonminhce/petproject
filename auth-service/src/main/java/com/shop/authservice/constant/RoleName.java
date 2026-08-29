@@ -1,4 +1,4 @@
-package com.shop.authservice.config;
+package com.shop.authservice.constant;
 
 public enum RoleName {
     USER,

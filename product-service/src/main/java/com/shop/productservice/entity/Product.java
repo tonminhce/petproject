@@ -1,6 +1,7 @@
 package com.shop.productservice.entity;
 
 import com.shop.common.core.data.AbstractMappedEntity;
+import com.shop.productservice.constant.ProductStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;

@@ -2,7 +2,7 @@ package com.shop.inventoryservice.service;
 
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.inventoryservice.entity.OutboxEvent;
-import com.shop.inventoryservice.entity.OutboxStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.inventoryservice.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

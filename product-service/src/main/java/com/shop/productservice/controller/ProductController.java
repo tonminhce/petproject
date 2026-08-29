@@ -8,7 +8,7 @@ import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
 import com.shop.productservice.dto.response.ProductSummaryResponse;
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

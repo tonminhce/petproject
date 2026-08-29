@@ -1,4 +1,4 @@
-package com.shop.productservice.entity;
+package com.shop.common.core.constants;
 
 public enum OutboxStatus {
     PENDING, SENT, FAILED

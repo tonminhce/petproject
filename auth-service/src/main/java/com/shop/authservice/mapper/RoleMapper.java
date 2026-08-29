@@ -1,6 +1,6 @@
 package com.shop.authservice.mapper;
 
-import com.shop.authservice.config.RoleName;
+import com.shop.authservice.constant.RoleName;
 import com.shop.common.core.exception.BusinessException;
 
 public class RoleMapper {

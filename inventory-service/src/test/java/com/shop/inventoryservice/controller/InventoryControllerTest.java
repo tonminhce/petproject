@@ -8,7 +8,7 @@ import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.InventoryResponse;
 import com.shop.inventoryservice.dto.response.ReservationResponse;
-import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.constant.ReservationStatus;
 import com.shop.inventoryservice.service.InventoryService;
 import com.shop.inventoryservice.service.ReservationService;
 import org.junit.jupiter.api.Test;

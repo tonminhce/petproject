@@ -1,6 +1,6 @@
 package com.shop.productservice.dto;
 
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 
 import java.util.UUID;
 

@@ -1,5 +1,6 @@
 package com.shop.productservice.entity;
 
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.common.core.data.AbstractMappedEntity;
 import jakarta.persistence.*;
 import lombok.*;

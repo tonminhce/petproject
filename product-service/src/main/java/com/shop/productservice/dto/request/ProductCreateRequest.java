@@ -1,6 +1,6 @@
 package com.shop.productservice.dto.request;
 
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

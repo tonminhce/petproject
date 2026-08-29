@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.inventoryservice.entity.Inventory;
 import com.shop.inventoryservice.entity.OutboxEvent;
-import com.shop.inventoryservice.entity.OutboxStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.inventoryservice.entity.Reservation;
 import com.shop.inventoryservice.repository.OutboxEventRepository;
 import com.shop.inventoryservice.service.InventoryEventPublisher;

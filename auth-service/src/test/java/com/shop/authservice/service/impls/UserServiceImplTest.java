@@ -1,6 +1,6 @@
 package com.shop.authservice.service.impls;
 
-import com.shop.authservice.config.RoleName;
+import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;

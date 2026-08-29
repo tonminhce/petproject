@@ -9,7 +9,7 @@ import com.shop.inventoryservice.dto.response.InventoryResponse;
 import com.shop.inventoryservice.dto.response.ReservationResponse;
 import com.shop.inventoryservice.entity.Inventory;
 import com.shop.inventoryservice.entity.Reservation;
-import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.constant.ReservationStatus;
 import com.shop.inventoryservice.mapper.InventoryMapper;
 import com.shop.inventoryservice.repository.InventoryRepository;
 import com.shop.inventoryservice.repository.ReservationRepository;

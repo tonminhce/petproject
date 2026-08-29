@@ -1,6 +1,6 @@
 package com.shop.authservice.service.impls;
 
-import com.shop.authservice.config.RoleName;
+import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.entity.Role;
 import com.shop.authservice.entity.User;
 import com.shop.authservice.repository.RoleRepository;

@@ -1,5 +1,6 @@
 package com.shop.inventoryservice.entity;
 
+import com.shop.common.core.constants.OutboxStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

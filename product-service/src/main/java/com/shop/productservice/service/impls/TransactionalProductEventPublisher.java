@@ -3,7 +3,7 @@ package com.shop.productservice.service.impls;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.productservice.entity.OutboxEvent;
-import com.shop.productservice.entity.OutboxStatus;
+import com.shop.common.core.constants.OutboxStatus;
 import com.shop.productservice.entity.Product;
 import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.service.ProductEventPublisher;

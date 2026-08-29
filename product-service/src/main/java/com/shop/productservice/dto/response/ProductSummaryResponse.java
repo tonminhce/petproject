@@ -1,6 +1,6 @@
 package com.shop.productservice.dto.response;
 
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 
 import java.math.BigDecimal;
 import java.util.UUID;

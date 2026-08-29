@@ -1,7 +1,7 @@
 package com.shop.inventoryservice.repository;
 
 import com.shop.inventoryservice.entity.Reservation;
-import com.shop.inventoryservice.entity.ReservationStatus;
+import com.shop.inventoryservice.constant.ReservationStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
