@@ -14,7 +14,7 @@ public interface OrderService {
 
     OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin);
 
-    OrderResponse confirmOrder(UUID orderId);
+    OrderResponse confirmOrder(UUID orderId, UUID adminUserId, String idempotencyKey);
     OrderResponse shipOrder(UUID orderId);
     OrderResponse deliverOrder(UUID orderId);
 

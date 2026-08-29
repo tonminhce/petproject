@@ -22,11 +22,15 @@ import com.shop.orderservice.repository.CartRepository;
 import com.shop.orderservice.repository.OrderItemRepository;
 import com.shop.orderservice.repository.OrderRepository;
 import com.shop.orderservice.service.IdempotencyService;
+import com.shop.orderservice.service.OrderCommitCoordinator;
+import com.shop.orderservice.service.OrderConfirmMetrics;
 import com.shop.orderservice.service.OrderEventPublisher;
 import com.shop.orderservice.service.OrderService;
 import com.shop.orderservice.service.OrderStatusService;
 import com.shop.orderservice.service.PricingService;
 import com.shop.orderservice.service.StockReservationService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -66,6 +70,9 @@ public class OrderServiceImpl implements OrderService {
     private final OrderStatusService orderStatusService;
     private final OrderMapper orderMapper;
     private final ObjectMapper objectMapper;
+    private final OrderCommitCoordinator commitCoordinator;
+    private final OrderConfirmMetrics confirmMetrics;
+    private final MeterRegistry meterRegistry;
 
     // ========================================================================
     // CREATE ORDER — SAGA with explicit compensation
@@ -204,15 +211,23 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * SHA-256 hex of JSON-serialized request body (Jackson deterministic for record field order).
-     * 64 hex chars fits {@code idempotency_keys.request_hash VARCHAR(64)}.
+     * SHA-256 hex (64 chars — fits {@code idempotency_keys.request_hash VARCHAR(64)}).
+     * Shared by create (JSON-serialized body) and confirm (orderId string).
      */
+    private String sha256Hex(String raw) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("Failed to hash request body for idempotency", ex);
+        }
+    }
+
+    /** SHA-256 hex of JSON-serialized request body (Jackson deterministic for record field order). */
     private String hash(OrderCreateRequest request) {
         try {
-            byte[] json = objectMapper.writeValueAsBytes(request);
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(json);
-            return HexFormat.of().formatHex(digest);
-        } catch (JsonProcessingException | NoSuchAlgorithmException ex) {
+            return sha256Hex(new String(objectMapper.writeValueAsBytes(request), StandardCharsets.UTF_8));
+        } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Failed to hash request body for idempotency", ex);
         }
     }
@@ -290,8 +305,47 @@ public class OrderServiceImpl implements OrderService {
     // service layer only enforces the state machine.
     @Override
     @Transactional
-    public OrderResponse confirmOrder(UUID orderId) {
-        return transitionStatus(orderId, OrderStatus.CONFIRMED, () -> Instant.now());
+    public OrderResponse confirmOrder(UUID orderId, UUID adminUserId, String idempotencyKey) {
+        confirmMetrics.attempt();
+        String requestHash = sha256Hex(orderId.toString());
+        Optional<OrderResponse> cached = (idempotencyKey == null)
+            ? Optional.empty()
+            : idempotencyService.begin(idempotencyKey, adminUserId, requestHash);
+        if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the commit
+
+        try {
+            Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
+            orderStatusService.validateTransition(order.getStatus(), OrderStatus.CONFIRMED);
+            List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+
+            // External commit BEFORE local state flip — local row stays PENDING until
+            // inventory/promotion commits succeed (coordinator compensates on failure).
+            Timer.Sample sample = Timer.start(meterRegistry);
+            try {
+                commitCoordinator.commitForConfirm(order, items);
+            } finally {
+                sample.stop(confirmMetrics.timer("commit_inventory"));
+            }
+
+            order.setConfirmedAt(Instant.now());
+            order.setStatus(OrderStatus.CONFIRMED);
+            orderRepository.save(order);
+            orderEventPublisher.publishStatusChanged(order);
+
+            OrderResponse response = orderMapper.toResponse(order, items);
+            if (idempotencyKey != null)
+                idempotencyService.complete(idempotencyKey, adminUserId, response, 200);
+            return response;
+        } catch (RuntimeException ex) {
+            // begin() throws are deliberately OUTSIDE this try: a collision 409 must
+            // never delete another execution's in-flight row (same as createOrder).
+            if (idempotencyKey != null)
+                idempotencyService.abort(idempotencyKey, adminUserId, requestHash);
+            if (!(ex instanceof BusinessException))  // infra failure → 409 ORD-4011, order stays PENDING
+                throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
+            throw ex;  // state-machine guard etc. rethrown unchanged
+        }
     }
 
     @Override

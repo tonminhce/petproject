@@ -10,12 +10,15 @@ import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.mapper.OrderMapper;
 import com.shop.orderservice.repository.*;
 import com.shop.orderservice.service.*;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -43,10 +46,14 @@ class OrderServiceImplTest {
     @Mock OrderStatusService orderStatusService;
     @Mock OrderMapper orderMapper;
     @Mock com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    @Mock OrderCommitCoordinator commitCoordinator;
+    @Mock OrderConfirmMetrics confirmMetrics;
+    @Spy io.micrometer.core.instrument.simple.SimpleMeterRegistry meterRegistry;
 
     @InjectMocks OrderServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();
+    private final UUID adminId = UUID.randomUUID();
     private final UUID orderId = UUID.randomUUID();
     private final UUID productId = UUID.randomUUID();
     private Order order;
@@ -130,14 +137,137 @@ class OrderServiceImplTest {
         verify(pricingService, never()).calculate(any(), any(), any(), any());  // saga NOT re-run
     }
 
-    @Test
-    void confirmOrder_setsConfirmedAt() {
+    // ========================================================================
+    // CONFIRM — orchestration + Idempotency-Key (Task 11)
+    // ========================================================================
+
+    private static final String CONFIRM_KEY = "confirm-key-1";
+
+    /** Contract: request hash for confirm = sha256 hex of orderId.toString() (64 chars). */
+    private String confirmHash() {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(orderId.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    /** Loads + timer only — shared by tests that FAIL before the mapper is reached. */
+    private void stubConfirmLoad() {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
+        when(confirmMetrics.timer(anyString()))
+            .thenAnswer(inv -> Timer.builder("test").register(new SimpleMeterRegistry()));
+    }
 
-        service.confirmOrder(orderId);
+    private OrderResponse stubConfirmHappy() {
+        stubConfirmLoad();
+        OrderResponse response = new OrderResponse(orderId, userId, OrderStatus.CONFIRMED,
+            List.of(), BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO,
+            BigDecimal.valueOf(110), null, Instant.now(), Instant.now(), null, null, null);
+        when(orderMapper.toResponse(eq(order), any())).thenReturn(response);
+        return response;
+    }
 
+    @Test
+    void confirmOrder_happy_commitsThenConfirmsAndCompletesIdempotency() {
+        OrderResponse response = stubConfirmHappy();
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+            .thenReturn(Optional.empty());
+
+        OrderResponse result = service.confirmOrder(orderId, adminId, CONFIRM_KEY);
+
+        assertThat(result).isSameAs(response);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(order.getConfirmedAt()).isNotNull();
+        verify(commitCoordinator).commitForConfirm(order, List.of());
+        verify(orderRepository).save(order);
+        verify(orderEventPublisher).publishStatusChanged(order);
+        verify(idempotencyService).complete(CONFIRM_KEY, adminId, response, 200);
+        verify(confirmMetrics).attempt();
+        // external commit FIRST — state flip/publish/complete only after it succeeds
+        org.mockito.InOrder seq = inOrder(commitCoordinator, orderRepository,
+            orderEventPublisher, idempotencyService);
+        seq.verify(commitCoordinator).commitForConfirm(order, List.of());
+        seq.verify(orderRepository).save(order);
+        seq.verify(orderEventPublisher).publishStatusChanged(order);
+        seq.verify(idempotencyService).complete(CONFIRM_KEY, adminId, response, 200);
+    }
+
+    @Test
+    void confirmOrder_coordinatorFails_wr4011AbortsAndStaysPending() {
+        stubConfirmLoad();
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+            .thenReturn(Optional.empty());
+        doThrow(new RuntimeException("inventory down"))
+            .when(commitCoordinator).commitForConfirm(any(), anyList());
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, CONFIRM_KEY))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4011"));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(order.getConfirmedAt()).isNull();
+        verify(orderRepository, never()).save(any());
+        verify(orderEventPublisher, never()).publishStatusChanged(any());
+        verify(idempotencyService).abort(CONFIRM_KEY, adminId, confirmHash());
+        verify(idempotencyService, never()).complete(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void confirmOrder_sameKeyReplay_returnsCachedCoordinatorRunsOnce() {
+        OrderResponse first = stubConfirmHappy();
+        OrderResponse cached = new OrderResponse(orderId, userId, OrderStatus.CONFIRMED,
+            List.of(), BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO,
+            BigDecimal.valueOf(110), null, Instant.now(), Instant.now(), null, null, null);
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+            .thenReturn(Optional.empty())
+            .thenReturn(Optional.of(cached));
+
+        OrderResponse r1 = service.confirmOrder(orderId, adminId, CONFIRM_KEY);
+        OrderResponse r2 = service.confirmOrder(orderId, adminId, CONFIRM_KEY);
+
+        assertThat(r1).isSameAs(first);
+        assertThat(r2).isSameAs(cached);
+        verify(commitCoordinator, times(1)).commitForConfirm(any(), any());
+        verify(orderRepository, times(1)).save(any());
+        verify(idempotencyService, times(1)).complete(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    void confirmOrder_invalidState_rethrowsGuardAsIs_andAborts() {
+        order.setStatus(OrderStatus.SHIPPED);
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+            .thenReturn(Optional.empty());
+        doThrow(BusinessException.of(ErrorCode.ORDER_INVALID_STATE_TRANSITION,
+                OrderStatus.SHIPPED, OrderStatus.CONFIRMED))
+            .when(orderStatusService).validateTransition(OrderStatus.SHIPPED, OrderStatus.CONFIRMED);
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, CONFIRM_KEY))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4004"));  // NOT wrapped to 4011
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
+        verify(confirmMetrics).attempt();
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+        verify(idempotencyService).abort(CONFIRM_KEY, adminId, confirmHash());
+    }
+
+    @Test
+    void confirmOrder_nullKey_skipsIdempotencyStillOrchestrates() {
+        stubConfirmHappy();
+
+        OrderResponse result = service.confirmOrder(orderId, adminId, null);
+
+        verifyNoInteractions(idempotencyService);
+        assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(order.getConfirmedAt()).isNotNull();
+        verify(commitCoordinator).commitForConfirm(order, List.of());
+        verify(orderEventPublisher).publishStatusChanged(order);
     }
 
     @Test
