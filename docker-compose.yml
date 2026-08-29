@@ -20,7 +20,7 @@ x-logging: &logging
       max-file: "3"
 
 x-jwt: &jwt
-  JWT_ISSUER_URI: http://keycloak:8080/realms/ecommerce
+  SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
 
 x-pg-creds: &pg-creds
   POSTGRES_USER: ${POSTGRES_USER}
@@ -383,6 +383,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventoryservice
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       postgres:

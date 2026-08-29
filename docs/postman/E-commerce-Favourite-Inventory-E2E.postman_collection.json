@@ -1,0 +1,983 @@
+{
+  "info": {
+    "name": "E-commerce Favourite + Inventory E2E",
+    "description": "End-to-end test for favourite-service (8081) + inventory-service (8082). Requires the auth+product Postman collection (E-commerce Auth + Product E2E) to have run first to populate accessToken + adminAccessToken variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "favouriteBase",
+      "value": "http://localhost:8081/api/v1"
+    },
+    {
+      "key": "inventoryBase",
+      "value": "http://localhost:8082/api/v1"
+    },
+    {
+      "key": "favouriteId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "reservationId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. SETUP - Health Checks",
+      "item": [
+        {
+          "name": "Favourite Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8081/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "Inventory Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8082/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "Favourite Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8081/swagger-ui.html"
+            }
+          }
+        },
+        {
+          "name": "Inventory Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8082/swagger-ui.html"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. FAVOURITE - Anonymous access blocked (expect 401)",
+      "item": [
+        {
+          "name": "GET /favourites anonymous (expect 401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{favouriteBase}}"
+            }
+          }
+        },
+        {
+          "name": "POST /favourites anonymous (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "00000000-0000-0000-0000-000000000000"
+}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. FAVOURITE - USER reads (empty list initially)",
+      "item": [
+        {
+          "name": "GET /favourites as USER (empty list)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. FAVOURITE - USER creates favourites (uses productId from auth+product collection)",
+      "item": [
+        {
+          "name": "Add favourite for productId (USER)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('favouriteId', j.data.id); console.log('Favourite ID stored:', j.data.favouriteId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "{{productId}}"
+}"
+            }
+          }
+        },
+        {
+          "name": "Add SAME favourite (USER) again (expect 409 duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "{{productId}}"
+}"
+            }
+          }
+        },
+        {
+          "name": "Add favourite with INVALID body (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": null
+}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. FAVOURITE - USER reads after create",
+      "item": [
+        {
+          "name": "GET /favourites (USER, should have 1 entry)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            }
+          }
+        },
+        {
+          "name": "GET /favourites/{favouriteId} (USER)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}/{{favouriteId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. FAVOURITE - ADMIN cannot see USER favourites (per-user isolation)",
+      "item": [
+        {
+          "name": "GET /favourites as ADMIN (own list, may be empty)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            }
+          }
+        },
+        {
+          "name": "GET /favourites/{favouriteId} as ADMIN (expect 404 - different user)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}/{{favouriteId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. FAVOURITE - USER deletes by id",
+      "item": [
+        {
+          "name": "DELETE /favourites/{favouriteId} (USER)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}/{{favouriteId}}"
+            }
+          }
+        },
+        {
+          "name": "GET deleted favourite (expect 404 soft-delete)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}/{{favouriteId}}"
+            }
+          }
+        },
+        {
+          "name": "Re-add favourite for delete-by-product test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('favouriteId', j.data.favouriteId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "{{productId}}"
+}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /favourites/by-product/{productId} (USER)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}/by-product/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "GET list after delete-by-product (should be empty)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{favouriteBase}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. INVENTORY - Anonymous reads blocked (expect 401, fail-closed)",
+      "item": [
+        {
+          "name": "GET /inventory anonymous (expect 401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{inventoryBase}}"
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/{productId} anonymous (expect 401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{inventoryBase}}/00000000-0000-0000-0000-000000000000"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. INVENTORY - USER reads (empty list initially)",
+      "item": [
+        {
+          "name": "GET /inventory as USER (paged)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/{productId} USER (expect 404 — not created yet)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. INVENTORY - USER cannot write (expect 403)",
+      "item": [
+        {
+          "name": "POST /inventory as USER (expect 403 - ADMIN only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "00000000-0000-0000-0000-000000000001",
+  "availableQuantity": 100
+}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. INVENTORY - ADMIN creates + reads (cache-aside)",
+      "item": [
+        {
+          "name": "Create inventory for productId (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { console.log('Inventory created:', JSON.stringify(j.data)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "{{productId}}",
+  "availableQuantity": 100
+}"
+            }
+          }
+        },
+        {
+          "name": "Create DUPLICATE inventory (expect 409 INVENTORY_ALREADY_EXISTS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "productId": "{{productId}}",
+  "availableQuantity": 50
+}"
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/{productId} as USER (cache MISS, populates Redis)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/{productId} again (cache HIT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. INVENTORY - ADMIN update (cache evict afterCommit)",
+      "item": [
+        {
+          "name": "Update inventory (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "availableQuantity": 200
+}"
+            }
+          }
+        },
+        {
+          "name": "GET /inventory/{productId} (should show 200 after cache evict)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. INVENTORY - Reserve/commit/release lifecycle (ADMIN as SERVICE proxy)",
+      "item": [
+        {
+          "name": "Reserve stock (ADMIN, satisfies SERVICE-or-ADMIN rule)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('reservationId', j.data.reservationId); console.log('Reservation ID stored:', j.data.reservationId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}/reserve"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "quantity": 30
+}"
+            }
+          }
+        },
+        {
+          "name": "GET inventory (should show reservedQuantity=30, availableQuantity=170)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "Reserve EXCESS stock (expect 409 STOCK_INSUFFICIENT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}/reserve"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "quantity": 99999
+}"
+            }
+          }
+        },
+        {
+          "name": "Commit reservation (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/reservations/{{reservationId}}/commit"
+            }
+          }
+        },
+        {
+          "name": "GET inventory after commit (reservedQuantity=0, availableQuantity=170)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "Reserve + Release cycle (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('reservationId', j.data.reservationId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}/reserve"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "quantity": 15
+}"
+            }
+          }
+        },
+        {
+          "name": "Release reservation (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/reservations/{{reservationId}}/release"
+            }
+          }
+        },
+        {
+          "name": "GET inventory after release (reservedQuantity back to 0)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. INVENTORY - Reservation error paths",
+      "item": [
+        {
+          "name": "Commit non-existent reservation (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/reservations/00000000-0000-0000-0000-000000000000/commit"
+            }
+          }
+        },
+        {
+          "name": "Reserve with invalid body (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}/reserve"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "quantity": 0
+}"
+            }
+          }
+        },
+        {
+          "name": "USER cannot reserve (expect 403 - SERVICE-or-ADMIN only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}/reserve"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "quantity": 5
+}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. INVENTORY - ADMIN delete (with reservation guard)",
+      "item": [
+        {
+          "name": "DELETE /inventory/{productId} (ADMIN) - expect 409 (active COMMITTED reservation)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "Reserve+Release to clear state (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var j = pm.response.json(); if (pm.response.code === 200) { pm.collectionVariables.set('reservationId', j.data.reservationId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}/reserve"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "quantity": 1
+}"
+            }
+          }
+        },
+        {
+          "name": "Release reservation (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/reservations/{{reservationId}}/release"
+            }
+          }
+        },
+        {
+          "name": "DELETE /inventory/{productId} (ADMIN) - should succeed (no active reservations)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        },
+        {
+          "name": "GET deleted inventory (expect 404 hard-delete)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{inventoryBase}}/{{productId}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. KAFKA OUTBOX - Verify events landed in shop.inventory.events.v1",
+      "item": [
+        {
+          "name": "Consume shop.inventory.events.v1 from Kafka",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:9092/api/v1/kafka/topics/shop.inventory.events.v1 (use kafka-console-consumer in docker)"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
