@@ -49,12 +49,15 @@ public class InventoryMetrics {
         // `Cache` interface does not expose getStatistics(); only `RedisCache`
         // does — cast and skip if the cast fails (e.g. test context running with
         // spring.cache.type=none).
+        //
+        // Bind the RedisCache itself and call getStatistics() INSIDE the gauge
+        // function: it returns an immutable snapshot, so a constructor-time capture
+        // would freeze the counters at their boot values (platform metrics fix).
         if (cacheManager.getCache("inventory") instanceof RedisCache redisCache) {
-            CacheStatistics stats = redisCache.getStatistics();
-            Gauge.builder("inventory.cache.hit", stats, CacheStatistics::getHits)
+            Gauge.builder("inventory.cache.hit", redisCache, rc -> rc.getStatistics().getHits())
                 .tag("cache", "inventory")
                 .register(registry);
-            Gauge.builder("inventory.cache.miss", stats, CacheStatistics::getMisses)
+            Gauge.builder("inventory.cache.miss", redisCache, rc -> rc.getStatistics().getMisses())
                 .tag("cache", "inventory")
                 .register(registry);
         }

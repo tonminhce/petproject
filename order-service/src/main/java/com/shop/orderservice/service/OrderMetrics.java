@@ -40,11 +40,14 @@ public class OrderMetrics {
             .register(registry);
 
         if (cacheManager.getCache("productPrice") instanceof RedisCache redisCache) {
-            CacheStatistics stats = redisCache.getStatistics();
-            Gauge.builder("order.cache.hit", stats, CacheStatistics::getHits)
+            // Bind the RedisCache itself and read getStatistics() INSIDE the gauge
+            // value function: getStatistics() returns an immutable snapshot, so a
+            // constructor-time capture would freeze the counters at their boot
+            // values (re-review finding 2b).
+            Gauge.builder("order.cache.hit", redisCache, rc -> rc.getStatistics().getHits())
                 .tag("cache", "productPrice")
                 .register(registry);
-            Gauge.builder("order.cache.miss", stats, CacheStatistics::getMisses)
+            Gauge.builder("order.cache.miss", redisCache, rc -> rc.getStatistics().getMisses())
                 .tag("cache", "productPrice")
                 .register(registry);
         }

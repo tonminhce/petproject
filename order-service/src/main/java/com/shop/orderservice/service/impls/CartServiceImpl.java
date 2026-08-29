@@ -37,7 +37,7 @@ public class CartServiceImpl implements CartService {
     private final CartMapper cartMapper;
 
     @Override
-    // ⚠️ P0-3 — NOT @Transactional(readOnly=true). getOrCreateCart may INSERT for new users;
+    // P0-3 — NOT @Transactional(readOnly=true). getOrCreateCart may INSERT for new users;
     // readOnly connection would reject INSERT → 500 on first GET. This is a write (auto-create).
     @Transactional
     public CartResponse getMyCart(UUID userId) {

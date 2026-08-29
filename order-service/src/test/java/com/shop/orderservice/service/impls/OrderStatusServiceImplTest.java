@@ -35,10 +35,15 @@ class OrderStatusServiceImplTest {
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.DELIVERED, true),
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED, false),
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.PENDING, false),
-            // DELIVERED: terminal
+            // DELIVERED: terminal — including CANCELLED (asserted against the real
+            // state machine because OrderServiceImplTest stubs the service for the
+            // cancel path)
             Arguments.of(OrderStatus.DELIVERED, OrderStatus.PENDING, false),
+            Arguments.of(OrderStatus.DELIVERED, OrderStatus.SHIPPED, false),
+            Arguments.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED, false),
             // CANCELLED: terminal
             Arguments.of(OrderStatus.CANCELLED, OrderStatus.PENDING, false),
+            Arguments.of(OrderStatus.CANCELLED, OrderStatus.CONFIRMED, false),
             // Same-state: rejected (strict)
             Arguments.of(OrderStatus.PENDING, OrderStatus.PENDING, false)
         );

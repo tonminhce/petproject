@@ -112,4 +112,15 @@ class OrderControllerTest {
                 .content("{}"))
             .andExpect(status().isOk());
     }
+
+    @Test
+    void createOrder_rejectsIdempotencyKeyOver64Chars() throws Exception {
+        // idempotency_keys.key is varchar(64) — a longer header must be a 400 from
+        // the guard, not a DB constraint violation (review M5).
+        mockMvc.perform(post("/api/v1/orders")
+                .header("Idempotency-Key", "k".repeat(65))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest());
+    }
 }

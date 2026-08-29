@@ -19,9 +19,10 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-5 — Unwraps ApiResponse envelope.
- * ⚠️ P1-3 — Per-call Authorization header từ `ServiceTokenProvider` (Task 2). Chỉ client
- * này cần token (product GET public; tax/promotion disabled MVP).
+ * P0-5 — unwraps the ApiResponse envelope into the typed payload.
+ * P1-3 — attaches a per-call Authorization header from {@link ServiceTokenProvider}:
+ * only this client needs a token (product GET is a public path; tax/promotion are
+ * disabled in the MVP).
  */
 @Component
 @RequiredArgsConstructor

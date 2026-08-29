@@ -30,7 +30,7 @@ public class PricingServiceImpl implements PricingService {
 
     @Override
     public PricingBreakdown calculate(UUID userId, List<CartItem> items, String couponCode) {
-        // ⚠️ P1-5 — Reject couponCode upfront if promotion service is disabled.
+        // P1-5 — Reject couponCode upfront if promotion service is disabled.
         // Spec §5.2: "Có couponCode mà promotion disabled → 400 ORDER_PROMOTION_INVALID
         // (không âm thầm bỏ qua discount user nhập)". Silent ZERO discount would be
         // a UI lie — user sees a coupon field that doesn't work.

@@ -21,7 +21,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.springframework.dao.OptimisticLockingFailureException;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @Testcontainers
@@ -84,5 +87,25 @@ class OrderRepositoryTest {
             .subtotal(BigDecimal.TEN).taxAmount(BigDecimal.ZERO).discountAmount(BigDecimal.ZERO)
             .total(BigDecimal.TEN).build();
         return em.persistAndFlush(order);
+    }
+
+    @Test
+    void versionIncrementsOnUpdate_andStaleSaveThrows() {
+        // Review I3: @Version guards concurrent status transitions and changelog-003
+        // must apply cleanly under ddl-auto=validate.
+        Order order = persistOrder(alice, OrderStatus.PENDING);
+        em.clear();
+
+        Order managed = repo.findById(order.getId()).orElseThrow();
+        assertThat(managed.getVersion()).isEqualTo(0L);
+        managed.setStatus(OrderStatus.CONFIRMED);
+        repo.saveAndFlush(managed);
+        assertThat(managed.getVersion()).isEqualTo(1L);
+
+        // `order` is a stale detached copy (version 0) — writing it now must fail.
+        em.clear();
+        order.setStatus(OrderStatus.CANCELLED);
+        assertThatThrownBy(() -> repo.saveAndFlush(order))
+            .isInstanceOf(OptimisticLockingFailureException.class);
     }
 }

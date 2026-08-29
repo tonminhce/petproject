@@ -52,15 +52,18 @@ public class ProductMetrics {
         // The Spring `Cache` interface does not expose getStatistics(); only
         // `RedisCache` does — cast and skip if the cast fails (e.g. test context
         // using a different CacheManager implementation).
+        //
+        // Bind the RedisCache itself and call getStatistics() INSIDE the gauge
+        // function: it returns an immutable snapshot, so a constructor-time capture
+        // would freeze the counters at their boot values (platform metrics fix).
         for (String cacheName : List.of("product", "productBySlug", "category", "brand")) {
             if (!(cacheManager.getCache(cacheName) instanceof RedisCache redisCache)) {
                 continue;
             }
-            CacheStatistics stats = redisCache.getStatistics();
-            Gauge.builder("product.cache.hit",  stats, CacheStatistics::getHits)
+            Gauge.builder("product.cache.hit", redisCache, rc -> rc.getStatistics().getHits())
                 .tag("cache", cacheName)
                 .register(registry);
-            Gauge.builder("product.cache.miss", stats, CacheStatistics::getMisses)
+            Gauge.builder("product.cache.miss", redisCache, rc -> rc.getStatistics().getMisses())
                 .tag("cache", cacheName)
                 .register(registry);
         }

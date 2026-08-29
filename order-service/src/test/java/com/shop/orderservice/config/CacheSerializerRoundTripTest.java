@@ -47,4 +47,21 @@ class CacheSerializerRoundTripTest {
             .contains("@class")
             .contains("ProductSnapshot");
     }
+
+    @Test
+    void productPriceSerializer_doesNotMutateProvidedObjectMapper() throws Exception {
+        // Regression guard for re-review finding 1: GenericJackson2JsonRedisSerializer
+        // builder MUTATES the mapper it receives (setDefaultTyping + NullValue module).
+        // The mapper handed in must be a private copy — if the shared Boot ObjectMapper
+        // were mutated, every MVC record request body would fail deserialization with
+        // InvalidTypeIdException and every record response would gain an "@class" field.
+        ObjectMapper shared = new ObjectMapper();  // stands in for the Boot bean
+
+        CacheConfig.productPriceSerializer(shared);  // must NOT touch `shared`
+
+        byte[] appJson = shared.writeValueAsBytes(
+            new ProductSnapshot(UUID.randomUUID(), "App", BigDecimal.ONE));
+        assertThat(new String(appJson)).doesNotContain("@class");
+        assertThat(shared.readValue(appJson, ProductSnapshot.class).title()).isEqualTo("App");
+    }
 }

@@ -34,7 +34,9 @@ class IdempotencyServiceImplTest {
     @Mock ObjectMapper objectMapper;
     @Mock PlatformTransactionManager transactionManager;
 
-    @InjectMocks IdempotencyServiceImpl service;
+    // Manual construction: the TTL is constructor-injected (review nit 8), and
+    // @InjectMocks would leave the primitive parameter at 0.
+    IdempotencyServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();
     private final String key = "test-key";
@@ -45,15 +47,13 @@ class IdempotencyServiceImplTest {
         Instant.now(), null, null, null, null);
 
     @BeforeEach
-    void stubTxManager() {
+    void setUp() {
+        service = new IdempotencyServiceImpl(repository, objectMapper, transactionManager, 24L);
         // The impl builds a REQUIRES_NEW TransactionTemplate over this manager;
         // this stub makes the template execute its callback inline and treat the
         // "transaction" as new, so the production code path runs unmodified.
         lenient().when(transactionManager.getTransaction(any()))
             .thenReturn(new SimpleTransactionStatus());
-        // No Spring container here — inject the @Value TTL manually (default 0 would
-        // make expiresAt == createdAt and break the isAfter assertion on fast ticks).
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "ttlHours", 24L);
     }
 
     // ---------- begin ----------

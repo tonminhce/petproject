@@ -38,11 +38,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -101,7 +104,7 @@ public class OrderServiceImpl implements OrderService {
         // must not depend on arbitrary DB row order — a stable sequence makes
         // partial-failure outcomes reproducible and testable.
         List<CartItem> items = cartItemRepository.findByCartId(cart.getId()).stream()
-            .sorted(java.util.Comparator.comparing(CartItem::getProductId))
+            .sorted(Comparator.comparing(CartItem::getProductId))
             .toList();
         if (items.isEmpty()) throw BusinessException.of(ErrorCode.CART_EMPTY);
 
@@ -220,7 +223,7 @@ public class OrderServiceImpl implements OrderService {
         if (order.getStatus() == OrderStatus.PENDING) {
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .toList();
             releaseAllReservationsById(reservationIds);
         }
@@ -327,7 +330,7 @@ public class OrderServiceImpl implements OrderService {
         Map<UUID, List<OrderItem>> itemsByOrder = orderIds.isEmpty()
             ? Map.of()
             : orderItemRepository.findByOrderIdIn(orderIds).stream()
-                .collect(java.util.stream.Collectors.groupingBy(OrderItem::getOrderId));
+                .collect(Collectors.groupingBy(OrderItem::getOrderId));
         return page.map(order -> orderMapper.toResponse(
             order, itemsByOrder.getOrDefault(order.getId(), List.of())));
     }

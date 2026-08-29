@@ -71,7 +71,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
         Map<String, Object> data = new HashMap<>();
         data.put("orderId", order.getId());
         data.put("cancelledAt", order.getCancelledAt() != null ? order.getCancelledAt().toString() : Instant.now().toString());
-        // ⚠️ P2-4 — MVP cannot determine refund status (no payment-service integration yet).
+        // P2-4 — MVP cannot determine refund status (no payment-service integration yet).
         // Hardcode false + TODO for Phase 8 (payment-service) to wire real refund state.
         // Original condition `status == CANCELLED && total != null` was ALWAYS true.
         data.put("refunded", false);

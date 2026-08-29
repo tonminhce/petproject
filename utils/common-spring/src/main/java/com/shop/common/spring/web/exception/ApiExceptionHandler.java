@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -117,7 +118,8 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableMessage(
             HttpMessageNotReadableException exception, WebRequest request) {
-        // Không đưa exception.getMessage() ra ngoài vì có thể chứa JSON thô và chi tiết nội bộ
+        // Deliberately do NOT surface exception.getMessage(): it can contain the raw
+        // JSON payload and internal deserialization details.
         String safeMessage = Messages.get(ErrorCode.BAD_REQUEST.getMessageKey());
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
@@ -205,6 +207,26 @@ public class ApiExceptionHandler {
         );
     }
 
+    // ------------------- Concurrent modification -------------------
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLocking(
+            OptimisticLockingFailureException exception, WebRequest request) {
+        // Another transaction updated the same row between our read and write
+        // (e.g. two admins racing confirm/cancel on one order). That is a
+        // client-visible conflict, not a server fault — canonical 409, never
+        // the 500 fallback (order-service review finding 3).
+        String message = Messages.get(ErrorCode.CONFLICT.getMessageKey());
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                ErrorCode.CONFLICT.getCode(),
+                message,
+                null,
+                request,
+                exception,
+                true
+        );
+    }
+
     // ------------------- Security -------------------
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
@@ -278,7 +300,7 @@ public class ApiExceptionHandler {
         String requestUri = extractRequestUri(request);
         Throwable rootCause = findRootCause(exception);
 
-        // Log theo mức phù hợp
+        // Log at the severity the translation branch asked for
         if (shouldLogAsError) {
             log.error(ERROR_LOG_TEMPLATE, requestUri, status.value(), errorCode, message, rootCause.getMessage(), exception);
         } else {

@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-1 — Does NOT extend {@code AbstractMappedEntity}. Cart items are hard-deleted
+ * P0-1 — Does NOT extend {@code AbstractMappedEntity}. Cart items are hard-deleted
  * with their parent Cart via {@code ON DELETE CASCADE} on the FK.
  *
  * <p>If we extended AbstractMappedEntity, {@code ddl-auto: validate} would fail at

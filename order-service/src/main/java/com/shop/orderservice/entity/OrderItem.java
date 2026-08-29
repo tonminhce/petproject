@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-1 — Does NOT extend {@code AbstractMappedEntity} (which extends
+ * P0-1 — Does NOT extend {@code AbstractMappedEntity} (which extends
  * {@code SoftDeletable} requiring `deleted` column). Order items are hard-deleted
  * with their parent Order via {@code ON DELETE CASCADE} on the FK.
  *

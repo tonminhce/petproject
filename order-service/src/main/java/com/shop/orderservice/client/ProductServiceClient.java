@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-5 — Unwraps {@code ApiResponse<ProductSnapshot>} envelope. Product-service
+ * P0-5 — Unwraps {@code ApiResponse<ProductSnapshot>} envelope. Product-service
  * returns ALL endpoints wrapped in {@code ApiResponse<T>} — calling
  * {@code .body(ProductSnapshot.class)} would deserialize {@code {success, code, message, data, ...}}
  * directly into {@code ProductSnapshot} → all fields null → NPE on {@code .unitPrice()}.

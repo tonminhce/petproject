@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 
 /**
- * ⚠️ P0-4 — NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
+ * P0-4 — NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
  * {@code @Qualifier} from fields to constructor params. Defining beans as method
  * signatures here works because Spring wires by parameter NAME ({@code productRestClient},
  * {@code inventoryRestClient}, etc.) — clients inject by name with

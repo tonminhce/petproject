@@ -39,21 +39,28 @@ public class IdempotencyServiceImpl implements IdempotencyService {
      * replays, and the unique composite PK is the final arbiter on concurrent inserts.
      *
      * <p>The insert runs in its own committed transaction (independent of the caller's
-     * saga TX) so other requests can observe the in-flight row during the saga. Because
-     * it owns a dedicated transaction, a lost same-key race rolls back cleanly and the
-     * subsequent re-read stays on a fresh persistence context (review finding I1).</p>
+     * saga TX) so other requests can observe the in-flight row during the saga, and a
+     * lost same-key race rolls back cleanly without poisoning the caller's transaction
+     * (review finding I1).</p>
+     *
+     * <p>Pool note (review finding 7): while the caller's transaction is active, this
+     * template holds a SECOND pooled connection for the whole saga — including the
+     * remote pricing/reserve calls. Hikari's pool must be sized with that in mind
+     * (connections ≈ 2 × concurrent checkouts), or the in-flight insert should move
+     * outside the saga TX in a future revision.</p>
      */
     private final TransactionTemplate requiresNewTemplate;
 
     /** TTL from spec §3.7 — wired to the {@code order.idempotency.ttl-hours} knob. */
-    @Value("${order.idempotency.ttl-hours:24}")
-    private long ttlHours;
+    private final long ttlHours;
 
     public IdempotencyServiceImpl(IdempotencyKeyRepository repository,
                                   ObjectMapper objectMapper,
-                                  PlatformTransactionManager transactionManager) {
+                                  PlatformTransactionManager transactionManager,
+                                  @Value("${order.idempotency.ttl-hours:24}") long ttlHours) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        this.ttlHours = ttlHours;
         TransactionTemplate template = new TransactionTemplate(transactionManager);
         template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.requiresNewTemplate = template;
@@ -73,9 +80,10 @@ public class IdempotencyServiceImpl implements IdempotencyService {
             requiresNewTemplate.executeWithoutResult(status -> repository.saveAndFlush(ik));
             return Optional.empty();  // owner — proceed with saga
         } catch (DataIntegrityViolationException ex) {
-            // Lost a same-key race: the winner's insert committed first. The failed
-            // template TX is discarded, so this re-read hits a fresh persistence
-            // context. Resolve exactly like any other collision — never leak a raw
+            // Lost a same-key race: the winner's insert committed first. This re-read
+            // runs in the caller's (saga) persistence context — safe because nothing
+            // has been loaded into it yet, so the query sees the winner's committed
+            // row. Resolve exactly like any other collision — never leak a raw
             // constraint violation as a 500 (review finding I1).
             IdempotencyKey winner = repository.findByUserIdAndKey(userId, key)
                 .orElseThrow(() -> ex);

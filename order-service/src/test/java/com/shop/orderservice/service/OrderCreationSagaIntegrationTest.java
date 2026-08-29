@@ -118,6 +118,7 @@ class OrderCreationSagaIntegrationTest {
     @Autowired private OrderRepository orderRepository;
     @Autowired private OrderItemRepository orderItemRepository;
     @Autowired private OutboxEventRepository outboxEventRepository;
+    @Autowired private com.shop.orderservice.client.ProductServiceClient productServiceClient;
 
     private UUID userId;
     private UUID productId;
@@ -227,6 +228,11 @@ class OrderCreationSagaIntegrationTest {
                 """.formatted(item1ReservationId, productA))));
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productB + "/reserve"))
             .willReturn(aResponse().withStatus(409)));
+        // The compensation release must reach the inventory API as a real success —
+        // the client swallows release failures, so an unstubbed 404 would hide a
+        // broken call while the request journal below would still be empty.
+        inventoryServer.stubFor(post(urlMatching("/api/v1/inventory/reservations/.*/release"))
+            .willReturn(aResponse().withStatus(200)));
 
         // Execute + verify saga throws
         assertThatThrownBy(() -> orderService.createOrder(userId,
@@ -269,6 +275,25 @@ class OrderCreationSagaIntegrationTest {
 
         assertThat(second.id()).isEqualTo(first.id());
         // Verify product-service called only ONCE (not twice)
+        productServer.verify(1, getRequestedFor(urlEqualTo("/api/v1/products/" + productId)));
+    }
+
+    @Test
+    void productPriceCacheHit_returnsProductSnapshot() {
+        // End-to-end guard for review C1: the productPrice cache entry must come
+        // back as a ProductSnapshot record. With the pre-fix serializer (no
+        // polymorphic typing) the second call below blew up with a
+        // ClassCastException on a LinkedHashMap.
+        productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"id":"%s","title":"Cached","priceUnit":42.50}}
+                """.formatted(productId))));
+
+        var first = productServiceClient.getProduct(productId);
+        var second = productServiceClient.getProduct(productId);  // served from Redis
+
+        assertThat(first.title()).isEqualTo("Cached");
+        assertThat(second).isEqualTo(first);
         productServer.verify(1, getRequestedFor(urlEqualTo("/api/v1/products/" + productId)));
     }
 }

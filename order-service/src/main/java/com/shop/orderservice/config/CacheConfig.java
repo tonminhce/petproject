@@ -22,23 +22,32 @@ public class CacheConfig {
     public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer(ObjectMapper objectMapper) {
         var jacksonSerializer = productPriceSerializer(objectMapper);
         return builder -> builder
-            .cacheDefaults(defaultConfig(jacksonSerializer))
-            .withCacheConfiguration("productPrice", defaultConfig(jacksonSerializer).entryTtl(PRODUCT_PRICE_TTL))
-            .transactionAware();  // no-arg — defense-in-depth
+                // Required for the order.cache.hit/miss gauges (OrderMetrics) — without
+                // it the cache writer uses a NoOp statistics collector and counters
+                // stay at zero forever.
+                .enableStatistics()
+                .cacheDefaults(defaultConfig(jacksonSerializer))
+                .withCacheConfiguration("productPrice", defaultConfig(jacksonSerializer).entryTtl(PRODUCT_PRICE_TTL))
+                .transactionAware();  // no-arg — defense-in-depth
     }
 
     /**
      * The serializer MUST carry polymorphic type information: {@link ProductSnapshot}
-     * is a record, and a serializer built from a plain {@code new GenericJackson2JsonRedisSerializer(objectMapper)}
-     * writes no {@code @class} hint — a cache HIT then deserializes to a
-     * {@code LinkedHashMap} and the {@code @Cacheable} proxy throws
-     * {@code ClassCastException} (review finding C1, reproduced by probe;
-     * regression-guarded by CacheSerializerRoundTripTest). Mirrors the
-     * product-service CacheConfig builder pattern.
+     * is a record, and a serializer built without default typing writes no
+     * {@code @class} hint — a cache HIT then deserializes to a {@code LinkedHashMap}
+     * and the {@code @Cacheable} proxy throws {@code ClassCastException}
+     * (review finding C1; regression-guarded by CacheSerializerRoundTripTest).
+     *
+     * <p>CRITICAL (re-review finding 1): {@code build()} MUTATES the mapper it
+     * receives ({@code setDefaultTyping} + NullValue module). It must therefore
+     * receive a PRIVATE copy — handing it the shared Boot bean would inject
+     * {@code @class} into every MVC record payload and break request-body
+     * deserialization service-wide. Guarded by
+     * {@code CacheSerializerRoundTripTest.productPriceSerializer_doesNotMutateProvidedObjectMapper}.</p>
      */
     static GenericJackson2JsonRedisSerializer productPriceSerializer(ObjectMapper objectMapper) {
         return GenericJackson2JsonRedisSerializer.builder()
-            .objectMapper(objectMapper)
+            .objectMapper(objectMapper.copy())
             .defaultTyping(true)
             .typeHintPropertyName("@class")
             .build();
