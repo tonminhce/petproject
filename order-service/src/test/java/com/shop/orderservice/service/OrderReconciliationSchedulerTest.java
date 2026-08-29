@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -32,11 +33,13 @@ import static org.mockito.Mockito.*;
 
 /**
  * OrderReconciliationScheduler unit tests — hardening §6, task 12 scenarios 1-5.
- * State-poll failure (any BusinessException, incl. 404→RESERVATION_NOT_FOUND and
- * promotion 4xx→SERVICE_UNAVAILABLE fallback) routes to the mixed/alert path —
- * never auto-decide (spec §6, T5 ledger pointer). Null reservation ids are
- * not-applicable (D5 analog), never mixed. Empty applicable set → mixed
- * (nothing verifiable — no automatic decision, needs human eyes per D8).
+ * State-poll failure routes to the mixed/alert path — never auto-decide (spec §6,
+ * T5 ledger pointer). "Failure" is ANY exception from the poll: BusinessException
+ * (404→RESERVATION_NOT_FOUND, promotion 4xx→SERVICE_UNAVAILABLE fallback) and
+ * transport errors (ResourceAccessException/RestClientException from 5xx or
+ * timeouts — fix round 1). Null reservation ids are not-applicable (D5 analog),
+ * never mixed. Empty applicable set → mixed (nothing verifiable — no automatic
+ * decision, needs human eyes per D8).
  */
 @ExtendWith(MockitoExtension.class)
 class OrderReconciliationSchedulerTest {
@@ -162,6 +165,24 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
     }
 
+    /** Scenario 4c — inventory transport failure (5xx/timeout → ResourceAccessException) → mixed path. */
+    @Test
+    void inventoryStatePollTransportFailure_routesToMixed_neverDecides() {
+        Order order = stuckOrder(promoId);
+        givenCandidates(order, item(r1));
+        when(promotionClient.getReservationState(promoId)).thenReturn(new ReservationStateResponse("COMMITTED"));
+        when(inventoryClient.getReservationState(r1))
+            .thenThrow(new ResourceAccessException("connection reset"));
+
+        scheduler.reconcileStuckOrders();
+
+        verify(orderRepository, never()).save(any());
+        verify(eventPublisher, never()).publishStatusChanged(any());
+        verify(eventPublisher, never()).publishCancelled(any());
+        assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
     /** Scenario 4b — promotion state-poll 4xx (client maps to SERVICE_UNAVAILABLE) → mixed path. */
     @Test
     void promotionStatePoll4xx_serviceUnavailable_routesToMixed() {
@@ -241,7 +262,12 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.get("order.commit.stuck").gauges().size()).isEqualTo(1);
     }
 
-    /** One candidate throwing (e.g. unexpected repo failure) must not abort the sweep. */
+    /**
+     * One candidate throwing must not abort the sweep. The item-repo hiccup happens
+     * inside the poll — since fix round 1 ANY poll failure (incl. unexpected ones)
+     * routes to the mixed path, so both candidates land there; the sweep-loop outer
+     * catch remains for failures outside the poll (tx/event publish).
+     */
     @Test
     void unexpectedErrorOnOneOrder_doesNotAbortSweep() {
         Order bad = Order.builder().id(UUID.randomUUID()).status(OrderStatus.PENDING).build();
@@ -252,8 +278,8 @@ class OrderReconciliationSchedulerTest {
         when(orderItemRepository.findByOrderId(good.getId())).thenReturn(List.of(item(null)));
 
         assertThatCode(scheduler::reconcileStuckOrders).doesNotThrowAnyException();
-        // good order still processed (mixed — nothing applicable)
-        assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
+        // both orders processed — neither auto-decided, both routed to mixed/alert
+        assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(2.0);
         verify(orderRepository, never()).save(any());
     }
 }

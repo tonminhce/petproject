@@ -1,6 +1,5 @@
 package com.shop.orderservice.service;
 
-import com.shop.common.core.exception.BusinessException;
 import com.shop.orderservice.client.InventoryServiceClient;
 import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.constant.OrderStatus;
@@ -88,11 +87,11 @@ public class OrderReconciliationScheduler {
 
     @Scheduled(fixedDelayString = "${order.reconciliation.interval-ms:300000}")
     public void reconcileStuckOrders() {
+        Instant cutoff = stuckCutoff();
         List<Order> candidates =
-            orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, stuckCutoff());
+            orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
         if (candidates.isEmpty()) return;
-        log.info("RECONCILIATION_SCAN candidates={} cutoff={}", candidates.size(), stuckCutoff());
-        for (Order order : candidates) {
+        log.info("RECONCILIATION_SCAN candidates={} cutoff={}", candidates.size(), cutoff);        for (Order order : candidates) {
             try {
                 reconcile(order);
             } catch (Exception ex) {
@@ -124,6 +123,10 @@ public class OrderReconciliationScheduler {
      * Polls promotion (when the order has a reservation) + per-item inventory states.
      * Returns {@code null} when any poll fails — the failure is routed to the mixed
      * path here because the caller must never auto-decide on incomplete data (§6).
+     * Catches {@link Exception} (not just BusinessException) so transport failures
+     * (ResourceAccessException from 5xx / connect-read timeouts, RestClientException)
+     * also reach the mixed/alert path instead of the sweep-loop RECONCILIATION_ERROR
+     * catch — alerting must stay loud during an upstream outage.
      */
     private List<String> pollReservationStates(Order order) {
         List<String> states = new ArrayList<>();
@@ -136,7 +139,7 @@ public class OrderReconciliationScheduler {
                     states.add(inventoryClient.getReservationState(item.getReservationId()).status());
                 }
             }
-        } catch (BusinessException ex) {
+        } catch (Exception ex) {
             routeToMixed(order, states, "state poll failed: " + ex.getMessage());
             return null;
         }
