@@ -40,6 +40,13 @@ public class CacheConfig {
     /** Product lookups are read-heavy and tolerate a short staleness window. */
     private static final Duration PRODUCT_TTL = Duration.ofMinutes(10);
 
+    /**
+     * Categories/brands change rarely but are read on every product page and
+     * filter facet; a longer TTL is safe because every write path evicts or
+     * replaces the entry (see CategoryServiceImpl/BrandServiceImpl).
+     */
+    private static final Duration TAXONOMY_TTL = Duration.ofMinutes(30);
+
     @Bean
     public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer() {
         // enableStatistics() is on RedisCacheManagerBuilder (Spring Data Redis
@@ -48,7 +55,9 @@ public class CacheConfig {
         return builder -> builder
                 .enableStatistics()
                 .withCacheConfiguration("product", cacheConfig(PRODUCT_TTL))
-                .withCacheConfiguration("productBySlug", cacheConfig(PRODUCT_TTL));
+                .withCacheConfiguration("productBySlug", cacheConfig(PRODUCT_TTL))
+                .withCacheConfiguration("category", cacheConfig(TAXONOMY_TTL))
+                .withCacheConfiguration("brand", cacheConfig(TAXONOMY_TTL));
     }
 
     /**

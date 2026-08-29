@@ -189,6 +189,8 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 |-------|-------|---------|
 | `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }` — sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed |
 | `shop.inventory.events.v1` | `inventory.reserved.v1` / `inventory.committed.v1` / `inventory.released.v1` / `inventory.adjusted.v1` / `inventory.deleted.v1` | `{ eventId, eventType, occurredAt, productId, … }` — via Transactional Outbox (`InventoryOutboxRelay`, break-on-error to preserve per-aggregate ordering). Naming note: inventory uses CloudEvents-style dot.case event types (like `notification.send.v1`), deliberately NOT product's PascalCase — consumers handle exactly one style. Partition key = productId |
+| `shop.category.lifecycle.v1` | `CategoryCreated` / `CategoryUpdated` / `CategoryDeleted` | `{ eventId, eventType, occurredAt, categoryId, slug }` — via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
+| `shop.brand.lifecycle.v1` | `BrandCreated` / `BrandUpdated` / `BrandDeleted` | `{ eventId, eventType, occurredAt, brandId, slug }` — via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
 
 > **Reference uses different topic** (`product.indexed.v1`) — workspace follows the outbox + Kafka envelope pattern from common-kafka. Search-service consumers are decoupled from this event format.
 
@@ -198,8 +200,10 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 |---|---|---|---|
 | `product` | `product::{id}` | 10 min (600 000 ms) | `@Cacheable` on `findById`; `@CachePut` + `@CacheEvict(productBySlug)` on `update` |
 | `productBySlug` | `productBySlug::{slug}` | 10 min | `@Cacheable` on `findBySlug`; `@CacheEvict(allEntries=true)` on `update`/`delete` |
+| `category` | `category::{id}` | 30 min | `@Cacheable` on `CategoryServiceImpl.findById`; `@CachePut` on `update`; `@CacheEvict(allEntries=true)` on `delete` |
+| `brand` | `brand::{id}` | 30 min | `@Cacheable` on `BrandServiceImpl.findById`; `@CachePut` on `update`; `@CacheEvict(allEntries=true)` on `delete` |
 
-> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName` — cache stale up to 10 min if those are renamed. Future: invalidate on `Category`/`Brand` updates (open item).
+> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName` — cache stale up to 10 min if those are renamed. The `shop.category.lifecycle.v1` / `shop.brand.lifecycle.v1` outbox events now give downstream invalidators the signal; in-service product-cache eviction is deliberately not wired (avoids taxonomy → product coupling inside one service).
 
 ### 2.7 Service dependencies
 

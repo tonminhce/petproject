@@ -7,6 +7,7 @@ import com.shop.productservice.dto.response.BrandResponse;
 import com.shop.productservice.entity.Brand;
 import com.shop.productservice.mapper.BrandMapper;
 import com.shop.productservice.repository.BrandRepository;
+import com.shop.productservice.service.BrandEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,6 +33,7 @@ class BrandServiceImplTest {
 
     @Mock BrandRepository repo;
     @Mock BrandMapper mapper;
+    @Mock BrandEventPublisher publisher;
     @Mock AuditorAware<String> auditorAware;
     @InjectMocks BrandServiceImpl service;
 
@@ -66,6 +68,7 @@ class BrandServiceImplTest {
         when(mapper.toResponse(brand)).thenReturn(resp);
 
         assertThat(service.create(req)).isEqualTo(resp);
+        verify(publisher).publishCreated(brand);
     }
 
     @Test
@@ -101,6 +104,7 @@ class BrandServiceImplTest {
         BrandResponse result = service.update(ID, req);
         assertThat(result.description()).isEqualTo("new");
         verify(mapper).partialUpdate(existing, req);
+        verify(publisher).publishUpdated(existing);
     }
 
     @Test
@@ -115,6 +119,7 @@ class BrandServiceImplTest {
         assertThat(existing.getDeletedBy()).isEqualTo("alice");
         assertThat(existing.getDeletedAt()).isNotNull();
         verify(repo).save(existing);
+        verify(publisher).publishDeleted(existing);
     }
 
     @Test

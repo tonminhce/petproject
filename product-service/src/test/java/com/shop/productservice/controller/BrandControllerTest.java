@@ -1,6 +1,7 @@
 package com.shop.productservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.productservice.dto.request.BrandCreateRequest;
 import com.shop.productservice.dto.response.BrandResponse;
 import com.shop.productservice.service.BrandService;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +25,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(BrandController.class)
 @AutoConfigureMockMvc(addFilters = false)
+// Mirrors ProductControllerTest: without the handler, BusinessException/
+// validation failures would surface as raw 500s instead of the ApiResponse
+// error envelope.
+@Import(ApiExceptionHandler.class)
 class BrandControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -53,5 +59,16 @@ class BrandControllerTest {
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.name").value("Acme"));
+    }
+
+    @Test
+    void create_withInvalidDto_returns400() throws Exception {
+        BrandCreateRequest req = new BrandCreateRequest("", "", null, null);
+
+        mockMvc.perform(post("/api/v1/brands")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(req)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("ERR-0422-V"));
     }
 }

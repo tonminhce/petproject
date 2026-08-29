@@ -9,8 +9,12 @@ import com.shop.productservice.dto.response.BrandResponse;
 import com.shop.productservice.entity.Brand;
 import com.shop.productservice.mapper.BrandMapper;
 import com.shop.productservice.repository.BrandRepository;
+import com.shop.productservice.service.BrandEventPublisher;
 import com.shop.productservice.service.BrandService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +29,7 @@ public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository repo;
     private final BrandMapper mapper;
+    private final BrandEventPublisher publisher;
     private final AuditorAware<String> auditorAware;
 
     @Override
@@ -40,6 +45,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "brand", key = "#id")
     public BrandResponse findById(UUID id) {
         return repo.findById(id)
             .map(mapper::toResponse)
@@ -53,11 +59,14 @@ public class BrandServiceImpl implements BrandService {
             throw BusinessException.of(ErrorCode.BRAND_SLUG_EXISTS);
         }
         Brand brand = mapper.toEntity(request);
-        return mapper.toResponse(repo.save(brand));
+        Brand saved = repo.save(brand);
+        publisher.publishCreated(saved);
+        return mapper.toResponse(saved);
     }
 
     @Override
     @Transactional
+    @CachePut(value = "brand", key = "#id")
     public BrandResponse update(UUID id, BrandUpdateRequest request) {
         Brand existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
@@ -65,15 +74,19 @@ public class BrandServiceImpl implements BrandService {
             throw BusinessException.of(ErrorCode.BRAND_SLUG_EXISTS);
         }
         mapper.partialUpdate(existing, request);
-        return mapper.toResponse(repo.save(existing));
+        Brand saved = repo.save(existing);
+        publisher.publishUpdated(saved);
+        return mapper.toResponse(saved);
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "brand", allEntries = true)
     public void delete(UUID id) {
         Brand existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
         existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         repo.save(existing);
+        publisher.publishDeleted(existing);
     }
 }

@@ -6,11 +6,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
+/**
+ * NOTE: deliberately NO {@code @EnableJpaAuditing} here — tests that need it
+ * {@code @Import} the platform's {@code JpaAuditingAutoConfiguration}, which is
+ * the single sanctioned home of that annotation. Duplicating it here registers
+ * {@code jpaAuditingHandler} twice and fails the context with a
+ * BeanDefinitionOverrideException.
+ */
 @Configuration(proxyBeanMethods = false)
-@EnableJpaAuditing(auditorAwareRef = "auditorAware")
 public class TestLiquibaseConfig {
 
     @Bean

@@ -24,7 +24,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  *       per-call increments) avoid the AOP dance around Spring's
  *       {@code CacheInterceptor} and stay accurate under load.</li>
  *   <li>{@code product.events.published} — counter tagged with {@code event_type};
- *       incremented from {@code TransactionalProductEventPublisher.save()}.</li>
+ *       incremented from the {@code Transactional*EventPublisher.save()} methods.
+ *       The name is service-scoped, not aggregate-scoped: category/brand
+ *       lifecycle events flow through the same counter with their own
+ *       {@code event_type} tag ({@code CategoryCreated}, {@code BrandDeleted}, …).</li>
  *   <li>{@code product.outbox.relay.duration} — timer; recorded from
  *       {@code OutboxRelay} in a {@code finally} block.</li>
  *   <li>{@code product.outbox.pending.count} — gauge backed by an
@@ -49,7 +52,7 @@ public class ProductMetrics {
         // The Spring `Cache` interface does not expose getStatistics(); only
         // `RedisCache` does — cast and skip if the cast fails (e.g. test context
         // using a different CacheManager implementation).
-        for (String cacheName : List.of("product", "productBySlug")) {
+        for (String cacheName : List.of("product", "productBySlug", "category", "brand")) {
             if (!(cacheManager.getCache(cacheName) instanceof RedisCache redisCache)) {
                 continue;
             }

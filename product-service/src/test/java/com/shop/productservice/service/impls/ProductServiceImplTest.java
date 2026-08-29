@@ -7,7 +7,7 @@ import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
 import com.shop.productservice.dto.response.ProductSummaryResponse;
 import com.shop.productservice.entity.Product;
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.mapper.ProductMapper;
 import com.shop.productservice.repository.BrandRepository;
 import com.shop.productservice.repository.CategoryRepository;
@@ -32,6 +32,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -48,6 +49,8 @@ class ProductServiceImplTest {
     @InjectMocks ProductServiceImpl service;
 
     private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    private static final UUID BRAND_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
 
     private ProductCreateRequest sampleCreate() {
         return new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
@@ -103,6 +106,64 @@ class ProductServiceImplTest {
         when(repo.existsBySlug("iphone-15")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(req)).isInstanceOf(BusinessException.class);
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void create_throwsCategoryNotFoundWhenFkMissing() {
+        ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, CATEGORY_ID, null);
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
+        when(categoryRepo.findById(CATEGORY_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2003"));
+        verifyNoInteractions(publisher);
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void create_throwsBrandNotFoundWhenFkMissing() {
+        ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, BRAND_ID);
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
+        when(brandRepo.findById(BRAND_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2006"));
+        verifyNoInteractions(publisher);
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void update_throwsCategoryNotFoundWhenFkMissing() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
+            null, null, null, null, null, null, CATEGORY_ID, null);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(categoryRepo.findById(CATEGORY_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(ID, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2003"));
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void update_throwsBrandNotFoundWhenFkMissing() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
+            null, null, null, null, null, null, null, BRAND_ID);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(brandRepo.findById(BRAND_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(ID, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                e -> assertThat(e.getErrorCode()).isEqualTo("PRD-2006"));
         verifyNoInteractions(publisher);
     }
 

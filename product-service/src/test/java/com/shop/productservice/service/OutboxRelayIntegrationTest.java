@@ -1,8 +1,12 @@
 package com.shop.productservice.service;
 
+import com.shop.productservice.dto.request.BrandCreateRequest;
+import com.shop.productservice.dto.request.CategoryCreateRequest;
 import com.shop.productservice.dto.request.ProductCreateRequest;
-import com.shop.productservice.entity.OutboxStatus;
-import com.shop.productservice.entity.ProductStatus;
+import com.shop.productservice.service.BrandService;
+import com.shop.productservice.service.CategoryService;
+import com.shop.common.core.constants.OutboxStatus;
+import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -29,6 +33,8 @@ import static org.awaitility.Awaitility.await;
 class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired ProductService productService;
+    @Autowired CategoryService categoryService;
+    @Autowired BrandService brandService;
     @Autowired OutboxEventRepository outboxRepo;
 
     @Test
@@ -52,6 +58,22 @@ class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
             long sentCount = outboxRepo.countByStatus(OutboxStatus.SENT);
             assertThat(pendingCount).isEqualTo(0L);
             assertThat(sentCount).isGreaterThan(sentBefore);
+        });
+    }
+
+    @Test
+    void relay_publishesCategoryAndBrandEventsToKafka() {
+        long sentBefore = outboxRepo.countByStatus(OutboxStatus.SENT);
+
+        categoryService.create(new CategoryCreateRequest("Electronics", "electronics", null, null));
+        brandService.create(new BrandCreateRequest("Acme", "acme", null, null));
+
+        outboxRelay().relay();
+
+        // Both aggregate types drain through the SAME relay — two rows must flip.
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(outboxRepo.countByStatus(OutboxStatus.PENDING)).isEqualTo(0L);
+            assertThat(outboxRepo.countByStatus(OutboxStatus.SENT)).isGreaterThanOrEqualTo(sentBefore + 2);
         });
     }
 
