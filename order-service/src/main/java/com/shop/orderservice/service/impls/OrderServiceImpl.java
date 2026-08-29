@@ -7,6 +7,7 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.orderservice.dto.internal.PricingBreakdown;
 import com.shop.orderservice.dto.internal.ProductSnapshot;
 import com.shop.orderservice.dto.internal.ReserveRequest;
+import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.Cart;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -57,6 +59,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final PricingService pricingService;
+    private final PromotionServiceClient promotionClient;
     private final StockReservationService stockReservationService;
     private final OrderEventPublisher orderEventPublisher;
     private final IdempotencyService idempotencyService;
@@ -108,17 +111,28 @@ public class OrderServiceImpl implements OrderService {
             .toList();
         if (items.isEmpty()) throw BusinessException.of(ErrorCode.CART_EMPTY);
 
-        // 2. Pricing (remote: product + tax + promotion)
-        PricingBreakdown pricing = pricingService.calculate(userId, items, request.couponCode());
-
-        // 3. Create Order + OrderItems FIRST (so we have orderId for ReserveRequest)
-        Order order = Order.builder()
+        // 2. Persist-early: insert the Order row BEFORE pricing so the Hibernate-generated
+        // id exists when the promotion reservation is created — reservation is frozen at
+        // reserve time (spec D3) and must carry the real orderId. Amounts are NOT NULL
+        // schema columns → seeded ZERO, updated with priced values in the same TX below
+        // (no external visibility until commit).
+        Order order = orderRepository.save(Order.builder()
             .userId(userId).status(OrderStatus.PENDING)
-            .subtotal(pricing.subtotal()).taxAmount(pricing.taxAmount())
-            .discountAmount(pricing.discountAmount()).total(pricing.total())
+            .subtotal(BigDecimal.ZERO).taxAmount(BigDecimal.ZERO)
+            .discountAmount(BigDecimal.ZERO).total(BigDecimal.ZERO)
             .couponCode(request.couponCode())
-            .build();
-        order = orderRepository.save(order);
+            .build());
+
+        // 3. Pricing (remote: product + tax + promotion) — reserve now carries real orderId
+        PricingBreakdown pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
+
+        // 4. Update the same managed entity with priced amounts + reservation correlation
+        order.setSubtotal(pricing.subtotal());
+        order.setTaxAmount(pricing.taxAmount());
+        order.setDiscountAmount(pricing.discountAmount());
+        order.setTotal(pricing.total());
+        order.setPromotionReservationId(pricing.promotionReservationId());
+        orderRepository.save(order);
         List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem item : items) {
             ProductSnapshot snapshot = pricing.snapshots().get(item.getProductId());
@@ -146,8 +160,18 @@ public class OrderServiceImpl implements OrderService {
             }
             orderItemRepository.saveAll(orderItems);  // persist reservationIds
         } catch (StockReservationFailedException ex) {
-            // Compensation: release all reservations
+            // Compensation: release all reservations, then best-effort release the
+            // promotion reservation (spec §12 swallow pattern — TTL sweep covers
+            // failures; never mask the original error).
             releaseAllReservations(reserved);
+            if (order.getPromotionReservationId() != null) {
+                try {
+                    promotionClient.release(order.getPromotionReservationId());
+                } catch (Exception pex) {
+                    log.error("Failed to release promotion reservation {} — TTL sweep covers",
+                        order.getPromotionReservationId(), pex);
+                }
+            }
             throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getProductId());
         }
 

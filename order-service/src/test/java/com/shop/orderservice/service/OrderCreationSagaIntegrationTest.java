@@ -58,6 +58,7 @@ class OrderCreationSagaIntegrationTest {
     static WireMockServer productServer;
     static WireMockServer inventoryServer;
     static WireMockServer keycloakServer;
+    static WireMockServer promotionServer;
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
@@ -72,7 +73,11 @@ class OrderCreationSagaIntegrationTest {
         r.add("shop.services.product.url", () -> "http://localhost:" + productServer.port());
         r.add("shop.services.inventory.url", () -> "http://localhost:" + inventoryServer.port());
         r.add("shop.services.tax.enabled", () -> "false");
-        r.add("shop.services.promotion.enabled", () -> "false");
+        // Task 7 — promotion reserve is part of the saga now: enabled + WireMock-backed.
+        // Coupon-less tests never reach reserve (P1-5 only triggers with a coupon), so
+        // this changes nothing for them.
+        r.add("shop.services.promotion.enabled", () -> "true");
+        r.add("shop.services.promotion.url", () -> "http://localhost:" + promotionServer.port());
         // ⚠️ P0-8 — point Keycloak issuer to WireMock to avoid connection refused at boot
         r.add("shop.security.issuer-uri", () -> "http://localhost:" + keycloakServer.port() + "/realms/test");
         r.add("shop.security.csrf-disabled", () -> "true");
@@ -90,6 +95,8 @@ class OrderCreationSagaIntegrationTest {
         productServer.start();
         inventoryServer = new WireMockServer(0);
         inventoryServer.start();
+        promotionServer = new WireMockServer(0);
+        promotionServer.start();
         // P0-8 — stub Keycloak's OIDC discovery + token endpoints so Boot's JwtDecoder
         // gets a resolvable issuer at boot AND ServiceTokenProvider can exchange for a
         // service token (shop.services.keycloak.token-url points at this WireMock).
@@ -110,6 +117,7 @@ class OrderCreationSagaIntegrationTest {
         productServer.stop();
         inventoryServer.stop();
         keycloakServer.stop();
+        promotionServer.stop();
     }
 
     @Autowired private OrderService orderService;
@@ -136,6 +144,7 @@ class OrderCreationSagaIntegrationTest {
 
         productServer.resetAll();
         inventoryServer.resetAll();
+        promotionServer.resetAll();
     }
 
     @Test
@@ -252,6 +261,46 @@ class OrderCreationSagaIntegrationTest {
         // No Order persisted (TX rollback)
         assertThat(orderRepository.findAll()
             .stream().filter(o -> o.getUserId().equals(userId)).toList()).isEmpty();
+    }
+
+    @Test
+    void happyPath_withCoupon_reservesWithRealOrderId_andPersistsReservationId() {
+        productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"id":"%s","title":"Test Product","priceUnit":100.00}}
+                """.formatted(productId))));
+        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId + "/reserve"))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"reservationId":"%s","productId":"%s","quantity":2}}
+                """.formatted(UUID.randomUUID(), productId))));
+        // Task 7 — promotion reserve stub: data carries {reservationId, discountAmount, finalAmount}
+        UUID promoReservationId = UUID.randomUUID();
+        promotionServer.stubFor(post(urlEqualTo("/api/v1/promotions/SAVE10/reserve"))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"reservationId":"%s","discountAmount":20.00,"finalAmount":180.00}}
+                """.formatted(promoReservationId))));
+
+        OrderResponse response = orderService.createOrder(userId,
+            new OrderCreateRequest(null, "SAVE10"), "promo-key-1");
+
+        // subtotal 200, discount 20, tax disabled → 0, total 180
+        assertThat(response.subtotal()).isEqualByComparingTo(new BigDecimal("200.00"));
+        assertThat(response.discountAmount()).isEqualByComparingTo(new BigDecimal("20.00"));
+        assertThat(response.total()).isEqualByComparingTo(new BigDecimal("180.00"));
+
+        // reservation frozen on the order row (spec D3)
+        var saved = orderRepository.findById(response.id()).orElseThrow();
+        assertThat(saved.getPromotionReservationId()).isEqualTo(promoReservationId);
+        assertThat(saved.getCouponCode()).isEqualTo("SAVE10");
+
+        // persist-early: the reserve call carried the REAL generated orderId
+        var reserveRequests = promotionServer.findAll(
+            postRequestedFor(urlEqualTo("/api/v1/promotions/SAVE10/reserve")));
+        assertThat(reserveRequests).hasSize(1);
+        assertThat(reserveRequests.get(0).getBodyAsString())
+            .contains("\"orderId\":\"" + response.id() + "\"")
+            .contains("\"userId\":\"" + userId + "\"")
+            .contains("\"orderAmount\":200");
     }
 
     @Test

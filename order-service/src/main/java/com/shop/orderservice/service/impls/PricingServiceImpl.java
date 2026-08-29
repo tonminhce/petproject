@@ -29,7 +29,7 @@ public class PricingServiceImpl implements PricingService {
     private final PromotionServiceClient promotionClient;
 
     @Override
-    public PricingBreakdown calculate(UUID userId, List<CartItem> items, String couponCode) {
+    public PricingBreakdown calculate(UUID orderId, UUID userId, List<CartItem> items, String couponCode) {
         // P1-5 — Reject couponCode upfront if promotion service is disabled.
         // Spec §5.2: "Có couponCode mà promotion disabled → 400 ORDER_PROMOTION_INVALID
         // (không âm thầm bỏ qua discount user nhập)". Silent ZERO discount would be
@@ -49,14 +49,16 @@ public class PricingServiceImpl implements PricingService {
         }
 
         // 2. Apply promotion if coupon provided
-        // Behavior-neutral bridge (Task 5): apply() → reserve(); reservationId is
-        // ignored here — order/confirm semantics land in Task 7. orderId is not
-        // known at pricing time (passed as null).
+        // Reserve (not apply): the reservation is frozen at reserve time (spec D3) —
+        // orderId comes from the saga's persist-early insert so the coordinator can
+        // correlate, and reservationId propagates back for commit/release/compensation.
+        UUID promotionReservationId = null;
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (couponCode != null && !couponCode.isBlank()) {
             var promoResp = promotionClient.reserve(
-                new PromotionReserveRequest(couponCode, subtotal, userId, null)
+                new PromotionReserveRequest(couponCode, subtotal, userId, orderId)
             );
+            promotionReservationId = promoResp.reservationId();
             discountAmount = promoResp.discountAmount();
         }
 
@@ -70,6 +72,6 @@ public class PricingServiceImpl implements PricingService {
         // 4. Compute total
         BigDecimal total = taxableAmount.add(taxAmount);
 
-        return new PricingBreakdown(subtotal, taxAmount, discountAmount, total, snapshots);
+        return new PricingBreakdown(subtotal, taxAmount, discountAmount, total, snapshots, promotionReservationId);
     }
 }

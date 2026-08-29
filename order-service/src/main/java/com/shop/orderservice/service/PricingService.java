@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PricingService {
-    PricingBreakdown calculate(UUID userId, List<CartItem> items, String couponCode);
+    PricingBreakdown calculate(UUID orderId, UUID userId, List<CartItem> items, String couponCode);
 }

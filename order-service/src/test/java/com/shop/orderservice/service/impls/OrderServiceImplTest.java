@@ -13,6 +13,7 @@ import com.shop.orderservice.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +36,7 @@ class OrderServiceImplTest {
     @Mock CartRepository cartRepository;
     @Mock CartItemRepository cartItemRepository;
     @Mock PricingService pricingService;
+    @Mock com.shop.orderservice.client.PromotionServiceClient promotionClient;
     @Mock StockReservationService stockReservationService;
     @Mock OrderEventPublisher orderEventPublisher;
     @Mock IdempotencyService idempotencyService;
@@ -125,7 +127,7 @@ class OrderServiceImplTest {
         OrderResponse result = service.createOrder(userId, req, "key1");
 
         assertThat(result).isEqualTo(cached);
-        verify(pricingService, never()).calculate(any(), any(), any());  // saga NOT re-run
+        verify(pricingService, never()).calculate(any(), any(), any(), any());  // saga NOT re-run
     }
 
     @Test
@@ -190,5 +192,116 @@ class OrderServiceImplTest {
         service.cancelOrder(orderId, userId, false);
 
         verify(stockReservationService).release(item.getReservationId());
+    }
+
+    // ========================================================================
+    // CREATE — persist-early saga (Task 7 re-attempt ruling)
+    // ========================================================================
+
+    private void stubHappyCart() {
+        var cart = com.shop.orderservice.entity.Cart.builder()
+            .userId(userId).subtotal(BigDecimal.ZERO).build();
+        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        when(cartItemRepository.findByCartId(cart.getId())).thenReturn(List.of(
+            com.shop.orderservice.entity.CartItem.builder()
+                .cartId(cart.getId()).productId(productId).productTitle("Test Product")
+                .unitPrice(BigDecimal.TEN).quantity(1).build()));
+    }
+
+    private void stubIdempotency() throws Exception {
+        when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
+        when(idempotencyService.begin(any(), eq(userId), any())).thenReturn(Optional.empty());
+    }
+
+    @Test
+    void createOrder_persistsZeroAmountOrderBeforePricing_thenAppliesPricedAmounts() throws Exception {
+        stubHappyCart();
+        stubIdempotency();
+        UUID reservationId = UUID.randomUUID();
+        // Both saves receive the SAME managed instance — snapshot inside save() to
+        // observe the entity state AS IT WAS at each call, not after later mutation.
+        java.util.List<Order> saveSnapshots = new java.util.ArrayList<>();
+        when(orderRepository.save(any())).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            saveSnapshots.add(Order.builder()
+                .userId(o.getUserId()).status(o.getStatus())
+                .subtotal(o.getSubtotal()).taxAmount(o.getTaxAmount())
+                .discountAmount(o.getDiscountAmount()).total(o.getTotal())
+                .couponCode(o.getCouponCode()).promotionReservationId(o.getPromotionReservationId())
+                .build());
+            return o;
+        });
+        when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
+            .thenReturn(new com.shop.orderservice.dto.internal.PricingBreakdown(
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.valueOf(11),
+                java.util.Map.of(productId, new com.shop.orderservice.dto.internal.ProductSnapshot(
+                    productId, "Test Product", BigDecimal.TEN)),
+                reservationId));
+        when(stockReservationService.reserve(eq(productId), any())).thenReturn(UUID.randomUUID());
+        when(orderMapper.toResponse(any(), any())).thenReturn(null);
+
+        service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "persist-early-key");
+
+        // Persist-early contract: the ZERO-amount PENDING row is inserted BEFORE pricing runs
+        org.mockito.InOrder seq = inOrder(orderRepository, pricingService);
+        seq.verify(orderRepository).save(any(Order.class));
+        seq.verify(pricingService).calculate(any(), eq(userId), anyList(), eq("SAVE10"));
+
+        assertThat(saveSnapshots).hasSize(2);
+        Order initial = saveSnapshots.get(0);
+        assertThat(initial.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(initial.getSubtotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(initial.getTaxAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(initial.getDiscountAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(initial.getTotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(initial.getCouponCode()).isEqualTo("SAVE10");
+
+        // Second save (same TX) carries priced amounts + the promotion reservation id
+        Order priced = saveSnapshots.get(1);
+        assertThat(priced.getTotal()).isEqualByComparingTo(BigDecimal.valueOf(11));
+        assertThat(priced.getPromotionReservationId()).isEqualTo(reservationId);
+    }
+
+    @Test
+    void createOrder_stockReserveFails_releasesPromotionReservationThenThrows() throws Exception {
+        stubHappyCart();
+        stubIdempotency();
+        UUID promoReservationId = UUID.randomUUID();
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
+            .thenReturn(new com.shop.orderservice.dto.internal.PricingBreakdown(
+                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
+                java.util.Map.of(productId, new com.shop.orderservice.dto.internal.ProductSnapshot(
+                    productId, "Test Product", BigDecimal.TEN)),
+                promoReservationId));
+        when(stockReservationService.reserve(eq(productId), any()))
+            .thenThrow(new StockReservationFailedException(productId, null));
+
+        assertThatThrownBy(() -> service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "promo-comp-key"))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));
+
+        verify(promotionClient).release(promoReservationId);
+    }
+
+    @Test
+    void createOrder_stockReserveFails_swallowsPromotionReleaseFailure() throws Exception {
+        stubHappyCart();
+        stubIdempotency();
+        UUID promoReservationId = UUID.randomUUID();
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
+            .thenReturn(new com.shop.orderservice.dto.internal.PricingBreakdown(
+                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
+                java.util.Map.of(productId, new com.shop.orderservice.dto.internal.ProductSnapshot(
+                    productId, "Test Product", BigDecimal.TEN)),
+                promoReservationId));
+        when(stockReservationService.reserve(eq(productId), any()))
+            .thenThrow(new StockReservationFailedException(productId, null));
+        doThrow(new RuntimeException("promotion down")).when(promotionClient).release(promoReservationId);
+
+        assertThatThrownBy(() -> service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "promo-down-key"))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));  // swallow — original error preserved
     }
 }
