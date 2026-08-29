@@ -53,4 +53,10 @@ public class RestClientConfig {
             .defaultHeader("Accept", "application/json")
             .build();
     }
+
+    /** ponytail: Spring Boot 4 does not auto-register RestClient.Builder as a bean; ServiceTokenProvider needs it. */
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder();
+    }
 }

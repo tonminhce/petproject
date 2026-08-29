@@ -10,7 +10,6 @@ import com.shop.orderservice.repository.IdempotencyKeyRepository;
 import com.shop.orderservice.service.IdempotencyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +32,20 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     public Optional<OrderResponse> begin(String key, UUID userId, String requestHash) {
         if (key == null) return Optional.empty();
 
+        // ponytail: Hibernate sees @IdClass with non-null PK as "managed/merged" — saveAndFlush
+        // bypasses the INSERT and silently merges, so DataIntegrityViolation never fires.
+        // Check existence explicitly so the replay path actually short-circuits.
+        Optional<IdempotencyKey> preExisting = repository.findByUserIdAndKey(userId, key);
+        if (preExisting.isPresent()) {
+            IdempotencyKey existing = preExisting.get();
+            if (existing.getResponseStatus() != 0) {
+                // Complete — replay cached response
+                return Optional.of(deserialize(existing.getResponseBody()));
+            }
+            // In-flight — reject
+            throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
+        }
+
         IdempotencyKey ik = new IdempotencyKey();
         ik.setUserId(userId);
         ik.setKey(key);
@@ -42,20 +55,8 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         ik.setCreatedAt(Instant.now());
         ik.setExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS));  // TTL from spec §3.7
 
-        try {
-            repository.saveAndFlush(ik);
-            return Optional.empty();  // owner — proceed with saga
-        } catch (DataIntegrityViolationException ex) {
-            // PK collision — re-lookup by composite key (user_id, key)
-            IdempotencyKey existing = repository.findByUserIdAndKey(userId, key)
-                .orElseThrow(() -> new IllegalStateException("PK collision but row not found", ex));
-            if (existing.getResponseStatus() != 0) {
-                // Complete — replay cached response
-                return Optional.of(deserialize(existing.getResponseBody()));
-            }
-            // In-flight — reject
-            throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
-        }
+        repository.saveAndFlush(ik);
+        return Optional.empty();  // owner — proceed with saga
     }
 
     @Override

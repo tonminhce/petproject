@@ -13,7 +13,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -76,8 +75,6 @@ class IdempotencyServiceImplTest {
             .responseBody("{\"cached\":\"json\"}")
             .createdAt(Instant.now()).expiresAt(Instant.now().plusSeconds(3600))
             .build();
-        when(repository.saveAndFlush(any(IdempotencyKey.class)))
-            .thenThrow(new DataIntegrityViolationException("PK collision"));
         when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
         when(objectMapper.readValue(existing.getResponseBody(), OrderResponse.class)).thenReturn(response);
 
@@ -95,8 +92,6 @@ class IdempotencyServiceImplTest {
             .responseBody("")
             .createdAt(Instant.now()).expiresAt(Instant.now().plusSeconds(3600))
             .build();
-        when(repository.saveAndFlush(any(IdempotencyKey.class)))
-            .thenThrow(new DataIntegrityViolationException("PK collision"));
         when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.begin(key, userId, requestHash))
