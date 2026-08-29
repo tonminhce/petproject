@@ -1,0 +1,237 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  carts — one ACTIVE cart per user. The uniqueness is partial
+  #  (WHERE deleted = false) so clearCart's soft-delete doesn't block the next
+  #  cart for the same user.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-carts
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: carts
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: user_id,    type: uuid, constraints: { nullable: false } }
+              - column: { name: subtotal,   type: "numeric(15,2)", defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamp }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        # Liquibase's createIndex silently drops `where`, so raw SQL it is.
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX idx_carts_user_active
+              ON carts (user_id) WHERE deleted = false
+
+  # ===========================================================================
+  #  cart_items — product_title + unit_price are display snapshots.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-cart-items
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: cart_items
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cart_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cart_items_cart
+                    references: carts(id)
+                    deleteCascade: true
+              - column: { name: product_id,    type: uuid, constraints: { nullable: false } }
+              - column: { name: product_title, type: varchar(255), constraints: { nullable: false } }
+              - column: { name: unit_price,    type: "numeric(15,2)", constraints: { nullable: false } }
+              - column: { name: quantity,      type: integer, constraints: { nullable: false } }
+
+        - createIndex:
+            tableName: cart_items
+            indexName: idx_cart_items_cart_product
+            unique: true
+            columns:
+              - column: { name: cart_id }
+              - column: { name: product_id }
+
+  # ===========================================================================
+  #  orders — soft-delete is admin/GDPR only; cancel just sets status +
+  #  cancelled_at (spec §5.3).
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-orders
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: orders
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: user_id,         type: uuid, constraints: { nullable: false } }
+              - column: { name: status,          type: varchar(20), defaultValue: PENDING, constraints: { nullable: false } }
+              - column: { name: subtotal,        type: "numeric(15,2)", defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: tax_amount,      type: "numeric(15,2)", defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: discount_amount, type: "numeric(15,2)", defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: total,           type: "numeric(15,2)", defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: coupon_code,     type: varchar(50) }
+              - column: { name: confirmed_at,    type: timestamp }
+              - column: { name: shipped_at,      type: timestamp }
+              - column: { name: delivered_at,    type: timestamp }
+              - column: { name: cancelled_at,    type: timestamp }
+              - column: { name: created_at,      type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at,      type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: created_by,      type: varchar(100) }
+              - column: { name: updated_by,      type: varchar(100) }
+              - column: { name: deleted,         type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,      type: timestamp }
+              - column: { name: deleted_by,      type: varchar(255) }
+
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_user_id
+            columns:
+              - column: { name: user_id }
+
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_status_created
+            columns:
+              - column: { name: status }
+              - column: { name: created_at }
+
+        # Partial (non-unique) lookup index — coupon usage counting only spans
+        # live orders. Raw SQL because createIndex ignores `where`.
+        - sql:
+            sql: >-
+              CREATE INDEX idx_orders_coupon_active
+              ON orders (coupon_code) WHERE deleted = false
+
+  # ===========================================================================
+  #  order_items — hard-deleted with the parent order (CASCADE).
+  #  reservation_id is nullable: set once inventory reserves, used on cancel.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-order-items
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: order_items
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_order_items_order
+                    references: orders(id)
+                    deleteCascade: true
+              - column: { name: product_id,     type: uuid, constraints: { nullable: false } }
+              - column: { name: product_title,  type: varchar(255), constraints: { nullable: false } }
+              - column: { name: quantity,       type: integer, constraints: { nullable: false } }
+              - column: { name: unit_price,     type: "numeric(15,2)", constraints: { nullable: false } }
+              - column: { name: line_total,     type: "numeric(15,2)", constraints: { nullable: false } }
+              - column: { name: reservation_id, type: uuid }
+
+        - createIndex:
+            tableName: order_items
+            indexName: idx_order_items_order_id
+            columns:
+              - column: { name: order_id }
+
+  # ===========================================================================
+  #  outbox_events — transactional outbox; aggregate_id = order id.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-outbox-events
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: event_id,       type: varchar(36), constraints: { nullable: false, unique: true } }
+              - column: { name: aggregate_type, type: varchar(50), constraints: { nullable: false } }
+              - column: { name: aggregate_id,   type: uuid, constraints: { nullable: false } }
+              - column: { name: event_type,     type: varchar(50), constraints: { nullable: false } }
+              - column: { name: topic,          type: varchar(100), constraints: { nullable: false } }
+              - column: { name: payload,        type: text, constraints: { nullable: false } }
+              - column: { name: status,         type: varchar(20), constraints: { nullable: false } }
+              - column: { name: retry_count,    type: integer, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: sent_at,        type: timestamp }
+              - column: { name: last_error,     type: varchar(1000) }
+
+        # Poller query: WHERE status = 'PENDING' ORDER BY id.
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_status
+            columns:
+              - column: { name: status }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_aggregate_id
+            columns:
+              - column: { name: aggregate_id }
+
+  # ===========================================================================
+  #  idempotency_keys — composite PK (user_id, key), rev 2 fix O-N5.
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-idempotency-keys
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: idempotency_keys
+            columns:
+              - column: { name: user_id,         type: uuid, constraints: { nullable: false } }
+              - column: { name: key,             type: varchar(64), constraints: { nullable: false } }
+              - column: { name: request_hash,    type: varchar(64), constraints: { nullable: false } }
+              - column: { name: response_status, type: integer, constraints: { nullable: false } }
+              - column: { name: response_body,   type: text, constraints: { nullable: false } }
+              - column: { name: created_at,      type: timestamp, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: expires_at,      type: timestamp, constraints: { nullable: false } }
+
+        - addPrimaryKey:
+            tableName: idempotency_keys
+            columnNames: user_id, key
+            constraintName: pk_idempotency_keys
+
+        # Sweeper: DELETE WHERE expires_at < now().
+        - createIndex:
+            tableName: idempotency_keys
+            indexName: idx_idempotency_expires_at
+            columns:
+              - column: { name: expires_at }

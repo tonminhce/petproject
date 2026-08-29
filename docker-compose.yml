@@ -318,7 +318,12 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
-      KAFKA_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_SERVICE_CLIENT_ID: order-service
+      ORDER_SERVICE_CLIENT_SECRET: changeme
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       postgres:
         condition: service_healthy

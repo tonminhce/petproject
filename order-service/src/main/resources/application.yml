@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: order-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/orderservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+  cache:
+    type: redis
+
+server:
+  port: ${SERVER_PORT:8084}
+  shutdown: graceful
+
+shop:
+  kafka:
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer: { acks: all, retries: 3 }
+  security:
+    public-paths: []
+
+  services:
+    product:
+      url: ${PRODUCT_SERVICE_URL:http://localhost:8086}
+      timeout-ms: 5000
+    inventory:
+      url: ${INVENTORY_SERVICE_URL:http://localhost:8082}
+      timeout-ms: 5000
+    tax:
+      url: ${TAX_SERVICE_URL:http://localhost:8091}
+      timeout-ms: 3000
+      enabled: ${TAX_SERVICE_ENABLED:false}    # MVP default false; flips when tax-service ships
+    promotion:
+      url: ${PROMOTION_SERVICE_URL:http://localhost:8093}
+      timeout-ms: 3000
+      enabled: ${PROMOTION_SERVICE_ENABLED:false}  # MVP default false
+    keycloak:
+      token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
+      client-id: ${ORDER_SERVICE_CLIENT_ID:order-service}
+      client-secret: ${ORDER_SERVICE_CLIENT_SECRET:changeme}
+
+order:
+  idempotency:
+    ttl-hours: 24
+  outbox:
+    poll-interval-ms: 5000
+    batch-size: 100
+    max-retries: 10
+    retention-days: 7
+    retention-cron: "0 0 3 * * *"
+  cleanup:
+    idempotency-cron: "0 0 4 * * *"
+    expired-cart-days: 7
+    cancelled-order-days: 90
