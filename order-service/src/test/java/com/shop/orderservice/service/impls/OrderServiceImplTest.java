@@ -10,8 +10,6 @@ import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.mapper.OrderMapper;
 import com.shop.orderservice.repository.*;
 import com.shop.orderservice.service.*;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,7 +46,6 @@ class OrderServiceImplTest {
     @Mock com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     @Mock OrderCommitCoordinator commitCoordinator;
     @Mock OrderConfirmMetrics confirmMetrics;
-    @Spy io.micrometer.core.instrument.simple.SimpleMeterRegistry meterRegistry;
 
     @InjectMocks OrderServiceImpl service;
 
@@ -154,12 +151,10 @@ class OrderServiceImplTest {
         }
     }
 
-    /** Loads + timer only — shared by tests that FAIL before the mapper is reached. */
+    /** Loads only — shared by tests that FAIL before the mapper is reached. */
     private void stubConfirmLoad() {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
         when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
-        when(confirmMetrics.timer(anyString()))
-            .thenAnswer(inv -> Timer.builder("test").register(new SimpleMeterRegistry()));
     }
 
     private OrderResponse stubConfirmHappy() {
@@ -187,6 +182,9 @@ class OrderServiceImplTest {
         verify(orderEventPublisher).publishStatusChanged(order);
         verify(idempotencyService).complete(CONFIRM_KEY, adminId, response, 200);
         verify(confirmMetrics).attempt();
+        // Phase timers are coordinator-owned — service must NOT sample them itself
+        // (review fix: caller-side commit_inventory sample double-counted every confirm)
+        verify(confirmMetrics, never()).timer(anyString());
         // external commit FIRST — state flip/publish/complete only after it succeeds
         org.mockito.InOrder seq = inOrder(commitCoordinator, orderRepository,
             orderEventPublisher, idempotencyService);

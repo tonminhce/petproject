@@ -29,8 +29,6 @@ import com.shop.orderservice.service.OrderService;
 import com.shop.orderservice.service.OrderStatusService;
 import com.shop.orderservice.service.PricingService;
 import com.shop.orderservice.service.StockReservationService;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -72,7 +70,6 @@ public class OrderServiceImpl implements OrderService {
     private final ObjectMapper objectMapper;
     private final OrderCommitCoordinator commitCoordinator;
     private final OrderConfirmMetrics confirmMetrics;
-    private final MeterRegistry meterRegistry;
 
     // ========================================================================
     // CREATE ORDER — SAGA with explicit compensation
@@ -321,12 +318,9 @@ public class OrderServiceImpl implements OrderService {
 
             // External commit BEFORE local state flip — local row stays PENDING until
             // inventory/promotion commits succeed (coordinator compensates on failure).
-            Timer.Sample sample = Timer.start(meterRegistry);
-            try {
-                commitCoordinator.commitForConfirm(order, items);
-            } finally {
-                sample.stop(confirmMetrics.timer("commit_inventory"));
-            }
+            // Phase timing (commit_inventory/commit_promotion) is owned by the
+            // coordinator — no caller-side timer (would double-count §8 latencies).
+            commitCoordinator.commitForConfirm(order, items);
 
             order.setConfirmedAt(Instant.now());
             order.setStatus(OrderStatus.CONFIRMED);
@@ -342,8 +336,11 @@ public class OrderServiceImpl implements OrderService {
             // never delete another execution's in-flight row (same as createOrder).
             if (idempotencyKey != null)
                 idempotencyService.abort(idempotencyKey, adminUserId, requestHash);
-            if (!(ex instanceof BusinessException))  // infra failure → 409 ORD-4011, order stays PENDING
+            if (!(ex instanceof BusinessException)) {  // infra failure → 409 ORD-4011, order stays PENDING
+                // Wrap drops the root cause — log it so the infra failure stays diagnosable
+                log.error("Confirm commit failed for order {}", orderId, ex);
                 throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
+            }
             throw ex;  // state-machine guard etc. rethrown unchanged
         }
     }
