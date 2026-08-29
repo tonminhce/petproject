@@ -15,6 +15,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
@@ -63,6 +64,32 @@ public class InventoryServiceClient {
         }
     }
 
+    private static final ParameterizedTypeReference<ApiResponse<Void>> ERROR_BODY =
+        new ParameterizedTypeReference<>() {};
+
+    /**
+     * Confirm-side commit (hardening §5.2) — mirrors PromotionServiceClient's
+     * lifecycleCall error mapping: 4xx is rethrown as the parsed remote
+     * {@code ApiResponse.code} when it resolves to a known {@link ErrorCode}
+     * (RESERVATION_* codes must stay distinguishable for the coordinator —
+     * spec D4), otherwise SERVICE_UNAVAILABLE; 5xx always fails closed.
+     */
+    public void commit(UUID reservationId) {
+        try {
+            restClient.post()
+                .uri("/api/v1/inventory/reservations/{id}/commit", reservationId)
+                .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
+                .retrieve()
+                .toBodilessEntity();
+        } catch (HttpClientErrorException ex) {
+            log.warn("Inventory reservation {} failed for commit: {}", reservationId, ex.getMessage());
+            throw remoteBusinessException(ex);
+        } catch (HttpServerErrorException ex) {
+            log.error("Inventory service 5xx on commit — failing closed", ex);
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+        }
+    }
+
     public void release(UUID reservationId) {
         try {
             restClient.post()
@@ -106,5 +133,21 @@ public class InventoryServiceClient {
             }
             throw BusinessException.of(ErrorCode.INTERNAL_SERVER_ERROR, "inventory");
         }
+    }
+
+    private BusinessException remoteBusinessException(HttpClientErrorException ex) {
+        try {
+            ApiResponse<Void> error = ex.getResponseBodyAs(ERROR_BODY);
+            if (error != null && error.code() != null) {
+                for (ErrorCode candidate : ErrorCode.values()) {
+                    if (candidate.getCode().equals(error.code())) {
+                        return BusinessException.of(candidate);
+                    }
+                }
+            }
+        } catch (Exception parseFailure) {
+            log.debug("Could not parse inventory error body", parseFailure);
+        }
+        return BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
     }
 }

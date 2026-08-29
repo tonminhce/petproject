@@ -1,0 +1,179 @@
+package com.shop.orderservice.service;
+
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
+import com.shop.orderservice.client.InventoryServiceClient;
+import com.shop.orderservice.client.PromotionServiceClient;
+import com.shop.orderservice.entity.Order;
+import com.shop.orderservice.entity.OrderItem;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+/**
+ * OrderCommitCoordinator unit tests — hardening §5.2, task 9 scenarios 1-6.
+ * (type, id) compensation targets per D10; null reservationId skip per D5;
+ * RESERVATION_NOT_FOUND rethrow per D4.
+ */
+@ExtendWith(MockitoExtension.class)
+class OrderCommitCoordinatorTest {
+
+    @Mock PromotionServiceClient promotionClient;
+    @Mock InventoryServiceClient inventoryClient;
+
+    private SimpleMeterRegistry meterRegistry;
+    private OrderCommitCoordinator coordinator;
+
+    private final UUID orderId = UUID.randomUUID();
+    private final UUID promoId = UUID.randomUUID();
+    private final UUID r1 = UUID.randomUUID();
+    private final UUID r2 = UUID.randomUUID();
+    private final UUID r3 = UUID.randomUUID();
+    // deterministic ordering: coordinator sorts by productId, so the ids must have a known order
+    private final UUID p1 = new UUID(0L, 1L);
+    private final UUID p2 = new UUID(0L, 2L);
+    private final UUID p3 = new UUID(0L, 3L);
+
+    @BeforeEach
+    void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        coordinator = new OrderCommitCoordinator(promotionClient, inventoryClient, meterRegistry);
+    }
+
+    private Order orderWithPromotion() {
+        return Order.builder().id(orderId).promotionReservationId(promoId).build();
+    }
+
+    private OrderItem item(UUID productId, UUID reservationId) {
+        return OrderItem.builder().id(UUID.randomUUID()).productId(productId)
+            .reservationId(reservationId).build();
+    }
+
+    /** Scenario 1 — success: promotion commit, then inventory commits sorted by productId. */
+    @Test
+    void commit_success_promotionThenInventorySortedByProductId() {
+        Order order = orderWithPromotion();
+        // deliberately unsorted input — coordinator must sort by productId
+        List<OrderItem> items = List.of(item(p2, r2), item(p3, r3), item(p1, r1));
+
+        CommitOutcome outcome = coordinator.commitForConfirm(order, items);
+
+        assertThat(outcome).isEqualTo(CommitOutcome.SUCCESS);
+        InOrder inOrder = inOrder(promotionClient, inventoryClient);
+        inOrder.verify(promotionClient).commit(promoId);
+        inOrder.verify(inventoryClient).commit(r1);
+        inOrder.verify(inventoryClient).commit(r2);
+        inOrder.verify(inventoryClient).commit(r3);
+        verify(promotionClient, never()).releaseCommitted(any());
+        verify(inventoryClient, never()).releaseCommitted(any());
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "success").count())
+            .isEqualTo(1.0);
+    }
+
+    /** Scenario 2 — promotion 5xx: rethrow, nothing else called, no compensation. */
+    @Test
+    void commit_promotionFails_rethrows_noOtherCalls_noCompensation() {
+        Order order = orderWithPromotion();
+        BusinessException failure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "promotion");
+        doThrow(failure).when(promotionClient).commit(promoId);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, List.of(item(p1, r1))))
+            .isSameAs(failure);
+
+        verify(inventoryClient, never()).commit(any());
+        verify(promotionClient, never()).releaseCommitted(any());
+        verify(inventoryClient, never()).releaseCommitted(any());
+    }
+
+    /** Scenario 3 — item 2 of 3 fails: releaseCommitted in REVERSE order (item-1 then promotion), then rethrow. */
+    @Test
+    void commit_secondItemFails_compensatesInReverseOrder_thenRethrows() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, r1), item(p2, r2), item(p3, r3));
+        RuntimeException failure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+        doNothing().when(inventoryClient).commit(r1);
+        doThrow(failure).when(inventoryClient).commit(r2);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, items)).isSameAs(failure);
+
+        // item-3 never attempted; item-2 never committed so never compensated
+        verify(inventoryClient, never()).commit(r3);
+        verify(inventoryClient, never()).releaseCommitted(r2);
+        // compensation is LIFO: last committed (item-1) released first, promotion last
+        InOrder inOrder = inOrder(promotionClient, inventoryClient);
+        inOrder.verify(promotionClient).commit(promoId);
+        inOrder.verify(inventoryClient).commit(r1);
+        inOrder.verify(inventoryClient).commit(r2);
+        inOrder.verify(inventoryClient).releaseCommitted(r1);
+        inOrder.verify(promotionClient).releaseCommitted(promoId);
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
+            .isEqualTo(1.0);
+    }
+
+    /** Scenario 4 — reservationId == null item (legacy): skipped, flow continues (D5). */
+    @Test
+    void commit_nullReservationIdItem_skipped_flowContinues() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, null), item(p2, r2));
+
+        CommitOutcome outcome = coordinator.commitForConfirm(order, items);
+
+        assertThat(outcome).isEqualTo(CommitOutcome.SUCCESS);
+        verify(inventoryClient).commit(r2);
+        verifyNoMoreInteractions(inventoryClient);   // no commit(null), no compensation
+        verify(promotionClient, never()).releaseCommitted(any());
+    }
+
+    /** Scenario 5 — RESERVATION_NOT_FOUND from inventory commit: rethrown, NOT skipped (D4). */
+    @Test
+    void commit_reservationNotFound_rethrownNotSkipped() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, r1), item(p2, r2));
+        BusinessException notFound = BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, r2);
+        doNothing().when(inventoryClient).commit(r1);
+        doThrow(notFound).when(inventoryClient).commit(r2);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, items))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("INV-3003"));
+
+        // D4 — the failure propagates; already-committed targets are still compensated
+        verify(inventoryClient, never()).releaseCommitted(r2);   // never committed → never compensated
+        verify(inventoryClient).releaseCommitted(r1);
+        verify(promotionClient).releaseCommitted(promoId);
+    }
+
+    /** Scenario 6 — rollback HTTP failure: swallowed, order.commit.rollback.failed counter incremented. */
+    @Test
+    void commit_rollbackFailure_swallowed_counterIncremented_originalRethrown() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, r1), item(p2, r2));
+        RuntimeException commitFailure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+        doNothing().when(inventoryClient).commit(r1);
+        doThrow(commitFailure).when(inventoryClient).commit(r2);
+        // item-1 committed successfully — its rollback now fails (HTTP 500)
+        doThrow(new IllegalStateException("release-committed 500")).when(inventoryClient).releaseCommitted(r1);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, items)).isSameAs(commitFailure);
+
+        // loop continues past the failed rollback — promotion still released
+        InOrder inOrder = inOrder(promotionClient, inventoryClient);
+        inOrder.verify(inventoryClient).releaseCommitted(r1);
+        inOrder.verify(promotionClient).releaseCommitted(promoId);
+        verify(inventoryClient, never()).releaseCommitted(r2);   // never committed → never compensated
+        assertThat(meterRegistry.counter("order.commit.rollback.failed").count()).isEqualTo(1.0);
+        assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
+            .isEqualTo(1.0);
+    }
+}
