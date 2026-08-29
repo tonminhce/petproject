@@ -82,7 +82,8 @@ public enum ErrorCode {
     ORDER_RESERVATION_FAILED("ORD-4007", "order.reservation.failed", HttpStatus.CONFLICT),
     ORDER_PROMOTION_INVALID("ORD-4008", "order.promotion.invalid", HttpStatus.BAD_REQUEST),
     ORDER_TAX_CALCULATION_FAILED("ORD-4009", "order.tax.calculation.failed", HttpStatus.BAD_REQUEST),
-    ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT);
+    ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT),
+    CONFIRM_COMMIT_FAILED("ORD-4011", "order.confirm.commit.failed", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;

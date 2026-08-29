@@ -27,6 +27,7 @@ public final class ApiPaths {
     public static final String INVENTORY = API_V1 + "/inventory";
     public static final String SHIPPINGS = API_V1 + "/shippings";
     public static final String FAVOURITES = API_V1 + "/favourites";
+    public static final String PROMOTIONS = API_V1 + "/promotions";
     public static final String MEDIAS = API_V1 + "/medias";
 
     // ---- Notifications ----
