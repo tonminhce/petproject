@@ -194,6 +194,50 @@ class OrderServiceImplTest {
         verify(stockReservationService).release(item.getReservationId());
     }
 
+    @Test
+    void cancelOrder_pendingReleasesPromotionReservation_once() {
+        UUID promoReservationId = UUID.randomUUID();
+        order.setPromotionReservationId(promoReservationId);
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        var item = new com.shop.orderservice.entity.OrderItem();
+        item.setReservationId(UUID.randomUUID());
+        when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of(item));
+
+        service.cancelOrder(orderId, userId, false);
+
+        verify(promotionClient, times(1)).release(promoReservationId);
+        // promotion release happens AFTER stock release (mirrors saga compensation order)
+        org.mockito.InOrder seq = inOrder(stockReservationService, promotionClient);
+        seq.verify(stockReservationService).release(item.getReservationId());
+        seq.verify(promotionClient).release(promoReservationId);
+    }
+
+    @Test
+    void cancelOrder_adminCancelConfirmed_doesNotReleasePromotionReservation() {
+        order.setStatus(OrderStatus.CONFIRMED);
+        order.setPromotionReservationId(UUID.randomUUID());
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
+
+        service.cancelOrder(orderId, userId, true);
+
+        // reservations already COMMITTED at confirm — release belongs to Phase 8 refund
+        verify(promotionClient, never()).release(any());
+    }
+
+    @Test
+    void cancelOrder_nullPromotionReservationId_doesNotCallRelease() {
+        assertThat(order.getPromotionReservationId()).isNull();
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        var item = new com.shop.orderservice.entity.OrderItem();
+        item.setReservationId(UUID.randomUUID());
+        when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of(item));
+
+        service.cancelOrder(orderId, userId, false);
+
+        verify(promotionClient, never()).release(any());
+    }
+
     // ========================================================================
     // CREATE — persist-early saga (Task 7 re-attempt ruling)
     // ========================================================================

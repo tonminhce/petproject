@@ -250,6 +250,17 @@ public class OrderServiceImpl implements OrderService {
                 .filter(Objects::nonNull)
                 .toList();
             releaseAllReservationsById(reservationIds);
+            // Best-effort promotion release (spec §12 swallow pattern — TTL sweep covers
+            // failures; never mask the cancel flow). CONFIRMED branch: nothing —
+            // reservations are already COMMITTED; Phase 8 refund handles those.
+            if (order.getPromotionReservationId() != null) {
+                try {
+                    promotionClient.release(order.getPromotionReservationId());
+                } catch (Exception pex) {
+                    log.error("Failed to release promotion reservation {} during cancel",
+                        order.getPromotionReservationId(), pex);
+                }
+            }
         }
 
         order.setStatus(OrderStatus.CANCELLED);
