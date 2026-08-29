@@ -22,10 +22,10 @@ Closing these enables design **A**: `confirmOrder` becomes a commit orchestrator
 | D3 | Any commit failure → order stays `PENDING`, compensate committed reservations in reverse via `release-committed`, rethrow | All-or-nothing at order level; sweep + reconciliation are belt-and-suspenders |
 | D4 | `RESERVATION_NOT_FOUND` during commit is a **failure**, not a silent skip | Retention purge only removes terminal rows — a `PENDING` order whose reservation row is missing is a real inconsistency; fail + let reconciliation investigate. (Explicit rejection of "treat as resolved" from the original proposal.) |
 | D5 | `reservationId == null` on an order item (legacy/pre-inventory data) → skip commit, `log.info` | Cheap compatibility; such items simply have nothing to commit |
-| D6 | Confirm accepts optional `Idempotency-Key`; reuse `IdempotencyServiceImpl` | Retried confirm after timeout must not double-commit (idempotent branches make it safe anyway, but replay must also return the same 200 body, not re-run orchestration) |
+| D6 | Confirm accepts optional `Idempotency-Key`; reuse `IdempotencyServiceImpl`. **Recommended, not required** — clients (admin UI/gateway) SHOULD send it | Retried confirm after timeout must not double-commit (idempotent branches make it safe anyway, but replay must also return the same 200 body, not re-run orchestration). Keyless concurrent confirms are still **safe**: `Order` carries `@Version` (`Order.java:68-71`) — the loser's `setStatus(CONFIRMED)` hits `OptimisticLockingFailureException`, its local TX rolls back while the external commits stay COMMITTED (coherent); the retry then replays cleanly. The cost of keyless is only a wasted orchestration round + a spurious rollback, i.e. avoidable noise, not a correctness hole |
 | D7 | Idempotency scope for confirm: `userId` = the **admin's** id from the JWT; `requestHash = SHA-256(orderId.toString())` | `IdempotencyKey.user_id` is `NOT NULL` with unique `(user_id, key)` — do NOT stuff orderId into the userId column; two admins using the same key is a client bug and yields two rows, which is fine |
 | D8 | Reconciliation owns stuck `PENDING` orders (> 30 min): all-committed → auto-confirm; all-terminal → auto-cancel; mixed → alert | Bounded automatic recovery; mixed state needs human eyes |
-| D9 | OTel/W3C `traceparent` propagation **deferred** | `RestClientConfig` currently propagates nothing (only `Accept` header) — trace injection is new infrastructure; belongs to a common-logging follow-up, not this epic |
+| D9 | W3C `traceparent`/OTel **deferred**; but `X-Correlation-Id` outbound propagation **included now** | `CorrelationIdFilter` already populates `MDC` (`MdcKey.CORRELATION_ID`, header constant at `CorrelationIdFilter.java:29`) — forwarding it is one `requestInitializer` line in `RestClientConfig`, no agent, no new infra. Full tracing stays a common-logging follow-up |
 | D10 | Coordinator tracks compensation targets as `(type, id)` pairs, never bare UUIDs | Promotion and inventory reservation ids are both UUIDs — indistinguishable after the fact |
 
 ## 2. Promotion contract change (order side)
@@ -50,10 +50,22 @@ public record PromotionReserveResponse(UUID reservationId, BigDecimal discountAm
 
 Keep `isEnabled()` and its defensive zero-discount fallback unchanged — `PricingServiceImpl`'s upfront P1-5 check (`PricingServiceImpl:33-39`) remains the first gate; the client guard is a cheap second net.
 
+**Correlation propagation (D9):** while touching `RestClientConfig`, add one initializer so every outbound call (inventory + promotion + tax) carries the inbound correlation id:
+
+```java
+.requestInitializer(req -> {
+    String corrId = MDC.get(MdcKey.CORRELATION_ID);   // populated by common-spring CorrelationIdFilter
+    if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);
+})
+```
+
+(W3C `traceparent` remains deferred — see D9. Note the mirror rule: when promotion-service and future services grow outbound clients, they inherit the same initializer.)
+
 ## 3. Order entity + Liquibase
 
 - `Order` gains `promotion_reservation_id UUID NULL` (one reservation per order — promotion usage is order-scoped, unlike per-item inventory reservations).
 - New Liquibase changeset: `addColumn order.promotion_reservation_id`, nullable, **no backfill** (existing rows simply have no promotion reservation — D5/D6 compatibility).
+- **No new index needed for reconciliation:** `idx_orders_status_created` on `(status, created_at)` already exists (`changelog-001-initial-schema.yaml:116-118`) and serves `findByStatusAndCreatedAtBefore(PENDING, cutoff)` — do not create a duplicate.
 - **Pre-generated orderId:** `doCreateOrder` currently creates the order at step 3 (`OrderServiceImpl.java:115-121`) *after* pricing (step 2, line 112) — but `PromotionReserveRequest` needs `orderId`. Change: generate `UUID orderId = UUID.randomUUID()` at the top of the saga, set on the entity before persisting (`order.setId(orderId)`). `@GeneratedValue(strategy = GenerationType.UUID)` (`Order.java:19-21`) respects a manually assigned id (Hibernate generates only when null) — **the plan must include a sandbox test proving this before the refactor lands**; fallback if violated: switch the entity to `@UuidGenerator` + assigned-when-present, same semantics.
 
 ## 4. Saga changes (`doCreateOrder`)
@@ -211,7 +223,8 @@ No new Keycloak/URL config — promotion reuses `shop.services.promotion.{url,ti
 
 ## 12. Open items / Deferred
 
-- W3C `traceparent` propagation via OTel agent — common-logging follow-up (D9).
+- W3C `traceparent` propagation via OTel agent — common-logging follow-up (D9). (`X-Correlation-Id` outbound propagation IS in scope — §2.)
+- **Tracking — silent-swallow compensation (pre-existing):** `releaseAllReservations` / `releaseAllReservationsById` (`OrderServiceImpl:168-180, 240-248`) swallow all exceptions; the new promotion release in the saga and in cancel follows the same pattern for consistency. Follow-up refactor (separate task, not this epic): both callers → 3-state outcome (success / NOT_FOUND-resolved / real-error) + `order.compensation.release.failed` metric, so compensation debt is observable instead of log-only.
 - Payment-service (Phase 8) will replace/supersede parts of confirm orchestration (payment-driven confirm); this design deliberately keeps the coordinator swappable.
 - Refund flow for CONFIRMED cancels — Phase 8, unchanged.
 - `order.commit.stuck` gauge needs a small scheduled counter query — implementation detail for the plan (avoid per-scrape full scans: cache gauge value from the reconciliation tick).
@@ -225,4 +238,5 @@ No new Keycloak/URL config — promotion reuses `shop.services.promotion.{url,ti
 
 ## 14. Changelog
 
+- 2026-08-29 (rev 2): Review round 1 (concerns O1–O4): D6 — keyless concurrent confirm proven safe via `Order @Version` (O1); Idempotency-Key now "recommended" for clients. D9 split — `X-Correlation-Id` outbound propagation included via `requestInitializer` (O2, filter/MDC verified pre-existing), OTel stays deferred. O3 moot — `idx_orders_status_created` already exists, spec references it instead of adding a duplicate changeset. O4 — silent-swallow compensation refactor recorded as a tracked follow-up (§12).
 - 2026-08-29 (rev 1): Initial design from brainstorming: design A (confirm-driven commit) + production hardening. Corrections applied to the reviewed proposal: compensation targets as (type,id) pairs (Guava `Lists.reverse` dropped), confirm idempotency scoped by admin userId (not orderId-in-userId-column), `RESERVATION_NOT_FOUND` fails instead of silently succeeding (D4), OTel deferred after verifying `RestClientConfig` propagates nothing today, Resilience4j already present in promotion pom but WireMock fault injection chosen for tests, impact re-measured as LOW/2-symbols.
