@@ -15,11 +15,13 @@ import com.shop.orderservice.repository.CartRepository;
 import com.shop.orderservice.service.CartService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -129,11 +131,22 @@ public class CartServiceImpl implements CartService {
     }
 
     private Cart getOrCreateCart(UUID userId) {
-        return cartRepository.findByUserIdAndDeletedFalse(userId)
-            .orElseGet(() -> cartRepository.save(Cart.builder()
+        Optional<Cart> existing = cartRepository.findByUserIdAndDeletedFalse(userId);
+        if (existing.isPresent()) return existing.get();
+        try {
+            return cartRepository.save(Cart.builder()
                 .userId(userId)
                 .subtotal(BigDecimal.ZERO)
-                .build()));
+                .build());
+        } catch (DataIntegrityViolationException ex) {
+            // ponytail: concurrent first-GET race — another request won the INSERT.
+            // Re-fetch the winner instead of bubbling 500. Unique index on user_id
+            // (active cart) is the actual source of truth; application-side locking
+            // would just shift the race.
+            return cartRepository.findByUserIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new IllegalStateException(
+                    "Cart race: PK conflict but row not found", ex));
+        }
     }
 
     private BigDecimal calculateSubtotal(Cart cart) {

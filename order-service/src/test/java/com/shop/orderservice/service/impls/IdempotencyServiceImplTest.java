@@ -85,6 +85,21 @@ class IdempotencyServiceImplTest {
     }
 
     @Test
+    void begin_collisionWithDifferentPayloadThrows409() {
+        IdempotencyKey existing = IdempotencyKey.builder()
+            .userId(userId).key(key).requestHash("abc")  // different hash than `requestHash` ("abc123")
+            .responseStatus(201)  // completed
+            .responseBody("{\"cached\":\"json\"}")
+            .createdAt(Instant.now()).expiresAt(Instant.now().plusSeconds(3600))
+            .build();
+        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.begin(key, userId, requestHash))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));  // DUPLICATE_REQUEST
+    }
+
+    @Test
     void begin_collisionInFlightThrows() {
         IdempotencyKey existing = IdempotencyKey.builder()
             .userId(userId).key(key).requestHash(requestHash)

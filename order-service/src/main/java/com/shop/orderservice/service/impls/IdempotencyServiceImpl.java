@@ -39,7 +39,11 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         if (preExisting.isPresent()) {
             IdempotencyKey existing = preExisting.get();
             if (existing.getResponseStatus() != 0) {
-                // Complete — replay cached response
+                // Complete — but spec §5.6 requires hash match before replay.
+                // Same key + different payload is a 409, not a silent replay.
+                if (!existing.getRequestHash().equals(requestHash)) {
+                    throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
+                }
                 return Optional.of(deserialize(existing.getResponseBody()));
             }
             // In-flight — reject

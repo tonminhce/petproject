@@ -75,6 +75,21 @@ class CartServiceImplTest {
     }
 
     @Test
+    void getMyCart_raceLost_returnsWinner() {
+        Cart winner = Cart.builder().id(cartId).userId(userId).subtotal(BigDecimal.ZERO).build();
+        when(cartRepository.findByUserIdAndDeletedFalse(userId))
+            .thenReturn(Optional.empty())                    // first call (pre-save) misses
+            .thenReturn(Optional.of(winner));                // second call (post-conflict) returns winner
+        when(cartRepository.save(any(Cart.class)))
+            .thenThrow(new org.springframework.dao.DataIntegrityViolationException("unique constraint"));
+        when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of());
+        when(cartMapper.toResponse(winner, List.of())).thenReturn(emptyResponse());
+
+        assertThatCode(() -> service.getMyCart(userId)).doesNotThrowAnyException();
+        verify(cartRepository, times(2)).findByUserIdAndDeletedFalse(userId);
+    }
+
+    @Test
     void getMyCart_returnsExistingCart() {
         when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
         when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of());

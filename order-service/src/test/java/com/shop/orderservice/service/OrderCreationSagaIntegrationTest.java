@@ -6,15 +6,18 @@ import com.shop.orderservice.config.TestLiquibaseConfig;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.OrderStatus;
+import com.shop.orderservice.entity.OutboxStatus;
 import com.shop.orderservice.repository.CartItemRepository;
 import com.shop.orderservice.repository.CartRepository;
 import com.shop.orderservice.repository.OrderItemRepository;
 import com.shop.orderservice.repository.OrderRepository;
+import com.shop.orderservice.repository.OutboxEventRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -114,6 +117,7 @@ class OrderCreationSagaIntegrationTest {
     @Autowired private CartItemRepository cartItemRepository;
     @Autowired private OrderRepository orderRepository;
     @Autowired private OrderItemRepository orderItemRepository;
+    @Autowired private OutboxEventRepository outboxEventRepository;
 
     private UUID userId;
     private UUID productId;
@@ -157,6 +161,12 @@ class OrderCreationSagaIntegrationTest {
         assertThat(response.total()).isEqualByComparingTo(new BigDecimal("200.00"));
         assertThat(orderRepository.findById(response.id())).isPresent();
         assertThat(cartRepository.findByUserIdAndDeletedFalse(userId)).isEmpty();  // cart cleared
+
+        // Outbox assertion — same TX as order insert; must have ≥1 PENDING event for relay.
+        var pendingEvents = outboxEventRepository.findByStatusOrderByIdAsc(
+            OutboxStatus.PENDING, PageRequest.of(0, 10));
+        assertThat(pendingEvents).isNotEmpty();
+        assertThat(pendingEvents.get(0).getEventType()).isEqualTo("order.created.v1");
     }
 
     @Test
@@ -182,6 +192,51 @@ class OrderCreationSagaIntegrationTest {
             .hasMessageContaining("Failed to reserve stock");
 
         // No Order created for THIS user (TX rollback)
+        assertThat(orderRepository.findAll()
+            .stream().filter(o -> o.getUserId().equals(userId)).toList()).isEmpty();
+    }
+
+    @Test
+    void partialReservationFailure_releasesReservedItems() {
+        // 2 cart items — item 1 reserves successfully, item 2 fails.
+        // Spec §9 requires release endpoint called for each successful reservation
+        // when 1 fails (compensation invariant).
+        UUID productId2 = UUID.randomUUID();
+        var cart = cartRepository.findByUserIdAndDeletedFalse(userId).orElseThrow();
+        cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
+            .cartId(cart.getId()).productId(productId2)
+            .productTitle("Test 2").unitPrice(new BigDecimal("50.00")).quantity(1).build());
+
+        productServer.stubFor(get(urlMatching("/api/v1/products/.*"))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"id":"abc","title":"X","priceUnit":10}}
+                """)));
+
+        UUID item1ReservationId = UUID.randomUUID();
+        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId + "/reserve"))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"reservationId":"%s","productId":"%s","quantity":2}}
+                """.formatted(item1ReservationId, productId))));
+        inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId2 + "/reserve"))
+            .willReturn(aResponse().withStatus(409)));
+
+        // Execute + verify saga throws
+        assertThatThrownBy(() -> orderService.createOrder(userId,
+            new OrderCreateRequest(null, null), "partial-fail-key"))
+            .isInstanceOf(com.shop.common.core.exception.BusinessException.class)
+            .hasMessageContaining("Failed to reserve stock");
+
+        // COMPENSATION VERIFIED — the successful reservation was released after the
+        // second one failed. findByCartId has no ORDER BY, so item processing order is
+        // DB-determined; both stubs succeed/fail regardless of which item is processed
+        // first. We assert the released reservationId matches the one that returned 200.
+        var releaseRequests = inventoryServer.findAll(postRequestedFor(
+            urlMatching("/api/v1/inventory/reservations/.*/release")));
+        assertThat(releaseRequests).hasSize(1);
+        assertThat(releaseRequests.get(0).getUrl())
+            .contains(item1ReservationId.toString());
+
+        // No Order persisted (TX rollback)
         assertThat(orderRepository.findAll()
             .stream().filter(o -> o.getUserId().equals(userId)).toList()).isEmpty();
     }
