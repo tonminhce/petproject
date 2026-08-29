@@ -164,7 +164,9 @@ class InventoryServiceImplTest {
 
     @Test
     void commit_throwsWhenNotPending() {
-        reservation.setStatus(ReservationStatus.COMMITTED);
+        // COMMITTED is now an idempotent no-op (hardening §7.1) — wrong-way
+        // terminal states must still be rejected.
+        reservation.setStatus(ReservationStatus.RELEASED);
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
 
         assertThatThrownBy(() -> service.commit(reservationId))

@@ -17,6 +17,7 @@ import com.shop.inventoryservice.service.InventoryCacheService;
 import com.shop.inventoryservice.service.InventoryEventPublisher;
 import com.shop.inventoryservice.service.InventoryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
 
@@ -150,6 +152,11 @@ public class InventoryServiceImpl implements InventoryService {
     public void commit(UUID reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
+        // Idempotent retry: a retried commit after a timeout must succeed (hardening spec §7.1)
+        if (r.getStatus() == ReservationStatus.COMMITTED) {
+            log.info("Reservation {} already committed (idempotent retry)", reservationId);
+            return;
+        }
         if (r.getStatus() != ReservationStatus.PENDING) {
             throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
         }
@@ -174,6 +181,12 @@ public class InventoryServiceImpl implements InventoryService {
     public void release(UUID reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
+        // Idempotent: quota already returned — safe no-op (hardening spec §7.1)
+        if (r.getStatus() == ReservationStatus.RELEASED
+            || r.getStatus() == ReservationStatus.EXPIRED) {
+            log.info("Reservation {} already terminalized (idempotent retry)", reservationId);
+            return;
+        }
         if (r.getStatus() != ReservationStatus.PENDING) {
             throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
         }
