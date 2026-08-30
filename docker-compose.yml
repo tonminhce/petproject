@@ -547,14 +547,12 @@ services:
       - "8090:8090"
     environment:
       <<: *jwt
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      KAFKA_SERVERS: kafka:9092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notificationservice
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+      SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      SMTP_FALLBACK_RECIPIENT: ${SMTP_FALLBACK_RECIPIENT:-ops@example.com}
     depends_on:
       postgres:
         condition: service_healthy
