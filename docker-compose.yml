@@ -322,6 +322,8 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
+      # Promotion reservation flow (reserve/commit/release) — service is live.
+      PROMOTION_SERVICE_ENABLED: "true"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -500,6 +502,9 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotionservice
+      # Outbox relay publishes shop.promotion.lifecycle.v1 — must reach the
+      # in-network broker (yml default is localhost for local runs).
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       postgres:
         condition: service_healthy
