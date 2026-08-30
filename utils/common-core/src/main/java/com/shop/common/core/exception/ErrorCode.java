@@ -99,7 +99,10 @@ public enum ErrorCode {
     NO_MATCHING_RATE("TAX-8002", "tax.rate.no_match", HttpStatus.NOT_FOUND),
     DUPLICATE_TAX_RATE("TAX-8003", "tax.rate.duplicate", HttpStatus.CONFLICT),
     TAX_CLASS_IN_USE("TAX-8004", "tax.class.in_use", HttpStatus.CONFLICT),
-    TAX_RATE_NOT_FOUND("TAX-8005", "tax.rate.not_found", HttpStatus.NOT_FOUND);
+    TAX_RATE_NOT_FOUND("TAX-8005", "tax.rate.not_found", HttpStatus.NOT_FOUND),
+
+    // ---- Notification domain ----
+    NOTIFICATION_NOT_FOUND("NTF-9001", "notification.not_found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String messageKey;
