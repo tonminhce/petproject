@@ -56,8 +56,24 @@
 
 **Interfaces:** `ErrorCode.PAYMENT_DUPLICATE_REQUEST` (PAY-5003, 409), `PAYMENT_INVALID_STATE` (PAY-5004, 409), `WEBHOOK_SIGNATURE_INVALID` (PAY-5005, 401), `REFUND_INVALID_STATE` (PAY-5006, 409), `AMOUNT_MISMATCH` (PAY-5007, 400); `ApiPaths.BACKOFFICE_PAYMENTS = API_V1 + "/backoffice/payments"`; `ApiPaths.WEBHOOK_PAYMENTS = API_V1 + "/webhooks/payments"`; i18n keys `payment.duplicate_request`, `payment.invalid_state`, `payment.webhook_signature_invalid`, `payment.refund_invalid_state`, `payment.amount_mismatch` (EN+VI).
 
-- [ ] **Step 1: pom** — copy promotion's dep list; ADD `utils/common-storage` (artifact `common-storage`, `${project.version}`); keep `spring-kafka` + `common-kafka`; nothing else removed.
-- [ ] **Step 2: ErrorCode** — anchor per Global Constraints; append PAY-5003..5007 in order (i18n keys as listed), `;` on PAY-5007.
+- [ ] **Step 1: pom** — copy promotion's dep list; keep `spring-kafka` + `common-kafka`; ADD the explicit dependency (no version — BOM/parent manages):
+  ```xml
+  <dependency>
+      <groupId>com.shop</groupId>
+      <artifactId>common-storage</artifactId>
+      <version>${project.version}</version>
+  </dependency>
+  ```
+  Nothing else removed.
+- [ ] **Step 2: ErrorCode** — the anchor is the CURRENT last entry `NOTIFICATION_NOT_FOUND("NTF-9001", "notification.not_found", HttpStatus.NOT_FOUND);` — flip its trailing `;` to `,`, then append after it:
+  ```java
+          PAYMENT_DUPLICATE_REQUEST("PAY-5003", "payment.duplicate_request", HttpStatus.CONFLICT),
+          PAYMENT_INVALID_STATE("PAY-5004", "payment.invalid_state", HttpStatus.CONFLICT),
+          WEBHOOK_SIGNATURE_INVALID("PAY-5005", "payment.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
+          REFUND_INVALID_STATE("PAY-5006", "payment.refund_invalid_state", HttpStatus.CONFLICT),
+          AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST);
+  ```
+  Verify: PAY-5007 ends with `;` AND NTF-9001 now ends with `,` (exactly one `;` terminator in the whole enum).
 - [ ] **Step 3: ApiPaths** — two constants mirroring `BACKOFFICE_TAX_CLASSES` style (`API_V1 +` concat).
 - [ ] **Step 4: i18n** — EN/VI for all 5 keys.
 - [ ] **Step 5:** `./mvnw -pl utils/common-core,utils/common-spring install -q && ./mvnw -pl payment-service compile -q` green.
@@ -118,7 +134,7 @@
 
 ### Task 8: Outbox + relay (port from order)
 
-**Files:** Create `.../outbox/OutboxEvent.java`, `.../outbox/OutboxEventRepository.java`, `.../outbox/PaymentOutboxRelay.java`, `.../outbox/PaymentEventPublisher.java`; **changelog-001 add `outbox_events` table** (copy order's column set 1:1 — read `OrderOutboxRelay`/`OutboxEvent` first).
+**Files:** Create `.../outbox/OutboxEvent.java`, `.../outbox/OutboxEventRepository.java`, `.../outbox/PaymentOutboxRelay.java`, `.../outbox/PaymentEventPublisher.java`; **create `db/changelog/changelog-002-payment-outbox.yaml`** (outbox_events table, order column set 1:1 — separate file, promotion pattern: 1 changelog per logical group; register in `db.changelog-master.yaml`).
 
 **Interfaces:** Entities/repo are faithful ports (package rename only; `OutboxStatus` comes from common-core). `PaymentEventPublisher` builds the D5 wrapper payload JSON (`ObjectMapper`, `eventId=UUID.randomUUID()`) and exposes `publish(Payment payment, String eventType)` → outbox row insert (called inside the caller's tx). `PaymentOutboxRelay` = `@Scheduled(fixedDelayString = "${shop.payment.outbox.poll-millis:2000}")` port of order's relay (PENDING → `KafkaMessagePublisher.publish(topic, payload)` → SENT; error → retry counter).
 
@@ -131,7 +147,7 @@
 
 **Interfaces:**
 - `PaymentService`: `Payment create(CreatePaymentRequest req)` — idempotent: existing `idempotencyKey` → return that row (200 semantics, no error); `Payment capture(UUID id)` — PENDING only (PAY-5004), calls provider, records nothing terminal (state changes ONLY via webhook), returns updated row; `Payment refund(UUID id)` — CAPTURED only (PAY-5006), calls provider.refund.
-- `PaymentWriter` `@Repository @Transactional` (notification precedent — commit-time exception translation): `insert`, `saveAndFlush`.
+- `PaymentWriter` `@Repository @Transactional` (notification precedent — adjudicated 2026-08-30: `@Repository` registers the bean with PersistenceExceptionTranslationPostProcessor, so commit-time exceptions from these `@Transactional` methods pass through PET on THIS proxy; `@Component` would drop that safety net): `insert`, `saveAndFlush`.
 - FINAL SHAPE: service methods annotated `@Transactional`; provider call INSIDE tx is fine (mock is local; stripe skeleton throws).
 
 - [ ] **Step 1 (RED):** `PaymentServiceImplTest` (mocks): create happy; create idempotent-replay returns existing without insert; capture on non-PENDING → PAY-5004; capture calls provider with payment's fields; refund on PENDING → PAY-5006; refund happy calls provider.
@@ -206,4 +222,4 @@
 ### Task 16: Final whole-branch review
 
 - [ ] **Step 1:** review-package BASE→HEAD; reviewer checks: D1 provider port (service never imports Mock/Stripe classes), D2 mock-as-service contract (compose + server.js vs spec endpoints), D3 idempotency + previousStatus, D4 HMAC fail-closed + persist-first ordering, D5 outbox atomicity (state change + outbox row same tx) vs order reference diff, D6 codes vs spec table, D7 security matrix + webhook carve-out correctness (public path ≠ open path: HMAC still enforced), D9 receipt non-blocking, D10 port 8085/envs/Stripe fail-fast documented, zero order/shipping/notification edits.
-- [ ] **Step 2:** fix rounds per review; ledger close. Ops note: live Stripe = `PAYMENT_PROVIDER=stripe` + key (skeleton throws until real impl); rotate `PAYMENT_WEBHOOK_SECRET` per env; receipt bucket must exist before first CAPTURED (or receipts no-op with warn).
+- [ ] **Step 2:** fix rounds per review; ledger close. Ops note: live Stripe = `PAYMENT_PROVIDER=stripe` + key (skeleton throws until real impl); rotate `PAYMENT_WEBHOOK_SECRET` per env; receipts — VERIFY `StorageProperties`/`ObjectStorageAutoConfiguration` auto-create-bucket behavior during review (if auto-create is off, ops must pre-create the bucket before first CAPTURED; if on, record the bucket name in the ledger close).

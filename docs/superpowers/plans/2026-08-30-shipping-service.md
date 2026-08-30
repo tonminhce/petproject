@@ -69,6 +69,7 @@
 **Files:** Create `application.yml`, `db/changelog/db.changelog-master.yaml`, `db/changelog/changelog-001-shipments.yaml`
 
 - [ ] **Step 1: yml** — port 8087; liquibase master; `shop.kafka.bootstrap-servers` + `consumer.group-id: shipping-service` + `auto-offset-reset: latest`; `shop.shipping.auto-deliver-days: ${SHIPMENT_AUTO_DELIVER_DAYS:7}`; `shop.shipping.notify-threshold-hours: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:72}`; `shop.shipping.webhook.secrets.<carrier>` map from env (`SHIPMENT_WEBHOOK_SECRET_GHN` etc., all defaulting empty); security block mirrors notification's.
+- [ ] **Step 1b: ShippingWebhookProperties** — `@ConfigurationProperties(prefix = "shop.shipping.webhook")` with `private Map<String, String> secrets = new HashMap<>();` (+ `@EnableConfigurationProperties` registration or `@ConfigurationPropertiesScan` per fleet convention — check how notification binds `shop.notification.smtp.*` and mirror). Relaxed binding maps `SHIPMENT_WEBHOOK_SECRET_GHN` → `secrets.GHN` automatically. Bean injected into Task 8's controller/service; blank/missing carrier key → 401 path.
 - [ ] **Step 2: changelog-001** — `shipments`: `id UUID`, `order_id UUID NOT NULL`, `carrier VARCHAR(16) NOT NULL` CHECK in ('MANUAL','NOOP','GHN','GHTK'), `tracking_number VARCHAR(64) NULL`, `status VARCHAR(24) NOT NULL` CHECK in ('CREATED','PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','DELIVERY_FAILED','CANCELLED'), `previous_status VARCHAR(24) NULL`, `auto_delivered BOOLEAN NOT NULL DEFAULT false`, `last_carrier_update TIMESTAMPTZ NULL`, `delivered_at TIMESTAMPTZ NULL`, full audit set. Raw SQL: `CREATE UNIQUE INDEX uk_shipment_order_live ON shipments (order_id) WHERE deleted = false;`, `CREATE INDEX idx_shipments_status_stale ON shipments (status, last_carrier_update);`. `shipment_events`: `id UUID`, `shipment_id UUID NULL` (webhook may arrive before shipment known → FAILED row), `carrier VARCHAR(16) NOT NULL`, `provider_event_id VARCHAR(128) NOT NULL`, `type VARCHAR(32) NOT NULL`, `payload TEXT NOT NULL`, `status VARCHAR(16) NOT NULL` CHECK in ('PROCESSED','FAILED'), audit set. Raw SQL: `CREATE UNIQUE INDEX uk_shipment_events_carrier_event ON shipment_events (carrier, provider_event_id);`
 - [ ] **Step 3:** compile + changelog parses. **Step 4: Commit** — `feat(shipping-service): config + shipments tables`
 
@@ -152,7 +153,7 @@
 
 ### Task 11: Outbox + relay + event publisher
 
-**Files:** Create `.../outbox/OutboxEvent.java`, `.../outbox/OutboxEventRepository.java`, `.../outbox/ShippingOutboxRelay.java`, `.../outbox/ShippingEventPublisher.java`; **changelog-001 add `outbox_events`** (order column set 1:1).
+**Files:** Create `.../outbox/OutboxEvent.java`, `.../outbox/OutboxEventRepository.java`, `.../outbox/ShippingOutboxRelay.java`, `.../outbox/ShippingEventPublisher.java`; **create `db/changelog/changelog-002-shipping-outbox.yaml`** (outbox_events, order column set 1:1 — separate file, promotion pattern: 1 changelog per logical group; register in `db.changelog-master.yaml`).
 
 **Interfaces:** faithful port (Task 8 of payment plan is the freshest copy in-fleet — read order's original as truth). `ShippingEventPublisher.publishDelivered(Shipment s, boolean autoDelivered)` → wrapper per Global Constraints (eventId fresh UUID, eventType `shipping.delivered.v1`), outbox row in caller's tx.
 
