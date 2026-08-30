@@ -19,6 +19,8 @@ public interface ShipmentRepository extends JpaRepository<Shipment, UUID> {
 
     Optional<Shipment> findByOrderId(UUID orderId);
 
+    Optional<Shipment> findByTrackingNumber(String trackingNumber);
+
     Page<Shipment> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Shipment> findAllByStatusOrderByCreatedAtDesc(ShipmentStatus status, Pageable pageable);

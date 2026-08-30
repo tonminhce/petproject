@@ -39,3 +39,5 @@ shop:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}
     csrf-disabled: true
     stateless-session: true
+    public-paths:
+      - path: /api/v1/webhooks/shipping/**
