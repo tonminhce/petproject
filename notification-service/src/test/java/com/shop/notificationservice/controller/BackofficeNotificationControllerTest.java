@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -83,6 +84,8 @@ class BackofficeNotificationControllerTest {
             .andExpect(jsonPath("$.data.content[0].status").value("SENT"))
             .andExpect(jsonPath("$.data.content[0].channel").value("SMTP"))
             .andExpect(jsonPath("$.data.totalElements").value(1));
+
+        verify(notificationService).findAllByOrderId(isNull(), eq(PageRequest.of(0, 10)));
     }
 
     @Test

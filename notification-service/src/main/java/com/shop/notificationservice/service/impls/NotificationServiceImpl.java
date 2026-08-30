@@ -72,8 +72,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public Page<NotificationResponse> findAllByOrderId(UUID orderId, Pageable pageable) {
-        return repository.findAllByOrderIdOrderByCreatedAtDesc(orderId, pageable)
-                .map(NotificationResponse::from);
+        Page<Notification> page = orderId == null
+                ? repository.findAllByOrderByCreatedAtDesc(pageable)
+                : repository.findAllByOrderIdOrderByCreatedAtDesc(orderId, pageable);
+        return page.map(NotificationResponse::from);
     }
 
     @Override

@@ -14,5 +14,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     Page<Notification> findAllByOrderIdOrderByCreatedAtDesc(UUID orderId, Pageable pageable);
 
+    Page<Notification> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
     Optional<Notification> findById(UUID id);
 }

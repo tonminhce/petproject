@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.notificationservice.constant.NotificationChannel;
 import com.shop.notificationservice.constant.NotificationStatus;
 import com.shop.notificationservice.dto.OrderLifecycleEvent;
+import com.shop.notificationservice.dto.response.NotificationResponse;
 import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
 import com.shop.notificationservice.service.NotificationWriter;
@@ -15,6 +16,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -181,5 +185,36 @@ class NotificationServiceImplTest {
         service.handle(createdEvent());
 
         verify(writer).markFailed(NOTIFICATION_ID);
+    }
+
+    @Test
+    void findAllByOrderId_nullOrderId_delegatesToUnfilteredNewestFirstFinder() {
+        Notification notification = savedNotification();
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(repository.findAllByOrderByCreatedAtDesc(pageable))
+                .thenReturn(new PageImpl<>(List.of(notification)));
+
+        Page<NotificationResponse> page = service.findAllByOrderId(null, pageable);
+
+        verify(repository).findAllByOrderByCreatedAtDesc(pageable);
+        verify(repository, never()).findAllByOrderIdOrderByCreatedAtDesc(any(), any());
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).id()).isEqualTo(NOTIFICATION_ID);
+        assertThat(page.getContent().get(0).orderId()).isEqualTo(ORDER_ID);
+    }
+
+    @Test
+    void findAllByOrderId_withOrderId_delegatesToDerivedFinder() {
+        Notification notification = savedNotification();
+        PageRequest pageable = PageRequest.of(1, 5);
+        when(repository.findAllByOrderIdOrderByCreatedAtDesc(ORDER_ID, pageable))
+                .thenReturn(new PageImpl<>(List.of(notification)));
+
+        Page<NotificationResponse> page = service.findAllByOrderId(ORDER_ID, pageable);
+
+        verify(repository).findAllByOrderIdOrderByCreatedAtDesc(ORDER_ID, pageable);
+        verify(repository, never()).findAllByOrderByCreatedAtDesc(any());
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).id()).isEqualTo(NOTIFICATION_ID);
     }
 }
