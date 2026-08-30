@@ -25,12 +25,12 @@ databaseChangeLog:
               - column: { name: code,              type: varchar(50),          constraints: { nullable: false } }
               - column: { name: name,              type: varchar(255),         constraints: { nullable: false } }
               - column: { name: discount_type,     type: varchar(10),          constraints: { nullable: false } }
-              - column: { name: discount_value,    type: numeric(19,2),        constraints: { nullable: false } }
-              - column: { name: min_order_amount,  type: numeric(19,2) }
+              - column: { name: discount_value,    type: 'numeric(19,2)',      constraints: { nullable: false } }
+              - column: { name: min_order_amount,  type: 'numeric(19,2)' }
               - column: { name: starts_at,         type: timestamp with time zone }
               - column: { name: ends_at,           type: timestamp with time zone }
               - column: { name: max_redemptions,   type: integer }
-              - column: { name: total_budget,      type: numeric(19,2) }
+              - column: { name: total_budget,      type: 'numeric(19,2)' }
               - column: { name: per_user_limit,    type: integer,              constraints: { nullable: false, defaultValueNumeric: 1 } }
               - column: { name: version,           type: bigint,               constraints: { nullable: false, defaultValueNumeric: 0 } }
               - column: { name: status,            type: varchar(10),          constraints: { nullable: false, defaultValue: 'INACTIVE' } }
@@ -77,8 +77,8 @@ databaseChangeLog:
               - column: { name: campaign_id,     type: uuid,                 constraints: { nullable: false } }
               - column: { name: user_id,         type: uuid,                 constraints: { nullable: false } }
               - column: { name: order_id,        type: uuid,                 constraints: { nullable: false } }
-              - column: { name: order_amount,    type: numeric(19,2),        constraints: { nullable: false } }
-              - column: { name: discount_amount, type: numeric(19,2),        constraints: { nullable: false } }
+              - column: { name: order_amount,    type: 'numeric(19,2)',      constraints: { nullable: false } }
+              - column: { name: discount_amount, type: 'numeric(19,2)',      constraints: { nullable: false } }
               - column: { name: status,          type: varchar(10),          constraints: { nullable: false } }
               - column: { name: expires_at,      type: timestamp with time zone, constraints: { nullable: false } }
               - column: { name: reserved_at,     type: timestamp with time zone, constraints: { nullable: false } }
