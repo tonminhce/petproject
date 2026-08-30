@@ -97,9 +97,20 @@ no cache by design (D9).
 
 ## 6. Fleet impact
 
-`utils/common-core`: +4 `ErrorCode` entries, `ApiPaths` additions
-(`BACKOFFICE_TAX_CLASSES`, `BACKOFFICE_TAX_RATES`), i18n keys — additive only,
-merged after the tax epic wins the shared-file race (tax merges first by plan).
+`utils/common-core` — additive only, but the anchor steps are explicit:
+
+1. `ErrorCode.java` (:97 today) ends with
+   `PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", ...);` → flip that
+   line's `;` to `,`.
+2. Append, ascending: `TAX_CLASS_NOT_FOUND("TAX-8001", ...)`,
+   `NO_MATCHING_RATE("TAX-8002", ...)`, `DUPLICATE_TAX_RATE("TAX-8003", ...)`
+   — each `,`-terminated; `TAX_CLASS_IN_USE("TAX-8004", ...)` last,
+   `;`-terminated.
+3. `ApiPaths` additions (`BACKOFFICE_TAX_CLASSES`, `BACKOFFICE_TAX_RATES`)
+   and `tax.*` i18n keys (EN+VI, one per code) — pure appends.
+
+Tax merges first in the concurrent-epic pair; the notification epic then
+appends `NTF-9001` after `TAX-8004` (its spec D8 carries that anchor).
 
 ## 7. Out of scope
 
