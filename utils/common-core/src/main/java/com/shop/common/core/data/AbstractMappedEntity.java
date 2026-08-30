@@ -35,4 +35,13 @@ public abstract class AbstractMappedEntity extends SoftDeletable {
     public Instant getUpdatedAt()  { return updatedAt; }
     public String  getCreatedBy()  { return createdBy; }
     public String  getUpdatedBy()  { return updatedBy; }
+
+    /**
+     * Explicit audit touch — lets a service force the entity dirty (e.g. the
+     * promotion reserve version-touch, spec §5.2) so the pending UPDATE
+     * triggers the {@code @Version} compare. Normally {@code @LastModifiedDate}
+     * auditing fills this; a manual set wins whenever auditing has no change
+     * to piggyback on.
+     */
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
