@@ -23,8 +23,11 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
@@ -34,6 +37,9 @@ public class WebhookEventServiceImpl implements WebhookEventService {
 
     private static final String EVENT_STATUS_PROCESSED = "PROCESSED";
     private static final String EVENT_STATUS_FAILED = "FAILED";
+    private static final String EVENT_TYPE_UNPARSEABLE = "UNPARSEABLE";
+    private static final String UNPARSEABLE_EVENT_ID_PREFIX = "unparseable-";
+    private static final int PROVIDER_EVENT_ID_MAX_LENGTH = 128;
 
     private final ShippingWebhookProperties webhookProperties;
     private final ShipmentRepository shipmentRepository;
@@ -52,7 +58,14 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             throw BusinessException.of(ErrorCode.SHIPPING_WEBHOOK_SIGNATURE_INVALID, carrier);
         }
 
-        CarrierWebhookPayload payload = parse(rawBody);
+        CarrierWebhookPayload payload;
+        try {
+            payload = parse(rawBody);
+        } catch (IllegalStateException e) {
+            log.warn("Webhook body from carrier {} failed to parse, persisting FAILED event", carrier);
+            persistUnparseableEvent(parsedCarrier, rawBody);
+            return;
+        }
 
         if (eventRepository.existsByCarrierAndProviderEventId(parsedCarrier, payload.getEventId())) {
             log.info("Webhook event {} from carrier {} already processed, acking no-op", payload.getEventId(), carrier);
@@ -79,6 +92,11 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         if (shipment == null) {
             log.warn("Webhook event {} references unknown tracking number {}, event marked FAILED",
                     payload.getEventId(), payload.getTrackingNumber());
+            return;
+        }
+
+        if (payload.getCarrierStatus() == null) {
+            log.warn("Webhook event {} has null carrierStatus, event marked FAILED", payload.getEventId());
             return;
         }
 
@@ -111,6 +129,40 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             return Carrier.valueOf(carrier);
         } catch (IllegalArgumentException | NullPointerException e) {
             throw BusinessException.of(ErrorCode.SHIPPING_WEBHOOK_SIGNATURE_INVALID, carrier);
+        }
+    }
+
+    private void persistUnparseableEvent(Carrier carrier, byte[] rawBody) {
+        String providerEventId = syntheticEventId(rawBody);
+        if (eventRepository.existsByCarrierAndProviderEventId(carrier, providerEventId)) {
+            log.info("Unparseable webhook body from carrier {} already recorded, acking no-op", carrier);
+            return;
+        }
+        ShipmentEvent event = ShipmentEvent.builder()
+                .id(UUID.randomUUID())
+                .carrier(carrier)
+                .providerEventId(providerEventId)
+                .type(EVENT_TYPE_UNPARSEABLE)
+                .payload(new String(rawBody, StandardCharsets.UTF_8))
+                .status(EVENT_STATUS_FAILED)
+                .build();
+        try {
+            writer.insert(event);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Unparseable webhook body from carrier {} raced a concurrent insert, acking no-op", carrier);
+        }
+    }
+
+    private String syntheticEventId(byte[] rawBody) {
+        String id = UNPARSEABLE_EVENT_ID_PREFIX + sha256Hex(rawBody);
+        return id.length() > PROVIDER_EVENT_ID_MAX_LENGTH ? id.substring(0, PROVIDER_EVENT_ID_MAX_LENGTH) : id;
+    }
+
+    private String sha256Hex(byte[] rawBody) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(rawBody));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
     }
 

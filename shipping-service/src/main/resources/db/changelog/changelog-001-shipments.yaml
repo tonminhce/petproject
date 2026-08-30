@@ -75,3 +75,10 @@ databaseChangeLog:
 
         - sql:
             sql: CREATE UNIQUE INDEX uk_shipment_events_carrier_event ON shipment_events (carrier, provider_event_id)
+
+  - changeSet:
+      id: 003-unique-tracking-number-live
+      author: shop-platform
+      changes:
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_shipments_tracking_live ON shipments (tracking_number) WHERE tracking_number IS NOT NULL AND deleted = false

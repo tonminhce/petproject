@@ -24,6 +24,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
@@ -80,6 +81,18 @@ class WebhookEventServiceTest {
 
     private byte[] body(String json) {
         return json.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String syntheticId(byte[] raw) {
+        return "unparseable-" + sha256Hex(raw);
+    }
+
+    private static String sha256Hex(byte[] raw) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private String payloadJson(String eventId, String trackingNumber, String carrierStatus) {
@@ -259,6 +272,61 @@ class WebhookEventServiceTest {
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
         verifyNoInteractions(events, shipments, writer, publisher);
+    }
+
+    @Test
+    void unparseableBodyWithValidSignature_persistsFailedEventWithSyntheticIdAndAcks() {
+        byte[] raw = body("not-a-json-payload{{{");
+        when(events.existsByCarrierAndProviderEventId(CARRIER, syntheticId(raw))).thenReturn(false);
+
+        assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
+                .doesNotThrowAnyException();
+
+        ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).insert(eventCaptor.capture());
+        ShipmentEvent inserted = eventCaptor.getValue();
+        assertThat(inserted.getStatus()).isEqualTo("FAILED");
+        assertThat(inserted.getProviderEventId()).isEqualTo(syntheticId(raw));
+        assertThat(inserted.getProviderEventId()).hasSizeLessThanOrEqualTo(128);
+        assertThat(inserted.getType()).isEqualTo("UNPARSEABLE");
+        assertThat(inserted.getCarrier()).isEqualTo(CARRIER);
+        assertThat(inserted.getShipmentId()).isNull();
+        assertThat(inserted.getPayload()).isEqualTo(new String(raw, StandardCharsets.UTF_8));
+        verify(shipments, never()).findByTrackingNumber(anyString());
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void unparseableBodyRepeat_dedupesViaSyntheticIdAndAcks() {
+        byte[] raw = body("not-a-json-payload{{{");
+        when(events.existsByCarrierAndProviderEventId(CARRIER, syntheticId(raw))).thenReturn(true);
+
+        assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
+                .doesNotThrowAnyException();
+
+        verify(writer, never()).insert(any(ShipmentEvent.class));
+        verify(shipments, never()).findByTrackingNumber(anyString());
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void nullCarrierStatus_marksEventFailedAndAcks() {
+        byte[] raw = body("{\"eventId\":\"evt-13\",\"eventType\":\"carrier.event.v1\",\"trackingNumber\":\"TRK-1\"}");
+        happyPathStubs("evt-13");
+        when(shipments.findByTrackingNumber("TRK-1"))
+                .thenReturn(Optional.of(shipment(ShipmentStatus.PICKED_UP)));
+
+        assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
+                .doesNotThrowAnyException();
+
+        ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).insert(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
+        assertThat(eventCaptor.getValue().getProviderEventId()).isEqualTo("evt-13");
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
+        verifyNoInteractions(publisher);
     }
 
     @Test
