@@ -167,7 +167,11 @@ services:
     image: quay.io/keycloak/keycloak:26.0
     container_name: keycloak
     <<: [*restart, *logging]
-    command: start-dev --http-port=8080 --import-realm
+    # --hostname pins the issuer claim (iss) to the INTERNAL url so tokens carry
+    # iss=http://keycloak:8080/realms/ecommerce regardless of how the client
+    # reached Keycloak (host uses localhost:9090). Services validate against the
+    # same url AND fetch JWKS from it — reachable via container DNS.
+    command: start-dev --http-port=8080 --hostname=http://keycloak:8080 --import-realm
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
@@ -320,6 +324,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_SERVICE_CLIENT_ID: order-service
       ORDER_SERVICE_CLIENT_SECRET: changeme
