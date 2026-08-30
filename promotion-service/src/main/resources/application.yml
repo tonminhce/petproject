@@ -36,6 +36,10 @@ shop:
     # common-kafka binds shop.kafka.* (KafkaProperties) — NOT spring.kafka.*.
     # Only the outbox relay produces here; the service has no Kafka consumer.
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      # Durability over throughput: the outbox relay must not lose events.
+      acks: all
+      retries: 3
   security:
     # Every endpoint requires a valid JWT — NO public-paths (fail-closed):
     # backoffice rows are business-sensitive and reservation endpoints are
@@ -53,3 +57,14 @@ shop:
     reservation-cleanup-interval-ms: 60000      # expired sweep every 60s
     reservation-retention-cron: "0 0 4 * * *"   # purge terminal > 30 days, 04:00 daily
     reservation-retention-days: 30
+
+# Outbox relay + retention — SAME prop names as inventory-service's
+# `inventory.outbox.*` (fleet-consistent; per-service yml anyway). Values MUST
+# match the inline @Value/@Scheduled defaults in PromotionOutboxRelay /
+# OutboxRetentionScheduler.
+promotion:
+  outbox:
+    poll-interval-ms: 5000
+    batch-size: 100
+    max-retries: 10
+    retention-cron: "0 0 3 * * *"               # purge SENT > 7 days, 03:00 daily

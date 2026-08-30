@@ -1,0 +1,45 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  002-promotion-outbox
+  #  Transactional outbox (spec §5.5) — table definition mirrored EXACTLY from
+  #  inventory-service's changelog-001 (003-create-outbox-events changeset):
+  #  hard-delete lifecycle PENDING → SENT/FAILED, no soft delete (deliberate
+  #  divergence from product-service — do not "align").
+  # ===========================================================================
+  - changeSet:
+      id: 002-promotion-outbox
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: event_id,       type: VARCHAR(36),  constraints: { nullable: false, unique: true } }
+              - column: { name: aggregate_type, type: VARCHAR(50),  constraints: { nullable: false } }
+              - column: { name: aggregate_id,   type: UUID,         constraints: { nullable: false } }
+              - column: { name: event_type,     type: VARCHAR(50),  constraints: { nullable: false } }
+              - column: { name: topic,          type: VARCHAR(100), constraints: { nullable: false } }
+              - column: { name: payload,        type: TEXT,         constraints: { nullable: false } }
+              - column: { name: status,         type: VARCHAR(20),  constraints: { nullable: false } }
+              - column: { name: retry_count,    type: INTEGER,      constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: sent_at,        type: TIMESTAMP }
+              - column: { name: last_error,     type: VARCHAR(1000) }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_status
+            columns:
+              - column: { name: status }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_aggregate_id
+            columns:
+              - column: { name: aggregate_id }
