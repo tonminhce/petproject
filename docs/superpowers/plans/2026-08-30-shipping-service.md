@@ -62,7 +62,7 @@
 
 **Files:** Modify `ErrorCode.java`, `ApiPaths.java`, `messages_{en,vi}.properties`
 
-**Interfaces:** `ErrorCode.SHIPMENT_NOT_FOUND` (SHP-10001, 404), `SHIPMENT_DUPLICATE` (SHP-10002, 409), `SHIPMENT_INVALID_TRANSITION` (SHP-10003, 409), `WEBHOOK_SIGNATURE_INVALID` (SHP-10004, 401), `TRACKING_REQUIRED` (SHP-10005, 400), `CARRIER_NOT_CONFIGURED` (SHP-10006, 409); `ApiPaths.BACKOFFICE_SHIPMENTS = API_V1 + "/backoffice/shipments"`; `ApiPaths.WEBHOOK_SHIPPING = API_V1 + "/webhooks/shipping"`; i18n keys `shipping.not_found`, `shipping.duplicate`, `shipping.invalid_transition`, `shipping.webhook_signature_invalid`, `shipping.tracking_required`, `shipping.carrier_not_configured` (EN+VI).
+**Interfaces:** `ErrorCode.SHIPMENT_NOT_FOUND` (SHP-10001, 404), `SHIPMENT_DUPLICATE` (SHP-10002, 409), `SHIPMENT_INVALID_TRANSITION` (SHP-10003, 409), `SHIPPING_WEBHOOK_SIGNATURE_INVALID` (SHP-10004, 401 — constant renamed from WEBHOOK_SIGNATURE_INVALID: enum-name collision with payment's PAY-5005; code/i18n key unchanged), `TRACKING_REQUIRED` (SHP-10005, 400), `CARRIER_NOT_CONFIGURED` (SHP-10006, 409); `ApiPaths.BACKOFFICE_SHIPMENTS = API_V1 + "/backoffice/shipments"`; `ApiPaths.WEBHOOK_SHIPPING = API_V1 + "/webhooks/shipping"`; i18n keys `shipping.not_found`, `shipping.duplicate`, `shipping.invalid_transition`, `shipping.webhook_signature_invalid`, `shipping.tracking_required`, `shipping.carrier_not_configured` (EN+VI).
 
 - [ ] **Step 0: GATE** — verify ErrorCode last entry is `AMOUNT_MISMATCH("PAY-5007", ...)` (payment lane's Task 1 landed via the branch-to-branch unlock merge). Not found → STOP — sequence violation.
 - [ ] **Step 2: ErrorCode** — append SHP-10001..10006 in order; `;` on SHP-10006. (5-digit block: thousands 1–9 exhausted — spec D6 documents the fleet extension.)
@@ -133,11 +133,11 @@
 **Files:** Create `.../webhook/CarrierWebhookController.java`, `.../service/WebhookEventService.java`, `.../webhook/CarrierWebhookPayload.java`
 
 **Interfaces:**
-- `POST ApiPaths.WEBHOOK_SHIPPING + "/{carrier}"` — raw body + `X-Webhook-Signature`. Secret lookup by `{carrier}` from `shop.shipping.webhook.secrets` map; missing/blank → `WEBHOOK_SIGNATURE_INVALID` 401 BEFORE parsing. Bad signature → 401, no state change, no event row.
+- `POST ApiPaths.WEBHOOK_SHIPPING + "/{carrier}"` — raw body + `X-Webhook-Signature`. Secret lookup by `{carrier}` from `shop.shipping.webhook.secrets` map; missing/blank → `SHIPPING_WEBHOOK_SIGNATURE_INVALID` 401 BEFORE parsing. Bad signature → 401, no state change, no event row.
 - `CarrierWebhookPayload`: `eventId, eventType, trackingNumber, carrierStatus` (PICKED_UP|IN_TRANSIT|OUT_FOR_DELIVERY|DELIVERED|DELIVERY_FAILED).
 - `WebhookEventService.handle(carrier, body, signature)` — persist-first/ack-always: dedupe `(carrier, eventId)` → ack no-op; insert `ShipmentEvent` own tx (DIVE → ack no-op); resolve shipment by trackingNumber (unknown → event FAILED, ack); FSM advance via `ShipmentStateMachine` (illegal → event FAILED, ack); update `last_carrier_update = now` (injected `Clock`), `delivered_at` when DELIVERED + outbox row (same tx — Task 11 publisher) + metrics; ack 200 ALWAYS.
 
-- [ ] **Step 1 (RED):** `WebhookEventServiceTest` (mocks): valid advance + last_carrier_update set; DELIVERED → delivered_at + outbox + `shipping.delivered.count` counter; replay no-op; unknown tracking → event FAILED; illegal transition → event FAILED; unconfigured carrier → 401 before anything.
+- [ ] **Step 1 (RED):** `WebhookEventServiceTest` (mocks): valid advance + last_carrier_update set; DELIVERED → delivered_at + outbox + `shipping.delivered.count` counter; replay no-op; unknown tracking → event FAILED; illegal transition → event FAILED; unconfigured carrier → 401 (SHIPPING_WEBHOOK_SIGNATURE_INVALID) before anything.
 - [ ] **Step 2:** FAIL → **Step 3 (GREEN):** implement (+ security public-paths carve-out, same mechanism as payment — verify it landed) → **Step 4:** PASS. **Step 5: Commit** — `feat(shipping-service): per-carrier signed webhook receiver`
 
 ### Task 9: Admin backoffice API
