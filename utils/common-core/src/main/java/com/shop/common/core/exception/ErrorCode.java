@@ -94,7 +94,12 @@ public enum ErrorCode {
     PROMOTION_RESERVATION_NOT_FOUND("PRO-7008", "promotion.reservation.not.found", HttpStatus.NOT_FOUND),
     PROMOTION_RESERVATION_EXPIRED("PRO-7009", "promotion.reservation.expired", HttpStatus.CONFLICT),
     PROMOTION_RESERVATION_INVALID_STATE("PRO-7010", "promotion.reservation.invalid.state", HttpStatus.CONFLICT),
-    PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", "promotion.reservation.version.conflict", HttpStatus.CONFLICT);
+    PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", "promotion.reservation.version.conflict", HttpStatus.CONFLICT),
+    TAX_CLASS_NOT_FOUND("TAX-8001", "tax.class.not_found", HttpStatus.NOT_FOUND),
+    NO_MATCHING_RATE("TAX-8002", "tax.rate.no_match", HttpStatus.NOT_FOUND),
+    DUPLICATE_TAX_RATE("TAX-8003", "tax.rate.duplicate", HttpStatus.CONFLICT),
+    TAX_CLASS_IN_USE("TAX-8004", "tax.class.in_use", HttpStatus.CONFLICT),
+    TAX_RATE_NOT_FOUND("TAX-8005", "tax.rate.not_found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String messageKey;
