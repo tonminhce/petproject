@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Package `com.shop.shippingservice` (scaffold exists: `ShippingServiceApplication`). Port **8087**. DB `shippingservice` (init SQL line pre-exists — verify-only). Compose stanza + `ServiceRoute.SHIPPING` pre-exist — env modernization only, gateway verify-only.
-- **Lane rule (parallel epics):** shipping lane = **W2**. Task 1's shared-file edits are BLOCKED until the payment epic's anchor lands and the branch-to-branch unlock merge runs (af71412 mechanism). Sequence gate below; if it fails: STOP.
+- **Lane rule (parallel epics):** shipping lane = **W2**. Task 1 (pom-only, ungated) may start immediately; Task 1b's shared-file edits are BLOCKED until the payment epic's anchor lands and the branch-to-branch unlock merge runs (af71412 mechanism). Sequence gate below; if it fails: STOP.
 - **ErrorCode anchor:** after payment's Task 1, the LAST enum entry is `AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST);` → flip its `;` to `,`, append SHP-10001..10006 with `;` on the new last entry. If anchor not found: STOP — sequence violation.
 - **Never edit** `order-service`, `payment-service`, `notification-service`. Read-only truth: `OrderEventPublisherImpl` (payload wrapper), `OrderOutboxRelay` (relay port), notification's `NotificationListenerConfig`/`BaseKafkaListenerConfig` (consumer stack — INCLUDING the T10 rulings: `@EnableKafka` on the factory-owning config; key deserializer is StringDeserializer).
 - **Order event contract (inbound):** topic `shop.order.lifecycle.v1`, wrapper `{eventId, eventType, occurredAt, ...data}`; shipping reacts to `order.updated.v1` where `status == "CONFIRMED"` (create shipment) and where `status == "CANCELLED"` (cancel un-shipped shipment). All other events ignored (ack).
@@ -30,9 +30,9 @@
 | File | Action |
 |------|--------|
 | `shipping-service/pom.xml` | MODIFY — deps (Task 1) |
-| `utils/common-core/.../ErrorCode.java` | MODIFY — SHP-1xxxx tail (Task 1, gated) |
-| `utils/common-core/.../constants/ApiPaths.java` | MODIFY — BACKOFFICE_SHIPMENTS + WEBHOOK_SHIPPING (Task 1, gated) |
-| `utils/common-spring/.../messages_{en,vi}.properties` | MODIFY — 6 `shipping.*` keys (Task 1, gated) |
+| `utils/common-core/.../ErrorCode.java` | MODIFY — SHP-1xxxx tail (Task 1b, gated) |
+| `utils/common-core/.../constants/ApiPaths.java` | MODIFY — BACKOFFICE_SHIPMENTS + WEBHOOK_SHIPPING (Task 1b, gated) |
+| `utils/common-spring/.../messages_{en,vi}.properties` | MODIFY — 6 `shipping.*` keys (Task 1b, gated) |
 | `.../application.yml` + `db/changelog/*changelog-001-shipments.yaml` | CREATE (Task 2) |
 | `.../constant/ShipmentStatus.java`, `.../constant/Carrier.java`, `.../entity/Shipment.java`, `.../entity/ShipmentEvent.java` | CREATE (Task 3) |
 | `.../repository/ShipmentRepository.java`, `ShipmentEventRepository.java` | CREATE (Task 4) |
@@ -50,14 +50,21 @@
 
 ---
 
-### Task 1: pom deps + ErrorCode SHP tail + ApiPaths + i18n  (SEQUENCE-GATED)
+### Task 1: pom deps  (ungated — no shared files)
 
-**Files:** Modify `shipping-service/pom.xml`, `ErrorCode.java`, `ApiPaths.java`, `messages_{en,vi}.properties`
+**Files:** Modify `shipping-service/pom.xml`
+
+- [ ] **Step 1: pom** — promotion's dep list + `spring-kafka` + `common-kafka` (notification's pom is the closest copy source); no mail/storage deps.
+- [ ] **Step 2:** `./mvnw -pl shipping-service compile -q` green.
+- [ ] **Step 3: Commit** — `feat(shipping-service): deps`
+
+### Task 1b: ErrorCode SHP tail + ApiPaths + i18n  (SEQUENCE-GATED)
+
+**Files:** Modify `ErrorCode.java`, `ApiPaths.java`, `messages_{en,vi}.properties`
 
 **Interfaces:** `ErrorCode.SHIPMENT_NOT_FOUND` (SHP-10001, 404), `SHIPMENT_DUPLICATE` (SHP-10002, 409), `SHIPMENT_INVALID_TRANSITION` (SHP-10003, 409), `WEBHOOK_SIGNATURE_INVALID` (SHP-10004, 401), `TRACKING_REQUIRED` (SHP-10005, 400), `CARRIER_NOT_CONFIGURED` (SHP-10006, 409); `ApiPaths.BACKOFFICE_SHIPMENTS = API_V1 + "/backoffice/shipments"`; `ApiPaths.WEBHOOK_SHIPPING = API_V1 + "/webhooks/shipping"`; i18n keys `shipping.not_found`, `shipping.duplicate`, `shipping.invalid_transition`, `shipping.webhook_signature_invalid`, `shipping.tracking_required`, `shipping.carrier_not_configured` (EN+VI).
 
-- [ ] **Step 0: GATE** — verify ErrorCode last entry is `PAY-5007` (payment Task 1 merged into this branch via unlock-merge). Not found → STOP.
-- [ ] **Step 1: pom** — promotion's dep list + `spring-kafka` + `common-kafka` (notification's pom is the closest copy source); no mail/storage deps.
+- [ ] **Step 0: GATE** — verify ErrorCode last entry is `AMOUNT_MISMATCH("PAY-5007", ...)` (payment lane's Task 1 landed via the branch-to-branch unlock merge). Not found → STOP — sequence violation.
 - [ ] **Step 2: ErrorCode** — append SHP-10001..10006 in order; `;` on SHP-10006. (5-digit block: thousands 1–9 exhausted — spec D6 documents the fleet extension.)
 - [ ] **Step 3: ApiPaths** — two constants (`API_V1 +` concat style).
 - [ ] **Step 4: i18n** — EN/VI for all 6 keys.
