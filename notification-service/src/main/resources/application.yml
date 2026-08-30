@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: notification-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/notificationservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+
+server:
+  port: ${SERVER_PORT:8090}
+
+shop:
+  kafka:
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: latest
+
+  notification:
+    smtp:
+      enabled: ${SMTP_ENABLED:false}
+      fallback-recipient: ${SMTP_FALLBACK_RECIPIENT:ops@example.com}
+
+  security:
+    issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true

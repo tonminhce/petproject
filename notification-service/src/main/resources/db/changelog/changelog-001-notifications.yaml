@@ -1,0 +1,43 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-notifications
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: notifications
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: event_id,   type: uuid,         constraints: { nullable: false } }
+              - column: { name: event_type, type: varchar(64),  constraints: { nullable: false } }
+              - column: { name: order_id,   type: uuid,         constraints: { nullable: false } }
+              - column: { name: user_id,    type: uuid }
+              - column: { name: status,     type: varchar(16),  constraints: { nullable: false } }
+              - column: { name: channel,    type: varchar(8),   constraints: { nullable: false } }
+              - column: { name: subject,    type: varchar(255), constraints: { nullable: false } }
+              - column: { name: body,       type: text,         constraints: { nullable: false } }
+              - column: { name: payload,    type: text,         constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamp,    constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamp,    constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean,      defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamp }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        - sql:
+            sql: ALTER TABLE notifications ADD CONSTRAINT ck_notifications_status CHECK (status IN ('SENT', 'FAILED', 'SKIPPED'))
+
+        - sql:
+            sql: ALTER TABLE notifications ADD CONSTRAINT ck_notifications_channel CHECK (channel IN ('LOG', 'SMTP'))
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_notification_event_id ON notifications (event_id)
+
+        - sql:
+            sql: CREATE INDEX idx_notifications_order_id ON notifications (order_id)
