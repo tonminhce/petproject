@@ -1,7 +1,6 @@
 package com.shop.taxservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
-import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.data.SoftDeletable;
 import com.shop.taxservice.dto.request.TaxClassRequest;
 import com.shop.taxservice.dto.response.TaxClassResponse;
