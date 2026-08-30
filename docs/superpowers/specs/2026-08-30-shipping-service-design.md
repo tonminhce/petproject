@@ -44,7 +44,7 @@ order wiring. Ships standalone — it does not touch order-service.
   live on `shipment_events` (replay → ack + no-op), persist-first/ack-always
   (payment D4 precedent). Valid events drive
   PICKED_UP/IN_TRANSIT/OUT_FOR_DELIVERY/DELIVERED/DELIVERY_FAILED transitions
-  and bump `last_carrier_update`. On DELIVERED (webhook or scheduler): write
+  and bump `last_carrier_update`. On DELIVERED (webhook, scheduler, OR admin transition): write
   outbox row → `ShippingOutboxRelay` publishes
   `shop.shipping.lifecycle.v1` / `shipping.delivered.v1`
   `{eventId, eventType, occurredAt, orderId, shipmentId, carrier,
