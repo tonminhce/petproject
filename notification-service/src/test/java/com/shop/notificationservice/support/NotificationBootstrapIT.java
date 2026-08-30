@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
 
@@ -20,7 +21,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Container/property bootstrap lives entirely in
  * {@link AbstractIntegrationTest}; this class only asserts.</p>
+ *
+ * <p>{@code @DirtiesContext}: this context runs a live {@code OrderEventConsumer}
+ * in group {@code notification-service}. Closing it after the class stops that
+ * consumer from competing for the topic's single partition while
+ * {@code NotificationFlowIT} runs — flow scenarios (e.g. the spied sender)
+ * must be processed by the flow context's own listener.</p>
  */
+@DirtiesContext
 class NotificationBootstrapIT extends AbstractIntegrationTest {
 
     @Autowired
