@@ -28,7 +28,7 @@
 |------|--------|
 | `tax-service/pom.xml` | MODIFY — deps (Task 1) |
 | `utils/common-core/.../ErrorCode.java` | MODIFY — TAX-8001..8004 (Task 1) |
-| `utils/common-core/.../constants/ApiPaths.java` | MODIFY — BACKOFFICE_TAX_CLASSES/RATES (Task 1) |
+| `utils/common-core/.../constants/ApiPaths.java` | VERIFY-ONLY — BACKOFFICE_TAX_* already exist (Task 1) |
 | `utils/common-spring/.../messages/messages_{en,vi}.properties` | MODIFY — 4 `tax.*` keys (Task 1) |
 | `tax-service/src/main/resources/application.yml` | CREATE (Task 2) |
 | `tax-service/src/main/resources/db/changelog/db.changelog-master.yaml` + `changelog-001-initial-schema.yaml` | CREATE (Task 2) |
@@ -49,10 +49,12 @@
 ### Task 1: pom deps + ErrorCode TAX-8xxx + ApiPaths + i18n
 
 **Files:**
-- Modify: `tax-service/pom.xml`, `utils/common-core/.../ErrorCode.java`, `utils/common-core/.../constants/ApiPaths.java`, `messages_en.properties`, `messages_vi.properties`
+- Modify: `tax-service/pom.xml`, `utils/common-core/.../ErrorCode.java`, `messages_en.properties`, `messages_vi.properties`
+- Verify-only: `utils/common-core/.../constants/ApiPaths.java` (constants already present, :43-44)
 
 **Interfaces:**
-- Produces: `ErrorCode.TAX_CLASS_NOT_FOUND` (TAX-8001, 404), `NO_MATCHING_RATE` (TAX-8002, 404), `DUPLICATE_TAX_RATE` (TAX-8003, 409), `TAX_CLASS_IN_USE` (TAX-8004, 409); `ApiPaths.BACKOFFICE_TAX_CLASSES = "/api/v1/backoffice/tax-classes"`, `ApiPaths.BACKOFFICE_TAX_RATES = "/api/v1/backoffice/tax-rates"`; i18n keys `tax.class.not_found`, `tax.rate.no_match`, `tax.rate.duplicate`, `tax.class.in_use`.
+- Produces: `ErrorCode.TAX_CLASS_NOT_FOUND` (TAX-8001, 404), `NO_MATCHING_RATE` (TAX-8002, 404), `DUPLICATE_TAX_RATE` (TAX-8003, 409), `TAX_CLASS_IN_USE` (TAX-8004, 409); i18n keys `tax.class.not_found`, `tax.rate.no_match`, `tax.rate.duplicate`, `tax.class.in_use`.
+- ApiPaths: `BACKOFFICE_TAX_CLASSES` + `BACKOFFICE_TAX_RATES` **ALREADY EXIST** (`ApiPaths.java:43-44`, scaffold era) — VERIFY-ONLY in this task, do NOT re-add (duplicate-key compile error).
 
 - [ ] **Step 1: pom deps** — copy promotion-service/pom.xml dependency list, REMOVE `spring-kafka` + `common-kafka` (no Kafka here), keep: common-core, common-spring, common-security, common-keycloak, spring-boot-starter-web, data-jpa, validation, actuator, postgres driver, liquibase, lombok, test starters. Parent + `common-library.version` identical to promotion's.
 
@@ -65,7 +67,7 @@
           DUPLICATE_TAX_RATE("TAX-8003", "tax.rate.duplicate", HttpStatus.CONFLICT),
           TAX_CLASS_IN_USE("TAX-8004", "tax.class.in_use", HttpStatus.CONFLICT);
   ```
-- [ ] **Step 3: ApiPaths** — add `String BACKOFFICE_TAX_CLASSES = "/api/v1/backoffice/tax-classes"; String BACKOFFICE_TAX_RATES = "/api/v1/backoffice/tax-rates";` next to `BACKOFFICE_PROMOTIONS`.
+- [ ] **Step 3: ApiPaths verify-only** — assert `BACKOFFICE_TAX_CLASSES` / `BACKOFFICE_TAX_RATES` already present at `ApiPaths.java:43-44`; if absent, add them next to `BACKOFFICE_PROMOTIONS` (expected: already there).
 - [ ] **Step 4: i18n** — EN: `tax.class.not_found=Tax class not found`, `tax.rate.no_match=No tax rate matches the requested destination`, `tax.rate.duplicate=Duplicate tax entry`, `tax.class.in_use=Tax class still has active rates and cannot be deleted`; VI: `tax.class.not_found=Không tìm thấy nhóm thuế`, `tax.rate.no_match=Không có mức thuế phù hợp cho điểm đến`, `tax.rate.duplicate=Thông tin thuế bị trùng lặp`, `tax.class.in_use=Nhóm thuế vẫn còn mức thuế đang hoạt động, không thể xóa`.
 - [ ] **Step 5: Verify** — `./mvnw -pl utils/common-core,utils/common-spring install -q` green; `./mvnw -pl tax-service compile -q` green.
 - [ ] **Step 6: Commit** — `feat(tax-service): deps + TAX-8xxx error codes + api paths + i18n`
