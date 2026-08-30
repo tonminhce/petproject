@@ -96,6 +96,7 @@ class NotificationServiceImplTest {
         assertThat(inserted.getEventId()).isEqualTo(EVENT_ID);
         assertThat(inserted.getOrderId()).isEqualTo(ORDER_ID);
         assertThat(inserted.getUserId()).isEqualTo(USER_ID);
+        assertThat(inserted.getEventType()).isEqualTo("order.created.v1");
         assertThat(inserted.getBody()).contains("subtotal=100.00", "tax=8.00", "discount=10.00", "total=98.00");
         verify(sender).send(saved);
         verify(writer, never()).markFailed(any());
@@ -112,6 +113,7 @@ class NotificationServiceImplTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(writer).insert(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.SKIPPED);
+        assertThat(captor.getValue().getEventType()).isEqualTo("order.exploded.v9");
         verify(sender, never()).send(any());
         verify(writer, never()).markFailed(any());
     }
@@ -127,6 +129,22 @@ class NotificationServiceImplTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(writer).insert(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.SKIPPED);
+        assertThat(captor.getValue().getEventType()).isEqualTo("unknown");
+        verify(sender, never()).send(any());
+    }
+
+    @Test
+    void blankEventType_storedAsUnknown() {
+        OrderLifecycleEvent e = createdEvent();
+        e.setEventType("   ");
+        when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
+
+        service.handle(e);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(writer).insert(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.SKIPPED);
+        assertThat(captor.getValue().getEventType()).isEqualTo("unknown");
         verify(sender, never()).send(any());
     }
 

@@ -40,7 +40,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .eventId(eventId)
                 .orderId(event.getOrderId())
                 .userId(event.getUserId())
-                .eventType(event.getEventType())
+                .eventType(eventTypeOrUnknown(event.getEventType()))
                 .status(draft.known() ? NotificationStatus.SENT : NotificationStatus.SKIPPED)
                 .channel(draft.known() ? sender.channel() : NotificationChannel.LOG)
                 .subject(draft.subject())
@@ -63,6 +63,10 @@ public class NotificationServiceImpl implements NotificationService {
             log.error("Notification {} send failed", saved.getId(), e);
             writer.markFailed(saved.getId());
         }
+    }
+
+    private String eventTypeOrUnknown(String eventType) {
+        return eventType == null || eventType.isBlank() ? "unknown" : eventType;
     }
 
     private String payload(OrderLifecycleEvent event) {

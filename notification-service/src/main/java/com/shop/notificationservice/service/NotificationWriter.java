@@ -4,12 +4,12 @@ import com.shop.notificationservice.constant.NotificationStatus;
 import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class NotificationWriter {
 
@@ -17,7 +17,7 @@ public class NotificationWriter {
 
     @Transactional
     public Notification insert(Notification notification) {
-        return repository.save(notification);
+        return repository.saveAndFlush(notification);
     }
 
     @Transactional
