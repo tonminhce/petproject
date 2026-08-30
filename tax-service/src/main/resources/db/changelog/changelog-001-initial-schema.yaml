@@ -1,0 +1,73 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-tax-classes
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: tax_classes
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: name,             type: varchar(120),          constraints: { nullable: false } }
+              - column: { name: default_rate_pct, type: 'numeric(5,2)',        constraints: { nullable: false } }
+              - column: { name: created_at,       type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: updated_at,       type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: created_by,       type: varchar(80) }
+              - column: { name: updated_by,       type: varchar(80) }
+              - column: { name: version,          type: bigint,                constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: deleted,          type: boolean,               defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,       type: timestamp with time zone }
+              - column: { name: deleted_by,       type: varchar(80) }
+
+        - sql:
+            sql: ALTER TABLE tax_classes ADD CONSTRAINT ck_tax_classes_default_rate CHECK (default_rate_pct >= 0 AND default_rate_pct <= 100)
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_tax_class_name_live ON tax_classes (lower(name)) WHERE deleted = false
+
+  - changeSet:
+      id: 002-create-tax-rates
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: tax_rates
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: tax_class_id, type: uuid,                     constraints: { nullable: false } }
+              - column: { name: country,      type: char(2),                  constraints: { nullable: false } }
+              - column: { name: postal_code,  type: varchar(16) }
+              - column: { name: rate_pct,     type: 'numeric(5,2)',           constraints: { nullable: false } }
+              - column: { name: created_at,   type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: updated_at,   type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: created_by,   type: varchar(80) }
+              - column: { name: updated_by,   type: varchar(80) }
+              - column: { name: version,      type: bigint,                   constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: deleted,      type: boolean,                  defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,   type: timestamp with time zone }
+              - column: { name: deleted_by,   type: varchar(80) }
+
+        - addForeignKeyConstraint:
+            baseTableName: tax_rates
+            baseColumnNames: tax_class_id
+            referencedTableName: tax_classes
+            referencedColumnNames: id
+            constraintName: fk_tax_rates_class
+
+        - sql:
+            sql: ALTER TABLE tax_rates ADD CONSTRAINT ck_tax_rates_rate_pct CHECK (rate_pct >= 0 AND rate_pct <= 100)
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_tax_rate_dest_live ON tax_rates (tax_class_id, country, COALESCE(postal_code, '')) WHERE deleted = false
+
+        - sql:
+            sql: CREATE INDEX idx_tax_rates_class_country ON tax_rates (tax_class_id, country) WHERE deleted = false

@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: tax-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/taxservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  port: ${SERVER_PORT:8091}
+
+shop:
+  security:
+    issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true
