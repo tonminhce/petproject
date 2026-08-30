@@ -3,6 +3,7 @@ package com.shop.notificationservice.service;
 import com.shop.notificationservice.dto.OrderLifecycleEvent;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,10 @@ class NotificationTemplatesTest {
     void createdEvent_buildsSubjectAndBody() {
         OrderLifecycleEvent e = event("order.created.v1");
         e.setStatus("NEW");
+        e.setSubtotal(new BigDecimal("100.00"));
+        e.setTaxAmount(new BigDecimal("8.00"));
+        e.setDiscountAmount(new BigDecimal("10.00"));
+        e.setTotal(new BigDecimal("98.00"));
         e.setItems(List.of(Map.of("sku", "A"), Map.of("sku", "B")));
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
@@ -37,18 +42,35 @@ class NotificationTemplatesTest {
         assertThat(draft.known()).isTrue();
         assertThat(draft.subject()).isEqualTo("Order 11111111-1111-1111-1111-111111111111 created");
         assertThat(draft.body()).isEqualTo(
-                "status=NEW, subtotal=null, tax=null, discount=null, total=null, items=2");
+                "status=NEW, subtotal=100.00, tax=8.00, discount=10.00, total=98.00, items=2");
     }
 
     @Test
     void createdEventWithoutItems_rendersZeroItems() {
         OrderLifecycleEvent e = event("order.created.v1");
         e.setStatus("NEW");
+        e.setSubtotal(new BigDecimal("50.00"));
+        e.setTaxAmount(new BigDecimal("4.00"));
+        e.setDiscountAmount(BigDecimal.ZERO);
+        e.setTotal(new BigDecimal("54.00"));
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
 
         assertThat(draft.body()).isEqualTo(
-                "status=NEW, subtotal=null, tax=null, discount=null, total=null, items=0");
+                "status=NEW, subtotal=50.00, tax=4.00, discount=0, total=54.00, items=0");
+    }
+
+    @Test
+    void nullEventType_routesToSkipped() {
+        OrderLifecycleEvent e = event(null);
+
+        NotificationTemplates.Draft draft = NotificationTemplates.build(e);
+
+        assertThat(draft.known()).isFalse();
+        assertThat(draft.subject()).isEqualTo("[skipped] null");
+        assertThat(draft.body()).isEqualTo(
+                "eventId=33333333-3333-3333-3333-333333333333, eventType=null, "
+                        + "occurredAt=2026-08-30T10:00:00Z, orderId=11111111-1111-1111-1111-111111111111");
     }
 
     @Test

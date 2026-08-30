@@ -11,6 +11,9 @@ public final class NotificationTemplates {
     }
 
     public static Draft build(OrderLifecycleEvent e) {
+        if (e.getEventType() == null) {
+            return skipped(e);
+        }
         return switch (e.getEventType()) {
             case "order.created.v1" -> created(e);
             case "order.updated.v1" -> updated(e);
@@ -23,7 +26,7 @@ public final class NotificationTemplates {
         int itemCount = e.getItems() == null ? 0 : e.getItems().size();
         String subject = String.format("Order %s created", e.getOrderId());
         String body = String.format("status=%s, subtotal=%s, tax=%s, discount=%s, total=%s, items=%d",
-                e.getStatus(), null, null, null, null, itemCount);
+                e.getStatus(), e.getSubtotal(), e.getTaxAmount(), e.getDiscountAmount(), e.getTotal(), itemCount);
         return new Draft(subject, body, true);
     }
 
