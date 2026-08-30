@@ -3,7 +3,6 @@ package com.shop.shippingservice.scheduler;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
-import com.shop.shippingservice.outbox.ShippingEventPublisher;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentWriter;
@@ -41,7 +40,6 @@ class ReconciliationSchedulerTest {
 
     @Mock ShipmentRepository repository;
     @Mock ShipmentWriter writer;
-    @Mock ShippingEventPublisher publisher;
 
     @Captor ArgumentCaptor<Collection<ShipmentStatus>> statusesCaptor;
 
@@ -51,7 +49,7 @@ class ReconciliationSchedulerTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        scheduler = new ReconciliationScheduler(repository, writer, publisher,
+        scheduler = new ReconciliationScheduler(repository, writer,
                 new ShippingMetrics(meterRegistry), Clock.fixed(NOW, ZoneOffset.UTC), AUTO_DELIVER_DAYS);
     }
 
@@ -66,22 +64,21 @@ class ReconciliationSchedulerTest {
     }
 
     @Test
-    void inFlightPastCutoff_flipsToDeliveredFlaggedAutoPublishedAndCounted() {
+    void inFlightPastCutoff_flipsToDeliveredFlaggedAutoSavedDeliveredAndCounted() {
         Shipment shipment = shipment(ShipmentStatus.IN_TRANSIT, NOW.minus(Duration.ofDays(8)));
         when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
                 .thenReturn(List.of(shipment));
-        when(writer.save(shipment)).thenReturn(shipment);
+        when(writer.saveDelivered(shipment, true)).thenReturn(shipment);
 
         scheduler.reconcile();
 
         ArgumentCaptor<Shipment> captor = ArgumentCaptor.forClass(Shipment.class);
-        verify(writer).save(captor.capture());
+        verify(writer).saveDelivered(captor.capture(), eq(true));
         Shipment saved = captor.getValue();
         assertThat(saved.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
         assertThat(saved.getPreviousStatus()).isEqualTo(ShipmentStatus.IN_TRANSIT);
         assertThat(saved.isAutoDelivered()).isTrue();
         assertThat(saved.getDeliveredAt()).isEqualTo(NOW);
-        verify(publisher).publishDelivered(saved, true);
         assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "true").count()).isEqualTo(1.0);
         assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "false").count()).isZero();
         assertThat(meterRegistry.get("shipping.stale.inflight").gauge().value()).isEqualTo(1.0);
@@ -92,7 +89,7 @@ class ReconciliationSchedulerTest {
         Shipment shipment = shipment(ShipmentStatus.PICKED_UP, NOW.minus(Duration.ofDays(30)));
         when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
                 .thenReturn(List.of(shipment));
-        when(writer.save(shipment)).thenReturn(shipment);
+        when(writer.saveDelivered(shipment, true)).thenReturn(shipment);
 
         scheduler.reconcile();
 
@@ -131,7 +128,7 @@ class ReconciliationSchedulerTest {
 
         scheduler.reconcile();
 
-        verifyNoInteractions(writer, publisher);
+        verifyNoInteractions(writer);
         assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "true").count()).isZero();
         assertThat(meterRegistry.get("shipping.stale.inflight").gauge().value()).isZero();
     }

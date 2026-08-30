@@ -7,7 +7,6 @@ import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.entity.ShipmentEvent;
-import com.shop.shippingservice.outbox.ShippingEventPublisher;
 import com.shop.shippingservice.repository.ShipmentEventRepository;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.WebhookEventWriter;
@@ -38,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -55,7 +55,6 @@ class WebhookEventServiceTest {
     @Mock ShipmentRepository shipments;
     @Mock ShipmentEventRepository events;
     @Mock WebhookEventWriter writer;
-    @Mock ShippingEventPublisher publisher;
 
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -66,7 +65,7 @@ class WebhookEventServiceTest {
     void setUp() {
         ShippingWebhookProperties properties = new ShippingWebhookProperties();
         properties.setSecrets(Map.of(CARRIER.name(), SECRET));
-        service = new WebhookEventServiceImpl(properties, shipments, events, writer, publisher, objectMapper, clock);
+        service = new WebhookEventServiceImpl(properties, shipments, events, writer, objectMapper, clock);
     }
 
     private static String hmacHex(String secret, byte[] body) {
@@ -125,18 +124,17 @@ class WebhookEventServiceTest {
 
         ArgumentCaptor<Shipment> shipmentCaptor = ArgumentCaptor.forClass(Shipment.class);
         ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
-        verify(writer).complete(shipmentCaptor.capture(), eventCaptor.capture());
+        verify(writer).complete(shipmentCaptor.capture(), eventCaptor.capture(), eq(false));
         assertThat(shipmentCaptor.getValue().getStatus()).isEqualTo(ShipmentStatus.IN_TRANSIT);
         assertThat(shipmentCaptor.getValue().getPreviousStatus()).isEqualTo(ShipmentStatus.PICKED_UP);
         assertThat(shipmentCaptor.getValue().getLastCarrierUpdate()).isEqualTo(NOW);
         assertThat(shipmentCaptor.getValue().getDeliveredAt()).isNull();
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo("PROCESSED");
         assertThat(eventCaptor.getValue().getShipmentId()).isEqualTo(shipment.getId());
-        verifyNoInteractions(publisher);
     }
 
     @Test
-    void delivered_setsDeliveredAtAndPublishes() {
+    void delivered_setsDeliveredAtAndCompletesWithDeliveredFlag() {
         byte[] raw = body(payloadJson("evt-2", "TRK-1", "DELIVERED"));
         happyPathStubs("evt-2");
         Shipment shipment = shipment(ShipmentStatus.OUT_FOR_DELIVERY);
@@ -145,10 +143,9 @@ class WebhookEventServiceTest {
         service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw));
 
         ArgumentCaptor<Shipment> shipmentCaptor = ArgumentCaptor.forClass(Shipment.class);
-        verify(writer).complete(shipmentCaptor.capture(), any(ShipmentEvent.class));
+        verify(writer).complete(shipmentCaptor.capture(), any(ShipmentEvent.class), eq(true));
         assertThat(shipmentCaptor.getValue().getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
         assertThat(shipmentCaptor.getValue().getDeliveredAt()).isEqualTo(NOW);
-        verify(publisher).publishDelivered(shipmentCaptor.getValue(), false);
     }
 
     @Test
@@ -159,9 +156,8 @@ class WebhookEventServiceTest {
         service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw));
 
         verify(writer, never()).insert(any(ShipmentEvent.class));
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
         verify(shipments, never()).findByTrackingNumber(anyString());
-        verifyNoInteractions(publisher);
     }
 
     @Test
@@ -177,8 +173,7 @@ class WebhookEventServiceTest {
         verify(writer).insert(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
         assertThat(eventCaptor.getValue().getShipmentId()).isNull();
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
-        verifyNoInteractions(publisher);
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test
@@ -194,8 +189,7 @@ class WebhookEventServiceTest {
         ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
         verify(writer).insert(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
-        verifyNoInteractions(publisher);
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test
@@ -209,8 +203,7 @@ class WebhookEventServiceTest {
                 .doesNotThrowAnyException();
 
         verify(shipments, never()).findByTrackingNumber(anyString());
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
-        verifyNoInteractions(publisher);
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test
@@ -223,21 +216,21 @@ class WebhookEventServiceTest {
                     assertThat(ex.getErrorCode()).isEqualTo("SHP-10004");
                 });
 
-        verifyNoInteractions(events, shipments, writer, publisher);
+        verifyNoInteractions(events, shipments, writer);
     }
 
     @Test
     void blankSecret_throws401BeforeAnything() {
         ShippingWebhookProperties blank = new ShippingWebhookProperties();
         blank.setSecrets(Map.of("GHTK", ""));
-        service = new WebhookEventServiceImpl(blank, shipments, events, writer, publisher, objectMapper, clock);
+        service = new WebhookEventServiceImpl(blank, shipments, events, writer, objectMapper, clock);
         byte[] raw = body(payloadJson("evt-8", "TRK-1", "IN_TRANSIT"));
 
         assertThatThrownBy(() -> service.handle("GHTK", raw, hmacHex(SECRET, raw)))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
-        verifyNoInteractions(events, shipments, writer, publisher);
+        verifyNoInteractions(events, shipments, writer);
     }
 
     @Test
@@ -248,7 +241,7 @@ class WebhookEventServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
-        verifyNoInteractions(events, shipments, writer, publisher);
+        verifyNoInteractions(events, shipments, writer);
     }
 
     @Test
@@ -260,7 +253,7 @@ class WebhookEventServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
-        verifyNoInteractions(events, shipments, writer, publisher);
+        verifyNoInteractions(events, shipments, writer);
     }
 
     @Test
@@ -271,7 +264,7 @@ class WebhookEventServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
-        verifyNoInteractions(events, shipments, writer, publisher);
+        verifyNoInteractions(events, shipments, writer);
     }
 
     @Test
@@ -293,8 +286,7 @@ class WebhookEventServiceTest {
         assertThat(inserted.getShipmentId()).isNull();
         assertThat(inserted.getPayload()).isEqualTo(new String(raw, StandardCharsets.UTF_8));
         verify(shipments, never()).findByTrackingNumber(anyString());
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
-        verifyNoInteractions(publisher);
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test
@@ -307,8 +299,7 @@ class WebhookEventServiceTest {
 
         verify(writer, never()).insert(any(ShipmentEvent.class));
         verify(shipments, never()).findByTrackingNumber(anyString());
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
-        verifyNoInteractions(publisher);
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test
@@ -325,8 +316,7 @@ class WebhookEventServiceTest {
         verify(writer).insert(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
         assertThat(eventCaptor.getValue().getProviderEventId()).isEqualTo("evt-13");
-        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class));
-        verifyNoInteractions(publisher);
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test

@@ -8,7 +8,6 @@ import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.entity.ShipmentEvent;
-import com.shop.shippingservice.outbox.ShippingEventPublisher;
 import com.shop.shippingservice.repository.ShipmentEventRepository;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShipmentStateMachine;
@@ -45,7 +44,6 @@ public class WebhookEventServiceImpl implements WebhookEventService {
     private final ShipmentRepository shipmentRepository;
     private final ShipmentEventRepository eventRepository;
     private final WebhookEventWriter writer;
-    private final ShippingEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -116,12 +114,11 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         shipment.setLastCarrierUpdate(now);
         if (next == ShipmentStatus.DELIVERED) {
             shipment.setDeliveredAt(now);
-            eventPublisher.publishDelivered(shipment, false);
         }
 
         event.setShipmentId(shipment.getId());
         event.setStatus(EVENT_STATUS_PROCESSED);
-        writer.complete(shipment, event);
+        writer.complete(shipment, event, next == ShipmentStatus.DELIVERED);
     }
 
     private Carrier resolveCarrier(String carrier) {

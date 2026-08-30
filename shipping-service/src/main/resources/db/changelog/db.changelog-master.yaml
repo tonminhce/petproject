@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       file: changelog-001-shipments.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-002-shipping-outbox.yaml
+      relativeToChangelogFile: true

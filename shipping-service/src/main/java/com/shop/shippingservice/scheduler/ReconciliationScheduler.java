@@ -2,7 +2,6 @@ package com.shop.shippingservice.scheduler;
 
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
-import com.shop.shippingservice.outbox.ShippingEventPublisher;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentWriter;
@@ -29,17 +28,15 @@ public class ReconciliationScheduler {
 
     private final ShipmentRepository repository;
     private final ShipmentWriter writer;
-    private final ShippingEventPublisher publisher;
     private final ShippingMetrics metrics;
     private final Clock clock;
     private final long autoDeliverDays;
 
     public ReconciliationScheduler(ShipmentRepository repository, ShipmentWriter writer,
-                                   ShippingEventPublisher publisher, ShippingMetrics metrics, Clock clock,
+                                   ShippingMetrics metrics, Clock clock,
                                    @Value("${shop.shipping.auto-deliver-days:7}") long autoDeliverDays) {
         this.repository = repository;
         this.writer = writer;
-        this.publisher = publisher;
         this.metrics = metrics;
         this.clock = clock;
         this.autoDeliverDays = autoDeliverDays;
@@ -59,9 +56,8 @@ public class ReconciliationScheduler {
             shipment.setStatus(ShipmentStatus.DELIVERED);
             shipment.setAutoDelivered(true);
             shipment.setDeliveredAt(clock.instant());
-            publisher.publishDelivered(shipment, true);
             metrics.recordDelivered(true);
-            writer.save(shipment);
+            writer.saveDelivered(shipment, true);
         }
     }
 }

@@ -8,7 +8,6 @@ import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.dto.OrderLifecycleEvent;
 import com.shop.shippingservice.dto.response.ShipmentResponse;
 import com.shop.shippingservice.entity.Shipment;
-import com.shop.shippingservice.outbox.ShippingEventPublisher;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentService;
@@ -38,7 +37,6 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final ShipmentWriter writer;
     private final CarrierAdapter carrierAdapter;
     private final Clock clock;
-    private final ShippingEventPublisher eventPublisher;
     private final ShippingMetrics metrics;
 
     @Override
@@ -154,8 +152,8 @@ public class ShipmentServiceImpl implements ShipmentService {
         shipment.setStatus(next);
         if (next == ShipmentStatus.DELIVERED) {
             shipment.setDeliveredAt(clock.instant());
-            eventPublisher.publishDelivered(shipment, false);
             metrics.recordDelivered(false);
+            return ShipmentResponse.from(writer.saveDelivered(shipment, false));
         }
         return ShipmentResponse.from(writer.save(shipment));
     }

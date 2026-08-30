@@ -6,7 +6,6 @@ import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.dto.OrderLifecycleEvent;
 import com.shop.shippingservice.entity.Shipment;
-import com.shop.shippingservice.outbox.ShippingEventPublisher;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentWriter;
@@ -32,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -49,7 +49,6 @@ class ShipmentServiceImplTest {
     @Mock ShipmentWriter writer;
     @Mock CarrierAdapter adapter;
     @Mock Clock clock;
-    @Mock ShippingEventPublisher eventPublisher;
 
     private SimpleMeterRegistry meterRegistry;
     private ShippingMetrics metrics;
@@ -59,7 +58,7 @@ class ShipmentServiceImplTest {
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
         metrics = new ShippingMetrics(meterRegistry);
-        service = new ShipmentServiceImpl(repository, writer, adapter, clock, eventPublisher, metrics);
+        service = new ShipmentServiceImpl(repository, writer, adapter, clock, metrics);
     }
 
     private OrderLifecycleEvent event(String status) {
@@ -259,22 +258,21 @@ class ShipmentServiceImplTest {
     }
 
     @Test
-    void transition_toDelivered_stampsDeliveredAtPublishesManualDeliveredAndCounts() {
+    void transition_toDelivered_stampsDeliveredAtSavesDeliveredViaWriterAndCounts() {
         Shipment shipment = shipment(Carrier.MANUAL, ShipmentStatus.OUT_FOR_DELIVERY);
         when(repository.findById(SHIPMENT_ID)).thenReturn(Optional.of(shipment));
         when(clock.instant()).thenReturn(NOW);
-        when(writer.save(shipment)).thenReturn(shipment);
+        when(writer.saveDelivered(shipment, false)).thenReturn(shipment);
 
         var response = service.transition(SHIPMENT_ID, ShipmentStatus.DELIVERED);
 
         assertThat(response.status()).isEqualTo(ShipmentStatus.DELIVERED);
         ArgumentCaptor<Shipment> captor = ArgumentCaptor.forClass(Shipment.class);
-        verify(writer).save(captor.capture());
+        verify(writer).saveDelivered(captor.capture(), eq(false));
         assertThat(captor.getValue().getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
         assertThat(captor.getValue().getPreviousStatus()).isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
         assertThat(captor.getValue().getDeliveredAt()).isEqualTo(NOW);
         assertThat(captor.getValue().isAutoDelivered()).isFalse();
-        verify(eventPublisher).publishDelivered(shipment, false);
         assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "false").count()).isEqualTo(1.0);
         assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "true").count()).isZero();
     }
@@ -287,7 +285,7 @@ class ShipmentServiceImplTest {
 
         service.transition(SHIPMENT_ID, ShipmentStatus.IN_TRANSIT);
 
-        verify(eventPublisher, never()).publishDelivered(any(), anyBoolean());
+        verify(writer, never()).saveDelivered(any(), anyBoolean());
         ArgumentCaptor<Shipment> captor = ArgumentCaptor.forClass(Shipment.class);
         verify(writer).save(captor.capture());
         assertThat(captor.getValue().getDeliveredAt()).isNull();
