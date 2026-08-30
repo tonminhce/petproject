@@ -92,7 +92,7 @@
 
 **Files:** Create `.../repository/ShipmentRepository.java`, `.../repository/ShipmentEventRepository.java`
 
-**Interfaces:** `ShipmentRepository`: `Optional<Shipment> findById(UUID);` `Optional<Shipment> findByOrderId(UUID orderId);` (unique live — returns the one), `Page<Shipment> findAllByOrderByCreatedAtDesc(Pageable p);` `Page<Shipment> findAllByStatusOrderByCreatedAtDesc(ShipmentStatus s, Pageable p);` `Page<Shipment> findAllByCarrierOrderByCreatedAtDesc(Carrier c, Pageable p);` `List<Shipment> findByStatusInAndLastCarrierUpdateBefore(Collection<ShipmentStatus> statuses, Instant cutoff);` `boolean existsByOrderId(UUID orderId);`. `ShipmentEventRepository`: `boolean existsByCarrierAndProviderEventId(String carrier, String eventId);`
+**Interfaces:** `ShipmentRepository`: `Optional<Shipment> findById(UUID);` `Optional<Shipment> findByOrderId(UUID orderId);` (unique live — returns the one), `Page<Shipment> findAllByOrderByCreatedAtDesc(Pageable p);` `Page<Shipment> findAllByStatusOrderByCreatedAtDesc(ShipmentStatus s, Pageable p);` `Page<Shipment> findAllByCarrierOrderByCreatedAtDesc(Carrier c, Pageable p);` `List<Shipment> findByStatusInAndLastCarrierUpdateBefore(Collection<ShipmentStatus> statuses, Instant cutoff);` `boolean existsByOrderId(UUID orderId);`. `ShipmentEventRepository`: `boolean existsByCarrierAndProviderEventId(Carrier carrier, String eventId);` (Carrier-typed per T4 review adjudication — matches field type + sibling method)
 
 - [ ] **Step 1:** write; **Step 2:** compile; **Step 3: Commit** — `feat(shipping-service): shipment repositories`
 
