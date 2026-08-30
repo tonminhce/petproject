@@ -91,7 +91,8 @@ public class OrderReconciliationScheduler {
         List<Order> candidates =
             orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
         if (candidates.isEmpty()) return;
-        log.info("RECONCILIATION_SCAN candidates={} cutoff={}", candidates.size(), cutoff);        for (Order order : candidates) {
+        log.info("RECONCILIATION_SCAN candidates={} cutoff={}", candidates.size(), cutoff);
+        for (Order order : candidates) {
             try {
                 reconcile(order);
             } catch (Exception ex) {
