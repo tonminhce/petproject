@@ -1,0 +1,77 @@
+package com.shop.shippingservice.carrier;
+
+import com.shop.shippingservice.constant.Carrier;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class CarrierConfigTest {
+
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(CarrierConfig.class, ManualCarrierAdapter.class, NoopCarrierAdapter.class);
+
+    @Test
+    void manualIsActiveByDefaultAndResolvesAsPrimary() {
+        contextRunner.run(ctx -> {
+            assertThat(ctx).hasBean("manualCarrierAdapter");
+            assertThat(ctx).doesNotHaveBean("noopCarrierAdapter");
+            assertThat(ctx.getBean(CarrierAdapter.class)).isSameAs(ctx.getBean("manualCarrierAdapter"));
+            assertThat(ctx.getBean(CarrierAdapter.class).carrier()).isEqualTo(Carrier.MANUAL);
+        });
+    }
+
+    @Test
+    void noopSelectedWhenConfigured() {
+        contextRunner.withPropertyValues("shop.shipping.carrier=noop")
+                .run(ctx -> {
+                    assertThat(ctx).hasBean("noopCarrierAdapter");
+                    assertThat(ctx).doesNotHaveBean("manualCarrierAdapter");
+                    assertThat(ctx.getBean(CarrierAdapter.class)).isSameAs(ctx.getBean("noopCarrierAdapter"));
+                    assertThat(ctx.getBean(CarrierAdapter.class).carrier()).isEqualTo(Carrier.NOOP);
+                });
+    }
+
+    @Test
+    void failsWhenNotExactlyOneAdapterActive() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(CarrierConfig.class, ManualCarrierAdapter.class, ExtraAdapterConfig.class)
+                .run(ctx -> {
+                    assertThat(ctx).hasFailed();
+                    assertThat(rootCause(ctx.getStartupFailure()))
+                            .isInstanceOf(IllegalStateException.class)
+                            .hasMessageContaining("exactly one");
+                });
+    }
+
+    private static Throwable rootCause(Throwable failure) {
+        Throwable cause = failure;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        return cause;
+    }
+
+    @Configuration
+    static class ExtraAdapterConfig {
+
+        @Bean
+        CarrierAdapter extraCarrierAdapter() {
+            return new CarrierAdapter() {
+                @Override
+                public Carrier carrier() {
+                    return Carrier.GHN;
+                }
+
+                @Override
+                public CarrierAdapter.ShipmentDraft createShipment(UUID orderId) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
+    }
+}

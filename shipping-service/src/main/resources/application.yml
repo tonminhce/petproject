@@ -27,6 +27,7 @@ shop:
       auto-offset-reset: latest
 
   shipping:
+    carrier: ${SHOP_SHIPPING_CARRIER:manual}
     auto-deliver-days: ${SHIPMENT_AUTO_DELIVER_DAYS:7}
     notify-threshold-hours: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:72}
     webhook:
