@@ -43,7 +43,7 @@ public class TaxRateServiceImpl implements TaxRateService {
     @Transactional
     public TaxRateResponse update(UUID id, TaxRateRequest request) {
         TaxRate taxRate = taxRateRepository.findById(id)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.NOT_FOUND, id));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
         requireTaxClass(request.taxClassId());
         String postalCode = normalize(request.postalCode());
         requireNoDuplicate(request.taxClassId(), request.country(), postalCode, id);
@@ -59,7 +59,7 @@ public class TaxRateServiceImpl implements TaxRateService {
     public TaxRateResponse get(UUID id) {
         return taxRateRepository.findById(id)
             .map(this::toResponse)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.NOT_FOUND, id));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
     }
 
     @Override
@@ -72,7 +72,7 @@ public class TaxRateServiceImpl implements TaxRateService {
     @Transactional
     public void delete(UUID id) {
         TaxRate taxRate = taxRateRepository.findById(id)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.NOT_FOUND, id));
+            .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
         taxRate.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         taxRateRepository.save(taxRate);
     }

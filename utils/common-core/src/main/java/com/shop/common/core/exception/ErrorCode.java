@@ -98,7 +98,8 @@ public enum ErrorCode {
     TAX_CLASS_NOT_FOUND("TAX-8001", "tax.class.not_found", HttpStatus.NOT_FOUND),
     NO_MATCHING_RATE("TAX-8002", "tax.rate.no_match", HttpStatus.NOT_FOUND),
     DUPLICATE_TAX_RATE("TAX-8003", "tax.rate.duplicate", HttpStatus.CONFLICT),
-    TAX_CLASS_IN_USE("TAX-8004", "tax.class.in_use", HttpStatus.CONFLICT);
+    TAX_CLASS_IN_USE("TAX-8004", "tax.class.in_use", HttpStatus.CONFLICT),
+    TAX_RATE_NOT_FOUND("TAX-8005", "tax.rate.not_found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String messageKey;

@@ -165,6 +165,39 @@ class TaxRateServiceImplTest {
     }
 
     @Test
+    void getUnknownRateThrowsTax8005() {
+        when(taxRateRepository.findById(rateId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.get(rateId))
+            .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                assertThat(ex.getErrorCode()).isEqualTo("TAX-8005");
+                assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND);
+            });
+    }
+
+    @Test
+    void updateUnknownRateThrowsTax8005() {
+        when(taxRateRepository.findById(rateId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(rateId, request("10115")))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("TAX-8005"));
+
+        verify(taxClassRepository, never()).findById(any());
+    }
+
+    @Test
+    void deleteUnknownRateThrowsTax8005() {
+        when(taxRateRepository.findById(rateId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(rateId))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("TAX-8005"));
+
+        verify(auditorAware, never()).getCurrentAuditor();
+    }
+
+    @Test
     void listByClassReturnsRates() {
         when(taxRateRepository.findAllByTaxClassId(classId)).thenReturn(List.of(taxRate("10115")));
 
