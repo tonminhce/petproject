@@ -42,7 +42,7 @@ public interface CouponUsageReservationRepository extends JpaRepository<CouponUs
 
     /**
      * Retention purge candidates (T11): terminal rows whose effective end instant
-     * — max of committedAt, releasedAt, fallback reservedAt for non-released rows —
+     * — first non-null of committedAt, releasedAt, then reservedAt (coalesce) —
      * is older than the cutoff.
      */
     @Query("select r from CouponUsageReservation r where r.status in :statuses and " +

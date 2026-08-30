@@ -68,7 +68,7 @@ class InventoryControllerTest {
     }
 
     @Test
-    void reserve_returnsReservation() throws Exception {
+    void reserve_returnsCreated() throws Exception {
         ReserveRequest req = new ReserveRequest(5, null);
         ReservationResponse resp = new ReservationResponse(
             reservationId, productId, 5, ReservationStatus.PENDING,
@@ -78,7 +78,7 @@ class InventoryControllerTest {
         mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(new ObjectMapper().writeValueAsString(req)))
-            .andExpect(status().isOk())
+            .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.reservationId").value(reservationId.toString()));
     }
 

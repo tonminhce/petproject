@@ -85,7 +85,7 @@ class PromotionReservationControllerTest {
     }
 
     @Test
-    void reserve_serviceRole_returnsOkWithReservation() throws Exception {
+    void reserve_serviceRole_returnsCreatedWithReservation() throws Exception {
         when(reservationService.reserveWithRetry("SUMMER10",
                 new ReserveRequest(userId, reservationId, new BigDecimal("100.00"))))
             .thenReturn(sampleResponse());
@@ -96,13 +96,30 @@ class PromotionReservationControllerTest {
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(reserveBody()))
-            .andExpect(status().isOk())
+            .andExpect(status().isCreated())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.reservationId").value(reservationId.toString()))
             .andExpect(jsonPath("$.data.campaignId").value(campaignId.toString()))
             .andExpect(jsonPath("$.data.code").value("SUMMER10"))
             .andExpect(jsonPath("$.data.status").value("PENDING"))
             .andExpect(jsonPath("$.data.expiresAt").exists());
+    }
+
+    @Test
+    void reserve_adminRole_returnsCreated() throws Exception {
+        when(reservationService.reserveWithRetry("SUMMER10",
+                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"))))
+            .thenReturn(sampleResponse());
+
+        mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("admin-client"))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reserveBody()))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.reservationId").value(reservationId.toString()));
     }
 
     @Test

@@ -50,7 +50,7 @@ shop:
 
   promotion:
     # Reservation lifecycle — values MUST match the inline @Value/@Scheduled
-    # defaults in ReservationCleanupScheduler / ReservationRetentionScheduler
+    # defaults in ReservationCleanupScheduler (expired sweep + retention purge)
     # (declared explicitly so ops can see what runs when without grepping Java).
     reservation-ttl-seconds: 900                # 15 min — same as inventory (D6)
     reservation-cleanup-batch-size: 500         # sweep in batches (memory guard)
