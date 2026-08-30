@@ -83,7 +83,18 @@ public enum ErrorCode {
     ORDER_PROMOTION_INVALID("ORD-4008", "order.promotion.invalid", HttpStatus.BAD_REQUEST),
     ORDER_TAX_CALCULATION_FAILED("ORD-4009", "order.tax.calculation.failed", HttpStatus.BAD_REQUEST),
     ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT),
-    CONFIRM_COMMIT_FAILED("ORD-4011", "order.confirm.commit.failed", HttpStatus.CONFLICT);
+    CONFIRM_COMMIT_FAILED("ORD-4011", "order.confirm.commit.failed", HttpStatus.CONFLICT),
+    CAMPAIGN_NOT_FOUND("PRO-7001", "promotion.campaign.not.found", HttpStatus.NOT_FOUND),
+    CAMPAIGN_ALREADY_EXISTS("PRO-7002", "promotion.campaign.already.exists", HttpStatus.CONFLICT),
+    CAMPAIGN_IN_USE("PRO-7003", "promotion.campaign.in.use", HttpStatus.CONFLICT),
+    CAMPAIGN_NOT_ACTIVE("PRO-7004", "promotion.campaign.not.active", HttpStatus.CONFLICT),
+    MIN_ORDER_AMOUNT_NOT_MET("PRO-7005", "promotion.min.order.amount.not.met", HttpStatus.BAD_REQUEST),
+    PER_USER_LIMIT_EXCEEDED("PRO-7006", "promotion.per.user.limit.exceeded", HttpStatus.CONFLICT),
+    BUDGET_EXHAUSTED("PRO-7007", "promotion.budget.exhausted", HttpStatus.CONFLICT),
+    PROMOTION_RESERVATION_NOT_FOUND("PRO-7008", "promotion.reservation.not.found", HttpStatus.NOT_FOUND),
+    PROMOTION_RESERVATION_EXPIRED("PRO-7009", "promotion.reservation.expired", HttpStatus.CONFLICT),
+    PROMOTION_RESERVATION_INVALID_STATE("PRO-7010", "promotion.reservation.invalid.state", HttpStatus.CONFLICT),
+    PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", "promotion.reservation.version.conflict", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;
