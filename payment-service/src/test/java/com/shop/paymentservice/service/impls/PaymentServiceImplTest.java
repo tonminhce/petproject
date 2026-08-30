@@ -4,6 +4,7 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
+import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.provider.PaymentProvider;
 import com.shop.paymentservice.repository.PaymentRepository;
@@ -14,14 +15,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -142,5 +148,61 @@ class PaymentServiceImplTest {
         verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
         verifyNoInteractions(writer);
+    }
+
+    // --- backoffice read API ---
+
+    @Test
+    void findAllByOrderId_nullOrderId_delegatesToUnfilteredNewestFirstFinder() {
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(repository.findAllByOrderByCreatedAtDesc(pageable))
+                .thenReturn(new PageImpl<>(List.of(payment(PaymentStatus.CAPTURED))));
+
+        Page<PaymentResponse> page = service.findAllByOrderId(null, pageable);
+
+        verify(repository).findAllByOrderByCreatedAtDesc(pageable);
+        verify(repository, never()).findAllByOrderIdOrderByCreatedAtDesc(any(), any());
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).id()).isEqualTo(PAYMENT_ID);
+        assertThat(page.getContent().get(0).orderId()).isEqualTo(ORDER_ID);
+    }
+
+    @Test
+    void findAllByOrderId_withOrderId_delegatesToDerivedFinder() {
+        PageRequest pageable = PageRequest.of(1, 5);
+        when(repository.findAllByOrderIdOrderByCreatedAtDesc(ORDER_ID, pageable))
+                .thenReturn(new PageImpl<>(List.of(payment(PaymentStatus.CAPTURED))));
+
+        Page<PaymentResponse> page = service.findAllByOrderId(ORDER_ID, pageable);
+
+        verify(repository).findAllByOrderIdOrderByCreatedAtDesc(ORDER_ID, pageable);
+        verify(repository, never()).findAllByOrderByCreatedAtDesc(any());
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).id()).isEqualTo(PAYMENT_ID);
+    }
+
+    @Test
+    void findById_existingPayment_mapsEntityToResponse() {
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+
+        PaymentResponse response = service.findById(PAYMENT_ID);
+
+        assertThat(response.id()).isEqualTo(PAYMENT_ID);
+        assertThat(response.orderId()).isEqualTo(ORDER_ID);
+        assertThat(response.amount()).isEqualByComparingTo(AMOUNT);
+        assertThat(response.currency()).isEqualTo(CURRENCY);
+        assertThat(response.status()).isEqualTo(PaymentStatus.CAPTURED);
+        assertThat(response.provider()).isEqualTo("mock");
+        assertThat(response.receiptKey()).isNull();
+    }
+
+    @Test
+    void findById_unknownPayment_throwsPay5002() {
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findById(PAYMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND.getCode()));
     }
 }

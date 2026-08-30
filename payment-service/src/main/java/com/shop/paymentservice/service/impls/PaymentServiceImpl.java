@@ -4,12 +4,15 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
+import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.provider.PaymentProvider;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.service.PaymentService;
 import com.shop.paymentservice.service.PaymentWriter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +60,21 @@ public class PaymentServiceImpl implements PaymentService {
         }
         provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey());
         return payment;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PaymentResponse> findAllByOrderId(UUID orderId, Pageable pageable) {
+        Page<Payment> page = orderId == null
+                ? repository.findAllByOrderByCreatedAtDesc(pageable)
+                : repository.findAllByOrderIdOrderByCreatedAtDesc(orderId, pageable);
+        return page.map(PaymentResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentResponse findById(UUID id) {
+        return PaymentResponse.from(requirePayment(id));
     }
 
     private Payment requirePayment(UUID id) {
