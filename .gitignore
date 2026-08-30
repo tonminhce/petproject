@@ -160,3 +160,4 @@ scratch/
 **/scratch/
 .reference/
 .superpowers/
+.worktrees/
