@@ -29,6 +29,7 @@ import static org.mockito.Mockito.*;
 class ReservationRetryServiceImplTest {
 
     private static final String CODE = "SAVE10";
+    private final UUID RESERVATION_ID = UUID.randomUUID();
 
     @Mock CampaignReservationService campaignReservationService;
     @InjectMocks ReservationRetryServiceImpl service;
@@ -89,5 +90,62 @@ class ReservationRetryServiceImplTest {
         assertThatThrownBy(() -> service.reserveWithRetry(CODE, req))
             .isInstanceOf(BusinessException.class);
         verify(campaignReservationService, times(2)).reserve(CODE, req);
+    }
+
+    // --- Task 7 — lifecycle *WithRetry variants (spec §5.3: same wrapper as reserve) ---
+
+    @Test
+    void commitWithRetry_retriesOnOptimisticLockFailure() {
+        doThrow(new OptimisticLockingFailureException("conflict"))
+            .doThrow(new OptimisticLockingFailureException("conflict"))
+            .doNothing()
+            .when(campaignReservationService).commit(RESERVATION_ID);
+
+        service.commitWithRetry(RESERVATION_ID);
+
+        verify(campaignReservationService, times(3)).commit(RESERVATION_ID);
+    }
+
+    @Test
+    void lifecycleWithRetry_throwsVersionConflictAfterMaxRetries() {
+        doThrow(new OptimisticLockingFailureException("conflict"))
+            .when(campaignReservationService).commit(RESERVATION_ID);
+
+        assertThatThrownBy(() -> service.commitWithRetry(RESERVATION_ID))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7011"));
+        verify(campaignReservationService, times(3)).commit(RESERVATION_ID);
+
+        doThrow(new OptimisticLockingFailureException("conflict"))
+            .when(campaignReservationService).release(RESERVATION_ID);
+        assertThatThrownBy(() -> service.releaseWithRetry(RESERVATION_ID))
+            .isInstanceOf(BusinessException.class);
+        verify(campaignReservationService, times(3)).release(RESERVATION_ID);
+
+        doThrow(new OptimisticLockingFailureException("conflict"))
+            .when(campaignReservationService).releaseCommitted(RESERVATION_ID);
+        assertThatThrownBy(() -> service.releaseCommittedWithRetry(RESERVATION_ID))
+            .isInstanceOf(BusinessException.class);
+        verify(campaignReservationService, times(3)).releaseCommitted(RESERVATION_ID);
+    }
+
+    @Test
+    void lifecycleWithRetry_passesThroughBusinessErrorsWithoutRetry() {
+        doThrow(BusinessException.of(
+                com.shop.common.core.exception.ErrorCode.PROMOTION_RESERVATION_INVALID_STATE, RESERVATION_ID))
+            .when(campaignReservationService).commit(RESERVATION_ID);
+
+        assertThatThrownBy(() -> service.commitWithRetry(RESERVATION_ID))
+            .isInstanceOf(BusinessException.class);
+        verify(campaignReservationService, times(1)).commit(RESERVATION_ID);
+    }
+
+    @Test
+    void getStateWithRetry_returnsResponse() {
+        ReservationResponse resp = response();
+        when(campaignReservationService.getState(RESERVATION_ID)).thenReturn(resp);
+
+        assertThat(service.getStateWithRetry(RESERVATION_ID)).isEqualTo(resp);
+        verify(campaignReservationService, times(1)).getState(RESERVATION_ID);
     }
 }

@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -111,5 +112,104 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         CouponUsageReservation saved = reservationRepository.save(reservation);
         eventPublisher.publishReserved(campaign, saved);
         return ReservationResponse.from(campaign, saved);
+    }
+
+    /**
+     * Idempotent state machine (spec §5.3, branch order load-bearing):
+     * COMMITTED → retry OK; RELEASED/EXPIRED → PRO-7010 fail-closed (caller
+     * view diverged — reconciliation owns it); expired pending → PRO-7009;
+     * PENDING → COMMITTED + committedAt + {@code promotion.committed.v1}.
+     */
+    @Override
+    @Transactional
+    public void commit(UUID id) {
+        CouponUsageReservation reservation = loadReservation(id);
+        Instant now = clock.instant();
+        if (reservation.getStatus() == UsageStatus.COMMITTED) {
+            log.info("Reservation {} already committed (idempotent retry)", id);
+            return;
+        }
+        if (reservation.getStatus() == UsageStatus.RELEASED
+                || reservation.getStatus() == UsageStatus.EXPIRED) {
+            throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_INVALID_STATE, id);
+        }
+        if (!reservation.getExpiresAt().isAfter(now)) {
+            throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_EXPIRED, id);
+        }
+        Campaign campaign = loadCampaign(reservation);
+        reservation.setStatus(UsageStatus.COMMITTED);
+        reservation.setCommittedAt(now);
+        reservationRepository.save(reservation);
+        eventPublisher.publishCommitted(campaign, reservation);
+    }
+
+    /**
+     * PENDING → RELEASED + releasedAt + {@code promotion.released.v1}
+     * ({@code previousStatus="PENDING"}). Terminal states are idempotent
+     * no-ops (quota already returned); COMMITTED → PRO-7010 — the
+     * commit→rollback path is {@link #releaseCommitted(UUID)} (§5.3).
+     */
+    @Override
+    @Transactional
+    public void release(UUID id) {
+        CouponUsageReservation reservation = loadReservation(id);
+        if (reservation.getStatus() == UsageStatus.RELEASED
+                || reservation.getStatus() == UsageStatus.EXPIRED) {
+            log.info("Reservation {} already terminalized (idempotent retry)", id);
+            return;
+        }
+        if (reservation.getStatus() != UsageStatus.PENDING) {
+            throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_INVALID_STATE, id);
+        }
+        Campaign campaign = loadCampaign(reservation);
+        reservation.setStatus(UsageStatus.RELEASED);
+        reservation.setReleasedAt(clock.instant());
+        reservationRepository.save(reservation);
+        eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name());
+    }
+
+    /**
+     * Half-commit rollback (spec §5.3): COMMITTED → RELEASED with
+     * {@code previousStatus="COMMITTED"} so consumers distinguish
+     * confirm-flow compensation from a plain reserve→release. Terminal
+     * states are idempotent no-ops; PENDING belongs to {@link #release(UUID)}.
+     */
+    @Override
+    @Transactional
+    public void releaseCommitted(UUID id) {
+        CouponUsageReservation reservation = loadReservation(id);
+        if (reservation.getStatus() == UsageStatus.RELEASED
+                || reservation.getStatus() == UsageStatus.EXPIRED) {
+            log.info("Reservation {} already terminalized (idempotent retry)", id);
+            return;
+        }
+        if (reservation.getStatus() != UsageStatus.COMMITTED) {
+            throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_INVALID_STATE, id);
+        }
+        Campaign campaign = loadCampaign(reservation);
+        reservation.setStatus(UsageStatus.RELEASED);
+        reservation.setReleasedAt(clock.instant());
+        reservationRepository.save(reservation);
+        eventPublisher.publishReleased(campaign, reservation, UsageStatus.COMMITTED.name());
+    }
+
+    /** Read-only projection for reconciliation polling (spec §5.3). */
+    @Override
+    @Transactional(readOnly = true)
+    public ReservationResponse getState(UUID id) {
+        CouponUsageReservation reservation = loadReservation(id);
+        Campaign campaign = loadCampaign(reservation);
+        return ReservationResponse.from(campaign, reservation);
+    }
+
+    private CouponUsageReservation loadReservation(UUID id) {
+        return reservationRepository.findById(id)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.PROMOTION_RESERVATION_NOT_FOUND, id));
+    }
+
+    private Campaign loadCampaign(CouponUsageReservation reservation) {
+        return campaignRepository.findById(reservation.getCampaignId())
+            .orElseThrow(() -> BusinessException.of(
+                ErrorCode.CAMPAIGN_NOT_FOUND, reservation.getCampaignId()));
     }
 }

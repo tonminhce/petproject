@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+import java.util.function.Supplier;
+
 /**
  * Wraps {@link CampaignReservationService} with a manual retry loop for
  * {@link OptimisticLockingFailureException} (spec §5.1 step 5). A retry
@@ -29,13 +32,51 @@ public class ReservationRetryServiceImpl implements ReservationRetryService {
 
     @Override
     public ReservationResponse reserveWithRetry(String code, ReserveRequest request) {
+        return withRetry(code, () -> campaignReservationService.reserve(code, request));
+    }
+
+    @Override
+    public void commitWithRetry(UUID reservationId) {
+        withRetry(reservationId, () -> {
+            campaignReservationService.commit(reservationId);
+            return null;
+        });
+    }
+
+    @Override
+    public void releaseWithRetry(UUID reservationId) {
+        withRetry(reservationId, () -> {
+            campaignReservationService.release(reservationId);
+            return null;
+        });
+    }
+
+    @Override
+    public void releaseCommittedWithRetry(UUID reservationId) {
+        withRetry(reservationId, () -> {
+            campaignReservationService.releaseCommitted(reservationId);
+            return null;
+        });
+    }
+
+    @Override
+    public ReservationResponse getStateWithRetry(UUID reservationId) {
+        return withRetry(reservationId, () -> campaignReservationService.getState(reservationId));
+    }
+
+    /**
+     * Shared optimistic-lock retry loop (spec §5.1 step 5 / §5.3): 3 attempts,
+     * linear backoff 50ms*attempt, exhausted → PRO-7011. Business rejections
+     * are NOT retried — only OptimisticLockingFailureException is.
+     */
+    private <T> T withRetry(Object key, Supplier<T> call) {
         int attempt = 0;
         while (true) {
             try {
-                return campaignReservationService.reserve(code, request);
+                return call.get();
             } catch (OptimisticLockingFailureException ex) {
                 if (++attempt >= MAX_ATTEMPTS) {
-                    throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_VERSION_CONFLICT, code);
+                    throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_VERSION_CONFLICT, key);
                 }
                 sleep(BACKOFF_BASE_MS * attempt);
             }

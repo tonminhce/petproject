@@ -19,4 +19,17 @@ public class LoggingPromotionEventPublisher implements PromotionEventPublisher {
         log.info("promotion.reserved.v1 campaign={} reservation={} order={} (outbox publisher wired in Task 10)",
             campaign.getCode(), reservation.getId(), reservation.getOrderId());
     }
+
+    @Override
+    public void publishCommitted(Campaign campaign, CouponUsageReservation reservation) {
+        log.info("promotion.committed.v1 campaign={} reservation={} order={} committedAt={} (outbox publisher wired in Task 10)",
+            campaign.getCode(), reservation.getId(), reservation.getOrderId(), reservation.getCommittedAt());
+    }
+
+    @Override
+    public void publishReleased(Campaign campaign, CouponUsageReservation reservation, String previousStatus) {
+        log.info("promotion.released.v1 campaign={} reservation={} order={} releasedAt={} previousStatus={} (outbox publisher wired in Task 10)",
+            campaign.getCode(), reservation.getId(), reservation.getOrderId(),
+            reservation.getReleasedAt(), previousStatus);
+    }
 }

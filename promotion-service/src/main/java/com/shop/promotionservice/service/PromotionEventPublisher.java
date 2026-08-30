@@ -11,4 +11,9 @@ import com.shop.promotionservice.entity.CouponUsageReservation;
 public interface PromotionEventPublisher {
 
     void publishReserved(Campaign campaign, CouponUsageReservation reservation);
+
+    void publishCommitted(Campaign campaign, CouponUsageReservation reservation);
+
+    /** {@code previousStatus} is "PENDING" (reserve→release) or "COMMITTED" (confirm-flow rollback). */
+    void publishReleased(Campaign campaign, CouponUsageReservation reservation, String previousStatus);
 }
