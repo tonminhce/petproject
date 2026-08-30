@@ -224,12 +224,15 @@ class LifecycleAndEventsIT extends AbstractIntegrationTest {
         // EXPIRED rows have no releasedAt — effective end falls back to reservedAt.
         CouponUsageReservation oldExpired = seedTerminal(campaignId, UsageStatus.EXPIRED,
             now.minusSeconds(40L * 86_400), null);
+        CouponUsageReservation recentExpired = seedTerminal(campaignId, UsageStatus.EXPIRED,
+            now.minusSeconds(2L * 86_400), null);
 
         cleanupScheduler.purgeOldTerminalReservations();
 
         assertThat(reservationRepository.findById(oldReleased.getId())).isEmpty();
         assertThat(reservationRepository.findById(oldExpired.getId())).isEmpty();
         assertThat(reservationRepository.findById(recentReleased.getId())).isPresent();
+        assertThat(reservationRepository.findById(recentExpired.getId())).isPresent();
     }
 
     private CouponUsageReservation seedTerminal(UUID campaignId, UsageStatus status,

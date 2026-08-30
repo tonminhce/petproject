@@ -149,12 +149,17 @@ class ReserveFlowIT extends AbstractIntegrationTest {
                 assertThat(payload).contains("\"code\":\"HAPPY-IT\"");
                 assertThat(payload).contains("\"discountAmount\":20.00");
             });
+        // Row presence is exact (exactly one reserved event for this
+        // reservation), but its status is raced by the bootstrap context's
+        // background relay timer (~5s): the relay may legitimately drain the
+        // row to SENT between the reserve commit and this assert. Both
+        // statuses prove the row was written PENDING by the same transaction.
         List<String> statuses = jdbcTemplate.queryForList(
             "select status from outbox_events where event_type = 'promotion.reserved.v1' " +
             "and payload like ?",
             String.class, "%" + response.reservationId() + "%");
         assertThat(statuses).hasSize(1);
-        assertThat(statuses.get(0)).isEqualTo("PENDING");
+        assertThat(statuses.get(0)).isIn("PENDING", "SENT");
     }
 
     // --- 2. gate branches (PRO-7xxx), seeded via real repos ------------------
