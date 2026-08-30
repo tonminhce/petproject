@@ -19,7 +19,8 @@ public class ValidDiscountValueValidator implements ConstraintValidator<ValidDis
             return true; // field-level @NotBlank / @NotNull handle these
         }
         if (DiscountCalculator.TYPE_PERCENT.equalsIgnoreCase(request.discountType())
-                && request.discountValue().compareTo(MAX_PERCENT) > 0) {
+                && (request.discountValue().compareTo(BigDecimal.ZERO) <= 0
+                    || request.discountValue().compareTo(MAX_PERCENT) > 0)) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
                 .addPropertyNode("discountValue")

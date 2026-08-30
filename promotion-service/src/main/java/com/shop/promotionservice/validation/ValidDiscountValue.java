@@ -10,8 +10,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Class-level constraint: a PERCENT campaign's {@code discountValue} must not
- * exceed 100 (a percentage above 100% is nonsensical and would create money).
+ * Class-level constraint: a PERCENT campaign's {@code discountValue} must be
+ * strictly positive and not exceed 100 (0% is a no-op coupon — the inclusive
+ * field-level {@code @DecimalMin("0")} lets it through — and a percentage above
+ * 100% is nonsensical and would create money).
  */
 @Documented
 @Constraint(validatedBy = ValidDiscountValueValidator.class)
@@ -19,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidDiscountValue {
 
-    String message() default "PERCENT discount value must be <= 100";
+    String message() default "PERCENT discount value must be > 0 and <= 100";
 
     Class<?>[] groups() default {};
 

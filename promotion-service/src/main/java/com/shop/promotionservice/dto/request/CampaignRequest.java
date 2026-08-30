@@ -5,6 +5,7 @@ import com.shop.promotionservice.validation.ValidDiscountValue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -16,7 +17,7 @@ import java.time.Instant;
 public record CampaignRequest(
     @NotBlank @Size(max = 50) String code,
     @NotBlank String name,
-    @NotBlank String discountType,
+    @NotBlank @Pattern(regexp = "PERCENT|FIXED") String discountType,
     @NotNull @DecimalMin("0") BigDecimal discountValue,
     @PositiveOrZero BigDecimal minOrderAmount,
     Instant startsAt,

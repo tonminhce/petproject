@@ -23,5 +23,7 @@ public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
 
     boolean existsByCodeAndIdNot(String code, UUID id);
 
+    boolean existsByCode(String code);
+
     Page<Campaign> findAllByStatus(CampaignStatus status, Pageable pageable);
 }
