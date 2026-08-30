@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: shipping-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shippingservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  port: ${SERVER_PORT:8087}
+
+shop:
+  kafka:
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: shipping-service
+      auto-offset-reset: latest
+
+  shipping:
+    auto-deliver-days: ${SHIPMENT_AUTO_DELIVER_DAYS:7}
+    notify-threshold-hours: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:72}
+    webhook:
+      secrets:
+        GHN: ${SHIPMENT_WEBHOOK_SECRET_GHN:}
+        GHTK: ${SHIPMENT_WEBHOOK_SECRET_GHTK:}
+
+  security:
+    issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true

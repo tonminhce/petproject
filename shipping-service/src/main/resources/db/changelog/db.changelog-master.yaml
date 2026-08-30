@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - include:
+      file: changelog-001-shipments.yaml
+      relativeToChangelogFile: true
