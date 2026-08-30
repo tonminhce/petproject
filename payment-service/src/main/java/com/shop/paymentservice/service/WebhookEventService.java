@@ -71,9 +71,9 @@ public class WebhookEventService {
         PaymentStatus next = PaymentStateMachine.transition(payment.getStatus(), target);
         payment.setPreviousStatus(payment.getStatus());
         payment.setStatus(next);
-        writer.completeWithEvent(payment, event, outboxEventType(next));
+        Payment saved = writer.completeWithEvent(payment, event, outboxEventType(next));
         if (next == PaymentStatus.CAPTURED) {
-            attachReceipt(payment);
+            attachReceipt(saved);
         }
     }
 

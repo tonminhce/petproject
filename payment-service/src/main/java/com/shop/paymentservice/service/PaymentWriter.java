@@ -39,10 +39,11 @@ public class PaymentWriter {
     }
 
     @Transactional
-    public void completeWithEvent(Payment payment, PaymentEvent event, String outboxEventType) {
+    public Payment completeWithEvent(Payment payment, PaymentEvent event, String outboxEventType) {
         event.setStatus(PaymentEvent.STATUS_PROCESSED);
         eventRepository.saveAndFlush(event);
-        repository.saveAndFlush(payment);
+        Payment saved = repository.saveAndFlush(payment);
         publisher.publish(payment, outboxEventType);
+        return saved;
     }
 }

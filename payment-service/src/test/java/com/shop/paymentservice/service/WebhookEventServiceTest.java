@@ -56,7 +56,7 @@ class WebhookEventServiceTest {
         service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(), receiptService);
         org.mockito.Mockito.lenient().doAnswer(inv -> {
             inv.getArgument(1, PaymentEvent.class).setStatus(PaymentEvent.STATUS_PROCESSED);
-            return null;
+            return inv.getArgument(0, Payment.class);
         }).when(writer).completeWithEvent(any(Payment.class), any(PaymentEvent.class), anyString());
     }
 
