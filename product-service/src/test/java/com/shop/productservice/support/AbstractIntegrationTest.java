@@ -11,8 +11,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -30,23 +28,35 @@ import org.testcontainers.utility.DockerImageName;
  * <p>JWT decoding is stubbed via {@link TestSecurityConfig} so the production
  * decoder (which fetches JWKS from Keycloak) does not try to reach a real
  * identity provider at startup.</p>
+ *
+ * <p>Containers are singletons booted once per JVM (order-service pattern).
+ * Per-class {@code @Testcontainers} start/stop would break Spring's cached
+ * {@code ApplicationContext}: classes sharing a context cache key reuse a
+ * context bound to the previous class's stopped containers, and every test
+ * then fails with {@code Connection refused} against the dead mapped port
+ * (GitHub issue #1). Never stopping the containers keeps every cached context
+ * pointed at live containers; the surefire fork's JVM exit reaps them.</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Testcontainers
 @Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class})
 public abstract class AbstractIntegrationTest {
 
-    @Container
-    @SuppressWarnings("resource")
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
         .withDatabaseName("product_test")
         .withUsername("test")
         .withPassword("test");
 
-    @Container
-    @SuppressWarnings("resource")
-    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+
+    static {
+        postgres.start();
+        kafka.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            postgres.stop();
+            kafka.stop();
+        }));
+    }
 
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry registry) {
