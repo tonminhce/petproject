@@ -68,7 +68,9 @@ public class ReservationCleanupScheduler {
         } catch (Exception ex) {
             // Same posture as the retention job below: log at ERROR with full
             // context instead of letting the scheduler swallow the stack trace.
-            // Batches already flushed stay committed; the next cycle continues.
+            // Flushed batches are rolled back with the transaction; the next
+            // cycle retries them - safe because status flips and deletes are
+            // idempotent.
             log.error("Expired-reservation sweep failed - will retry next cycle", ex);
         }
     }
