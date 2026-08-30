@@ -14,6 +14,13 @@ import java.util.Map;
 /**
  * Base class for a typed Kafka listener container factory.
  *
+ * <p>The <em>key</em> deserializer is fixed to {@link StringDeserializer}: the
+ * fleet-wide producer convention is String keys, so records are always
+ * deserialized with a String key regardless of the declared {@code K}. The
+ * {@code keyType} constructor parameter is currently unused for
+ * deserialization. The <em>value</em> path deserializes to {@code V} via
+ * {@link JsonDeserializer}.</p>
+ *
  * <p>Subclasses pin {@code K}/{@code V} and expose {@link #listenerContainerFactory()}
  * as a Spring bean so the container can be referenced by name from
  * {@code @KafkaListener}.</p>
@@ -21,7 +28,8 @@ import java.util.Map;
  * <h3>Why wrap with {@link ErrorHandlingDeserializer}?</h3>
  * Poison records would otherwise tombstone the partition. Wrapping converts
  * deserialization failures into a {@code DeserializationException} that Spring
- * Kafka can route to a dead-letter topic without losing position.
+ * Kafka can handle without losing position. Note: routing those failures to a
+ * dead-letter topic is <strong>not</strong> wired by this base class.
  */
 public abstract class BaseKafkaListenerConfig<K, V> {
 
