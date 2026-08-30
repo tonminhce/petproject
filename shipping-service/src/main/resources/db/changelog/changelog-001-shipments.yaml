@@ -21,6 +21,7 @@ databaseChangeLog:
               - column: { name: auto_delivered,      type: boolean,     defaultValueBoolean: false, constraints: { nullable: false } }
               - column: { name: last_carrier_update, type: timestamptz }
               - column: { name: delivered_at,        type: timestamptz }
+              - column: { name: version,            type: bigint,      constraints: { nullable: false, defaultValueNumeric: 0 } }
               - column: { name: created_at,          type: timestamptz, constraints: { nullable: false } }
               - column: { name: updated_at,          type: timestamptz, constraints: { nullable: false } }
               - column: { name: created_by,          type: varchar(100) }
@@ -60,6 +61,7 @@ databaseChangeLog:
               - column: { name: type,              type: varchar(32),  constraints: { nullable: false } }
               - column: { name: payload,           type: text,         constraints: { nullable: false } }
               - column: { name: status,            type: varchar(16),  constraints: { nullable: false } }
+              - column: { name: version,           type: bigint,       constraints: { nullable: false, defaultValueNumeric: 0 } }
               - column: { name: created_at,        type: timestamptz,  constraints: { nullable: false } }
               - column: { name: updated_at,        type: timestamptz,  constraints: { nullable: false } }
               - column: { name: created_by,        type: varchar(100) }
