@@ -10,3 +10,4 @@ CREATE DATABASE ratingservice;
 CREATE DATABASE mediaservice;
 CREATE DATABASE taxservice;
 CREATE DATABASE promotionservice;
+CREATE DATABASE notificationservice;
