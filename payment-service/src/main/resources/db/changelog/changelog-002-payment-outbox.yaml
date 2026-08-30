@@ -1,0 +1,43 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 002-create-payment-outbox-events
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: event_id,       type: varchar(36), constraints: { nullable: false, unique: true } }
+              - column: { name: aggregate_type, type: varchar(50), constraints: { nullable: false } }
+              - column: { name: aggregate_id,   type: uuid, constraints: { nullable: false } }
+              - column: { name: event_type,     type: varchar(50), constraints: { nullable: false } }
+              - column: { name: topic,          type: varchar(100), constraints: { nullable: false } }
+              - column: { name: payload,        type: text, constraints: { nullable: false } }
+              - column: { name: status,         type: varchar(20), constraints: { nullable: false } }
+              - column: { name: retry_count,    type: integer, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: sent_at,        type: timestamp }
+              - column: { name: last_error,     type: varchar(1000) }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_status
+            columns:
+              - column: { name: status }
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_aggregate_id
+            columns:
+              - column: { name: aggregate_id }
+
+        - sql:
+            sql: >-
+              CREATE INDEX idx_outbox_pending_id
+              ON outbox_events (id) WHERE status = 'PENDING'
