@@ -1,10 +1,13 @@
 package com.shop.notificationservice.service.impls;
 
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.notificationservice.constant.NotificationChannel;
 import com.shop.notificationservice.constant.NotificationStatus;
 import com.shop.notificationservice.dto.OrderLifecycleEvent;
+import com.shop.notificationservice.dto.response.NotificationResponse;
 import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
 import com.shop.notificationservice.service.NotificationService;
@@ -14,6 +17,8 @@ import com.shop.notificationservice.service.sender.NotificationSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -63,6 +68,19 @@ public class NotificationServiceImpl implements NotificationService {
             log.error("Notification {} send failed", saved.getId(), e);
             writer.markFailed(saved.getId());
         }
+    }
+
+    @Override
+    public Page<NotificationResponse> findAllByOrderId(UUID orderId, Pageable pageable) {
+        return repository.findAllByOrderIdOrderByCreatedAtDesc(orderId, pageable)
+                .map(NotificationResponse::from);
+    }
+
+    @Override
+    public NotificationResponse findById(UUID id) {
+        return repository.findById(id)
+                .map(NotificationResponse::from)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.NOTIFICATION_NOT_FOUND, id));
     }
 
     private String eventTypeOrUnknown(String eventType) {
