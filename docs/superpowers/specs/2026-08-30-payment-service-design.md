@@ -69,7 +69,9 @@ owned by neither epic (see Fleet impact).
 - **D8 — Schema (TIMESTAMPTZ audit columns).** `payments(id, order_id,
   amount numeric(19,2), currency char(3), status, previous_status, provider,
   idempotency_key, created_at, updated_at, version, deleted)` — unique live
-  index on `idempotency_key`, index on `order_id`.
+  PARTIAL index on `idempotency_key` (`WHERE idempotency_key IS NOT NULL`;
+  raw SQL, campaign.code precedent — makes NULL-tolerance intent explicit),
+  index on `order_id`.
   `payment_events(id, payment_id, provider_event_id, type, payload jsonb,
   status, created_at, ...)` — unique live index on `(provider, provider_event_id)`.
   Entity mirrors Campaign precedent (`@Version Long`, soft-delete).
@@ -78,13 +80,20 @@ owned by neither epic (see Fleet impact).
   render a receipt JSON and store via `ObjectStorageService` (RustFS/S3) under
   `receipts/{paymentId}.json`; store the object key on the payment row
   (`receipt_key`). Failure to store → log + continue (receipt is auxiliary,
-  never blocks the payment state).
+  never blocks the payment state). Activation note: payment-service must pull
+  `common-storage` and satisfy its autoconfigure properties (endpoint/bucket)
+  — the plan wires `shop.storage.*` envs in the compose stanza.
 
-- **D10 — Deployment.** Port **8095**, DB `paymentservice` (init SQL addition
-  is payment-lane-owned), compose stanza with
-  `SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092` + webhook-secret env +
-  mock-provider stanza beside it. Config flags fail-closed:
+- **D10 — Deployment.** Port **8085** — compose stanza + gateway
+  `ServiceRoute.PAYMENT` pre-exist from the v0 skeleton (verified), so compose
+  work = env modernization only (`KAFKA_SERVERS` →
+  `SHOP_KAFKA_BOOTSTRAP_SERVERS`, add webhook-secret env) and gateway routes
+  are verify-only. DB `paymentservice` (verify init SQL already has the
+  `CREATE DATABASE` line). Config flags fail-closed:
   `shop.payment.provider: mock`, `shop.payment.webhook.secret` required.
+  `StripeProvider` is a skeleton: `shop.payment.provider=stripe` without
+  credentials must fail fast at startup with a clear message — the plan's
+  final task documents this explicitly.
 
 ## 3. API
 
@@ -120,9 +129,9 @@ Refund mirrors it with `payment.refunded.v1`.
 ## 6. Fleet impact (lane rules)
 
 - **payment lane = W1 shared-file owner** (ErrorCode PAY-5xxx tail, i18n,
-  ApiPaths `BACKOFFICE_PAYMENTS` + webhook path constant, init SQL
-  `CREATE DATABASE paymentservice;`) until merge; shipping lane waits for the
-  branch-to-branch unlock merge before touching tails.
+  ApiPaths `BACKOFFICE_PAYMENTS` + webhook path constant) until merge;
+  shipping lane waits for the branch-to-branch unlock merge before touching
+  tails. Init SQL `paymentservice` line pre-exists — verify-only.
 - **order-service: untouched in this epic.** The confirm-time payment guard
   and any order↔payment client are the post-merge wiring task.
 - notification-service template additions (receipt/payment subjects) =

@@ -82,15 +82,24 @@ order wiring. Ships standalone — it does not touch order-service.
 
 - **D9 — Metrics + alert surface.** Micrometer counters port the
   `OrderMetrics` precedent: `shipping.delivered.count` tagged
-  `{auto=true|false}`, `shipping.failed.count`, plus a gauge of stale
+  `{auto=true|false}`, `shipping.failed.count`, `shipping.advance.count`
+  tagged `{from,to}` (FSM transition visibility), plus a gauge of stale
   in-flight shipments. "No silent delivery" invariant = scheduler flips +
   metric increment; alert wiring (Prometheus rules) is ops-side, out of scope.
 
-- **D10 — Deployment.** Port **8096**, DB `shippingservice` (init SQL
-  addition owned by the shipping lane's tail window), compose stanza with
-  `SHOP_KAFKA_BOOTSTRAP_SERVERS` (second consumer group), `SHIPMENT_AUTO_DELIVER_DAYS: "7"`,
-  `SHIPPING_NOTIFY_THRESHOLD_HOURS` (reserved for notif follow-up), webhook
-  secret env. Fixed scheduler (cron `0 0 * * * *`) — no config seam needed.
+- **D10 — Deployment.** Port **8087** — compose stanza + gateway
+  `ServiceRoute.SHIPPING` pre-exist from the v0 skeleton (verified), so
+  compose work = env modernization only (`KAFKA_SERVERS` →
+  `SHOP_KAFKA_BOOTSTRAP_SERVERS`, add webhook-secret envs) and gateway routes
+  are verify-only. DB `shippingservice` — init SQL line pre-exists (verified
+  line 6). Webhook secrets are PER CARRIER (`SHOP_SHIPPING_WEBHOOK_SECRET_GHN`,
+  `..._GHTK`, ...): verification looks up the secret by `{carrier}` path
+  variable; unknown/unconfigured carrier → 401 fail-closed. ManualCarrier
+  uses the admin write path, never webhooks, so it needs no secret.
+  `SHIPMENT_AUTO_DELIVER_DAYS: "7"`, `SHIPPING_NOTIFY_THRESHOLD_HOURS`
+  (reserved for notif follow-up). Reconciliation scheduler runs HOURLY
+  (Spring 6-field cron `0 0 * * * *`) — caps auto-deliver lag at ~1h; the
+  `last_carrier_update` predicate keeps it idempotent.
 
 ## 3. API
 
@@ -129,9 +138,9 @@ feed the post-merge order wiring (order DELIVERED link).
 ## 6. Fleet impact (lane rules)
 
 - **shipping lane = W2 for shared-file tails** (SHP-1xxxx block, ApiPaths
-  `BACKOFFICE_SHIPMENTS` + webhook constant, i18n, init SQL
-  `CREATE DATABASE shippingservice;`) — gated behind the branch-to-branch
-  unlock merge from payment, exactly the af71412 mechanism.
+  `BACKOFFICE_SHIPMENTS` + webhook constant, i18n) — gated behind the
+  branch-to-branch unlock merge from payment, exactly the af71412 mechanism.
+  Init SQL `shippingservice` line pre-exists — verify-only.
 - **order-service: untouched.** Post-merge wiring task (single owner):
   confirm-guard consumes payment state, order DELIVERED transition consumes
   `shipping.delivered.v1`, gateway routes for both services.
