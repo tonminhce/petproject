@@ -13,6 +13,9 @@ import java.util.UUID;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class PaymentEvent extends AbstractMappedEntity {
 
+    public static final String STATUS_PROCESSED = "PROCESSED";
+    public static final String STATUS_FAILED = "FAILED";
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
