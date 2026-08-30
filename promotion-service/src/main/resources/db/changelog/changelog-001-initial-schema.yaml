@@ -1,0 +1,123 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  001-create-campaign
+  #  20 columns: id + 12 business + 4 audit (AbstractMappedEntity)
+  #              + 3 soft-delete (SoftDeletable: deleted, deleted_at, deleted_by)
+  #  CHECK constraints + partial unique index are raw SQL (Liquibase createTable
+  #  / createIndex have no CHECK / WHERE support) — same pattern as
+  #  favourite-service's partial unique index.
+  #  No seed data (spec §6).
+  # ===========================================================================
+  - changeSet:
+      id: 001-create-campaign
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: campaign
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: code,              type: varchar(50),          constraints: { nullable: false } }
+              - column: { name: name,              type: varchar(255),         constraints: { nullable: false } }
+              - column: { name: discount_type,     type: varchar(10),          constraints: { nullable: false } }
+              - column: { name: discount_value,    type: numeric(19,2),        constraints: { nullable: false } }
+              - column: { name: min_order_amount,  type: numeric(19,2) }
+              - column: { name: starts_at,         type: timestamp with time zone }
+              - column: { name: ends_at,           type: timestamp with time zone }
+              - column: { name: max_redemptions,   type: integer }
+              - column: { name: total_budget,      type: numeric(19,2) }
+              - column: { name: per_user_limit,    type: integer,              constraints: { nullable: false, defaultValueNumeric: 1 } }
+              - column: { name: version,           type: bigint,               constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: status,            type: varchar(10),          constraints: { nullable: false, defaultValue: 'INACTIVE' } }
+              - column: { name: created_at,        type: timestamp,            constraints: { nullable: false } }
+              - column: { name: updated_at,        type: timestamp,            constraints: { nullable: false } }
+              - column: { name: created_by,        type: varchar(100) }
+              - column: { name: updated_by,        type: varchar(100) }
+              - column: { name: deleted,           type: boolean,              defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,        type: timestamp }
+              - column: { name: deleted_by,        type: varchar(255) }
+
+        - sql:
+            sql: ALTER TABLE campaign ADD CONSTRAINT ck_campaign_discount_type CHECK (discount_type IN ('PERCENT', 'FIXED'))
+
+        - sql:
+            sql: ALTER TABLE campaign ADD CONSTRAINT ck_campaign_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
+
+        # Partial unique: same code may be reused after soft-delete (spec §3).
+        # Liquibase's createIndex has no `where` attribute, so raw SQL.
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX uk_campaign_code_live
+              ON campaign (code) WHERE deleted = false
+
+  # ===========================================================================
+  #  002-create-coupon-usage-reservation
+  #  Hard-lifecycle rows (NO soft delete / audit columns — D10): terminal rows
+  #  purged after 30 days by the retention job. One reservation per order
+  #  (uk_cur_order_id — spec §3).
+  # ===========================================================================
+  - changeSet:
+      id: 002-create-coupon-usage-reservation
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: coupon_usage_reservation
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: campaign_id,     type: uuid,                 constraints: { nullable: false } }
+              - column: { name: user_id,         type: uuid,                 constraints: { nullable: false } }
+              - column: { name: order_id,        type: uuid,                 constraints: { nullable: false } }
+              - column: { name: order_amount,    type: numeric(19,2),        constraints: { nullable: false } }
+              - column: { name: discount_amount, type: numeric(19,2),        constraints: { nullable: false } }
+              - column: { name: status,          type: varchar(10),          constraints: { nullable: false } }
+              - column: { name: expires_at,      type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: reserved_at,     type: timestamp with time zone, constraints: { nullable: false } }
+              - column: { name: committed_at,    type: timestamp with time zone }
+              - column: { name: released_at,     type: timestamp with time zone }
+
+        - addForeignKeyConstraint:
+            baseTableName: coupon_usage_reservation
+            baseColumnNames: campaign_id
+            referencedTableName: campaign
+            referencedColumnNames: id
+            constraintName: fk_cur_campaign
+
+        - sql:
+            sql: ALTER TABLE coupon_usage_reservation ADD CONSTRAINT ck_cur_status CHECK (status IN ('PENDING', 'COMMITTED', 'RELEASED', 'EXPIRED'))
+
+        # Per-user limit check: count PENDING+COMMITTED per (user, campaign) (D4).
+        - createIndex:
+            tableName: coupon_usage_reservation
+            indexName: idx_cur_user_campaign_status
+            columns:
+              - column: { name: user_id }
+              - column: { name: campaign_id }
+              - column: { name: status }
+
+        # TTL sweep: find PENDING past expires_at in batches (mirror inventory).
+        - createIndex:
+            tableName: coupon_usage_reservation
+            indexName: idx_cur_status_expires
+            columns:
+              - column: { name: status }
+              - column: { name: expires_at }
+
+        # One reservation per order — order-service reconciliation polls by
+        # reservation id; this unique index backs the "any usage for this
+        # order?" query (spec §3).
+        - createIndex:
+            tableName: coupon_usage_reservation
+            indexName: uk_cur_order_id
+            columns:
+              - column: { name: order_id }
+            unique: true

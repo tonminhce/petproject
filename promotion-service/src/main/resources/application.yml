@@ -1,0 +1,55 @@
+# =============================================================================
+#  promotion-service — Discount campaigns + 2-phase coupon usage reservations.
+#  Owns campaign CRUD (admin) and the reserve/commit/release lifecycle that
+#  order-service drives during the create-order saga and confirm flow.
+#  Publishes lifecycle events to Kafka through a transactional outbox.
+#
+#  Platform-wide defaults live in common-spring/application.yml (inherited).
+#  Only service-specific overrides belong here.
+# =============================================================================
+spring:
+  application:
+    name: promotion-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/promotionservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Schema is owned by Liquibase — never let Hibernate mutate it.
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  # Override the common-spring default 8080 (compose maps 8093:8093).
+  # (shutdown: graceful is inherited from common-spring/application.yml.)
+  port: ${SERVER_PORT:8093}
+
+shop:
+  kafka:
+    # common-kafka binds shop.kafka.* (KafkaProperties) — NOT spring.kafka.*.
+    # Only the outbox relay produces here; the service has no Kafka consumer.
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  security:
+    # Every endpoint requires a valid JWT — NO public-paths (fail-closed):
+    # backoffice rows are business-sensitive and reservation endpoints are
+    # SERVICE/ADMIN machine calls (spec §2). actuator/swagger/api-docs remain
+    # public via common-security platform defaults. csrf-disabled is the
+    # platform default; declared explicitly for clarity (spec §6).
+    csrf-disabled: true
+
+  promotion:
+    # Reservation lifecycle — values MUST match the inline @Value/@Scheduled
+    # defaults in ReservationCleanupScheduler / ReservationRetentionScheduler
+    # (declared explicitly so ops can see what runs when without grepping Java).
+    reservation-ttl-seconds: 900                # 15 min — same as inventory (D6)
+    reservation-cleanup-batch-size: 500         # sweep in batches (memory guard)
+    reservation-cleanup-interval-ms: 60000      # expired sweep every 60s
+    reservation-retention-cron: "0 0 4 * * *"   # purge terminal > 30 days, 04:00 daily
+    reservation-retention-days: 30
