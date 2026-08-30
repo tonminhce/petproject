@@ -47,12 +47,13 @@ class WebhookEventServiceTest {
     @Mock PaymentEventRepository eventRepository;
     @Mock PaymentWriter writer;
     @Mock PaymentEventPublisher publisher;
+    @Mock ReceiptService receiptService;
 
     private WebhookEventService service;
 
     @BeforeEach
     void setUp() {
-        service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper());
+        service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(), receiptService);
         org.mockito.Mockito.lenient().doAnswer(inv -> {
             inv.getArgument(1, PaymentEvent.class).setStatus(PaymentEvent.STATUS_PROCESSED);
             return null;
@@ -107,6 +108,47 @@ class WebhookEventServiceTest {
         assertThat(updated.getPreviousStatus()).isEqualTo(PaymentStatus.PENDING);
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo(PaymentEvent.STATUS_PROCESSED);
         verify(writer).insertEvent(any(PaymentEvent.class));
+    }
+
+    @Test
+    void capturedTransition_storesReceipt_andPersistsReceiptKey() {
+        when(eventRepository.existsByProviderAndProviderEventId(PROVIDER, PROVIDER_EVENT_ID)).thenReturn(false);
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(receiptService.storeReceipt(any(Payment.class))).thenReturn("receipts/" + PAYMENT_ID + ".json");
+
+        service.handle(PROVIDER, body(capturedPayload().build()));
+
+        verify(receiptService).storeReceipt(pending);
+        ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+        verify(writer).saveAndFlush(paymentCaptor.capture());
+        assertThat(paymentCaptor.getValue().getReceiptKey()).isEqualTo("receipts/" + PAYMENT_ID + ".json");
+    }
+
+    @Test
+    void capturedTransition_receiptFailure_skipsFollowUpSave_andStillAcks() {
+        when(eventRepository.existsByProviderAndProviderEventId(PROVIDER, PROVIDER_EVENT_ID)).thenReturn(false);
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(receiptService.storeReceipt(any(Payment.class))).thenReturn(null);
+
+        assertThatCode(() -> service.handle(PROVIDER, body(capturedPayload().build())))
+                .doesNotThrowAnyException();
+
+        verify(receiptService).storeReceipt(pending);
+        verify(writer, never()).saveAndFlush(any(Payment.class));
+        assertThat(pending.getReceiptKey()).isNull();
+        verify(writer, never()).markEventFailed(any(PaymentEvent.class));
+    }
+
+    @Test
+    void nonCapturedTransition_neverStoresReceipt() {
+        when(eventRepository.existsByProviderAndProviderEventId(PROVIDER, PROVIDER_EVENT_ID)).thenReturn(false);
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.PENDING)));
+
+        service.handle(PROVIDER, body(capturedPayload().status("FAILED").build()));
+
+        verifyNoInteractions(receiptService);
     }
 
     @Test

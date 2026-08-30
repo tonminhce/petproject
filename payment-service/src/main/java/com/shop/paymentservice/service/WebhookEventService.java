@@ -33,6 +33,7 @@ public class WebhookEventService {
     private final PaymentEventRepository eventRepository;
     private final PaymentWriter writer;
     private final ObjectMapper objectMapper;
+    private final ReceiptService receiptService;
 
     public void handle(String provider, byte[] rawBody) {
         WebhookPayload payload = tryParse(rawBody);
@@ -71,6 +72,17 @@ public class WebhookEventService {
         payment.setPreviousStatus(payment.getStatus());
         payment.setStatus(next);
         writer.completeWithEvent(payment, event, outboxEventType(next));
+        if (next == PaymentStatus.CAPTURED) {
+            attachReceipt(payment);
+        }
+    }
+
+    private void attachReceipt(Payment payment) {
+        String receiptKey = receiptService.storeReceipt(payment);
+        if (receiptKey != null) {
+            payment.setReceiptKey(receiptKey);
+            writer.saveAndFlush(payment);
+        }
     }
 
     private WebhookPayload tryParse(byte[] rawBody) {
