@@ -109,7 +109,15 @@ public enum ErrorCode {
     PAYMENT_INVALID_STATE("PAY-5004", "payment.invalid_state", HttpStatus.CONFLICT),
     WEBHOOK_SIGNATURE_INVALID("PAY-5005", "payment.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
     REFUND_INVALID_STATE("PAY-5006", "payment.refund_invalid_state", HttpStatus.CONFLICT),
-    AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST);
+    AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST),
+
+    // ---- Shipping domain ---- SHP-10001..10006
+    SHIPMENT_NOT_FOUND("SHP-10001", "shipping.not_found", HttpStatus.NOT_FOUND),
+    SHIPMENT_DUPLICATE("SHP-10002", "shipping.duplicate", HttpStatus.CONFLICT),
+    SHIPMENT_INVALID_TRANSITION("SHP-10003", "shipping.invalid_transition", HttpStatus.CONFLICT),
+    SHIPPING_WEBHOOK_SIGNATURE_INVALID("SHP-10004", "shipping.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
+    TRACKING_REQUIRED("SHP-10005", "shipping.tracking_required", HttpStatus.BAD_REQUEST),
+    CARRIER_NOT_CONFIGURED("SHP-10006", "shipping.carrier_not_configured", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;

@@ -48,6 +48,10 @@ public final class ApiPaths {
     public static final String BACKOFFICE_PAYMENTS = API_V1 + "/backoffice/payments";
     public static final String WEBHOOK_PAYMENTS = API_V1 + "/webhooks/payments";
 
+    // ---- Shipping ----
+    public static final String BACKOFFICE_SHIPMENTS = API_V1 + "/backoffice/shipments";
+    public static final String WEBHOOK_SHIPPING = API_V1 + "/webhooks/shipping";
+
     private ApiPaths() {
     }
 }
