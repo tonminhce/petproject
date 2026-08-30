@@ -102,7 +102,14 @@ public enum ErrorCode {
     TAX_RATE_NOT_FOUND("TAX-8005", "tax.rate.not_found", HttpStatus.NOT_FOUND),
 
     // ---- Notification domain ----
-    NOTIFICATION_NOT_FOUND("NTF-9001", "notification.not_found", HttpStatus.NOT_FOUND);
+    NOTIFICATION_NOT_FOUND("NTF-9001", "notification.not_found", HttpStatus.NOT_FOUND),
+
+    // ---- Payment domain (continued) — PAY-5003..5007 ----
+    PAYMENT_DUPLICATE_REQUEST("PAY-5003", "payment.duplicate_request", HttpStatus.CONFLICT),
+    PAYMENT_INVALID_STATE("PAY-5004", "payment.invalid_state", HttpStatus.CONFLICT),
+    WEBHOOK_SIGNATURE_INVALID("PAY-5005", "payment.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
+    REFUND_INVALID_STATE("PAY-5006", "payment.refund_invalid_state", HttpStatus.CONFLICT),
+    AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String messageKey;
