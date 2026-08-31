@@ -66,7 +66,9 @@ class RatingEventServiceTest {
         OutboxEvent event = captor.getValue();
 
         assertThat(event.getAggregateType()).isEqualTo("rating");
-        assertThat(event.getAggregateId()).isEqualTo(rating.getId());
+        // Spec D4: aggregateId = productId — it doubles as the Kafka
+        // partition key (per-product ordering); the relay keys on it.
+        assertThat(event.getAggregateId()).isEqualTo(productId);
         assertThat(event.getEventType()).isEqualTo("rating.submitted.v1");
         assertThat(event.getTopic()).isEqualTo("shop.rating.lifecycle.v1");
         assertThat(event.getStatus()).isEqualTo(OutboxStatus.PENDING);
@@ -126,5 +128,22 @@ class RatingEventServiceTest {
         JsonNode json = objectMapper.readTree(captor.getValue().getPayload());
         assertThat(json.get("avgRating").decimalValue()).isEqualByComparingTo("4.33");
         assertThat(json.get("avgRating").decimalValue().scale()).isEqualTo(2);
+    }
+
+    @Test
+    void record_hidden_payloadCarriesHiddenActionAndInvisibleFlag() throws Exception {
+        // Snapshot excludes the hidden row itself — aggregate reflects the
+        // remaining visible ratings (T5 carry-over gap test).
+        when(ratingRepository.findAggregateByProductId(productId))
+                .thenReturn(List.<Object[]>of(new Object[]{new BigDecimal("4.0"), 2L}));
+        Rating rating = rating(5, true, true);
+
+        service.record(rating, RatingAction.HIDDEN);
+
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepository).save(captor.capture());
+        JsonNode json = objectMapper.readTree(captor.getValue().getPayload());
+        assertThat(json.get("action").textValue()).isEqualTo("HIDDEN");
+        assertThat(json.get("visible").booleanValue()).isFalse();
     }
 }

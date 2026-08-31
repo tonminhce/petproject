@@ -57,7 +57,11 @@ public class RatingEventService {
         OutboxEvent event = new OutboxEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setAggregateType(AGGREGATE_TYPE);
-        event.setAggregateId(rating.getId());
+        // Spec D4: Kafka message key = productId (per-product partition
+        // ordering) and the relay keys on aggregateId — so the partition key
+        // lives here, not the rating row id. Rating identity still travels in
+        // payload.ratingId and eventId.
+        event.setAggregateId(rating.getProductId());
         event.setEventType(EVENT_TYPE);
         event.setTopic(TOPIC);
 
