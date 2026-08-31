@@ -11,6 +11,7 @@ import com.shop.orderservice.dto.internal.ReserveRequest;
 import com.shop.orderservice.client.PaymentServiceClient;
 import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
+import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
@@ -435,6 +436,13 @@ public class OrderServiceImpl implements OrderService {
             ? orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
             : orderRepository.findAllByOrderByCreatedAtDesc(pageable);
         return withItems(page);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderItemResponse> findDeliveredItemsByUserAndProduct(UUID userId, UUID productId, Pageable pageable) {
+        return orderItemRepository.findDeliveredByUserAndProduct(userId, productId, pageable)
+            .map(orderMapper::toItemResponse);
     }
 
     /**

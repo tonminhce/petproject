@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: rating-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ratingservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  port: ${SERVER_PORT:8089}
+
+shop:
+  kafka:
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  security:
+    issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true
+    public-paths: []
+
+  rating:
+    outbox:
+      poll-millis: 2000
+      batch-size: 100
+      max-retries: 10
+    order-service:
+      url: ${ORDER_SERVICE_URL:http://localhost:8084}
+      timeout-ms: 3000
+    keycloak:
+      token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
+      client-id: ${RATING_SERVICE_CLIENT_ID:rating-service}
+      client-secret: ${RATING_SERVICE_CLIENT_SECRET:changeme}

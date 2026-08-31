@@ -13,5 +13,7 @@ public record ProductSummaryResponse(
     BigDecimal priceUnit,
     Integer quantity,
     ProductStatus status,
-    String imageUrl
+    String imageUrl,
+    BigDecimal avgRating,
+    Integer ratingCount
 ) {}

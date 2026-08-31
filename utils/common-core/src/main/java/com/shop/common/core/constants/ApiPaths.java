@@ -35,6 +35,9 @@ public final class ApiPaths {
     public static final String PAYMENT_NOTIFICATIONS = API_V1 + "/payment-notifications";
     public static final String EMAILS = API_V1 + "/emails";
 
+    // ---- Ratings ----
+    public static final String RATINGS = API_V1 + "/ratings";
+
     // ---- Storefront / Backoffice ----
     public static final String STOREFRONT_RATINGS = API_V1 + "/storefront/ratings";
     public static final String BACKOFFICE_RATINGS = API_V1 + "/backoffice/ratings";

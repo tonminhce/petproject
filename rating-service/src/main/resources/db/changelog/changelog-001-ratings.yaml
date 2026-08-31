@@ -1,0 +1,56 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-ratings
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: ratings
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: product_id,     type: uuid,           constraints: { nullable: false } }
+              - column: { name: user_id,        type: uuid,           constraints: { nullable: false } }
+              - column: { name: rating,         type: smallint,       constraints: { nullable: false } }
+              - column: { name: comment,        type: text,           constraints: { nullable: false } }
+              - column: { name: verified,       type: boolean,        constraints: { nullable: false }, defaultValueBoolean: false }
+              - column: { name: hidden,         type: boolean,        constraints: { nullable: false }, defaultValueBoolean: false }
+              - column: { name: hidden_at,      type: timestamptz }
+              - column: { name: hidden_by,      type: uuid }
+              - column: { name: hidden_reason,  type: varchar(500) }
+              - column: { name: edited_at,      type: timestamptz }
+              - column: { name: deleted,        type: boolean,        constraints: { nullable: false }, defaultValueBoolean: false }
+              - column: { name: deleted_at,     type: timestamptz }
+              - column: { name: deleted_by,     type: varchar(255) }
+              - column: { name: created_at,     type: timestamptz,    constraints: { nullable: false }, defaultValueComputed: "CURRENT_TIMESTAMP" }
+              - column: { name: updated_at,     type: timestamptz,    constraints: { nullable: false }, defaultValueComputed: "CURRENT_TIMESTAMP" }
+              - column: { name: created_by,     type: varchar(100) }
+              - column: { name: updated_by,     type: varchar(100) }
+
+  - changeSet:
+      id: 001-ratings-constraints
+      author: shop-platform
+      changes:
+        - sql: |
+            ALTER TABLE ratings ADD CONSTRAINT ck_ratings_rating_range CHECK (rating >= 1 AND rating <= 5);
+            ALTER TABLE ratings ADD CONSTRAINT ck_ratings_comment_length CHECK (char_length(comment) >= 5 AND char_length(comment) <= 2000);
+            ALTER TABLE ratings ADD CONSTRAINT ck_ratings_audit CHECK ((hidden = false) OR (hidden = true AND hidden_at IS NOT NULL AND hidden_by IS NOT NULL));
+            CREATE UNIQUE INDEX uk_rating_user_product_live ON ratings (user_id, product_id) WHERE deleted = false;
+            CREATE INDEX idx_ratings_product_live ON ratings (product_id) WHERE deleted = false AND hidden = false;
+
+  - changeSet:
+      id: 002-create-outbox-events
+      author: shop-platform
+      changes:
+        - sql: |
+            CREATE TABLE outbox_events (
+              id BIGSERIAL PRIMARY KEY, event_id varchar(36) NOT NULL UNIQUE,
+              aggregate_type varchar(50) NOT NULL, aggregate_id uuid NOT NULL,
+              event_type varchar(50) NOT NULL, topic varchar(100) NOT NULL,
+              payload TEXT NOT NULL, status varchar(20) NOT NULL,
+              retry_count integer NOT NULL DEFAULT 0, sent_at timestamptz, last_error varchar(1000));
+            CREATE INDEX idx_outbox_status ON outbox_events (status);

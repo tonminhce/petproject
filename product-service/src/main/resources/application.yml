@@ -55,6 +55,11 @@ shop:
       # Durability over throughput: the outbox relay must not lose events.
       acks: all
       retries: 3
+    consumer:
+      # First consumer: rating lifecycle events (spec D5). Mirrors shipping's
+      # consumer block style.
+      group-id: product-service
+      auto-offset-reset: latest
   security:
     # Catalog reads are anonymous; writes stay authenticated.
     # (actuator, swagger, api-docs are public via common-security platform defaults)

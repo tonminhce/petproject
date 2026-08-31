@@ -59,7 +59,8 @@ class ProductServiceImplTest {
 
     private Product sampleProduct() {
         return Product.builder().id(ID).title("iPhone 15").slug("iphone-15").sku("IP15-001")
-            .priceUnit(new BigDecimal("999.00")).quantity(10).status(ProductStatus.ACTIVE).build();
+            .priceUnit(new BigDecimal("999.00")).quantity(10).status(ProductStatus.ACTIVE)
+            .avgRating(new BigDecimal("0.00")).ratingCount(0).build();
     }
 
     @Test
@@ -67,7 +68,7 @@ class ProductServiceImplTest {
         Product p = sampleProduct();
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null);
         when(repo.findWithRelationsById(ID)).thenReturn(Optional.of(p));
         when(mapper.toDetailResponse(p)).thenReturn(resp);
 
@@ -87,7 +88,7 @@ class ProductServiceImplTest {
         Product product = sampleProduct();
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null);
         when(repo.existsBySlug("iphone-15")).thenReturn(false);
         when(repo.existsBySku("IP15-001")).thenReturn(false);
         when(mapper.toEntity(req)).thenReturn(product);
@@ -200,7 +201,7 @@ class ProductServiceImplTest {
             new BigDecimal("1099.00"), null, null, null, null, null, null, null);
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
-            null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null, null);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.save(existing)).thenReturn(existing);
         when(mapper.toDetailResponse(existing)).thenReturn(resp);
@@ -233,7 +234,7 @@ class ProductServiceImplTest {
         when(mapper.toSummaryResponse(p)).thenReturn(
             new ProductSummaryResponse(
                 ID, "iPhone 15", "iphone-15", "IP15-001",
-                new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null));
+                new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null));
 
         var result = service.findAll(new ProductFilter(null, null, null), PageRequest.of(0, 10));
 

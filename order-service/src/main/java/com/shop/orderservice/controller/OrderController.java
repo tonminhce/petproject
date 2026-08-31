@@ -7,6 +7,7 @@ import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
+import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.service.OrderService;
@@ -80,6 +81,19 @@ public class OrderController {
         UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
         boolean isAdmin = AuthenticatedUser.requireCurrent().hasRole("ADMIN");
         return ApiResponse.ok(orderService.cancelOrder(orderId, userId, isAdmin), "Order cancelled");
+    }
+
+    @GetMapping("/verify-purchase")
+    @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    public ApiResponse<PageResponse<OrderItemResponse>> verifyPurchase(
+            @RequestParam UUID userId, @RequestParam UUID productId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        Page<OrderItemResponse> result =
+            orderService.findDeliveredItemsByUserAndProduct(userId, productId, pageable);
+        return ApiResponse.ok(PageResponse.of(
+            result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));
     }
 
     private static UUID currentUserId() {

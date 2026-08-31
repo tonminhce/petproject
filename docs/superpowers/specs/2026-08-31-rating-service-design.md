@@ -152,7 +152,7 @@ Meter `rating_submitted_total{action}`.
 
 rating-service: port 8089, postgres db `ratingservice` (+ init SQL user/db), yml keys
 `ORDER_SERVICE_URL:http://localhost:8084`, `KEYCLOAK_TOKEN_URL`, `client-id
-${RATING_SERVICE_CLIENT_ID:rating-service}` / `changeme`, outbox poll 5000 ms.
+${RATING_SERVICE_CLIENT_ID:rating-service}` / `changeme`, outbox poll 2000 ms (matches payment's relay cadence; spec originally said 5000 — corrigendum T1 review).
 Compose: rating-service stanza (8089, db envs, `ORDER_SERVICE_URL:
 http://order-service:8084`), appended after promotion stanza. Gateway: **zero
 changes**. Keycloak: `rating-service` client provisioned at ops time (§4).
@@ -164,10 +164,11 @@ changes**. Keycloak: `rating-service` client provisioned at ops time (§4).
    `avgRating`/`ratingCount` after consumer tick; `PUT` edit; admin hide → product
    aggregate drops the rating on next event.
 2. Consumer contract: value = JSON string-wrapped envelope (fleet unwrap-once rule);
-   consumer must tolerate replay (snapshot copy) and unknown productIds.
+   consumer must tolerate replay (snapshot copy) and unknown productIds. Poison records: `ErrorHandlingDeserializer` + log-and-skip with offset advance — fleet `BaseKafkaListenerConfig` default handler, NO dead-letter topic (ratified T8/T10).
 3. Provision `rating-service` Keycloak client (client-credentials, service-account
    role `SERVICE`) — same manual step as every other service client (realm import gap
-   is fleet-wide, §5).
+   is fleet-wide, §5). `rating-service` client — provisioned manually like every
+   other service client (confirmed absent from realm import, T9).
 4. Known fleet gaps NOT fixed here (recorded): `/api/v1/backoffice/**` not
    edge-routed (all Backoffice controllers, direct-service access); realm import
    lacks per-service clients.
