@@ -324,8 +324,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
       # Promotion reservation flow (reserve/commit/release) — service is live.
       PROMOTION_SERVICE_ENABLED: "true"
+      PROMOTION_SERVICE_URL: http://promotion-service:8093
+      TAX_SERVICE_URL: http://tax-service:8091
       # order-wiring D1 — payment-captured confirm gate (fail-closed), flip on post-verify.
       PAYMENT_SERVICE_ENABLED: ${PAYMENT_SERVICE_ENABLED:-false}
+      PAYMENT_SERVICE_URL: http://payment-service:8085
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
