@@ -1,0 +1,73 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-payments
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: payments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: order_id,         type: uuid,           constraints: { nullable: false } }
+              - column: { name: amount,           type: "numeric(19,2)", constraints: { nullable: false } }
+              - column: { name: currency,         type: "char(3)",      constraints: { nullable: false } }
+              - column: { name: status,           type: varchar(16),    constraints: { nullable: false } }
+              - column: { name: previous_status,  type: varchar(16) }
+              - column: { name: provider,         type: varchar(16),    constraints: { nullable: false } }
+              - column: { name: idempotency_key,  type: varchar(64),    constraints: { nullable: false } }
+              - column: { name: receipt_key,      type: varchar(255) }
+              - column: { name: version,          type: bigint,           constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: created_at, type: timestamptz, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamptz }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        - sql:
+            sql: ALTER TABLE payments ADD CONSTRAINT ck_payments_status CHECK (status IN ('PENDING', 'CAPTURED', 'FAILED', 'REFUNDED'))
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_payment_idempotency_key ON payments (idempotency_key)
+
+        - sql:
+            sql: CREATE INDEX idx_payments_order_id ON payments (order_id)
+
+  - changeSet:
+      id: 001-create-payment-events
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: payment_events
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: payment_id,        type: uuid,           constraints: { nullable: false } }
+              - column: { name: provider,          type: varchar(16),    constraints: { nullable: false } }
+              - column: { name: provider_event_id, type: varchar(128),   constraints: { nullable: false } }
+              - column: { name: type,              type: varchar(32),    constraints: { nullable: false } }
+              - column: { name: payload,           type: text,           constraints: { nullable: false } }
+              - column: { name: status,            type: varchar(16),    constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamptz }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        - sql:
+            sql: ALTER TABLE payment_events ADD CONSTRAINT ck_payment_events_status CHECK (status IN ('PROCESSED', 'FAILED'))
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_payment_events_provider_event ON payment_events (provider, provider_event_id)

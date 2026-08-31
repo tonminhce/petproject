@@ -352,15 +352,44 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
-      KAFKA_SERVERS: kafka:9092
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-test-secret}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      # Receipt storage on RustFS (same env style as media-service; dedicated bucket)
+      STORAGE_ENDPOINT: http://rustfs:9000
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_BUCKET: shop-payments
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      rustfs:
+        condition: service_healthy
     healthcheck:
       <<: *hc-defaults
       test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Mock Payment Provider (spec D2/D10) -----
+  # Simulates an external PSP: capture/refund calls trigger HMAC-signed
+  # CAPTURED/REFUNDED webhooks back into payment-service.
+  mock-payment-provider:
+    build: ./mock-services/mock-payment-provider
+    container_name: mock-payment-provider
+    <<: [*restart, *logging]
+    environment:
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-test-secret}
+      PAYMENT_SERVICE_URL: http://payment-service:8085
+    depends_on:
+      payment-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/mock-payments/_health > /dev/null 2>&1 || exit 1"]
     networks:
       - ecommerce-network
 

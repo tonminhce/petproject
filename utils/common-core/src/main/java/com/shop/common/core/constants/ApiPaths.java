@@ -44,6 +44,10 @@ public final class ApiPaths {
     public static final String BACKOFFICE_TAX_RATES = API_V1 + "/backoffice/tax-rates";
     public static final String BACKOFFICE_NOTIFICATIONS = API_V1 + "/backoffice/notifications";
 
+    // ---- Payments ----
+    public static final String BACKOFFICE_PAYMENTS = API_V1 + "/backoffice/payments";
+    public static final String WEBHOOK_PAYMENTS = API_V1 + "/webhooks/payments";
+
     private ApiPaths() {
     }
 }

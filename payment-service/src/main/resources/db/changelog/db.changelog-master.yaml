@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: changelog-001-payments.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-002-payment-outbox.yaml
+      relativeToChangelogFile: true

@@ -1,0 +1,13 @@
+{
+  "name": "mock-payment-provider",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mock payment provider emitting HMAC-signed webhooks (payment-service spec D2/D10)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
