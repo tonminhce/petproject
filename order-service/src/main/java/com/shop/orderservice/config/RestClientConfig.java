@@ -44,6 +44,11 @@ public class RestClientConfig {
         return baseRestClient(props.promotion().url(), props.promotion().timeoutMs());
     }
 
+    @Bean("paymentRestClient")
+    public RestClient paymentRestClient(ShopServicesProperties props) {
+        return baseRestClient(props.payment().url(), props.payment().timeoutMs());
+    }
+
     private RestClient baseRestClient(String baseUrl, int timeoutMs) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofMillis(timeoutMs).toMillis());

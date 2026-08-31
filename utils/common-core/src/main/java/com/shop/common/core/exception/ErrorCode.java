@@ -117,7 +117,8 @@ public enum ErrorCode {
     SHIPMENT_INVALID_TRANSITION("SHP-10003", "shipping.invalid_transition", HttpStatus.CONFLICT),
     SHIPPING_WEBHOOK_SIGNATURE_INVALID("SHP-10004", "shipping.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
     TRACKING_REQUIRED("SHP-10005", "shipping.tracking_required", HttpStatus.BAD_REQUEST),
-    CARRIER_NOT_CONFIGURED("SHP-10006", "shipping.carrier_not_configured", HttpStatus.CONFLICT);
+    CARRIER_NOT_CONFIGURED("SHP-10006", "shipping.carrier_not_configured", HttpStatus.CONFLICT),
+    ORDER_PAYMENT_NOT_CAPTURED("ORD-4012", "order.payment.not_captured", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;

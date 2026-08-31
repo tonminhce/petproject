@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
 import com.shop.orderservice.dto.internal.PricingBreakdown;
 import com.shop.orderservice.dto.internal.ProductSnapshot;
 import com.shop.orderservice.dto.internal.ReserveRequest;
+import com.shop.orderservice.client.PaymentServiceClient;
 import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
@@ -62,6 +64,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartItemRepository cartItemRepository;
     private final PricingService pricingService;
     private final PromotionServiceClient promotionClient;
+    private final PaymentServiceClient paymentClient;
     private final StockReservationService stockReservationService;
     private final OrderEventPublisher orderEventPublisher;
     private final IdempotencyService idempotencyService;
@@ -315,6 +318,24 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
             orderStatusService.validateTransition(order.getStatus(), OrderStatus.CONFIRMED);
             List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+
+            // order-wiring D1 — payment gate BEFORE any remote commit: with the
+            // payment-service flag on, confirm requires a CAPTURED payment. ANY
+            // client failure also yields ORD-4012 (fail-closed — a payment we
+            // could not verify must block confirm, and the raw exception never
+            // leaks past this seam). Flag off (default) → guard bypassed.
+            if (paymentClient.isEnabled()) {
+                PaymentStatusSnapshot payment;
+                try {
+                    payment = paymentClient.findCapturedByOrderId(orderId).orElse(null);
+                } catch (RuntimeException ex) {
+                    log.error("Payment captured-check failed for order {} — failing closed", orderId, ex);
+                    payment = null;
+                }
+                if (payment == null || !"CAPTURED".equals(payment.status())) {
+                    throw BusinessException.of(ErrorCode.ORDER_PAYMENT_NOT_CAPTURED, orderId);
+                }
+            }
 
             // External commit BEFORE local state flip — local row stays PENDING until
             // inventory/promotion commits succeed (coordinator compensates on failure).
