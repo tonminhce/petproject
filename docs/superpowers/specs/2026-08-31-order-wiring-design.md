@@ -135,3 +135,15 @@ volume out of `advance.count`.
    is env-set + service restart; the carrier must switch secrets in lockstep
    (single-secret verification, no dual-accept window — expect rejected
    deliveries during the switch, which carriers retry).
+5. **Corrigendum (post-merge review, f4ec967 severity correction).** The
+   missing service URLs in the order stanza pre-fix were characterized as a
+   "silent promotion skip" — inaccurate. Actual behavior: the promotion
+   client catches only `HttpClientErrorException`/`HttpServerErrorException`;
+   a connection-refused surfaces as `ResourceAccessException`, which is
+   neither, so it propagated raw and **500'd every compose-stack order that
+   carried a coupon** (loud, UX-broken). Coupon-less orders were unaffected
+   (the reserve call is only made when a coupon is present). Post-fix matrix:
+   coupon + compose → 200 with discount applied; no coupon → unchanged
+   (0 discount by design). Severity: loud-fail-broken-UX, high operational
+   risk if coupons went untested in compose — not a silent skip. The fix
+   itself (3 explicit `*_SERVICE_URL` lines) is unchanged.
