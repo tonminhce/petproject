@@ -27,7 +27,7 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, ProductLife
     // are ack-skipped (spec D1); no DLT (fleet containment rule).
     private void handleContained(ProductLifecycleEvent event) {
         try {
-            switch (event.eventType()) {
+            switch (event.eventType() == null ? "" : event.eventType()) {
                 case "ProductCreated", "ProductUpdated" -> productSearchService.index(event);
                 case "ProductDeleted" -> productSearchService.delete(event.productId());
                 default -> log.info("Skipping unknown product eventType {} (eventId={})",

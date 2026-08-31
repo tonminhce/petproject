@@ -2,6 +2,7 @@ package com.shop.searchservice.service;
 
 import com.shop.searchservice.client.ProductBackofficeClient;
 import com.shop.searchservice.kafka.dto.ProductLifecycleEvent;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,6 +17,7 @@ import java.util.UUID;
  * paths converge here: the Kafka consumer ({@link ProductLifecycleEvent}) and
  * the reindex stream ({@link ProductBackofficeClient.ProductSnapshot}).
  */
+@Slf4j
 public final class ProductDocuments {
 
     private ProductDocuments() {
@@ -66,6 +68,7 @@ public final class ProductDocuments {
         try {
             return Instant.parse(value);
         } catch (DateTimeParseException ex) {
+            log.warn("Unparseable updatedAt '{}' — indexed without it", value);
             return null;
         }
     }

@@ -35,6 +35,7 @@ public class SearchParams {
     private String sort;
 
     @PositiveOrZero
+    @Max(49)
     private int page = 0;
 
     @Min(1)

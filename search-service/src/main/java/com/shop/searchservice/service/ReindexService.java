@@ -215,7 +215,8 @@ public class ReindexService {
             if (ex.status() == 404) {
                 return "none";
             }
-            throw ex;
+            log.error("Resolving the current alias target failed", ex);
+            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         } catch (IOException ex) {
             log.error("Resolving the current alias target failed", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);

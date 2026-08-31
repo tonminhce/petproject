@@ -175,6 +175,17 @@ class SearchControllerTest {
         verifyNoInteractions(searchQueryService);
     }
 
+    @Test
+    void search_pageOverCap_returns400WithErr0422V() throws Exception {
+        mockMvc.perform(get("/api/v1/search")
+                    .param("page", "50")
+                    .with(customer()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("ERR-0422-V"));
+
+        verifyNoInteractions(searchQueryService);
+    }
+
     // --- ES-down mapping ---
 
     @Test

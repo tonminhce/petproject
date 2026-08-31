@@ -1,5 +1,9 @@
 package com.shop.searchservice.kafka;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.shop.searchservice.support.AbstractSearchIntegrationTest;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -8,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -186,6 +191,34 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         send(marker, payload(marker, "ProductCreated", "ACTIVE"));
         awaitDocIndexed(marker);
         assertThat(indexedDoc(unknown)).isNull();
+    }
+
+    @Test
+    @DisplayName("null eventType is ack-skipped at INFO: no doc, no handler failure, consumption continues")
+    void nullEventTypeIsAckSkipped() {
+        var consumerLogger = (Logger) LoggerFactory.getLogger(ProductSearchConsumer.class);
+        ListAppender<ILoggingEvent> events = new ListAppender<>();
+        events.start();
+        consumerLogger.addAppender(events);
+        try {
+            UUID nullType = UUID.randomUUID();
+            Map<String, Object> noEventType = payload(nullType, "ProductCreated", "ACTIVE");
+            noEventType.remove("eventType");
+            send(nullType, noEventType);
+
+            UUID marker = UUID.randomUUID();
+            send(marker, payload(marker, "ProductCreated", "ACTIVE"));
+            awaitDocIndexed(marker);
+
+            assertThat(indexedDoc(nullType)).isNull();
+            assertThat(events.list)
+                .anySatisfy(event -> assertThat(event.getFormattedMessage())
+                    .startsWith("Skipping unknown product eventType null"))
+                .noneSatisfy(event -> assertThat(event.getLevel()).isEqualTo(Level.ERROR));
+        } finally {
+            consumerLogger.detachAppender(events);
+            events.stop();
+        }
     }
 
     @Test
