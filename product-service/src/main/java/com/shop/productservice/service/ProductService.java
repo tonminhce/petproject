@@ -14,6 +14,13 @@ public interface ProductService {
 
     PageResponse<ProductSummaryResponse> findAll(ProductFilter filter, Pageable pageable);
 
+    /**
+     * Paged list with the FULL detail mapping (brand/category resolved) — the
+     * backoffice reindex source (F2 STEP 0). Relations are fetch-joined to
+     * avoid N+1 lazy loads across the page.
+     */
+    PageResponse<ProductDetailResponse> findAllDetail(ProductFilter filter, Pageable pageable);
+
     ProductDetailResponse findById(UUID id);
 
     ProductDetailResponse findBySlug(String slug);

@@ -48,7 +48,27 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductSummaryResponse> findAll(ProductFilter filter, Pageable pageable) {
-        Specification<Product> spec = (root, query, cb) -> {
+        Page<Product> page = repo.findAll(filterSpec(filter), pageable);
+        return PageResponse.of(
+            page.map(mapper::toSummaryResponse).getContent(),
+            page.getNumber(),
+            page.getSize(),
+            page.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProductDetailResponse> findAllDetail(ProductFilter filter, Pageable pageable) {
+        Page<Product> page = repo.findAll(filterSpec(filter), pageable);
+        return PageResponse.of(
+            page.map(mapper::toDetailResponse).getContent(),
+            page.getNumber(),
+            page.getSize(),
+            page.getTotalElements());
+    }
+
+    private static Specification<Product> filterSpec(ProductFilter filter) {
+        return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (filter.categoryId() != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), filter.categoryId()));
@@ -61,13 +81,6 @@ public class ProductServiceImpl implements ProductService {
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-
-        Page<Product> page = repo.findAll(spec, pageable);
-        return PageResponse.of(
-            page.map(mapper::toSummaryResponse).getContent(),
-            page.getNumber(),
-            page.getSize(),
-            page.getTotalElements());
     }
 
     @Override
