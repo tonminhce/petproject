@@ -51,7 +51,7 @@
                 CREATE UNIQUE INDEX uk_rating_user_product_live ON ratings (user_id, product_id) WHERE deleted = false;
                 CREATE INDEX idx_ratings_product_live ON ratings (product_id) WHERE deleted = false AND hidden = false;
       - changeSet:
-          id: 001-create-outbox-events
+          id: 002-create-outbox-events
           author: shop-platform
           changes:
             - sql: |
@@ -97,7 +97,7 @@ Request: `GET {url}/api/v1/orders/verify-purchase?userId=&productId=` — `Param
 ### Task 3: submit path + errors + i18n + outbox write
 
 **Files:**
-- Modify: `utils/common-core/.../exception/ErrorCode.java` (append RTG-11001..11005 per spec D7 — flip ORD-4012 `,`→`,`, new last `RATING_ALREADY_EXISTS` gets `;`)
+- Modify: `utils/common-core/.../exception/ErrorCode.java` — **verified tail (2026-08-31): line 121 is `ORDER_PAYMENT_NOT_CAPTURED("ORD-4012", "order.payment.not_captured", HttpStatus.CONFLICT);` — flip its `;`→`,`, append RTG-11001..11005 per spec D7 with `RATING_ALREADY_EXISTS("RTG-11005", …)` as the `;` terminator** (nit #3 pinned)
 - Modify: `utils/common-spring/src/main/resources/messages/messages_en.properties` + `messages_vi.properties` (5 keys `rating.not_eligible` … `rating.already_exists`)
 - Create: `dto/request/RatingSubmitRequest.java` (`@NotNull UUID productId`, `@Min(1)@Max(5) int rating`, `@Size(min=5,max=2000) @NotNull String comment`), `dto/response/RatingResponse.java` (`id, productId, userId, rating, comment, verified, hidden, editedAt, createdAt`)
 - Create: `service/RatingService.java` + `service/impls/RatingServiceImpl.java`
@@ -113,7 +113,7 @@ Request: `GET {url}/api/v1/orders/verify-purchase?userId=&productId=` — `Param
   - `submit_eligible_createsVerifiedRating_outboxRow`: client true → saved rating `verified=true`, one outbox row PENDING, payload contains `"action":"CREATED"`, `"visible":true`, `"avgRating":4.5` (assertEquals on parsed JSON), `"ratingCount":1`.
   - `submit_unverified_whenNotEligibleButAllowed`: N/A — ineligible = hard 403 (spec D1/D6). Instead: `submit_duplicate_conflict` → RTG-11005, no second row, no outbox row.
   - `record_updated_recomputesSnapshot`: rating UPDATED with rating 2 after another user's 5 → payload `avgRating=3.5, ratingCount=2, action=UPDATED`.
-- [ ] **Step 2: run** → RED. **Step 3: implement.** `submit` = `@Transactional`; duplicate check → eligibility → save → `record(rating, CREATED)`. **Step 4: run** → GREEN. **Step 5: commit** `feat(rating): submit path — eligibility, outbox snapshot events, RTG-11xxx errors`
+- [ ] **Step 2: run** → RED. **Step 3: implement.** `submit` = `@Transactional`; duplicate check → eligibility → `saveAndFlush` (**flush REQUIRED before record — the aggregate JPQL in `record()` must see the new row, nit #1**) → `record(rating, CREATED)`; same `saveAndFlush` discipline in the PUT edit path (Task 4) and hide/unhide (Task 5) before `record`. **Step 4: run** → GREEN. **Step 5: commit** `feat(rating): submit path — eligibility, outbox snapshot events, RTG-11xxx errors`
 
 ### Task 4: storefront read + owner edit
 
