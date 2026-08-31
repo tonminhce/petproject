@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
 import com.shop.ratingservice.constant.RatingAction;
 import com.shop.ratingservice.entity.Rating;
+import com.shop.ratingservice.metrics.RatingMetrics;
 import com.shop.ratingservice.outbox.OutboxEvent;
 import com.shop.ratingservice.outbox.OutboxEventRepository;
 import com.shop.ratingservice.repository.RatingRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +40,8 @@ class RatingEventServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RatingEventService(ratingRepository, outboxRepository, objectMapper);
+        service = new RatingEventService(ratingRepository, outboxRepository, objectMapper,
+                new RatingMetrics(new SimpleMeterRegistry()));
     }
 
     private Rating rating(int value, boolean verified, boolean hidden) {

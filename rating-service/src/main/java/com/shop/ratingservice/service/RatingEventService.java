@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
 import com.shop.ratingservice.constant.RatingAction;
 import com.shop.ratingservice.entity.Rating;
+import com.shop.ratingservice.metrics.RatingMetrics;
 import com.shop.ratingservice.outbox.OutboxEvent;
 import com.shop.ratingservice.outbox.OutboxEventRepository;
 import com.shop.ratingservice.repository.RatingRepository;
@@ -40,6 +41,7 @@ public class RatingEventService {
     private final RatingRepository ratingRepository;
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final RatingMetrics ratingMetrics;
 
     /**
      * Joins the caller's transaction (REQUIRED): the snapshot aggregate must
@@ -90,6 +92,10 @@ public class RatingEventService {
         event.setStatus(OutboxStatus.PENDING);
         event.setRetryCount(0);
         outboxRepository.save(event);
+        // Spec D7: incremented after the outbox row write, inside the tx —
+        // every lifecycle write hits record() exactly once, so the counter
+        // commits atomically with the event it counts (rollback = no count).
+        ratingMetrics.recordSubmitted(action);
     }
 
     // JPQL AVG over an integral column returns Double on some Hibernate
