@@ -1,8 +1,10 @@
 package com.shop.ratingservice.service.impls;
 
+import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.ratingservice.constant.RatingAction;
+import com.shop.ratingservice.dto.request.RatingEditRequest;
 import com.shop.ratingservice.dto.request.RatingSubmitRequest;
 import com.shop.ratingservice.dto.response.RatingResponse;
 import com.shop.ratingservice.eligibility.EligibilityClient;
@@ -11,9 +13,13 @@ import com.shop.ratingservice.repository.RatingRepository;
 import com.shop.ratingservice.service.RatingEventService;
 import com.shop.ratingservice.service.RatingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -53,6 +59,33 @@ public class RatingServiceImpl implements RatingService {
         // only sees this row once it is flushed in the current transaction.
         Rating saved = ratingRepository.saveAndFlush(rating);
         ratingEventService.record(saved, RatingAction.CREATED);
+        return RatingResponse.from(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RatingResponse> findVisibleByProductId(UUID productId, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ratingRepository.findByProductIdAndHiddenFalseAndDeletedFalse(productId, pageRequest)
+                .map(RatingResponse::from);
+    }
+
+    @Override
+    @Transactional
+    public RatingResponse edit(UUID jwtUserId, UUID productId, RatingEditRequest request) {
+        Rating rating = ratingRepository.findByUserIdAndProductIdAndDeletedFalse(jwtUserId, productId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.RATING_NOT_FOUND));
+
+        // D6: verified stamped at submit time only — edit preserves it and never
+        // re-checks eligibility; hidden/audit fields are the backoffice's alone.
+        rating.setRating(request.rating());
+        rating.setComment(request.comment());
+        rating.setEditedAt(Instant.now());
+
+        // NIT #1: flush REQUIRED before record() — same discipline as submit.
+        Rating saved = ratingRepository.saveAndFlush(rating);
+        ratingEventService.record(saved, RatingAction.UPDATED);
         return RatingResponse.from(saved);
     }
 }
