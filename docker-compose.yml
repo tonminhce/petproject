@@ -374,8 +374,15 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shippingservice
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SHIPMENT_AUTO_DELIVER_DAYS: ${SHIPMENT_AUTO_DELIVER_DAYS:-7}
+      SHIPPING_NOTIFY_THRESHOLD_HOURS: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:-72}
+      SHOP_SHIPPING_CARRIER: ${SHOP_SHIPPING_CARRIER:-manual}
+      SHIPMENT_WEBHOOK_SECRET_GHN: ${SHIPMENT_WEBHOOK_SECRET_GHN:-}
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     healthcheck:
       <<: *hc-defaults
