@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -162,6 +163,12 @@ public abstract class AbstractOrderServiceIT {
             .willReturn(okJson("""
                 {"success":true,"code":"OK","data":{"taxAmount":0,"appliedRate":0}}
                 """)));
+        // Deterministic Redis cache state per test (defense-in-depth against
+        // cross-test/cross-class pollution — e.g. ConfirmOrchestrationIT reuses
+        // class-fixed product ids; with immediate cache writes each clear is
+        // synchronous, so it is visible before the test body runs).
+        var cache = cacheManager.getCache("productPrice");
+        if (cache != null) cache.clear();
     }
 
     @AfterEach
@@ -178,6 +185,8 @@ public abstract class AbstractOrderServiceIT {
     @Autowired protected OutboxEventRepository outboxEventRepository;
     @Autowired protected IdempotencyKeyRepository idempotencyKeyRepository;
     @Autowired protected ProductServiceClient productServiceClient;
+    @Autowired
+    private CacheManager cacheManager;
 
     /**
      * Seeds a SERVICE/ADMIN-grade principal (JWT subject = adminId) for MockMvc calls —

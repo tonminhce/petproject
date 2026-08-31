@@ -51,6 +51,25 @@ if (cache != null) cache.clear();
 - [ ] **Step 4:** `./mvnw -pl order-service test` full suite green (with the 50x multiplier).
 - [ ] **Step 5: commit** `fix(order-it): deterministic Redis state for productPrice cache (pre-existing flake fix)`
 
+**Amendment (root cause, evidence-based).** Implementation revealed the per-test `cache.clear()`
+alone could NOT kill the flake: Redis MONITOR wire evidence (see
+`cache-flake-root-cause-verdict.md`) proved the real root cause is spring-data-redis 4.1.1's
+`DefaultRedisCacheWriter` defaulting to `asynchronousWrites=true` — the `@Cacheable` PUT is
+dispatched fire-and-forget on a Netty/Reactor event-loop thread (reactive connection), so the
+test's second `getProduct()` races its own first call's cache write by tens of µs (13/50
+iterations saw `GET#2 BEFORE SET` → duplicate HTTP fetch → `verify(1)` "received 2"). The
+fix therefore has three legs: (1) `CacheConfig` supplies an explicit
+`RedisCacheWriter.create(factory, c -> c.immediateWrites())` via
+`RedisCacheManagerBuilder.cacheWriter(...)` — no Boot property exists for this — restoring
+synchronous put/clear semantics (serializer config, TTL, statistics, `.transactionAware()`
+unchanged; `enableStatistics()` still wraps the custom writer via `withStatisticsCollector`);
+(2) the repeated test's `productId` stays fresh per iteration (`@BeforeEach`
+`UUID.randomUUID()`, new instance per repetition) so no stale entry can alias across
+iterations; (3) the `cache.clear()` in `AbstractOrderServiceIT` stays as defense-in-depth for
+cross-test/cross-class pollution (e.g. `ConfirmOrchestrationIT` reuses class-fixed product
+ids) — and is itself synchronous under immediate writes. Spec rule 6 codifies the writer
+requirement fleet-wide.
+
 ### Task 2: fleet sweep — other shared caches
 
 **Files:**

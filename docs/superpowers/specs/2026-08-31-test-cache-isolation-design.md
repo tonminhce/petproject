@@ -34,6 +34,16 @@ The CCE-on-cached-record bug was a DIFFERENT failure mode (regression-guarded by
    (astronomically improbable); blanket `cache.clear()` per test is the whole fix.
 5. New `@Cacheable` introduced by any future epic ⇒ same epic's IT base gets the
    matching `clear()` line + a repeated-test proof on its cache-hit assertion.
+6. **Any `RedisCacheManager` in this fleet MUST configure immediateWrites**
+   (`RedisCacheWriter.create(connectionFactory, c -> c.immediateWrites())` wired via
+   `RedisCacheManagerBuilder.cacheWriter(...)` — see order-service `CacheConfig`).
+   spring-data-redis 4.1.1 defaults the writer to asynchronous writes: the `@Cacheable`
+   PUT is fire-and-forget on a Netty/Reactor event-loop thread, so a same-transaction
+   (or same-request) reader racing it by tens of µs misses and re-fetches downstream
+   (Redis MONITOR wire evidence: `GET#2 BEFORE SET` in 13/50 iterations). No Boot
+   `spring.cache.redis.*` property exists for this. Note `clear()` is async under the
+   default too — immediate writes make the IT-base per-test `cache.clear()` (rule 1)
+   synchronous as well. New caching services copy order-service `CacheConfig`.
 
 ## Fleet sweep obligation
 
