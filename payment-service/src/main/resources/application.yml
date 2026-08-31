@@ -23,6 +23,15 @@ shop:
   kafka:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
+  # common-storage auto-config creates the S3 client + ensures the bucket at
+  # startup; point it at RustFS in compose (see docker-compose payment stanza).
+  # Key defaults mirror StorageProperties so no-env local runs still boot.
+  storage:
+    endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
+    access-key: ${STORAGE_ACCESS_KEY:rustfsadmin}
+    secret-key: ${STORAGE_SECRET_KEY:rustfsadmin}
+    bucket: ${STORAGE_BUCKET:shop-payments}
+
   payment:
     provider: ${PAYMENT_PROVIDER:mock}
     webhook:

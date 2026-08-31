@@ -356,10 +356,17 @@ services:
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-local-test-secret}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      # Receipt storage on RustFS (same env style as media-service; dedicated bucket)
+      STORAGE_ENDPOINT: http://rustfs:9000
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_BUCKET: shop-payments
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      rustfs:
         condition: service_healthy
     healthcheck:
       <<: *hc-defaults
