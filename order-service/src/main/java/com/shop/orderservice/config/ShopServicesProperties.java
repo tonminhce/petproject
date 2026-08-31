@@ -13,6 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param inventory  base URL of inventory-service
  * @param tax        base URL of tax-service
  * @param promotion  base URL of promotion-service
+ * @param payment    base URL of payment-service
  * @param keycloak   client_credentials settings (token-url, client-id, client-secret)
  */
 @ConfigurationProperties(prefix = "shop.services")
@@ -21,6 +22,7 @@ public record ShopServicesProperties(
         Service inventory,
         Service tax,
         Service promotion,
+        Service payment,
         Keycloak keycloak
 ) {
 

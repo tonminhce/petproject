@@ -38,6 +38,7 @@ class OrderServiceImplTest {
     @Mock CartItemRepository cartItemRepository;
     @Mock PricingService pricingService;
     @Mock com.shop.orderservice.client.PromotionServiceClient promotionClient;
+    @Mock com.shop.orderservice.client.PaymentServiceClient paymentClient;
     @Mock StockReservationService stockReservationService;
     @Mock OrderEventPublisher orderEventPublisher;
     @Mock IdempotencyService idempotencyService;
@@ -266,6 +267,102 @@ class OrderServiceImplTest {
         assertThat(order.getConfirmedAt()).isNotNull();
         verify(commitCoordinator).commitForConfirm(order, List.of());
         verify(orderEventPublisher).publishStatusChanged(order);
+    }
+
+    // ========================================================================
+    // CONFIRM — payment-captured guard (order-wiring D1, flag-gated)
+    // ========================================================================
+
+    @Test
+    void confirmOrder_flagOff_bypassesPaymentGuard() {
+        stubConfirmHappy();
+
+        OrderResponse result = service.confirmOrder(orderId, adminId, null);
+
+        assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
+        verify(paymentClient).isEnabled();  // flag consulted...
+        verify(paymentClient, never()).findCapturedByOrderId(any());  // ...lookup never made
+        verify(commitCoordinator).commitForConfirm(order, List.of());
+    }
+
+    @Test
+    void confirmOrder_flagOn_capturedPayment_proceedsToCommit() {
+        stubConfirmHappy();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
+                orderId, "CAPTURED", UUID.randomUUID())));
+
+        OrderResponse result = service.confirmOrder(orderId, adminId, null);
+
+        assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(order.getConfirmedAt()).isNotNull();
+        verify(commitCoordinator).commitForConfirm(order, List.of());
+    }
+
+    @Test
+    void confirmOrder_flagOn_pendingPayment_rejectedOrd4012_beforeCommit() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
+                orderId, "PENDING", UUID.randomUUID())));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4012"));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(order.getConfirmedAt()).isNull();
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+        verify(orderRepository, never()).save(any());
+        verify(orderEventPublisher, never()).publishStatusChanged(any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_refundedPayment_rejectedOrd4012() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
+                orderId, "REFUNDED", UUID.randomUUID())));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4012"));
+
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_noPaymentAtAll_rejectedOrd4012() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4012"));
+
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_clientFailure_mapsToOrd4012_neverLeaksRawException() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenThrow(new RuntimeException("payment-service down"));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo("ORD-4012");
+                    assertThat(ex.getMessage()).doesNotContain("payment-service down");
+                });
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
     }
 
     @Test

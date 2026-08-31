@@ -51,6 +51,10 @@ shop:
       url: ${PROMOTION_SERVICE_URL:http://localhost:8093}
       timeout-ms: 3000
       enabled: ${PROMOTION_SERVICE_ENABLED:false}  # MVP default false
+    payment:
+      url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+      timeout-ms: 3000
+      enabled: ${PAYMENT_SERVICE_ENABLED:false}  # order-wiring D1 — payment-captured confirm gate, default off until payment-service ships
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${ORDER_SERVICE_CLIENT_ID:order-service}
