@@ -1,10 +1,11 @@
-package com.shop.searchservice.service;
+package com.shop.searchservice.service.impls;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.searchservice.dto.response.ReindexResponse;
+import com.shop.searchservice.service.ReindexService;
 import com.shop.searchservice.support.AbstractSearchIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

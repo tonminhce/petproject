@@ -1,6 +1,7 @@
 package com.shop.searchservice.client;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.ApiResponse;
@@ -53,7 +54,7 @@ public class ProductBackofficeClient {
     public PageResponse<ProductSnapshot> fetchPage(int page, int size) {
         try {
             ApiResponse<PageResponse<ProductSnapshot>> resp = restClient.get()
-                .uri(uriBuilder -> uriBuilder.path("/api/v1/backoffice/products")
+                .uri(uriBuilder -> uriBuilder.path(ApiPaths.BACKOFFICE_PRODUCTS)
                     .queryParam("page", page)
                     .queryParam("size", size)
                     .queryParam("status", "ACTIVE")

@@ -2,7 +2,6 @@ package com.shop.searchservice.kafka;
 
 import com.shop.common.kafka.config.KafkaProperties;
 import com.shop.common.kafka.consumer.BaseKafkaListenerConfig;
-import com.shop.searchservice.kafka.dto.ProductLifecycleEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;

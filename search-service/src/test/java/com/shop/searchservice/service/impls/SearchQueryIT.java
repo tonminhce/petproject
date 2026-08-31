@@ -1,9 +1,11 @@
-package com.shop.searchservice.service;
+package com.shop.searchservice.service.impls;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import com.shop.searchservice.dto.request.SearchParams;
+import com.shop.searchservice.dto.request.SearchRequest;
 import com.shop.searchservice.dto.response.ProductSearchResponse;
-import com.shop.searchservice.kafka.dto.ProductLifecycleEvent;
+import com.shop.searchservice.kafka.ProductLifecycleEvent;
+import com.shop.searchservice.service.ProductSearchService;
+import com.shop.searchservice.service.SearchQueryService;
 import com.shop.searchservice.support.AbstractSearchIntegrationTest;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,8 +97,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         return content.stream().map(ProductSearchResponse::id).toList();
     }
 
-    private static SearchParams params() {
-        return new SearchParams();
+    private static SearchRequest params() {
+        return new SearchRequest(null, null, null, null, null, null, null, null, null);
     }
 
     private double counter(String sort) {
@@ -109,10 +111,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("q relevance: title match ranks above description match")
     void relevance_titleMatchRanksAboveDescriptionMatch() {
-        SearchParams params = params();
-        params.setQ("laser");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest("laser", null, null, null, null, null, null, null, null)).content());
 
         assertThat(result).containsExactly(P1, P2);
     }
@@ -122,10 +122,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("brandId filter narrows to the brand's products")
     void filter_brandId_narrowsToBrand() {
-        SearchParams params = params();
-        params.setBrandId(BRAND_A);
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, BRAND_A, null, null, null, null, null, null, null)).content());
 
         assertThat(result).containsExactlyInAnyOrder(P1, P2);
     }
@@ -133,10 +131,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("categoryId filter narrows to the category's products")
     void filter_categoryId_narrowsToCategory() {
-        SearchParams params = params();
-        params.setCategoryId(CAT_X);
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, CAT_X, null, null, null, null, null, null)).content());
 
         assertThat(result).containsExactlyInAnyOrder(P1, P3);
     }
@@ -144,11 +140,9 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("minPrice/maxPrice range filter is inclusive on both bounds")
     void filter_priceRange_boundsInclusive() {
-        SearchParams params = params();
-        params.setMinPrice(new BigDecimal("20.00"));
-        params.setMaxPrice(new BigDecimal("30.00"));
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, new BigDecimal("20.00"), new BigDecimal("30.00"),
+                null, null, null, null)).content());
 
         assertThat(result).containsExactlyInAnyOrder(P2, P3, P5);
     }
@@ -156,10 +150,9 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("minRating filter excludes below-threshold and never-rated docs")
     void filter_minRating_excludesNeverRatedDocs() {
-        SearchParams params = params();
-        params.setMinRating(new BigDecimal("4.0"));
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, new BigDecimal("4.0"),
+                null, null, null)).content());
 
         assertThat(result).containsExactlyInAnyOrder(P1, P4);
     }
@@ -169,10 +162,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("sort=price_asc orders by price ascending")
     void sort_priceAsc() {
-        SearchParams params = params();
-        params.setSort("price_asc");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, "price_asc", null, null)).content());
 
         assertThat(result).containsExactly(P1, P3, P5, P2, P4);
     }
@@ -180,10 +171,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("sort=price_desc orders by price descending")
     void sort_priceDesc() {
-        SearchParams params = params();
-        params.setSort("price_desc");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, "price_desc", null, null)).content());
 
         assertThat(result).containsExactly(P4, P2, P5, P3, P1);
     }
@@ -191,10 +180,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("sort=rating_desc orders by avgRating desc with never-rated docs last")
     void sort_ratingDesc_placesNeverRatedLast() {
-        SearchParams params = params();
-        params.setSort("rating_desc");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, "rating_desc", null, null)).content());
 
         assertThat(result).containsExactly(P4, P1, P2, P5, P3);
     }
@@ -202,10 +189,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("sort=newest orders by updatedAt desc")
     void sort_explicitNewest_ordersByUpdatedAtDesc() {
-        SearchParams params = params();
-        params.setSort("newest");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, "newest", null, null)).content());
 
         assertThat(result).containsExactly(P5, P4, P3, P2, P1);
     }
@@ -215,10 +200,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("F3: q present + no sort param orders by relevance")
     void f3_qPresent_noSort_ordersByRelevance() {
-        SearchParams params = params();
-        params.setQ("laser");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest("laser", null, null, null, null, null, null, null, null)).content());
 
         assertThat(result).containsExactly(P1, P2);
     }
@@ -226,11 +209,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("F3: explicit sort param wins over the relevance default when q present")
     void f3_qPresent_explicitNewestWinsOverRelevance() {
-        SearchParams params = params();
-        params.setQ("laser");
-        params.setSort("newest");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest("laser", null, null, null, null, null, "newest", null, null)).content());
 
         assertThat(result).containsExactly(P2, P1);
     }
@@ -238,10 +218,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("F3: empty q + explicit sort=relevance falls back to newest (never _score on match_all)")
     void f3_emptyQ_explicitRelevance_fallsBackToNewest() {
-        SearchParams params = params();
-        params.setSort("relevance");
-
-        List<UUID> result = ids(searchQueryService.search(params).content());
+        List<UUID> result = ids(searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, "relevance", null, null)).content());
 
         assertThat(result).containsExactly(P5, P4, P3, P2, P1);
     }
@@ -260,9 +238,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("pagination slices pages with correct totals and first/last flags")
     void pagination_slicesPagesAndTotals() {
-        SearchParams page0 = params();
-        page0.setSize(2);
-        var first = searchQueryService.search(page0);
+        var first = searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, null, 0, 2));
 
         assertThat(ids(first.content())).containsExactly(P5, P4);
         assertThat(first.totalElements()).isEqualTo(5);
@@ -270,10 +247,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(first.first()).isTrue();
         assertThat(first.last()).isFalse();
 
-        SearchParams page2 = params();
-        page2.setSize(2);
-        page2.setPage(2);
-        var lastPage = searchQueryService.search(page2);
+        var lastPage = searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, null, 2, 2));
 
         assertThat(ids(lastPage.content())).containsExactly(P1);
         assertThat(lastPage.first()).isFalse();
@@ -283,10 +258,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Test
     @DisplayName("size over the 200 cap is clamped without error")
     void sizeCap_overLimit_isClampedWithoutError() {
-        SearchParams params = params();
-        params.setSize(1000);
-
-        var page = searchQueryService.search(params);
+        var page = searchQueryService.search(
+            new SearchRequest(null, null, null, null, null, null, null, null, 1000));
 
         assertThat(page.totalElements()).isEqualTo(5);
         assertThat(page.content()).hasSize(5);
@@ -334,9 +307,8 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(counter("newest")).isEqualTo(newestBefore + 1.0d);
 
         double relevanceBefore = counter("relevance");
-        SearchParams params = params();
-        params.setQ("laser");
-        searchQueryService.search(params);
+        searchQueryService.search(
+            new SearchRequest("laser", null, null, null, null, null, null, null, null));
         assertThat(counter("relevance")).isEqualTo(relevanceBefore + 1.0d);
     }
 }

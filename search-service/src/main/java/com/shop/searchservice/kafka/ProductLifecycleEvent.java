@@ -1,4 +1,4 @@
-package com.shop.searchservice.kafka.dto;
+package com.shop.searchservice.kafka;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

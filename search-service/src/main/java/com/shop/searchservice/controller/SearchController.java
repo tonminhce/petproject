@@ -3,7 +3,7 @@ package com.shop.searchservice.controller;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
-import com.shop.searchservice.dto.request.SearchParams;
+import com.shop.searchservice.dto.request.SearchRequest;
 import com.shop.searchservice.dto.response.ProductSearchResponse;
 import com.shop.searchservice.service.SearchQueryService;
 import jakarta.validation.Valid;
@@ -30,7 +30,7 @@ public class SearchController {
 
     @GetMapping
     public ApiResponse<PageResponse<ProductSearchResponse>> search(
-            @Valid @ModelAttribute SearchParams params) {
-        return ApiResponse.ok(searchQueryService.search(params));
+            @Valid @ModelAttribute SearchRequest request) {
+        return ApiResponse.ok(searchQueryService.search(request));
     }
 }

@@ -1,4 +1,4 @@
-package com.shop.searchservice.service;
+package com.shop.searchservice.service.impls;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
@@ -34,12 +34,12 @@ class ReindexServiceTest {
 
     private final ElasticsearchClient client = mock(ElasticsearchClient.class);
     private final ProductBackofficeClient productClient = mock(ProductBackofficeClient.class);
-    private final ReindexService service = new ReindexService(client, productClient);
+    private final ReindexServiceImpl service = new ReindexServiceImpl(client, productClient);
 
     @Test
     void dryRun_esErrorOnAliasLookup_mapsTo503Srh12002() throws IOException {
-        when(productClient.fetchPage(anyInt(), eq(ReindexService.SOURCE_PAGE_SIZE)))
-            .thenReturn(PageResponse.of(List.of(), 0, ReindexService.SOURCE_PAGE_SIZE, 0));
+        when(productClient.fetchPage(anyInt(), eq(ReindexServiceImpl.SOURCE_PAGE_SIZE)))
+            .thenReturn(PageResponse.of(List.of(), 0, ReindexServiceImpl.SOURCE_PAGE_SIZE, 0));
 
         ElasticsearchException esError = new ElasticsearchException("indices.get_alias",
             ErrorResponse.of(e -> e.status(502)

@@ -1,7 +1,6 @@
 package com.shop.searchservice.kafka;
 
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
-import com.shop.searchservice.kafka.dto.ProductLifecycleEvent;
 import com.shop.searchservice.service.ProductSearchService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.MessageHeaders;

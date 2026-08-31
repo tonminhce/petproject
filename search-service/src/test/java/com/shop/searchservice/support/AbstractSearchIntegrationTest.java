@@ -8,19 +8,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestSecurityConfig.class)
 public abstract class AbstractSearchIntegrationTest {
-
-    @SuppressWarnings("resource")
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
-        .withDatabaseName("search_test")
-        .withUsername("test")
-        .withPassword("test");
 
     @SuppressWarnings("resource")
     static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
@@ -34,16 +27,12 @@ public abstract class AbstractSearchIntegrationTest {
         .withStartupTimeout(Duration.ofMinutes(3));
 
     static {
-        postgres.start();
         kafka.start();
         elasticsearch.start();
     }
 
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
         registry.add("elasticsearch.url", elasticsearch::getHttpHostAddress);

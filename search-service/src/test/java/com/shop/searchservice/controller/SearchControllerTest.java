@@ -5,7 +5,7 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.security.config.SecurityAutoConfiguration;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
-import com.shop.searchservice.dto.request.SearchParams;
+import com.shop.searchservice.dto.request.SearchRequest;
 import com.shop.searchservice.dto.response.ProductSearchResponse;
 import com.shop.searchservice.service.SearchQueryService;
 import org.junit.jupiter.api.Test;
@@ -89,11 +89,11 @@ class SearchControllerTest {
             .andExpect(jsonPath("$.data.content[0].avgRating").value(4.5))
             .andExpect(jsonPath("$.data.totalElements").value(5));
 
-        ArgumentCaptor<SearchParams> captor = ArgumentCaptor.forClass(SearchParams.class);
+        ArgumentCaptor<SearchRequest> captor = ArgumentCaptor.forClass(SearchRequest.class);
         verify(searchQueryService).search(captor.capture());
-        assertThat(captor.getValue().getPage()).isEqualTo(0);
-        assertThat(captor.getValue().getSize()).isEqualTo(20);
-        assertThat(captor.getValue().getQ()).isNull();
+        assertThat(captor.getValue().page()).isEqualTo(0);
+        assertThat(captor.getValue().size()).isEqualTo(20);
+        assertThat(captor.getValue().q()).isNull();
     }
 
     @Test
@@ -113,18 +113,18 @@ class SearchControllerTest {
                     .with(customer()))
             .andExpect(status().isOk());
 
-        ArgumentCaptor<SearchParams> captor = ArgumentCaptor.forClass(SearchParams.class);
+        ArgumentCaptor<SearchRequest> captor = ArgumentCaptor.forClass(SearchRequest.class);
         verify(searchQueryService).search(captor.capture());
-        SearchParams forwarded = captor.getValue();
-        assertThat(forwarded.getQ()).isEqualTo("mouse");
-        assertThat(forwarded.getBrandId()).isEqualTo(UUID.fromString("b1000000-0000-0000-0000-00000000000a"));
-        assertThat(forwarded.getCategoryId()).isEqualTo(UUID.fromString("c1000000-0000-0000-0000-00000000000a"));
-        assertThat(forwarded.getMinPrice()).isEqualByComparingTo("10");
-        assertThat(forwarded.getMaxPrice()).isEqualByComparingTo("50");
-        assertThat(forwarded.getMinRating()).isEqualByComparingTo("3.5");
-        assertThat(forwarded.getSort()).isEqualTo("price_asc");
-        assertThat(forwarded.getPage()).isEqualTo(2);
-        assertThat(forwarded.getSize()).isEqualTo(50);
+        SearchRequest forwarded = captor.getValue();
+        assertThat(forwarded.q()).isEqualTo("mouse");
+        assertThat(forwarded.brandId()).isEqualTo(UUID.fromString("b1000000-0000-0000-0000-00000000000a"));
+        assertThat(forwarded.categoryId()).isEqualTo(UUID.fromString("c1000000-0000-0000-0000-00000000000a"));
+        assertThat(forwarded.minPrice()).isEqualByComparingTo("10");
+        assertThat(forwarded.maxPrice()).isEqualByComparingTo("50");
+        assertThat(forwarded.minRating()).isEqualByComparingTo("3.5");
+        assertThat(forwarded.sort()).isEqualTo("price_asc");
+        assertThat(forwarded.page()).isEqualTo(2);
+        assertThat(forwarded.size()).isEqualTo(50);
     }
 
     // --- validation ---
@@ -201,7 +201,7 @@ class SearchControllerTest {
             .andExpect(jsonPath("$.code").value("SRH-12002"));
     }
 
-    private static SearchParams anyParams() {
-        return org.mockito.ArgumentMatchers.any(SearchParams.class);
+    private static SearchRequest anyParams() {
+        return org.mockito.ArgumentMatchers.any(SearchRequest.class);
     }
 }

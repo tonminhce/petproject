@@ -1,11 +1,11 @@
 package com.shop.searchservice.dto.request;
 
+import com.shop.common.core.constants.PageableConstant;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -14,31 +14,39 @@ import java.util.UUID;
  * Query-string parameters for {@code GET /api/v1/search} (spec D5).
  * {@code status} is deliberately absent — only ACTIVE docs are indexed (D3).
  */
-@Data
-public class SearchParams {
-
+public record SearchRequest(
     @Size(max = 200)
-    private String q;
+    String q,
 
-    private UUID brandId;
+    UUID brandId,
 
-    private UUID categoryId;
+    UUID categoryId,
 
-    private BigDecimal minPrice;
+    BigDecimal minPrice,
 
-    private BigDecimal maxPrice;
+    BigDecimal maxPrice,
 
-    private BigDecimal minRating;
+    BigDecimal minRating,
 
     /** relevance (default) | price_asc | price_desc | rating_desc | newest */
     @Pattern(regexp = "relevance|price_asc|price_desc|rating_desc|newest")
-    private String sort;
+    String sort,
 
+    /** 49 × 200 + 200 = 10,000 — the ES {@code index.max_result_window} edge. */
     @PositiveOrZero
     @Max(49)
-    private int page = 0;
+    Integer page,
 
     @Min(1)
-    @Max(200)
-    private int size = 20;
+    @Max(PageableConstant.MAX_PAGE_SIZE)
+    Integer size
+) {
+    public SearchRequest {
+        if (page == null) {
+            page = 0;
+        }
+        if (size == null) {
+            size = 20;
+        }
+    }
 }
