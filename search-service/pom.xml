@@ -22,6 +22,12 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!-- common-kafka is <optional> in common-spring → declare it explicitly to get
+             BaseKafkaConsumer/BaseKafkaListenerConfig + the shop.kafka.* binding. -->
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-kafka</artifactId>
+        </dependency>
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>
@@ -75,6 +81,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-elasticsearch</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
