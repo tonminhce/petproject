@@ -164,7 +164,7 @@ changes**. Keycloak: `rating-service` client provisioned at ops time (§4).
    `avgRating`/`ratingCount` after consumer tick; `PUT` edit; admin hide → product
    aggregate drops the rating on next event.
 2. Consumer contract: value = JSON string-wrapped envelope (fleet unwrap-once rule);
-   consumer must tolerate replay (snapshot copy) and unknown productIds.
+   consumer must tolerate replay (snapshot copy) and unknown productIds. Poison records: `ErrorHandlingDeserializer` + log-and-skip with offset advance — fleet `BaseKafkaListenerConfig` default handler, NO dead-letter topic (ratified T8/T10).
 3. Provision `rating-service` Keycloak client (client-credentials, service-account
    role `SERVICE`) — same manual step as every other service client (realm import gap
    is fleet-wide, §5). `rating-service` client — provisioned manually like every
