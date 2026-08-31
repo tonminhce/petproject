@@ -19,8 +19,13 @@ public class ElasticsearchConfig {
 
     private final SearchProperties properties;
 
-    @Bean
-    public ElasticsearchClient elasticsearchClient() {
+    /**
+     * Managed low-level client so Spring invokes {@link RestClient#close()} on
+     * context shutdown, stopping the async I/O reactor thread (T1 review
+     * finding 1 — an inline builder would leak it past shutdown).
+     */
+    @Bean(destroyMethod = "close")
+    public RestClient elasticsearchRestClient() {
         RestClientBuilder builder = RestClient.builder(HttpHost.create(properties.url()))
             .setRequestConfigCallback(rc -> rc
                 .setConnectTimeout(3000)
@@ -33,6 +38,12 @@ public class ElasticsearchConfig {
             builder.setHttpClientConfigCallback(hc -> hc.setDefaultCredentialsProvider(credentials));
         }
 
-        return new ElasticsearchClient(new RestClientTransport(builder.build(), new JacksonJsonpMapper()));
+        return builder.build();
+    }
+
+    @Bean
+    public ElasticsearchClient elasticsearchClient(RestClient elasticsearchRestClient) {
+        return new ElasticsearchClient(
+            new RestClientTransport(elasticsearchRestClient, new JacksonJsonpMapper()));
     }
 }
