@@ -4,6 +4,7 @@ import com.shop.common.spring.autoconfigure.JpaAuditingAutoConfiguration;
 import com.shop.common.spring.test.TestSecurityConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -11,6 +12,10 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base class for full-context integration tests — mirrors product-service's
@@ -78,4 +83,27 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     protected ApplicationContext applicationContext;
+
+    /**
+     * Rule 1 (test-cache-isolation fleet spec): every IT base that boots a
+     * cache-capable context MUST reset cache state in {@code @BeforeEach}. This
+     * base runs cache-free ({@code spring.cache.type=none}, no Redis
+     * container), so the clear below is currently a synchronous no-op — it
+     * exists so any future cache-capable subclass inherits deterministic
+     * per-test cache state for the {@code inventory} {@code @Cacheable} name in
+     * {@code CacheConfig}. {@code required = false} + null guards keep it
+     * harmless even when no {@code CacheManager} bean exists; with immediate
+     * cache writes each clear is synchronous, visible before the test body.
+     */
+    @Autowired(required = false)
+    private CacheManager cacheManager;
+
+    @BeforeEach
+    void clearCaches() {
+        if (cacheManager == null) {
+            return;
+        }
+        var cache = cacheManager.getCache("inventory");
+        if (cache != null) cache.clear();
+    }
 }
