@@ -113,6 +113,12 @@ changes.
    no defaults.
 4. Event contract (D2): additive-only enrichment; eventType strings unchanged;
    per-product partition ordering (aggregateId=productId) — consumers may rely on it.
+5. **Primary consumer**: search-service is the ONLY production consumer of
+   `shop.product.lifecycle.v1` as of this epic. Future consumers MUST use
+   `@JsonIgnoreProperties(ignoreUnknown = true)` on their DTOs and tolerate unknown
+   eventTypes (ack-skip) — forward/backward compat rule for any new subscriber; new
+   payload fields ship additive and consumers roll out +1 release before relying on
+   them (rollback-safe).
 
 ## §5 Non-goals (binding)
 
