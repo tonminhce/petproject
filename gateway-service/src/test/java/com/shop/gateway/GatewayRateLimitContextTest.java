@@ -67,7 +67,7 @@ class GatewayRateLimitContextTest {
     void everyBackendRouteHasRateLimiterFilter() {
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(15);
+        assertThat(routes).hasSize(17);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).hasSize(1));
     }
 }

@@ -80,3 +80,58 @@ gateway webhook exposure for real carriers.
 
 Auto-ship; payment simulation wiring into E2E happy path (ops checklist
 item); customer-facing payment history; dispute flows; retry DLQs.
+
+## 4. Ops & Contracts (D7 + D4 verification notes)
+
+### Webhook exposure (as built — supersedes D4's URL sketch)
+
+The gateway forwards the **full request path unchanged** (no StripPrefix on
+any `ServiceRoute`), so the exposed webhook URLs are exact-prefix routes,
+not `/payments/...`-prefixed ones:
+
+- PSP → payment-service: `POST {gateway}/api/v1/webhooks/payments/{provider}`
+- Carrier → shipping-service: `POST {gateway}/api/v1/webhooks/shipping/{carrier}`
+
+Both prefixes are gateway `public-endpoints` (no edge JWT) — **HMAC-SHA256 in
+`X-Webhook-Signature` over the raw body is the sole authentication**, verified
+service-side (payment rejects pre-persist on bad signature; shipping rejects
+before persisting). Rate limiting applies on these routes like any other.
+
+### Unwrap-once footgun (D7a)
+
+`shop.{payment,shipping}.lifecycle.v1` (and order lifecycle, same pattern):
+the outbox stores `writeValueAsString(envelope)` and the relay publishes that
+**String** through `JsonKafkaSerializer` — so the record value is a
+JSON-encoded *string* wrapping the event envelope, not a bare JSON object.
+The common-kafka consumer stack (`BaseKafkaListenerConfig` +
+`ErrorHandlingDeserializer(JsonDeserializer<V>)`, notification/order proof)
+handles this transparently. Any custom/raw consumer (e.g. `kafka-console-consumer`,
+`V = String`, or a non-Java client) gets the envelope as escaped JSON text and
+must **unwrap once** (parse the string, then read the envelope) before use.
+
+### CANCELLED outside the advance matrix (D7b)
+
+Shipping's `advance.count{from,to}` matrix intentionally has **no
+CANCELLED edges**: cancellation is an ops-side exit, not forward progress.
+A `CANCELLED` shipment never advances via webhooks; order-side cancellation
+coordination is future work. Metrics dashboards must not read cancelled
+volume out of `advance.count`.
+
+### Ops checklist (post-verify activation)
+
+1. **Enable the payment confirm gate** — in `docker-compose.yml` order stanza,
+   set `PAYMENT_SERVICE_ENABLED: ${PAYMENT_SERVICE_ENABLED:-false}` → `true`
+   (env override or edit). Guard is fail-closed (`ORD-4012` 409 on
+   non-CAPTURED/unreachable), so orders cannot confirm until payment-service
+   is healthy. Property path: `shop.services.payment.enabled`.
+2. **Smoke**: create payment `POST /api/v1/payments` → mock capture
+   (`PAYMENT_PROVIDER=mock`, `POST /api/v1/payments/{id}/capture`) → signed
+   CAPTURED webhook (or capture endpoint) → confirm order succeeds.
+3. **Carrier webhook base URLs** go through the gateway (URLs above); point
+   GHN/GHTK/PSP dashboards at the gateway host, never at service ports.
+4. **Webhook secrets**: payment `PAYMENT_WEBHOOK_SECRET` (default
+   `local-test-secret` — override in any non-local env), shipping
+   `SHIPMENT_WEBHOOK_SECRET_GHN` / `SHIPMENT_WEBHOOK_SECRET_GHTK`. Rotation
+   is env-set + service restart; the carrier must switch secrets in lockstep
+   (single-secret verification, no dual-accept window — expect rejected
+   deliveries during the switch, which carriers retry).

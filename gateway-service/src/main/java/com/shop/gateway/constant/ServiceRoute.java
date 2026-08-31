@@ -14,6 +14,8 @@ public enum ServiceRoute {
     PAYMENT("payment-service", "payments", "payment-service", 8085),
     PRODUCT("product-service", "products", "product-service", 8086),
     SHIPPING("shipping-service", "shipping", "shipping-service", 8087),
+    PAYMENT_WEBHOOK("payment-webhooks", "webhooks/payments", "payment-service", 8085),
+    SHIPPING_WEBHOOK("shipping-webhooks", "webhooks/shipping", "shipping-service", 8087),
     RATING("rating-service", "ratings", "rating-service", 8089),
     NOTIFICATION("notification-service", "notifications", "notification-service", 8090),
     TAX("tax-service", "tax", "tax-service", 8091),
