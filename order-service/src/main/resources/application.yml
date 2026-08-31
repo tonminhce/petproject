@@ -33,6 +33,9 @@ shop:
   kafka:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer: { acks: all, retries: 3 }
+    consumer:
+      group-id: order-service
+      auto-offset-reset: latest
   security:
     public-paths: []
 
