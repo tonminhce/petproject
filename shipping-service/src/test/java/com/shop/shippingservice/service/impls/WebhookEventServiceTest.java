@@ -9,6 +9,7 @@ import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.entity.ShipmentEvent;
 import com.shop.shippingservice.repository.ShipmentEventRepository;
 import com.shop.shippingservice.repository.ShipmentRepository;
+import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.WebhookEventWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,7 @@ class WebhookEventServiceTest {
     @Mock ShipmentRepository shipments;
     @Mock ShipmentEventRepository events;
     @Mock WebhookEventWriter writer;
+    @Mock ShippingMetrics metrics;
 
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -65,7 +67,7 @@ class WebhookEventServiceTest {
     void setUp() {
         ShippingWebhookProperties properties = new ShippingWebhookProperties();
         properties.setSecrets(Map.of(CARRIER.name(), SECRET));
-        service = new WebhookEventServiceImpl(properties, shipments, events, writer, objectMapper, clock);
+        service = new WebhookEventServiceImpl(properties, shipments, events, writer, objectMapper, clock, metrics);
     }
 
     private static String hmacHex(String secret, byte[] body) {
@@ -131,6 +133,9 @@ class WebhookEventServiceTest {
         assertThat(shipmentCaptor.getValue().getDeliveredAt()).isNull();
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo("PROCESSED");
         assertThat(eventCaptor.getValue().getShipmentId()).isEqualTo(shipment.getId());
+        verify(metrics).recordAdvance(ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT);
+        verify(metrics, never()).recordDelivered(anyBoolean());
+        verify(metrics, never()).recordFailed();
     }
 
     @Test
@@ -146,6 +151,26 @@ class WebhookEventServiceTest {
         verify(writer).complete(shipmentCaptor.capture(), any(ShipmentEvent.class), eq(true));
         assertThat(shipmentCaptor.getValue().getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
         assertThat(shipmentCaptor.getValue().getDeliveredAt()).isEqualTo(NOW);
+        verify(metrics).recordDelivered(false);
+        verify(metrics).recordAdvance(ShipmentStatus.OUT_FOR_DELIVERY, ShipmentStatus.DELIVERED);
+        verify(metrics, never()).recordFailed();
+    }
+
+    @Test
+    void deliveryFailed_recordsFailedAndAdvanceButNotDelivered() {
+        byte[] raw = body(payloadJson("evt-14", "TRK-1", "DELIVERY_FAILED"));
+        happyPathStubs("evt-14");
+        when(shipments.findByTrackingNumber("TRK-1"))
+                .thenReturn(Optional.of(shipment(ShipmentStatus.OUT_FOR_DELIVERY)));
+
+        service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw));
+
+        ArgumentCaptor<Shipment> shipmentCaptor = ArgumentCaptor.forClass(Shipment.class);
+        verify(writer).complete(shipmentCaptor.capture(), any(ShipmentEvent.class), eq(false));
+        assertThat(shipmentCaptor.getValue().getStatus()).isEqualTo(ShipmentStatus.DELIVERY_FAILED);
+        verify(metrics).recordFailed();
+        verify(metrics).recordAdvance(ShipmentStatus.OUT_FOR_DELIVERY, ShipmentStatus.DELIVERY_FAILED);
+        verify(metrics, never()).recordDelivered(anyBoolean());
     }
 
     @Test
@@ -158,6 +183,7 @@ class WebhookEventServiceTest {
         verify(writer, never()).insert(any(ShipmentEvent.class));
         verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
         verify(shipments, never()).findByTrackingNumber(anyString());
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -190,6 +216,7 @@ class WebhookEventServiceTest {
         verify(writer).insert(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
         verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -223,7 +250,7 @@ class WebhookEventServiceTest {
     void blankSecret_throws401BeforeAnything() {
         ShippingWebhookProperties blank = new ShippingWebhookProperties();
         blank.setSecrets(Map.of("GHTK", ""));
-        service = new WebhookEventServiceImpl(blank, shipments, events, writer, objectMapper, clock);
+        service = new WebhookEventServiceImpl(blank, shipments, events, writer, objectMapper, clock, metrics);
         byte[] raw = body(payloadJson("evt-8", "TRK-1", "IN_TRANSIT"));
 
         assertThatThrownBy(() -> service.handle("GHTK", raw, hmacHex(SECRET, raw)))

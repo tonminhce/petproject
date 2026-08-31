@@ -11,6 +11,7 @@ import com.shop.shippingservice.entity.ShipmentEvent;
 import com.shop.shippingservice.repository.ShipmentEventRepository;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShipmentStateMachine;
+import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.WebhookEventService;
 import com.shop.shippingservice.service.WebhookEventWriter;
 import com.shop.shippingservice.webhook.CarrierWebhookPayload;
@@ -46,6 +47,7 @@ public class WebhookEventServiceImpl implements WebhookEventService {
     private final WebhookEventWriter writer;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ShippingMetrics metrics;
 
     @Override
     public void handle(String carrier, byte[] rawBody, String signature) {
@@ -108,17 +110,23 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             return;
         }
 
+        ShipmentStatus from = shipment.getStatus();
         Instant now = clock.instant();
-        shipment.setPreviousStatus(shipment.getStatus());
+        shipment.setPreviousStatus(from);
         shipment.setStatus(next);
         shipment.setLastCarrierUpdate(now);
         if (next == ShipmentStatus.DELIVERED) {
             shipment.setDeliveredAt(now);
+            metrics.recordDelivered(false);
         }
 
         event.setShipmentId(shipment.getId());
         event.setStatus(EVENT_STATUS_PROCESSED);
         writer.complete(shipment, event, next == ShipmentStatus.DELIVERED);
+        metrics.recordAdvance(from, next);
+        if (next == ShipmentStatus.DELIVERY_FAILED) {
+            metrics.recordFailed();
+        }
     }
 
     private Carrier resolveCarrier(String carrier) {

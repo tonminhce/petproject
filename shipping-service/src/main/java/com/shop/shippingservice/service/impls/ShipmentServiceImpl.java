@@ -147,9 +147,14 @@ public class ShipmentServiceImpl implements ShipmentService {
     }
 
     private ShipmentResponse advance(Shipment shipment, ShipmentStatus target) {
-        ShipmentStatus next = ShipmentStateMachine.transition(shipment.getStatus(), target);
-        shipment.setPreviousStatus(shipment.getStatus());
+        ShipmentStatus from = shipment.getStatus();
+        ShipmentStatus next = ShipmentStateMachine.transition(from, target);
+        shipment.setPreviousStatus(from);
         shipment.setStatus(next);
+        metrics.recordAdvance(from, next);
+        if (next == ShipmentStatus.DELIVERY_FAILED) {
+            metrics.recordFailed();
+        }
         if (next == ShipmentStatus.DELIVERED) {
             shipment.setDeliveredAt(clock.instant());
             metrics.recordDelivered(false);

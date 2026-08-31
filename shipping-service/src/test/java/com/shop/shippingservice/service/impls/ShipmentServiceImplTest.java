@@ -9,7 +9,6 @@ import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentWriter;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,15 +48,12 @@ class ShipmentServiceImplTest {
     @Mock ShipmentWriter writer;
     @Mock CarrierAdapter adapter;
     @Mock Clock clock;
+    @Mock ShippingMetrics metrics;
 
-    private SimpleMeterRegistry meterRegistry;
-    private ShippingMetrics metrics;
     private ShipmentServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        meterRegistry = new SimpleMeterRegistry();
-        metrics = new ShippingMetrics(meterRegistry);
         service = new ShipmentServiceImpl(repository, writer, adapter, clock, metrics);
     }
 
@@ -184,6 +180,7 @@ class ShipmentServiceImplTest {
         assertThat(captor.getValue().getPreviousStatus()).isEqualTo(ShipmentStatus.CREATED);
         assertThat(captor.getValue().getTrackingNumber()).isEqualTo("TRK-42");
         assertThat(captor.getValue().getLastCarrierUpdate()).isEqualTo(NOW);
+        verify(metrics).recordAdvance(ShipmentStatus.CREATED, ShipmentStatus.PICKED_UP);
     }
 
     @Test
@@ -255,6 +252,7 @@ class ShipmentServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo("SHP-10003");
+        verifyNoInteractions(metrics);
     }
 
     @Test
@@ -273,8 +271,9 @@ class ShipmentServiceImplTest {
         assertThat(captor.getValue().getPreviousStatus()).isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
         assertThat(captor.getValue().getDeliveredAt()).isEqualTo(NOW);
         assertThat(captor.getValue().isAutoDelivered()).isFalse();
-        assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "false").count()).isEqualTo(1.0);
-        assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "true").count()).isZero();
+        verify(metrics).recordDelivered(false);
+        verify(metrics).recordAdvance(ShipmentStatus.OUT_FOR_DELIVERY, ShipmentStatus.DELIVERED);
+        verify(metrics, never()).recordFailed();
     }
 
     @Test
@@ -289,7 +288,9 @@ class ShipmentServiceImplTest {
         ArgumentCaptor<Shipment> captor = ArgumentCaptor.forClass(Shipment.class);
         verify(writer).save(captor.capture());
         assertThat(captor.getValue().getDeliveredAt()).isNull();
-        assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "false").count()).isZero();
+        verify(metrics).recordAdvance(ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT);
+        verify(metrics, never()).recordDelivered(anyBoolean());
+        verify(metrics, never()).recordFailed();
     }
 
     @Test
@@ -302,6 +303,8 @@ class ShipmentServiceImplTest {
 
         assertThat(response.status()).isEqualTo(ShipmentStatus.DELIVERY_FAILED);
         assertThat(response.previousStatus()).isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
+        verify(metrics).recordAdvance(ShipmentStatus.OUT_FOR_DELIVERY, ShipmentStatus.DELIVERY_FAILED);
+        verify(metrics).recordFailed();
     }
 
     @Test
@@ -325,6 +328,7 @@ class ShipmentServiceImplTest {
 
         assertThat(response.status()).isEqualTo(ShipmentStatus.IN_TRANSIT);
         assertThat(response.previousStatus()).isEqualTo(ShipmentStatus.DELIVERY_FAILED);
+        verify(metrics).recordAdvance(ShipmentStatus.DELIVERY_FAILED, ShipmentStatus.IN_TRANSIT);
     }
 
     @Test
