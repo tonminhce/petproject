@@ -43,7 +43,7 @@ public class PaymentWriter {
         event.setStatus(PaymentEvent.STATUS_PROCESSED);
         eventRepository.saveAndFlush(event);
         Payment saved = repository.saveAndFlush(payment);
-        publisher.publish(payment, outboxEventType);
+        publisher.publish(saved, outboxEventType);
         return saved;
     }
 }
