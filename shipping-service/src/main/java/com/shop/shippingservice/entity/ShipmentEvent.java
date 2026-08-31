@@ -6,8 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -29,7 +27,7 @@ import java.util.UUID;
 public class ShipmentEvent extends AbstractMappedEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false)
     private UUID id;
 
     @Column(name = "shipment_id")
@@ -53,6 +51,5 @@ public class ShipmentEvent extends AbstractMappedEntity {
 
     @Version
     @Column(name = "version")
-    @Builder.Default
-    private Long version = 0L;
+    private Long version;
 }
