@@ -470,25 +470,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Rating Service -----
-  rating-service:
-    image: rating-service:latest
-    container_name: rating-service
-    <<: [*restart, *logging]
-    ports:
-      - "8089:8089"
-    environment:
-      <<: [*jwt, *pg-creds]
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ratingservice
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      <<: *hc-defaults
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/actuator/health > /dev/null 2>&1 || exit 1"]
-    networks:
-      - ecommerce-network
-
   # ----- Media Service (uses RustFS for object storage) -----
   media-service:
     image: media-service:latest
@@ -552,6 +533,38 @@ services:
     healthcheck:
       <<: *hc-defaults
       test: ["CMD-SHELL", "wget -qO- http://localhost:8093/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  # ----- Rating Service (Kafka producer via outbox relay) -----
+  rating-service:
+    image: rating-service:latest
+    container_name: rating-service
+    <<: [*restart, *logging]
+    ports:
+      - "8089:8089"
+    environment:
+      <<: [*jwt, *pg-creds]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ratingservice
+      # Outbox relay publishes shop.rating.lifecycle.v1 — must reach the
+      # in-network broker (yml default is localhost for local runs).
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Eligibility verify-purchase call into order-service (same explicit
+      # *_SERVICE_URL pattern as order's tax/promotion/payment clients).
+      ORDER_SERVICE_URL: http://order-service:8084
+      # Client-credentials for the eligibility call (same default style as
+      # ORDER_SERVICE_CLIENT_ID/SECRET in order-service's stanza).
+      RATING_SERVICE_CLIENT_ID: rating-service
+      RATING_SERVICE_CLIENT_SECRET: changeme
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/actuator/health > /dev/null 2>&1 || exit 1"]
     networks:
       - ecommerce-network
 

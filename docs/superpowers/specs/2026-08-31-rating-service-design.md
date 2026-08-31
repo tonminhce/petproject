@@ -167,7 +167,8 @@ changes**. Keycloak: `rating-service` client provisioned at ops time (§4).
    consumer must tolerate replay (snapshot copy) and unknown productIds.
 3. Provision `rating-service` Keycloak client (client-credentials, service-account
    role `SERVICE`) — same manual step as every other service client (realm import gap
-   is fleet-wide, §5).
+   is fleet-wide, §5). `rating-service` client — provisioned manually like every
+   other service client (confirmed absent from realm import, T9).
 4. Known fleet gaps NOT fixed here (recorded): `/api/v1/backoffice/**` not
    edge-routed (all Backoffice controllers, direct-service access); realm import
    lacks per-service clients.
