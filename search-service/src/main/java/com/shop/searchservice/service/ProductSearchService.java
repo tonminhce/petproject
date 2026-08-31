@@ -10,9 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.format.DateTimeParseException;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,24 +38,7 @@ public class ProductSearchService {
             delete(event.productId());
             return;
         }
-        Instant updatedAt = parseInstant(event.updatedAt());
-        Map<String, Object> document = new LinkedHashMap<>();
-        document.put("id", event.productId().toString());
-        document.put("title", event.title());
-        document.put("description", event.description());
-        document.put("brandName", event.brandName());
-        document.put("brandId", event.brandId() != null ? event.brandId().toString() : null);
-        document.put("categoryId", event.categoryId() != null ? event.categoryId().toString() : null);
-        document.put("categoryName", event.categoryName());
-        document.put("slug", event.slug());
-        document.put("imageUrl", event.imageUrl());
-        document.put("price", event.price());
-        document.put("avgRating", event.avgRating());
-        document.put("ratingCount", event.ratingCount());
-        document.put("status", event.status());
-        // ES client's JacksonJsonpMapper has no JavaTimeModule — the Instant
-        // is serialized as an ISO-8601 string, which the `date` mapping accepts.
-        document.put("updatedAt", updatedAt != null ? updatedAt.toString() : null);
+        Map<String, Object> document = ProductDocuments.of(event);
         try {
             client.index(i -> i
                 .index(INDEX_ALIAS)
@@ -82,18 +62,6 @@ public class ProductSearchService {
             log.debug("Delete for missing product doc {} — nothing to do", productId);
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to delete product doc " + productId, ex);
-        }
-    }
-
-    private static Instant parseInstant(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return Instant.parse(value);
-        } catch (DateTimeParseException ex) {
-            log.warn("Unparseable updatedAt '{}' — indexed without it", value);
-            return null;
         }
     }
 }

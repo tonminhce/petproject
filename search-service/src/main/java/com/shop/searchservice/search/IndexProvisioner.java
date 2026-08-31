@@ -17,9 +17,11 @@ import java.util.Map;
 @Slf4j
 public class IndexProvisioner implements ApplicationRunner {
 
-    static final String INDEX_TEMPLATE = "products-template";
-    static final String INDEX = "products-v1";
-    static final String ALIAS = "products";
+    public static final String INDEX_TEMPLATE = "products-template";
+    public static final String INDEX = "products-v1";
+    public static final String ALIAS = "products";
+    /** All reindex generation indices match this pattern. */
+    public static final String INDEX_PATTERN = "products-v*";
 
     private final ElasticsearchClient client;
 
