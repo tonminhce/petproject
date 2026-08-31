@@ -42,6 +42,8 @@ public final class ApiPaths {
     public static final String STOREFRONT_RATINGS = API_V1 + "/storefront/ratings";
     public static final String BACKOFFICE_RATINGS = API_V1 + "/backoffice/ratings";
     public static final String STOREFRONT_SEARCH = API_V1 + "/storefront/search";
+    public static final String SEARCH = API_V1 + "/search";
+    public static final String BACKOFFICE_SEARCH = API_V1 + "/backoffice/search";
     public static final String BACKOFFICE_PROMOTIONS = API_V1 + "/backoffice/promotions";
     public static final String BACKOFFICE_TAX_CLASSES = API_V1 + "/backoffice/tax-classes";
     public static final String BACKOFFICE_TAX_RATES = API_V1 + "/backoffice/tax-rates";
