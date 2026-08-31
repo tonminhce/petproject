@@ -14,4 +14,8 @@ public interface RatingService {
     Page<RatingResponse> findVisibleByProductId(UUID productId, int page, int size);
 
     RatingResponse edit(UUID jwtUserId, UUID productId, RatingEditRequest request);
+
+    RatingResponse hide(UUID id, UUID adminId, String reason);
+
+    RatingResponse unhide(UUID id, UUID adminId);
 }

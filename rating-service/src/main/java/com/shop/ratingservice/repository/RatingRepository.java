@@ -17,6 +17,8 @@ public interface RatingRepository extends JpaRepository<Rating, UUID> {
 
     Optional<Rating> findByUserIdAndProductIdAndDeletedFalse(UUID userId, UUID productId);
 
+    Optional<Rating> findByIdAndDeletedFalse(UUID id);
+
     @Query("select coalesce(avg(r.rating), 0), count(r) from Rating r where r.productId = :productId and r.hidden = false and r.deleted = false")
     List<Object[]> findAggregateByProductId(@Param("productId") UUID productId);
 }

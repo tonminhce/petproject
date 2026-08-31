@@ -88,4 +88,46 @@ public class RatingServiceImpl implements RatingService {
         ratingEventService.record(saved, RatingAction.UPDATED);
         return RatingResponse.from(saved);
     }
+
+    @Override
+    @Transactional
+    public RatingResponse hide(UUID id, UUID adminId, String reason) {
+        Rating rating = ratingRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.RATING_NOT_FOUND));
+
+        if (rating.isHidden()) {
+            throw BusinessException.of(ErrorCode.RATING_ALREADY_HIDDEN);
+        }
+
+        rating.setHidden(true);
+        rating.setHiddenAt(Instant.now());
+        rating.setHiddenBy(adminId);
+        rating.setHiddenReason(reason);
+
+        // NIT #1: flush REQUIRED before record() — the snapshot aggregate must
+        // see the hidden row (count drops) once record() recomputes it.
+        Rating saved = ratingRepository.saveAndFlush(rating);
+        ratingEventService.record(saved, RatingAction.HIDDEN);
+        return RatingResponse.from(saved);
+    }
+
+    @Override
+    @Transactional
+    public RatingResponse unhide(UUID id, UUID adminId) {
+        Rating rating = ratingRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.RATING_NOT_FOUND));
+
+        if (!rating.isHidden()) {
+            throw BusinessException.of(ErrorCode.RATING_NOT_HIDDEN);
+        }
+
+        // D2: hiddenAt/hiddenBy/hiddenReason RETAINED as history — only the
+        // flag flips.
+        rating.setHidden(false);
+
+        // NIT #1: flush REQUIRED before record() — same discipline as hide.
+        Rating saved = ratingRepository.saveAndFlush(rating);
+        ratingEventService.record(saved, RatingAction.UNHIDDEN);
+        return RatingResponse.from(saved);
+    }
 }
