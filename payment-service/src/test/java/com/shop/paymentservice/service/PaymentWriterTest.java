@@ -69,7 +69,9 @@ class PaymentWriterTest {
     @Test
     void completeWithEvent_marksEventProcessed_savesPayment_andPublishesOutboxRowAtomically() {
         Payment payment = Payment.builder().id(PAYMENT_ID).build();
+        Payment merged = Payment.builder().id(PAYMENT_ID).build();
         PaymentEvent failed = event(PaymentEvent.STATUS_FAILED);
+        org.mockito.Mockito.when(paymentRepository.saveAndFlush(payment)).thenReturn(merged);
 
         writer.completeWithEvent(payment, failed, "payment.captured.v1");
 
@@ -78,6 +80,6 @@ class PaymentWriterTest {
         verify(paymentRepository).saveAndFlush(payment);
         ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
         verify(publisher).publish(captor.capture(), org.mockito.ArgumentMatchers.eq("payment.captured.v1"));
-        assertThat(captor.getValue()).isSameAs(payment);
+        assertThat(captor.getValue()).isSameAs(merged);
     }
 }
