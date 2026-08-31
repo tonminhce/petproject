@@ -118,7 +118,14 @@ public enum ErrorCode {
     SHIPPING_WEBHOOK_SIGNATURE_INVALID("SHP-10004", "shipping.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
     TRACKING_REQUIRED("SHP-10005", "shipping.tracking_required", HttpStatus.BAD_REQUEST),
     CARRIER_NOT_CONFIGURED("SHP-10006", "shipping.carrier_not_configured", HttpStatus.CONFLICT),
-    ORDER_PAYMENT_NOT_CAPTURED("ORD-4012", "order.payment.not_captured", HttpStatus.CONFLICT);
+    ORDER_PAYMENT_NOT_CAPTURED("ORD-4012", "order.payment.not_captured", HttpStatus.CONFLICT),
+
+    // ---- Rating domain ---- RTG-11001..11005
+    RATING_NOT_ELIGIBLE("RTG-11001", "rating.not_eligible", HttpStatus.FORBIDDEN),
+    RATING_NOT_FOUND("RTG-11002", "rating.not_found", HttpStatus.NOT_FOUND),
+    RATING_ALREADY_HIDDEN("RTG-11003", "rating.already_hidden", HttpStatus.CONFLICT),
+    RATING_NOT_HIDDEN("RTG-11004", "rating.not_hidden", HttpStatus.CONFLICT),
+    RATING_ALREADY_EXISTS("RTG-11005", "rating.already_exists", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;
