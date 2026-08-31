@@ -28,8 +28,8 @@ databaseChangeLog:
               - column: { name: deleted_by,     type: varchar(255) }
               - column: { name: created_at,     type: timestamptz,    constraints: { nullable: false }, defaultValueComputed: "CURRENT_TIMESTAMP" }
               - column: { name: updated_at,     type: timestamptz,    constraints: { nullable: false }, defaultValueComputed: "CURRENT_TIMESTAMP" }
-              - column: { name: created_by,     type: varchar(255) }
-              - column: { name: updated_by,     type: varchar(255) }
+              - column: { name: created_by,     type: varchar(100) }
+              - column: { name: updated_by,     type: varchar(100) }
 
   - changeSet:
       id: 001-ratings-constraints

@@ -152,7 +152,7 @@ Meter `rating_submitted_total{action}`.
 
 rating-service: port 8089, postgres db `ratingservice` (+ init SQL user/db), yml keys
 `ORDER_SERVICE_URL:http://localhost:8084`, `KEYCLOAK_TOKEN_URL`, `client-id
-${RATING_SERVICE_CLIENT_ID:rating-service}` / `changeme`, outbox poll 5000 ms.
+${RATING_SERVICE_CLIENT_ID:rating-service}` / `changeme`, outbox poll 2000 ms (matches payment's relay cadence; spec originally said 5000 — corrigendum T1 review).
 Compose: rating-service stanza (8089, db envs, `ORDER_SERVICE_URL:
 http://order-service:8084`), appended after promotion stanza. Gateway: **zero
 changes**. Keycloak: `rating-service` client provisioned at ops time (§4).
