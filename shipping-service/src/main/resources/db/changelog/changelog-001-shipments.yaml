@@ -1,0 +1,84 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-shipments
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: shipments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: order_id,            type: uuid,        constraints: { nullable: false } }
+              - column: { name: carrier,             type: varchar(16), constraints: { nullable: false } }
+              - column: { name: tracking_number,     type: varchar(64) }
+              - column: { name: status,              type: varchar(24), constraints: { nullable: false } }
+              - column: { name: previous_status,     type: varchar(24) }
+              - column: { name: auto_delivered,      type: boolean,     defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: last_carrier_update, type: timestamptz }
+              - column: { name: delivered_at,        type: timestamptz }
+              - column: { name: version,            type: bigint,      constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: created_at,          type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at,          type: timestamptz, constraints: { nullable: false } }
+              - column: { name: created_by,          type: varchar(100) }
+              - column: { name: updated_by,          type: varchar(100) }
+              - column: { name: deleted,             type: boolean,     defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,          type: timestamptz }
+              - column: { name: deleted_by,          type: varchar(255) }
+
+        - sql:
+            sql: ALTER TABLE shipments ADD CONSTRAINT ck_shipments_carrier CHECK (carrier IN ('MANUAL', 'NOOP', 'GHN', 'GHTK'))
+
+        - sql:
+            sql: ALTER TABLE shipments ADD CONSTRAINT ck_shipments_status CHECK (status IN ('CREATED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'CANCELLED'))
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_shipment_order_live ON shipments (order_id) WHERE deleted = false
+
+        - sql:
+            sql: CREATE INDEX idx_shipments_status_stale ON shipments (status, last_carrier_update)
+
+  - changeSet:
+      id: 002-create-shipment-events
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: shipment_events
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: shipment_id,       type: uuid }
+              - column: { name: carrier,           type: varchar(16),  constraints: { nullable: false } }
+              - column: { name: provider_event_id, type: varchar(128), constraints: { nullable: false } }
+              - column: { name: type,              type: varchar(32),  constraints: { nullable: false } }
+              - column: { name: payload,           type: text,         constraints: { nullable: false } }
+              - column: { name: status,            type: varchar(16),  constraints: { nullable: false } }
+              - column: { name: version,           type: bigint,       constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: created_at,        type: timestamptz,  constraints: { nullable: false } }
+              - column: { name: updated_at,        type: timestamptz,  constraints: { nullable: false } }
+              - column: { name: created_by,        type: varchar(100) }
+              - column: { name: updated_by,        type: varchar(100) }
+              - column: { name: deleted,           type: boolean,      defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,        type: timestamptz }
+              - column: { name: deleted_by,        type: varchar(255) }
+
+        - sql:
+            sql: ALTER TABLE shipment_events ADD CONSTRAINT ck_shipment_events_status CHECK (status IN ('PROCESSED', 'FAILED'))
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_shipment_events_carrier_event ON shipment_events (carrier, provider_event_id)
+
+  - changeSet:
+      id: 003-unique-tracking-number-live
+      author: shop-platform
+      changes:
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_shipments_tracking_live ON shipments (tracking_number) WHERE tracking_number IS NOT NULL AND deleted = false
