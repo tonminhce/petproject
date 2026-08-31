@@ -71,6 +71,20 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("productId", p.getId());
         payload.put("slug", p.getSlug());
         payload.put("status", p.getStatus() != null ? p.getStatus().name() : null);
+        // Full catalog snapshot (spec D2, additive-only): brand/category names
+        // resolved exactly like ProductMapper.toDetailResponse (same relations,
+        // null-safe); avgRating stays JSON null for never-rated products.
+        payload.put("title", p.getTitle());
+        payload.put("description", p.getDescription());
+        payload.put("brandId", p.getBrand() != null ? p.getBrand().getId() : null);
+        payload.put("brandName", p.getBrand() != null ? p.getBrand().getName() : null);
+        payload.put("categoryId", p.getCategory() != null ? p.getCategory().getId() : null);
+        payload.put("categoryName", p.getCategory() != null ? p.getCategory().getTitle() : null);
+        payload.put("price", p.getPriceUnit());
+        payload.put("imageUrl", p.getImageUrl());
+        payload.put("avgRating", p.getAvgRating());
+        payload.put("ratingCount", p.getRatingCount());
+        payload.put("updatedAt", p.getUpdatedAt() != null ? p.getUpdatedAt().toString() : null);
         try {
             event.setPayload(objectMapper.writeValueAsString(payload));
         } catch (JsonProcessingException ex) {

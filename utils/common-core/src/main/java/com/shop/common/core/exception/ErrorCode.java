@@ -125,7 +125,11 @@ public enum ErrorCode {
     RATING_NOT_FOUND("RTG-11002", "rating.not_found", HttpStatus.NOT_FOUND),
     RATING_ALREADY_HIDDEN("RTG-11003", "rating.already_hidden", HttpStatus.CONFLICT),
     RATING_NOT_HIDDEN("RTG-11004", "rating.not_hidden", HttpStatus.CONFLICT),
-    RATING_ALREADY_EXISTS("RTG-11005", "rating.already_exists", HttpStatus.CONFLICT);
+    RATING_ALREADY_EXISTS("RTG-11005", "rating.already_exists", HttpStatus.CONFLICT),
+
+    // ---- Search domain ---- SRH-12001..12002
+    SEARCH_REINDEX_IN_PROGRESS("SRH-12001", "search.reindex_in_progress", HttpStatus.CONFLICT),
+    SEARCH_QUERY_FAILED("SRH-12002", "search.query_failed", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final String code;
     private final String messageKey;

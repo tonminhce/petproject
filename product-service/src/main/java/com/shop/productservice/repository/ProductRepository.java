@@ -20,6 +20,14 @@ public interface ProductRepository
     @EntityGraph(attributePaths = {"category", "brand"})
     Optional<Product> findWithRelationsBySlug(String slug);
 
+    /**
+     * Executor override with category+brand fetch-joined (backoffice detail
+     * list, F2). Scalar ManyToOne joins only — pagination stays in SQL.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"category", "brand"})
+    Page<Product> findAll(Specification<Product> spec, Pageable pageable);
+
     boolean existsBySlug(String slug);
 
     boolean existsBySku(String sku);

@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,12 +29,13 @@ class ProductRatingServiceTest {
     private static final UUID RATING_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
 
     @Mock ProductRepository repository;
+    @Mock ProductEventPublisher publisher;
 
     private ProductRatingService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProductRatingService(repository);
+        service = new ProductRatingService(repository, publisher);
     }
 
     private RatingLifecycleEvent event(String action, String avgRating, int ratingCount) {
@@ -93,6 +95,24 @@ class ProductRatingServiceTest {
             .doesNotThrowAnyException();
 
         verify(repository, never()).save(any());
+        verify(publisher, never()).publishUpdated(any());
+    }
+
+    @Test
+    void apply_publishesProductUpdatedWithTheSavedEntityReturnedByRepoSave() {
+        // F4: the publisher must receive the entity returned by save() — the
+        // persisted instance (audit fields filled), not the pre-save detached one.
+        Product managed = product();
+        Product saved = product();
+        saved.setTitle("SAVED-INSTANCE");
+        when(repository.findById(PRODUCT_ID)).thenReturn(Optional.of(managed));
+        when(repository.save(any(Product.class))).thenReturn(saved);
+
+        service.apply(event("CREATED", "4.50", 2));
+
+        verify(publisher, times(1)).publishUpdated(saved);
+        verify(publisher, never()).publishCreated(any());
+        verify(publisher, never()).publishDeleted(any());
     }
 
     @Test

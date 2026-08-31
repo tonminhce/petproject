@@ -580,7 +580,17 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
       ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
-      KAFKA_SERVERS: kafka:9092
+      # Catalog event consumer binds shop.kafka — must reach the in-network
+      # broker (yml default is localhost for local runs).
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Product catalog client for reindex (same explicit *_SERVICE_URL pattern
+      # as order's tax/promotion and rating's order clients).
+      PRODUCT_SERVICE_URL: http://product-service:8086
+      # Client-credentials for the reindex call (same default style as
+      # RATING_SERVICE_CLIENT_ID/SECRET in rating-service's stanza).
+      SEARCH_SERVICE_CLIENT_ID: search-service
+      SEARCH_SERVICE_CLIENT_SECRET: changeme
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       elasticsearch:
         condition: service_healthy
