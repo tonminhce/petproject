@@ -8,6 +8,7 @@ import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.support.AbstractOrderServiceIT;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
 
@@ -219,12 +220,17 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
         productServer.verify(1, getRequestedFor(urlEqualTo("/api/v1/products/" + productId)));
     }
 
-    @Test
+    @RepeatedTest(50)
     void productPriceCacheHit_returnsProductSnapshot() {
         // End-to-end guard for review C1: the productPrice cache entry must come
         // back as a ProductSnapshot record. With the pre-fix serializer (no
         // polymorphic typing) the second call below blew up with a
         // ClassCastException on a LinkedHashMap.
+        //
+        // productId is FRESH PER ITERATION: @BeforeEach (new test instance per
+        // repetition) generates a random UUID, so no cross-iteration key aliasing
+        // — a stale entry from iteration N can never turn iteration N+1's first
+        // GET into a hit (which would make verify(1) see 0 fetches).
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
                 {"success":true,"code":"OK","data":{"id":"%s","title":"Cached","priceUnit":42.50}}
