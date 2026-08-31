@@ -28,7 +28,9 @@ public class ProductMapper {
             product.getPriceUnit(),
             product.getQuantity(),
             product.getStatus(),
-            product.getImageUrl()
+            product.getImageUrl(),
+            product.getAvgRating(),
+            product.getRatingCount()
         );
     }
 
@@ -49,6 +51,8 @@ public class ProductMapper {
             product.getImageUrl(),
             product.getWeight(),
             product.getDimensions(),
+            product.getAvgRating(),
+            product.getRatingCount(),
             categoryId,
             categoryTitle,
             brandId,

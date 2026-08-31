@@ -18,6 +18,8 @@ public record ProductDetailResponse(
     String imageUrl,
     BigDecimal weight,
     String dimensions,
+    BigDecimal avgRating,
+    Integer ratingCount,
     UUID categoryId,
     String categoryTitle,
     UUID brandId,

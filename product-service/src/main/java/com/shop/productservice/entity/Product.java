@@ -54,6 +54,17 @@ public class Product extends AbstractMappedEntity {
     @Column(length = 50)
     private String dimensions;
 
+    // Denormalized rating stars (spec D5) — copied from rating lifecycle
+    // events by ProductRatingService, never recomputed here.
+    @Column(name = "avg_rating", precision = 3, scale = 2)
+    private BigDecimal avgRating;
+
+    // @Builder.Default: Lombok builders must produce 0 (never null) or every
+    // plain insert would violate the NOT NULL column.
+    @Builder.Default
+    @Column(name = "rating_count", nullable = false)
+    private Integer ratingCount = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;

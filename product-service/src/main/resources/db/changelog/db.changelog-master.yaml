@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: changelog-002-outbox-pending-index.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-003-rating-columns.yaml
+      relativeToChangelogFile: true
