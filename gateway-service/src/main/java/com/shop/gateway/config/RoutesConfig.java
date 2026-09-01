@@ -16,13 +16,16 @@ public class RoutesConfig {
     private final RateLimiter rateLimiter;
     private final KeyResolver keyResolver;
     private final RateLimitProperties rateLimitProperties;
+    private final RouteTargetProperties routeTargetProperties;
 
     public RoutesConfig(@Qualifier("gatewayRateLimiter") final RateLimiter<?> rateLimiter,
                         final KeyResolver keyResolver,
-                        final RateLimitProperties rateLimitProperties) {
+                        final RateLimitProperties rateLimitProperties,
+                        final RouteTargetProperties routeTargetProperties) {
         this.rateLimiter = rateLimiter;
         this.keyResolver = keyResolver;
         this.rateLimitProperties = rateLimitProperties;
+        this.routeTargetProperties = routeTargetProperties;
     }
 
     @Bean
@@ -38,7 +41,7 @@ public class RoutesConfig {
                             .setDenyEmptyKey(true)
                             .setEmptyKeyStatus("429")));
                 }
-                return routeSpec.uri(route.uri());
+                return routeSpec.uri(routeTargetProperties.resolve(route.serviceName(), route.uri()));
             });
         }
         return routesBuilder.build();

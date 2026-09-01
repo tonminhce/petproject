@@ -4,6 +4,8 @@ public final class ApiPaths {
 
     public static final String API_V1_PREFIX = "/api/v1";
 
+    public static final String WEBHOOKS_PREFIX = API_V1_PREFIX + "/webhooks";
+
     public static final String ACTUATOR_BASE = "/actuator";
     public static final String ACTUATOR_HEALTH = ACTUATOR_BASE + "/health";
     public static final String ACTUATOR_INFO = ACTUATOR_BASE + "/info";

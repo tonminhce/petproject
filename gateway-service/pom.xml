@@ -11,10 +11,34 @@
     <artifactId>gateway-service</artifactId>
     <name>gateway-service</name>
     <description>Spring Cloud Gateway: single entry point routing requests to backend microservices with JWT validation.</description>
+    <properties>
+        <bucket4j.version>8.14.0</bucket4j.version>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-core</artifactId>
+            <exclusions>
+                <!-- Gateway is reactive and has no datastore: keep the JPA stack
+                     out of the edge. Only the contracts (ApiResponse/ErrorCode) are used. -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-data-jpa</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>jakarta.persistence</groupId>
+                    <artifactId>jakarta.persistence-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>${bucket4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -59,6 +83,12 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>3.13.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -60,6 +60,18 @@ gateway:
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}
       burst-capacity: ${GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY:4000}
       requested-tokens: ${GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS:1}
+  # D4 — bucket4j edge scopes (in-process buckets, single instance V1)
+  edge-rate-limit:
+    enabled: ${GATEWAY_EDGE_RATE_LIMIT_ENABLED:true}
+    backoffice-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_BACKOFFICE_RPM:10}
+    search-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_SEARCH_RPM:60}
+  # D5 — backoffice IP allowlist. ABSENT/empty = INACTIVE; PRESENT = deny-by-default.
+  # Comma-separated CIDRs, e.g. "203.0.113.0/24,198.51.100.7/32"
+  admin-ip-allowlist:
+    cidrs: ${ADMIN_IP_ALLOWLIST:}
+  # Optional per-service target overrides (tests / tooling); keyed by service name
+  route-targets:
+    overrides: {}
 
 management:
   endpoints:
