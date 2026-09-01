@@ -88,6 +88,19 @@
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
       "secret": "changeme"
+    },
+    {
+      "clientId": "product-service",
+      "name": "Product Service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "secret": "changeme"
     }
   ],
   "users": [
@@ -148,6 +161,14 @@
       "username": "service-account-search-service",
       "enabled": true,
       "serviceAccountClientId": "search-service",
+      "realmRoles": [
+        "SERVICE"
+      ]
+    },
+    {
+      "username": "service-account-product-service",
+      "enabled": true,
+      "serviceAccountClientId": "product-service",
       "realmRoles": [
         "SERVICE"
       ]
