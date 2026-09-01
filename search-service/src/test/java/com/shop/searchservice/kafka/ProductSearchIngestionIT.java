@@ -5,8 +5,14 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.shop.common.kafka.serialization.JsonKafkaSerializer;
 import com.shop.searchservice.support.AbstractSearchIntegrationTest;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -32,10 +39,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * End-to-end ingestion contract over real Kafka + ES containers: JSON-string
- * records produced to {@code shop.product.lifecycle.v1} (fleet wire format)
- * are consumed by the live {@code search-service} group and mirrored as
- * upsert/delete operations on the {@code products} alias (spec D1, F1
+ * End-to-end ingestion contract over real Kafka + ES containers: records are
+ * produced through the REAL fleet wire path — {@code KafkaTemplate} with the
+ * fleet {@code JsonKafkaSerializer} (the exact producer path of product's
+ * {@code OutboxRelay}), so the payload String lands DOUBLE-ENCODED (a JSON
+ * string token wrapping the event JSON). F-5: the helper previously used a
+ * {@code StringSerializer} (single-encoded) — a test wire that never matched
+ * production, which is why the double-encoded drop survived the ITs. The live
+ * {@code search-service} group must unwrap-once (spec §4.2) and mirror events
+ * as upsert/delete operations on the {@code products} alias (spec D1, F1
  * bidirectional status). Poison records must never stall the partition —
  * each negative case proves progression via a marker product event sent after.
  */
@@ -61,7 +73,9 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        // The fleet producer's value serializer (KafkaAutoConfiguration): a
+        // payload String gets JSON-string-encoded → double-encoded on the wire.
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonKafkaSerializer.class.getName());
         kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
     }
 
@@ -93,6 +107,31 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         assertThat(((Number) doc.get("price")).doubleValue()).isEqualTo(25.50d);
         assertThat(((Number) doc.get("avgRating")).doubleValue()).isEqualTo(4.50d);
         assertThat(((Number) doc.get("ratingCount")).intValue()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("double-encoded fleet wire token (OutboxRelay shape) is unwrapped and indexed (F-5)")
+    void doubleEncodedFleetWireTokenIsAccepted() throws Exception {
+        UUID productId = UUID.randomUUID();
+
+        send(productId, payload(productId, "ProductCreated", "ACTIVE"));
+
+        // Wire proof on the real topic: the record value is a JSON string
+        // token wrapping the event JSON — the shape that the old
+        // JsonDeserializer-only consumer config dropped before the listener.
+        ConsumerRecord<String, String> record = awaitRecord(productId);
+        assertThat(record).as("record on %s", TOPIC).isNotNull();
+        JsonNode token = objectMapper.readTree(record.value());
+        assertThat(token.isTextual()).as("fleet wire shape is a JSON string token").isTrue();
+        JsonNode unwrapped = objectMapper.readTree(token.textValue());
+        assertThat(unwrapped.get("eventType").textValue()).isEqualTo("ProductCreated");
+        assertThat(unwrapped.get("productId").textValue()).isEqualTo(productId.toString());
+
+        // ...and the double-encoded record is actually ingested.
+        Map<String, Object> doc = awaitDocIndexed(productId);
+        assertThat(doc)
+            .containsEntry("id", productId.toString())
+            .containsEntry("status", "ACTIVE");
     }
 
     @Test
@@ -284,6 +323,28 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** Raw readback (StringDeserializer) to prove the actual wire shape. */
+    private ConsumerRecord<String, String> awaitRecord(UUID key) {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "search-ingestion-it-" + UUID.randomUUID());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(List.of(TOPIC));
+            long deadline = System.currentTimeMillis() + 20_000;
+            while (System.currentTimeMillis() < deadline) {
+                for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(500))) {
+                    if (key.toString().equals(record.key())) {
+                        return record;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private Map<String, Object> awaitDocIndexed(UUID productId) {
