@@ -181,29 +181,30 @@ class TraceparentHeaderExtractionTest {
         return null;
     }
 
-    record Received(ConsumerRecord<String, TestEvent> record, String currentTraceId, String currentSpanId) {
-    }
-
-    record TestEvent(String body) {
+    record Received(ConsumerRecord<String, String> record, String currentTraceId, String currentSpanId) {
     }
 
     @EnableKafka
-    static class TraceTestListenerConfig extends BaseKafkaListenerConfig<String, TestEvent> {
+    static class TraceTestListenerConfig extends BaseKafkaListenerConfig<String> {
 
         static final BlockingQueue<Received> RECEIVED = new LinkedBlockingQueue<>();
 
         TraceTestListenerConfig(KafkaProperties kafkaProperties) {
-            super(String.class, TestEvent.class, kafkaProperties);
+            super(String.class, kafkaProperties);
         }
 
         @Override
         @Bean(name = "traceTestFactory")
-        public ConcurrentKafkaListenerContainerFactory<String, TestEvent> listenerContainerFactory() {
+        public ConcurrentKafkaListenerContainerFactory<String, String> listenerContainerFactory() {
             return kafkaListenerContainerFactory();
         }
 
+        // H-1: the base factory delivers the RAW STRING value (the tracing
+        // contract only needs the record headers + span context, so the wire
+        // payload is not bound to a DTO here). The publish path of this test
+        // is unchanged (single-encoded JSON — tolerated wire).
         @KafkaListener(id = "trace-test", topics = TOPIC, containerFactory = "traceTestFactory")
-        void onRecord(ConsumerRecord<String, TestEvent> record) {
+        void onRecord(ConsumerRecord<String, String> record) {
             SpanContext current = Span.fromContext(Context.current()).getSpanContext();
             RECEIVED.add(new Received(record, current.getTraceId(), current.getSpanId()));
         }

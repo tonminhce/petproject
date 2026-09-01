@@ -17,7 +17,9 @@ public class OrderEventConsumer extends BaseKafkaConsumer<String, OrderLifecycle
     }
 
     @KafkaListener(topics = "shop.order.lifecycle.v1", containerFactory = "shippingListenerFactory")
-    public void onMessage(OrderLifecycleEvent event, MessageHeaders headers) {
-        processMessage(event, headers, shipmentService::handleOrderEvent);
+    public void onMessage(String rawValue, MessageHeaders headers) {
+        // H-1 raw-wire entry: the base unwraps-once + binds the typed event;
+        // a decode failure is a contained ack-skip inside the base.
+        processMessage(rawValue, headers, OrderLifecycleEvent.class, shipmentService::handleOrderEvent);
     }
 }

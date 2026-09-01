@@ -10,15 +10,15 @@ import org.springframework.context.annotation.Configuration;
 
 @EnableKafka
 @Configuration
-public class ShippingListenerConfig extends BaseKafkaListenerConfig<String, OrderLifecycleEvent> {
+public class ShippingListenerConfig extends BaseKafkaListenerConfig<String> {
 
     public ShippingListenerConfig(KafkaProperties kafkaProperties) {
-        super(String.class, OrderLifecycleEvent.class, kafkaProperties);
+        super(String.class, kafkaProperties);
     }
 
     @Override
     @Bean(name = "shippingListenerFactory")
-    public ConcurrentKafkaListenerContainerFactory<String, OrderLifecycleEvent> listenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, String> listenerContainerFactory() {
         return kafkaListenerContainerFactory();
     }
 }

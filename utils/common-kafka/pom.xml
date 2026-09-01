@@ -44,6 +44,15 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <!--
+            H-1: the consumer-boundary wire mapper binds ISO-8601 instants that
+            travel on the fleet wire (e.g. transitionedAt) — same jsr310 module
+            Boot registers on every service's producer-side ObjectMapper.
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

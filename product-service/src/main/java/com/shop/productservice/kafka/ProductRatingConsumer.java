@@ -16,8 +16,10 @@ public class ProductRatingConsumer extends BaseKafkaConsumer<String, RatingLifec
     }
 
     @KafkaListener(topics = "shop.rating.lifecycle.v1", containerFactory = "ratingListenerFactory")
-    public void onMessage(RatingLifecycleEvent event, MessageHeaders headers) {
-        processMessage(event, headers, this::handleContained);
+    public void onMessage(String rawValue, MessageHeaders headers) {
+        // H-1 raw-wire entry: the base unwraps-once + binds the typed event;
+        // a decode failure is a contained ack-skip inside the base.
+        processMessage(rawValue, headers, RatingLifecycleEvent.class, this::handleContained);
     }
 
     // Ack-always poison posture (order-service ShippingDeliveredConsumer
