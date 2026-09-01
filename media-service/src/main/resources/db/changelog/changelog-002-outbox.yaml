@@ -1,0 +1,14 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 002-create-outbox-events
+      author: shop-platform
+      changes:
+        - sql: |
+            CREATE TABLE outbox_events (
+              id BIGSERIAL PRIMARY KEY, event_id varchar(36) NOT NULL UNIQUE,
+              aggregate_type varchar(50) NOT NULL, aggregate_id uuid NOT NULL,
+              event_type varchar(50) NOT NULL, topic varchar(100) NOT NULL,
+              payload TEXT NOT NULL, status varchar(20) NOT NULL,
+              retry_count integer NOT NULL DEFAULT 0, sent_at timestamptz, last_error varchar(1000));
+            CREATE INDEX idx_outbox_status ON outbox_events (status);

@@ -38,6 +38,11 @@ public abstract class AbstractMediaIntegrationTest {
         minio.start();
     }
 
+    /** Bootstrap servers of the shared Kafka singleton — ITs assert on real topics. */
+    public static String kafkaBootstrapServers() {
+        return kafka.getBootstrapServers();
+    }
+
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);

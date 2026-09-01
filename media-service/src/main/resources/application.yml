@@ -44,6 +44,13 @@ shop:
     stateless-session: true
     public-paths: []
 
+  # D4 outbox relay scheduling (ports rating-service's convention)
+  media:
+    outbox:
+      poll-millis: ${MEDIA_OUTBOX_POLL_MILLIS:2000}
+      batch-size: 100
+      max-retries: 10
+
 media:
   bucket: ${STORAGE_BUCKET:media}
   presign-ttl: ${MEDIA_PRESIGN_TTL:7d}

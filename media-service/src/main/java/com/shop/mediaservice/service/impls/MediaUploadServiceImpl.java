@@ -11,6 +11,8 @@ import com.shop.mediaservice.dto.response.MediaVariantResponse;
 import com.shop.mediaservice.entity.Media;
 import com.shop.mediaservice.entity.MediaVariant;
 import com.shop.mediaservice.metrics.MediaMetrics;
+import com.shop.mediaservice.outbox.MediaEventService;
+import com.shop.mediaservice.outbox.MediaEventType;
 import com.shop.mediaservice.repository.MediaRepository;
 import com.shop.mediaservice.service.MediaUploadService;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +49,9 @@ import java.util.UUID;
  *       stored original is never the raw bytes — metadata dies in the
  *       decode/re-encode);</li>
  *   <li>S3 writes (each key tracked);</li>
- *   <li>media + variant rows commit LAST, in one short transaction.</li>
+ *   <li>media + variant rows + the MediaCreated outbox row commit LAST, in
+ *       one short transaction (D4: the event commits or rolls back with the
+ *       media row — never written before the S3 writes).</li>
  * </ol>
  * Any failure after the first object write triggers best-effort orphan
  * deletion of the already-written keys; object-storage failures surface as
@@ -70,6 +74,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
     private final MediaMetrics metrics;
     private final MediaProperties properties;
     private final TransactionTemplate transactionTemplate;
+    private final MediaEventService mediaEvents;
 
     @Override
     public MediaResponse upload(MultipartFile file) {
@@ -169,7 +174,13 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             media.getVariants().add(variant);
         });
         try {
-            Media saved = transactionTemplate.execute(tx -> mediaRepository.saveAndFlush(media));
+            Media saved = transactionTemplate.execute(tx -> {
+                Media persisted = mediaRepository.saveAndFlush(media);
+                // D4: MediaCreated rides the SAME final DB transaction as the
+                // media row (which commits LAST, after the S3 writes).
+                mediaEvents.record(persisted, MediaEventType.MediaCreated);
+                return persisted;
+            });
             metrics.recordUpload(MediaMetrics.OUTCOME_CREATED);
             log.info("Media {} stored: sha256={}, {} variants, {} source bytes",
                     saved.getId(), sha256, saved.getVariants().size(), source.length);

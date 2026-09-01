@@ -27,6 +27,14 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-storage</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-kafka</artifactId>
+        </dependency>
         <!-- media-only processing stack (all Apache-2.0):
              thumbnailator drives the re-encode/variant renders through ImageIO;
              webp-imageio is the ImageIO WebP reader/writer plugin (JDK has none)
