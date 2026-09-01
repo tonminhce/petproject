@@ -40,6 +40,7 @@ class TransactionalProductEventPublisherTest {
     private static final UUID PRODUCT_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
     private static final UUID BRAND_ID = UUID.fromString("66666666-6666-6666-6666-666666666666");
     private static final UUID CATEGORY_ID = UUID.fromString("77777777-7777-7777-7777-777777777777");
+    private static final UUID MEDIA_ID = UUID.fromString("88888888-8888-8888-8888-888888888888");
     private static final Instant UPDATED_AT = Instant.parse("2026-08-31T10:00:00Z");
 
     private static final List<String> PAYLOAD_FIELDS = List.of(
@@ -173,5 +174,32 @@ class TransactionalProductEventPublisherTest {
         OutboxEvent event = capturedEvent();
         assertThat(event.getEventType()).isEqualTo("ProductDeleted");
         assertThat(payloadOf(event).get("eventType").asText()).isEqualTo("ProductDeleted");
+    }
+
+    @Test
+    void publishUpdated_mediaIdPresent_imageUrlIsDerivedCanonicalPath_17NamesUnchanged() throws Exception {
+        // Media epic spec D5: same 17-name contract, new imageUrl VALUE SOURCE —
+        // the derived canonical path replaces the stored free-string when the
+        // product references a media.
+        Product p = fullProduct();
+        p.setMediaId(MEDIA_ID);
+
+        publisher.publishUpdated(p);
+
+        JsonNode payload = payloadOf(capturedEvent());
+        assertThat(fieldNames(payload)).containsExactlyInAnyOrderElementsOf(PAYLOAD_FIELDS);
+        assertThat(payload.get("imageUrl").asText()).isEqualTo("/api/v1/medias/" + MEDIA_ID);
+    }
+
+    @Test
+    void publishUpdated_mediaIdNull_imageUrlStaysLegacyFreeString() throws Exception {
+        Product p = fullProduct();
+        p.setMediaId(null);
+
+        publisher.publishUpdated(p);
+
+        JsonNode payload = payloadOf(capturedEvent());
+        assertThat(fieldNames(payload)).containsExactlyInAnyOrderElementsOf(PAYLOAD_FIELDS);
+        assertThat(payload.get("imageUrl").asText()).isEqualTo("http://img.example/ip15.png");
     }
 }

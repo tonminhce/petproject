@@ -54,6 +54,11 @@ public abstract class AbstractIntegrationTest {
 
     static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
 
+    /** Bootstrap servers of the shared Kafka singleton — ITs assert on real topics (media base precedent). */
+    public static String kafkaBootstrapServers() {
+        return kafka.getBootstrapServers();
+    }
+
     static {
         postgres.start();
         kafka.start();

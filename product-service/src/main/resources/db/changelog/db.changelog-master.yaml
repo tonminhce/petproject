@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       file: changelog-003-rating-columns.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-004-media-reference.yaml
+      relativeToChangelogFile: true

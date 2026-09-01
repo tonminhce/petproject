@@ -40,6 +40,10 @@ public record ProductCreateRequest(
     @Size(max = 500, message = "Image URL must be at most 500 characters")
     String imageUrl,
 
+    // Logical media reference (media epic D5) — validated at write time with a
+    // HEAD existence check; null keeps the legacy imageUrl path.
+    UUID mediaId,
+
     @DecimalMin(value = "0.0", message = "Weight must be at least 0.0")
     BigDecimal weight,
 

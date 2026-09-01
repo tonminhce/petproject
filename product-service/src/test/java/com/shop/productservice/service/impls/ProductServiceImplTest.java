@@ -1,6 +1,8 @@
 package com.shop.productservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
+import com.shop.productservice.client.MediaHeadClient;
 import com.shop.productservice.dto.ProductFilter;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
@@ -46,6 +48,7 @@ class ProductServiceImplTest {
     @Mock ProductMapper mapper;
     @Mock ProductEventPublisher publisher;
     @Mock AuditorAware<String> auditorAware;
+    @Mock MediaHeadClient mediaHeadClient;
     @InjectMocks ProductServiceImpl service;
 
     private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -54,7 +57,7 @@ class ProductServiceImplTest {
 
     private ProductCreateRequest sampleCreate() {
         return new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
-            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null);
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null, null);
     }
 
     private Product sampleProduct() {
@@ -68,7 +71,7 @@ class ProductServiceImplTest {
         Product p = sampleProduct();
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
-            null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null);
         when(repo.findWithRelationsById(ID)).thenReturn(Optional.of(p));
         when(mapper.toDetailResponse(p)).thenReturn(resp);
 
@@ -88,7 +91,7 @@ class ProductServiceImplTest {
         Product product = sampleProduct();
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null,
-            null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null);
         when(repo.existsBySlug("iphone-15")).thenReturn(false);
         when(repo.existsBySku("IP15-001")).thenReturn(false);
         when(mapper.toEntity(req)).thenReturn(product);
@@ -113,7 +116,7 @@ class ProductServiceImplTest {
     @Test
     void create_throwsCategoryNotFoundWhenFkMissing() {
         ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
-            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, CATEGORY_ID, null);
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, CATEGORY_ID, null);
         when(repo.existsBySlug("iphone-15")).thenReturn(false);
         when(repo.existsBySku("IP15-001")).thenReturn(false);
         when(categoryRepo.findById(CATEGORY_ID)).thenReturn(Optional.empty());
@@ -128,7 +131,7 @@ class ProductServiceImplTest {
     @Test
     void create_throwsBrandNotFoundWhenFkMissing() {
         ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
-            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, BRAND_ID);
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null, BRAND_ID);
         when(repo.existsBySlug("iphone-15")).thenReturn(false);
         when(repo.existsBySku("IP15-001")).thenReturn(false);
         when(brandRepo.findById(BRAND_ID)).thenReturn(Optional.empty());
@@ -144,7 +147,7 @@ class ProductServiceImplTest {
     void update_throwsCategoryNotFoundWhenFkMissing() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
-            null, null, null, null, null, null, CATEGORY_ID, null);
+            null, null, null, null, null, null, null, CATEGORY_ID, null);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(categoryRepo.findById(CATEGORY_ID)).thenReturn(Optional.empty());
 
@@ -158,7 +161,7 @@ class ProductServiceImplTest {
     void update_throwsBrandNotFoundWhenFkMissing() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
-            null, null, null, null, null, null, null, BRAND_ID);
+            null, null, null, null, null, null, null, null, BRAND_ID);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(brandRepo.findById(BRAND_ID)).thenReturn(Optional.empty());
 
@@ -172,7 +175,7 @@ class ProductServiceImplTest {
     void update_throwsConflictOnDuplicateSlug() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, "taken", null, null,
-            null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.existsBySlugAndIdNot("taken", ID)).thenReturn(true);
 
@@ -185,7 +188,7 @@ class ProductServiceImplTest {
     void update_throwsConflictOnDuplicateSku() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, "taken-sku",
-            null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.existsBySkuAndIdNot("taken-sku", ID)).thenReturn(true);
 
@@ -198,10 +201,10 @@ class ProductServiceImplTest {
     void update_appliesPartialUpdateAndPublishes() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, "new desc", null,
-            new BigDecimal("1099.00"), null, null, null, null, null, null, null);
+            new BigDecimal("1099.00"), null, null, null, null, null, null, null, null);
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
-            null, null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null, null, null);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.save(existing)).thenReturn(existing);
         when(mapper.toDetailResponse(existing)).thenReturn(resp);
@@ -234,10 +237,142 @@ class ProductServiceImplTest {
         when(mapper.toSummaryResponse(p)).thenReturn(
             new ProductSummaryResponse(
                 ID, "iPhone 15", "iphone-15", "IP15-001",
-                new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null));
+                new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null));
 
         var result = service.findAll(new ProductFilter(null, null, null), PageRequest.of(0, 10));
 
         assertThat(result.content()).hasSize(1);
+    }
+
+    // --- media epic spec D5 — Option C write-time gate ---
+
+    private static final UUID MEDIA_ID = UUID.fromString("88888888-8888-8888-8888-888888888888");
+
+    private ProductCreateRequest createWithMedia() {
+        return new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, MEDIA_ID,
+            null, null, null, null);
+    }
+
+    @Test
+    void create_mediaIdExists_acceptedAndPersisted() {
+        ProductCreateRequest req = createWithMedia();
+        Product product = sampleProduct();
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
+        when(mediaHeadClient.exists(MEDIA_ID)).thenReturn(true);
+        when(mapper.toEntity(req)).thenReturn(product);
+        when(repo.save(product)).thenReturn(product);
+        when(mapper.toDetailResponse(product)).thenReturn(new ProductDetailResponse(ID, "iPhone 15",
+            "iphone-15", "desc", "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE,
+            null, MEDIA_ID, null, null, null, null, null, null, null, null, null, null));
+
+        service.create(req);
+
+        verify(mediaHeadClient).exists(MEDIA_ID);
+        verify(repo).save(product);
+    }
+
+    @Test
+    void create_unknownMediaId_rejectedWithMed12004() {
+        ProductCreateRequest req = createWithMedia();
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
+        when(mediaHeadClient.exists(MEDIA_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(req))
+            .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                assertThat(ex.getErrorCode()).isEqualTo("MED-12004");
+                assertThat(ex.getStatus().value()).isEqualTo(404);
+            });
+        verifyNoInteractions(publisher);
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void create_mediaUnreachable_rejectedWithMed12006() {
+        ProductCreateRequest req = createWithMedia();
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
+        when(mediaHeadClient.exists(MEDIA_ID))
+            .thenThrow(BusinessException.of(ErrorCode.MEDIA_STORAGE_UNAVAILABLE));
+
+        assertThatThrownBy(() -> service.create(req))
+            .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                assertThat(ex.getErrorCode()).isEqualTo("MED-12006");
+                assertThat(ex.getStatus().value()).isEqualTo(503);
+            });
+        verifyNoInteractions(publisher);
+        verify(repo, never()).save(any());
+    }
+
+    @Test
+    void create_nullMediaId_skipsHeadCheck_keepsLegacyPath() {
+        ProductCreateRequest req = sampleCreate();
+        Product product = sampleProduct();
+        when(repo.existsBySlug("iphone-15")).thenReturn(false);
+        when(repo.existsBySku("IP15-001")).thenReturn(false);
+        when(mapper.toEntity(req)).thenReturn(product);
+        when(repo.save(product)).thenReturn(product);
+        when(mapper.toDetailResponse(product)).thenReturn(new ProductDetailResponse(ID, "iPhone 15",
+            "iphone-15", "desc", "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE,
+            null, null, null, null, null, null, null, null, null, null, null, null));
+
+        service.create(req);
+
+        verifyNoInteractions(mediaHeadClient);
+    }
+
+    @Test
+    void update_mediaIdExists_appliesReferenceAndPublishes() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
+            null, null, null, null, MEDIA_ID, null, null, null, null);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(mediaHeadClient.exists(MEDIA_ID)).thenReturn(true);
+        when(repo.save(existing)).thenReturn(existing);
+        when(mapper.toDetailResponse(existing)).thenReturn(new ProductDetailResponse(ID, "iPhone 15",
+            "iphone-15", null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE,
+            null, MEDIA_ID, null, null, null, null, null, null, null, null, null, null));
+
+        service.update(ID, req);
+
+        verify(mediaHeadClient).exists(MEDIA_ID);
+        // mediaId wiring lives in mapper.partialUpdate (mocked here — its real
+        // behavior is pinned in ProductMapperMediaFieldsTest); the gate must
+        // pass BEFORE the update proceeds.
+        verify(mapper).partialUpdate(existing, req);
+        verify(publisher).publishUpdated(existing);
+    }
+
+    @Test
+    void update_unknownMediaId_rejectedWithMed12004() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
+            null, null, null, null, MEDIA_ID, null, null, null, null);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(mediaHeadClient.exists(MEDIA_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.update(ID, req))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("MED-12004"));
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void update_nullMediaId_skipsHeadCheck() {
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, "new desc", null,
+            new BigDecimal("1099.00"), null, null, null, null, null, null, null, null);
+        ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
+            "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
+            null, null, null, null, null, null, null, null, null, null, null, null);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(repo.save(existing)).thenReturn(existing);
+        when(mapper.toDetailResponse(existing)).thenReturn(resp);
+
+        service.update(ID, req);
+
+        verifyNoInteractions(mediaHeadClient);
     }
 }

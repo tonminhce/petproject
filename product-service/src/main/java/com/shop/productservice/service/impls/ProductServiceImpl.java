@@ -3,6 +3,7 @@ package com.shop.productservice.service.impls;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.productservice.client.MediaHeadClient;
 import com.shop.productservice.dto.ProductFilter;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
@@ -44,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductMapper mapper;
     private final ProductEventPublisher publisher;
     private final AuditorAware<String> auditorAware;
+    private final MediaHeadClient mediaHeadClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -110,6 +112,7 @@ public class ProductServiceImpl implements ProductService {
         if (repo.existsBySku(request.sku())) {
             throw BusinessException.of(ErrorCode.PRODUCT_SKU_EXISTS);
         }
+        assertMediaExists(request.mediaId());
         Product product = mapper.toEntity(request);
         if (request.categoryId() != null) {
             Category category = categoryRepo.findById(request.categoryId())
@@ -139,6 +142,7 @@ public class ProductServiceImpl implements ProductService {
         if (request.sku() != null && repo.existsBySkuAndIdNot(request.sku(), id)) {
             throw BusinessException.of(ErrorCode.PRODUCT_SKU_EXISTS);
         }
+        assertMediaExists(request.mediaId());
         mapper.partialUpdate(existing, request);
         if (request.categoryId() != null) {
             Category category = categoryRepo.findById(request.categoryId())
@@ -164,5 +168,17 @@ public class ProductServiceImpl implements ProductService {
         existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         repo.save(existing);
         publisher.publishDeleted(existing);
+    }
+
+    /**
+     * Media epic spec D5 — Option C write-time gate: a non-null mediaId is
+     * HEAD-checked against media-service; an unknown id rejects the write with
+     * MED-12004 (admin typos never ship broken images). The delete-time side
+     * stays EVENTUAL via the MediaDeleted consumer — no sync check here.
+     */
+    private void assertMediaExists(UUID mediaId) {
+        if (mediaId != null && !mediaHeadClient.exists(mediaId)) {
+            throw BusinessException.of(ErrorCode.MEDIA_NOT_FOUND);
+        }
     }
 }

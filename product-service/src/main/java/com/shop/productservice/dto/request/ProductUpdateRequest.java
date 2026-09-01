@@ -17,6 +17,7 @@ public record ProductUpdateRequest(
     @Min(0)                      Integer quantity,
     ProductStatus status,
     @Size(max = 500)             String imageUrl,
+    UUID mediaId,
     @DecimalMin("0.0")           BigDecimal weight,
     @Size(max = 50)              String dimensions,
     UUID categoryId,

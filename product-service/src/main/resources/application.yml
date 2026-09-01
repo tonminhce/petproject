@@ -70,6 +70,15 @@ shop:
         path: /api/v1/categories/**
       - method: GET
         path: /api/v1/brands/**
+  # Media-service client (media epic spec D5 Option C write-time gate).
+  # base-url env-backed with the compose-era in-network default.
+  media:
+    base-url: ${MEDIA_SERVICE_URL:http://media-service:8083}
+    timeout-ms: 3000
+    keycloak:
+      token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
+      client-id: ${PRODUCT_SERVICE_CLIENT_ID:product-service}
+      client-secret: ${PRODUCT_SERVICE_CLIENT_SECRET:changeme}
 
 product:
   outbox:
