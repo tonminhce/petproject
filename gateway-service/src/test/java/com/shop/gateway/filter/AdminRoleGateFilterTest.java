@@ -131,6 +131,32 @@ class AdminRoleGateFilterTest {
     }
 
     @Test
+    void singleCharEncodedBackofficePathIsGatedEvenWithAdminRole() throws Exception {
+        var exchange = encodedExchange("/api/v1/backoffice/%72atings");
+
+        filter.filter(exchange, passingChain())
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authWithRoles(List.of("ADMIN"))))
+                .block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        var json = new ObjectMapper().readTree(exchange.getResponse().getBodyAsString().block());
+        assertThat(json.get("success").asBoolean()).isFalse();
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0400");
+        assertThat(json.get("path").asText()).isEqualTo("/api/v1/backoffice/%72atings");
+    }
+
+    @Test
+    void doubleEncodedBackofficePathIsRejectedWithoutRoleCheck() {
+        var exchange = encodedExchange("/api/v1/backoffice/%2572atings");
+
+        filter.filter(exchange, passingChain())
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(userAuth()))
+                .block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void filterOrderFollowsBindingConstant() {
         assertThat(filter.getOrder())
                 .isEqualTo(FilterOrder.ADMIN_ROLE_GATE)
@@ -174,5 +200,12 @@ class AdminRoleGateFilterTest {
 
     private MockServerWebExchange exchange(String path) {
         return MockServerWebExchange.from(MockServerHttpRequest.get("http://gateway.local" + path).build());
+    }
+
+    private MockServerWebExchange encodedExchange(String rawPath) {
+        return MockServerWebExchange.from(MockServerHttpRequest
+                .method(org.springframework.http.HttpMethod.GET,
+                        java.net.URI.create("http://gateway.local" + rawPath))
+                .build());
     }
 }

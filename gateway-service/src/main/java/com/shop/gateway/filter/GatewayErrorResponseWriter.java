@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  * Writes the fleet {@link ApiResponse} error envelope from the gateway edge
- * (D4 rate-limit 429 and D5 IP-block 403 responses).
+ * (D4 rate-limit 429, D5 IP-block 403 and encoded-path 400 responses).
  *
  * <p><strong>Message i18n choice (documented):</strong> the gateway is the
  * edge — it does not run the per-request Locale resolution services use.
@@ -30,10 +30,12 @@ public final class GatewayErrorResponseWriter {
 
     static final String RATE_LIMITED_MESSAGE_EN = "Too many requests. Please slow down.";
     static final String ACCESS_DENIED_MESSAGE_EN = "You do not have permission to access this resource.";
+    static final String BAD_REQUEST_MESSAGE_EN = "Malformed request path.";
 
     private static final Map<ErrorCode, String> EN_MESSAGES = Map.of(
             ErrorCode.TOO_MANY_REQUESTS, RATE_LIMITED_MESSAGE_EN,
-            ErrorCode.ACCESS_DENIED, ACCESS_DENIED_MESSAGE_EN);
+            ErrorCode.ACCESS_DENIED, ACCESS_DENIED_MESSAGE_EN,
+            ErrorCode.BAD_REQUEST, BAD_REQUEST_MESSAGE_EN);
 
     private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 

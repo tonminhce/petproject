@@ -4,6 +4,8 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.gateway.routing.ApiPaths;
 import io.netty.handler.ipfilter.IpFilterRuleType;
 import io.netty.handler.ipfilter.IpSubnetFilterRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -24,8 +26,14 @@ import java.util.List;
  * <p>Bypass list (never IP-blocked — third-party callers and probes have no
  * office IP): payment/shipping webhook paths ({@code /api/v1/webhooks/**}) and
  * the actuator health endpoint (incl. liveness/readiness probes).</p>
+ *
+ * <p>Percent-encoded paths (raw &ne; decoded, incl. double encoding and
+ * malformed escapes) are rejected with the fleet 400 envelope before any
+ * bypass/IP decision — see {@link RequestPathGuard} for the strategy.</p>
  */
 public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminIpAllowlistFilter.class);
 
     private static final String WEBHOOK_BYPASS_PREFIX = ApiPaths.WEBHOOKS_PREFIX + "/";
     private static final String HEALTH_BYPASS_PATH = ApiPaths.ACTUATOR_HEALTH;
@@ -47,7 +55,15 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(final ServerWebExchange exchange, final GatewayFilterChain chain) {
-        if (!properties.active() || isBypassed(exchange.getRequest().getPath().value())) {
+        if (!properties.active()) {
+            return chain.filter(exchange);
+        }
+        final String path = exchange.getRequest().getPath().value();
+        if (RequestPathGuard.isEncoded(path)) {
+            log.warn("Rejected percent-encoded path at the IP allowlist edge: {}", path);
+            return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
+        }
+        if (isBypassed(path)) {
             return chain.filter(exchange);
         }
         final String clientIp = clientIpResolver.resolve(exchange);

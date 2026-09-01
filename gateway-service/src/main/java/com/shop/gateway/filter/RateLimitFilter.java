@@ -5,6 +5,8 @@ import com.shop.gateway.constant.ServiceRoute;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -21,10 +23,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * Buckets live in-process (single gateway instance, V1); a rejected request
  * gets the fleet 429 envelope plus {@code X-RateLimit-Remaining: 0}, a passed
  * request is tagged with the remaining tokens for debuggability (§4.4).
+ *
+ * <p>Scope lookup happens on the percent-DECODED path and a percent-encoded
+ * request whose decoded form falls into a scope is still metered, then
+ * rejected with the fleet 400 envelope (raw &ne; decoded — see
+ * {@link RequestPathGuard}; route predicates would decode it to the scoped
+ * route, so raw-only matching would let one encoded character bypass the
+ * limiter entirely).</p>
  */
 public final class RateLimitFilter implements GlobalFilter, Ordered {
 
     static final String REMAINING_HEADER = "X-RateLimit-Remaining";
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     private enum Scope {
         BACKOFFICE, SEARCH
@@ -50,20 +61,24 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
         if (!properties.enabled()) {
             return chain.filter(exchange);
         }
-        final String path = exchange.getRequest().getPath().value();
-        final Scope scope = scopeFor(path);
+        final String rawPath = exchange.getRequest().getPath().value();
+        final Scope scope = scopeFor(RequestPathGuard.decoded(rawPath));
         if (scope == null) {
             return chain.filter(exchange);
         }
 
         final String key = scope + ":" + clientIpResolver.resolve(exchange);
         final Bucket bucket = buckets.computeIfAbsent(key, ignored -> newBucket(scope));
-        if (bucket.tryConsume(1)) {
-            exchange.getResponse().getHeaders().set(REMAINING_HEADER, Long.toString(bucket.getAvailableTokens()));
-            return chain.filter(exchange);
+        if (!bucket.tryConsume(1)) {
+            exchange.getResponse().getHeaders().set(REMAINING_HEADER, "0");
+            return errorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS);
         }
-        exchange.getResponse().getHeaders().set(REMAINING_HEADER, "0");
-        return errorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS);
+        exchange.getResponse().getHeaders().set(REMAINING_HEADER, Long.toString(bucket.getAvailableTokens()));
+        if (RequestPathGuard.isEncoded(rawPath)) {
+            log.warn("Rejected percent-encoded path in a rate-limited scope (attempt still metered): {}", rawPath);
+            return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
+        }
+        return chain.filter(exchange);
     }
 
     @Override

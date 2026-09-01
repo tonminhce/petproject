@@ -120,6 +120,55 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void singleCharEncodedBackofficePathIsMeteredThenRejectedWith400() {
+        stubChainOk();
+        var filter = new RateLimitFilter(
+                new EdgeRateLimitProperties(true, 2, 60), errorWriter, ipResolver);
+
+        var first = encodedExchange("/api/v1/backoffice/%72atings", "203.0.113.7");
+        filter.filter(first, chain).block();
+        var second = encodedExchange("/api/v1/backoffice/%72atings", "203.0.113.7");
+        filter.filter(second, chain).block();
+        var third = encodedExchange("/api/v1/backoffice/%72atings", "203.0.113.7");
+        filter.filter(third, chain).block();
+
+        assertThat(first.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(second.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(third.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @Test
+    void doubleEncodedBackofficePathIsRejectedWith400Envelope() throws Exception {
+        stubChainOk();
+        var filter = new RateLimitFilter(
+                new EdgeRateLimitProperties(true, 10, 60), errorWriter, ipResolver);
+
+        var exchange = encodedExchange("/api/v1/backoffice/%2572atings", "203.0.113.7");
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        var json = new ObjectMapper().readTree(exchange.getResponse().getBodyAsString().block());
+        assertThat(json.get("success").asBoolean()).isFalse();
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0400");
+        assertThat(json.get("path").asText()).isEqualTo("/api/v1/backoffice/%2572atings");
+    }
+
+    @Test
+    void encodedSearchPathIsMeteredThenRejectedWith400() {
+        stubChainOk();
+        var filter = new RateLimitFilter(
+                new EdgeRateLimitProperties(true, 10, 1), errorWriter, ipResolver);
+
+        var first = encodedExchange("/api/v1/%73earch?q=shoes", "203.0.113.7");
+        filter.filter(first, chain).block();
+        var second = encodedExchange("/api/v1/%73earch?q=shoes", "203.0.113.7");
+        filter.filter(second, chain).block();
+
+        assertThat(first.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(second.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @Test
     void filterOrderFollowsBindingConstant() {
         var filter = new RateLimitFilter(
                 new EdgeRateLimitProperties(true, 10, 60), errorWriter, ipResolver);
@@ -148,6 +197,16 @@ class RateLimitFilterTest {
 
     private MockServerWebExchange exchange(String path, String forwardedFor) {
         var request = MockServerHttpRequest.get("http://gateway.local" + path)
+                .remoteAddress(new InetSocketAddress(101));
+        if (forwardedFor != null) {
+            request.header("X-Forwarded-For", forwardedFor);
+        }
+        return MockServerWebExchange.from(request.build());
+    }
+
+    private MockServerWebExchange encodedExchange(String rawPath, String forwardedFor) {
+        var request = MockServerHttpRequest.method(org.springframework.http.HttpMethod.GET,
+                        java.net.URI.create("http://gateway.local" + rawPath))
                 .remoteAddress(new InetSocketAddress(101));
         if (forwardedFor != null) {
             request.header("X-Forwarded-For", forwardedFor);

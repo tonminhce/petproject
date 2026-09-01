@@ -159,6 +159,58 @@ class AdminIpAllowlistFilterTest {
     }
 
     @Test
+    void encodedPathIsRejectedWith400EvenForAllowlistedIp() throws Exception {
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
+        var exchange = encodedExchange("/api/v1/backoffice/%72atings", "203.0.113.7");
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+        var json = new ObjectMapper().readTree(exchange.getResponse().getBodyAsString().block());
+        assertThat(json.get("success").asBoolean()).isFalse();
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0400");
+        assertThat(json.get("path").asText()).isEqualTo("/api/v1/backoffice/%72atings");
+    }
+
+    @Test
+    void doubleEncodedPathIsRejectedWith400() {
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
+        var exchange = encodedExchange("/api/v1/backoffice/%2572atings", "203.0.113.7");
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void encodedWebhookPathNeverReachesTheBypass() {
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("10.0.0.0/8")), errorWriter, ipResolver);
+        var exchange = encodedExchange("/api/v1/%77ebhooks/payments/callback", "10.1.2.3");
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void inactiveAllowlistStillPassesEncodedPathsThrough() {
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of()), errorWriter, ipResolver);
+        var exchange = encodedExchange("/api/v1/backoffice/%72atings", "8.8.8.8");
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.OK);
+    }
+
+    @Test
     void filterRunsAtHighestPrecedence() {
         var filter = new AdminIpAllowlistFilter(
                 new AdminIpAllowlistProperties(List.of()), errorWriter, ipResolver);
@@ -170,6 +222,16 @@ class AdminIpAllowlistFilterTest {
 
     private MockServerWebExchange exchange(String path, String forwardedFor) {
         var request = MockServerHttpRequest.get("http://gateway.local" + path)
+                .remoteAddress(new InetSocketAddress(101));
+        if (forwardedFor != null) {
+            request.header("X-Forwarded-For", forwardedFor);
+        }
+        return MockServerWebExchange.from(request.build());
+    }
+
+    private MockServerWebExchange encodedExchange(String rawPath, String forwardedFor) {
+        var request = MockServerHttpRequest.method(org.springframework.http.HttpMethod.GET,
+                        java.net.URI.create("http://gateway.local" + rawPath))
                 .remoteAddress(new InetSocketAddress(101));
         if (forwardedFor != null) {
             request.header("X-Forwarded-For", forwardedFor);

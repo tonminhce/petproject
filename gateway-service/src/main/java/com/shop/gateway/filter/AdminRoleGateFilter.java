@@ -2,6 +2,8 @@ package com.shop.gateway.filter;
 
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.gateway.constant.ServiceRoute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -22,6 +24,13 @@ import java.util.Map;
  * fallback for client-scoped roles. Anything else on those prefixes gets the
  * fleet 403 envelope.
  *
+ * <p>Prefix matching runs on the percent-DECODED path; a percent-encoded
+ * request whose decoded form falls under a backoffice prefix is rejected with
+ * the fleet 400 envelope before the role check (raw &ne; decoded — see
+ * {@link RequestPathGuard}; route predicates would decode it onto the gated
+ * route, so raw-only matching would let one encoded character skip the
+ * gate).</p>
+ *
  * <p>401 (no/invalid token) is already handled upstream by the resource-server
  * security chain — this filter only ever sees authenticated requests.</p>
  */
@@ -31,6 +40,8 @@ public final class AdminRoleGateFilter implements GlobalFilter, Ordered {
     private static final String REALM_ACCESS = "realm_access";
     private static final String RESOURCE_ACCESS = "resource_access";
     private static final String ROLES = "roles";
+
+    private static final Logger log = LoggerFactory.getLogger(AdminRoleGateFilter.class);
 
     private final List<String> backofficePrefixes;
     private final GatewayErrorResponseWriter errorResponseWriter;
@@ -42,9 +53,16 @@ public final class AdminRoleGateFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(final ServerWebExchange exchange, final GatewayFilterChain chain) {
-        final String path = exchange.getRequest().getPath().value();
-        if (backofficePrefixes.stream().noneMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"))) {
+        final String rawPath = exchange.getRequest().getPath().value();
+        final String decodedPath = RequestPathGuard.decoded(rawPath);
+        final boolean backoffice = backofficePrefixes.stream()
+                .anyMatch(prefix -> decodedPath.equals(prefix) || decodedPath.startsWith(prefix + "/"));
+        if (!backoffice) {
             return chain.filter(exchange);
+        }
+        if (RequestPathGuard.isEncoded(rawPath)) {
+            log.warn("Rejected percent-encoded path under a backoffice prefix: {}", rawPath);
+            return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
         }
 
         final Mono<Boolean> allowed = ReactiveSecurityContextHolder.getContext()
