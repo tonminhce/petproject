@@ -127,6 +127,30 @@
         "ADMIN",
         "MANAGER"
       ]
+    },
+    {
+      "username": "service-account-order-service",
+      "enabled": true,
+      "serviceAccountClientId": "order-service",
+      "realmRoles": [
+        "SERVICE"
+      ]
+    },
+    {
+      "username": "service-account-rating-service",
+      "enabled": true,
+      "serviceAccountClientId": "rating-service",
+      "realmRoles": [
+        "SERVICE"
+      ]
+    },
+    {
+      "username": "service-account-search-service",
+      "enabled": true,
+      "serviceAccountClientId": "search-service",
+      "realmRoles": [
+        "SERVICE"
+      ]
     }
   ]
 }

@@ -36,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the 3 confidential clients exist with service accounts enabled, each obtains a
  * client_credentials token whose JWT claims identify the service account
  * (preferred_username = service-account-&lt;clientId&gt;, sub = that service
- * account's user id), and the public frontend client is DENIED that grant.
+ * account's user id) AND carries the SERVICE realm role (final-review F2 —
+ * without it every SERVICE-gated internal endpoint 403s machine callers), and
+ * the public frontend client is DENIED that grant.
  *
  * <p>Client ids/secrets are parsed from the mounted JSON file — nothing is
  * duplicated here, so a realm-config drift fails this IT.</p>
@@ -165,6 +167,29 @@ class KeycloakRealmImportIT {
             .isEqualTo(saUser.json().path("id").asText());
         assertThat(claims.path("iss").asText()).endsWith("/realms/" + REALM);
         assertThat(claims.has("email")).as("service account carries no email").isFalse();
+    }
+
+    @ParameterizedTest(name = "{0} service-account token carries the SERVICE realm role")
+    @MethodSource("confidentialClients")
+    void clientCredentialsGrant_tokenCarriesServiceRealmRole(String clientId) {
+        String secret = clientNodes(REALM_JSON).stream()
+            .filter(c -> clientId.equals(c.path("clientId").asText()))
+            .findFirst().orElseThrow().path("secret").asText();
+        Response r = postForm("/realms/" + REALM + "/protocol/openid-connect/token",
+            "grant_type", "client_credentials",
+            "client_id", clientId,
+            "client_secret", secret);
+        assertThat(r.status()).as("token endpoint status for %s", clientId).isEqualTo(200);
+
+        JsonNode claims = jwtClaims(r.json().path("access_token").asText());
+        List<String> realmRoles = new ArrayList<>();
+        claims.path("realm_access").path("roles").forEach(role -> realmRoles.add(role.asText()));
+        assertThat(realmRoles)
+            .as("realm_access.roles of %s machine token (F2: SERVICE-gated internal calls)", clientId)
+            .contains("SERVICE");
+        assertThat(realmRoles)
+            .as("machine token of %s must not carry the ADMIN realm role", clientId)
+            .doesNotContain("ADMIN");
     }
 
     @Test
