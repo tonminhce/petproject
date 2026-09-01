@@ -39,10 +39,8 @@ public final class ApiPaths {
     public static final String RATINGS = API_V1 + "/ratings";
 
     // ---- Storefront / Backoffice ----
-    public static final String STOREFRONT_RATINGS = API_V1 + "/storefront/ratings";
     public static final String BACKOFFICE_RATINGS = API_V1 + "/backoffice/ratings";
     public static final String BACKOFFICE_PRODUCTS = API_V1 + "/backoffice/products";
-    public static final String STOREFRONT_SEARCH = API_V1 + "/storefront/search";
     public static final String SEARCH = API_V1 + "/search";
     public static final String BACKOFFICE_SEARCH = API_V1 + "/backoffice/search";
     public static final String BACKOFFICE_PROMOTIONS = API_V1 + "/backoffice/promotions";
