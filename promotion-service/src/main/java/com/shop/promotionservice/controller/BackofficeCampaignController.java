@@ -4,6 +4,7 @@ import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.promotionservice.constant.CampaignStatus;
 import com.shop.promotionservice.dto.request.CampaignRequest;
 import com.shop.promotionservice.dto.response.CampaignResponse;
@@ -59,17 +60,20 @@ public class BackofficeCampaignController {
     }
 
     @PostMapping
+    @Audited(action = "campaign.create", resourceType = "campaign")
     public ApiResponse<CampaignResponse> create(@Valid @RequestBody CampaignRequest request) {
         return ApiResponse.ok(campaignService.create(request), "Campaign created successfully");
     }
 
     @PutMapping("/{id}")
+    @Audited(action = "campaign.update", resourceType = "campaign")
     public ApiResponse<CampaignResponse> update(@PathVariable UUID id,
                                                 @Valid @RequestBody CampaignRequest request) {
         return ApiResponse.ok(campaignService.update(id, request), "Campaign updated successfully");
     }
 
     @DeleteMapping("/{id}")
+    @Audited(action = "campaign.delete", resourceType = "campaign")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         campaignService.delete(id);
         return ApiResponse.message("Campaign deleted successfully");

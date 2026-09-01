@@ -2,6 +2,7 @@ package com.shop.searchservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.searchservice.dto.request.ReindexRequest;
 import com.shop.searchservice.dto.response.ReindexResponse;
 import com.shop.searchservice.service.ReindexService;
@@ -31,6 +32,7 @@ public class BackofficeSearchController {
      * stream + atomic alias swap.
      */
     @PostMapping("/reindex")
+    @Audited(action = "search.reindex", resourceType = "search-index")
     public ApiResponse<ReindexResponse> reindex(
             @RequestBody(required = false) ReindexRequest request) {
         boolean dryRun = request != null && Boolean.TRUE.equals(request.dryRun());
