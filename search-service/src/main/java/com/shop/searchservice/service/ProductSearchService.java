@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch.core.DeleteResponse;
 import com.shop.searchservice.kafka.ProductLifecycleEvent;
+import com.shop.searchservice.search.IndexProvisioner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,8 +16,8 @@ import java.util.UUID;
 
 /**
  * Dumb upsert/delete of the FULL-snapshot product document behind the
- * {@code products} alias (spec D1/D2): the payload is copied as-is, no
- * recompute, no source lookups.
+ * {@link IndexProvisioner#ALIAS} alias (spec D1/D2): the payload is copied
+ * as-is, no recompute, no source lookups.
  *
  * <p>Status handling is BIDIRECTIONAL (F1): an ACTIVE payload upserts the
  * doc, any non-ACTIVE payload deletes it — which covers every transition
@@ -26,8 +27,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class ProductSearchService {
-
-    static final String INDEX_ALIAS = "products";
 
     private static final String STATUS_ACTIVE = "ACTIVE";
 
@@ -41,7 +40,7 @@ public class ProductSearchService {
         Map<String, Object> document = ProductDocuments.of(event);
         try {
             client.index(i -> i
-                .index(INDEX_ALIAS)
+                .index(IndexProvisioner.ALIAS)
                 .id(event.productId().toString())
                 .document(document));
         } catch (IOException ex) {
@@ -51,7 +50,7 @@ public class ProductSearchService {
 
     public void delete(UUID productId) {
         try {
-            DeleteResponse response = client.delete(d -> d.index(INDEX_ALIAS).id(productId.toString()));
+            DeleteResponse response = client.delete(d -> d.index(IndexProvisioner.ALIAS).id(productId.toString()));
             if (response.result() == Result.NotFound) {
                 log.debug("Delete for missing product doc {} — nothing to do", productId);
             }

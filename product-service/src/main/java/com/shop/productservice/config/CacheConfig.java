@@ -8,6 +8,8 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheWriter;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -32,6 +34,17 @@ import java.time.Duration;
  * {@code GenericJackson2JsonRedisSerializer} with a hand-tuned ObjectMapper
  * (JavaTimeModule for {@code Instant}, polymorphic typing for record types) so
  * the same serializer survives cache round-trips for any cached type.</p>
+ *
+ * <p><b>Immediate writes (fleet rule 6):</b> spring-data-redis 4.1.1's
+ * {@code DefaultRedisCacheWriter} defaults to {@code asynchronousWrites=true} —
+ * {@code put()} dispatches the Redis {@code SET} fire-and-forget on a
+ * Netty/Reactor event-loop thread while {@code get()} reads on the caller's
+ * synchronous connection, so a same-request reader racing the writer by tens of
+ * microseconds misses and re-fetches downstream (proven with Redis MONITOR wire
+ * evidence in order-service; fixed there in commit 02ac753). No Boot
+ * {@code spring.cache.redis.*} property exists for this — it must be set on the
+ * writer via {@code immediateWrites()}, which also makes {@code clear()}
+ * synchronous (see the IT-base per-test cache reset).</p>
  */
 @Configuration
 @EnableCaching
@@ -48,11 +61,15 @@ public class CacheConfig {
     private static final Duration TAXONOMY_TTL = Duration.ofMinutes(30);
 
     @Bean
-    public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer() {
+    public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer(
+            RedisConnectionFactory connectionFactory) {
         // enableStatistics() is on RedisCacheManagerBuilder (Spring Data Redis
         // 4.x), not on the per-cache RedisCacheConfiguration. Wired here so
         // ProductMetrics can read hit/miss via RedisCache.getStatistics().
         return builder -> builder
+                // Immediate writes: async put default raced same-request readers
+                // (fleet rule 6). No Boot property exists for this.
+                .cacheWriter(RedisCacheWriter.create(connectionFactory, config -> config.immediateWrites()))
                 .enableStatistics()
                 .withCacheConfiguration("product", cacheConfig(PRODUCT_TTL))
                 .withCacheConfiguration("productBySlug", cacheConfig(PRODUCT_TTL))
