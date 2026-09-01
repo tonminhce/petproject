@@ -1,6 +1,7 @@
 package com.shop.orderservice.config;
 
 import com.shop.common.core.constants.MdcKey;
+import com.shop.common.spring.tracing.TraceparentInterceptor;
 import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,31 +26,31 @@ import java.time.Duration;
 public class RestClientConfig {
 
     @Bean("productRestClient")
-    public RestClient productRestClient(ShopServicesProperties props) {
-        return baseRestClient(props.product().url(), props.product().timeoutMs());
+    public RestClient productRestClient(ShopServicesProperties props, TraceparentInterceptor traceparent) {
+        return baseRestClient(props.product().url(), props.product().timeoutMs(), traceparent);
     }
 
     @Bean("inventoryRestClient")
-    public RestClient inventoryRestClient(ShopServicesProperties props) {
-        return baseRestClient(props.inventory().url(), props.inventory().timeoutMs());
+    public RestClient inventoryRestClient(ShopServicesProperties props, TraceparentInterceptor traceparent) {
+        return baseRestClient(props.inventory().url(), props.inventory().timeoutMs(), traceparent);
     }
 
     @Bean("taxRestClient")
-    public RestClient taxRestClient(ShopServicesProperties props) {
-        return baseRestClient(props.tax().url(), props.tax().timeoutMs());
+    public RestClient taxRestClient(ShopServicesProperties props, TraceparentInterceptor traceparent) {
+        return baseRestClient(props.tax().url(), props.tax().timeoutMs(), traceparent);
     }
 
     @Bean("promotionRestClient")
-    public RestClient promotionRestClient(ShopServicesProperties props) {
-        return baseRestClient(props.promotion().url(), props.promotion().timeoutMs());
+    public RestClient promotionRestClient(ShopServicesProperties props, TraceparentInterceptor traceparent) {
+        return baseRestClient(props.promotion().url(), props.promotion().timeoutMs(), traceparent);
     }
 
     @Bean("paymentRestClient")
-    public RestClient paymentRestClient(ShopServicesProperties props) {
-        return baseRestClient(props.payment().url(), props.payment().timeoutMs());
+    public RestClient paymentRestClient(ShopServicesProperties props, TraceparentInterceptor traceparent) {
+        return baseRestClient(props.payment().url(), props.payment().timeoutMs(), traceparent);
     }
 
-    private RestClient baseRestClient(String baseUrl, int timeoutMs) {
+    private RestClient baseRestClient(String baseUrl, int timeoutMs, TraceparentInterceptor traceparent) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofMillis(timeoutMs).toMillis());
         factory.setReadTimeout((int) Duration.ofMillis(timeoutMs).toMillis());
@@ -64,12 +65,14 @@ public class RestClientConfig {
                 String corrId = MDC.get(MdcKey.CORRELATION_ID);
                 if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);
             })
+            // D3 — W3C traceparent propagation on every fleet outbound call.
+            .requestInterceptor(traceparent)
             .build();
     }
 
     /** ponytail: Spring Boot 4 does not auto-register RestClient.Builder as a bean; ServiceTokenProvider needs it. */
     @Bean
-    public RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
+    public RestClient.Builder restClientBuilder(TraceparentInterceptor traceparent) {
+        return RestClient.builder().requestInterceptor(traceparent);
     }
 }

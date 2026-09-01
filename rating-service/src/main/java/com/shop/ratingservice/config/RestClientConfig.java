@@ -1,6 +1,7 @@
 package com.shop.ratingservice.config;
 
 import com.shop.common.core.constants.MdcKey;
+import com.shop.common.spring.tracing.TraceparentInterceptor;
 import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,11 +26,11 @@ import java.time.Duration;
 public class RestClientConfig {
 
     @Bean("orderRestClient")
-    public RestClient orderRestClient(RatingClientProperties props) {
-        return baseRestClient(props.orderService().url(), props.orderService().timeoutMs());
+    public RestClient orderRestClient(RatingClientProperties props, TraceparentInterceptor traceparent) {
+        return baseRestClient(props.orderService().url(), props.orderService().timeoutMs(), traceparent);
     }
 
-    private RestClient baseRestClient(String baseUrl, long timeoutMs) {
+    private RestClient baseRestClient(String baseUrl, long timeoutMs, TraceparentInterceptor traceparent) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofMillis(timeoutMs).toMillis());
         factory.setReadTimeout((int) Duration.ofMillis(timeoutMs).toMillis());
@@ -43,12 +44,14 @@ public class RestClientConfig {
                 String corrId = MDC.get(MdcKey.CORRELATION_ID);
                 if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);
             })
+            // D3 — W3C traceparent propagation on every fleet outbound call.
+            .requestInterceptor(traceparent)
             .build();
     }
 
     /** Spring Boot 4 does not auto-register RestClient.Builder as a bean; ServiceTokenProvider needs it. */
     @Bean
-    public RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
+    public RestClient.Builder restClientBuilder(TraceparentInterceptor traceparent) {
+        return RestClient.builder().requestInterceptor(traceparent);
     }
 }
