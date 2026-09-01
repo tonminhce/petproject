@@ -27,7 +27,7 @@ class RoutesConfigTest {
 
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(26);
+        assertThat(routes).hasSize(27);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).hasSize(1));
     }
 
@@ -41,12 +41,12 @@ class RoutesConfigTest {
 
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(26);
+        assertThat(routes).hasSize(27);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).isEmpty());
     }
 
     @Test
-    void registersAllNineBackofficeRoutesWithTargetUris() {
+    void registersAllTenBackofficeRoutesWithTargetUris() {
         var rateLimiter = mock(RateLimiter.class);
         var keyResolver = mock(KeyResolver.class);
         var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
@@ -58,7 +58,7 @@ class RoutesConfigTest {
         var backofficeRoutes = routes.stream()
                 .filter(route -> route.getId().startsWith("backoffice-"))
                 .toList();
-        assertThat(backofficeRoutes).hasSize(9);
+        assertThat(backofficeRoutes).hasSize(10);
         assertThat(backofficeRoutes)
                 .satisfiesOnlyOnce(route -> {
                     assertThat(route.getUri().toString()).isEqualTo("http://tax-service:8091");
@@ -71,7 +71,31 @@ class RoutesConfigTest {
                 .satisfiesOnlyOnce(route -> {
                     assertThat(route.getUri().toString()).isEqualTo("http://search-service:8094");
                     assertThat(route.getPredicate().toString()).contains("/api/v1/backoffice/search");
+                })
+                .satisfiesOnlyOnce(route -> {
+                    assertThat(route.getUri().toString()).isEqualTo("http://media-service:8083");
+                    assertThat(route.getPredicate().toString()).contains("/api/v1/backoffice/medias");
                 });
+    }
+
+    @Test
+    void mediaRoutesUsePluralPredicateAndMediaServiceTarget() {
+        var rateLimiter = mock(RateLimiter.class);
+        var keyResolver = mock(KeyResolver.class);
+        var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
+        var routeLocator = createRoutes(rateLimiterFactory, rateLimiter, keyResolver,
+                new RateLimitProperties(false, 100, 200, 1, 0));
+
+        var routes = routeLocator.getRoutes().collectList().block();
+
+        var mediaRoute = routes.stream()
+                .filter(route -> route.getId().equals("media-service"))
+                .findFirst().orElseThrow();
+
+        assertThat(mediaRoute.getUri().toString()).isEqualTo("http://media-service:8083");
+        assertThat(mediaRoute.getPredicate().toString()).contains("/api/v1/medias");
+        assertThat(mediaRoute.getPredicate().toString()).doesNotContain("/api/v1/media/**");
+        assertThat(mediaRoute.getPredicate().toString()).doesNotContain("/api/v1/backoffice/medias");
     }
 
     @Test
