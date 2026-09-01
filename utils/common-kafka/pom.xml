@@ -16,6 +16,18 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
+        <!--
+            D3: OTel API only, used to read the current span context and inject
+            the W3C traceparent record header (mirrors common-spring's
+            TraceparentInterceptor). Provided scope on purpose: the actual tracing
+            bridge comes from common-spring (spring-boot-starter-opentelemetry) on
+            the runtime classpath of every fleet service that depends on both.
+        -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -35,6 +47,21 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+            Test-only tracing bridge: lets the module prove (without common-spring)
+            that the instrumented listener container really continues a trace from
+            the traceparent record header.
+        -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

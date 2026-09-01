@@ -21,10 +21,18 @@ import java.util.Map;
  * deserialization. The <em>value</em> path deserializes to {@code V} via
  * {@link JsonDeserializer}.</p>
  *
- * <p>Subclasses pin {@code K}/{@code V} and expose {@link #listenerContainerFactory()}
- * as a Spring bean so the container can be referenced by name from
- * {@code @KafkaListener}.</p>
- *
+     * <p>Subclasses pin {@code K}/{@code V} and expose {@link #listenerContainerFactory()}
+     * as a Spring bean so the container can be referenced by name from
+     * {@code @KafkaListener}.</p>
+     *
+     * <p>D3 — container observation is enabled so spring-kafka's listener
+     * instrumentation kicks in whenever the application context provides an
+     * {@code ObservationRegistry}: the propagating tracing handler extracts the
+     * W3C {@code traceparent} record header and the listener processing runs in
+     * a child span of that remote parent. Without a registry on the classpath
+     * (or without tracing handlers on it) the container degrades to a no-op —
+     * a missing/unknown header still yields a new root trace.</p>
+     *
  * <h3>Why wrap with {@link ErrorHandlingDeserializer}?</h3>
  * Poison records would otherwise tombstone the partition. Wrapping converts
  * deserialization failures into a {@code DeserializationException} that Spring
@@ -48,6 +56,7 @@ public abstract class BaseKafkaListenerConfig<K, V> {
     protected ConcurrentKafkaListenerContainerFactory<K, V> kafkaListenerContainerFactory() {
         var factory = new ConcurrentKafkaListenerContainerFactory<K, V>();
         factory.setConsumerFactory(typedConsumerFactory());
+        factory.getContainerProperties().setObservationEnabled(true);
         return factory;
     }
 
