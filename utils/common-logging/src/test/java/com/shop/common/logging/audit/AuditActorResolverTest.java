@@ -61,6 +61,39 @@ class AuditActorResolverTest {
     }
 
     @Test
+    void kc26MachineTokenShapeResolvesToAuthorizedPartyNotUser() {
+        // Final-review F3: the KC26 live probe proved client_credentials tokens
+        // carry clientId=None, azp=<client>, sub=<service-account-uuid> — the
+        // sub must not mislabel the machine caller as a user.
+        login(Map.of(
+                "sub", "b7c1f9a2-1111-4c3d-8e2f-9a8b7c6d5e4f",
+                "azp", "order-service",
+                "preferred_username", "service-account-order-service",
+                "typ", "Bearer"));
+
+        AuditActorResolver.Actor actor = AuditActorResolver.resolve();
+
+        assertThat(actor.id()).isEqualTo("order-service");
+        assertThat(actor.type()).isEqualTo(AuditEvent.ACTOR_TYPE_SERVICE);
+    }
+
+    @Test
+    void interactiveUserTokenWithAzpStillResolvesToSubject() {
+        // azp names the authorized party on USER tokens too — only the absence
+        // of a session marker makes it a service identity.
+        login(Map.of(
+                "sub", "3f6d2f4e-8e7a-4a1b-9c0d-123456789abc",
+                "azp", "ecommerce-client",
+                "session_state", "5e9d7c3a-2222-4b1a-9f0e-1a2b3c4d5e6f",
+                "sid", "7a1b2c3d-3333-4e5f-8a9b-0c1d2e3f4a5b"));
+
+        AuditActorResolver.Actor actor = AuditActorResolver.resolve();
+
+        assertThat(actor.id()).isEqualTo("3f6d2f4e-8e7a-4a1b-9c0d-123456789abc");
+        assertThat(actor.type()).isEqualTo(AuditEvent.ACTOR_TYPE_USER);
+    }
+
+    @Test
     void noAuthenticationResolvesToAnonymous() {
         SecurityContextHolder.clearContext();
 
