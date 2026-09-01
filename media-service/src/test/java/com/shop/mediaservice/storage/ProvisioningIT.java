@@ -3,8 +3,10 @@ package com.shop.mediaservice.storage;
 import com.shop.common.storage.service.ObjectStorageService;
 import com.shop.mediaservice.config.MediaProperties;
 import com.shop.mediaservice.support.AbstractMediaIntegrationTest;
+import jakarta.servlet.MultipartConfigElement;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
@@ -25,6 +27,9 @@ class ProvisioningIT extends AbstractMediaIntegrationTest {
 
     @Autowired
     private MediaProperties mediaProperties;
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
     @Test
     void contextBootsWithBucketProvisioned() {
@@ -48,6 +53,18 @@ class ProvisioningIT extends AbstractMediaIntegrationTest {
         assertThat(mediaProperties.presignTtl()).isEqualTo(Duration.ofDays(7));
         assertThat(mediaProperties.maxUpload().toBytes()).isEqualTo(10 * 1024 * 1024);
         assertThat(mediaProperties.purgeGrace()).isEqualTo(Duration.ofDays(30));
+        assertThat(mediaProperties.displayWidth()).isEqualTo(1200);
+        assertThat(mediaProperties.thumbWidth()).isEqualTo(320);
+    }
+
+    @Test
+    void servletMultipartCeilingSitsAboveTheBusinessCap() {
+        var multipartConfig = applicationContext.getBean(MultipartConfigElement.class);
+
+        assertThat(multipartConfig.getMaxFileSize())
+                .isEqualTo(mediaProperties.maxUploadBytes() + 1024L * 1024L);
+        assertThat(multipartConfig.getMaxRequestSize())
+                .isEqualTo(mediaProperties.maxUploadBytes() + 2 * 1024L * 1024L);
     }
 
     private static boolean isPublicGrant(Grant grant) {

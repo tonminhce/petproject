@@ -129,7 +129,15 @@ public enum ErrorCode {
 
     // ---- Search domain ---- SRH-12001..12002
     SEARCH_REINDEX_IN_PROGRESS("SRH-12001", "search.reindex_in_progress", HttpStatus.CONFLICT),
-    SEARCH_QUERY_FAILED("SRH-12002", "search.query_failed", HttpStatus.SERVICE_UNAVAILABLE);
+    SEARCH_QUERY_FAILED("SRH-12002", "search.query_failed", HttpStatus.SERVICE_UNAVAILABLE),
+
+    // ---- Media domain ---- MED-12001..12006
+    MEDIA_INVALID_FILE("MED-12001", "media.invalid_file", HttpStatus.BAD_REQUEST),
+    MEDIA_TOO_LARGE("MED-12002", "media.too_large", HttpStatus.PAYLOAD_TOO_LARGE),
+    MEDIA_TYPE_NOT_ALLOWED("MED-12003", "media.type_not_allowed", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    MEDIA_NOT_FOUND("MED-12004", "media.not_found", HttpStatus.NOT_FOUND),
+    MEDIA_ALREADY_DELETED("MED-12005", "media.already_deleted", HttpStatus.CONFLICT),
+    MEDIA_STORAGE_UNAVAILABLE("MED-12006", "media.storage_unavailable", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final String code;
     private final String messageKey;

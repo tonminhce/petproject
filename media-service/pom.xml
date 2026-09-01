@@ -27,9 +27,34 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-storage</artifactId>
         </dependency>
+        <!-- media-only processing stack (all Apache-2.0):
+             thumbnailator drives the re-encode/variant renders through ImageIO;
+             webp-imageio is the ImageIO WebP reader/writer plugin (JDK has none)
+             that makes original-format + WebP renders possible;
+             metadata-extractor is upload-time metadata inspection (EXIF/GPS
+             audit logging only — stripped bytes are never stored). -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>0.4.20</version>
+        </dependency>
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>2.19.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.usefulness</groupId>
+            <artifactId>webp-imageio</artifactId>
+            <version>0.10.2</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
         </dependency>
         <dependency>
             <groupId>org.liquibase</groupId>

@@ -44,7 +44,9 @@ public abstract class AbstractMediaIntegrationTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        registry.add("spring.liquibase.enabled", () -> "false");
+        // Liquibase owns the media schema (changelog-001) — schema-by-Hibernate
+        // stays off (ddl-auto none) so the changelog is what ITs exercise.
+        registry.add("spring.liquibase.enabled", () -> "true");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
         registry.add("shop.storage.endpoint", minio::getS3URL);

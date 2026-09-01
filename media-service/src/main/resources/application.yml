@@ -49,3 +49,5 @@ media:
   presign-ttl: ${MEDIA_PRESIGN_TTL:7d}
   max-upload: ${MEDIA_MAX_UPLOAD:10MB}
   purge-grace: ${MEDIA_PURGE_GRACE:30d}
+  display-width: ${MEDIA_DISPLAY_WIDTH:1200}
+  thumb-width: ${MEDIA_THUMB_WIDTH:320}
