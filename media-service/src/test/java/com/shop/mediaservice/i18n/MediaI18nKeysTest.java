@@ -21,7 +21,9 @@ class MediaI18nKeysTest {
             "media.invalid_file",
             "media.too_large",
             "media.type_not_allowed",
-            "media.storage_unavailable");
+            "media.storage_unavailable",
+            "media.not_found",
+            "media.already_deleted");
 
     private static final String[] BUNDLES = {
             "/messages/messages_en.properties",

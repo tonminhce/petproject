@@ -28,8 +28,10 @@ databaseChangeLog:
       id: 001-medias-sha256-unique
       author: shop-platform
       changes:
+        # Partial unique: SHA-256 is unique across LIVE media only (D1) —
+        # a soft-deleted row must never block re-uploading the same bytes.
         - sql: |
-            CREATE UNIQUE INDEX uk_medias_sha256 ON medias (sha256);
+            CREATE UNIQUE INDEX uk_medias_sha256 ON medias (sha256) WHERE deleted = false;
 
   - changeSet:
       id: 001-create-media-variants

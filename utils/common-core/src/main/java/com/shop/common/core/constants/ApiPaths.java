@@ -29,6 +29,7 @@ public final class ApiPaths {
     public static final String FAVOURITES = API_V1 + "/favourites";
     public static final String PROMOTIONS = API_V1 + "/promotions";
     public static final String MEDIAS = API_V1 + "/medias";
+    public static final String BACKOFFICE_MEDIAS = API_V1 + "/backoffice/medias";
 
     // ---- Notifications ----
     public static final String NOTIFICATIONS = API_V1 + "/notifications";

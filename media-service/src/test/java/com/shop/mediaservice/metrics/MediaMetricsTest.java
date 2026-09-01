@@ -34,4 +34,16 @@ class MediaMetricsTest {
         assertThat(registry.get("media_uploads_total").tag("outcome", "rejected").counter().count())
                 .isEqualTo(1.0d);
     }
+
+    @Test
+    void recordPresign_incrementsCounterTaggedWithVariant() {
+        metrics.recordPresign("display");
+        metrics.recordPresign("display");
+        metrics.recordPresign("thumb");
+
+        assertThat(registry.get("media_presigned_total").tag("variant", "display").counter().count())
+                .isEqualTo(2.0d);
+        assertThat(registry.get("media_presigned_total").tag("variant", "thumb").counter().count())
+                .isEqualTo(1.0d);
+    }
 }
