@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: media-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mediaservice}
+    username: ${POSTGRES_USER:admin}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  port: ${SERVER_PORT:8083}
+
+shop:
+  kafka:
+    bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: media-service
+      auto-offset-reset: latest
+
+  # common-storage wires S3Client/S3Presigner/ObjectStorageService from these
+  # props (RustFS in compose, MinIO in ITs). Bucket creation is BucketBootstrap's
+  # job — it also asserts the private ACL — so auto-create stays off here and a
+  # storage outage at startup degrades the service instead of killing the context.
+  storage:
+    endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
+    region: ${STORAGE_REGION:us-east-1}
+    access-key: ${STORAGE_ACCESS_KEY:rustfsadmin}
+    secret-key: ${STORAGE_SECRET_KEY:rustfsadmin}
+    bucket: ${STORAGE_BUCKET:media}
+    auto-create-bucket: false
+
+  security:
+    issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}
+    csrf-disabled: true
+    stateless-session: true
+    public-paths: []
+
+media:
+  bucket: ${STORAGE_BUCKET:media}
+  presign-ttl: ${MEDIA_PRESIGN_TTL:7d}
+  max-upload: ${MEDIA_MAX_UPLOAD:10MB}
+  purge-grace: ${MEDIA_PURGE_GRACE:30d}
