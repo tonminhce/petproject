@@ -1,0 +1,178 @@
+# ============================================================
+# PRODUCTION OVERLAY — apply ON TOP of docker-compose.yml
+# ============================================================
+# Run with BOTH files (never run this file alone):
+#
+#   docker compose --env-file .env.prod \
+#     -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Semantics (compose merge rules, verified with `config` output):
+#   * `ports: !override []` REPLACES the base published-ports list with an
+#     empty one (requires docker compose v2.24+; plain merge would APPEND).
+#     Result: INGRESS ONLY on gateway-service — every other container is
+#     reachable exclusively on the internal `ecommerce-network` (the internal
+#     network is untouched; service-to-service calls keep working).
+#   * `environment` maps merge per-key, so this file only adds/overrides the
+#     prod vars listed below.
+#   * service `volumes` merge by container mount path, so the audit volume
+#     appends to whatever the base mounts.
+#
+# The base docker-compose.yml MUST stay unchanged — dev keeps direct service
+# access (Postman E2E flows). All prod-specific knobs live in .env.prod
+# (template: .env.prod.example).
+#
+# ⚠ TRUSTED-PROXY REQUIREMENT — docs/PRODUCTION-READINESS.md §4.1:
+#   The gateway trusts the FIRST X-Forwarded-For entry (allowlist + rate-limit
+#   keying). This topology is only sound behind a trusted reverse proxy / LB
+#   that OVERWRITES XFF before traffic reaches :8080. Never expose the gateway
+#   port directly to the internet.
+#
+# mock-payment-provider is a local-PSP simulator: disable it in real prod with
+#   `--scale mock-payment-provider=0` (or route PAYMENT_PROVIDER to a real PSP).
+# ============================================================
+
+x-audit-env: &audit-env
+  AUDIT_LOG_PATH: /var/log/audit/audit.jsonl
+
+x-audit-volume: &audit-volume
+  volumes:
+    - audit_logs:/var/log/audit
+
+services:
+
+  # ============================================================
+  # INGRESS — the ONLY service with a published port
+  # ============================================================
+  gateway-service:
+    ports: !override
+      - "${GATEWAY_INGRESS_PORT:-8080}:8080"
+    environment:
+      # D5 — backoffice IP allowlist. MUST be set in prod:
+      #   env ABSENT or EMPTY STRING = filter INACTIVE (allow-all) — an empty
+      #   value is a MISCONFIGURATION (docs/PRODUCTION-READINESS.md §4.1).
+      # Comma-separated CIDRs, e.g. 10.0.0.0/8,192.168.1.0/24. Invalid CIDRs
+      # fail gateway startup (fail-fast). Bypassed: /api/v1/webhooks/**,
+      # /actuator/health.
+      ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-}
+      # Trust exactly ONE XFF hop — valid ONLY behind the trusted reverse
+      # proxy / LB mandated in §4.1 (rate-limit key: XFF entry at index 1).
+      GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS: ${GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS:-1}
+      # D3 — OTLP exporter, env-gated. Uncomment AND set the real collector
+      # URL in .env.prod; an EMPTY value must NOT be wired (it would enable
+      # the exporter with a blank endpoint). Absent → no exporter, tracing
+      # still populates MDC. Copy this same line into any service block to
+      # export that service's spans too.
+      # OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+
+  # ============================================================
+  # INFRASTRUCTURE — no host ports in prod (internal network only)
+  # ============================================================
+  postgres:
+    ports: !override []
+
+  redis:
+    ports: !override []
+
+  kafka:
+    ports: !override []
+
+  elasticsearch:
+    ports: !override []
+
+  rustfs:
+    ports: !override []
+
+  # Keycloak admin console (:9090) is NOT exposed at the edge in prod —
+  # manage the realm via the admin API from inside the network (rotation
+  # runbook: docs/PRODUCTION-READINESS.md §4.1) or a one-off container.
+  keycloak:
+    ports: !override []
+    environment:
+      # Rotation item — operator sets a strong value in .env.prod (already an
+      # env ref in the base file; restated here so rotation is documented).
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+
+  # ============================================================
+  # BACKEND SERVICES — no host ports; audit sink + rotated secrets
+  # ============================================================
+  auth-service:
+    ports: !override []
+
+  # D6 — @Audited sink (backoffice + ADMIN product mutations)
+  product-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+
+  order-service:
+    ports: !override []
+    environment:
+      # Rotation item (D2) — client_credentials secret for order-service,
+      # rotated via Keycloak admin API and injected here; empty value FAILS
+      # CLOSED (Keycloak rejects client_credentials), never falls back to the
+      # dev default baked into the base file.
+      ORDER_SERVICE_CLIENT_SECRET: ${ORDER_SERVICE_CLIENT_SECRET:-}
+
+  payment-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+
+  shipping-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+
+  inventory-service:
+    ports: !override []
+
+  favourite-service:
+    ports: !override []
+
+  media-service:
+    ports: !override []
+
+  tax-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+
+  promotion-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+
+  rating-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+      # Rotation item (D2) — see order-service note. Empty fails closed.
+      RATING_SERVICE_CLIENT_SECRET: ${RATING_SERVICE_CLIENT_SECRET:-}
+
+  search-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+      # Rotation item (D2) — see order-service note. Empty fails closed.
+      SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:-}
+
+  notification-service:
+    <<: *audit-volume
+    ports: !override []
+    environment:
+      <<: *audit-env
+
+# ============================================================
+# VOLUMES — appends `audit_logs` to the base volumes (merge by key).
+# Ship audit.jsonl off-box with filebeat/vector (spec §6 open item).
+# ============================================================
+volumes:
+  audit_logs:

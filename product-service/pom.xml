@@ -34,6 +34,11 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-kafka</artifactId>
         </dependency>
+        <!-- Audit aspect: @Audited on the ADMIN-gated product mutations. -->
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-logging</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>

@@ -3,6 +3,7 @@ package com.shop.productservice.controller;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.productservice.dto.ProductFilter;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
@@ -58,12 +59,14 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = "product.create", resourceType = "product")
     public ApiResponse<ProductDetailResponse> create(@Valid @RequestBody ProductCreateRequest request) {
         return ApiResponse.ok(productService.create(request), "Product created successfully");
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = "product.update", resourceType = "product")
     public ApiResponse<ProductDetailResponse> update(@PathVariable UUID id,
                                                      @Valid @RequestBody ProductUpdateRequest request) {
         return ApiResponse.ok(productService.update(id, request), "Product updated successfully");
@@ -71,6 +74,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = "product.delete", resourceType = "product")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         productService.delete(id);
         return ApiResponse.message("Product deleted successfully");

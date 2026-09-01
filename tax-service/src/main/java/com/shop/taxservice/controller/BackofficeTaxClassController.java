@@ -2,6 +2,7 @@ package com.shop.taxservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.taxservice.dto.request.TaxClassRequest;
 import com.shop.taxservice.dto.response.TaxClassResponse;
 import com.shop.taxservice.service.TaxClassService;
@@ -39,17 +40,20 @@ public class BackofficeTaxClassController {
     }
 
     @PostMapping
+    @Audited(action = "tax-class.create", resourceType = "tax-class")
     public ApiResponse<TaxClassResponse> create(@Valid @RequestBody TaxClassRequest request) {
         return ApiResponse.ok(taxClassService.create(request), "Tax class created successfully");
     }
 
     @PutMapping("/{id}")
+    @Audited(action = "tax-class.update", resourceType = "tax-class")
     public ApiResponse<TaxClassResponse> update(@PathVariable UUID id,
                                                 @Valid @RequestBody TaxClassRequest request) {
         return ApiResponse.ok(taxClassService.update(id, request), "Tax class updated successfully");
     }
 
     @DeleteMapping("/{id}")
+    @Audited(action = "tax-class.delete", resourceType = "tax-class")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         taxClassService.delete(id);
         return ApiResponse.message("Tax class deleted successfully");

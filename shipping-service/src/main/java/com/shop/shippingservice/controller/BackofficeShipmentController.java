@@ -4,6 +4,7 @@ import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.dto.request.AssignTrackingRequest;
@@ -52,6 +53,7 @@ public class BackofficeShipmentController {
     }
 
     @PostMapping("/{id}/tracking")
+    @Audited(action = "shipment.assign-tracking", resourceType = "shipment")
     public ApiResponse<ShipmentResponse> assignTracking(@PathVariable UUID id,
                                                         @RequestBody AssignTrackingRequest request) {
         return ApiResponse.ok(shipmentService.assignTracking(id, request.trackingNumber()),
@@ -59,6 +61,7 @@ public class BackofficeShipmentController {
     }
 
     @PostMapping("/{id}/transition")
+    @Audited(action = "shipment.transition", resourceType = "shipment")
     public ApiResponse<ShipmentResponse> transition(@PathVariable UUID id,
                                                     @RequestBody ShipmentTransitionRequest request) {
         return ApiResponse.ok(shipmentService.transition(id, request.status()),
@@ -66,11 +69,13 @@ public class BackofficeShipmentController {
     }
 
     @PostMapping("/{id}/fail")
+    @Audited(action = "shipment.fail", resourceType = "shipment")
     public ApiResponse<ShipmentResponse> fail(@PathVariable UUID id) {
         return ApiResponse.ok(shipmentService.fail(id), "Shipment marked as failed");
     }
 
     @PostMapping("/{id}/retry")
+    @Audited(action = "shipment.retry", resourceType = "shipment")
     public ApiResponse<ShipmentResponse> retry(@PathVariable UUID id) {
         return ApiResponse.ok(shipmentService.retry(id), "Shipment retry started");
     }

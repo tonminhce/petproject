@@ -2,6 +2,7 @@ package com.shop.ratingservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.ratingservice.dto.request.RatingHideRequest;
 import com.shop.ratingservice.dto.response.RatingResponse;
@@ -31,6 +32,7 @@ public class BackofficeRatingController {
     private final RatingService ratingService;
 
     @PostMapping("/{id}/hide")
+    @Audited(action = "rating.hide", resourceType = "rating")
     public ApiResponse<RatingResponse> hide(@PathVariable UUID id,
                                             @Valid @RequestBody RatingHideRequest request) {
         UUID adminId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
@@ -38,6 +40,7 @@ public class BackofficeRatingController {
     }
 
     @PostMapping("/{id}/unhide")
+    @Audited(action = "rating.unhide", resourceType = "rating")
     public ApiResponse<RatingResponse> unhide(@PathVariable UUID id) {
         UUID adminId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(ratingService.unhide(id, adminId));

@@ -28,6 +28,11 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-kafka</artifactId>
         </dependency>
+        <!-- Audit aspect: @Audited on the backoffice reindex endpoint. -->
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-logging</artifactId>
+        </dependency>
         <dependency>
             <groupId>co.elastic.clients</groupId>
             <artifactId>elasticsearch-java</artifactId>

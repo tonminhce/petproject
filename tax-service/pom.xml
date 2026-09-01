@@ -33,6 +33,10 @@
         </dependency>
         <dependency>
             <groupId>com.shop.microservices</groupId>
+            <artifactId>common-logging</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
             <artifactId>common-keycloak</artifactId>
         </dependency>
         <dependency>
