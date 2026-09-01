@@ -205,8 +205,7 @@ Pin every `@RequestMapping` to one of these constants. No string literals.
 | `CARTS`, `ORDERS`, `PAYMENTS` | `/api/v1/carts`, `/orders`, `/payments` |
 | `INVENTORY`, `SHIPPINGS`, `FAVOURITES`, `MEDIAS` | `/api/v1/inventory`, `/shippings`, `/favourites`, `/medias` |
 | `NOTIFICATIONS`, `EMAILS` | `/api/v1/notifications`, `/emails` |
-| `STOREFRONT_RATINGS`, `BACKOFFICE_RATINGS` | split storefront vs. backoffice |
-| `STOREFRONT_SEARCH` | `/api/v1/storefront/search` |
+| `BACKOFFICE_RATINGS`, `BACKOFFICE_PRODUCTS`, `BACKOFFICE_SEARCH` | split storefront vs. backoffice |
 | `BACKOFFICE_PROMOTIONS`, `BACKOFFICE_TAX_CLASSES`, `BACKOFFICE_TAX_RATES` | `/api/v1/backoffice/…` |
 
 ### 2.3 `BusinessException` + `ErrorCode`
