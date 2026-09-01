@@ -31,6 +31,12 @@ StorageConfig (common-storage client bean from props), BucketBootstrap
 (ApplicationRunner: create-if-missing + ASSERT private ACL, ES-down-style tolerance),
 MediaProperties record; test support AbstractMediaIntegrationTest (Testcontainers:
 postgres + kafka + **MinIO** — port search's singleton pattern; MinIO with bucket env).
+**N-R1 follow-up (user-ratified, do FIRST in this task): extend the EXISTING
+gateway RequestPathGuard (commit e91100e — do NOT create a new class) to reject
+paths containing `;` (matrix-variable evasion, same class as F1 percent-encoding)
+with the same 400 envelope; tests: `/backoffice;r=1/ratings` → 400 across the 3
+edge filters + normal paths pass; commit separately:
+`feat(gateway): RequestPathGuard — matrix-variable path rejection (N-R1)`.**
 Test: ProvisioningIT — context boots, bucket exists + private, props bound.
 - [ ] TDD → green → **commit** `feat(media): bootstrap — storage client, private bucket bootstrap, IT base`
 

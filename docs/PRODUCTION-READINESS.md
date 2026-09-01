@@ -136,3 +136,17 @@ sink is the seam (spec §6 open item: audit sink shippers).
   one instance (also closes the in-process bucket-map growth note).
 - XFF trust gating for the allowlist filter (mirroring
   `GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS`) — see §4.1.
+
+## Future hardening (ratified follow-ups, non-blocking)
+
+1. **Central OTel wiring (Phase 9+, R1 follow-up):** outbound traceparent injection
+   currently lives at 4 per-service RestClient builder sites. Add a common-spring
+   `BeanPostProcessor` that auto-injects the OTel interceptor into EVERY
+   `RestClient.Builder` bean (and `RestTemplate.Builder` if present) so future
+   services inherit tracing with zero wiring. ~20 LOC, 1 commit.
+2. **`confirm()` semantic (pre-existing):** OrderStatusController.confirm parses the
+   authenticated id as a UUID — valid for SERVICE tokens (service-account UUID) but
+   semantically expects an admin id; revisit if order confirm becomes admin-facing.
+3. **Actor resolution Keycloak-shape coupling:** audit actor uses
+   azp-present-without-session-marker ⇒ service; degradation path is sub-first.
+   Re-verify on Keycloak upgrades (KeycloakRealmImportIT gates the token shape).
