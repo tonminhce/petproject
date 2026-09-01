@@ -44,7 +44,10 @@ Keycloak realm import, common-* modules. **Zero business-logic changes in servic
   traceparent on every fleet RestClient (where the ServiceTokenProvider interceptor
   already lives — same config site).
 - OTLP exporter env-gated: OTEL_EXPORTER_OTLP_ENDPOINT absent → exporter bean not
-  created; MDC still gets traceId/spanId.
+  created; MDC still gets traceId/spanId. **N3: pin the env-gating with an explicit
+  conditional-bean-creation test (context without env → no exporter bean + tracer
+  present; context with env → exporter bean present) — do NOT rely on Boot
+  auto-config behavior being obvious.**
 - Test: auto-config context test (tracer present, no exporter when env absent);
   interceptor unit test asserting header injection when span active.
 
@@ -69,7 +72,9 @@ Keycloak realm import, common-* modules. **Zero business-logic changes in servic
   (Authentication → sub/clientId ONLY), resourceId (path variable named `id`/`*Id`),
   outcome (success/fail), correlationId+traceId from MDC.
 - Writer: one JSON line per event → file at `AUDIT_LOG_PATH` env (absent → stdout
-  logger `AUDIT`), fire-and-forget executor, failures log-and-continue (never block).
+  logger `AUDIT`), **N1: bounded pool corePoolSize=2 / maxPoolSize=4 /
+  queueCapacity=1000, rejection = discard + WARN counter (audit NEVER blocks the
+  request — queue overflow is logged, not propagated)**, failures log-and-continue.
 - Payload EXACT per spec D6 (PII-safe). No annotation on GET endpoints.
 - Test: aspect unit tests (actor extraction, PII exclusion — email/name never
   serialized), writer file/stdout modes, failure-tolerance test.
@@ -88,7 +93,10 @@ tests.
   webhooks/actuator-health. Present+non-match → 403 envelope.
 - Rate limit: bucket4j per-IP buckets for the two scopes (10/min, 60/min —
   configurable props); 429 envelope + X-RateLimit-Remaining header.
-- Order: IP → rate → role → route (Spring cloud gateway global filters order).
+- Order: IP → rate → role → route — **N2: explicit getOrder() assignments:
+  IP = HIGHEST_PRECEDENCE, rate = HIGHEST_PRECEDENCE+10, role =
+  HIGHEST_PRECEDENCE+20 (ordered constants, not magic numbers)** (Spring cloud
+  gateway global filters order).
 - Tests: WebFluxRouteTests — matrix: no-token/401, user-token/403, admin-token/200
   (proxy to WireMock target), IP blocked, IP inactive-when-absent, webhook bypass,
   429 after burst + header, envelope shapes exact.

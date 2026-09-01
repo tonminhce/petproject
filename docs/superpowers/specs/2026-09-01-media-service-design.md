@@ -47,6 +47,8 @@ cleanup + §4 purge note).
 - `GET /api/v1/medias/{id}?variant=display|thumb|original&format=auto|webp` — public
   (P2-6, authenticated edge; default display+auto=webp when stored) → **302 presigned**.
   Unknown variant → 404.
+- `HEAD /api/v1/medias/{id}` — existence check, NO presign (200/404). Service-facing
+  validation endpoint (product write-time check, spec D5 Option C).
 - `DELETE /api/v1/backoffice/medias/{id}` — ADMIN → soft-delete (deleted_at) +
   MediaDeleted event (D4); repeat → 409. Hard purge of objects after
   `MEDIA_PURGE_GRACE` (default 30d) by scheduled job (@EnableScheduling, port rating's
@@ -69,9 +71,13 @@ eventTypes ack-skip; containment fleet posture; NO DLT.
 changelog-004: `products.media_id` UUID NULL (logical ref — media DB is SEPARATE, no
 FK), backfill none (legacy rows keep free-text imageUrl). Mapper: mediaId present →
 canonicalPath; else legacy imageUrl (backward compat). ProductDetail/Summary +
-create/update requests gain `mediaId`; lifecycle payload's `imageUrl` field becomes
-the DERIVED canonical path when mediaId set (search doc unchanged — contract stable).
-Rating-referenced product payload parity test updated (same 17 names, new value source).
+create/update requests gain `mediaId`; **validation is Option C hybrid (binding):
+write-time — product backoffice create/update HEAD-checks media and rejects unknown
+mediaId (MED-12004) so admin typos never ship broken images; delete-time — EVENTUAL
+via the D4 consumer chain (no sync check on delete)**. Lifecycle payload's `imageUrl`
+field becomes the DERIVED canonical path when mediaId set (search doc unchanged —
+contract stable). Rating-referenced product payload parity test updated (same 17
+names, new value source).
 
 ## D6 — Errors, i18n, metrics
 

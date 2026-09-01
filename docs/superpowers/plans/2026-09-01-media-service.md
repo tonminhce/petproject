@@ -39,8 +39,11 @@ Test: ProvisioningIT — context boots, bucket exists + private, props bound.
 **Files:** Media entity + variants child (schema per D1/D2, changelog-001),
 MediaRepository (sha256 unique), upload pipeline: magic-byte + mime allowlist →
 size guard → SHA-256 (dedup → return existing 200 duplicate:true BEFORE storing) →
-EXIF/GPS strip → thumbnailator variants (original/display/thumb × original-format+WebP)
-→ S3 writes → media row commit LAST; failure → best-effort orphan delete + 503/400.
+**M1 EXIF/GPS strip: metadata-extractor (Drew Noakes, Apache-2) for upload-time
+metadata inspection/logging; the stored original is a FULL-RESOLUTION re-encode via
+thumbnailator (re-encode drops EXIF/GPS inherently — never store raw bytes)** →
+thumbnailator variants (display/thumb × original-format+WebP) →
+S3 writes → media row commit LAST; failure → best-effort orphan delete + 503/400.
 MediaUploadService interface + impls (fleet split), MediaProperties binding.
 ErrorCode MED-12001..12003 + i18n + `media_uploads_total{outcome}`.
 Tests: UploadIT (MinIO): each format ok (variants exist, sizes ≤ caps, WebP present),
@@ -51,6 +54,8 @@ orphan cleanup on injected S3 failure.
 ### Task 3: read + delete — presign 302, soft delete, purge
 
 **Files:** MediaQueryService (presign per variant/format, unknown → 404 MED-12004),
+**HEAD /api/v1/medias/{id} — existence check WITHOUT presign (200/404) for
+service-to-service validation (M3 Option C)**,
 MediaLifecycleService (soft-delete + outbox row, repeat 409 MED-12005),
 MediaPurgeJob (@EnableScheduling, grace-aware, reference-aware WARN-skip),
 BackofficeMediaController (ADMIN upload/delete), MediaPublicController (GET P2-6 → 302),
@@ -73,12 +78,20 @@ same-tx outbox row IT.
 
 **Files:** product-service: changelog-004 (products.media_id UUID NULL), Product
 entity + mapper (mediaId → canonicalPath derive; legacy imageUrl fallback per spec D5),
-create/update request fields, **MediaLifecycleListenerConfig + MediaDeletedConsumer**
+create/update request fields, **M2 naming: product's EXISTING BackofficeProductController
+gains mediaId on create/update — NO new client class is introduced**;
+**M3 DESIGN CHOICE (Option C hybrid, binding): write-time validation — product
+backoffice create/update with mediaId performs a lightweight HEAD check against
+media (via a small MediaHeadClient, EligibilityClient pattern) and rejects unknown
+mediaId with MED-12004; delete-time stays EVENTUAL (media Deleted event → product
+consumer clears refs, no sync check at delete) — consistent with the fleet's
+snapshot-carry adjudication**,
+**MediaLifecycleListenerConfig + MediaDeletedConsumer**
 (product's consumer stack; group product-service): on MediaDeleted → clear matching
 media_id products → publishUpdated(each) → (search chain verified by existing consumer
-tests' pattern); ProductBackofficeClient upload-attach: backoffice product
-create/update accept mediaId (no sync media check — integrity is event-driven).
-Tests: changelog roll, mapper derive/fallback, consumer clears + emits ProductUpdated
+tests' pattern).
+Tests: changelog roll, mapper derive/fallback, HEAD-check reject path (WireMock
+404 → MED-12004) + accept path, consumer clears + emits ProductUpdated
 (real kafka), payload parity test updated (17 names, derived imageUrl), product suite
 green (62+).
 - [ ] TDD → green → **commit** `feat(product): media_id reference + MediaDeleted consumer (orphan kill → ProductUpdated)`
