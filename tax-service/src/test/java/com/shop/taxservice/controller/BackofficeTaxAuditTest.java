@@ -5,8 +5,10 @@ import com.shop.common.logging.audit.AuditEventWriter;
 import com.shop.common.logging.config.AuditAutoConfiguration;
 import com.shop.common.security.config.SecurityAutoConfiguration;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
+import com.shop.taxservice.dto.response.TaxCalculateResponse;
 import com.shop.taxservice.dto.response.TaxClassResponse;
 import com.shop.taxservice.dto.response.TaxRateResponse;
+import com.shop.taxservice.service.TaxCalculationService;
 import com.shop.taxservice.service.TaxClassService;
 import com.shop.taxservice.service.TaxRateService;
 import org.junit.jupiter.api.Test;
@@ -38,12 +40,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Audit spot matrix (spec D6): one mutating endpoint per backoffice tax
- * controller (both live in this service) exercised through the
- * {@code AuditAspect} — proving the two distinct action/resourceType pairs
- * and the path-variable resourceId on the idempotent {id} route.
+ * Audit spot matrix (spec D6 + R3 veto): one mutating endpoint per backoffice
+ * tax controller plus the SERVICE-gated calculation endpoint (all live in
+ * this service) exercised through the {@code AuditAspect} — proving the
+ * distinct action/resourceType pairs, the path-variable resourceId on the
+ * idempotent {id} route, and the service-actor discrimination on calculate.
  */
-@WebMvcTest(value = {BackofficeTaxClassController.class, BackofficeTaxRateController.class},
+@WebMvcTest(value = {BackofficeTaxClassController.class, BackofficeTaxRateController.class,
+        TaxCalculationController.class},
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
 @Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class,
@@ -58,6 +62,7 @@ class BackofficeTaxAuditTest {
     @Autowired MockMvc mockMvc;
     @MockitoBean TaxClassService taxClassService;
     @MockitoBean TaxRateService taxRateService;
+    @MockitoBean TaxCalculationService taxCalculationService;
     @MockitoBean JwtDecoder jwtDecoder;
     @MockitoBean AuditEventWriter auditEventWriter;
 
@@ -109,5 +114,31 @@ class BackofficeTaxAuditTest {
         assertThat(event.toJson()).contains(
             "\"action\":\"tax-rate.update\"",
             "\"resourceId\":\"" + rateId + "\"");
+    }
+
+    @Test
+    void calculate_byServiceToken_emitsAuditLineWithServiceActor() throws Exception {
+        when(taxCalculationService.calculate(
+                any(com.shop.taxservice.dto.request.TaxCalculateRequest.class)))
+            .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
+
+        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000b004")
+                        .claim("azp", "checkout-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"taxClassId":"%s","country":"DE","amount":100.00}""".formatted(classId)))
+            .andExpect(status().isOk());
+
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventWriter).write(captor.capture());
+        AuditEvent event = captor.getValue();
+        assertThat(event.action()).isEqualTo("tax.calculate");
+        assertThat(event.resourceType()).isEqualTo("tax-calculation");
+        assertThat(event.actorType()).isEqualTo("service");
+        assertThat(event.actorId()).isEqualTo("checkout-service");
+        assertThat(event.outcome()).isEqualTo("success");
+        assertThat(event.toJson()).contains("\"action\":\"tax.calculate\"");
     }
 }

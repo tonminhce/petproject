@@ -33,12 +33,14 @@ public class PaymentController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    @Audited(action = "payment.create", resourceType = "payment")
     public ApiResponse<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
         return ApiResponse.ok(PaymentResponse.from(paymentService.create(request)));
     }
 
     @PostMapping("/{id}/capture")
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    @Audited(action = "payment.capture", resourceType = "payment")
     public ApiResponse<PaymentResponse> capture(@PathVariable UUID id) {
         return ApiResponse.ok(PaymentResponse.from(paymentService.capture(id)));
     }
