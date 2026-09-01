@@ -4,6 +4,7 @@ import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.InventoryResponse;
@@ -76,6 +77,7 @@ public class InventoryController {
     @PostMapping("/{productId}/reserve")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
+    @Audited(action = "inventory.reserve", resourceType = "reservation")
     public ApiResponse<ReservationResponse> reserve(@PathVariable UUID productId,
                                                      @Valid @RequestBody ReserveRequest request) {
         return ApiResponse.ok(reservationService.reserveWithRetry(productId, request));
@@ -83,6 +85,7 @@ public class InventoryController {
 
     @PostMapping("/reservations/{reservationId}/commit")
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
+    @Audited(action = "inventory.commit", resourceType = "reservation")
     public ApiResponse<Void> commit(@PathVariable UUID reservationId) {
         reservationService.commitWithRetry(reservationId);
         return ApiResponse.message("Reservation committed successfully");
@@ -90,6 +93,7 @@ public class InventoryController {
 
     @PostMapping("/reservations/{reservationId}/release")
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
+    @Audited(action = "inventory.release", resourceType = "reservation")
     public ApiResponse<Void> release(@PathVariable UUID reservationId) {
         reservationService.releaseWithRetry(reservationId);
         return ApiResponse.message("Reservation released successfully");
@@ -97,6 +101,7 @@ public class InventoryController {
 
     @PostMapping("/reservations/{reservationId}/release-committed")
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
+    @Audited(action = "inventory.release-committed", resourceType = "reservation")
     public ApiResponse<Void> releaseCommitted(@PathVariable UUID reservationId) {
         reservationService.releaseCommittedWithRetry(reservationId);
         return ApiResponse.ok(null);

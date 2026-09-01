@@ -2,6 +2,7 @@ package com.shop.taxservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.taxservice.dto.request.TaxCalculateRequest;
 import com.shop.taxservice.dto.response.TaxCalculateResponse;
 import com.shop.taxservice.service.TaxCalculationService;
@@ -20,6 +21,7 @@ public class TaxCalculationController {
 
     @PostMapping(ApiPaths.BACKOFFICE_TAX_RATES + "/calculate")
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    @Audited(action = "tax.calculate", resourceType = "tax-calculation")
     public ApiResponse<TaxCalculateResponse> calculate(@Valid @RequestBody TaxCalculateRequest request) {
         return ApiResponse.ok(taxCalculationService.calculate(request));
     }
