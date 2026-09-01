@@ -27,9 +27,10 @@ import java.util.List;
  * office IP): payment/shipping webhook paths ({@code /api/v1/webhooks/**}) and
  * the actuator health endpoint (incl. liveness/readiness probes).</p>
  *
- * <p>Percent-encoded paths (raw &ne; decoded, incl. double encoding and
- * malformed escapes) are rejected with the fleet 400 envelope before any
- * bypass/IP decision — see {@link RequestPathGuard} for the strategy.</p>
+ * <p>Evasive paths (percent-encoded — raw &ne; decoded, incl. double encoding
+ * and malformed escapes — or carrying matrix variables) are rejected with the
+ * fleet 400 envelope before any bypass/IP decision — see
+ * {@link RequestPathGuard} for the strategy.</p>
  */
 public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
 
@@ -59,8 +60,8 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
         final String path = exchange.getRequest().getPath().value();
-        if (RequestPathGuard.isEncoded(path)) {
-            log.warn("Rejected percent-encoded path at the IP allowlist edge: {}", path);
+        if (RequestPathGuard.isEvasive(path)) {
+            log.warn("Rejected evasive path (encoded or matrix-variable) at the IP allowlist edge: {}", path);
             return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
         }
         if (isBypassed(path)) {

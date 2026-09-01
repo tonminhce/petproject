@@ -29,7 +29,9 @@ import java.util.Map;
  * the fleet 400 envelope before the role check (raw &ne; decoded — see
  * {@link RequestPathGuard}; route predicates would decode it onto the gated
  * route, so raw-only matching would let one encoded character skip the
- * gate).</p>
+ * gate). Matrix-variable paths (N-R1) are rejected outright, before the
+ * prefix decision — the {@code ;} suffix defeats the prefix match itself
+ * while route predicates still land the request on the gated route.</p>
  *
  * <p>401 (no/invalid token) is already handled upstream by the resource-server
  * security chain — this filter only ever sees authenticated requests.</p>
@@ -54,6 +56,10 @@ public final class AdminRoleGateFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(final ServerWebExchange exchange, final GatewayFilterChain chain) {
         final String rawPath = exchange.getRequest().getPath().value();
+        if (RequestPathGuard.containsMatrixVariable(rawPath)) {
+            log.warn("Rejected matrix-variable path at the backoffice role gate: {}", rawPath);
+            return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
+        }
         final String decodedPath = RequestPathGuard.decoded(rawPath);
         final boolean backoffice = backofficePrefixes.stream()
                 .anyMatch(prefix -> decodedPath.equals(prefix) || decodedPath.startsWith(prefix + "/"));

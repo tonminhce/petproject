@@ -138,6 +138,22 @@ class RateLimitFilterTest {
     }
 
     @Test
+    void matrixVariableBackofficePathIsRejectedWith400() throws Exception {
+        stubChainOk();
+        var filter = new RateLimitFilter(
+                new EdgeRateLimitProperties(true, 10, 60), errorWriter, ipResolver);
+
+        var exchange = encodedExchange("/api/v1/backoffice;r=1/ratings", "203.0.113.7");
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        var json = new ObjectMapper().readTree(exchange.getResponse().getBodyAsString().block());
+        assertThat(json.get("success").asBoolean()).isFalse();
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0400");
+        assertThat(json.get("path").asText()).isEqualTo("/api/v1/backoffice;r=1/ratings");
+    }
+
+    @Test
     void doubleEncodedBackofficePathIsRejectedWith400Envelope() throws Exception {
         stubChainOk();
         var filter = new RateLimitFilter(
