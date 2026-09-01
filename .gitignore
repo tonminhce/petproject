@@ -23,6 +23,7 @@ target/
 .env.*
 !.env.example
 !.env.template
+!.env.prod.example
 
 # ============================================================
 # Logs
