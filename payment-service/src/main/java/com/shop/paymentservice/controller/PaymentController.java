@@ -4,6 +4,7 @@ import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
 import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.service.PaymentService;
@@ -44,6 +45,7 @@ public class PaymentController {
 
     @PostMapping("/{id}/refund")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audited(action = "payment.refund", resourceType = "payment")
     public ApiResponse<PaymentResponse> refund(@PathVariable UUID id) {
         return ApiResponse.ok(PaymentResponse.from(paymentService.refund(id)));
     }

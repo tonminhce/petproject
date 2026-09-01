@@ -51,6 +51,12 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-kafka</artifactId>
         </dependency>
+        <!-- Audit aspect: @Audited on the backoffice shipment mutations. Declared
+             explicitly — the transitive copy via common-spring is an accident. -->
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
+            <artifactId>common-logging</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
