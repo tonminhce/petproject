@@ -49,6 +49,45 @@
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:*##http://127.0.0.1:*##http://ecommerce.local/*##http://admin.ecommerce.local/*"
       }
+    },
+    {
+      "clientId": "order-service",
+      "name": "Order Service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "secret": "changeme"
+    },
+    {
+      "clientId": "rating-service",
+      "name": "Rating Service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "secret": "changeme"
+    },
+    {
+      "clientId": "search-service",
+      "name": "Search Service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "secret": "changeme"
     }
   ],
   "users": [

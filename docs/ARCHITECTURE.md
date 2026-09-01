@@ -231,7 +231,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Redis 7 | gateway (rate limit — global system bucket + per-route bucket, see [`docs/RATE-LIMIT.md`](./RATE-LIMIT.md)), auth (SSO session store), order (cart cache) | DB 0–15 logical | `spring.session.store-type=redis` (when wired); key schema `request_rate_limiter.{routeId}.{key}.tokens` |
 | Kafka 3.9 | order → payment/notification/search; product → search | topics above | KRaft mode (no Zookeeper), one broker is fine for dev |
 | Elasticsearch 8.15 | search-service (products, ratings), optional logs | `products`, `ratings`, `logs-*` | Single-node, security off in dev |
-| Keycloak 26 | all services (JWT issuer) | `keycloak` DB on the same Postgres | Realm `ecommerce`, clients `ecommerce-client`, `swagger-ui` |
+| Keycloak 26 | all services (JWT issuer) | `keycloak` DB on the same Postgres | Realm `ecommerce`, clients `ecommerce-client`, `swagger-ui`, service clients `order-service`/`rating-service`/`search-service` (confidential, client_credentials only) |
 | RustFS | media-service (S3 SDK v2) | bucket `ecommerce-media` | S3-compatible, console on :9001 |
 
 ## 6. Cross-cutting concerns
