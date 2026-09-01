@@ -3,6 +3,7 @@ package com.shop.mediaservice.outbox;
 import com.shop.common.core.constants.OutboxStatus;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.when;
 class MediaOutboxRelayTest {
 
     private static final String TOPIC = "media.lifecycle.v1";
+    private static final List<OutboxStatus> DUE_STATUSES = List.of(OutboxStatus.PENDING, OutboxStatus.FAILED);
 
     @Mock private OutboxEventRepository outboxRepo;
     @Mock private KafkaMessagePublisher kafkaPublisher;
@@ -46,7 +48,7 @@ class MediaOutboxRelayTest {
         ReflectionTestUtils.setField(relay, "maxRetries", 10);
     }
 
-    private OutboxEvent pendingEvent(int retryCount) {
+    private OutboxEvent event(OutboxStatus status, int retryCount) {
         return OutboxEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .aggregateType("media")
@@ -54,16 +56,20 @@ class MediaOutboxRelayTest {
                 .eventType("MediaCreated")
                 .topic(TOPIC)
                 .payload("{\"eventType\":\"MediaCreated\",\"mediaId\":\"" + mediaId + "\"}")
-                .status(OutboxStatus.PENDING)
+                .status(status)
                 .retryCount(retryCount)
                 .build();
     }
 
+    private void due(OutboxEvent... events) {
+        when(outboxRepo.findByStatusInOrderByIdAsc(DUE_STATUSES, PAGE_REQUEST))
+                .thenReturn(List.of(events));
+    }
+
     @Test
     void relay_success_marksSentWithSentAtAndKeepsRetryCount() {
-        OutboxEvent event = pendingEvent(0);
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(event));
+        OutboxEvent event = event(OutboxStatus.PENDING, 0);
+        due(event);
 
         relay.relay();
 
@@ -80,10 +86,9 @@ class MediaOutboxRelayTest {
 
     @Test
     void relay_publishesWhateverEventTypeRowCarries() {
-        OutboxEvent event = pendingEvent(0);
+        OutboxEvent event = event(OutboxStatus.PENDING, 0);
         event.setEventType("MediaDeleted");
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(event));
+        due(event);
 
         relay.relay();
 
@@ -93,10 +98,9 @@ class MediaOutboxRelayTest {
 
     @Test
     void relay_publishFailure_incrementsRetryAndBreaksLoop() {
-        OutboxEvent first = pendingEvent(0);
-        OutboxEvent second = pendingEvent(0);
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(first, second));
+        OutboxEvent first = event(OutboxStatus.PENDING, 0);
+        OutboxEvent second = event(OutboxStatus.PENDING, 0);
+        due(first, second);
         doThrow(new RuntimeException("kafka down")).when(kafkaPublisher)
                 .publish(TOPIC, mediaId.toString(), first.getPayload());
 
@@ -116,9 +120,8 @@ class MediaOutboxRelayTest {
 
     @Test
     void relay_maxRetriesExhausted_marksFailed() {
-        OutboxEvent event = pendingEvent(9);
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(event));
+        OutboxEvent event = event(OutboxStatus.PENDING, 9);
+        due(event);
         doThrow(new RuntimeException("kafka still down")).when(kafkaPublisher)
                 .publish(TOPIC, mediaId.toString(), event.getPayload());
 
@@ -134,8 +137,43 @@ class MediaOutboxRelayTest {
     }
 
     @Test
+    @DisplayName("FAILED row is NOT terminal — picked up again next cycle, published + SENT")
+    void relay_failedRowIsReplayedOnNextCycle() {
+        OutboxEvent event = event(OutboxStatus.FAILED, 10);
+        due(event);
+
+        relay.relay();
+
+        verify(kafkaPublisher).publish(TOPIC, mediaId.toString(), event.getPayload());
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepo).save(captor.capture());
+        OutboxEvent saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(OutboxStatus.SENT);
+        assertThat(saved.getSentAt()).isBeforeOrEqualTo(Instant.now());
+        assertThat(saved.getLastError()).isNull();
+    }
+
+    @Test
+    @DisplayName("FAILED row that fails again stays FAILED — one bounded attempt per cycle")
+    void relay_failedRowReplayFailure_staysFailed() {
+        OutboxEvent event = event(OutboxStatus.FAILED, 10);
+        due(event);
+        doThrow(new RuntimeException("broker still down")).when(kafkaPublisher)
+                .publish(TOPIC, mediaId.toString(), event.getPayload());
+
+        relay.relay();
+
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepo).save(captor.capture());
+        OutboxEvent saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(OutboxStatus.FAILED); // parked for the next cycle
+        assertThat(saved.getRetryCount()).isEqualTo(11);
+        assertThat(saved.getLastError()).isEqualTo("broker still down");
+    }
+
+    @Test
     void relay_emptyPending_noPublishNoSave() {
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
+        when(outboxRepo.findByStatusInOrderByIdAsc(DUE_STATUSES, PAGE_REQUEST))
                 .thenReturn(List.of());
 
         relay.relay();

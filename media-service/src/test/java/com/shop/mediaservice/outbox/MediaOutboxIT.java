@@ -71,6 +71,8 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
     @DynamicPropertySource
     static void relayProps(DynamicPropertyRegistry registry) {
         registry.add("shop.media.outbox.poll-millis", () -> "3600000");
+        // low bar so the FAILED parking (and its replay) is reachable in-test
+        registry.add("shop.media.outbox.max-retries", () -> "2");
     }
 
     @BeforeEach
@@ -267,6 +269,29 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         OutboxEvent retried = outboxRepository.findById(row.getId()).orElseThrow();
         assertThat(retried.getStatus()).isEqualTo(com.shop.common.core.constants.OutboxStatus.SENT);
         assertThat(retried.getRetryCount()).isEqualTo(1); // unchanged by the successful publish
+        assertThat(awaitRecord("media.lifecycle.v1", response.id().toString())).isNotNull();
+    }
+
+    @Test
+    @DisplayName("FAILED row is REPLAYED: outage past max-retries parks the row, next healthy cycle publishes + SENT")
+    void relayFailedRowIsReplayedOnNextCycle() throws Exception {
+        byte[] source = TestImages.jpeg(640, 480);
+        MediaResponse response = uploadService.upload(multipart("image/jpeg", source));
+        OutboxEvent row = outboxRepository.findAll().get(0);
+
+        FlakyPublisher.failing = true;
+        relay.relay(); // retry 1/2
+        relay.relay(); // retry 2/2 → parked FAILED
+        OutboxEvent parked = outboxRepository.findById(row.getId()).orElseThrow();
+        assertThat(parked.getStatus()).isEqualTo(com.shop.common.core.constants.OutboxStatus.FAILED);
+        assertThat(parked.getLastError()).isNotBlank();
+
+        FlakyPublisher.failing = false;
+        relay.relay(); // replay cycle picks FAILED rows up again
+
+        OutboxEvent replayed = outboxRepository.findById(row.getId()).orElseThrow();
+        assertThat(replayed.getStatus()).isEqualTo(com.shop.common.core.constants.OutboxStatus.SENT);
+        assertThat(replayed.getSentAt()).isNotNull();
         assertThat(awaitRecord("media.lifecycle.v1", response.id().toString())).isNotNull();
     }
 

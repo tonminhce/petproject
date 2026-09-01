@@ -14,12 +14,20 @@ import software.amazon.awssdk.services.s3.model.Type;
 
 /**
  * D1 — startup bootstrap of the PRIVATE media bucket. Creates the bucket when
- * missing (idempotent) and then asserts the ACL carries no public grant; a
- * bucket that exposes media objects is a hard misconfiguration, so a failed
- * assert refuses to bless it (the error surfaces in the log and health stays
- * degraded). Mirrors search's IndexProvisioner tolerance: a storage outage at
- * startup is logged, not fatal — the service boots and recovers once the
- * object store is reachable.
+ * missing (idempotent) and then asserts the ACL carries no public grant. The
+ * two failure modes are split (final review F-4):
+ *
+ * <ul>
+ *   <li><strong>Storage unavailable</strong> (connectivity/SDK errors from
+ *   bucket discovery, creation or the ACL read): logged, not fatal — the
+ *   service boots degraded and recovers once the object store is reachable
+ *   (mirrors search's IndexProvisioner tolerance).</li>
+ *   <li><strong>Bucket exists but is NOT private</strong> (the ACL assertion
+ *   itself fails, {@link IllegalStateException} from
+ *   {@link #assertPrivateAcl}): FATAL — the runner rethrows and startup
+ *   crashes. A misconfigured public bucket must never serve private media,
+ *   not even degraded.</li>
+ * </ul>
  */
 @Component
 @RequiredArgsConstructor
@@ -34,6 +42,9 @@ public class BucketBootstrap implements ApplicationRunner {
     public void run(final ApplicationArguments args) {
         try {
             bootstrap();
+        } catch (IllegalStateException e) {
+            // the private-ACL assertion failed — refuse to boot on a misconfigured (public) bucket
+            throw e;
         } catch (Exception e) {
             log.error("Bucket bootstrap failed — media storage stays degraded until object storage is reachable", e);
         }

@@ -5,6 +5,7 @@ import com.shop.mediaservice.config.MediaProperties;
 import com.shop.mediaservice.entity.Media;
 import com.shop.mediaservice.repository.MediaRepository;
 import com.shop.mediaservice.service.MediaLifecycleService;
+import com.shop.mediaservice.service.MediaReferenceChecker;
 import com.shop.mediaservice.service.MediaUploadService;
 import com.shop.mediaservice.support.AbstractMediaIntegrationTest;
 import com.shop.mediaservice.support.TestImages;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.sql.Timestamp;
@@ -22,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * The purge GRACE BOUNDARY proven against the real database (the unit test
@@ -30,6 +34,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * purgeable — objects hard-deleted, rows (media + cascaded variants) gone —
  * while a row inside the grace window survives untouched, ready for a later
  * cycle.
+ *
+ * <p>The production default checker bean ({@code NoopMediaReferenceChecker})
+ * is fail-safe TRUE (purge skips everything until a real checker lands, F-3);
+ * here it is REPLACED with a stubbed-false checker — the stub controls
+ * behavior so the purge path itself stays covered.</p>
  */
 class MediaPurgeIT extends AbstractMediaIntegrationTest {
 
@@ -57,8 +66,12 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
     @Autowired
     private MediaProperties properties;
 
+    @MockitoBean
+    private MediaReferenceChecker referenceChecker;
+
     @BeforeEach
     void wipe() {
+        when(referenceChecker.isReferenced(any())).thenReturn(false);
         // native DELETE — @SQLRestriction hides soft-deleted rows from bulk
         // JPQL too, so deleteAllInBatch would leave them behind
         jdbcTemplate.update("DELETE FROM media_variants");

@@ -7,18 +7,22 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * Production default of the {@link MediaReferenceChecker} PORT: answers
- * "not referenced" for EVERY media.
+ * Production default of the {@link MediaReferenceChecker} PORT: FAIL-SAFE
+ * answer — every media is treated as REFERENCED, so the purge job skips all
+ * candidates (WARN per cycle) until a real checker exists. Skipping is the
+ * safe direction: soft-deleted objects accumulate during the grace window
+ * and beyond, but nothing referenced can be hard-purged into broken product
+ * images.
  *
- * <p><strong>KNOWN LIMITATION (flagged for final review):</strong> this is a
- * stub. The media DB is separate from the product DB (spec D5) — no FK, no
- * join — so a truthful answer requires asking product-service (in-process
- * client or via the T5 wiring). Delete-time is EVENTUAL by design: the
- * MediaDeleted consumer chain clears {@code products.media_id}; the purge
- * grace window (default 30d) is the safety window that makes this
- * best-effort answer survivable — a referenced media whose reference is
- * cleared inside the grace is never actually purged, and a WARN-skip only
- * postpones the hard delete.</p>
+ * <p><strong>KNOWN LIMITATION (final review F-3, waived):</strong> the media
+ * DB is separate from the product DB (spec D5) — no FK, no join — and
+ * product-service exposes no reference-check endpoint, so a truthful answer
+ * is impossible from inside media-service today. DELETE-TIME is still
+ * EVENTUAL: the MediaDeleted consumer chain clears {@code products.media_id}.
+ * A REAL checker (product-side reference endpoint + purge-side
+ * reconciliation) is a follow-up ticket / future epic; until it lands the
+ * purge is a documented no-op by fail-safe design (see
+ * docs/PRODUCTION-READINESS.md, media runbook).
  */
 @Component
 @Slf4j
@@ -26,12 +30,9 @@ public class NoopMediaReferenceChecker implements MediaReferenceChecker {
 
     @Override
     public boolean isReferenced(UUID mediaId) {
-        // TODO(media-reference-check): once the product-service wiring exists
-        // (T5 / client port), replace with a real cross-DB reference query —
-        // media DB and product DB are separate (D5), so this cannot be a
-        // local join. Until then the purge job treats every purged media as
-        // unreferenced; the grace window + eventual MediaDeleted consumer
-        // chain are the compensating controls.
-        return false;
+        log.warn("NoopMediaReferenceChecker: no real reference checker is wired — "
+                + "treating media {} as REFERENCED (purge skips; follow-up epic: "
+                + "product-side reference endpoint)", mediaId);
+        return true;
     }
 }

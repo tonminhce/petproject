@@ -2,6 +2,7 @@ package com.shop.mediaservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.logging.audit.Audited;
 import com.shop.mediaservice.dto.response.MediaResponse;
 import com.shop.mediaservice.service.MediaLifecycleService;
 import com.shop.mediaservice.service.MediaUploadService;
@@ -36,6 +37,7 @@ public class BackofficeMediaController {
     private final MediaLifecycleService lifecycleService;
 
     @PostMapping
+    @Audited(action = "media.upload", resourceType = "media")
     public ResponseEntity<ApiResponse<MediaResponse>> upload(
             @RequestParam("file") MultipartFile file) {
         MediaResponse response = uploadService.upload(file);
@@ -44,6 +46,7 @@ public class BackofficeMediaController {
     }
 
     @DeleteMapping("/{id}")
+    @Audited(action = "media.delete", resourceType = "media")
     public ApiResponse<Void> delete(@PathVariable UUID id) {
         lifecycleService.softDelete(id);
         return ApiResponse.message("Media deleted successfully");

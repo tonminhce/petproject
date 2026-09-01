@@ -31,12 +31,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Purge unit proofs with STUBBED reference checker (the port's production
- * impl is a documented no-op): grace boundary (a row at EXACTLY the grace
- * horizon is purgeable — the repo's {@code <=} query is IT-proven in
- * {@code MediaPurgeIT}), referenced-skip logs WARN + leaves objects/rows for
- * the NEXT cycle, unreferenced purge is objects-then-rows in order, and one
- * failing media never aborts the batch.
+ * Purge unit proofs with a STUBBED reference checker — the stub controls
+ * behavior, the production default bean ({@code NoopMediaReferenceChecker},
+ * fail-safe TRUE = "referenced") merely decides what happens when nothing is
+ * stubbed in: skip everything. So: stubbed-false proves the purge path works
+ * (grace boundary — a row at EXACTLY the grace horizon is purgeable, the
+ * repo's {@code <=} query is IT-proven in {@code MediaPurgeIT};
+ * referenced-skip logs WARN + leaves objects/rows for the NEXT cycle;
+ * unreferenced purge is objects-then-rows in order; one failing media never
+ * aborts the batch), and the always-true Noop default means the un-stubbed
+ * production job skips all candidates until a real checker lands (F-3).
  */
 @ExtendWith(MockitoExtension.class)
 class MediaPurgeJobTest {
