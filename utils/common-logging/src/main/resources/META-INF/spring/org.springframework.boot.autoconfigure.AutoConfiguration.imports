@@ -1,1 +1,2 @@
+com.shop.common.logging.config.AuditAutoConfiguration
 com.shop.common.logging.config.LoggingAutoConfiguration
