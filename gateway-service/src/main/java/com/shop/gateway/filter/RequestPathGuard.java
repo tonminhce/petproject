@@ -22,6 +22,14 @@ import java.nio.charset.StandardCharsets;
  * is consumed first, so an evasion attempt is metered and gated — never
  * silently normalized into a pass. Fleet paths are canonical ASCII segments;
  * legitimate callers never percent-encode a controlled prefix.</p>
+ *
+ * <p>N-R1 — same evasion class, second vector: matrix variables
+ * ({@code /api/v1/backoffice;r=1/ratings}). Route predicates match segments
+ * with the {@code ;params} suffix stripped, so a semicolon can move a request
+ * past the raw-string prefix match while it still lands on the gated route.
+ * Any path containing {@code ;} is rejected with the same 400 envelope;
+ * legitimate fleet paths are canonical ASCII segments without matrix
+ * parameters.</p>
  */
 final class RequestPathGuard {
 
@@ -46,6 +54,24 @@ final class RequestPathGuard {
         } catch (final IllegalArgumentException malformedSequence) {
             return true;
         }
+    }
+
+    /**
+     * {@code true} when the raw path carries matrix variables
+     * ({@code ;} in any segment — N-R1). Unlike percent-encoding this breaks
+     * raw-string prefix matching itself, so it must be rejected before any
+     * scope/prefix decision is trusted.
+     */
+    static boolean containsMatrixVariable(final String rawPath) {
+        return rawPath.indexOf(';') >= 0;
+    }
+
+    /**
+     * {@code true} when the raw path is percent-encoded or carries matrix
+     * variables — the two known evasion vectors this guard exists for.
+     */
+    static boolean isEvasive(final String rawPath) {
+        return isEncoded(rawPath) || containsMatrixVariable(rawPath);
     }
 
     /**

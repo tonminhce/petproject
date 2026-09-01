@@ -14,6 +14,7 @@ public record ProductSummaryResponse(
     Integer quantity,
     ProductStatus status,
     String imageUrl,
+    UUID mediaId,
     BigDecimal avgRating,
     Integer ratingCount
 ) {}

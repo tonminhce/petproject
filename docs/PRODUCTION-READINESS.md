@@ -136,6 +136,16 @@ sink is the seam (spec §6 open item: audit sink shippers).
   one instance (also closes the in-process bucket-map growth note).
 - XFF trust gating for the allowlist filter (mirroring
   `GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS`) — see §4.1.
+- **Media purge is FAIL-SAFE by design (F-3):** the production
+  `MediaReferenceChecker` is a Noop that answers "referenced" for every
+  media, so the purge job SKIPS all candidates (WARN per cycle) until a real
+  checker lands (product-side reference endpoint — future epic;
+  `NoopMediaReferenceChecker` javadoc has the trail). Soft-deleted objects
+  therefore ACCUMULATE past the 30d grace window by design — not a bug;
+  storage growth is bounded by delete volume. The media outbox relay
+  replays FAILED rows on later cycles (broker outage delays delivery, never
+  kills it). Media's `@Audited` events go to the stdout `AUDIT` logger until
+  the service joins the `AUDIT_LOG_PATH` volume wiring above.
 
 ## Future hardening (ratified follow-ups, non-blocking)
 

@@ -132,7 +132,8 @@ class WebFluxRouteTests {
             "/api/v1/backoffice/tax-rates",
             "/api/v1/backoffice/notifications",
             "/api/v1/backoffice/payments",
-            "/api/v1/backoffice/shipments"})
+            "/api/v1/backoffice/shipments",
+            "/api/v1/backoffice/medias"})
     void adminTokenIsProxiedForEveryBackofficePrefix(String prefix) {
         client.get().uri(prefix + "/list")
                 .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
@@ -160,6 +161,16 @@ class WebFluxRouteTests {
                 .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void storefrontMediasRouteProxiesPluralPredicate() {
+        client.get().uri("/api/v1/medias/some-media-id")
+                .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
+                .exchange()
+                .expectStatus().isOk();
+
+        WIRE_MOCK.verify(1, getRequestedFor(urlEqualTo("/api/v1/medias/some-media-id")));
     }
 
     @Test
@@ -209,7 +220,8 @@ class WebFluxRouteTests {
                                 "gateway.route-targets.overrides.notification-service", WIRE_MOCK::baseUrl,
                                 "gateway.route-targets.overrides.payment-service", WIRE_MOCK::baseUrl,
                                 "gateway.route-targets.overrides.shipping-service", WIRE_MOCK::baseUrl,
-                                "gateway.route-targets.overrides.order-service", WIRE_MOCK::baseUrl)
+                                "gateway.route-targets.overrides.order-service", WIRE_MOCK::baseUrl,
+                                "gateway.route-targets.overrides.media-service", WIRE_MOCK::baseUrl)
                         .forEach(registry::add);
             };
         }

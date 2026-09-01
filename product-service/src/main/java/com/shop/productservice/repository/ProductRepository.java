@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +20,10 @@ public interface ProductRepository
 
     @EntityGraph(attributePaths = {"category", "brand"})
     Optional<Product> findWithRelationsBySlug(String slug);
+
+    /** Live products pointing at the given media — the MediaDeleted clear set (spec D4). */
+    @EntityGraph(attributePaths = {"category", "brand"})
+    List<Product> findByMediaId(UUID mediaId);
 
     /**
      * Executor override with category+brand fetch-joined (backoffice detail

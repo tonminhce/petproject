@@ -296,6 +296,13 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Media epic D5 — Option C write-time media existence gate (MediaHeadClient).
+      # Same explicit *_SERVICE_URL + client-credentials pattern as order's
+      # tax/promotion, rating's order, and search's product clients.
+      MEDIA_SERVICE_URL: http://media-service:8083
+      PRODUCT_SERVICE_CLIENT_ID: product-service
+      PRODUCT_SERVICE_CLIENT_SECRET: changeme
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
       # Force-bypass common-spring YAML placeholder resolution (see auth-service note).
       # Use INTERNAL Keycloak URL (container DNS) so JWT decoder can fetch JWKS.
       SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
@@ -470,24 +477,32 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Media Service (uses RustFS for object storage) -----
+  # ----- Media Service (RustFS object storage; ingress-only — reached via
+  # gateway :8080, ServiceRoute MEDIA; NO host port published even in dev) -----
   media-service:
     image: media-service:latest
     container_name: media-service
     <<: [*restart, *logging]
-    ports:
-      - "8083:8083"
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mediaservice
+      # Outbox relay publishes shop.media.lifecycle.v1 — must reach the
+      # in-network broker (yml default is localhost for local runs).
+      SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_ENDPOINT: http://rustfs:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
-      STORAGE_BUCKET: ${STORAGE_BUCKET}
+      # D1 — private bucket `media` (default); MEDIA_* knobs per spec §4.3.
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-media}
+      MEDIA_MAX_UPLOAD: ${MEDIA_MAX_UPLOAD:-10MB}
+      MEDIA_PRESIGN_TTL: ${MEDIA_PRESIGN_TTL:-7d}
+      MEDIA_PURGE_GRACE: ${MEDIA_PURGE_GRACE:-30d}
     depends_on:
       postgres:
         condition: service_healthy
       rustfs:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     healthcheck:
       <<: *hc-defaults

@@ -146,6 +146,21 @@ class AdminRoleGateFilterTest {
     }
 
     @Test
+    void matrixVariableBackofficePathIsRejectedWith400EvenWithAdminRole() throws Exception {
+        var exchange = encodedExchange("/api/v1/backoffice;r=1/ratings");
+
+        filter.filter(exchange, passingChain())
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authWithRoles(List.of("ADMIN"))))
+                .block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        var json = new ObjectMapper().readTree(exchange.getResponse().getBodyAsString().block());
+        assertThat(json.get("success").asBoolean()).isFalse();
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0400");
+        assertThat(json.get("path").asText()).isEqualTo("/api/v1/backoffice;r=1/ratings");
+    }
+
+    @Test
     void doubleEncodedBackofficePathIsRejectedWithoutRoleCheck() {
         var exchange = encodedExchange("/api/v1/backoffice/%2572atings");
 

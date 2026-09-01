@@ -43,7 +43,7 @@ class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
         ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", null,
             "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE,
-            null, null, null, null, null);
+            null, null, null, null, null, null);
         productService.create(req);
 
         // Sanity: the publisher wrote a PENDING outbox row in the same TX as the product.

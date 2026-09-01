@@ -175,6 +175,22 @@ class AdminIpAllowlistFilterTest {
     }
 
     @Test
+    void matrixVariablePathIsRejectedWith400EvenForAllowlistedIp() throws Exception {
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
+        var exchange = encodedExchange("/api/v1/backoffice;r=1/ratings", "203.0.113.7");
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+        var json = new ObjectMapper().readTree(exchange.getResponse().getBodyAsString().block());
+        assertThat(json.get("success").asBoolean()).isFalse();
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0400");
+        assertThat(json.get("path").asText()).isEqualTo("/api/v1/backoffice;r=1/ratings");
+    }
+
+    @Test
     void doubleEncodedPathIsRejectedWith400() {
         var filter = new AdminIpAllowlistFilter(
                 new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);

@@ -105,6 +105,9 @@ services:
     ports: !override []
     environment:
       <<: *audit-env
+      # Rotation item (D2, media epic) — client_credentials secret for
+      # product-service's media existence-check client. See order-service note.
+      PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:-}
 
   order-service:
     ports: !override []

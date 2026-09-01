@@ -2,8 +2,9 @@ package com.shop.productservice.service.impls;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.shop.productservice.entity.OutboxEvent;
+import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.OutboxStatus;
+import com.shop.productservice.entity.OutboxEvent;
 import com.shop.productservice.entity.Product;
 import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.service.ProductEventPublisher;
@@ -81,7 +82,12 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("categoryId", p.getCategory() != null ? p.getCategory().getId() : null);
         payload.put("categoryName", p.getCategory() != null ? p.getCategory().getTitle() : null);
         payload.put("price", p.getPriceUnit());
-        payload.put("imageUrl", p.getImageUrl());
+        // Media epic spec D5: the payload's imageUrl is the DERIVED canonical
+        // path when the product references a media (17-name contract stable —
+        // same names, new value source); legacy free-string otherwise.
+        payload.put("imageUrl", p.getMediaId() != null
+            ? ApiPaths.MEDIAS + "/" + p.getMediaId()
+            : p.getImageUrl());
         payload.put("avgRating", p.getAvgRating());
         payload.put("ratingCount", p.getRatingCount());
         payload.put("updatedAt", p.getUpdatedAt() != null ? p.getUpdatedAt().toString() : null);

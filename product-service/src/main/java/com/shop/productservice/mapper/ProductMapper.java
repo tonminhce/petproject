@@ -1,5 +1,6 @@
 package com.shop.productservice.mapper;
 
+import com.shop.common.core.constants.ApiPaths;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
@@ -28,7 +29,8 @@ public class ProductMapper {
             product.getPriceUnit(),
             product.getQuantity(),
             product.getStatus(),
-            product.getImageUrl(),
+            resolveImage(product),
+            product.getMediaId(),
             product.getAvgRating(),
             product.getRatingCount()
         );
@@ -48,7 +50,8 @@ public class ProductMapper {
             product.getPriceUnit(),
             product.getQuantity(),
             product.getStatus(),
-            product.getImageUrl(),
+            resolveImage(product),
+            product.getMediaId(),
             product.getWeight(),
             product.getDimensions(),
             product.getAvgRating(),
@@ -80,7 +83,19 @@ public class ProductMapper {
         if (request.quantity()    != null) target.setQuantity(request.quantity());
         if (request.status()      != null) target.setStatus(request.status());
         if (request.imageUrl()    != null) target.setImageUrl(request.imageUrl());
+        if (request.mediaId()     != null) target.setMediaId(request.mediaId());
         if (request.weight()      != null) target.setWeight(request.weight());
         if (request.dimensions()  != null) target.setDimensions(request.dimensions());
+    }
+
+    /**
+     * Media epic spec D5 — derived display image, computed at mapping time
+     * (never stored): mediaId present → media canonicalPath
+     * {@code /api/v1/medias/{id}}; else legacy free-text imageUrl.
+     */
+    private String resolveImage(Product product) {
+        return product.getMediaId() != null
+            ? ApiPaths.MEDIAS + "/" + product.getMediaId()
+            : product.getImageUrl();
     }
 }

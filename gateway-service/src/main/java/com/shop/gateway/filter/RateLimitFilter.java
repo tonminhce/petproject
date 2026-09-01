@@ -29,7 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * rejected with the fleet 400 envelope (raw &ne; decoded — see
  * {@link RequestPathGuard}; route predicates would decode it to the scoped
  * route, so raw-only matching would let one encoded character bypass the
- * limiter entirely).</p>
+ * limiter entirely). Matrix-variable paths (N-R1) are rejected before scope
+ * lookup — the {@code ;} suffix defeats the prefix match itself.</p>
  */
 public final class RateLimitFilter implements GlobalFilter, Ordered {
 
@@ -62,6 +63,10 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
         final String rawPath = exchange.getRequest().getPath().value();
+        if (RequestPathGuard.containsMatrixVariable(rawPath)) {
+            log.warn("Rejected matrix-variable path in an edge scope: {}", rawPath);
+            return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
+        }
         final Scope scope = scopeFor(RequestPathGuard.decoded(rawPath));
         if (scope == null) {
             return chain.filter(exchange);

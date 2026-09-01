@@ -1,6 +1,8 @@
 package com.shop.productservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
@@ -18,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,8 +41,8 @@ class ProductControllerTest {
 
     private ProductDetailResponse sample() {
         return new ProductDetailResponse(ID, "iPhone 15", "iphone-15", null, "IP15-001",
-            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null, null,
-            null, null, null, null, null);
+            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null,
+            null, null, null, null, null, null, null);
     }
 
     @Test
@@ -64,7 +67,7 @@ class ProductControllerTest {
     @Test
     void create_withInvalidDto_returns400() throws Exception {
         ProductCreateRequest req = new ProductCreateRequest("", "", null, "",
-            null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null);
 
         mockMvc.perform(post("/api/v1/products")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -87,5 +90,27 @@ class ProductControllerTest {
             .andExpect(jsonPath("$.success").value(false));
 
         verifyNoInteractions(productService);
+    }
+
+    @Test
+    void create_unknownMediaId_mapsTo404WithMed12004AndCommonI18nMessage() throws Exception {
+        // Media epic spec D5/D6: the write-time gate rejects with MED-12004 —
+        // the code is defined in common-core and the message resolves from the
+        // COMMON i18n bundle (media.not_found) — no product-local key needed.
+        when(productService.create(any()))
+            .thenThrow(BusinessException.of(ErrorCode.MEDIA_NOT_FOUND));
+
+        ProductCreateRequest req = new ProductCreateRequest("iPhone 15", "iphone-15", null,
+            "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE,
+            null, UUID.fromString("88888888-8888-8888-8888-888888888888"),
+            null, null, null, null);
+
+        mockMvc.perform(post("/api/v1/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(req)))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("MED-12004"))
+            .andExpect(jsonPath("$.message").value("Media not found"));
     }
 }

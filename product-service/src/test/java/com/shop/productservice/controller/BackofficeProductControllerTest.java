@@ -67,6 +67,7 @@ class BackofficeProductControllerTest {
         return new ProductDetailResponse(
             ID, "iPhone 15", "iphone-15", "Apple smartphone", "IP15-001",
             new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, "http://img/iphone.png",
+            null,
             new BigDecimal("0.3"), "15x8x8cm", new BigDecimal("4.50"), 12,
             UUID.fromString("c0000000-0000-0000-0000-00000000000a"), "Phones",
             UUID.fromString("b0000000-0000-0000-0000-00000000000a"), "Apple",

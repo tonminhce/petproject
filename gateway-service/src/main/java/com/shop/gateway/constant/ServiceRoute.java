@@ -12,7 +12,7 @@ public enum ServiceRoute {
     ROLES("auth-roles", "roles", "auth-service", 8088),
     FAVOURITE("favourite-service", "favourites", "favourite-service", 8081),
     INVENTORY("inventory-service", "inventory", "inventory-service", 8082),
-    MEDIA("media-service", "media", "media-service", 8083),
+    MEDIA("media-service", "medias", "media-service", 8083),
     ORDER("order-service", "orders", "order-service", 8084),
     PAYMENT("payment-service", "payments", "payment-service", 8085),
     PRODUCT("product-service", "products", "product-service", 8086),
@@ -34,7 +34,8 @@ public enum ServiceRoute {
     BACKOFFICE_TAX_RATES("backoffice-tax-rates", "backoffice/tax-rates", "tax-service", 8091),
     BACKOFFICE_NOTIFICATIONS("backoffice-notifications", "backoffice/notifications", "notification-service", 8090),
     BACKOFFICE_PAYMENTS("backoffice-payments", "backoffice/payments", "payment-service", 8085),
-    BACKOFFICE_SHIPMENTS("backoffice-shipments", "backoffice/shipments", "shipping-service", 8087);
+    BACKOFFICE_SHIPMENTS("backoffice-shipments", "backoffice/shipments", "shipping-service", 8087),
+    BACKOFFICE_MEDIAS("backoffice-medias", "backoffice/medias", "media-service", 8083);
 
     private static final String BACKOFFICE_RESOURCE_PREFIX = "backoffice/";
 

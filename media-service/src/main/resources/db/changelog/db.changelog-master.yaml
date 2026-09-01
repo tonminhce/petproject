@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: changelog-001-medias.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-002-outbox.yaml
+      relativeToChangelogFile: true

@@ -16,6 +16,7 @@ public record ProductDetailResponse(
     Integer quantity,
     ProductStatus status,
     String imageUrl,
+    UUID mediaId,
     BigDecimal weight,
     String dimensions,
     BigDecimal avgRating,

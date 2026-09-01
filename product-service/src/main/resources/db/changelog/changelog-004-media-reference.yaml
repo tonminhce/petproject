@@ -1,0 +1,16 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  Media reference (media epic spec D5): logical pointer to media-service's
+  #  media row — media's DB is SEPARATE, so this is deliberately NOT a FK
+  #  (cross-service integrity is eventual: the MediaDeleted consumer clears
+  #  stale references). Nullable: legacy rows keep their free-text imageUrl;
+  #  backfill none. Derived display image = /api/v1/medias/{media_id} computed
+  #  at mapping time (never stored).
+  # ===========================================================================
+  - changeSet:
+      id: 004-add-media-reference
+      author: shop-platform
+      changes:
+        - sql: |
+            ALTER TABLE products ADD COLUMN media_id UUID;
