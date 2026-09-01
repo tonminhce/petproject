@@ -74,6 +74,14 @@ public class ProductMapper {
         return p;
     }
 
+    /**
+     * H-2 media semantics: {@code clearMediaId=true} → the reference is
+     * REMOVED ({@code mediaId} is guaranteed null by bean validation, so no
+     * replacement can hide behind a clear); the derived image then falls back
+     * to legacy {@code imageUrl} (spec D5). Flag false/absent keeps the
+     * original null-guard semantics — a present {@code mediaId} replaces, a
+     * null one leaves the reference untouched.
+     */
     public void partialUpdate(Product target, ProductUpdateRequest request) {
         if (request.title()       != null) target.setTitle(request.title());
         if (request.slug()        != null) target.setSlug(request.slug());
@@ -83,7 +91,11 @@ public class ProductMapper {
         if (request.quantity()    != null) target.setQuantity(request.quantity());
         if (request.status()      != null) target.setStatus(request.status());
         if (request.imageUrl()    != null) target.setImageUrl(request.imageUrl());
-        if (request.mediaId()     != null) target.setMediaId(request.mediaId());
+        if (Boolean.TRUE.equals(request.clearMediaId())) {
+            target.setMediaId(null);
+        } else if (request.mediaId() != null) {
+            target.setMediaId(request.mediaId());
+        }
         if (request.weight()      != null) target.setWeight(request.weight());
         if (request.dimensions()  != null) target.setDimensions(request.dimensions());
     }

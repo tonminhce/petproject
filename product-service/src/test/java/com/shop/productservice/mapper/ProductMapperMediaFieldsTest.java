@@ -1,6 +1,7 @@
 package com.shop.productservice.mapper;
 
 import com.shop.productservice.constant.ProductStatus;
+import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
 import com.shop.productservice.dto.response.ProductSummaryResponse;
 import com.shop.productservice.entity.Product;
@@ -103,5 +104,60 @@ class ProductMapperMediaFieldsTest {
 
         assertThat(detail.imageUrl()).isNull();
         assertThat(summary.imageUrl()).isNull();
+    }
+
+    // --- H-2: explicit clearMediaId on partialUpdate ---
+
+    @Test
+    @DisplayName("partialUpdate: clearMediaId=true → media_id removed even when the target referenced one")
+    void partialUpdate_clearMediaId_true_removesReference() {
+        Product p = product();
+        p.setMediaId(MEDIA_ID);
+        p.setImageUrl("http://legacy.example/ip15.png");
+
+        mapper.partialUpdate(p, update(null, true));
+
+        assertThat(p.getMediaId()).as("explicit clear must remove the reference").isNull();
+        assertThat(p.getTitle()).as("clear must not leak into other fields").isEqualTo("iPhone 15");
+    }
+
+    @Test
+    @DisplayName("partialUpdate: flag absent (false) + mediaId present → reference replaced (unchanged semantics)")
+    void partialUpdate_flagAbsent_mediaIdReplaces() {
+        Product p = product();
+
+        mapper.partialUpdate(p, update(MEDIA_ID, false));
+
+        assertThat(p.getMediaId()).isEqualTo(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("partialUpdate: flag absent + mediaId null → reference untouched (original null-guard)")
+    void partialUpdate_flagAbsent_nullMediaId_isNoOp() {
+        Product p = product();
+        p.setMediaId(MEDIA_ID);
+
+        mapper.partialUpdate(p, update(null, false));
+
+        assertThat(p.getMediaId()).isEqualTo(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("partialUpdate: clear=true overrides a concurrently set media_id field on the target")
+    void partialUpdate_clearWinsOverExistingReference() {
+        Product p = product();
+        p.setMediaId(MEDIA_ID);
+        p.setTitle("Renamed");
+
+        mapper.partialUpdate(p, new ProductUpdateRequest("Renamed again", null, null, null,
+            null, null, null, null, null, null, null, null, null, true));
+
+        assertThat(p.getMediaId()).isNull();
+        assertThat(p.getTitle()).isEqualTo("Renamed again");
+    }
+
+    private ProductUpdateRequest update(UUID mediaId, boolean clearMediaId) {
+        return new ProductUpdateRequest(null, null, null, null, null, null, null, null,
+            mediaId, null, null, null, null, clearMediaId);
     }
 }
