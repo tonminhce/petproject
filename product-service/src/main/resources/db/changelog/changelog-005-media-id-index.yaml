@@ -1,0 +1,19 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  H-3 reconciliation sweep + MediaDeleted clear-set support: products rows
+  #  are looked up by their (nullable) media reference with
+  #    WHERE media_id IS NOT NULL LIMIT <sweep limit>   (sweep page)
+  #    WHERE media_id = ?                               (consumer clear set)
+  #  A btree index on media_id serves both — Postgres answers IS NOT NULL with
+  #  an index scan and equality with an index probe, so neither query degrades
+  #  to a seq scan as the catalog grows.
+  # ===========================================================================
+  - changeSet:
+      id: 005-create-products-media-id-index
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              CREATE INDEX idx_products_media_id
+              ON products (media_id)

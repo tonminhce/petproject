@@ -80,6 +80,15 @@ shop:
       client-id: ${PRODUCT_SERVICE_CLIENT_ID:product-service}
       client-secret: ${PRODUCT_SERVICE_CLIENT_SECRET:changeme}
 
+  # H-3 reconciliation sweep — periodic re-verification of live product media
+  # references against media-service (closes the MediaDeleted consumer's
+  # at-most-once window). Fail-safe: media outage skips the cycle untouched.
+  product:
+    media-sweep:
+      enabled: ${SHOP_PRODUCT_MEDIA_SWEEP_ENABLED:true}
+      cron: ${SHOP_PRODUCT_MEDIA_SWEEP_CRON:0 */30 * * * *}
+      limit: ${SHOP_PRODUCT_MEDIA_SWEEP_LIMIT:100}
+
 product:
   outbox:
     poll-interval-ms: 5000

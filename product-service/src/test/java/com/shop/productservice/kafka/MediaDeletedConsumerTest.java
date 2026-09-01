@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.annotation.DirtiesContext;
@@ -19,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Media lifecycle consumer (media epic spec D4): the fleet serializer
@@ -111,5 +115,80 @@ class MediaDeletedConsumerTest {
                 objectMapper.writeValueAsString(payload("MediaDeleted")),
                 new MessageHeaders(new HashMap<>())))
             .doesNotThrowAnyException();
+    }
+
+    // --- H-3: bounded in-consumer retry for TRANSIENT failures ---
+
+    private void transientFailureThenSuccess(int failingAttempts) throws Exception {
+        var stub = when(productMediaService.clearReference(MEDIA_ID))
+            .thenThrow(new QueryTimeoutException("db blip"));
+        for (int i = 1; i < failingAttempts; i++) {
+            stub = stub.thenThrow(new QueryTimeoutException("db blip"));
+        }
+        stub.thenReturn(0);
+
+        assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
+            .doesNotThrowAnyException();
+
+        verify(productMediaService, times(MediaDeletedConsumer.MAX_ATTEMPTS)).clearReference(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("transient failure → retried in-consumer → success on a later attempt (clear lands)")
+    void transientFailure_retried_thenSucceeds() throws Exception {
+        transientFailureThenSuccess(MediaDeletedConsumer.MAX_ATTEMPTS - 1);
+    }
+
+    @Test
+    @DisplayName("first attempt succeeds immediately — no retry overhead")
+    void firstAttemptSucceeds_noRetry() throws Exception {
+        consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>()));
+
+        verify(productMediaService, times(1)).clearReference(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("transient failure exhausted after MAX_ATTEMPTS → ERROR + ack (no throw, posture preserved)")
+    void transientFailure_exhausted_errorAndAck() throws Exception {
+        doThrow(new QueryTimeoutException("db down"))
+            .when(productMediaService).clearReference(MEDIA_ID);
+
+        assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
+            .doesNotThrowAnyException();
+
+        verify(productMediaService, times(MediaDeletedConsumer.MAX_ATTEMPTS)).clearReference(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("DataAccessException base class is the retryable contract")
+    void dataAccessExceptionBaseClass_isRetryable() throws Exception {
+        doThrow(new DataAccessException("generic access failure") {})
+            .when(productMediaService).clearReference(MEDIA_ID);
+
+        assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
+            .doesNotThrowAnyException();
+
+        verify(productMediaService, times(MediaDeletedConsumer.MAX_ATTEMPTS)).clearReference(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("NON-transient failure (not DataAccessException) → immediate ERROR + ack, no retry")
+    void nonTransientFailure_immediateAck_noRetry() throws Exception {
+        doThrow(new IllegalStateException("unexpected"))
+            .when(productMediaService).clearReference(MEDIA_ID);
+
+        assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
+            .doesNotThrowAnyException();
+
+        verify(productMediaService, times(1)).clearReference(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("poison bytes still ack-skip IMMEDIATELY — no retry on parse failure")
+    void poisonPayload_immediateAckSkip_noRetry() {
+        assertThatCode(() -> consumer.onMessage("{\"broken\"", new MessageHeaders(new HashMap<>())))
+            .doesNotThrowAnyException();
+
+        verify(productMediaService, never()).clearReference(any());
     }
 }

@@ -18,6 +18,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -57,6 +59,19 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    /**
+     * T1 review carry-over: this IT ran on the unpinned application.yml
+     * default ({@code latest}) — a record published around container-join
+     * time was silently skipped (the exact class of bug this epic hunts).
+     * Pin {@code earliest} like {@link RatingLifecycleConsumerIT} so the
+     * listener consumes deterministically from offset 0 of the fresh
+     * container topic; prod keeps {@code latest}.
+     */
+    @DynamicPropertySource
+    static void kafkaEarliest(DynamicPropertyRegistry r) {
+        r.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
+    }
 
     @BeforeEach
     void resetState() {
