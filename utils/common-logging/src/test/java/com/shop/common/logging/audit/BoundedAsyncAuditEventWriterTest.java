@@ -13,7 +13,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -114,18 +116,70 @@ class BoundedAsyncAuditEventWriterTest {
     }
 
     @Test
-    void sinkFailureIsSwallowedAndCallerIsUnaffected() {
+    void sinkFailureIsSwallowedCountedAndWarnedThrottled() throws Exception {
         BoundedAsyncAuditEventWriter writer = new BoundedAsyncAuditEventWriter(line -> {
             throw new RuntimeException("disk on fire");
         });
+        Logger writerLogger = (Logger) LoggerFactory.getLogger(BoundedAsyncAuditEventWriter.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        writerLogger.addAppender(appender);
         try {
             assertThatNoException().isThrownBy(() -> {
                 writer.write(EVENT);
                 writer.write(EVENT);
             });
+            awaitUntil(() -> writer.failedEvents() == 2);
+        } finally {
+            writer.close();
+            writerLogger.detachAppender(appender);
+        }
+
+        assertThat(writer.failedEvents()).isEqualTo(2);
+        assertThat(writer.discardedEvents()).isZero();
+        long sinkFailureWarns = appender.list.stream()
+                .filter(e -> e.getFormattedMessage().contains("sink write failed"))
+                .count();
+        assertThat(sinkFailureWarns).isEqualTo(1); // throttled: NOT one WARN per event
+    }
+
+    @Test
+    void transientFileFailureRecoversForSubsequentEvents() throws Exception {
+        Path blocker = tempDir.resolve("blocker");
+        Path file = blocker.resolve("audit.log");
+        Files.createFile(blocker); // parent exists as a FILE -> first open must fail
+
+        AuditEvent second = eventWithOutcome(AuditEvent.OUTCOME_FAIL);
+        String secondJson = second.toJson();
+        BoundedAsyncAuditEventWriter writer = BoundedAsyncAuditEventWriter.create(file.toString());
+        try {
+            writer.write(EVENT);
+            awaitUntil(() -> writer.failedEvents() == 1);
+
+            // transient condition cleared: blocker file becomes a directory
+            Files.delete(blocker);
+            Files.createDirectory(blocker);
+
+            writer.write(second);
         } finally {
             writer.close();
         }
+
+        // sink was NOT permanently disabled: the second event is recorded
+        assertThat(Files.readAllLines(file)).containsExactly(secondJson);
+        assertThat(writer.failedEvents()).isEqualTo(1);
+    }
+
+    @Test
+    void shutdownRejectionCountsAsFailureNotOverflow() {
+        BoundedAsyncAuditEventWriter writer = new BoundedAsyncAuditEventWriter(line -> {
+        });
+        writer.close();
+
+        assertThatNoException().isThrownBy(() -> writer.write(EVENT));
+
+        assertThat(writer.failedEvents()).isEqualTo(1);
+        assertThat(writer.discardedEvents()).isZero();
     }
 
     @Test
@@ -140,10 +194,21 @@ class BoundedAsyncAuditEventWriterTest {
                 writer.write(EVENT);
                 writer.write(EVENT);
             });
+            awaitUntil(() -> writer.failedEvents() == 2);
         } catch (Exception e) {
             throw new AssertionError("test setup failed", e);
         } finally {
             writer.close();
+        }
+    }
+
+    private static void awaitUntil(BooleanSupplier condition) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!condition.getAsBoolean()) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("condition not met within 5s");
+            }
+            Thread.sleep(10);
         }
     }
 

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,13 +22,17 @@ import java.util.function.Consumer;
  * caller thread (cheap, and the event's context is request-bound), then hands
  * the line to a bounded executor that performs the I/O.
  *
- * <p>Binding rules (spec D6 + review nit N1):</p>
+ * <p>Binding rules (spec D6 + review nit N1, sink recovery per review I-1):</p>
  * <ul>
  *   <li>Pool is hard-bounded: core 2, max 4, queue 1000 — NOT configurable.</li>
  *   <li>Queue overflow DISCARDS the event, increments a counter and logs WARN
  *       (first discard, then every 100th to avoid log flooding) — the caller
  *       never blocks and never sees an exception.</li>
- *   <li>Sink failures (I/O errors) are logged and swallowed.</li>
+ *   <li>Sink failures (I/O errors) are counted via {@link #failedEvents()},
+ *       logged WARN at most once per minute, and swallowed — the file sink
+ *       REOPENS on the next event, so a transient failure (disk full, volume
+ *       blip) never permanently disables file audit.</li>
+ *   <li>Rejections after shutdown are counted as failures, not overflow.</li>
  *   <li>Sink: append to {@code AUDIT_LOG_PATH} when the env var is set, else
  *       one INFO line per event on the {@code AUDIT} logger (stdout).</li>
  * </ul>
@@ -49,10 +54,14 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
     private static final long KEEP_ALIVE_SECONDS = 60L;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 5L;
     private static final int WARN_EVERY = 100;
+    /** Sink-failure WARNs are throttled to one per interval — no per-event spam. */
+    static final long SINK_WARN_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(60);
 
     private final ThreadPoolExecutor executor;
     private final Consumer<String> sink;
     private final AtomicLong discarded = new AtomicLong();
+    private final AtomicLong failed = new AtomicLong();
+    private final AtomicLong lastSinkWarnNanos = new AtomicLong();
 
     /** Test seam: sink receives fully-formatted JSON lines. */
     BoundedAsyncAuditEventWriter(Consumer<String> sink) {
@@ -66,7 +75,14 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
                     thread.setDaemon(true);
                     return thread;
                 },
-                (r, e) -> onRejection());
+                (r, e) -> {
+                    if (e.isShutdown()) {
+                        // pool already closed — a lost event, not queue overflow
+                        recordSinkFailure("audit: writer rejected event (shutting down) — request unaffected", null);
+                    } else {
+                        onRejection();
+                    }
+                });
     }
 
     /** File sink when {@code auditLogPath} is set, stdout {@code AUDIT} logger otherwise. */
@@ -96,13 +112,13 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
                 try {
                     sink.accept(line);
                 } catch (Exception e) {
-                    log.warn("audit: sink write failed; event dropped — request unaffected", e);
+                    recordSinkFailure("audit: sink write failed; event dropped — request unaffected", e);
                 }
             });
         } catch (RuntimeException e) {
-            // Rejections are handled by the discard handler; anything else
-            // (shutdown pool) must still never reach the request thread.
-            onRejection();
+            // Overflow rejections go through the discard handler; this is any
+            // other rejection (pool shut down) — a failure, not an overflow.
+            recordSinkFailure("audit: writer rejected event (shutting down) — request unaffected", e);
         }
     }
 
@@ -113,9 +129,25 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
         }
     }
 
+    /** Counts the lost event and WARNs at most once per throttle interval. */
+    private void recordSinkFailure(String message, Exception cause) {
+        long total = failed.incrementAndGet();
+        long now = System.nanoTime();
+        long last = lastSinkWarnNanos.get();
+        if ((last == 0 || now - last >= SINK_WARN_INTERVAL_NANOS)
+                && lastSinkWarnNanos.compareAndSet(last, now)) {
+            log.warn("{} ({} failed audit events total)", message, total, cause);
+        }
+    }
+
     @Override
     public long discardedEvents() {
         return discarded.get();
+    }
+
+    /** Events lost to sink failures — distinct from queue-overflow discards. */
+    public long failedEvents() {
+        return failed.get();
     }
 
     @Override
@@ -135,12 +167,17 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
         return executor;
     }
 
-    /** Appending, lazily-opened, line-per-event file sink. Thread-safe: all writes go through the executor. */
+    /**
+     * Appending, lazily-opened, line-per-event file sink. Thread-safe: all
+     * writes go through the executor. On I/O failure the writer is closed so
+     * the NEXT event reopens the file — transient failures (disk full, volume
+     * blip) recover without a restart; the failure itself propagates to
+     * {@link BoundedAsyncAuditEventWriter} for counting and throttled WARN.
+     */
     private static final class FileSink implements Consumer<String> {
 
         private final Path file;
         private BufferedWriter writer;
-        private boolean failed;
 
         private FileSink(Path file) {
             this.file = file;
@@ -148,25 +185,36 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
 
         @Override
         public synchronized void accept(String line) {
-            if (failed) {
-                return; // first open failure is permanent for this instance; log-and-continue
-            }
             try {
                 if (writer == null) {
-                    if (file.getParent() != null) {
-                        Files.createDirectories(file.getParent());
-                    }
-                    writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8,
-                            StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                    open();
                 }
                 writer.write(line);
                 writer.newLine();
                 writer.flush();
             } catch (IOException e) {
-                failed = true;
-                log.warn("audit: cannot write to {} — audit events will be dropped for this writer instance",
-                        file, e);
+                closeWriterQuietly();
+                throw new UncheckedIOException("audit: cannot write to " + file, e);
             }
+        }
+
+        private void open() throws IOException {
+            if (file.getParent() != null) {
+                Files.createDirectories(file.getParent());
+            }
+            writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        }
+
+        private void closeWriterQuietly() {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException ignored) {
+                    // best effort — the reopen on the next event is what matters
+                }
+            }
+            writer = null;
         }
     }
 }
