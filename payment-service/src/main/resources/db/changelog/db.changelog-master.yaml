@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       file: changelog-003-webhook-retry.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-004-expand-events-status-check.yaml
+      relativeToChangelogFile: true

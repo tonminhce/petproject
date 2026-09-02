@@ -1,0 +1,26 @@
+databaseChangeLog:
+  # Wire-contract alignment fix — the original CHECK constraint on
+  # shipment_events.status only allowed {PROCESSED, FAILED}. The C3
+  # webhook-retry feature (changelog-003) writes FAILED_RETRYABLE and
+  # FAILED_PERMANENT, which the constraint rejects with
+  # DataIntegrityViolationException on any fresh database (the 003 backfill
+  # UPDATE violates it too). This changeset widens the constraint and performs
+  # the backfill in one go (idempotent — re-running 003's backfill is safe
+  # because the WHERE clause only matches rows still FAILED).
+  - changeSet:
+      id: 004-expand-events-status-check
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE shipment_events DROP CONSTRAINT ck_shipment_events_status;
+              ALTER TABLE shipment_events
+              ADD CONSTRAINT ck_shipment_events_status
+              CHECK (status IN ('PROCESSED', 'FAILED', 'FAILED_RETRYABLE', 'FAILED_PERMANENT'))
+        # Idempotent backfill — safety net if 003 hasn't run yet (or partially ran).
+        - sql:
+            sql: >-
+              UPDATE shipment_events
+              SET status = 'FAILED_RETRYABLE',
+                  next_retry_at = NOW()
+              WHERE status = 'FAILED'

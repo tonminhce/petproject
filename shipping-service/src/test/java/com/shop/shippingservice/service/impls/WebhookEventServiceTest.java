@@ -46,6 +46,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/**
+ * C3 contract: the event row is PERSISTED FIRST as FAILED_RETRYABLE (before
+ * the shipment transition is attempted), dedupe skips only PROCESSED rows,
+ * and any processing failure marks the row FAILED_RETRYABLE via
+ * {@code writer.saveEvent} so the retry scheduler can replay it.
+ */
 @ExtendWith(MockitoExtension.class)
 class WebhookEventServiceTest {
 
@@ -111,8 +117,21 @@ class WebhookEventServiceTest {
                 .build();
     }
 
+    /** C3: a fresh event id means no prior row — the service inserts one before processing. */
     private void happyPathStubs(String eventId) {
-        when(events.existsByCarrierAndProviderEventId(CARRIER, eventId)).thenReturn(false);
+        when(events.findFirstByCarrierAndProviderEventId(CARRIER, eventId)).thenReturn(Optional.empty());
+    }
+
+    private ShipmentEvent processedEvent(String eventId) {
+        return ShipmentEvent.builder()
+                .id(UUID.randomUUID())
+                .carrier(CARRIER)
+                .providerEventId(eventId)
+                .type("carrier.event.v1")
+                .payload("{}")
+                .status(ShipmentEvent.STATUS_PROCESSED)
+                .retryCount(1)
+                .build();
     }
 
     @Test
@@ -174,8 +193,9 @@ class WebhookEventServiceTest {
     }
 
     @Test
-    void replay_isNoOp() {
-        when(events.existsByCarrierAndProviderEventId(CARRIER, "evt-3")).thenReturn(true);
+    void processedEventDedupe_acksNoOp() {
+        when(events.findFirstByCarrierAndProviderEventId(CARRIER, "evt-3"))
+                .thenReturn(Optional.of(processedEvent("evt-3")));
         byte[] raw = body(payloadJson("evt-3", "TRK-1", "IN_TRANSIT"));
 
         service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw));
@@ -187,7 +207,7 @@ class WebhookEventServiceTest {
     }
 
     @Test
-    void unknownTrackingNumber_marksEventFailedAndAcks() {
+    void unknownTrackingNumber_marksEventFailedRetryableAndAcks() {
         byte[] raw = body(payloadJson("evt-4", "UNKNOWN", "IN_TRANSIT"));
         happyPathStubs("evt-4");
         when(shipments.findByTrackingNumber("UNKNOWN")).thenReturn(Optional.empty());
@@ -195,15 +215,21 @@ class WebhookEventServiceTest {
         assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
                 .doesNotThrowAnyException();
 
-        ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
-        verify(writer).insert(eventCaptor.capture());
-        assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
-        assertThat(eventCaptor.getValue().getShipmentId()).isNull();
+        // Event row persisted first (FAILED_RETRYABLE), then marked with the
+        // failure detail via saveEvent — the retry scheduler owns the replay.
+        ArgumentCaptor<ShipmentEvent> insertCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).insert(insertCaptor.capture());
+        assertThat(insertCaptor.getValue().getStatus()).isEqualTo("FAILED_RETRYABLE");
+        assertThat(insertCaptor.getValue().getShipmentId()).isNull();
+        ArgumentCaptor<ShipmentEvent> saveCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo("FAILED_RETRYABLE");
+        assertThat(saveCaptor.getValue().getLastError()).isNotBlank();
         verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
     @Test
-    void illegalTransition_marksEventFailedAndAcks() {
+    void illegalTransition_marksEventFailedRetryableAndAcks() {
         byte[] raw = body(payloadJson("evt-5", "TRK-1", "IN_TRANSIT"));
         happyPathStubs("evt-5");
         when(shipments.findByTrackingNumber("TRK-1"))
@@ -212,9 +238,11 @@ class WebhookEventServiceTest {
         assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
                 .doesNotThrowAnyException();
 
-        ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
-        verify(writer).insert(eventCaptor.capture());
-        assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
+        ArgumentCaptor<ShipmentEvent> saveCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).insert(any(ShipmentEvent.class));
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo("FAILED_RETRYABLE");
+        assertThat(saveCaptor.getValue().getLastError()).isNotBlank();
         verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
         verifyNoInteractions(metrics);
     }
@@ -295,9 +323,10 @@ class WebhookEventServiceTest {
     }
 
     @Test
-    void unparseableBodyWithValidSignature_persistsFailedEventWithSyntheticIdAndAcks() {
+    void unparseableBodyWithValidSignature_persistsFailedRetryableEventWithSyntheticIdAndAcks() {
         byte[] raw = body("not-a-json-payload{{{");
-        when(events.existsByCarrierAndProviderEventId(CARRIER, syntheticId(raw))).thenReturn(false);
+        when(events.findFirstByCarrierAndProviderEventId(CARRIER, syntheticId(raw)))
+                .thenReturn(Optional.empty());
 
         assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
                 .doesNotThrowAnyException();
@@ -305,7 +334,7 @@ class WebhookEventServiceTest {
         ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
         verify(writer).insert(eventCaptor.capture());
         ShipmentEvent inserted = eventCaptor.getValue();
-        assertThat(inserted.getStatus()).isEqualTo("FAILED");
+        assertThat(inserted.getStatus()).isEqualTo("FAILED_RETRYABLE");
         assertThat(inserted.getProviderEventId()).isEqualTo(syntheticId(raw));
         assertThat(inserted.getProviderEventId()).hasSizeLessThanOrEqualTo(128);
         assertThat(inserted.getType()).isEqualTo("UNPARSEABLE");
@@ -319,7 +348,8 @@ class WebhookEventServiceTest {
     @Test
     void unparseableBodyRepeat_dedupesViaSyntheticIdAndAcks() {
         byte[] raw = body("not-a-json-payload{{{");
-        when(events.existsByCarrierAndProviderEventId(CARRIER, syntheticId(raw))).thenReturn(true);
+        when(events.findFirstByCarrierAndProviderEventId(CARRIER, syntheticId(raw)))
+                .thenReturn(Optional.of(processedEvent(syntheticId(raw))));
 
         assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
                 .doesNotThrowAnyException();
@@ -330,7 +360,7 @@ class WebhookEventServiceTest {
     }
 
     @Test
-    void nullCarrierStatus_marksEventFailedAndAcks() {
+    void nullCarrierStatus_marksEventFailedRetryableAndAcks() {
         byte[] raw = body("{\"eventId\":\"evt-13\",\"eventType\":\"carrier.event.v1\",\"trackingNumber\":\"TRK-1\"}");
         happyPathStubs("evt-13");
         when(shipments.findByTrackingNumber("TRK-1"))
@@ -339,10 +369,11 @@ class WebhookEventServiceTest {
         assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
                 .doesNotThrowAnyException();
 
-        ArgumentCaptor<ShipmentEvent> eventCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
-        verify(writer).insert(eventCaptor.capture());
-        assertThat(eventCaptor.getValue().getStatus()).isEqualTo("FAILED");
-        assertThat(eventCaptor.getValue().getProviderEventId()).isEqualTo("evt-13");
+        ArgumentCaptor<ShipmentEvent> saveCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).insert(any(ShipmentEvent.class));
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo("FAILED_RETRYABLE");
+        assertThat(saveCaptor.getValue().getProviderEventId()).isEqualTo("evt-13");
         verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
     }
 
@@ -362,5 +393,6 @@ class WebhookEventServiceTest {
         assertThat(inserted.getProviderEventId()).isEqualTo("evt-12");
         assertThat(inserted.getType()).isEqualTo("carrier.event.v1");
         assertThat(inserted.getPayload()).isEqualTo(new String(raw, StandardCharsets.UTF_8));
+        assertThat(inserted.getStatus()).isEqualTo("FAILED_RETRYABLE");
     }
 }
