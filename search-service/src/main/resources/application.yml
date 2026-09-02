@@ -7,8 +7,8 @@ server:
 
 elasticsearch:
   url: ${ELASTICSEARCH_URL:http://localhost:9200}
-  username: ${ELASTICSEARCH_USERNAME:}
-  password: ${ELASTICSEARCH_PASSWORD:}
+  username: ${ES_ADMIN_USERNAME:}
+  password: ${ES_ADMIN_PASSWORD:}
 
 shop:
   kafka:

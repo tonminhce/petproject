@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -48,7 +50,7 @@ class UserControllerTest {
         User user = User.builder().id(id).username("alice").build();
         when(userService.findById(id)).thenReturn(user);
         when(userMapper.toResponse(user))
-                .thenReturn(UserResponse.builder().id(id).username("alice").build());
+                .thenReturn(new UserResponse(id, null, "alice", null, null, null, null));
 
         mockMvc.perform(get("/api/v1/users/{id}", id))
                 .andExpect(status().isOk())
@@ -59,7 +61,9 @@ class UserControllerTest {
     void getAllUsersReturnsPage() throws Exception {
         when(userService.findAllUsers(0, 10, "id", "ASC"))
                 .thenReturn(new PageImpl<>(List.of(
-                        UserResponse.builder().id(UUID.randomUUID()).username("alice").build())));
+                        new UserResponse(UUID.randomUUID(), null, "alice", null, null, null, null)),
+                        PageRequest.of(0, 10),
+                        1));
 
         mockMvc.perform(get("/api/v1/users")
                         .param("page", "0")

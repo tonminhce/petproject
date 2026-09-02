@@ -50,7 +50,7 @@ class KafkaPropertiesProducerDefaultsTest {
         assertThat(producer).containsEntry("acks", "all");
         assertThat(producer).containsEntry("enable.idempotence", true);
         assertThat(producer)
-                .containsEntry("properties.max.in.flight.requests.per.connection", 1);
+                .containsEntry("max.in.flight.requests.per.connection", 1);
     }
 
     @Test

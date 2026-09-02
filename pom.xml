@@ -360,6 +360,7 @@
                     <container>
                         <format>OCI</format>
                         <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                        <user>100:101</user>
                         <jvmFlags>
                             <jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
                         </jvmFlags>

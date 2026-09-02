@@ -42,8 +42,9 @@ class ApiExceptionHandlerConstraintLeakTest {
         ResponseEntity<ApiResponse<Void>> response = handler.handleDataIntegrityViolation(
                 ex, servletWebRequest("/api/v1/users"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().code()).isEqualTo("ERR-0409");
         String body = response.getBody().message();
         assertThat(body)
                 .as("client-facing message must NOT echo the DB constraint name")

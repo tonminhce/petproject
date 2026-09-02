@@ -31,11 +31,11 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private TokenResponse mapToTokenResponse(KeycloakTokenResponse keycloakResponse) {
-        return TokenResponse.builder()
-                .accessToken(keycloakResponse.accessToken())
-                .refreshToken(keycloakResponse.refreshToken())
-                .tokenType(keycloakResponse.tokenType())
-                .expiresIn(keycloakResponse.expiresIn())
-                .build();
+        return new TokenResponse(
+                keycloakResponse.accessToken(),
+                keycloakResponse.refreshToken(),
+                keycloakResponse.tokenType(),
+                keycloakResponse.expiresIn()
+        );
     }
 }

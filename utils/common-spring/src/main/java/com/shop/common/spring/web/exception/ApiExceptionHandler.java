@@ -195,14 +195,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, WebRequest request) {
-        // H32 — the most-specific cause's message is the JDBC driver's raw text
-        // (constraint name, table, column, SQL state, row payload). Echoing it
-        // back to the client leaks the data-model layout. Log the cause for
-        // operators and return the canonical internal-error string to the caller.
-        String safeMessage = Messages.get(ErrorCode.INTERNAL_SERVER_ERROR.getMessageKey());
+        // H32 (Wave A fix-up) — the most-specific cause's message carries raw JDBC
+        // text (constraint name, table, column, SQL state). ECHO NOTHING OF IT.
+        // Keep 409 + domain ErrorCode so callers and operators still see the right
+        // signal; the i18n string for `error.conflict` is the generic, leak-free
+        // message. Full cause is logged at ERROR for operators.
+        log.error("DataIntegrityViolationException swallowed into 409 ERR-0409 — see cause", exception);
+        String safeMessage = Messages.get(ErrorCode.CONFLICT.getMessageKey());
         return buildErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                HttpStatus.CONFLICT,
+                ErrorCode.CONFLICT.getCode(),
                 safeMessage,
                 null,
                 request,

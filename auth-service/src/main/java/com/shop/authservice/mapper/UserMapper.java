@@ -15,15 +15,15 @@ public class UserMapper {
     }
 
     public UserResponse toResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .fullname(user.getFullName())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .gender(user.getGender())
-                .phone(user.getPhone())
-                .avatar(user.getAvatar())
-                .build();
+        return new UserResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getGender(),
+                user.getPhone(),
+                user.getAvatar()
+        );
     }
 
     public User toEntity(RegisterRequest request) {

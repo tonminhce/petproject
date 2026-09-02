@@ -102,7 +102,7 @@ public class KafkaProperties {
         props.put("bootstrap.servers", bootstrapServers);
         props.put("acks", producer.getAcks());
         props.put("retries", producer.getRetries());
-        props.put("properties.max.in.flight.requests.per.connection", 1);
+        props.put("max.in.flight.requests.per.connection", 1);
         props.put("key.serializer", org.apache.kafka.common.serialization.StringSerializer.class.getName());
         // H41 — pin the transport-layer defaults so every fleet producer gets
         // batching, a small linger window, lz4 compression, and idempotent

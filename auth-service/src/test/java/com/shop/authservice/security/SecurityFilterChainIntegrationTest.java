@@ -144,12 +144,7 @@ class SecurityFilterChainIntegrationTest {
     @DisplayName("S2: POST /api/v1/auth/login without auth → 200 (service public-path, any method)")
     void loginIsPublicWithoutAuthentication() throws Exception {
         when(authService.login(anyString(), anyString()))
-                .thenReturn(TokenResponse.builder()
-                        .accessToken("at")
-                        .refreshToken("rt")
-                        .tokenType("Bearer")
-                        .expiresIn(300L)
-                        .build());
+                .thenReturn(new TokenResponse("at", "rt", "Bearer", 300L));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -180,7 +175,7 @@ class SecurityFilterChainIntegrationTest {
     void getCurrentUserWithJwtIsOk() throws Exception {
         UUID id = UUID.randomUUID();
         User user = User.builder().id(id).username("alice").build();
-        UserResponse response = UserResponse.builder().id(id).username("alice").build();
+        UserResponse response = new UserResponse(id, null, "alice", null, null, null, null);
 
         when(userService.findByUsername("alice")).thenReturn(user);
         when(userMapper.toResponse(user)).thenReturn(response);

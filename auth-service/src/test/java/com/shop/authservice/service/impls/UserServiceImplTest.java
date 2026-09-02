@@ -157,7 +157,7 @@ class UserServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userMapper.toResponse(user))
-                .thenReturn(UserResponse.builder().id(userId).fullname("Alice Wonder II").build());
+                .thenReturn(new UserResponse(userId, "Alice Wonder II", null, null, null, null, null));
 
         UpdateUserRequest req = new UpdateUserRequest("Alice Wonder II", null, null, null, null);
 
@@ -259,7 +259,7 @@ class UserServiceImplTest {
     void findAllUsersMapsToPage() {
         when(userRepository.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(newUser())));
         when(userMapper.toResponse(any(User.class)))
-                .thenReturn(UserResponse.builder().id(userId).username("alice").build());
+                .thenReturn(new UserResponse(userId, null, "alice", null, null, null, null));
 
         Page<UserResponse> page = userService.findAllUsers(0, 10, "id", "ASC");
 
