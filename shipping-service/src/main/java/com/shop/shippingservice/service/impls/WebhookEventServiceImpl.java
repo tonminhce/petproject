@@ -114,6 +114,13 @@ public class WebhookEventServiceImpl implements WebhookEventService {
 
     @Override
     public void retry(ShipmentEvent event) {
+        // The scheduler query is only an optimization; re-check the state here so
+        // a stale row cannot be replayed after another worker made it terminal.
+        if (!ShipmentEvent.STATUS_FAILED_RETRYABLE.equals(event.getStatus())) {
+            log.info("Skipping webhook retry {} in status {}",
+                    event.getProviderEventId(), event.getStatus());
+            return;
+        }
         byte[] rawBody = event.getPayload() == null
                 ? new byte[0]
                 : event.getPayload().getBytes(StandardCharsets.UTF_8);

@@ -135,6 +135,15 @@ class WebhookEventServiceTest {
     }
 
     @Test
+    void retry_nonRetryableEvent_isIgnored() {
+        ShipmentEvent event = processedEvent("evt-terminal");
+
+        service.retry(event);
+
+        verifyNoInteractions(shipments, writer, metrics);
+    }
+
+    @Test
     void validAdvance_updatesShipmentAndLastCarrierUpdate() {
         byte[] raw = body(payloadJson("evt-1", "TRK-1", "IN_TRANSIT"));
         happyPathStubs("evt-1");
