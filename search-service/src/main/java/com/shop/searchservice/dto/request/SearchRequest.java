@@ -32,15 +32,19 @@ public record SearchRequest(
     @Pattern(regexp = "relevance|price_asc|price_desc|rating_desc|newest")
     String sort,
 
-    /** 49 × 200 + 200 = 10,000 — the ES {@code index.max_result_window} edge. */
+    /** The largest page that remains inside Elasticsearch result window. */
     @PositiveOrZero
-    @Max(49)
+    @Max(MAX_PAGE_NUMBER)
     Integer page,
 
     @Min(1)
     @Max(PageableConstant.MAX_PAGE_SIZE)
     Integer size
 ) {
+    /** Elasticsearch default result window. */
+    public static final int MAX_RESULT_WINDOW = 10_000;
+    public static final int MAX_PAGE_NUMBER = MAX_RESULT_WINDOW / PageableConstant.MAX_PAGE_SIZE - 1;
+
     public SearchRequest {
         if (page == null) {
             page = 0;

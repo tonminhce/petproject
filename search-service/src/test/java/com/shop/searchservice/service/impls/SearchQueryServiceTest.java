@@ -82,6 +82,17 @@ class SearchQueryServiceTest {
     }
 
     @Test
+    void deepPagination_isRejectedBeforeElasticsearchCall() {
+        SearchRequest request = new SearchRequest("mouse", null, null, null, null, null, null, 50, 200);
+
+        assertThatThrownBy(() -> service.search(request))
+            .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                assertThat(ex.getErrorCode()).isEqualTo("SRH-12002");
+                assertThat(ex.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            });
+    }
+
+    @Test
     void failedSearch_doesNotIncrementQueryMeter() throws IOException {
         doThrow(new IOException("elasticsearch is down")).when(client)
             .search(any(java.util.function.Function.class), eq(Map.class));

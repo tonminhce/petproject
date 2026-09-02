@@ -64,7 +64,10 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         boolean queryPresent = request.q() != null && !request.q().isBlank();
         SortKey effectiveSort = resolveSort(request.sort(), queryPresent);
         int size = Math.min(request.size(), SIZE_CAP);
-        int from = request.page() * size;
+        long from = (long) request.page() * size;
+        if (from + size > SearchRequest.MAX_RESULT_WINDOW) {
+            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+        }
 
         BoolQuery.Builder bool = new BoolQuery.Builder();
         if (queryPresent) {
@@ -97,7 +100,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
             response = client.search(s -> s
                 .index(IndexProvisioner.ALIAS)
                 .query(q -> q.bool(bool.build()))
-                .from(from)
+                .from(Math.toIntExact(from))
                 .size(size)
                 .sort(sortOptions(effectiveSort)), Map.class);
         } catch (ElasticsearchException ex) {
