@@ -98,4 +98,46 @@ class WebhookSignatureVerifierTest {
 
         assertTrue(WebhookSignatureVerifier.verify(SECRET, RAW_BODY, signature));
     }
+
+    // ========================================================================
+    // H8 — Stripe signature scheme t=<timestamp>,v1=<hex> (sha256 prefix optional)
+    // ========================================================================
+
+    private static String hmacHexOf(String secret, String signedPayload) {
+        return hmacHex(secret, signedPayload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String stripeHeader(long timestamp, String hexSignature) {
+        return "t=" + timestamp + ",v1=" + hexSignature;
+    }
+
+    /** Case 1 (H8): Stripe-format header with correct HMAC over `t.body` is verified. */
+    @Test
+    void validStripeSignatureIsVerified() {
+        long ts = java.time.Instant.now().getEpochSecond();
+        byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
+        String signedPayload = ts + "." + new String(utf8Body, StandardCharsets.UTF_8);
+        String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
+        String header = stripeHeader(ts, hex);
+
+        assertTrue(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, ts));
+    }
+
+    /** Case 2 (H8): bare 64-char hex (no scheme prefix) is still accepted — sha256 prefix optional. */
+    @Test
+    void sha256OnlyBareHexIsVerified() {
+        String signature = hmacHex(SECRET, RAW_BODY);
+
+        assertTrue(WebhookSignatureVerifier.verify(SECRET, RAW_BODY, signature));
+    }
+
+    /** Case 3 (H8): Stripe header missing the v1= component is rejected. */
+    @Test
+    void v1MissingStripeHeaderIsRejected() {
+        long ts = java.time.Instant.now().getEpochSecond();
+        byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
+        String header = "t=" + ts;  // no v1=
+
+        assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, ts));
+    }
 }
