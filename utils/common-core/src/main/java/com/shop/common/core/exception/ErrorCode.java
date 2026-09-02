@@ -96,6 +96,7 @@ public enum ErrorCode {
     PROMOTION_RESERVATION_EXPIRED("PRO-7009", "promotion.reservation.expired", HttpStatus.CONFLICT),
     PROMOTION_RESERVATION_INVALID_STATE("PRO-7010", "promotion.reservation.invalid.state", HttpStatus.CONFLICT),
     PROMOTION_RESERVATION_VERSION_CONFLICT("PRO-7011", "promotion.reservation.version.conflict", HttpStatus.CONFLICT),
+    PROMOTION_DUPLICATE_REQUEST("PRO-7012", "promotion.duplicate.request", HttpStatus.CONFLICT),
     TAX_CLASS_NOT_FOUND("TAX-8001", "tax.class.not_found", HttpStatus.NOT_FOUND),
     NO_MATCHING_RATE("TAX-8002", "tax.rate.no_match", HttpStatus.NOT_FOUND),
     DUPLICATE_TAX_RATE("TAX-8003", "tax.rate.duplicate", HttpStatus.CONFLICT),
@@ -129,8 +130,9 @@ public enum ErrorCode {
     RATING_NOT_HIDDEN("RTG-11004", "rating.not_hidden", HttpStatus.CONFLICT),
     RATING_ALREADY_EXISTS("RTG-11005", "rating.already_exists", HttpStatus.CONFLICT),
 
-    // ---- Search domain ---- SRH-12001..12002
+    // ---- Search domain ---- SRH-12001..12005
     SEARCH_REINDEX_IN_PROGRESS("SRH-12001", "search.reindex_in_progress", HttpStatus.CONFLICT),
+    SEARCH_REINDEX_CLEANUP_FAILED("SRH-12005", "search.reindex_cleanup_failed", HttpStatus.SERVICE_UNAVAILABLE),
     SEARCH_QUERY_FAILED("SRH-12002", "search.query_failed", HttpStatus.SERVICE_UNAVAILABLE),
     SEARCH_INDEX_FAILED("SRH-12003", "search.index_failed", HttpStatus.SERVICE_UNAVAILABLE),
     SEARCH_DELETE_FAILED("SRH-12004", "search.delete_failed", HttpStatus.SERVICE_UNAVAILABLE),

@@ -202,10 +202,8 @@ public class ReindexServiceImpl implements ReindexService {
                 }
             }
         } catch (IOException | ElasticsearchException ex) {
-            // docs are already live on the new index via the alias — never fail
-            // the reindex because cleanup of a stale index failed.
-            log.warn("Cleaning up superseded products-v* indices failed — they will be "
-                + "reaped by the next successful reindex", ex);
+            log.error("Cleaning up superseded products-v* indices failed after alias swap", ex);
+            throw BusinessException.of(ErrorCode.SEARCH_REINDEX_CLEANUP_FAILED);
         }
     }
 
