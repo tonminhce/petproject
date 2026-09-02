@@ -187,6 +187,28 @@ class NotificationServiceImplTest {
     }
 
     @Test
+    void nullEventId_isSkippedWithoutThrowing() {
+        OrderLifecycleEvent event = createdEvent();
+        event.setEventId(null);
+
+        assertThatCode(() -> service.handle(event)).doesNotThrowAnyException();
+
+        verify(writer, never()).insert(any());
+        verify(delivery, never()).deliver(any());
+    }
+
+    @Test
+    void malformedEventId_isSkippedWithoutThrowing() {
+        OrderLifecycleEvent event = createdEvent();
+        event.setEventId("not-a-uuid");
+
+        assertThatCode(() -> service.handle(event)).doesNotThrowAnyException();
+
+        verify(writer, never()).insert(any());
+        verify(delivery, never()).deliver(any());
+    }
+
+    @Test
     void alreadyProcessedEvent_noInsertNoDelivery() {
         when(repository.existsByEventId(EVENT_ID)).thenReturn(true);
 

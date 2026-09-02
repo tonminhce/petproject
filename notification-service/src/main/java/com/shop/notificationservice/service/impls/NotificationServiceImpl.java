@@ -63,7 +63,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void handle(OrderLifecycleEvent event) {
-        UUID eventId = UUID.fromString(event.getEventId());
+        UUID eventId = parseEventId(event);
+        if (eventId == null) {
+            return;
+        }
         if (repository.existsByEventId(eventId)) {
             log.info("Event {} already processed, skipping", eventId);
             return;
@@ -98,6 +101,24 @@ public class NotificationServiceImpl implements NotificationService {
         } else {
             log.info("Notification {} already claimed by another worker; skipping initial send",
                     saved.getId());
+        }
+    }
+
+    /**
+     * Parses the event identifier at the Kafka trust boundary. Invalid payloads
+     * are poison messages: log and acknowledge them rather than retrying a
+     * value that can never produce a valid notification row.
+     */
+    private UUID parseEventId(OrderLifecycleEvent event) {
+        if (event == null || event.getEventId() == null || event.getEventId().isBlank()) {
+            log.warn("Skipping notification event with missing eventId");
+            return null;
+        }
+        try {
+            return UUID.fromString(event.getEventId());
+        } catch (IllegalArgumentException e) {
+            log.warn("Skipping notification event with invalid eventId {}", event.getEventId());
+            return null;
         }
     }
 

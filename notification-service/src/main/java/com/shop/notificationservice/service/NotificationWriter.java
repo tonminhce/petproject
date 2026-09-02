@@ -5,7 +5,7 @@ import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -34,7 +34,7 @@ import java.util.UUID;
  * path. F3 — {@code notification_failed_permanent_total} increments on every
  * terminal failure so ops can alert on it.</p>
  */
-@Repository
+@Service
 public class NotificationWriter {
 
     private static final int MAX_ERROR_LENGTH = 1024;
