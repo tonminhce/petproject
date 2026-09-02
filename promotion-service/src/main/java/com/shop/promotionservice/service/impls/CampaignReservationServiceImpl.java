@@ -68,6 +68,16 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             throw BusinessException.of(ErrorCode.MIN_ORDER_AMOUNT_NOT_MET, request.orderAmount());
         }
 
+        CouponUsageReservation existing = reservationRepository.findByOrderId(request.orderId()).orElse(null);
+        if (existing != null) {
+            if (!existing.getCampaignId().equals(campaign.getId())
+                    || !existing.getUserId().equals(request.userId())
+                    || existing.getOrderAmount().compareTo(request.orderAmount()) != 0) {
+                throw BusinessException.of(ErrorCode.PROMOTION_DUPLICATE_REQUEST, request.orderId());
+            }
+            return ReservationResponse.from(campaign, existing);
+        }
+
         // Frozen up-front (D3): budget check needs the new discount, and the
         // returned amounts must match the stored row exactly.
         BigDecimal discount = DiscountCalculator.compute(

@@ -98,6 +98,50 @@ class CampaignReserveTest {
             });
     }
 
+    @Test
+    @DisplayName("same order retry returns existing reservation without duplicate write or event")
+    void sameOrderRetryIsIdempotent() {
+        Campaign campaign = activeCampaign();
+        CouponUsageReservation existing = CouponUsageReservation.builder()
+            .id(UUID.randomUUID())
+            .campaignId(campaignId)
+            .userId(userId)
+            .orderId(orderId)
+            .orderAmount(new BigDecimal("199.99"))
+            .discountAmount(new BigDecimal("20.00"))
+            .status(UsageStatus.PENDING)
+            .expiresAt(NOW.plusSeconds(TTL_SECONDS))
+            .reservedAt(NOW)
+            .build();
+        when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(campaign));
+        when(reservationRepository.findByOrderId(orderId)).thenReturn(Optional.of(existing));
+
+        ReservationResponse response = service.reserve(CODE, request("199.99"));
+
+        assertThat(response.reservationId()).isEqualTo(existing.getId());
+        verify(reservationRepository).findByOrderId(orderId);
+        verify(reservationRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @DisplayName("same order with changed request is rejected as duplicate")
+    void sameOrderChangedRequestIsRejected() {
+        Campaign campaign = activeCampaign();
+        CouponUsageReservation existing = CouponUsageReservation.builder()
+            .id(UUID.randomUUID()).campaignId(campaignId).userId(userId).orderId(orderId)
+            .orderAmount(new BigDecimal("199.99")).discountAmount(new BigDecimal("20.00"))
+            .status(UsageStatus.PENDING).expiresAt(NOW.plusSeconds(TTL_SECONDS)).reservedAt(NOW).build();
+        when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(campaign));
+        when(reservationRepository.findByOrderId(orderId)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.reserve(CODE, request("299.99")))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("PRO-7012"));
+        verify(reservationRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
     // --- 1. unknown / deleted code → PRO-7001 (@SQLRestriction hides deleted) ---
 
     @Test
