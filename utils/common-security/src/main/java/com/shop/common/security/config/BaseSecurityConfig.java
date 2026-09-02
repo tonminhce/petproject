@@ -123,25 +123,19 @@ public class BaseSecurityConfig {
     }
 
     private OAuth2TokenValidator<Jwt> buildValidatorChain() {
-        var audienceClaim = new JwtClaimValidator<List<String>>("aud", aud -> {
-            if (properties.expectedAudiences().isEmpty()) {
-                return true;
-            }
-            if (aud == null || aud.isEmpty()) {
-                return false;
-            }
-            for (String expected : properties.expectedAudiences()) {
-                if (aud.contains(expected)) {
-                    return true;
+        var validators = new java.util.ArrayList<OAuth2TokenValidator<Jwt>>();
+        validators.add(new JwtIssuerValidator(properties.issuerUri()));
+        validators.add(new JwtTimestampValidator());
+        if (!properties.expectedAudiences().isEmpty()) {
+            validators.add(new JwtClaimValidator<Object>("aud", aud -> {
+                if (!(aud instanceof List<?> audiences) || audiences.isEmpty()) {
+                    return false;
                 }
-            }
-            return false;
-        });
-        return new DelegatingOAuth2TokenValidator<>(
-                new JwtIssuerValidator(properties.issuerUri()),
-                new JwtTimestampValidator(),
-                audienceClaim
-        );
+                return audiences.stream().allMatch(String.class::isInstance)
+                        && properties.expectedAudiences().stream().anyMatch(audiences::contains);
+            }));
+        }
+        return new DelegatingOAuth2TokenValidator<>(validators);
     }
 
     /**
