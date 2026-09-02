@@ -2,6 +2,7 @@ package com.shop.authservice.controller;
 
 import com.shop.authservice.dto.request.RoleRequest;
 import com.shop.authservice.service.RoleService;
+import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/roles")
+@RequestMapping(ApiPaths.ROLES)
 @PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 public class RoleController {

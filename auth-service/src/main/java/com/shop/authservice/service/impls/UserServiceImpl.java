@@ -14,8 +14,8 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.keycloak.client.KeycloakAdminClient;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
 import com.shop.common.logging.LogPerformance;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -65,7 +65,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
+    // A7: no DB write — only Keycloak HTTP. Holding a tx across an external call would
+    // keep a DB connection pinned for the round-trip (R5 connection-held-over-network).
     public String changePassword(ChangePasswordRequest request) {
         validatePasswordMatch(request);
 
@@ -104,11 +105,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public User findById(UUID userId) {
         return findUserOrThrow(userId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public User findByUsername(String userName) {
         return userRepository.findByUsername(userName)
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found.with.username", userName));
@@ -116,9 +119,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @LogPerformance(title = "List users")
+    @Transactional(readOnly = true)
     public Page<UserResponse> findAllUsers(int page, int size, String sortBy, String sortOrder) {
+        // A5: clamp page/size so callers can't pass 0 / negatives (IllegalArgumentException → 500)
+        // or unbounded sizes (DoS via full-table materialisation). Mirrors fleet PageableConstant cap.
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
         Sort sort = Sort.by(Sort.Direction.fromString(sortOrder), sortBy);
-        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        PageRequest pageRequest = PageRequest.of(safePage, safeSize, sort);
         return userRepository.findAll(pageRequest).map(userMapper::toResponse);
     }
 

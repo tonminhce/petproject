@@ -6,6 +6,7 @@ import com.shop.authservice.dto.request.RegisterRequest;
 import com.shop.authservice.dto.response.TokenResponse;
 import com.shop.authservice.service.AuthService;
 import com.shop.authservice.service.UserService;
+import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping(ApiPaths.AUTH)
 @RequiredArgsConstructor
 public class AuthController {
 

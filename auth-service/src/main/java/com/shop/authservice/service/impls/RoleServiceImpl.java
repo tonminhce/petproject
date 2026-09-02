@@ -8,8 +8,8 @@ import com.shop.authservice.repository.RoleRepository;
 import com.shop.authservice.repository.UserRepository;
 import com.shop.authservice.service.RoleService;
 import com.shop.common.core.exception.BusinessException;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +65,9 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    // A1: auth-service yml has open-in-view: false and User.roles is LAZY. Without a tx
+    // around this read, `user.getRoles()` would throw LazyInitializationException.
+    @Transactional(readOnly = true)
     public List<String> getUserRoles(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found"));

@@ -5,6 +5,7 @@ import com.shop.inventoryservice.dto.response.InventoryResponse;
 import com.shop.inventoryservice.dto.response.ReservationResponse;
 import com.shop.inventoryservice.entity.Inventory;
 import com.shop.inventoryservice.entity.Reservation;
+import com.shop.common.core.exception.BusinessException;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +37,14 @@ public class InventoryMapper {
 
     public void partialUpdate(Inventory target, InventoryUpsertRequest request) {
         if (request.availableQuantity() != null) {
+            // A10: refuse to drop available below already-committed/held stock — would let
+            // reservations/orders oversell. Caller must release or commit reservations first.
+            int reserved = target.getReservedQuantity() == null ? 0 : target.getReservedQuantity();
+            if (request.availableQuantity() < reserved) {
+                throw BusinessException.badRequest(
+                    "inventory.available.below.reserved",
+                    request.availableQuantity(), reserved);
+            }
             target.setAvailableQuantity(request.availableQuantity());
         }
     }

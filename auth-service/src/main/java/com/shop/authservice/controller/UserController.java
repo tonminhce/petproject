@@ -6,6 +6,7 @@ import com.shop.authservice.dto.response.UserResponse;
 import com.shop.authservice.entity.User;
 import com.shop.authservice.mapper.UserMapper;
 import com.shop.authservice.service.UserService;
+import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping(ApiPaths.USERS)
 @RequiredArgsConstructor
 public class UserController {
 

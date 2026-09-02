@@ -301,7 +301,7 @@ services:
       # tax/promotion, rating's order, and search's product clients.
       MEDIA_SERVICE_URL: http://media-service:8083
       PRODUCT_SERVICE_CLIENT_ID: product-service
-      PRODUCT_SERVICE_CLIENT_SECRET: changeme
+      PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
       # Force-bypass common-spring YAML placeholder resolution (see auth-service note).
       # Use INTERNAL Keycloak URL (container DNS) so JWT decoder can fetch JWKS.
@@ -341,7 +341,7 @@ services:
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_SERVICE_CLIENT_ID: order-service
-      ORDER_SERVICE_CLIENT_SECRET: changeme
+      ORDER_SERVICE_CLIENT_SECRET: ${ORDER_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       postgres:
@@ -570,7 +570,7 @@ services:
       # Client-credentials for the eligibility call (same default style as
       # ORDER_SERVICE_CLIENT_ID/SECRET in order-service's stanza).
       RATING_SERVICE_CLIENT_ID: rating-service
-      RATING_SERVICE_CLIENT_SECRET: changeme
+      RATING_SERVICE_CLIENT_SECRET: ${RATING_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       postgres:
@@ -604,7 +604,7 @@ services:
       # Client-credentials for the reindex call (same default style as
       # RATING_SERVICE_CLIENT_ID/SECRET in rating-service's stanza).
       SEARCH_SERVICE_CLIENT_ID: search-service
-      SEARCH_SERVICE_CLIENT_SECRET: changeme
+      SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       elasticsearch:

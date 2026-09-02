@@ -51,7 +51,15 @@ public class RestClientConfig {
 
     /** Spring Boot 4 does not auto-register RestClient.Builder as a bean; ServiceTokenProvider needs it. */
     @Bean
+    // A14: bare builder had no timeout → a hung Keycloak token endpoint would hold
+    // the caller's HTTP thread forever (thread starvation under load). 3s connect
+    // + 3s read mirrors the rest of the fleet's external clients.
     public RestClient.Builder restClientBuilder(TraceparentInterceptor traceparent) {
-        return RestClient.builder().requestInterceptor(traceparent);
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofMillis(3000).toMillis());
+        factory.setReadTimeout((int) Duration.ofMillis(3000).toMillis());
+        return RestClient.builder()
+            .requestFactory(factory)
+            .requestInterceptor(traceparent);
     }
 }

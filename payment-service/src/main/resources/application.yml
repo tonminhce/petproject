@@ -22,6 +22,12 @@ server:
 shop:
   kafka:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      # A13: payment-service has no consumer today, but pin group + offset to the
+      # fleet-safe defaults now so any future listener doesn't fall back to the
+      # common `shop-service` / `earliest` defaults (silent data loss + replay).
+      group-id: ${SHOP_KAFKA_CONSUMER_GROUP:payment-service}
+      auto-offset-reset: latest
 
   # common-storage auto-config creates the S3 client + ensures the bucket at
   # startup; point it at RustFS in compose (see docker-compose payment stanza).
@@ -33,7 +39,10 @@ shop:
     bucket: ${STORAGE_BUCKET:shop-payments}
 
   payment:
-    provider: ${PAYMENT_PROVIDER:mock}
+    # A12: default to stripe (real provider) — MockProvider used to be
+    # matchIfMissing=true so an unset env var silently captured payments without
+    # charging. Dev compose must now inject PAYMENT_PROVIDER=mock explicitly.
+    provider: ${PAYMENT_PROVIDER:stripe}
     webhook:
       secret: ${PAYMENT_WEBHOOK_SECRET:}
     stripe:

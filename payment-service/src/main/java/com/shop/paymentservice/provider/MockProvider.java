@@ -7,7 +7,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
-@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "mock", matchIfMissing = true)
+// A11: dropped `matchIfMissing = true` — prod must pick a real provider explicitly (stripe).
+// Dev compose sets PAYMENT_PROVIDER=mock; running without the env var now boots into
+// fail-fast (no PaymentProvider bean) instead of silently "capturing" without charging.
+@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "mock")
 public class MockProvider implements PaymentProvider {
 
     @Override
