@@ -39,16 +39,21 @@ shop:
     bucket: ${STORAGE_BUCKET:shop-payments}
 
   payment:
-    # A12: default to stripe (real provider) — MockProvider used to be
-    # matchIfMissing=true so an unset env var silently captured payments without
-    # charging. Dev compose must now inject PAYMENT_PROVIDER=mock explicitly.
-    provider: ${PAYMENT_PROVIDER:stripe}
+    # C5 (spec §3) — provider activation is env-driven. Mock stays the default
+    # (compose injects SHOP_PAYMENT_PROVIDER=mock explicitly); stripe is opt-in.
+    provider: ${SHOP_PAYMENT_PROVIDER:mock}
     webhook:
       # C3/C10 — fail-fast: a blank webhook secret means every legitimate
       # carrier webhook would 401. Compose must inject this var from secrets.
       secret: ${PAYMENT_WEBHOOK_SECRET:?PAYMENT_WEBHOOK_SECRET must be set}
     stripe:
-      secret-key: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY must be set}
+      # C5 — blank defaults are intentional: the StripeProvider bean is
+      # @ConditionalOnProperty(provider=stripe) and fail-fasts on a blank key
+      # when actually selected (D10), so the mock default never trips these.
+      secret-key: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:}
+      webhook-secret: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:}
+      api-version: "2024-06-20"
+      connect: false
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}

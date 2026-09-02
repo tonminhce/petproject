@@ -72,6 +72,14 @@
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot4</artifactId>
         </dependency>
+        <!-- C5 Task 1 — official Stripe SDK behind the PaymentProvider port
+             (spec D1): API versioning, error mapping (StripeException hierarchy)
+             and webhook signature verification (Webhook.constructEvent). -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>24.24.0</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
