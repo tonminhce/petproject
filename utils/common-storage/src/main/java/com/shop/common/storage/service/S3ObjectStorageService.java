@@ -18,6 +18,8 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
@@ -109,18 +111,26 @@ public class S3ObjectStorageService implements ObjectStorageService {
     @Override
     public StorageObject download(String bucket, String key) {
         GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key).build();
-        try {
-            ResponseInputStream<GetObjectResponse> stream = s3Client.getObject(request);
+        try (ResponseInputStream<GetObjectResponse> stream = s3Client.getObject(request)) {
             GetObjectResponse response = stream.response();
+            // H31 — buffer the body inside the try-with-resources so the S3
+            // stream is closed BEFORE the StorageObject leaves this method.
+            // Callers no longer own the live S3 stream; calling close() on the
+            // returned content is best-effort cleanup of an in-memory copy.
+            byte[] body = stream.readAllBytes();
+            long advertised = response.contentLength() == null ? -1L : response.contentLength();
+            long length = advertised < 0 ? body.length : advertised;
             return StorageObject.of(
-                    stream,
+                    new ByteArrayInputStream(body),
                     key,
                     response.contentType(),
-                    response.contentLength() == null ? -1L : response.contentLength()
+                    length
             );
         } catch (NoSuchKeyException e) {
             throw new StorageException("Object not found: " + bucket + "/" + key, e);
         } catch (S3Exception e) {
+            throw new StorageException("Failed to download object: " + key, e);
+        } catch (IOException e) {
             throw new StorageException("Failed to download object: " + key, e);
         }
     }
