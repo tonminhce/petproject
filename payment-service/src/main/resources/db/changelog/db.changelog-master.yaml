@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: changelog-006-payment-user-id.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-007-webhook-retry-index.yaml
+      relativeToChangelogFile: true

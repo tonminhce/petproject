@@ -53,6 +53,7 @@ public class OutboxRetentionScheduler {
     @Value("${shop.payment.outbox.dead-retention-seconds:604800}")  // 7d default
     private long deadRetentionSeconds;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public OutboxRetentionScheduler(OutboxEventRepository outboxRepo) {
         this(outboxRepo, Clock.systemUTC());
     }

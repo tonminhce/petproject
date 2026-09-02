@@ -1,0 +1,19 @@
+databaseChangeLog:
+
+  # H40 — payment webhook retry scheduler walks `WHERE status='FAILED_RETRYABLE'
+  # AND next_retry_at <= NOW()` on every tick. The (status, next_retry_at)
+  # composite index turns that scan from a seqscan into an index range scan —
+  # which matters as the table grows. App-side @Index annotations are
+  # ignored because spring.jpa.hibernate.ddl-auto=validate (R9) refuses to
+  # manage schema, so Liquibase is the only path that gets the index live.
+
+  - changeSet:
+      id: 007-webhook-retry-composite-index
+      author: shop-platform
+      changes:
+        - createIndex:
+            tableName: payment_events
+            indexName: idx_webhook_retry_status_next
+            columns:
+              - column: { name: status }
+              - column: { name: next_retry_at }
