@@ -364,7 +364,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
 
         @Bean
         @Primary
-        KafkaMessagePublisher flakyPublisher(KafkaTemplate<String, Object> template) {
+        KafkaMessagePublisher flakyPublisher(KafkaTemplate<String, String> template) {
             return new FlakyPublisher(template);
         }
     }
@@ -373,7 +373,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
 
         static volatile boolean failing = false;
 
-        FlakyPublisher(KafkaTemplate<String, Object> template) {
+        FlakyPublisher(KafkaTemplate<String, String> template) {
             super(template);
         }
 

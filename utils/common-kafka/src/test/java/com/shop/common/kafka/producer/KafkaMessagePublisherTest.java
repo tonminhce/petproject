@@ -43,7 +43,7 @@ class KafkaMessagePublisherTest {
     private static final String VALUE = "payload";
 
     @Mock
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     private KafkaMessagePublisher publisher;
 
@@ -86,7 +86,7 @@ class KafkaMessagePublisherTest {
             publisher.publish(TOPIC, KEY, VALUE);
         }
 
-        ProducerRecord<String, Object> record = capturedRecord();
+        ProducerRecord<String, String> record = capturedRecord();
         assertThat(new String(record.headers().lastHeader("traceparent").value()))
                 .isEqualTo("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
         assertThat(record.topic()).isEqualTo(TOPIC);
@@ -101,7 +101,7 @@ class KafkaMessagePublisherTest {
 
         publisher.publish(TOPIC, KEY, VALUE);
 
-        ProducerRecord<String, Object> record = capturedRecord();
+        ProducerRecord<String, String> record = capturedRecord();
         assertThat(record.headers().headers("traceparent")).isEmpty();
     }
 
@@ -117,7 +117,7 @@ class KafkaMessagePublisherTest {
             publisher.publishAsync(TOPIC, KEY, VALUE);
         }
 
-        ProducerRecord<String, Object> record = capturedRecord();
+        ProducerRecord<String, String> record = capturedRecord();
         assertThat(new String(record.headers().lastHeader("traceparent").value()))
                 .isEqualTo("00-4bf92f3577b34da6a3ce929d0e0e4737-00f067aa0ba902b8-01");
     }
@@ -127,14 +127,14 @@ class KafkaMessagePublisherTest {
         stubSend();
         publisher.publishAsync(TOPIC, KEY, VALUE);
 
-        ProducerRecord<String, Object> record = capturedRecord();
+        ProducerRecord<String, String> record = capturedRecord();
         assertThat(record.headers().headers("traceparent")).isEmpty();
     }
 
     @SuppressWarnings("unchecked")
-    private ProducerRecord<String, Object> capturedRecord() {
-        ArgumentCaptor<ProducerRecord<String, Object>> captor =
-                ArgumentCaptor.forClass((Class<ProducerRecord<String, Object>>) (Class<?>) ProducerRecord.class);
+    private ProducerRecord<String, String> capturedRecord() {
+        ArgumentCaptor<ProducerRecord<String, String>> captor =
+                ArgumentCaptor.forClass((Class<ProducerRecord<String, String>>) (Class<?>) ProducerRecord.class);
         verify(kafkaTemplate).send(captor.capture());
         return captor.getValue();
     }
