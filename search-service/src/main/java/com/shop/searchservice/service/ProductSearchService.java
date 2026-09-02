@@ -43,8 +43,13 @@ public class ProductSearchService {
                 .index(IndexProvisioner.ALIAS)
                 .id(event.productId().toString())
                 .document(document));
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed to index product " + event.productId(), ex);
+        } catch (IOException | ElasticsearchException ex) {
+            // C18 fix — surface a domain exception so ApiExceptionHandler maps it
+            // to a 503 with the canonical envelope instead of leaking the raw
+            // IllegalStateException (which would be 500 with a stack trace).
+            throw com.shop.common.core.exception.BusinessException.of(
+                com.shop.common.core.exception.ErrorCode.SEARCH_INDEX_FAILED,
+                event.productId());
         }
     }
 
@@ -56,11 +61,13 @@ public class ProductSearchService {
             }
         } catch (ElasticsearchException ex) {
             if (ex.status() != 404) {
-                throw ex;
+                throw com.shop.common.core.exception.BusinessException.of(
+                    com.shop.common.core.exception.ErrorCode.SEARCH_DELETE_FAILED, productId);
             }
             log.debug("Delete for missing product doc {} — nothing to do", productId);
         } catch (IOException ex) {
-            throw new IllegalStateException("Failed to delete product doc " + productId, ex);
+            throw com.shop.common.core.exception.BusinessException.of(
+                com.shop.common.core.exception.ErrorCode.SEARCH_DELETE_FAILED, productId);
         }
     }
 }

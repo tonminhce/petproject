@@ -3,16 +3,18 @@ package com.shop.promotionservice.service;
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.entity.CouponUsageReservation;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,24 +28,37 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Task 11 — TTL sweep + retention purge (spec §5.4). Mirrors inventory's
- * ReservationCleanupSchedulerTest: batch loop with flush+clear per batch.
- * Promotion deltas: status flip only (no inventory rows, no cache, no events) —
- * quota returns implicitly because per-user counts are by-status.
+ * Task 11 — TTL sweep + retention purge (spec §5.4). Mirrors payment's
+ * WebhookRetrySchedulerTest: a no-op PlatformTransactionManager stub, because
+ * the assertions are about batch semantics, not transaction propagation
+ * (verified by integration tests on a real DB). A16 shape: one transaction
+ * per batch (TransactionTemplate), no persistence-context flush/clear — a
+ * mid-cycle failure rolls back only the failing batch and terminates.
  */
 @ExtendWith(MockitoExtension.class)
 class ReservationCleanupSchedulerTest {
 
     @Mock CouponUsageReservationRepository reservationRepository;
-    @Mock EntityManager entityManager;
-    @InjectMocks ReservationCleanupScheduler scheduler;
+
+    private ReservationCleanupScheduler scheduler;
 
     @BeforeEach
     void setUp() {
-        // @Value and @PersistenceContext fields are not injected by Mockito - set explicitly
+        PlatformTransactionManager txManager = new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                // No-op — TransactionTemplate needs a non-null status to commit.
+                return new SimpleTransactionStatus(true);
+            }
+            @Override
+            public void commit(TransactionStatus status) { }
+            @Override
+            public void rollback(TransactionStatus status) { }
+        };
+        scheduler = new ReservationCleanupScheduler(reservationRepository, txManager);
+        // @Value fields are not injected outside Spring - set explicitly
         ReflectionTestUtils.setField(scheduler, "batchSize", 500);
         ReflectionTestUtils.setField(scheduler, "retentionDays", 30);
-        ReflectionTestUtils.setField(scheduler, "entityManager", entityManager);
     }
 
     private CouponUsageReservation pending(long secondsOverdue) {
@@ -71,9 +86,9 @@ class ReservationCleanupSchedulerTest {
 
         assertThat(first.getStatus()).isEqualTo(UsageStatus.EXPIRED);
         assertThat(second.getStatus()).isEqualTo(UsageStatus.EXPIRED);
-        // flush+clear per non-empty batch to bound the persistence context
-        verify(entityManager, times(1)).flush();
-        verify(entityManager, times(1)).clear();
+        // batched: drain until the page comes back empty
+        verify(reservationRepository, times(2)).findByStatusAndExpiresAtBefore(
+            eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500)));
     }
 
     @Test
@@ -85,8 +100,6 @@ class ReservationCleanupSchedulerTest {
         scheduler.releaseAllExpiredReservations();
 
         verify(reservationRepository, never()).saveAll(any());
-        verify(entityManager, never()).flush();
-        verify(entityManager, never()).clear();
     }
 
     @Test
@@ -133,8 +146,6 @@ class ReservationCleanupSchedulerTest {
         assertThat(value).isAfter(before.minus(31, ChronoUnit.DAYS));
         assertThat(value).isBefore(before.minus(29, ChronoUnit.DAYS));
         verify(reservationRepository).deleteAllInBatch(List.of(oldReleased));
-        verify(entityManager, times(1)).flush();
-        verify(entityManager, times(1)).clear();
     }
 
     @Test
@@ -146,7 +157,6 @@ class ReservationCleanupSchedulerTest {
         scheduler.purgeOldTerminalReservations();
 
         verify(reservationRepository, never()).deleteAllInBatch(any());
-        verify(entityManager, never()).flush();
     }
 
     @Test

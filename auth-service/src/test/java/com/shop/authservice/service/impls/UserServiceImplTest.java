@@ -274,6 +274,113 @@ class UserServiceImplTest {
         assertEquals("alice", page.getContent().get(0).getUsername());
     }
 
+    // ------------------------------------------------------------------
+    // C1 — server-side role whitelist on self-registration. ADMIN/SERVICE/
+    // MANAGER must NOT be assignable through the public sign-up endpoint,
+    // even when the request payload sends them. The whitelist only keeps
+    // {USER}; anything else is silently dropped.
+    // ------------------------------------------------------------------
+
+    @Test
+    void registerStripsDisallowedRolesFromRequest() {
+        RegisterRequest req = registerRequest();
+        req.setRoles(Set.of("ADMIN", "USER", "SERVICE"));
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByPhone("0901234567")).thenReturn(false);
+        when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
+                "Passw0rd", List.of("USER")))
+                .thenReturn("kc-123");
+        when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
+        when(userMapper.toEntity(req)).thenReturn(newUser());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.register(req);
+
+        // Only USER survives the whitelist — ADMIN and SERVICE are stripped
+        // before the call to Keycloak and before resolveRoles().
+        verify(keycloakAdminClient).createUser("alice", "alice@example.com",
+                "Alice Wonder", "Passw0rd", List.of("USER"));
+        verify(roleRepository).findByNameIn(List.of("USER"));
+    }
+
+    @Test
+    void registerEmptyRolesDefaultsToUser() {
+        RegisterRequest req = registerRequest();
+        // no roles set
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByPhone("0901234567")).thenReturn(false);
+        when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
+                "Passw0rd", List.of("USER")))
+                .thenReturn("kc-123");
+        when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
+        when(userMapper.toEntity(req)).thenReturn(newUser());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.register(req);
+
+        verify(keycloakAdminClient).createUser("alice", "alice@example.com",
+                "Alice Wonder", "Passw0rd", List.of("USER"));
+    }
+
+    @Test
+    void registerAllDisallowedRolesResultsInEmptyList() {
+        RegisterRequest req = registerRequest();
+        req.setRoles(Set.of("ADMIN", "SERVICE", "MANAGER"));
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByPhone("0901234567")).thenReturn(false);
+        // After whitelist filter, both calls receive empty lists — Keycloak is
+        // asked to create a user with no realm roles, local DB gets no role rows.
+        when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
+                "Passw0rd", List.of()))
+                .thenReturn("kc-123");
+        when(roleRepository.findByNameIn(List.of())).thenReturn(Set.of());
+        when(userMapper.toEntity(req)).thenReturn(newUser());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.register(req);
+
+        verify(keycloakAdminClient).createUser("alice", "alice@example.com",
+                "Alice Wonder", "Passw0rd", List.of());
+        verify(roleRepository).findByNameIn(List.of());
+    }
+
+    // ------------------------------------------------------------------
+    // A5 — page/size clamp in findAllUsers. Caller-supplied page=-1 or
+    // size=0 used to leak through to PageRequest.of and throw
+    // IllegalArgumentException → 500. Now both are clamped to safe bounds.
+    // ------------------------------------------------------------------
+
+    @Test
+    void findAllUsersClampsSizeAt100() {
+        when(userRepository.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        userService.findAllUsers(0, 99_999, "id", "ASC");
+
+        org.mockito.ArgumentCaptor<PageRequest> captor =
+                org.mockito.ArgumentCaptor.forClass(PageRequest.class);
+        verify(userRepository).findAll(captor.capture());
+        PageRequest sent = captor.getValue();
+        assertEquals(100, sent.getPageSize());
+        assertEquals(0, sent.getPageNumber());
+    }
+
+    @Test
+    void findAllUsersNegativePageAndZeroSizeDefaultsToSafe() {
+        when(userRepository.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        userService.findAllUsers(-5, 0, "id", "ASC");
+
+        org.mockito.ArgumentCaptor<PageRequest> captor =
+                org.mockito.ArgumentCaptor.forClass(PageRequest.class);
+        verify(userRepository).findAll(captor.capture());
+        PageRequest sent = captor.getValue();
+        assertEquals(0, sent.getPageNumber());
+        assertEquals(1, sent.getPageSize());
+    }
+
     private void authenticateAs(User user) {
         Jwt jwt = new Jwt(
                 "token-value",

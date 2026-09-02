@@ -157,7 +157,27 @@ public class KafkaProperties {
         }
     }
 
-    /** Retry/DLT defaults shared across consumers. */
+    /**
+     * Retry/DLT defaults — INTENTIONALLY UNUSED (C20 review finding).
+     *
+     * <p>The fleet's listener factory uses a raw-String value deserializer
+     * ({@link org.apache.kafka.common.serialization.StringDeserializer}, see
+     * {@code BaseKafkaListenerConfig}). That deserializer never throws on
+     * poison bytes, and {@code BaseKafkaConsumer}-derived listeners follow the
+     * "ack-always poison posture" — exceptions inside the handler are caught,
+     * logged, and the offset still advances. Combined, neither deserialize
+     * failures nor handler failures ever reach a {@code CommonErrorHandler}
+     * that could trigger retry / DLT routing.</p>
+     *
+     * <p>This block is kept for two reasons:</p>
+     * <ol>
+     *   <li>Future listeners that drop the ack-always posture (e.g. async
+     *       processing with a true DLT) can wire these values without a
+     *       config change.</li>
+     *   <li>Documented fleet precedent so reviewers don't re-flag this as
+     *       dead config drift.</li>
+     * </ol>
+     */
     public static class Retry {
         /** Delay between retry attempts, in milliseconds. */
         private long backoffMs = 6_000L;

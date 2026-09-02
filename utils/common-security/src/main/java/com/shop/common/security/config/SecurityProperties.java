@@ -44,6 +44,12 @@ import java.util.List;
  * @param publicPaths        service-specific allow-list merged with platform defaults;
  *                           each {@link EndpointRule} binds an optional {@link HttpMethod}
  *                           and a required path string
+ * @param expectedAudiences  optional list of JWT {@code aud} values this service
+ *                           will accept. C1 — without this list a token issued
+ *                           for client A is honoured by service B (cross-client
+ *                           horizontal privilege escalation). Set to the
+ *                           {@code clientId}(s) whose tokens should reach THIS
+ *                           service. Empty list = no aud check (legacy/dev only).
  * @param cors               CORS sub-configuration
  */
 @Validated
@@ -54,6 +60,7 @@ public record SecurityProperties(
         @DefaultValue("true") boolean csrfDisabled,
         @DefaultValue("true") boolean statelessSession,
         @DefaultValue List<EndpointRule> publicPaths,
+        @DefaultValue List<@NotBlank String> expectedAudiences,
         @Valid @DefaultValue Cors cors
 ) {
 
@@ -110,6 +117,9 @@ public record SecurityProperties(
     public SecurityProperties {
         if (publicPaths == null) {
             publicPaths = List.of();
+        }
+        if (expectedAudiences == null) {
+            expectedAudiences = List.of();
         }
         if (cors == null) {
             cors = new Cors(true, List.of("*"), List.of(), List.of("*"), List.of(), false, 3600L);

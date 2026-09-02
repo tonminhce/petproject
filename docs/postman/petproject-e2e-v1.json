@@ -1,0 +1,504 @@
+{
+  "info": {
+    "name": "E-commerce Microservices E2E (6 working services)",
+    "description": "Auth, Product, Inventory, Order, Favourite, Gateway. Skeleton services (tax, payment, promotion, rating, search, notification, shipping, media) excluded - spec-stub only, no controllers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "keycloak_url", "value": "http://localhost:9090"},
+    {"key": "realm", "value": "ecommerce"},
+    {"key": "client_id", "value": "ecommerce-client"},
+    {"key": "client_secret", "value": "ecommerce-client-secret"},
+    {"key": "auth_url", "value": "http://localhost:8088"},
+    {"key": "product_url", "value": "http://localhost:8086"},
+    {"key": "inventory_url", "value": "http://localhost:8082"},
+    {"key": "order_url", "value": "http://localhost:8084"},
+    {"key": "favourite_url", "value": "http://localhost:8081"},
+    {"key": "gateway_url", "value": "http://localhost:8080"},
+    {"key": "testuser_token", "value": ""},
+    {"key": "admin_token", "value": ""},
+    {"key": "product_id", "value": ""},
+    {"key": "reservation_id", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "0. Health & Infra",
+      "item": [
+        {
+          "name": "[Keycloak] OIDC discovery",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{keycloak_url}}/realms/{{realm}}/.well-known/openid-configuration"
+            }
+          }
+        },
+        {
+          "name": "[Auth] health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{auth_url}}/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "[Product] health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "[Inventory] health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{inventory_url}}/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "[Order] health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{order_url}}/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "[Favourite] health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{favourite_url}}/actuator/health"
+            }
+          }
+        },
+        {
+          "name": "[Gateway] health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{gateway_url}}/actuator/health"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Auth (Keycloak facade)",
+      "item": [
+        {
+          "name": "[Public] Login testuser",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"username\":\"testuser\",\"password\":\"testpass\"}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/auth/login"
+            }
+          }
+        },
+        {
+          "name": "[Public] Login adminuser",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"username\":\"adminuser\",\"password\":\"adminpass\"}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/auth/login"
+            }
+          }
+        },
+        {
+          "name": "[Public] Sign-up",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"fullName\":\"E2E Tester\",\"username\":\"e2euser01\",\"password\":\"TestPass123\",\"email\":\"e2e01@local.dev\",\"gender\":\"M\",\"phone\":\"0123456789\",\"avatar\":\"https://example.com/a.png\",\"roles\":[]}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/auth/sign-up"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "Sign-up triggers Keycloak createUser + local DB persistence. May fail if e2euser01 already exists."
+            }
+          }
+        },
+        {
+          "name": "[Public] Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"refreshToken\":\"<paste-refresh-token>\"}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/auth/refresh"
+            }
+          }
+        },
+        {
+          "name": "[Auth] Logout",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"refreshToken\":\"<paste-refresh-token>\"}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/auth/logout"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User (admin/self)",
+      "item": [
+        {
+          "name": "[Self] Get /users/me (USER token)",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/users/me"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "KNOWN BUG: returns 401 due to JWT iss mismatch (services expect http://keycloak:8080 but Keycloak issues http://localhost:9090)."
+            }
+          }
+        },
+        {
+          "name": "[Admin] List users",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/users"
+            }
+          }
+        },
+        {
+          "name": "[Admin] Assign role",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/roles/users/{userId}/assign"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"roleName\":\"MANAGER\"}"
+            }
+          }
+        },
+        {
+          "name": "[Self] Update own password",
+          "request": {
+            "method": "PUT",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{auth_url}}/api/v1/users/me/password"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"oldPassword\":\"testpass\",\"newPassword\":\"TestPass123\",\"confirmPassword\":\"TestPass123\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Product (read public, write ADMIN)",
+      "item": [
+        {
+          "name": "[Public] List",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/api/v1/products?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "[Public] Get by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/api/v1/products/{product_id}"
+            }
+          }
+        },
+        {
+          "name": "[Public] Get by slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/api/v1/products/slug/favprod-1787962431884599000"
+            }
+          }
+        },
+        {
+          "name": "[Public] List categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/api/v1/categories"
+            }
+          }
+        },
+        {
+          "name": "[Public] Categories tree",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/api/v1/categories/tree"
+            }
+          }
+        },
+        {
+          "name": "[Public] List brands",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{product_url}}/api/v1/brands?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "[Admin] Create product",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{product_url}}/api/v1/products"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"E2E Product\",\"slug\":\"e2e-product-1\",\"description\":\"From Postman\",\"sku\":\"E2E-SKU-1\",\"priceUnit\":99.99,\"quantity\":50,\"status\":\"ACTIVE\",\"imageUrl\":\"https://example.com/p.png\",\"weight\":1.5,\"dimensions\":\"10x10x5\",\"categoryId\":\"\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Inventory (read=USER, write=ADMIN, lifecycle=SERVICE)",
+      "item": [
+        {
+          "name": "[USER] List",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "[USER] Get by productId",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory/{product_id}"
+            }
+          }
+        },
+        {
+          "name": "[Admin] Create",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"productId\":\"{product_id}\",\"availableQuantity\":100}"
+            }
+          }
+        },
+        {
+          "name": "[SERVICE-or-ADMIN] Reserve",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory/{product_id}/reserve"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"quantity\":2,\"orderId\":\"00000000-0000-0000-0000-000000000001\"}"
+            }
+          }
+        },
+        {
+          "name": "[SERVICE-or-ADMIN] Commit reservation",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory/reservations/{reservation_id}/commit"
+            }
+          }
+        },
+        {
+          "name": "[SERVICE-or-ADMIN] Release reservation",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory/reservations/{reservation_id}/release"
+            }
+          }
+        },
+        {
+          "name": "[SERVICE-or-ADMIN] Release-committed (rollback)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory/reservations/{reservation_id}/release-committed"
+            }
+          }
+          ,"description": "New endpoint. Requires hardened InventoryServiceImpl with idempotent branches; current code is NOT idempotent so a retry returns 409."
+        },
+        {
+          "name": "[SERVICE-or-ADMIN] Get reservation state",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{inventory_url}}/api/v1/inventory/reservations/{reservation_id}/state"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Favourite (auth=USER)",
+      "item": [
+        {
+          "name": "[USER] List my",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{favourite_url}}/api/v1/favourites?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "[USER] Create",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{favourite_url}}/api/v1/favourites"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"productId\":\"{product_id}\"}"
+            }
+          }
+        },
+        {
+          "name": "[USER] Delete by id",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{favourite_url}}/api/v1/favourites/{favouriteId}"
+            }
+          }
+        },
+        {
+          "name": "[USER] Delete by product",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{favourite_url}}/api/v1/favourites/by-product/{product_id}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Order + Cart (via order-service)",
+      "item": [
+        {
+          "name": "[USER] Get my cart",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{order_url}}/api/v1/carts/me"
+            }
+          }
+        },
+        {
+          "name": "[USER] Add to cart",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\"}"},{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{order_url}}/api/v1/carts/me/items"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"productId\":\"{product_id}\",\"quantity\":2}"
+            }
+          }
+        },
+        {
+          "name": "[USER] Create order (Idempotency-Key)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"{\"Content-Type\":\"application/json\",\"Idempotency-Key\":\"{{$randomUUID}}\"}"},{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{order_url}}/api/v1/orders"
+            }
+            ,"body": {
+              "mode": "raw",
+              "raw": "{\"cartId\":null,\"couponCode\":null}"
+            }
+          }
+        },
+        {
+          "name": "[USER] Get my orders",
+          "request": {
+            "method": "GET",
+            "header": [{"key":"Authorization","value":"Bearer {{testuser_token}}"}],
+            "url": {
+              "raw": "{{order_url}}/api/v1/orders/me?page=0&size=10"
+            }
+          }
+        },
+        {
+          "name": "[SERVICE] Confirm order",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}],
+            "url": {
+              "raw": "{{order_url}}/api/v1/orders/{orderId}/confirm"
+            }
+          }
+          ,"description": "order-service missing REDIS_PASSWORD env in compose -> unhealthy. Confirm not reachable until compose patched."
+        }
+      ]
+    },
+    {
+      "name": "7. Gateway (port 8080)",
+      "item": [
+        {
+          "name": "[Public via gateway] GET /products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/products"
+            }
+          }
+          ,"description": "KNOWN BUG: gateway forwards but auth-broken paths return 401 due to iss mismatch."
+        }
+      ]
+    }
+  ]
+}

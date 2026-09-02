@@ -3,13 +3,15 @@ package com.shop.paymentservice.scheduler;
 import com.shop.paymentservice.entity.PaymentEvent;
 import com.shop.paymentservice.repository.PaymentEventRepository;
 import com.shop.paymentservice.service.WebhookEventService;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,11 +26,17 @@ import java.util.List;
  * 5m, 25m, 2h, 8h, 22h, 4d. Exceeding {@code MAX_ATTEMPTS} transitions the
  * row to {@code FAILED_PERMANENT} — a state ops can detect and investigate.</p>
  *
- * <p>Per-event {@code @Transactional} so a single failure rolls back only that
- * row's update — siblings keep their progress.</p>
+ * <p>F2 — per-event transaction via {@link TransactionTemplate} (not
+ * {@code @Transactional}): {@code replayOne} is called from {@link #replay()} via
+ * self-invocation, which bypasses Spring's proxy and silently disables
+ * {@code @Transactional}. Wrapping the body in {@code transactionTemplate.execute(...)}
+ * gives a real per-event tx boundary: a failure rolls back only that row's update,
+ * siblings keep their progress.</p>
+ *
+ * <p>F3 — {@code payment_webhook_failed_permanent_total} counter increments on
+ * terminal failures so ops can alert on it.</p>
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class WebhookRetryScheduler {
 
@@ -37,9 +45,21 @@ public class WebhookRetryScheduler {
 
     private final PaymentEventRepository eventRepository;
     private final WebhookEventService webhookEventService;
+    private final TransactionTemplate transactionTemplate;
+    private final Counter failedPermanentCounter;
 
     @Value("${shop.payment.webhook.retry-batch-size:50}")
     private int batchSize;
+
+    public WebhookRetryScheduler(PaymentEventRepository eventRepository,
+                                 WebhookEventService webhookEventService,
+                                 PlatformTransactionManager txManager,
+                                 MeterRegistry meterRegistry) {
+        this.eventRepository = eventRepository;
+        this.webhookEventService = webhookEventService;
+        this.transactionTemplate = new TransactionTemplate(txManager);
+        this.failedPermanentCounter = meterRegistry.counter("payment_webhook_failed_permanent_total");
+    }
 
     @Scheduled(fixedDelayString = "${shop.payment.webhook.retry-poll-ms:60000}")
     public void replay() {
@@ -56,41 +76,46 @@ public class WebhookRetryScheduler {
         }
     }
 
-    @Transactional
     void replayOne(PaymentEvent event) {
-        if (event.getRetryCount() >= MAX_ATTEMPTS) {
-            event.setStatus(PaymentEvent.STATUS_FAILED_PERMANENT);
-            event.setLastError(truncate("Exceeded MAX_ATTEMPTS=" + MAX_ATTEMPTS, 1024));
-            eventRepository.save(event);
-            log.warn("Payment webhook {} permanently failed after {} retries",
-                event.getProviderEventId(), event.getRetryCount());
-            return;
-        }
-        int attempt = event.getRetryCount() + 1;
-        try {
-            webhookEventService.retry(event);
-            // On success `retry()` raises nothing and process() set status=PROCESSED via completeWithEvent.
-            // Defensive: if a quirk left the row not PROCESSED, mark it now.
-            if (!PaymentEvent.STATUS_PROCESSED.equals(event.getStatus())) {
-                event.setStatus(PaymentEvent.STATUS_PROCESSED);
-                event.setLastError(null);
+        // F2 — real per-event tx boundary (self-invocation bypasses @Transactional).
+        transactionTemplate.execute(status -> {
+            if (event.getRetryCount() >= MAX_ATTEMPTS) {
+                event.setStatus(PaymentEvent.STATUS_FAILED_PERMANENT);
+                event.setLastError(truncate("Exceeded MAX_ATTEMPTS=" + MAX_ATTEMPTS, 1024));
+                eventRepository.save(event);
+                failedPermanentCounter.increment();
+                log.warn("Payment webhook {} permanently failed after {} retries",
+                    event.getProviderEventId(), event.getRetryCount());
+                return null;
+            }
+            int attempt = event.getRetryCount() + 1;
+            try {
+                webhookEventService.retry(event);
+                // On success `retry()` raises nothing and process() set status=PROCESSED via completeWithEvent.
+                // Defensive: if a quirk left the row not PROCESSED, mark it now.
+                if (!PaymentEvent.STATUS_PROCESSED.equals(event.getStatus())) {
+                    event.setStatus(PaymentEvent.STATUS_PROCESSED);
+                    event.setLastError(null);
+                    eventRepository.save(event);
+                }
+                log.info("Payment webhook {} replay succeeded on attempt {}", event.getProviderEventId(), attempt);
+            } catch (Exception e) {
+                event.setRetryCount(attempt);
+                event.setLastError(truncate(e.getMessage(), 1024));
+                event.setNextRetryAt(Instant.now().plusSeconds(backoffSeconds(attempt)));
+                if (attempt >= MAX_ATTEMPTS) {
+                    event.setStatus(PaymentEvent.STATUS_FAILED_PERMANENT);
+                    failedPermanentCounter.increment();
+                    log.error("Payment webhook {} permanently failed after {} retries",
+                        event.getProviderEventId(), attempt, e);
+                } else {
+                    log.warn("Payment webhook {} retry {}/{} failed; next at {}",
+                        event.getProviderEventId(), attempt, MAX_ATTEMPTS, event.getNextRetryAt(), e);
+                }
                 eventRepository.save(event);
             }
-            log.info("Payment webhook {} replay succeeded on attempt {}", event.getProviderEventId(), attempt);
-        } catch (Exception e) {
-            event.setRetryCount(attempt);
-            event.setLastError(truncate(e.getMessage(), 1024));
-            event.setNextRetryAt(Instant.now().plusSeconds(backoffSeconds(attempt)));
-            if (attempt >= MAX_ATTEMPTS) {
-                event.setStatus(PaymentEvent.STATUS_FAILED_PERMANENT);
-                log.error("Payment webhook {} permanently failed after {} retries",
-                    event.getProviderEventId(), attempt, e);
-            } else {
-                log.warn("Payment webhook {} retry {}/{} failed; next at {}",
-                    event.getProviderEventId(), attempt, MAX_ATTEMPTS, event.getNextRetryAt(), e);
-            }
-            eventRepository.save(event);
-        }
+            return null;
+        });
     }
 
     static long backoffSeconds(int attempt) {

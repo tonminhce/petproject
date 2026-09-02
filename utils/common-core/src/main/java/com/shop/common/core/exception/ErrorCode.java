@@ -49,6 +49,7 @@ public enum ErrorCode {
     BRAND_NOT_FOUND("PRD-2006", "brand.not.found", HttpStatus.NOT_FOUND),
     BRAND_SLUG_EXISTS("PRD-2007", "brand.slug.exists", HttpStatus.CONFLICT),
     CATEGORY_SLUG_EXISTS("PRD-2008", "category.slug.exists", HttpStatus.CONFLICT),
+    CATEGORY_CYCLE_DETECTED("PRD-2009", "category.cycle.detected", HttpStatus.CONFLICT),
 
     // ---- Inventory domain ----
     WAREHOUSE_NOT_FOUND("INV-3001", "warehouse.not.found", HttpStatus.NOT_FOUND),
@@ -109,6 +110,7 @@ public enum ErrorCode {
     PAYMENT_INVALID_STATE("PAY-5004", "payment.invalid_state", HttpStatus.CONFLICT),
     WEBHOOK_SIGNATURE_INVALID("PAY-5005", "payment.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
     REFUND_INVALID_STATE("PAY-5006", "payment.refund_invalid_state", HttpStatus.CONFLICT),
+    PAYMENT_PROVIDER_REJECTED("PAY-5007", "payment.provider_rejected", HttpStatus.BAD_GATEWAY),
     AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST),
 
     // ---- Shipping domain ---- SHP-10001..10006
@@ -130,6 +132,8 @@ public enum ErrorCode {
     // ---- Search domain ---- SRH-12001..12002
     SEARCH_REINDEX_IN_PROGRESS("SRH-12001", "search.reindex_in_progress", HttpStatus.CONFLICT),
     SEARCH_QUERY_FAILED("SRH-12002", "search.query_failed", HttpStatus.SERVICE_UNAVAILABLE),
+    SEARCH_INDEX_FAILED("SRH-12003", "search.index_failed", HttpStatus.SERVICE_UNAVAILABLE),
+    SEARCH_DELETE_FAILED("SRH-12004", "search.delete_failed", HttpStatus.SERVICE_UNAVAILABLE),
 
     // ---- Media domain ---- MED-12001..12006
     MEDIA_INVALID_FILE("MED-12001", "media.invalid_file", HttpStatus.BAD_REQUEST),

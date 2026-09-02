@@ -36,7 +36,10 @@ shop:
 gateway:
   keycloak-issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
   cors-allowed-origin-patterns:
-    - ${CORS_ALLOWED_ORIGIN_PATTERNS:*}
+    # C9 fix — wildcard `*` with allowCredentials=true is rejected by browsers
+    # AND is a fleet-wide security foot-gun. Refuse to boot unless the deployer
+    # provides an explicit allow-list (e.g. `http://localhost:3000`).
+    - ${CORS_ALLOWED_ORIGIN_PATTERNS:?CORS_ALLOWED_ORIGIN_PATTERNS must be set explicitly}
   public-endpoints:
     - /actuator/health
     - /actuator/health/**

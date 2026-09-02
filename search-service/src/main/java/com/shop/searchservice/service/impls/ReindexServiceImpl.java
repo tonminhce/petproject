@@ -134,7 +134,18 @@ public class ReindexServiceImpl implements ReindexService {
         try {
             int max = 0;
             for (String name : listGenerationIndices()) {
-                max = Math.max(max, Integer.parseInt(name.substring("products-v".length())));
+                // C15 fix — parse the generation suffix defensively. An index name
+                // that doesn't follow the `products-v<n>` convention (an old
+                // hand-created index, a stray operator typo) used to throw
+                // NumberFormatException and abort reindex with a 500. Now we
+                // log and skip — a safe default that doesn't fail the whole
+                // operation because of one bad row.
+                String suffix = name.substring("products-v".length());
+                try {
+                    max = Math.max(max, Integer.parseInt(suffix));
+                } catch (NumberFormatException nfe) {
+                    log.warn("Skipping unparseable index name '{}' — expected products-v<N>", name);
+                }
             }
             return "products-v" + (max + 1);
         } catch (IOException | ElasticsearchException ex) {

@@ -9,11 +9,19 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Default {@link SecurityFilterChain} for every resource server in the platform.
@@ -87,11 +95,43 @@ public class BaseSecurityConfig {
      * normally does this from {@code spring.security.oauth2.resourceserver.jwt.issuer-uri},
      * but exposing it here keeps the module self-contained when a service
      * configures only {@code shop.security.issuer-uri}.
+     *
+     * <p>C1 fix — the validator chain now asserts (in order): issuer matches
+     * {@link SecurityProperties#issuerUri()}, exp/nbf timestamps are valid,
+     * and — if {@code shop.security.expected-audiences} is set — the {@code aud}
+     * claim intersects that list. Without the aud check a token issued for
+     * client A would be honoured by service B (cross-client horizontal
+     * privilege escalation). Empty list keeps the legacy/dev posture of no
+     * aud enforcement.</p>
      */
     @Bean
     @ConditionalOnMissingBean(JwtDecoder.class)
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withIssuerLocation(properties.issuerUri()).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withIssuerLocation(properties.issuerUri()).build();
+        decoder.setJwtValidator(buildValidatorChain());
+        return decoder;
+    }
+
+    private OAuth2TokenValidator<Jwt> buildValidatorChain() {
+        var audienceClaim = new JwtClaimValidator<List<String>>("aud", aud -> {
+            if (properties.expectedAudiences().isEmpty()) {
+                return true;
+            }
+            if (aud == null || aud.isEmpty()) {
+                return false;
+            }
+            for (String expected : properties.expectedAudiences()) {
+                if (aud.contains(expected)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        return new DelegatingOAuth2TokenValidator<>(
+                new JwtIssuerValidator(properties.issuerUri()),
+                new JwtTimestampValidator(),
+                audienceClaim
+        );
     }
 
     /**

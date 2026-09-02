@@ -69,25 +69,34 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     public Optional<OrderResponse> begin(String key, String actor, String requestHash) {
         if (key == null) return Optional.empty();
 
-        Optional<IdempotencyKey> preExisting = repository.findByActorAndKey(actor, key);
-        if (preExisting.isPresent()) {
-            return resolve(preExisting.get(), requestHash, key);
-        }
-
-        IdempotencyKey ik = newInFlight(key, actor, requestHash);
-        try {
-            requiresNewTemplate.executeWithoutResult(status -> repository.saveAndFlush(ik));
-            return Optional.empty();  // owner — proceed with saga
-        } catch (DataIntegrityViolationException ex) {
-            // Lost a same-key race: the winner's insert committed first. This re-read
-            // runs in the caller's (saga) persistence context — safe because nothing
-            // has been loaded into it yet, so the query sees the winner's committed
-            // row. Resolve exactly like any other collision — never leak a raw
-            // constraint violation as a 500 (review finding I1).
-            IdempotencyKey winner = repository.findByActorAndKey(actor, key)
-                .orElseThrow(() -> ex);
-            return resolve(winner, requestHash, key);
-        }
+        // C6 fix — the previous design opened TWO pooled connections during the
+        // in-flight insert: the caller's saga TX held conn #1 for the existence
+        // SELECT, then REQUIRES_NEW opened conn #2 for the INSERT. Hikari's pool
+        // had to be sized to 2 × concurrent sagas, exhausting at half the
+        // theoretical throughput. Folding both queries into one REQUIRES_NEW
+        // tx holds a single connection for the brief lifetime of begin() and
+        // releases it the instant we return.
+        Optional<OrderResponse> result = requiresNewTemplate.execute(status -> {
+            Optional<IdempotencyKey> preExisting = repository.findByActorAndKey(actor, key);
+            if (preExisting.isPresent()) {
+                return resolve(preExisting.get(), requestHash, key);
+            }
+            IdempotencyKey ik = newInFlight(key, actor, requestHash);
+            try {
+                repository.saveAndFlush(ik);
+                return Optional.<OrderResponse>empty();  // owner — proceed with saga
+            } catch (DataIntegrityViolationException ex) {
+                // Lost a same-key race: the winner's insert committed first.
+                // Re-read inside the same short-lived tx (it sees the winner's
+                // committed row because the collision aborted only our flush,
+                // not the surrounding tx). Resolve like any other collision —
+                // never leak a raw constraint violation as a 500.
+                IdempotencyKey winner = repository.findByActorAndKey(actor, key)
+                    .orElseThrow(() -> ex);
+                return resolve(winner, requestHash, key);
+            }
+        });
+        return result == null ? Optional.empty() : result;
     }
 
     private Optional<OrderResponse> resolve(IdempotencyKey existing, String requestHash, String key) {

@@ -31,9 +31,11 @@ shop:
     auto-deliver-days: ${SHIPMENT_AUTO_DELIVER_DAYS:7}
     notify-threshold-hours: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:72}
     webhook:
+      # C3/C10 — fail-fast per-carrier. A blank secret would 401 every legit
+      # webhook. Inject via compose secrets.
       secrets:
-        GHN: ${SHIPMENT_WEBHOOK_SECRET_GHN:}
-        GHTK: ${SHIPMENT_WEBHOOK_SECRET_GHTK:}
+        GHN: ${SHIPMENT_WEBHOOK_SECRET_GHN:?SHIPMENT_WEBHOOK_SECRET_GHN must be set}
+        GHTK: ${SHIPMENT_WEBHOOK_SECRET_GHTK:?SHIPMENT_WEBHOOK_SECRET_GHTK must be set}
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}

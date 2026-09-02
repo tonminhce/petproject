@@ -47,7 +47,16 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.PENDING) {
             throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus());
         }
-        provider.capture(payment.getId(), payment.getAmount(), payment.getCurrency(), payment.getIdempotencyKey());
+        // C7 fix — the provider response carries an `accepted` flag (Stripe
+        // returns false for invalid_request_error / card_declined). The
+        // previous code discarded the result, leaving a PENDING row on a real
+        // provider FAILURE with no signal to the caller. Surface the rejection
+        // as a domain 502 so the saga can compensate.
+        com.shop.paymentservice.provider.PaymentProvider.ProviderResult result =
+                provider.capture(payment.getId(), payment.getAmount(), payment.getCurrency(), payment.getIdempotencyKey());
+        if (!result.accepted()) {
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
+        }
         return payment;
     }
 
@@ -58,7 +67,11 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
         }
-        provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey());
+        com.shop.paymentservice.provider.PaymentProvider.ProviderResult result =
+                provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey());
+        if (!result.accepted()) {
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
+        }
         return payment;
     }
 

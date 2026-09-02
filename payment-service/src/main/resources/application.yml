@@ -44,9 +44,11 @@ shop:
     # charging. Dev compose must now inject PAYMENT_PROVIDER=mock explicitly.
     provider: ${PAYMENT_PROVIDER:stripe}
     webhook:
-      secret: ${PAYMENT_WEBHOOK_SECRET:}
+      # C3/C10 — fail-fast: a blank webhook secret means every legitimate
+      # carrier webhook would 401. Compose must inject this var from secrets.
+      secret: ${PAYMENT_WEBHOOK_SECRET:?PAYMENT_WEBHOOK_SECRET must be set}
     stripe:
-      secret-key: ${STRIPE_SECRET_KEY:}
+      secret-key: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY must be set}
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}

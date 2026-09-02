@@ -40,7 +40,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @LogPerformance(title = "Register user", logInput = true)
+    // C2 fix — logInput=true was a latent password-leak vector: RegisterRequest
+    // currently has no @ToString so toString() returns the identity hash and the
+    // password stays out of the log, but any future refactor that adds @ToString
+    // or switches to a record would start logging plaintext passwords via the
+    // perfLogger. Drop logInput rather than rely on the DTO's current shape.
+    @LogPerformance(title = "Register user")
     public User register(RegisterRequest request) {
         validateUniqueConstraints(request);
 
