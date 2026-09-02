@@ -133,6 +133,36 @@ public class KeycloakAdminClient {
         }
     }
 
+    /** Disable a user and invalidate active sessions in Keycloak. */
+    public void disableUser(String userId) {
+        updateUserEnabled(userId, false);
+    }
+
+    /** Re-enable a previously disabled user in Keycloak. */
+    public void enableUser(String userId) {
+        updateUserEnabled(userId, true);
+    }
+
+    private void updateUserEnabled(String userId, boolean enabled) {
+        String adminToken = getAdminAccessToken();
+        Map<String, Object> payload = Map.of("enabled", enabled);
+        try {
+            restClient.put().uri(usersEndpoint + "/" + userId)
+                    .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON).body(payload)
+                    .retrieve().toBodilessEntity();
+            if (!enabled) {
+                restClient.post().uri(usersEndpoint + "/" + userId + "/logout")
+                        .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                        .retrieve().toBodilessEntity();
+            }
+        } catch (RestClientResponseException e) {
+            log.error("Keycloak user state update failed: {}", e.getResponseBodyAsString());
+            throw new KeycloakClientException("Update user state failed: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()), e);
+        }
+    }
+
     /**
      * Reset user's password in Keycloak.
      *

@@ -37,4 +37,7 @@ shop:
     # Auth entrypoints must stay public: sign-up / login / refresh / logout.
     # (actuator, swagger, api-docs are public via common-security platform defaults)
     public-paths:
-      - path: /api/v1/auth/**
+      - path: /api/v1/auth/sign-up
+      - path: /api/v1/auth/login
+      - path: /api/v1/auth/refresh
+      - path: /api/v1/auth/logout

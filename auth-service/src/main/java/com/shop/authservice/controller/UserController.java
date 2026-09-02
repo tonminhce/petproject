@@ -8,12 +8,11 @@ import com.shop.authservice.mapper.UserMapper;
 import com.shop.authservice.service.UserService;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.security.jwt.AuthenticatedUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,9 +35,8 @@ public class UserController {
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<UserResponse> updateCurrentUser(
-            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateUserRequest request) {
-        UUID userId = UUID.fromString(jwt.getSubject());
+        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(userService.update(userId, request));
     }
 
@@ -51,29 +49,30 @@ public class UserController {
 
     @DeleteMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ApiResponse<Void> deleteCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        UUID userId = UUID.fromString(jwt.getSubject());
-        userService.delete(userId, userId.toString());
+    public ApiResponse<Void> deleteCurrentUser() {
+        AuthenticatedUser current = AuthenticatedUser.requireCurrent();
+        UUID userId = UUID.fromString(current.id());
+        userService.delete(userId, current.username());
         return ApiResponse.message("User deleted successfully");
     }
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public ApiResponse<UserResponse> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        String username = jwt.getSubject();
+    public ApiResponse<UserResponse> getCurrentUser() {
+        String username = AuthenticatedUser.requireCurrent().username();
         User user = userService.findByUsername(username);
         return ApiResponse.ok(userMapper.toResponse(user));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated() and hasAuthority('ADMIN')")
+    @PreAuthorize("isAuthenticated() and hasRole('ADMIN')")
     public ApiResponse<UserResponse> getUserById(@PathVariable UUID id) {
         User user = userService.findById(id);
         return ApiResponse.ok(userMapper.toResponse(user));
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated() and hasAuthority('ADMIN')")
+    @PreAuthorize("isAuthenticated() and hasRole('ADMIN')")
     public ApiResponse<Page<UserResponse>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -83,7 +82,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/restore")
-    @PreAuthorize("isAuthenticated() and hasAuthority('ADMIN')")
+    @PreAuthorize("isAuthenticated() and hasRole('ADMIN')")
     public ApiResponse<Void> restoreUser(@PathVariable UUID id) {
         userService.restore(id);
         return ApiResponse.message("User restored successfully");

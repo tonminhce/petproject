@@ -24,7 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -115,13 +115,13 @@ class UserServiceImplTest {
                 .thenReturn("kc-123");
         when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(user);
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         userService.register(req);
 
         assertEquals("kc-123", user.getKeycloakUserId());
         assertTrue(user.getRoles().contains(userRole));
-        verify(userRepository).save(user);
+        verify(userRepository).saveAndFlush(user);
     }
 
     @Test
@@ -144,7 +144,7 @@ class UserServiceImplTest {
         when(keycloakAdminClient.createUser(any(), any(), any(), any(), any())).thenReturn("kc-123");
         when(roleRepository.findByNameIn(any())).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
-        when(userRepository.save(any(User.class))).thenThrow(new RuntimeException("db down"));
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(new RuntimeException("db down"));
 
         assertThrows(RuntimeException.class, () -> userService.register(req));
 
@@ -218,14 +218,17 @@ class UserServiceImplTest {
 
     @Test
     void deleteSoftDeletesWhenFound() {
+        User user = newUser();
+        user.setKeycloakUserId("kc-123");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userRepository.softDelete(userId, "alice")).thenReturn(1);
 
         assertEquals("User deleted successfully", userService.delete(userId, "alice"));
+        verify(keycloakAdminClient).disableUser("kc-123");
     }
 
     @Test
     void deleteThrowsNotFoundWhenMissing() {
-        when(userRepository.softDelete(userId, "alice")).thenReturn(0);
 
         BusinessException ex = assertThrows(BusinessException.class, () -> userService.delete(userId, "alice"));
 
@@ -234,9 +237,13 @@ class UserServiceImplTest {
 
     @Test
     void restoreRevivesWhenFound() {
+        User user = newUser();
+        user.setKeycloakUserId("kc-123");
+        when(userRepository.findByIdIncludingDeleted(userId)).thenReturn(Optional.of(user));
         when(userRepository.restore(userId)).thenReturn(1);
 
         assertEquals("User restored successfully", userService.restore(userId));
+        verify(keycloakAdminClient).enableUser("kc-123");
     }
 
     @Test
@@ -285,7 +292,7 @@ class UserServiceImplTest {
                 .thenReturn("kc-123");
         when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         userService.register(req);
 
@@ -308,7 +315,7 @@ class UserServiceImplTest {
                 .thenReturn("kc-123");
         when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         userService.register(req);
 
@@ -329,7 +336,7 @@ class UserServiceImplTest {
                 .thenReturn("kc-123");
         when(roleRepository.findByNameIn(List.of())).thenReturn(Set.of());
         when(userMapper.toEntity(req)).thenReturn(newUser());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         userService.register(req);
 
@@ -378,10 +385,10 @@ class UserServiceImplTest {
                 Instant.now(),
                 Instant.now().plusSeconds(300),
                 Map.of("alg", "RS256", "typ", "JWT"),
-                Map.of("sub", user.getUsername(), "preferred_username", user.getUsername())
+                Map.of("sub", user.getId().toString(), "preferred_username", user.getUsername())
         );
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(jwt, null, List.of())
+                new JwtAuthenticationToken(jwt, List.of())
         );
     }
 }

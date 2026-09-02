@@ -12,16 +12,16 @@ import com.shop.authservice.repository.UserRepository;
 import com.shop.authservice.service.UserService;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.keycloak.client.KeycloakAdminClient;
+import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.shop.common.logging.LogPerformance;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,6 +32,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
@@ -39,7 +41,6 @@ public class UserServiceImpl implements UserService {
     private final KeycloakTokenClient keycloakTokenClient;
 
     @Override
-    @Transactional
     // C2 fix — logInput=true was a latent password-leak vector: RegisterRequest
     // currently has no @ToString so toString() returns the identity hash and the
     // password stays out of the log, but any future refactor that adds @ToString
@@ -53,7 +54,7 @@ public class UserServiceImpl implements UserService {
 
         try {
             User user = buildUserFromRequest(request, keycloakUserId);
-            return userRepository.save(user);
+            return userRepository.saveAndFlush(user);
         } catch (RuntimeException e) {
             rollbackKeycloakUser(keycloakUserId);
             throw e;
@@ -92,6 +93,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public String delete(UUID id, String deletedBy) {
+        User user = findUserOrThrow(id);
+        keycloakAdminClient.disableUser(user.getKeycloakUserId());
         int affected = userRepository.softDelete(id, deletedBy);
         if (affected == 0) {
             throw BusinessException.notFound("auth.user.not.found.for.update", id);
@@ -102,6 +105,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public String restore(UUID id) {
+        User user = userRepository.findByIdIncludingDeleted(id)
+                .orElseThrow(() -> BusinessException.notFound("auth.user.not.found.for.update", id));
+        keycloakAdminClient.enableUser(user.getKeycloakUserId());
         int affected = userRepository.restore(id);
         if (affected == 0) {
             throw BusinessException.notFound("auth.user.not.found.for.update", id);
@@ -199,7 +205,7 @@ public class UserServiceImpl implements UserService {
         try {
             keycloakAdminClient.deleteUser(keycloakUserId);
         } catch (Exception e) {
-            // Log but don't throw - original exception is more important
+            log.error("Failed to roll back Keycloak user {}", keycloakUserId, e);
         }
     }
 
@@ -233,13 +239,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private User getCurrentAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw BusinessException.unauthorized("auth.not.authenticated");
-        }
-
-        Jwt jwt = (Jwt) authentication.getPrincipal();
-        String username = jwt.getSubject();
+        AuthenticatedUser authenticatedUser = AuthenticatedUser.requireCurrent();
+        String username = authenticatedUser.username();
 
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found.with.username", username));
