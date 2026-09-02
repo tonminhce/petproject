@@ -42,4 +42,9 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
     int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
+
+    /** H11 — purge DEAD rows older than the aging window. */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.updatedAt < :cutoff")
+    int deleteByStatusAndUpdatedAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 }

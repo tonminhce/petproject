@@ -1,0 +1,30 @@
+databaseChangeLog:
+
+  # H11 — outbox retention purge needs wall-clock timestamps on every row.
+
+  - changeSet:
+      id: 005-outbox-retention-timestamps
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: "CURRENT_TIMESTAMP"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  defaultValueComputed: "CURRENT_TIMESTAMP"
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_status_updated_at
+            columns:
+              - column: { name: status }
+              - column: { name: updated_at }

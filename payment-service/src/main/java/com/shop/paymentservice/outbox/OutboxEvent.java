@@ -3,6 +3,8 @@ package com.shop.paymentservice.outbox;
 import com.shop.common.core.constants.OutboxStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -47,4 +49,13 @@ public class OutboxEvent {
 
     @Column(name = "last_error", length = 1000)
     private String lastError;
+
+    /** H11 — outbox retention needs a wall-clock timestamp on every row. */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 }

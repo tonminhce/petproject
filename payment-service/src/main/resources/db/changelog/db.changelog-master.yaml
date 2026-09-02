@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: changelog-004-expand-events-status-check.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-005-outbox-retention.yaml
+      relativeToChangelogFile: true
