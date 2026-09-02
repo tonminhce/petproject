@@ -21,6 +21,7 @@
         <module>common-logging</module>
         <module>common-keycloak</module>
         <module>common-kafka</module>
+        <module>common-patterns</module>
         <module>common-spring</module>
         <module>common-storage</module>
     </modules>
