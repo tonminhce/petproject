@@ -16,12 +16,19 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Rows are never soft-deleted by notification code, but the entity carries
+ * the fleet-wide {@code @SQLRestriction("deleted = false")} guard (Payment,
+ * Order, Media, …) so any query against this table auto-filters tombstones.
+ */
 @Entity
 @Table(name = "notifications")
+@SQLRestriction("deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
