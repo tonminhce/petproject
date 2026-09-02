@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Petproject API - Comprehensive",
-    "description": "Every unique Spring MVC controller and webhook mapping discovered across services. Run Login first for bearer chaining. Limitations: replace the empty accessToken/refreshToken variables with credentials for your environment; localhost URLs and service ports must be reachable or overridden per environment. Collection-level bearer auth applies by default, while public login and webhook requests may override it. Service-to-service endpoints may require a SERVICE token and admin endpoints require an ADMIN token; the collection does not provision Keycloak users, secrets, Kafka, databases, or external provider credentials.",
+    "description": "Every unique Spring MVC controller and webhook mapping discovered across services. Run Login first for bearer chaining. Limitations: replace the empty accessToken/refreshToken variables with credentials for your environment; localhost URLs and service ports must be reachable or overridden per environment. Collection-level bearer auth applies by default, while public login and webhook requests may override it. Service-to-service endpoints may require a SERVICE token and admin endpoints require an ADMIN token; the collection does not provision Keycloak users, secrets, Kafka, databases, or external provider credentials. DTO-aligned examples are provided; replace placeholder UUIDs and credentials for your environment.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -90,6 +90,30 @@
     {
       "key": "carrier",
       "value": "mock"
+    },
+    {
+      "key": "productId",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "orderId",
+      "value": "00000000-0000-0000-0000-000000000002"
+    },
+    {
+      "key": "userId",
+      "value": "00000000-0000-0000-0000-000000000003"
+    },
+    {
+      "key": "categoryId",
+      "value": "00000000-0000-0000-0000-000000000004"
+    },
+    {
+      "key": "brandId",
+      "value": "00000000-0000-0000-0000-000000000005"
+    },
+    {
+      "key": "taxClassId",
+      "value": "00000000-0000-0000-0000-000000000006"
     }
   ],
   "item": [
@@ -173,7 +197,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"fullName\": \"Updated Test User\",\n  \"email\": \"testuser@example.com\",\n  \"gender\": \"OTHER\",\n  \"phone\": \"0901234567\",\n  \"avatar\": \"https://example.com/avatar.png\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -211,7 +235,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"oldPassword\": \"testpass\",\n  \"newPassword\": \"Newpass123\",\n  \"confirmPassword\": \"Newpass123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -346,16 +370,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -387,7 +402,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"fullName\": \"Postman Test User\",\n  \"username\": \"postmanuser\",\n  \"password\": \"Testpass123\",\n  \"email\": \"postman@example.com\",\n  \"gender\": \"OTHER\",\n  \"phone\": \"0901234567\",\n  \"avatar\": \"https://example.com/avatar.png\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -425,7 +440,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -463,7 +478,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -501,7 +516,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -539,7 +554,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"roleName\": \"USER\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -577,7 +592,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"roleName\": \"USER\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -695,7 +710,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"productId\": \"{{productId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -838,7 +853,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"availableQuantity\": 25\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -876,7 +891,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"availableQuantity\": 25\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -939,7 +954,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"quantity\": 1,\n  \"orderId\": \"{{orderId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -974,16 +989,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1012,16 +1018,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1050,16 +1047,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1319,7 +1307,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1357,7 +1345,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"quantity\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1445,7 +1433,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"cartId\": null,\n  \"couponCode\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1555,16 +1543,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1618,16 +1597,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1656,16 +1626,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1694,16 +1655,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1790,7 +1742,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 10,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"postman-{{$guid}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1825,16 +1777,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1863,16 +1806,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -1997,7 +1931,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"title\": \"Postman Category\",\n  \"slug\": \"postman-category\",\n  \"imageUrl\": \"https://example.com/category.png\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2098,7 +2032,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"name\": \"Postman Brand\",\n  \"slug\": \"postman-brand\",\n  \"logoUrl\": \"https://example.com/logo.png\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2424,7 +2358,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"title\": \"Postman Product\",\n  \"slug\": \"postman-product\",\n  \"description\": \"Product created by the comprehensive collection.\",\n  \"sku\": \"POSTMAN-001\",\n  \"priceUnit\": 10,\n  \"quantity\": 25,\n  \"status\": \"ACTIVE\",\n  \"imageUrl\": \"https://example.com/product.png\",\n  \"mediaId\": null,\n  \"weight\": 1,\n  \"dimensions\": \"10x10x10\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"brandId\": \"{{brandId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2580,7 +2514,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"code\": \"POSTMAN10\",\n  \"name\": \"Postman Promotion\",\n  \"discountType\": \"PERCENT\",\n  \"discountValue\": 10,\n  \"minOrderAmount\": 0,\n  \"maxRedemptions\": 100,\n  \"totalBudget\": 1000,\n  \"perUserLimit\": 1,\n  \"status\": \"ACTIVE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2706,7 +2640,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"orderId\": \"{{orderId}}\",\n  \"orderAmount\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2741,16 +2675,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -2779,16 +2704,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -2817,16 +2733,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -2913,7 +2820,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 5,\n  \"comment\": \"Great product from the Postman collection.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2951,7 +2858,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated product review.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2989,7 +2896,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"reason\": \"Moderation review requested by Postman test.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3024,16 +2931,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -3095,7 +2993,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"dryRun\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3226,7 +3124,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"trackingNumber\": \"POSTMAN-TRACK-001\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3264,7 +3162,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"status\": \"IN_TRANSIT\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3299,16 +3197,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -3337,16 +3226,7 @@
                 "key": "Content-Type",
                 "value": "application/json"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            ]
           },
           "event": [
             {
@@ -3433,7 +3313,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"name\": \"Postman Standard\",\n  \"defaultRatePct\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3584,7 +3464,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"taxClassId\": \"{{taxClassId}}\",\n  \"country\": \"US\",\n  \"postalCode\": \"10001\",\n  \"ratePct\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3685,7 +3565,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"taxClassId\": \"{{taxClassId}}\",\n  \"country\": \"US\",\n  \"postalCode\": \"10001\",\n  \"amount\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
