@@ -125,7 +125,7 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
              "imageUrl":"http://legacy.example/ip15.png","mediaId":"%s"}
             """.formatted(UUID.randomUUID().toString().substring(0, 8),
             UUID.randomUUID().toString().substring(0, 8), mediaId);
-        return rest.postForEntity(ApiPaths.PRODUCTS, new HttpEntity<>(body, headers), String.class);
+        return rest.postForEntity(ApiPaths.BACKOFFICE_PRODUCTS, new HttpEntity<>(body, headers), String.class);
     }
 
     @Test
@@ -210,7 +210,7 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
              "imageUrl":"http://legacy.example/legacy.png"}
             """.formatted(UUID.randomUUID().toString().substring(0, 8),
             UUID.randomUUID().toString().substring(0, 8));
-        ResponseEntity<String> resp = rest.postForEntity(ApiPaths.PRODUCTS,
+        ResponseEntity<String> resp = rest.postForEntity(ApiPaths.BACKOFFICE_PRODUCTS,
             new HttpEntity<>(body, headers), String.class);
 
         assertThat(resp.getStatusCode().value()).isEqualTo(200);
@@ -236,7 +236,7 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(ADMIN_TOKEN);
-        ResponseEntity<String> resp = rest.exchange(ApiPaths.PRODUCTS + "/" + productId,
+        ResponseEntity<String> resp = rest.exchange(ApiPaths.BACKOFFICE_PRODUCTS + "/" + productId,
             HttpMethod.PUT, new HttpEntity<>("{\"clearMediaId\": true}", headers), String.class);
 
         assertThat(resp.getStatusCode().value()).isEqualTo(200);
@@ -267,7 +267,7 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(ADMIN_TOKEN);
-        ResponseEntity<String> resp = rest.exchange(ApiPaths.PRODUCTS + "/" + productId,
+        ResponseEntity<String> resp = rest.exchange(ApiPaths.BACKOFFICE_PRODUCTS + "/" + productId,
             HttpMethod.PUT, new HttpEntity<>(
                 "{\"mediaId\": \"" + mediaId + "\", \"clearMediaId\": true}", headers), String.class);
 

@@ -35,11 +35,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Audit spot matrix (spec D6, fix round 1): the ADMIN-gated product mutation
- * on the storefront path ({@code ApiPaths.PRODUCTS}) exercised through the
- * {@code AuditAspect} — audit coverage follows the authorization level
- * (ADMIN), not the URL prefix.
+ * on the backoffice path ({@code ApiPaths.BACKOFFICE_PRODUCTS}) exercised
+ * through the {@code AuditAspect} — audit coverage follows the authorization
+ * level (ADMIN), not the URL prefix. C13 fix: the mutations live on
+ * {@code BackofficeProductController} since the storefront write endpoints
+ * were removed.
  */
-@WebMvcTest(value = ProductController.class,
+@WebMvcTest(value = BackofficeProductController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
 @Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class,
@@ -60,7 +62,7 @@ class ProductControllerAuditTest {
     void delete_emitsAuditLineWithAnnotatedActionAndResourceId() throws Exception {
         UUID productId = UUID.fromString("00000000-0000-0000-0000-000000006001");
 
-        mockMvc.perform(delete("/api/v1/products/{id}", productId)
+        mockMvc.perform(delete("/api/v1/backoffice/products/{id}", productId)
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-000000006003"))
                     .authorities(createAuthorityList("ROLE_ADMIN"))))
             .andExpect(status().isOk());
@@ -86,7 +88,7 @@ class ProductControllerAuditTest {
         UUID productId = UUID.fromString("00000000-0000-0000-0000-000000006002");
         when(productService.update(eq(productId), any())).thenReturn(null);
 
-        mockMvc.perform(put("/api/v1/products/{id}", productId)
+        mockMvc.perform(put("/api/v1/backoffice/products/{id}", productId)
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-000000006003"))
                     .authorities(createAuthorityList("ROLE_ADMIN")))
                 .contentType(MediaType.APPLICATION_JSON)
