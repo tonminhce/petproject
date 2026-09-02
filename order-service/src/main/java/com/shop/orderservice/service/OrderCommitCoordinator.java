@@ -13,7 +13,22 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+/**
+ * H15 — inventory commits in the confirm transaction used to run serially
+ * (one HTTP round-trip per item, ~50ms each, ~1s for a 20-item order).
+ * The promotion commit runs first; only after it succeeds do the inventory
+ * commits start. Both branches are now parallelised via {@link CompletableFuture}
+ * so the confirm wall time becomes the slowest single remote commit, not the
+ * sum. The promotion commit still runs first because the inventory commits
+ * carry promotion-derived pricing data — the order of business invariants
+ * is preserved.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -23,6 +38,15 @@ public class OrderCommitCoordinator {
     private final InventoryServiceClient inventoryClient;
     private final MeterRegistry meterRegistry;
     private final OrderConfirmMetrics confirmMetrics;
+
+    private static final ExecutorService COMMIT_EXECUTOR =
+        Executors.newFixedThreadPool(
+            Math.max(2, Runtime.getRuntime().availableProcessors() * 2),
+            r -> {
+                Thread t = new Thread(r, "commit-coordinator-fanout");
+                t.setDaemon(true);
+                return t;
+            });
 
     /** SUCCESS or throws. Never PARTIAL — compensations are best-effort, failures counted. */
     public CommitOutcome commitForConfirm(Order order, List<OrderItem> items) {
@@ -42,15 +66,53 @@ public class OrderCommitCoordinator {
             try {
                 List<OrderItem> sorted = items.stream()
                     .sorted(Comparator.comparing(OrderItem::getProductId)).toList();
+
+                // H15 — fan inventory commits out in parallel. Each commit
+                // becomes a CompletableFuture; the coordinator joins once
+                // after all are dispatched. We track SUCCESSFUL commits
+                // (handle() callback) so a failure doesn't poison the
+                // compensation list — the failed row was never committed
+                // and so must not be released-committed on rollback.
+                java.util.concurrent.ConcurrentLinkedQueue<RuntimeException> failures =
+                    new java.util.concurrent.ConcurrentLinkedQueue<>();
+                List<CompletableFuture<Void>> commitFutures = new ArrayList<>(sorted.size());
                 for (OrderItem item : sorted) {
                     if (item.getReservationId() == null) {
                         log.info("Order {} item {}: no reservationId (legacy) — skipping commit",
                             order.getId(), item.getId());
                         continue;
                     }
-                    inventoryClient.commit(item.getReservationId());
-                    committed.add(new CompensationTarget(CompensationTarget.Type.INVENTORY,
-                        item.getReservationId()));
+                    UUID reservationId = item.getReservationId();
+                    CompletableFuture<Void> future = CompletableFuture
+                        .runAsync(() -> inventoryClient.commit(reservationId), COMMIT_EXECUTOR)
+                        .handle((v, ex) -> {
+                            if (ex != null) {
+                                // unwrap and queue for rethrow below
+                                Throwable cause = ex;
+                                if (cause instanceof CompletionException && cause.getCause() != null) {
+                                    cause = cause.getCause();
+                                }
+                                if (cause instanceof RuntimeException re) {
+                                    failures.add(re);
+                                } else {
+                                    failures.add(new IllegalStateException("Inventory commit failed", cause));
+                                }
+                                return null;
+                            }
+                            synchronized (committed) {
+                                committed.add(new CompensationTarget(
+                                    CompensationTarget.Type.INVENTORY, reservationId));
+                            }
+                            return null;
+                        });
+                    commitFutures.add(future);
+                }
+                // Block until ALL dispatches complete (success or failure).
+                CompletableFuture.allOf(commitFutures.toArray(new CompletableFuture[0])).join();
+                // Surface the first failure so the outer catch compensates and rethrows.
+                RuntimeException firstFailure = failures.poll();
+                if (firstFailure != null) {
+                    throw firstFailure;
                 }
             } finally {
                 inventoryTimer.stop(confirmMetrics.timer("commit_inventory"));
