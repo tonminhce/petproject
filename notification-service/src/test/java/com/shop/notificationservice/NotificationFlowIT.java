@@ -170,14 +170,18 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("6. sender throws → FAILED row, then a new event → SENT row (partition survives)")
+    @DisplayName("6. C12/C17: sender throws → FAILED_RETRYABLE row (retryCount=1), then a new event → SENT row (partition survives)")
     void senderFailureMarksRowFailedAndPartitionSurvives() {
         doThrow(new RuntimeException("smtp-down")).doCallRealMethod().when(sender).send(any());
 
         OrderLifecycleEvent failing = createdEvent(UUID.randomUUID(), UUID.randomUUID());
         send(failing);
         Notification failedRow = awaitRow(failing.getEventId());
-        assertThat(failedRow.getStatus()).isEqualTo(NotificationStatus.FAILED);
+        // C12: the row never claims SENT; C17: the failure is retryable with bookkeeping.
+        assertThat(failedRow.getStatus()).isEqualTo(NotificationStatus.FAILED_RETRYABLE);
+        assertThat(failedRow.getRetryCount()).isEqualTo(1);
+        assertThat(failedRow.getNextRetryAt()).isNotNull();
+        assertThat(failedRow.getLastError()).contains("smtp-down");
 
         OrderLifecycleEvent following = createdEvent(UUID.randomUUID(), UUID.randomUUID());
         send(following);

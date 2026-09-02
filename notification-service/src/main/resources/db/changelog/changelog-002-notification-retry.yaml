@@ -1,0 +1,44 @@
+databaseChangeLog:
+  # C12/C17 — delivery state machine + bounded retry support. The previous
+  # design had no PENDING state and no retry path (insert → immediate send →
+  # single attempt, permanent loss on transient failure). This migration adds
+  # the retry bookkeeping, widens the status CHECK for the new states, and
+  # backfills historical FAILED rows so the retry scheduler re-processes them.
+  - changeSet:
+      id: 002-notification-retry
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: notifications
+            columns:
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_retry_at
+                  type: timestamp
+              - column:
+                  name: last_error
+                  type: varchar(1024)
+        # Widen the status CHECK for the state machine states. 'FAILED' stays
+        # allowed so rows written by pre-C12 instances during a rolling deploy
+        # still insert; current code never writes it.
+        - sql:
+            sql: >-
+              ALTER TABLE notifications DROP CONSTRAINT ck_notifications_status;
+              ALTER TABLE notifications
+              ADD CONSTRAINT ck_notifications_status
+              CHECK (status IN ('PENDING', 'SENDING', 'SENT', 'SKIPPED', 'FAILED_RETRYABLE', 'FAILED_PERMANENT', 'FAILED'))
+        # Backfill: every historical FAILED row becomes FAILED_RETRYABLE with
+        # an immediate retry window so the scheduler re-delivers it. Legacy
+        # FAILED rows that appear after this backfill are also reclaimed —
+        # the scheduler's claim query picks them up by status directly.
+        - sql:
+            sql: >-
+              UPDATE notifications
+              SET status = 'FAILED_RETRYABLE',
+                  next_retry_at = NOW()
+              WHERE status = 'FAILED'

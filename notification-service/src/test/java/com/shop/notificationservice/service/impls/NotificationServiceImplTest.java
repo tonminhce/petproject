@@ -7,8 +7,8 @@ import com.shop.notificationservice.dto.OrderLifecycleEvent;
 import com.shop.notificationservice.dto.response.NotificationResponse;
 import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
+import com.shop.notificationservice.service.NotificationDeliveryService;
 import com.shop.notificationservice.service.NotificationWriter;
-import com.shop.notificationservice.service.sender.NotificationSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,10 +28,17 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * C12/C17 — handle() persists the row as PENDING FIRST (never SENT), then
+ * claims it and delegates the actual send to the delivery service. SENT is
+ * only ever written by the writer AFTER a provider ack — a SMTP failure in
+ * the send window must never leave a row claiming SENT.
+ */
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceImplTest {
 
@@ -42,7 +49,8 @@ class NotificationServiceImplTest {
 
     @Mock NotificationRepository repository;
     @Mock NotificationWriter writer;
-    @Mock NotificationSender sender;
+    @Mock NotificationDeliveryService delivery;
+    @Mock com.shop.notificationservice.service.sender.NotificationSender sender;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -50,7 +58,7 @@ class NotificationServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new NotificationServiceImpl(repository, writer, sender, objectMapper);
+        service = new NotificationServiceImpl(repository, writer, sender, delivery, objectMapper, 900);
     }
 
     private OrderLifecycleEvent createdEvent() {
@@ -74,7 +82,7 @@ class NotificationServiceImplTest {
                 .id(NOTIFICATION_ID)
                 .eventId(EVENT_ID)
                 .orderId(ORDER_ID)
-                .status(NotificationStatus.SENT)
+                .status(NotificationStatus.PENDING)
                 .channel(NotificationChannel.LOG)
                 .subject("Order " + ORDER_ID + " created")
                 .body("status=NEW")
@@ -83,18 +91,22 @@ class NotificationServiceImplTest {
     }
 
     @Test
-    void createdEvent_insertsSentRowAndSends() {
+    void createdEvent_insertsPendingRowThenClaimsAndDelivers() {
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
         when(sender.channel()).thenReturn(NotificationChannel.LOG);
-        Notification saved = savedNotification();
-        when(writer.insert(any(Notification.class))).thenReturn(saved);
+        when(writer.insert(any(Notification.class))).thenReturn(savedNotification());
+        when(writer.markSending(eq(NOTIFICATION_ID), any(), any())).thenReturn(true);
 
         service.handle(createdEvent());
 
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(writer).insert(captor.capture());
         Notification inserted = captor.getValue();
-        assertThat(inserted.getStatus()).isEqualTo(NotificationStatus.SENT);
+        // C12: the row is born PENDING — never SENT.
+        assertThat(inserted.getStatus()).isEqualTo(NotificationStatus.PENDING);
+        // C17: PENDING rows are scheduler-eligible from birth (fallback if the
+        // instance dies between insert and claim).
+        assertThat(inserted.getNextRetryAt()).isNotNull();
         assertThat(inserted.getChannel()).isEqualTo(NotificationChannel.LOG);
         assertThat(inserted.getSubject()).isEqualTo("Order " + ORDER_ID + " created");
         assertThat(inserted.getEventId()).isEqualTo(EVENT_ID);
@@ -102,12 +114,24 @@ class NotificationServiceImplTest {
         assertThat(inserted.getUserId()).isEqualTo(USER_ID);
         assertThat(inserted.getEventType()).isEqualTo("order.created.v1");
         assertThat(inserted.getBody()).contains("subtotal=100.00", "tax=8.00", "discount=10.00", "total=98.00");
-        verify(sender).send(saved);
-        verify(writer, never()).markFailed(any());
+
+        verify(writer).markSending(eq(NOTIFICATION_ID), any(), any());
+        verify(delivery).deliver(NOTIFICATION_ID);
     }
 
     @Test
-    void unknownEventType_insertsSkippedRowAndNeverSends() {
+    void claimRejected_deliverIsNotCalled() {
+        when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
+        when(writer.insert(any(Notification.class))).thenReturn(savedNotification());
+        when(writer.markSending(eq(NOTIFICATION_ID), any(), any())).thenReturn(false);
+
+        service.handle(createdEvent());
+
+        verify(delivery, never()).deliver(any());
+    }
+
+    @Test
+    void unknownEventType_insertsSkippedRowAndNeverDelivers() {
         OrderLifecycleEvent e = createdEvent();
         e.setEventType("order.exploded.v9");
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
@@ -118,8 +142,8 @@ class NotificationServiceImplTest {
         verify(writer).insert(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.SKIPPED);
         assertThat(captor.getValue().getEventType()).isEqualTo("order.exploded.v9");
-        verify(sender, never()).send(any());
-        verify(writer, never()).markFailed(any());
+        verify(writer, never()).markSending(any(), any(), any());
+        verify(delivery, never()).deliver(any());
     }
 
     @Test
@@ -134,7 +158,8 @@ class NotificationServiceImplTest {
         verify(writer).insert(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.SKIPPED);
         assertThat(captor.getValue().getEventType()).isEqualTo("unknown");
-        verify(sender, never()).send(any());
+        verify(writer, never()).markSending(any(), any(), any());
+        verify(delivery, never()).deliver(any());
     }
 
     @Test
@@ -149,42 +174,29 @@ class NotificationServiceImplTest {
         verify(writer).insert(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(NotificationStatus.SKIPPED);
         assertThat(captor.getValue().getEventType()).isEqualTo("unknown");
-        verify(sender, never()).send(any());
+        verify(writer, never()).markSending(any(), any(), any());
     }
 
     @Test
-    void alreadyProcessedEvent_noInsertNoSend() {
+    void alreadyProcessedEvent_noInsertNoDelivery() {
         when(repository.existsByEventId(EVENT_ID)).thenReturn(true);
 
         service.handle(createdEvent());
 
         verify(writer, never()).insert(any());
-        verify(sender, never()).send(any());
+        verify(delivery, never()).deliver(any());
     }
 
     @Test
-    void duplicateRace_noSendNoCrash() {
+    void duplicateRace_noDeliveryNoCrash() {
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
         when(writer.insert(any(Notification.class)))
                 .thenThrow(new DataIntegrityViolationException("uk_notification_event_id"));
 
         assertThatCode(() -> service.handle(createdEvent())).doesNotThrowAnyException();
 
-        verify(sender, never()).send(any());
-        verify(writer, never()).markFailed(any());
-    }
-
-    @Test
-    void senderThrows_marksFailed() {
-        when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
-        when(sender.channel()).thenReturn(NotificationChannel.LOG);
-        when(writer.insert(any(Notification.class))).thenReturn(savedNotification());
-        org.mockito.Mockito.doThrow(new RuntimeException("smtp down"))
-                .when(sender).send(any(Notification.class));
-
-        service.handle(createdEvent());
-
-        verify(writer).markFailed(NOTIFICATION_ID);
+        verify(writer, never()).markSending(any(), any(), any());
+        verify(delivery, never()).deliver(any());
     }
 
     @Test

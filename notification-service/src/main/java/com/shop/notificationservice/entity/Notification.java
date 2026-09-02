@@ -17,6 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -47,7 +48,20 @@ public class Notification extends AbstractMappedEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     @Builder.Default
-    private NotificationStatus status = NotificationStatus.SENT;
+    private NotificationStatus status = NotificationStatus.PENDING;
+
+    // C12/C17 — retry bookkeeping (changelog-002). nextRetryAt doubles as the
+    // SENDING heartbeat: the retry scheduler reclaims rows whose heartbeat has
+    // elapsed (crash mid-send), so a delivery attempt is never silently lost.
+    @Column(name = "retry_count", nullable = false)
+    @Builder.Default
+    private int retryCount = 0;
+
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
+    @Column(name = "last_error", length = 1024)
+    private String lastError;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 8)

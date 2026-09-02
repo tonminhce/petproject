@@ -10,28 +10,56 @@ import com.shop.notificationservice.dto.OrderLifecycleEvent;
 import com.shop.notificationservice.dto.response.NotificationResponse;
 import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
+import com.shop.notificationservice.service.NotificationDeliveryService;
 import com.shop.notificationservice.service.NotificationService;
 import com.shop.notificationservice.service.NotificationTemplates;
 import com.shop.notificationservice.service.NotificationWriter;
 import com.shop.notificationservice.service.sender.NotificationSender;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * C12/C17 — the consumer entrypoint persists the event as {@code PENDING}
+ * FIRST (the durable record of "we owe this user a notification"), then
+ * claims it ({@code PENDING → SENDING} heartbeat) and delegates the send to
+ * {@link NotificationDeliveryService}, which writes {@code SENT} only after
+ * a provider ack or schedules a bounded retry on failure. The claim also
+ * arbitrates against the retry scheduler — whoever claims first delivers;
+ * the loser skips.
+ */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository repository;
     private final NotificationWriter writer;
     private final NotificationSender sender;
+    private final NotificationDeliveryService delivery;
     private final ObjectMapper objectMapper;
+    private final long claimStaleSeconds;
+
+    public NotificationServiceImpl(NotificationRepository repository,
+                                   NotificationWriter writer,
+                                   NotificationSender sender,
+                                   NotificationDeliveryService delivery,
+                                   ObjectMapper objectMapper,
+                                   @Value("${shop.notification.retry.stale-sending-seconds:900}")
+                                   long claimStaleSeconds) {
+        this.repository = repository;
+        this.writer = writer;
+        this.sender = sender;
+        this.delivery = delivery;
+        this.objectMapper = objectMapper;
+        this.claimStaleSeconds = claimStaleSeconds;
+    }
 
     @Override
     public void handle(OrderLifecycleEvent event) {
@@ -46,11 +74,14 @@ public class NotificationServiceImpl implements NotificationService {
                 .orderId(event.getOrderId())
                 .userId(event.getUserId())
                 .eventType(eventTypeOrUnknown(event.getEventType()))
-                .status(draft.known() ? NotificationStatus.SENT : NotificationStatus.SKIPPED)
+                .status(draft.known() ? NotificationStatus.PENDING : NotificationStatus.SKIPPED)
                 .channel(draft.known() ? sender.channel() : NotificationChannel.LOG)
                 .subject(draft.subject())
                 .body(draft.body())
                 .payload(payload(event))
+                // Scheduler-eligible from birth: if this instance dies before
+                // claiming, the retry poller picks the PENDING row up.
+                .nextRetryAt(draft.known() ? Instant.now() : null)
                 .build();
         Notification saved;
         try {
@@ -62,12 +93,16 @@ public class NotificationServiceImpl implements NotificationService {
         if (!draft.known()) {
             return;
         }
-        try {
-            sender.send(saved);
-        } catch (Exception e) {
-            log.error("Notification {} send failed", saved.getId(), e);
-            writer.markFailed(saved.getId());
+        if (writer.markSending(saved.getId(), heartbeatDeadline(), Instant.now())) {
+            delivery.deliver(saved.getId());
+        } else {
+            log.info("Notification {} already claimed by another worker; skipping initial send",
+                    saved.getId());
         }
+    }
+
+    private Instant heartbeatDeadline() {
+        return Instant.now().plus(Duration.ofSeconds(claimStaleSeconds));
     }
 
     @Override
