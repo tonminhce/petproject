@@ -27,7 +27,6 @@ public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
      */
     Optional<Favourite> findByIdAndUserId(UUID id, UUID userId);
 
-    Optional<Favourite> findByUserIdAndProductId(UUID userId, UUID productId);
 
     boolean existsByUserIdAndProductId(UUID userId, UUID productId);
 
