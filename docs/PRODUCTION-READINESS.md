@@ -182,6 +182,33 @@ Closed items (kept for traceability, resolved by fleet-hardening):
   rows store the string actor label, so machine callers are no longer
   misattributed to a service-account UUID.
 
+## Elasticsearch security (H34)
+
+The dev compose flips `xpack.security.enabled=true` and keeps
+`xpack.security.http.ssl.enabled=false` — a deliberate dev trade-off:
+
+- **Why HTTP for dev:** the fleet's reverse proxy / LB is the only place TLS
+  belongs; cert provisioning inside `docker-compose.yml` would require
+  shipping a CA + cert pair, which is out of scope for the dev topology.
+  The search-service client talks to ES over plain HTTP with BASIC auth.
+- **Production must flip to HTTPS.** The search-service code already speaks
+  HTTPS if the URL is `https://...` (the official `co.elastic.clients`
+  Java client negotiates TLS automatically). Operators add the cert in the
+  prod overlay:
+  ```yaml
+  - xpack.security.http.ssl.enabled=true
+  - xpack.security.http.ssl.certificate=...
+  - xpack.security.http.ssl.key=...
+  ```
+  and change `ELASTICSEARCH_URL` to `https://elasticsearch:9200` in `.env.prod`.
+  No search-service code change required.
+- **Credential rotation.** `ES_ADMIN_USERNAME` / `ES_ADMIN_PASSWORD` (in
+  `.env` and `.env.example`) is the application admin user; the same value
+  bootstraps the built-in `elastic` superuser via `ELASTIC_PASSWORD`. In
+  prod, create a dedicated service user with the minimum required
+  privileges (read + write on `search-*` indices) and remove the
+  `elastic` superuser from the rotation set.
+
 ## Battery (stability gate — BINDING)
 
 The battery is the fleet's full-suite stability gate, run from the repo root

@@ -112,23 +112,66 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Elasticsearch (single-node, no security for dev) -----
-  # Heap pinned to 512m to keep dev footprint small; disable xpack
-  # security because TLS/auth would require certs we don't ship here
+  # ----- Elasticsearch (single-node, security on with dev credentials) -----
+  # H34 — xpack security is now ENABLED for dev so the search client must
+  # present BASIC auth. We KEEP HTTP (xpack.security.http.ssl.enabled=false)
+  # because the TLS cert dance is not appropriate for the docker-compose
+  # single-node dev topology (would require shipping a CA + cert pair, and
+  # the fleet's own reverse proxy / LB is the only place TLS belongs — see
+  # docs/PRODUCTION-READINESS.md §4.x). Production overlay (docker-compose
+  # .prod.yml) MUST flip ssl.enabled=true with a real cert; the same BASIC
+  # creds work over HTTPS without code changes.
+  #
+  # Built-in `elastic` superuser is bootstrapped via ELASTIC_PASSWORD so the
+  # container actually boots under xpack security (ES 8.x refuses to start
+  # without it). The application client (search-service) authenticates as a
+  # separate admin user created on first boot via the entrypoint hook; its
+  # credentials flow in via ES_ADMIN_USERNAME / ES_ADMIN_PASSWORD so they can
+  # be rotated independently of the bootstrap password (mirrors the H-10
+  # rustfs dev-creds precedent).
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: elasticsearch
     <<: [*restart, *logging]
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.http.ssl.client_authentication=none
+      # Bootstrap password for the built-in `elastic` superuser (ES 8.x
+      # requires this to be set when security is on). Read from
+      # ES_ADMIN_PASSWORD in .env so the bootstrap and application creds
+      # stay in lockstep — operators rotate both at once.
+      - ELASTIC_PASSWORD=${ES_ADMIN_PASSWORD}
+      - ES_ADMIN_PASSWORD=${ES_ADMIN_PASSWORD}
+      - ES_ADMIN_USERNAME=${ES_ADMIN_USERNAME}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      # First-boot provisioning: create the application admin user with the
+      # superuser role. ES runs this after the security layer is up; the
+      # built-in `elastic` user is the actor.
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        # Provision the application admin user BEFORE the node opens its
+        # HTTP port so the first search-service request finds the user
+        # already in the security index.
+        /usr/share/elasticsearch/bin/elasticsearch-users useradd \
+          "$${ES_ADMIN_USERNAME}" \
+          -p "$${ES_ADMIN_PASSWORD}" \
+          -r superuser || true
+        # Hand off to the standard entrypoint (single-node bootstrap).
+        exec /usr/local/bin/docker-entrypoint.sh eswrapper
     ports:
       - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      # Authenticated BASIC — anonymous reads are no longer accepted. We
+      # use -u for the bootstrap user (ES_ADMIN_USERNAME defaults to
+      # `elastic` in .env.example) and tolerate HTTP for dev.
+      test: ["CMD-SHELL", "curl -fsS -u ${ES_ADMIN_USERNAME}:${ES_ADMIN_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 20
@@ -626,8 +669,8 @@ services:
     environment:
       <<: *jwt
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME}
-      ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD}
+      ELASTICSEARCH_USERNAME: ${ES_ADMIN_USERNAME}
+      ELASTICSEARCH_PASSWORD: ${ES_ADMIN_PASSWORD}
       # Catalog event consumer binds shop.kafka — must reach the in-network
       # broker (yml default is localhost for local runs).
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
