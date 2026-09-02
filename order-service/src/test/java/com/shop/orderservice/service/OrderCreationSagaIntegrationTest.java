@@ -69,7 +69,16 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
         var pendingEvents = outboxEventRepository.findByStatusOrderByIdAsc(
             OutboxStatus.PENDING, PageRequest.of(0, 10));
         assertThat(pendingEvents).isNotEmpty();
-        assertThat(pendingEvents.get(0).getEventType()).isEqualTo("order.created.v1");
+        // Assert on THIS order's event — the outbox table is shared across the
+        // suite and the relay no longer drains leftovers eagerly at context
+        // start (C14 initial-delay), so a global get(0) can be another
+        // aggregate's row (ProductRatingOutboxIntegrationTest filter precedent).
+        assertThat(pendingEvents.stream()
+            .filter(e -> response.id().toString().equals(e.getAggregateId().toString()))
+            .filter(e -> "order.created.v1".equals(e.getEventType()))
+            .findFirst())
+            .as("order.created.v1 PENDING outbox row for order %s", response.id())
+            .isPresent();
     }
 
     @Test

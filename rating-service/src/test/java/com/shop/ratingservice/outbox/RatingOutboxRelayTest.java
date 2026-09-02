@@ -8,12 +8,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +27,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/**
+ * C14 relay state machine — the claim comes from
+ * {@link OutboxEventRepository#claimOnePending} (one row per call). The
+ * PlatformTransactionManager is a no-op stub (payment WebhookRetrySchedulerTest
+ * precedent) because the assertions are about relay semantics, not transaction
+ * propagation (that's verified by the claim-concurrency IT on a real DB).
+ */
 @ExtendWith(MockitoExtension.class)
 class RatingOutboxRelayTest {
 
@@ -33,8 +42,6 @@ class RatingOutboxRelayTest {
     @Mock private OutboxEventRepository outboxRepo;
     @Mock private KafkaMessagePublisher kafkaPublisher;
 
-    private static final Pageable PAGE_REQUEST = PageRequest.of(0, 100);
-
     private RatingOutboxRelay relay;
 
     private final UUID productId = UUID.randomUUID();
@@ -42,7 +49,18 @@ class RatingOutboxRelayTest {
 
     @BeforeEach
     void setUp() {
-        relay = new RatingOutboxRelay(outboxRepo, kafkaPublisher);
+        PlatformTransactionManager txManager = new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                // No-op — TransactionTemplate needs a non-null status to commit.
+                return new SimpleTransactionStatus(true);
+            }
+            @Override
+            public void commit(TransactionStatus status) { }
+            @Override
+            public void rollback(TransactionStatus status) { }
+        };
+        relay = new RatingOutboxRelay(outboxRepo, kafkaPublisher, txManager);
         ReflectionTestUtils.setField(relay, "batchSize", 100);
         ReflectionTestUtils.setField(relay, "maxRetries", 10);
     }
@@ -63,8 +81,9 @@ class RatingOutboxRelayTest {
     @Test
     void relay_success_marksSentWithSentAtAndKeepsRetryCount() {
         OutboxEvent event = pendingEvent(0);
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(event));
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING))
+                .thenReturn(Optional.of(event))
+                .thenReturn(Optional.empty());
 
         relay.relay();
 
@@ -83,8 +102,10 @@ class RatingOutboxRelayTest {
     void relay_publishFailure_incrementsRetryAndBreaksLoop() {
         OutboxEvent first = pendingEvent(0);
         OutboxEvent second = pendingEvent(0);
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(first, second));
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING))
+                .thenReturn(Optional.of(first))
+                .thenReturn(Optional.of(second))
+                .thenReturn(Optional.empty());
         doThrow(new RuntimeException("kafka down")).when(kafkaPublisher)
                 .publish(TOPIC, productId.toString(), first.getPayload());
 
@@ -105,8 +126,9 @@ class RatingOutboxRelayTest {
     @Test
     void relay_maxRetriesExhausted_marksFailed() {
         OutboxEvent event = pendingEvent(9);
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of(event));
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING))
+                .thenReturn(Optional.of(event))
+                .thenReturn(Optional.empty());
         doThrow(new RuntimeException("kafka still down")).when(kafkaPublisher)
                 .publish(TOPIC, productId.toString(), event.getPayload());
 
@@ -123,8 +145,8 @@ class RatingOutboxRelayTest {
 
     @Test
     void relay_emptyPending_noPublishNoSave() {
-        when(outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PAGE_REQUEST))
-                .thenReturn(List.of());
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING))
+                .thenReturn(Optional.empty());
 
         relay.relay();
 

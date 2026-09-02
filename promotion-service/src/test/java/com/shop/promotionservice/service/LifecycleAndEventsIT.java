@@ -65,6 +65,10 @@ class LifecycleAndEventsIT extends AbstractIntegrationTest {
         // would surface as PRO-7010 instead of PRO-7009). The immediate first
         // run at context start is a no-op on an empty DB.
         registry.add("shop.promotion.reservation-cleanup-interval-ms", () -> "3600000");
+        // Neutralize the @Scheduled outbox relay timer too: the test drains
+        // manually below, and a background tick claiming the head row would
+        // lock the manual relay() out via SKIP LOCKED (C14) mid-drain.
+        registry.add("promotion.outbox.poll-interval-ms", () -> "3600000");
     }
 
     @Autowired

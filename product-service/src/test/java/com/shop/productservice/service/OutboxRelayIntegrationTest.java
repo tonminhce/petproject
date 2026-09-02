@@ -11,6 +11,8 @@ import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.support.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -31,6 +33,14 @@ import static org.awaitility.Awaitility.await;
  * </ol>
  */
 class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
+
+    @DynamicPropertySource
+    static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
+        // Neutralize the @Scheduled relay timer (LifecycleAndEventsIT precedent):
+        // the test drains manually, and a background tick claiming the head row
+        // would lock the manual relay() out via SKIP LOCKED (C14) mid-drain.
+        registry.add("product.outbox.poll-interval-ms", () -> "3600000");
+    }
 
     @Autowired ProductService productService;
     @Autowired CategoryService categoryService;

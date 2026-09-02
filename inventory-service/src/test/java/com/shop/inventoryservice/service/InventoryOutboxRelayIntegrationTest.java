@@ -24,7 +24,10 @@ class InventoryOutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void registerInventoryProps(DynamicPropertyRegistry registry) {
-        registry.add("inventory.outbox.poll-interval-ms", () -> "200");
+        // Neutralize the @Scheduled relay timer (LifecycleAndEventsIT precedent):
+        // the test drains manually, and a 200ms background tick claiming the head
+        // row would lock the manual relay() out via SKIP LOCKED (C14) mid-drain.
+        registry.add("inventory.outbox.poll-interval-ms", () -> "3600000");
     }
 
     @Autowired OutboxEventRepository outboxRepo;

@@ -9,12 +9,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.mockito.stubbing.OngoingStubbing;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +30,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/**
+ * C14 relay state machine — due rows (PENDING or replayable FAILED) come from
+ * {@link OutboxEventRepository#claimOneDue} (one row per call). The
+ * PlatformTransactionManager is a no-op stub (payment WebhookRetrySchedulerTest
+ * precedent) because the assertions are about relay semantics, not transaction
+ * propagation (that's verified by the claim-concurrency IT on a real DB).
+ */
 @ExtendWith(MockitoExtension.class)
 class MediaOutboxRelayTest {
 
@@ -35,15 +46,24 @@ class MediaOutboxRelayTest {
     @Mock private OutboxEventRepository outboxRepo;
     @Mock private KafkaMessagePublisher kafkaPublisher;
 
-    private static final Pageable PAGE_REQUEST = PageRequest.of(0, 100);
-
     private MediaOutboxRelay relay;
 
     private final UUID mediaId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        relay = new MediaOutboxRelay(outboxRepo, kafkaPublisher);
+        PlatformTransactionManager txManager = new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                // No-op — TransactionTemplate needs a non-null status to commit.
+                return new SimpleTransactionStatus(true);
+            }
+            @Override
+            public void commit(TransactionStatus status) { }
+            @Override
+            public void rollback(TransactionStatus status) { }
+        };
+        relay = new MediaOutboxRelay(outboxRepo, kafkaPublisher, txManager);
         ReflectionTestUtils.setField(relay, "batchSize", 100);
         ReflectionTestUtils.setField(relay, "maxRetries", 10);
     }
@@ -62,8 +82,12 @@ class MediaOutboxRelayTest {
     }
 
     private void due(OutboxEvent... events) {
-        when(outboxRepo.findByStatusInOrderByIdAsc(DUE_STATUSES, PAGE_REQUEST))
-                .thenReturn(List.of(events));
+        OngoingStubbing<Optional<OutboxEvent>> stub =
+                when(outboxRepo.claimOneDue(DUE_STATUSES));
+        for (OutboxEvent event : events) {
+            stub = stub.thenReturn(Optional.of(event));
+        }
+        stub.thenReturn(Optional.empty());
     }
 
     @Test
@@ -173,8 +197,8 @@ class MediaOutboxRelayTest {
 
     @Test
     void relay_emptyPending_noPublishNoSave() {
-        when(outboxRepo.findByStatusInOrderByIdAsc(DUE_STATUSES, PAGE_REQUEST))
-                .thenReturn(List.of());
+        when(outboxRepo.claimOneDue(DUE_STATUSES))
+                .thenReturn(Optional.empty());
 
         relay.relay();
 
