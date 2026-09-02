@@ -230,10 +230,10 @@ A real ops scenario (carrier loses the package mid-transit, customer wants a ref
 
 ## Medium Findings
 
-### M1 — DRY violation: ReservationServiceImpl has 4 nearly identical retry loops
+### M1 — DRY violation: ReservationServiceImpl has 4 nearly identical retry loops — FIXED
 **File:** inventory-service/src/main/java/com/shop/inventoryservice/service/impls/ReservationServiceImpl.java:22–95
 
-Each of reserveWithRetry, commitWithRetry, releaseWithRetry, releaseCommittedWithRetry has the same shape: counter, try, catch OptimisticLockingFailureException, MAX_ATTEMPTS check, sleep. Extract a private <T> T withRetry(IntFunction<T> op, UUID resourceId, ErrorCode errorCode) and the file shrinks by ~60 LOC and the retry-policy change requires editing one place.
+Extracted a shared generic `withRetry(Supplier<T>, UUID)` policy used by all four operations. Added a void-operation regression test covering retry behavior. Verified with `ReservationServiceImplTest` (4 tests passing).
 
 ---
 

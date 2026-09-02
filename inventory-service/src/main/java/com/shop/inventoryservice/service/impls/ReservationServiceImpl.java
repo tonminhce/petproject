@@ -11,6 +11,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Wraps {@link InventoryService} reservation operations with a manual retry
@@ -29,61 +30,32 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     public ReservationResponse reserveWithRetry(UUID productId, ReserveRequest request) {
-        int attempt = 0;
-        while (true) {
-            try {
-                return inventoryService.reserve(productId, request);
-            } catch (OptimisticLockingFailureException ex) {
-                if (++attempt >= MAX_ATTEMPTS) {
-                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, productId);
-                }
-                sleep(BACKOFF_BASE_MS * attempt);
-            }
-        }
+        return withRetry(() -> inventoryService.reserve(productId, request), productId);
     }
 
     @Override
     public void commitWithRetry(UUID reservationId) {
-        int attempt = 0;
-        while (true) {
-            try {
-                inventoryService.commit(reservationId);
-                return;
-            } catch (OptimisticLockingFailureException ex) {
-                if (++attempt >= MAX_ATTEMPTS) {
-                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, reservationId);
-                }
-                sleep(BACKOFF_BASE_MS * attempt);
-            }
-        }
+        withRetry(() -> { inventoryService.commit(reservationId); return null; }, reservationId);
     }
 
     @Override
     public void releaseWithRetry(UUID reservationId) {
-        int attempt = 0;
-        while (true) {
-            try {
-                inventoryService.release(reservationId);
-                return;
-            } catch (OptimisticLockingFailureException ex) {
-                if (++attempt >= MAX_ATTEMPTS) {
-                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, reservationId);
-                }
-                sleep(BACKOFF_BASE_MS * attempt);
-            }
-        }
+        withRetry(() -> { inventoryService.release(reservationId); return null; }, reservationId);
     }
 
     @Override
     public void releaseCommittedWithRetry(UUID reservationId) {
+        withRetry(() -> { inventoryService.releaseCommitted(reservationId); return null; }, reservationId);
+    }
+
+    private <T> T withRetry(Supplier<T> operation, UUID resourceId) {
         int attempt = 0;
         while (true) {
             try {
-                inventoryService.releaseCommitted(reservationId);
-                return;
+                return operation.get();
             } catch (OptimisticLockingFailureException ex) {
                 if (++attempt >= MAX_ATTEMPTS) {
-                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, reservationId);
+                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, resourceId);
                 }
                 sleep(BACKOFF_BASE_MS * attempt);
             }

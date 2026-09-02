@@ -45,6 +45,16 @@ class ReservationServiceImplTest {
     }
 
     @Test
+    void commitWithRetry_retriesVoidOperationOnOptimisticLockFailure() {
+        doThrow(new OptimisticLockingFailureException("conflict"))
+            .doNothing().when(inventoryService).commit(reservationId);
+
+        service.commitWithRetry(reservationId);
+
+        verify(inventoryService, times(2)).commit(reservationId);
+    }
+
+    @Test
     void reserveWithRetry_throwsVersionConflictAfterMaxRetries() {
         ReserveRequest req = new ReserveRequest(5, null);
         when(inventoryService.reserve(productId, req))
