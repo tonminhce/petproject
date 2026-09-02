@@ -80,9 +80,9 @@ class AdminIpAllowlistFilterTest {
     }
 
     @Test
-    void firstForwardedEntryIsDecisive() {
+    void rightmostTrustedForwardedEntryIsDecisive() {
         var filter = new AdminIpAllowlistFilter(
-                new AdminIpAllowlistProperties(List.of("10.0.0.0/8")), errorWriter, ipResolver);
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
         var exchange = exchange("/api/v1/backoffice/products", "10.1.2.3, 203.0.113.9");
 
         filter.filter(exchange, chain).block();
