@@ -140,4 +140,54 @@ class WebhookSignatureVerifierTest {
 
         assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, ts));
     }
+
+    // ========================================================================
+    // H27 — Webhook timestamp/replay protection (Stripe-style, 5-minute window)
+    // ========================================================================
+
+    /** H27: a timestamp far in the past (>5 min) is rejected even with a correct v1. */
+    @Test
+    void expiredStripeSignatureIsRejected() {
+        long expiredTs = java.time.Instant.now().getEpochSecond() - 600L;  // 10 min ago
+        byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
+        String signedPayload = expiredTs + "." + new String(utf8Body, StandardCharsets.UTF_8);
+        String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
+        String header = stripeHeader(expiredTs, hex);
+
+        assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, expiredTs));
+    }
+
+    /** H27: a timestamp far in the future (>5 min) is rejected even with a correct v1. */
+    @Test
+    void futureStripeSignatureIsRejected() {
+        long futureTs = java.time.Instant.now().getEpochSecond() + 600L;  // 10 min ahead
+        byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
+        String signedPayload = futureTs + "." + new String(utf8Body, StandardCharsets.UTF_8);
+        String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
+        String header = stripeHeader(futureTs, hex);
+
+        assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, futureTs));
+    }
+
+    /**
+     * H27: replay protection is the timestamp window itself — the same
+     * header sent twice within the 5-min window is currently accepted (Stripe's
+     * contract). Beyond the window, replays are rejected. Asserts the
+     * contract on both sides.
+     */
+    @Test
+    void replayWithinWindowIsAcceptedBeyondWindowIsRejected() {
+        long now = java.time.Instant.now().getEpochSecond();
+        byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
+        String signedPayload = now + "." + new String(utf8Body, StandardCharsets.UTF_8);
+        String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
+        String header = stripeHeader(now, hex);
+
+        // First send — within window
+        assertTrue(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, now));
+
+        // Replay after window — verifier no longer trusts the timestamp
+        long wayLater = now + 600L;
+        assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, wayLater));
+    }
 }
