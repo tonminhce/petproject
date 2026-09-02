@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: changelog-002-outbox.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-003-reservation-query-indexes.yaml
+      relativeToChangelogFile: true
