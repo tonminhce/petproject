@@ -40,6 +40,21 @@ class ProductControllerTest {
     }
 
     @Test
+    void findAll_capsPageSizeAndDefaultsStatusToActive() throws Exception {
+        when(productService.findAll(org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.argThat(p -> p.getPageSize() == com.shop.common.core.constants.PageableConstant.MAX_PAGE_SIZE)))
+            .thenReturn(com.shop.common.core.viewmodel.PageResponse.of(java.util.List.of(), 0, com.shop.common.core.constants.PageableConstant.MAX_PAGE_SIZE, 0));
+
+        mockMvc.perform(get("/api/v1/products").param("size", "9999"))
+            .andExpect(status().isOk());
+        org.mockito.ArgumentCaptor<com.shop.productservice.dto.ProductFilter> filter = org.mockito.ArgumentCaptor.forClass(com.shop.productservice.dto.ProductFilter.class);
+        org.mockito.ArgumentCaptor<org.springframework.data.domain.Pageable> pageable = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        org.mockito.Mockito.verify(productService).findAll(filter.capture(), pageable.capture());
+        org.assertj.core.api.Assertions.assertThat(filter.getValue().status()).isEqualTo(ProductStatus.ACTIVE);
+        org.assertj.core.api.Assertions.assertThat(pageable.getValue().getPageSize()).isEqualTo(com.shop.common.core.constants.PageableConstant.MAX_PAGE_SIZE);
+    }
+
+    @Test
     void findById_returns200WithApiResponse() throws Exception {
         when(productService.findById(ID)).thenReturn(sample());
 

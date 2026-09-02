@@ -1,6 +1,7 @@
 package com.shop.productservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.productservice.dto.ProductFilter;
@@ -37,10 +38,11 @@ public class ProductController {
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) UUID brandId,
             @RequestParam(required = false) ProductStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        ProductFilter filter = new ProductFilter(categoryId, brandId, status);
-        Pageable pageable = PageRequest.of(page, size);
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
+            @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
+        ProductFilter filter = new ProductFilter(categoryId, brandId,
+            status == null ? ProductStatus.ACTIVE : status);
+        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         return ApiResponse.ok(productService.findAll(filter, pageable));
     }
 
