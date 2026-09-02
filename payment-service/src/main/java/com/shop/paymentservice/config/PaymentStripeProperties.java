@@ -14,10 +14,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   <li>{@code webhook-secret} — {@code SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET};
  *       separate from the generic HMAC {@code shop.payment.webhook.secret}
  *       because Stripe signs with its own t=/v1= scheme.</li>
- *   <li>{@code api-version} — the Stripe wire version pinned onto every SDK
- *       call via {@code RequestOptions.setStripeVersionOverride} (stripe-java
- *       24.x has no mutable {@code Stripe.apiVersion} global — the constant is
- *       final — so the pin is applied per-request by the adapter).</li>
+ *   <li>{@code api-version} — declared pin (spec §3). Per D1 the stripe-java
+ *       SDK itself pins the Stripe-Version header on the wire
+ *       ({@code Stripe.API_VERSION} is a final constant in 24.x — there is no
+ *       mutable global); a configured value that drifts from the SDK constant
+ *       is surfaced as a startup WARN, never silently accepted as a pin.</li>
  *   <li>{@code connect} — V1 is single-account; Stripe Connect deferred.</li>
  * </ul>
  */
@@ -40,13 +41,17 @@ public record PaymentStripeProperties(
         }
     }
 
+    /** True when the stripe provider is actually activating (key present). */
+    public boolean isConfigured() {
+        return !secretKey.isBlank();
+    }
+
     /**
-     * The Stripe-Version to pin on SDK calls — the configured version only
-     * when the provider is actually activating (secret key non-blank);
-     * {@code null} under the mock default so the SDK global default stays
-     * untouched and no code path silently assumes Stripe semantics.
+     * C5 Task 1/2 — True when a configured pin (spec §3) drifts from the SDK's
+     * own {@code Stripe.API_VERSION}. Only meaningful when
+     * {@link #isConfigured()} — under the mock default no Stripe call exists.
      */
-    public String stripeVersionOverride() {
-        return secretKey.isBlank() ? null : apiVersion;
+    public boolean isVersionDriftedFromSdk() {
+        return isConfigured() && !apiVersion.equals(com.stripe.Stripe.API_VERSION);
     }
 }

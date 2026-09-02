@@ -1,6 +1,8 @@
 package com.shop.paymentservice.provider;
 
+import com.shop.paymentservice.config.PaymentStripeProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +15,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PaymentProviderConfigTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, StripeProvider.class);
+            .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, StripeProvider.class,
+                    PropsConfig.class);
+
+    /**
+     * C5 Task 2 — StripeProvider consumes PaymentStripeProperties
+     * (secret-key/webhook-secret/api-version/connect); the runner must enable
+     * the binding for the stripe-selection cases.
+     */
+    @EnableConfigurationProperties(PaymentStripeProperties.class)
+    static class PropsConfig {
+    }
 
     @Test
     void mockIsActiveWhenExplicitlySelectedAndResolvesAsPrimary() {

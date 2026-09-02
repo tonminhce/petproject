@@ -49,17 +49,31 @@ class PaymentStripePropertiesTest {
     }
 
     @Test
-    void secretKeyPresencePinsConfiguredApiVersionForSdkCalls() {
-        PaymentStripeProperties props = new PaymentStripeProperties(
+    void configuredKeyMeansStripeActivating() {
+        PaymentStripeProperties configured = new PaymentStripeProperties(
                 "sk_test_123", "whsec_123", "2024-06-20", false);
-        assertThat(props.stripeVersionOverride()).isEqualTo("2024-06-20");
+        PaymentStripeProperties blank = new PaymentStripeProperties(
+                "", "whsec_123", "2024-06-20", false);
+        assertThat(configured.isConfigured()).isTrue();
+        assertThat(blank.isConfigured()).isFalse();
     }
 
     @Test
-    void blankSecretKeyYieldsNoVersionOverride() {
-        PaymentStripeProperties props = new PaymentStripeProperties(
-                "", "whsec_123", "2024-06-20", false);
-        assertThat(props.stripeVersionOverride()).isNull();
+    void apiVersionDriftFromSdkConstantIsDetected() {
+        // Spec D1 — the SDK pins the wire version (final Stripe.API_VERSION in
+        // 24.x); a configured pin that drifts must be surfaced, never silently
+        // accepted. Compare against the real SDK constant, not a literal.
+        String sdkVersion = com.stripe.Stripe.API_VERSION;
+        PaymentStripeProperties drifted = new PaymentStripeProperties(
+                "sk_test_123", "whsec_123", "1900-01-01", false);
+        PaymentStripeProperties aligned = new PaymentStripeProperties(
+                "sk_test_123", "whsec_123", sdkVersion, false);
+        PaymentStripeProperties blankKey = new PaymentStripeProperties(
+                "", "whsec_123", "1900-01-01", false);
+        assertThat(drifted.isVersionDriftedFromSdk()).isTrue();
+        assertThat(aligned.isVersionDriftedFromSdk()).isFalse();
+        // Under the mock default no Stripe call exists — drift is irrelevant.
+        assertThat(blankKey.isVersionDriftedFromSdk()).isFalse();
     }
 
     @Test
@@ -67,7 +81,6 @@ class PaymentStripePropertiesTest {
         PaymentStripeProperties props = new PaymentStripeProperties(
                 "sk_test_123", "whsec_123", " ", false);
         assertThat(props.apiVersion()).isEqualTo("2024-06-20");
-        assertThat(props.stripeVersionOverride()).isEqualTo("2024-06-20");
     }
 
     @EnableConfigurationProperties(PaymentStripeProperties.class)
