@@ -34,6 +34,15 @@ public interface ProductRepository
     Page<Product> findByMediaIdIsNotNull(Pageable pageable);
 
     /**
+     * H-4 reference count for media-service's purge gate
+     * ({@code /internal/products/media-references/{mediaId}}): live products
+     * pointing at the given media. Equality probe — served by the
+     * {@code idx_products_media_id} index (changelog 005); {@code NULL}
+     * media_id rows can never match, so the count is exact.
+     */
+    long countByMediaId(UUID mediaId);
+
+    /**
      * Executor override with category+brand fetch-joined (backoffice detail
      * list, F2). Scalar ManyToOne joins only — pagination stays in SQL.
      */

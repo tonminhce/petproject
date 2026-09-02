@@ -60,4 +60,18 @@ public class ProductMediaService {
         log.info("Cleared media reference {} on {} product(s)", mediaId, affected.size());
         return affected.size();
     }
+
+    /**
+     * H-4: how many LIVE products still reference the given media — served to
+     * media-service via the internal SERVICE-gated endpoint
+     * {@code GET /internal/products/media-references/{mediaId}}. Read-only,
+     * indexed (changelog 005), never mutates state.
+     *
+     * @return exact count of live rows with {@code media_id} = the given media
+     */
+    public long referenceCount(UUID mediaId) {
+        long count = productRepository.countByMediaId(mediaId);
+        log.debug("Reference count for media {}: {} product(s)", mediaId, count);
+        return count;
+    }
 }

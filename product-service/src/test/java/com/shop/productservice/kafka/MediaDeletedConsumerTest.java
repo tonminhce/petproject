@@ -160,15 +160,28 @@ class MediaDeletedConsumerTest {
     }
 
     @Test
-    @DisplayName("DataAccessException base class is the retryable contract")
-    void dataAccessExceptionBaseClass_isRetryable() throws Exception {
-        doThrow(new DataAccessException("generic access failure") {})
+    @DisplayName("another TransientDataAccessException subclass (deadlock) is also retryable")
+    void otherTransientSubclass_isRetryable() throws Exception {
+        doThrow(new org.springframework.dao.DeadlockLoserDataAccessException("deadlock", null))
             .when(productMediaService).clearReference(MEDIA_ID);
 
         assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
             .doesNotThrowAnyException();
 
         verify(productMediaService, times(MediaDeletedConsumer.MAX_ATTEMPTS)).clearReference(MEDIA_ID);
+    }
+
+    @Test
+    @DisplayName("plain (non-transient) DataAccessException is NOT retried — narrowed to TransientDataAccessException")
+    void nonTransientDataAccessException_immediateAck_noRetry() throws Exception {
+        doThrow(new DataAccessException("constraint violation / bad grammar — not transient") {})
+            .when(productMediaService).clearReference(MEDIA_ID);
+
+        assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
+            .doesNotThrowAnyException();
+
+        // permanent failure for this payload — retrying cannot succeed, ack immediately
+        verify(productMediaService, times(1)).clearReference(MEDIA_ID);
     }
 
     @Test
