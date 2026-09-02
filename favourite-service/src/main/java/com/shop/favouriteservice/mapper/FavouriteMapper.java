@@ -2,17 +2,10 @@ package com.shop.favouriteservice.mapper;
 
 import com.shop.favouriteservice.dto.response.FavouriteResponse;
 import com.shop.favouriteservice.entity.Favourite;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 @Component
 public class FavouriteMapper {
-
-    private final ModelMapper modelMapper;
-
-    public FavouriteMapper(ModelMapper modelMapper) {
-        this.modelMapper = modelMapper;
-    }
 
     public FavouriteResponse toResponse(Favourite favourite) {
         // Manual mapping — only 4 fields, ModelMapper overhead exceeds benefit.
