@@ -105,13 +105,13 @@ public enum ErrorCode {
     // ---- Notification domain ----
     NOTIFICATION_NOT_FOUND("NTF-9001", "notification.not_found", HttpStatus.NOT_FOUND),
 
-    // ---- Payment domain (continued) — PAY-5003..5007 ----
+    // ---- Payment domain (continued) — PAY-5003..5008 ----
     PAYMENT_DUPLICATE_REQUEST("PAY-5003", "payment.duplicate_request", HttpStatus.CONFLICT),
     PAYMENT_INVALID_STATE("PAY-5004", "payment.invalid_state", HttpStatus.CONFLICT),
     WEBHOOK_SIGNATURE_INVALID("PAY-5005", "payment.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
     REFUND_INVALID_STATE("PAY-5006", "payment.refund_invalid_state", HttpStatus.CONFLICT),
-    PAYMENT_PROVIDER_REJECTED("PAY-5007", "payment.provider_rejected", HttpStatus.BAD_GATEWAY),
     AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST),
+    PAYMENT_PROVIDER_REJECTED("PAY-5008", "payment.provider_rejected", HttpStatus.BAD_GATEWAY),
 
     // ---- Shipping domain ---- SHP-10001..10006
     SHIPMENT_NOT_FOUND("SHP-10001", "shipping.not_found", HttpStatus.NOT_FOUND),
