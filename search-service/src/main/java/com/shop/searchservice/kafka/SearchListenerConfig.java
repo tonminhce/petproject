@@ -13,10 +13,10 @@ import java.util.Map;
 
 /**
  * Listener container factory for the product lifecycle topic (search spec D1
- * — last hop of the product→search refresh chain, F-5). Deliberately does NOT
- * extend {@code BaseKafkaListenerConfig} — that base hard-wires a
- * {@code JsonDeserializer} for the value, which binds the wire payload
- * straight to {@link ProductLifecycleEvent}. The fleet producer serializes
+ * — last hop of the product→search refresh chain, F-5). Standalone raw-string
+ * factory (predates the fleet-wide H-1 flip of {@code BaseKafkaListenerConfig}
+ * to double-encode-tolerant string-based consumers — same tolerance contract,
+ * self-unwrap shape). The fleet producer serializes
  * the outbox payload STRING via {@code JsonKafkaSerializer} (the product
  * OutboxRelay path), so records arrive DOUBLE-ENCODED — a JSON string token
  * wrapping the event JSON — and binding that token directly to the DTO throws
