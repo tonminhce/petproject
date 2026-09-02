@@ -160,3 +160,32 @@ sink is the seam (spec §6 open item: audit sink shippers).
 3. **Actor resolution Keycloak-shape coupling:** audit actor uses
    azp-present-without-session-marker ⇒ service; degradation path is sub-first.
    Re-verify on Keycloak upgrades (KeycloakRealmImportIT gates the token shape).
+
+## Battery (stability gate — BINDING)
+
+The battery is the fleet's full-suite stability gate, run from the repo root
+before and after every hardening pass:
+
+```bash
+./mvnw -T1C install -DskipTests -q          # whole-reactor compile gate
+./mvnw -pl <touched services...> test       # full suites of touched modules
+docker compose config -q                    # when compose/overlay was touched
+```
+
+**Scope (BINDING since fleet-hardening H-11):** the battery permanently
+includes the seven shared modules — their suites must never be masked again.
+
+```bash
+./mvnw -pl utils/common-core,utils/common-spring,utils/common-kafka,\
+utils/common-keycloak,utils/common-logging,utils/common-security,\
+utils/common-storage test \
+  && ./mvnw -T1C install -DskipTests -q
+```
+
+Contract notes (H-9): ITs execute under `mvn test` via the per-module
+surefire `**/*IT.java` includes — `mvn test`, not `failsafe`, is the
+battery's integration gate; `install -DskipTests` is the fleet compile gate,
+not a quality gate. `common-spring` intentionally ships a no-datasource
+boot proof (`CommonLibraryStarterTests`) that opts JPA auditing out via
+`shop.jpa.auditing.enabled=false` — JPA services keep the default
+`matchIfMissing=true` behavior and are covered by their own suites.

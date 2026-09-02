@@ -741,6 +741,43 @@ shop:
     version: v1
 ```
 
+### 8.4 JPA auditing — `JpaAuditingAutoConfiguration`
+
+[Workspace source](../utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/JpaAuditingAutoConfiguration.java)
+
+Every context that runs JPA entities gets `@EnableJpaAuditing` + the fleet
+`AuditorAware` (authenticated principal, else `system`) for free — no
+service declares its own `@EnableJpaAuditing`; entities simply extend
+`AbstractMappedEntity` (common-core), which carries
+`@EntityListeners(AuditingEntityListener.class)`.
+
+```yaml
+shop:
+  jpa:
+    auditing:
+      enabled: true   # default: true (matchIfMissing)
+```
+
+A context that consumes this starter **without a datasource** must opt out —
+otherwise `@EnableJpaAuditing` registers a `jpaMappingContext` that throws
+`JPA metamodel must not be empty` at boot (no `EntityManagerFactory` exists):
+
+```yaml
+shop:
+  jpa:
+    auditing:
+      enabled: false
+```
+
+Why a property instead of `@ConditionalOnBean(EntityManagerFactory)`:
+bean conditions are evaluated while Spring *parses* configuration classes,
+before any `@Bean` method registers its definition — the
+`EntityManagerFactory` is never visible at that moment (verified
+empirically during fleet-hardening H-11: a class-level
+`@ConditionalOnBean` silently disabled auditing across fleet integration
+tests, leaving `created_at` NULL). The starter's own no-datasource smoke
+test (`CommonLibraryStarterTests`) is the reference opt-out example.
+
 ---
 
 ## 9. Cheat sheet — "I want to…"
