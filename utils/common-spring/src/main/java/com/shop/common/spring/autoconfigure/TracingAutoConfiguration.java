@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.OpenTelemetryTracingAutoConfiguration;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.web.client.RestClient;
 
@@ -29,7 +30,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * D3 + R1 — fleet tracing wiring that Boot does not provide out of the box:
  * <ul>
  *   <li>{@link TraceparentInterceptor} + a {@link RestClientCustomizer} applying
- *       it to every auto-configured {@code RestClient.Builder}.</li>
+ *       it to every auto-configured {@code RestClient.Builder} (guarded on
+ *       {@code spring-boot-restclient} being present — services without the
+ *       module must still boot).</li>
  *   <li>R1 — a {@link BeanPostProcessor} that enriches EVERY {@code RestClient.Builder}
  *       bean with the interceptor, regardless of who defines the builder
  *       (services or Boot), so no fleet service wires traceparent by hand.
@@ -54,76 +57,89 @@ public class TracingAutoConfiguration {
         return new TraceparentInterceptor();
     }
 
-    @Bean
-    @ConditionalOnMissingBean(name = "traceparentRestClientCustomizer")
-    public RestClientCustomizer traceparentRestClientCustomizer(TraceparentInterceptor interceptor) {
-        return builder -> builder.requestInterceptor(interceptor);
-    }
-
     /**
-     * R1 — enriches every {@link RestClient.Builder} bean with the traceparent
-     * interceptor (idempotent). Declared {@code static} so this configuration
-     * class is never instantiated early; the interceptor is resolved lazily
-     * from the {@link BeanFactory} on first builder post-processing instead of
-     * being injected here — a BeanPostProcessor must not trigger premature
-     * instantiation of regular beans at registration time.
+     * RestClient tracing wiring, guarded so services without
+     * {@code spring-boot-restclient} on their runtime classpath (e.g. services
+     * that never build a {@code RestClient}) still boot — the outer class must
+     * not carry any method signature referencing this module's types, or
+     * {@code OnBeanCondition} introspection fails with
+     * {@code NoClassDefFoundError} at startup.
      */
-    @Bean
-    @ConditionalOnMissingBean(name = "traceparentRestClientBuilderPostProcessor")
-    public static BeanPostProcessor traceparentRestClientBuilderPostProcessor() {
-        return new TraceparentRestClientBuilderPostProcessor();
-    }
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(RestClientCustomizer.class)
+    static class RestClientTracingConfiguration {
 
-    /**
-     * Lazy holder + {@code instanceof} idempotency gate. The interceptor is a
-     * singleton bean, so builders manually wired by services and builders
-     * enriched here share the same instance — and any other instance of the
-     * class still satisfies the duplicate check.
-     */
-    static final class TraceparentRestClientBuilderPostProcessor implements BeanPostProcessor, BeanFactoryAware {
-
-        private static final Logger LOG =
-            LoggerFactory.getLogger(TraceparentRestClientBuilderPostProcessor.class);
-
-        private final AtomicReference<TraceparentInterceptor> interceptor = new AtomicReference<>();
-
-        private BeanFactory beanFactory;
-
-        @Override
-        public void setBeanFactory(BeanFactory beanFactory) {
-            this.beanFactory = beanFactory;
+        @Bean
+        @ConditionalOnMissingBean(name = "traceparentRestClientCustomizer")
+        public RestClientCustomizer traceparentRestClientCustomizer(TraceparentInterceptor interceptor) {
+            return builder -> builder.requestInterceptor(interceptor);
         }
 
-        @Override
-        public Object postProcessAfterInitialization(Object bean, String beanName) {
-            if (bean instanceof RestClient.Builder builder) {
-                List<ClientHttpRequestInterceptor> existing = new ArrayList<>();
-                builder.requestInterceptors(existing::addAll);
-                if (existing.stream().noneMatch(TraceparentInterceptor.class::isInstance)) {
-                    TraceparentInterceptor resolved = interceptor();
-                    if (resolved != null) {
-                        builder.requestInterceptor(resolved);
+        /**
+         * R1 — enriches every {@link RestClient.Builder} bean with the traceparent
+         * interceptor (idempotent). Declared {@code static} so this configuration
+         * class is never instantiated early; the interceptor is resolved lazily
+         * from the {@link BeanFactory} on first builder post-processing instead of
+         * being injected here — a BeanPostProcessor must not trigger premature
+         * instantiation of regular beans at registration time.
+         */
+        @Bean
+        @ConditionalOnMissingBean(name = "traceparentRestClientBuilderPostProcessor")
+        public static BeanPostProcessor traceparentRestClientBuilderPostProcessor() {
+            return new TraceparentRestClientBuilderPostProcessor();
+        }
+
+        /**
+         * Lazy holder + {@code instanceof} idempotency gate. The interceptor is a
+         * singleton bean, so builders manually wired by services and builders
+         * enriched here share the same instance — and any other instance of the
+         * class still satisfies the duplicate check.
+         */
+        static final class TraceparentRestClientBuilderPostProcessor implements BeanPostProcessor, BeanFactoryAware {
+
+            private static final Logger LOG =
+                LoggerFactory.getLogger(TraceparentRestClientBuilderPostProcessor.class);
+
+            private final AtomicReference<TraceparentInterceptor> interceptor = new AtomicReference<>();
+
+            private BeanFactory beanFactory;
+
+            @Override
+            public void setBeanFactory(BeanFactory beanFactory) {
+                this.beanFactory = beanFactory;
+            }
+
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String beanName) {
+                if (bean instanceof RestClient.Builder builder) {
+                    List<ClientHttpRequestInterceptor> existing = new ArrayList<>();
+                    builder.requestInterceptors(existing::addAll);
+                    if (existing.stream().noneMatch(TraceparentInterceptor.class::isInstance)) {
+                        TraceparentInterceptor resolved = interceptor();
+                        if (resolved != null) {
+                            builder.requestInterceptor(resolved);
+                        }
                     }
                 }
+                return bean;
             }
-            return bean;
-        }
 
-        /** Resolved once and cached; a miss is retried on the next builder (never cached). */
-        private TraceparentInterceptor interceptor() {
-            TraceparentInterceptor current = interceptor.get();
-            if (current != null) {
-                return current;
+            /** Resolved once and cached; a miss is retried on the next builder (never cached). */
+            private TraceparentInterceptor interceptor() {
+                TraceparentInterceptor current = interceptor.get();
+                if (current != null) {
+                    return current;
+                }
+                TraceparentInterceptor resolved = beanFactory
+                    .getBeanProvider(TraceparentInterceptor.class)
+                    .getIfAvailable();
+                if (resolved == null) {
+                    LOG.debug("No TraceparentInterceptor bean — skipping RestClient.Builder enrichment");
+                    return null;
+                }
+                interceptor.set(resolved);
+                return resolved;
             }
-            TraceparentInterceptor resolved = beanFactory
-                .getBeanProvider(TraceparentInterceptor.class)
-                .getIfAvailable();
-            if (resolved == null) {
-                LOG.debug("No TraceparentInterceptor bean — skipping RestClient.Builder enrichment");
-                return null;
-            }
-            interceptor.set(resolved);
-            return resolved;
         }
     }
 

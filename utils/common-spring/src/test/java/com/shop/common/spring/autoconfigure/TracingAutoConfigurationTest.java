@@ -190,4 +190,30 @@ class TracingAutoConfigurationTest {
                 .allMatch(com.shop.common.spring.tracing.TraceparentInterceptor.class::isInstance);
         });
     }
+
+    /**
+     * Fleet boot proof — services that do not carry {@code spring-boot-restclient}
+     * on their runtime classpath (test-scope only) must still start the tracing
+     * configuration: outer-class introspection must not touch the guarded nested
+     * RestClient wiring.
+     */
+    @Test
+    void bootsWithoutSpringBootRestclientOnClasspath() {
+        ClassLoader parent = getClass().getClassLoader();
+        ClassLoader hiding = new ClassLoader(parent) {
+            @Override
+            protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                if (name.startsWith("org.springframework.boot.restclient")) {
+                    throw new ClassNotFoundException(name);
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+        runner.withClassLoader(hiding).run(ctx -> {
+            assertThat(ctx).hasSingleBean(com.shop.common.spring.tracing.TraceparentInterceptor.class);
+            assertThat(ctx).hasBean("mdcOtelCurrentTraceContext");
+            assertThat(ctx).doesNotHaveBean("traceparentRestClientCustomizer");
+            assertThat(ctx).doesNotHaveBean("traceparentRestClientBuilderPostProcessor");
+        });
+    }
 }
