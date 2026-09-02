@@ -4,6 +4,7 @@ import com.shop.common.core.data.AbstractMappedEntity;
 import com.shop.paymentservice.constant.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
@@ -25,6 +26,10 @@ public class Payment extends AbstractMappedEntity {
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
+    // Types.CHAR so ddl-auto=validate matches Liquibase's char(3) column (Postgres bpchar,
+    // Types#CHAR) — Hibernate derives the validation type from the mapping's JDBC code,
+    // not from columnDefinition, which would expect VARCHAR and fail at boot.
+    @JdbcTypeCode(java.sql.Types.CHAR)
     @Column(name = "currency", nullable = false, columnDefinition = "char(3)")
     private String currency;
 
