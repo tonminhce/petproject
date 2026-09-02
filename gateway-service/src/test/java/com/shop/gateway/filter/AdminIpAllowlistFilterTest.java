@@ -31,7 +31,7 @@ class AdminIpAllowlistFilterTest {
     void setUp() {
         chain = mock(GatewayFilterChain.class);
         errorWriter = new GatewayErrorResponseWriter(new ObjectMapper());
-        ipResolver = new ClientIpResolver();
+        ipResolver = new ClientIpResolver(1);
         when(chain.filter(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> {
             var exchange = invocation.getArgument(0, ServerWebExchange.class);
             exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.OK);

@@ -15,17 +15,39 @@ import org.springframework.web.server.ServerWebExchange;
  */
 public final class ClientIpResolver {
 
+    private final int trustedProxyHops;
+
+    public ClientIpResolver() {
+        this(0);
+    }
+
+    public ClientIpResolver(final int trustedProxyHops) {
+        if (trustedProxyHops < 0) {
+            throw new IllegalArgumentException("trustedProxyHops must be >= 0");
+        }
+        this.trustedProxyHops = trustedProxyHops;
+    }
+
     private static final String UNKNOWN_IP = "unknown";
 
     private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 
     public String resolve(final ServerWebExchange exchange) {
         final String forwarded = exchange.getRequest().getHeaders().getFirst(X_FORWARDED_FOR);
-        final String firstEntry = firstForwardedEntry(forwarded);
+        final String firstEntry = clientEntry(forwarded);
         if (firstEntry != null) {
             return stripPort(firstEntry);
         }
         return remoteAddress(exchange);
+    }
+
+    private String clientEntry(final String forwarded) {
+        if (trustedProxyHops == 0 || forwarded == null || forwarded.isBlank()) return null;
+        final String[] entries = forwarded.split(",");
+        final int index = entries.length - trustedProxyHops;
+        if (index < 0) return null;
+        final String entry = entries[index].trim();
+        return entry.isEmpty() ? null : entry;
     }
 
     private String firstForwardedEntry(final String forwarded) {

@@ -7,6 +7,7 @@ import com.shop.gateway.filter.ClientIpResolver;
 import com.shop.gateway.filter.EdgeRateLimitProperties;
 import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import com.shop.gateway.filter.RateLimitFilter;
+import com.shop.gateway.ratelimit.RateLimitProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.ObjectMapper;
@@ -20,8 +21,8 @@ import tools.jackson.databind.ObjectMapper;
 public class EdgeFiltersConfiguration {
 
     @Bean
-    public ClientIpResolver clientIpResolver() {
-        return new ClientIpResolver();
+    public ClientIpResolver clientIpResolver(final RateLimitProperties properties) {
+        return new ClientIpResolver(properties.trustedProxyHops());
     }
 
     @Bean

@@ -10,13 +10,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ClientIpResolverTest {
 
-    private final ClientIpResolver resolver = new ClientIpResolver();
+    private final ClientIpResolver resolver = new ClientIpResolver(1);
 
     @Test
-    void trustsFirstForwardedEntryOnly() {
+    void selectsRightmostTrustedForwardedEntry() {
         var exchange = exchangeWithXff("203.0.113.7, 70.41.3.18, 10.0.0.1");
 
-        assertThat(resolver.resolve(exchange)).isEqualTo("203.0.113.7");
+        assertThat(resolver.resolve(exchange)).isEqualTo("70.41.3.18");
     }
 
     @Test
