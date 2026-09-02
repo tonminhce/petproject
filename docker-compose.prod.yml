@@ -28,7 +28,7 @@
 #   port directly to the internet.
 #
 # mock-payment-provider is a local-PSP simulator: disable it in real prod with
-#   `--scale mock-payment-provider=0` (or route PAYMENT_PROVIDER to a real PSP).
+#   `--scale mock-payment-provider=0` (or route SHOP_PAYMENT_PROVIDER to stripe — C5).
 # ============================================================
 
 x-audit-env: &audit-env

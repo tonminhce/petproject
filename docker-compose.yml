@@ -155,7 +155,7 @@ services:
     volumes:
       - rustfs_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/health"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9000/minio/health/live || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -388,9 +388,13 @@ services:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      # C5 — mock stays the default; Stripe is opt-in via env (see .env.example).
+      SHOP_PAYMENT_PROVIDER: ${SHOP_PAYMENT_PROVIDER:-mock}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?required}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?required}
+      # To activate Stripe:
+      # - SHOP_PAYMENT_PROVIDER=stripe
+      # - SHOP_PAYMENT_STRIPE_SECRET_KEY=sk_test_xxx
+      # - SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET=whsec_xxx
       # Receipt storage on RustFS (same env style as media-service; dedicated bucket)
       STORAGE_ENDPOINT: http://rustfs:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
