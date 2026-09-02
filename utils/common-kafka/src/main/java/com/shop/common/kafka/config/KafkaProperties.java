@@ -104,6 +104,15 @@ public class KafkaProperties {
         props.put("retries", producer.getRetries());
         props.put("properties.max.in.flight.requests.per.connection", 1);
         props.put("key.serializer", org.apache.kafka.common.serialization.StringSerializer.class.getName());
+        // H41 — pin the transport-layer defaults so every fleet producer gets
+        // batching, a small linger window, lz4 compression, and idempotent
+        // exactly-once-per-attempt delivery without per-service config. The
+        // wire contract (R1, single-encoded JSON-string via KafkaMessagePublisher)
+        // is unaffected — these knobs only govern batching + broker-side dedup.
+        props.put("enable.idempotence", producer.isEnableIdempotence());
+        props.put("compression.type", producer.getCompressionType());
+        props.put("batch.size", producer.getBatchSizeBytes());
+        props.put("linger.ms", producer.getLingerMs());
         return props;
     }
 
@@ -207,6 +216,35 @@ public class KafkaProperties {
         private String acks = "all";
         private int retries = 3;
 
+        /**
+         * H41 — exactly-once-per-attempt delivery on producer failover.
+         * Combined with {@code acks=all} and {@code max.in.flight.requests.
+         * per.connection=1} (pinned at the build site), this is the canonical
+         * fleet recipe.
+         */
+        private boolean enableIdempotence = true;
+
+        /**
+         * H41 — lz4 is the cheapest CPU cost per byte saved; snappy is faster
+         * but compresses less. zstd is also viable but is a separate native
+         * dep on the broker side; stick to lz4.
+         */
+        private String compressionType = "lz4";
+
+        /**
+         * H41 — batch size in bytes. 32 KiB amortises one network round-trip
+         * across ~20 small JSON envelopes while staying well under the
+         * default request size cap.
+         */
+        private int batchSizeBytes = 32 * 1024;
+
+        /**
+         * H41 — linger window in milliseconds. A small (5 ms) wait lets the
+         * producer coalesce synchronous outbox sends without adding latency
+         * a human caller would notice.
+         */
+        private int lingerMs = 5;
+
         public String getAcks() {
             return acks;
         }
@@ -221,6 +259,38 @@ public class KafkaProperties {
 
         public void setRetries(int retries) {
             this.retries = retries;
+        }
+
+        public boolean isEnableIdempotence() {
+            return enableIdempotence;
+        }
+
+        public void setEnableIdempotence(boolean enableIdempotence) {
+            this.enableIdempotence = enableIdempotence;
+        }
+
+        public String getCompressionType() {
+            return compressionType;
+        }
+
+        public void setCompressionType(String compressionType) {
+            this.compressionType = compressionType;
+        }
+
+        public int getBatchSizeBytes() {
+            return batchSizeBytes;
+        }
+
+        public void setBatchSizeBytes(int batchSizeBytes) {
+            this.batchSizeBytes = batchSizeBytes;
+        }
+
+        public int getLingerMs() {
+            return lingerMs;
+        }
+
+        public void setLingerMs(int lingerMs) {
+            this.lingerMs = lingerMs;
         }
     }
 
