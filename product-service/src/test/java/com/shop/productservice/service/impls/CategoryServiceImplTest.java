@@ -145,6 +145,20 @@ class CategoryServiceImplTest {
     }
 
     @Test
+    void update_rejectsCycle() {
+        Category existing = Category.builder().id(ROOT).title("Root").slug("root").build();
+        CategoryUpdateRequest req = new CategoryUpdateRequest(null, null, null, CHILD1);
+        Category child = Category.builder().id(CHILD1).title("Child").slug("child").parent(existing).build();
+        when(repo.findById(ROOT)).thenReturn(Optional.of(existing));
+        when(repo.findById(CHILD1)).thenReturn(Optional.of(child));
+
+        assertThatThrownBy(() -> service.update(ROOT, req))
+            .isInstanceOf(BusinessException.class)
+            .extracting("errorCode").isEqualTo("PRD-2009");
+        verify(repo, never()).save(any());
+    }
+
+    @Test
     void delete_softDeletesWithActorAndPublishes() {
         Category existing = Category.builder().id(ROOT).title("Electronics").slug("electronics").build();
         when(repo.findById(ROOT)).thenReturn(Optional.of(existing));
