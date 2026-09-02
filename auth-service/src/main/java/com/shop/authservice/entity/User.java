@@ -21,11 +21,12 @@ import java.util.UUID;
 @AllArgsConstructor
 
 @Entity
-@Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(name = "unique_username", columnNames = "user_name"),
-        @UniqueConstraint(name = "unique_email", columnNames = "email"),
-        @UniqueConstraint(name = "unique_phone", columnNames = "phone_number")
-})
+@Table(name = "users")
+// A9: uniqueness on user_name / email / phone_number is enforced by PARTIAL unique
+// indexes (Liquibase changeset 003) that ignore soft-deleted rows. JPA's
+// `@UniqueConstraint` here would create hard constraints that block re-registration
+// of a soft-deleted user — see auth review finding "soft-delete + re-register kills
+// identity forever".
 // @SQLRestriction injects "AND deleted = false" into EVERY query Hibernate writes
 // for this entity. Cannot be bypassed accidentally — only by raw native SQL.
 @SQLRestriction("deleted = false")

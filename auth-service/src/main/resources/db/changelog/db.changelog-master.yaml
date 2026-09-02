@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changeset/001-create-users-and-roles.yaml
   - include:
       file: db/changelog/changeset/002-add-soft-delete.yaml
+  - include:
+      file: db/changelog/changeset/003-partial-unique-users.yaml

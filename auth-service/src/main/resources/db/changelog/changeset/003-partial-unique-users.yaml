@@ -1,0 +1,57 @@
+databaseChangeLog:
+  # A9 — replace hard unique constraints on users(user_name/email/phone_number) with
+  # PARTIAL unique indexes that ignore soft-deleted rows. Without this, a soft-deleted
+  # user blocks re-registration with the same identity forever — there is no way to
+  # free up the slot short of a hard delete (which the @SQLRestriction guard forbids).
+  # The backing indexes from 001-create-users-and-roles.yaml are dropped too so the
+  # new partial indexes are the only enforcers.
+  - changeSet:
+      id: 003-partial-unique-users
+      author: shop-platform
+      changes:
+        # ---- drop the original hard unique constraints ----
+        - dropUniqueConstraint:
+            tableName: users
+            constraintName: users_user_name_key
+        - dropUniqueConstraint:
+            tableName: users
+            constraintName: users_email_key
+        - dropUniqueConstraint:
+            tableName: users
+            constraintName: users_phone_number_key
+
+        # NOTE: on Postgres a UNIQUE constraint IS its backing index — dropping the
+        # constraint drops the index with it. A follow-up dropIndex on the same
+        # name would fail with "index does not exist" and abort the migration,
+        # so it is intentionally omitted.
+
+        # ---- create partial unique indexes that ignore soft-deleted rows ----
+        # NOTE: partial indexes can't be created with `CREATE UNIQUE INDEX CONCURRENTLY`
+        # inside a Liquibase transaction — for a one-shot deploy on a small table this
+        # is acceptable. If the auth-service becomes write-hot, switch to a manual
+        # CONCURRENTLY run before this changeset executes.
+        - createIndex:
+            tableName: users
+            indexName: unique_username_active
+            columns:
+              - column:
+                  name: user_name
+            # Liquibase 4+ supports the `where` clause for partial indexes natively.
+            where: deleted = false
+            unique: true
+        - createIndex:
+            tableName: users
+            indexName: unique_email_active
+            columns:
+              - column:
+                  name: email
+            where: deleted = false
+            unique: true
+        - createIndex:
+            tableName: users
+            indexName: unique_phone_active
+            columns:
+              - column:
+                  name: phone_number
+            where: deleted = false
+            unique: true
