@@ -770,12 +770,17 @@ shop:
 ```
 
 Why a property instead of `@ConditionalOnBean(EntityManagerFactory)`:
-bean conditions are evaluated while Spring *parses* configuration classes,
-before any `@Bean` method registers its definition — the
-`EntityManagerFactory` is never visible at that moment (verified
-empirically during fleet-hardening H-11: a class-level
-`@ConditionalOnBean` silently disabled auditing across fleet integration
-tests, leaving `created_at` NULL). The starter's own no-datasource smoke
+bean-condition evaluation differs by how the class reaches a context, and only
+the property is deterministic in both. On the **`@Import` path** (fleet
+slices/tests import `JpaAuditingAutoConfiguration` as a plain configuration),
+conditions are evaluated while configuration classes are *parsed* — before any
+`@Bean` method registers its definition — so the `EntityManagerFactory` is
+never visible at evaluation time (verified empirically during fleet-hardening
+H-11: a class-level `@ConditionalOnBean` silently disabled auditing across
+fleet integration tests, leaving `created_at` NULL). On the **auto-configuration
+path** conditions run *after* regular bean definitions register, so EMF
+visibility there is an ordering problem (`@AutoConfiguration(after=...)`
+hints), not a parse-time impossibility. The starter's own no-datasource smoke
 test (`CommonLibraryStarterTests`) is the reference opt-out example.
 
 ---
