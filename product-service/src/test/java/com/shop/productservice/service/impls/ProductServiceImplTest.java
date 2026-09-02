@@ -49,6 +49,9 @@ class ProductServiceImplTest {
     @Mock ProductEventPublisher publisher;
     @Mock AuditorAware<String> auditorAware;
     @Mock MediaHeadClient mediaHeadClient;
+    @Mock org.springframework.cache.CacheManager cacheManager;
+    @Mock org.springframework.cache.Cache productCache;
+    @Mock org.springframework.cache.Cache slugCache;
     @InjectMocks ProductServiceImpl service;
 
     private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -213,6 +216,20 @@ class ProductServiceImplTest {
 
         assertThat(result.priceUnit()).isEqualByComparingTo("1099.00");
         verify(publisher).publishUpdated(existing);
+    }
+
+    @Test
+    void delete_evictsOnlyAffectedCacheKeys() {
+        Product existing = sampleProduct();
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
+        when(cacheManager.getCache("product")).thenReturn(productCache);
+        when(cacheManager.getCache("productBySlug")).thenReturn(slugCache);
+
+        service.delete(ID);
+
+        verify(productCache).evict(ID);
+        verify(slugCache).evict("iphone-15");
     }
 
     @Test

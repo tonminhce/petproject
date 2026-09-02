@@ -48,6 +48,7 @@ class ProductServiceImplMediaClearTest {
     @Mock ProductEventPublisher publisher;
     @Mock AuditorAware<String> auditorAware;
     @Mock MediaHeadClient mediaHeadClient;
+    @Mock org.springframework.cache.CacheManager cacheManager;
 
     private ProductServiceImpl service;
 
@@ -55,7 +56,7 @@ class ProductServiceImplMediaClearTest {
     void setUp() {
         // Real mapper + real ModelMapper — the partialUpdate branch is the unit under test here.
         service = new ProductServiceImpl(repo, categoryRepo, brandRepo,
-            new ProductMapper(new ModelMapper()), publisher, auditorAware, mediaHeadClient);
+            new ProductMapper(new ModelMapper()), publisher, auditorAware, mediaHeadClient, cacheManager);
     }
 
     private Product productWithMedia() {

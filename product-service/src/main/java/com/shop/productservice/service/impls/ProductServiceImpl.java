@@ -20,10 +20,9 @@ import com.shop.productservice.service.ProductEventPublisher;
 import com.shop.productservice.service.ProductService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductEventPublisher publisher;
     private final AuditorAware<String> auditorAware;
     private final MediaHeadClient mediaHeadClient;
+    private final CacheManager cacheManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -131,8 +131,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @Caching(put = @CachePut(value = "product", key = "#id"),
-             evict = @CacheEvict(value = "productBySlug", allEntries = true))
+    @CachePut(value = "product", key = "#id")
     public ProductDetailResponse update(UUID id, ProductUpdateRequest request) {
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
@@ -154,20 +153,36 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
             existing.setBrand(brand);
         }
+        String previousSlug = existing.getSlug();
         Product saved = repo.save(existing);
+        evictProductSlug(previousSlug);
+        evictProductSlug(saved.getSlug());
         publisher.publishUpdated(saved);
         return mapper.toDetailResponse(saved);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = {"product", "productBySlug"}, allEntries = true)
     public void delete(UUID id) {
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         repo.save(existing);
+        var productCache = cacheManager.getCache("product");
+        if (productCache != null) {
+            productCache.evict(id);
+        }
+        evictProductSlug(existing.getSlug());
         publisher.publishDeleted(existing);
+    }
+
+    private void evictProductSlug(String slug) {
+        if (slug != null) {
+            var slugCache = cacheManager.getCache("productBySlug");
+            if (slugCache != null) {
+                slugCache.evict(slug);
+            }
+        }
     }
 
     /**
