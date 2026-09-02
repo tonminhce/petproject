@@ -121,16 +121,24 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public ReservationResponse reserve(UUID productId, ReserveRequest request) {
-        releaseExpiredReservations(productId);
-        Inventory inventory = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
-        int available = inventory.getAvailableQuantity() - inventory.getReservedQuantity();
-        if (available < request.quantity()) {
+        // H10 — atomic capacity check + increment. The pre-fix read-then-write
+        // path had a TOCTOU window: two concurrent reserves could both observe
+        // the same available capacity and both succeed. The atomic UPDATE on
+        // the repository collapses the check + write into one statement that
+        // Postgres serializes via the row lock — concurrent requests can never
+        // both succeed past the available-reserved guard.
+        int updated = inventoryRepository.atomicReserve(productId, request.quantity());
+        if (updated == 0) {
+            // 0 rows updated — capacity was insufficient OR product missing.
+            // We disambiguate by looking the row up (the atomic UPDATE doesn't
+            // tell us which side failed). The find is rare-path only; the hot
+            // success path takes the early return below.
+            inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
             throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, productId);
         }
-        inventory.setReservedQuantity(inventory.getReservedQuantity() + request.quantity());
-        inventory.setLastUpdated(Instant.now());
-        inventoryRepository.save(inventory);
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
 
         Reservation reservation = Reservation.builder()
             .productId(productId)
