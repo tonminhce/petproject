@@ -37,4 +37,14 @@ public class MediaMetrics {
     public void recordPresign(String variant) {
         registry.counter("media_presigned_total", "variant", variant).increment();
     }
+
+    /**
+     * H-5 relay aging: incremented by the number of FAILED outbox rows the
+     * nightly retention scheduler aged to terminal DEAD — the ops signal that
+     * a publish has been broken past the retention window and needs manual
+     * root-cause (DEAD rows are never auto-purged or replayed).
+     */
+    public void recordOutboxDead(int count) {
+        registry.counter("media_outbox_dead_total").increment(count);
+    }
 }

@@ -29,6 +29,12 @@ import java.util.UUID;
  * <p>Presign is a local computation (no S3 round-trip), but a misconfigured
  * or down signer still surfaces as 503 MED-12006 — object-storage failures
  * map to the D6 storage-unavailable code everywhere.</p>
+ *
+ * <p>H-5 bucket unification: presign uses the bucket-qualified 3-arg overload
+ * with {@code media.bucket} — the SAME property that drives upload and purge
+ * writes/deletes. (Historically presign rode the 2-arg default-bucket chain,
+ * i.e. {@code shop.storage.bucket} — same value today, two drift-capable
+ * trees; one property now drives read AND write AND delete.)</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -63,7 +69,7 @@ public class MediaQueryServiceImpl implements MediaQueryService {
 
         URL url;
         try {
-            url = storage.presignedGetUrl(row.getObjectKey(), properties.presignTtl());
+            url = storage.presignedGetUrl(properties.bucket(), row.getObjectKey(), properties.presignTtl());
         } catch (StorageException e) {
             log.error("Presign failed for media {} object {}", mediaId, row.getObjectKey(), e);
             throw BusinessException.of(ErrorCode.MEDIA_STORAGE_UNAVAILABLE);

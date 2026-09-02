@@ -413,6 +413,11 @@ class UploadIT extends AbstractMediaIntegrationTest {
         }
 
         @Override
+        public URL presignedGetUrl(String bucket, String key, Duration ttl) {
+            return delegate.presignedGetUrl(bucket, key, ttl);
+        }
+
+        @Override
         public URL presignedPutUrl(String key, String contentType, Duration ttl) {
             return delegate.presignedPutUrl(key, contentType, ttl);
         }

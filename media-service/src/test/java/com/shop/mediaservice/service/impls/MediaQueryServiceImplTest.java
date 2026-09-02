@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -50,6 +51,7 @@ class MediaQueryServiceImplTest {
 
     private static final UUID MEDIA_ID = UUID.fromString("d1000000-0000-0000-0000-000000000001");
     private static final Duration TTL = Duration.ofDays(7);
+    private static final String BUCKET = "media";
 
     @BeforeEach
     void setUp() {
@@ -84,7 +86,8 @@ class MediaQueryServiceImplTest {
 
     private URL presignedFor(String objectKey) throws Exception {
         URL url = new URL("http://minio.test:9000/media/" + objectKey + "?X-Amz-Signature=sig");
-        when(storage.presignedGetUrl(objectKey, TTL)).thenReturn(url);
+        // H-5: reads presign against the EXPLICIT media.bucket (3-arg overload)
+        when(storage.presignedGetUrl(BUCKET, objectKey, TTL)).thenReturn(url);
         return url;
     }
 
@@ -195,7 +198,7 @@ class MediaQueryServiceImplTest {
     @DisplayName("storage presign failure → 503 MED-12006")
     void storageFailureIs503Med12006() {
         stored(row("display", "webp"));
-        when(storage.presignedGetUrl(MEDIA_ID + "/display.webp", TTL))
+        when(storage.presignedGetUrl(BUCKET, MEDIA_ID + "/display.webp", TTL))
                 .thenThrow(new StorageException("storage down"));
 
         assertThatThrownBy(() -> queryService.resolve(MEDIA_ID, "display", "auto"))
@@ -224,6 +227,20 @@ class MediaQueryServiceImplTest {
         stored(row("display", "webp"));
         queryService.resolve(MEDIA_ID, "display", "auto");
 
-        verify(storage).presignedGetUrl(MEDIA_ID + "/display.webp", TTL);
+        verify(storage).presignedGetUrl(BUCKET, MEDIA_ID + "/display.webp", TTL);
+    }
+
+    // --- H-5 bucket unification: reads presign against media.bucket explicitly ---
+
+    @Test
+    @DisplayName("presign goes through the 3-arg bucket-qualified overload with media.bucket")
+    void resolve_presignsAgainstTheMediaBucketProperty() throws Exception {
+        stored(row("display", "webp"));
+        queryService.resolve(MEDIA_ID, "display", "auto");
+
+        // the properties record's bucket value — NOT defaultBucket() — drives the read
+        verify(storage).presignedGetUrl(BUCKET, MEDIA_ID + "/display.webp", TTL);
+        verify(storage, never()).presignedGetUrl(MEDIA_ID + "/display.webp", TTL);
+        verify(storage, never()).defaultBucket();
     }
 }
