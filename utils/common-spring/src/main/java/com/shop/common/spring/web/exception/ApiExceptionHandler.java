@@ -195,11 +195,15 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, WebRequest request) {
-        String mostSpecificMessage = exception.getMostSpecificCause().getMessage();
+        // H32 — the most-specific cause's message is the JDBC driver's raw text
+        // (constraint name, table, column, SQL state, row payload). Echoing it
+        // back to the client leaks the data-model layout. Log the cause for
+        // operators and return the canonical internal-error string to the caller.
+        String safeMessage = Messages.get(ErrorCode.INTERNAL_SERVER_ERROR.getMessageKey());
         return buildErrorResponse(
-                HttpStatus.CONFLICT,
-                ErrorCode.CONFLICT.getCode(),
-                mostSpecificMessage,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                safeMessage,
                 null,
                 request,
                 exception,
