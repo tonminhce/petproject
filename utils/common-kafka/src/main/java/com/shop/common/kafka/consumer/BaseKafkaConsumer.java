@@ -44,10 +44,12 @@ public abstract class BaseKafkaConsumer<K, V> {
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * Raw-wire entry: decode the sanctioned (double-encoded) record value —
-     * tolerant of single-encoded JSON too — and hand the bound event to the
-     * typed handler. A decode failure logs at ERROR and ack-skips without
-     * invoking the handler (fleet containment: no DLT, no container crash).
+     * Raw-wire entry: decode the record value — the production wire is
+     * single-encoded JSON (R1); a legacy double-encoded token (pre-R1
+     * in-flight shape, H-1 tolerance) is unwrapped first — and hand the
+     * bound event to the typed handler. A decode failure logs at ERROR and
+     * ack-skips without invoking the handler (fleet containment: no DLT, no
+     * container crash).
      */
     protected void processMessage(String rawValue, MessageHeaders headers, Class<V> type, Consumer<V> handler) {
         V event = decodeContained(rawValue, type);
@@ -81,11 +83,12 @@ public abstract class BaseKafkaConsumer<K, V> {
     }
 
     /**
-     * Unwrap-once + typed bind: a textual top-level node (the sanctioned
-     * double-encoded wire — a JSON string token wrapping the event JSON) is
-     * unwrapped and parsed again; a non-textual node binds directly
-     * (single-encoded tolerance). Any decode failure returns {@code null} so
-     * the caller ack-skips.
+     * Unwrap-once + typed bind: a textual top-level node (the LEGACY
+     * double-encoded wire — a JSON string token wrapping the event JSON;
+     * H-1 defense-in-depth for in-flight records) is unwrapped and parsed
+     * again; a non-textual node binds directly (the production single-encoded
+     * wire since R1). Any decode failure returns {@code null} so the caller
+     * ack-skips.
      */
     private V decodeContained(String rawValue, Class<V> type) {
         if (rawValue == null) {
@@ -95,8 +98,8 @@ public abstract class BaseKafkaConsumer<K, V> {
         try {
             JsonNode node = WIRE_MAPPER.readTree(rawValue);
             if (node.isTextual()) {
-                // Double-encoded wire: the fleet producer JSON-string-encoded
-                // the payload — unwrap once before binding.
+                // Legacy double-encoded wire (pre-R1): an old producer
+                // JSON-string-encoded the payload — unwrap once before binding.
                 node = WIRE_MAPPER.readTree(node.textValue());
             }
             return WIRE_MAPPER.treeToValue(node, type);

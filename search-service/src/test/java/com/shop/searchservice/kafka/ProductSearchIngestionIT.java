@@ -6,7 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.shop.common.kafka.serialization.JsonKafkaSerializer;
+import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.searchservice.support.AbstractSearchIntegrationTest;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,16 +39,17 @@ import static org.awaitility.Awaitility.await;
 
 /**
  * End-to-end ingestion contract over real Kafka + ES containers: records are
- * produced through the REAL fleet wire path — {@code KafkaTemplate} with the
- * fleet {@code JsonKafkaSerializer} (the exact producer path of product's
- * {@code OutboxRelay}), so the payload String lands DOUBLE-ENCODED (a JSON
- * string token wrapping the event JSON). F-5: the helper previously used a
- * {@code StringSerializer} (single-encoded) — a test wire that never matched
- * production, which is why the double-encoded drop survived the ITs. The live
- * {@code search-service} group must unwrap-once (spec §4.2) and mirror events
- * as upsert/delete operations on the {@code products} alias (spec D1, F1
- * bidirectional status). Poison records must never stall the partition —
- * each negative case proves progression via a marker product event sent after.
+ * produced through the SAME path production uses — {@link KafkaMessagePublisher}
+ * over a StringSerializer ×2 template (the {@code stringKafkaTemplate}
+ * semantics of product's {@code OutboxRelay}, R1) — so the payload String
+ * lands SINGLE-ENCODED UTF-8 JSON on the wire. The live
+ * {@code search-service} group binds single-encoded events directly and must
+ * unwrap-once (spec §4.2) the LEGACY double-encoded shape (a JSON string
+ * token wrapping the event JSON) that pre-R1 in-flight records may still
+ * carry — pinned by the legacy-wire test. The helper previously used a
+ * {@code JsonKafkaSerializer} double-encoding template — a wire production
+ * no longer emits. Poison records must never stall the partition — each
+ * negative case proves progression via a marker product event sent after.
  */
 class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
 
@@ -66,22 +66,25 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
     private String bootstrapServers;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaTemplate<String, String> producerTemplate;
+    private KafkaMessagePublisher kafkaMessagePublisher;
 
     @BeforeEach
     void initProducer() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        // The fleet producer's value serializer (KafkaAutoConfiguration): a
-        // payload String gets JSON-string-encoded → double-encoded on the wire.
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonKafkaSerializer.class.getName());
-        kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
+        // The R1 production path: KafkaMessagePublisher over StringSerializer
+        // ×2 (stringKafkaTemplate semantics) — the payload String is forwarded
+        // as raw UTF-8 bytes, single-encoded JSON on the wire.
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        producerTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
+        kafkaMessagePublisher = new KafkaMessagePublisher(producerTemplate);
     }
 
     @AfterEach
     void closeProducer() {
-        kafkaTemplate.destroy();
+        producerTemplate.destroy();
     }
 
     @Test
@@ -110,24 +113,24 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
     }
 
     @Test
-    @DisplayName("double-encoded fleet wire token (OutboxRelay shape) is unwrapped and indexed (F-5)")
-    void doubleEncodedFleetWireTokenIsAccepted() throws Exception {
+    @DisplayName("LEGACY double-encoded fleet token (pre-R1 in-flight shape) is unwrapped and indexed (F-5, H-1)")
+    void legacyDoubleEncodedTokenIsAccepted() throws Exception {
         UUID productId = UUID.randomUUID();
 
-        send(productId, payload(productId, "ProductCreated", "ACTIVE"));
+        sendLegacyDoubleEncoded(productId, payload(productId, "ProductCreated", "ACTIVE"));
 
-        // Wire proof on the real topic: the record value is a JSON string
-        // token wrapping the event JSON — the shape that the old
-        // JsonDeserializer-only consumer config dropped before the listener.
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 wire that
+        // in-flight records may still carry.
         ConsumerRecord<String, String> record = awaitRecord(productId);
         assertThat(record).as("record on %s", TOPIC).isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
-        assertThat(token.isTextual()).as("fleet wire shape is a JSON string token").isTrue();
+        assertThat(token.isTextual()).as("legacy wire shape is a JSON string token").isTrue();
         JsonNode unwrapped = objectMapper.readTree(token.textValue());
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("ProductCreated");
         assertThat(unwrapped.get("productId").textValue()).isEqualTo(productId.toString());
 
-        // ...and the double-encoded record is actually ingested.
+        // ...and the legacy double-encoded record is actually ingested.
         Map<String, Object> doc = awaitDocIndexed(productId);
         assertThat(doc)
             .containsEntry("id", productId.toString())
@@ -292,13 +295,25 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         return payload;
     }
 
+    /** Publishes through the R1 production path: single-encoded JSON on the wire. */
     private void send(UUID productId, Map<String, Object> payload) {
         try {
-            kafkaTemplate.send(TOPIC, productId.toString(), objectMapper.writeValueAsString(payload))
-                .get(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            kafkaMessagePublisher.publish(TOPIC, productId.toString(),
+                objectMapper.writeValueAsString(payload));
+        } catch (Exception e) {
             throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Publishes the pre-R1 legacy wire: a JSON string token wrapping the event
+     * JSON (H-1 tolerance pin for in-flight records from pre-R1 producers).
+     */
+    private void sendLegacyDoubleEncoded(UUID productId, Map<String, Object> payload) {
+        try {
+            String payloadJson = objectMapper.writeValueAsString(payload);
+            kafkaMessagePublisher.publish(TOPIC, productId.toString(),
+                objectMapper.writeValueAsString(payloadJson));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -306,10 +321,7 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
 
     private void sendRaw(String json) {
         try {
-            kafkaTemplate.send(TOPIC, UUID.randomUUID().toString(), json).get(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
+            kafkaMessagePublisher.publish(TOPIC, UUID.randomUUID().toString(), json);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

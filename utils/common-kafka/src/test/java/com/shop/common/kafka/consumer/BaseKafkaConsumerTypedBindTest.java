@@ -45,7 +45,7 @@ class BaseKafkaConsumerTypedBindTest {
     }
 
     @Test
-    @DisplayName("the sanctioned double-encoded fleet wire token binds the typed event (incl. ISO instant)")
+    @DisplayName("the legacy double-encoded (pre-R1) fleet wire token binds the typed event (incl. ISO instant)")
     void doubleEncodedTokenBindsTypedEvent() {
         String token = "\"{\\\"eventId\\\":\\\"e-1\\\",\\\"eventType\\\":\\\"shipping.delivered.v1\\\","
             + "\\\"occurredAt\\\":\\\"2026-09-01T10:00:00Z\\\",\\\"orderId\\\":\\\"" + ORDER_ID + "\\\"}\"";

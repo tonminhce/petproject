@@ -16,8 +16,10 @@ class PaymentProviderConfigTest {
             .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, StripeProvider.class);
 
     @Test
-    void mockIsActiveByDefaultAndResolvesAsPrimary() {
-        contextRunner.run(ctx -> {
+    void mockIsActiveWhenExplicitlySelectedAndResolvesAsPrimary() {
+        // A11: no matchIfMissing — prod must pick a provider explicitly,
+        // so the mock is only active with shop.payment.provider=mock.
+        contextRunner.withPropertyValues("shop.payment.provider=mock").run(ctx -> {
             assertThat(ctx).hasBean("mockProvider");
             assertThat(ctx).doesNotHaveBean("stripeProvider");
             assertThat(ctx.getBean(PaymentProvider.class)).isSameAs(ctx.getBean("mockProvider"));
@@ -54,6 +56,7 @@ class PaymentProviderConfigTest {
     @Test
     void failsWhenNotExactlyOneProviderActive() {
         new ApplicationContextRunner()
+                .withPropertyValues("shop.payment.provider=mock")
                 .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, ExtraProviderConfig.class)
                 .run(ctx -> {
                     assertThat(ctx).hasFailed();

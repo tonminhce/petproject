@@ -184,7 +184,7 @@ class PaymentFlowIT extends AbstractIntegrationTest {
 
     @Test
     @Order(5)
-    @DisplayName("5. amount-mismatch webhook → state unchanged, event row FAILED")
+    @DisplayName("5. amount-mismatch webhook → state unchanged, event row FAILED_RETRYABLE (C3)")
     void amountMismatchLeavesStateAndMarksEventFailed() {
         Payment payment = createCapturedPendingPayment();
         String body = webhookBody(payment, "CAPTURED", new BigDecimal("99.00"), UUID.randomUUID().toString());
@@ -195,7 +195,7 @@ class PaymentFlowIT extends AbstractIntegrationTest {
         await().atMost(AWAIT).untilAsserted(() -> {
             List<PaymentEvent> events = eventsFor(payment.getId());
             assertThat(events).hasSize(1);
-            assertThat(events.get(0).getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED);
+            assertThat(events.get(0).getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
         });
         Payment row = reload(payment.getId());
         assertThat(row.getStatus()).isEqualTo(PaymentStatus.PENDING);
@@ -234,7 +234,7 @@ class PaymentFlowIT extends AbstractIntegrationTest {
 
     @Test
     @Order(7)
-    @DisplayName("7. garbage JSON with VALID signature → 200 ack + FAILED event, endpoint still processes")
+    @DisplayName("7. garbage JSON with VALID signature → 200 ack + FAILED_RETRYABLE event, endpoint still processes")
     void poisonedPayloadIsAckedAndEndpointSurvives() {
         String garbage = "{ this is not json ";
         ResponseEntity<String> poisoned = postSignedWebhook(garbage);
@@ -245,7 +245,7 @@ class PaymentFlowIT extends AbstractIntegrationTest {
                     .filter(e -> garbage.equals(e.getPayload()))
                     .toList();
             assertThat(failed).hasSize(1);
-            assertThat(failed.get(0).getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED);
+            assertThat(failed.get(0).getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
             assertThat(failed.get(0).getProviderEventId()).startsWith("unparseable-");
         });
 

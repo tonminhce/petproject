@@ -49,13 +49,13 @@ class ShippingDeliveredConsumerTest {
         return e;
     }
 
-    /** The sanctioned fleet wire: payload String JSON-string-encoded by JsonKafkaSerializer. */
+    /** The LEGACY pre-R1 wire: payload String JSON-string-encoded by JsonKafkaSerializer (H-1 tolerance). */
     private String doubleEncodedToken(ShippingDeliveredEvent event) throws JsonProcessingException {
         return objectMapper.writeValueAsString(objectMapper.writeValueAsString(event));
     }
 
     @Test
-    @DisplayName("H-1: the sanctioned double-encoded fleet wire token binds to the typed handler")
+    @DisplayName("H-1: the legacy double-encoded (pre-R1) fleet wire token binds to the typed handler")
     void onMessage_doubleEncodedToken_bindsTypedEventAndDelegates() throws JsonProcessingException {
         ShippingDeliveredEvent event = deliveredEvent();
 

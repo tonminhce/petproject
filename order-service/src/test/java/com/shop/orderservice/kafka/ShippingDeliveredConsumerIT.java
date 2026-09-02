@@ -2,6 +2,7 @@ package com.shop.orderservice.kafka;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.repository.OrderRepository;
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -26,23 +26,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * Shipping-delivered consumer against the REAL Kafka wire (H-1): the fleet
- * relay (shipping-service {@code ShippingOutboxRelay}) publishes the outbox
- * payload STRING through the {@code JsonKafkaSerializer} producer, so records
- * arrive DOUBLE-ENCODED — a JSON string token wrapping the event JSON. This
- * IT publishes through the SAME context {@code KafkaTemplate}, reproducing
- * the exact wire shape. Under the previous {@code JsonDeserializer} wiring
- * the token failed value deserialization before the listener ever ran — the
- * fleet's shipping→order delivered transition silently dropped every event;
- * with the H-1 String base the event is unwrapped-once at the consumer
- * boundary and SHIPPED orders transition to DELIVERED. Poison tokens and
- * unknown orders are contained ack-skips — the partition keeps advancing.
+ * Shipping-delivered consumer against the REAL Kafka wire (R1 + H-1): this IT
+ * publishes through the SAME production path as shipping-service's
+ * {@code ShippingOutboxRelay} — the context {@link KafkaMessagePublisher} (R1
+ * single-encode: the outbox payload STRING forwarded as raw UTF-8 bytes), so
+ * records arrive SINGLE-ENCODED UTF-8 JSON. Under the previous
+ * {@code JsonDeserializer} wiring real records failed value deserialization
+ * before the listener ever ran — the fleet's shipping→order delivered
+ * transition silently dropped every event; with the H-1 String base the event
+ * binds directly and SHIPPED orders transition to DELIVERED. One pin keeps
+ * the LEGACY double-encoded shape (a JSON string token wrapping the event
+ * JSON, from pre-R1 producers) accepted — H-1 defense-in-depth for
+ * in-flight/retained records. Poison tokens and unknown orders are contained
+ * ack-skips — the partition keeps advancing.
  */
 class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
 
@@ -58,7 +59,7 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
     private OutboxEventRepository outboxEventRepository;
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaMessagePublisher kafkaMessagePublisher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -97,13 +98,16 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
         return orderRepository.save(order);
     }
 
-    /** Publishes EXACTLY like ShippingOutboxRelay: payload String via the fleet KafkaTemplate. */
+    /** Publishes EXACTLY like ShippingOutboxRelay: payload String via the fleet KafkaMessagePublisher (R1 single-encode). */
     private void publishExactlyLikeRelay(String payloadJson, UUID orderId) {
+        kafkaMessagePublisher.publish(TOPIC, orderId.toString(), payloadJson);
+    }
+
+    /** Publishes the pre-R1 legacy wire: a JSON string token wrapping the event JSON (H-1 in-flight tolerance). */
+    private void publishLegacyDoubleEncoded(String payloadJson, UUID orderId) {
         try {
-            kafkaTemplate.send(TOPIC, orderId.toString(), payloadJson).get(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
+            kafkaMessagePublisher.publish(TOPIC, orderId.toString(),
+                objectMapper.writeValueAsString(payloadJson));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -132,8 +136,8 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
     }
 
     @Test
-    @DisplayName("double-encoded shipping.delivered.v1 transitions the SHIPPED order to DELIVERED")
-    void doubleEncodedDeliveredEventTransitionsOrderToDelivered() {
+    @DisplayName("shipping.delivered.v1 (production single-encoded wire) transitions the SHIPPED order to DELIVERED")
+    void deliveredEventTransitionsOrderToDelivered() {
         Order order = shippedOrder();
 
         publishExactlyLikeRelay(deliveredPayload(UUID.randomUUID().toString(), order.getId()), order.getId());
@@ -153,27 +157,33 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
     }
 
     @Test
-    @DisplayName("real kafka record value is a JSON string token wrapping the event (H-1 wire shape)")
-    void wireShapeIsDoubleEncodedOnTheRealBroker() {
+    @DisplayName("H-1 pin: a LEGACY double-encoded record (pre-R1 in-flight shape) is unwrapped and processed")
+    void legacyDoubleEncodedDeliveredEventIsStillProcessed() {
         Order order = shippedOrder();
-        publishExactlyLikeRelay(deliveredPayload(UUID.randomUUID().toString(), order.getId()), order.getId());
+        publishLegacyDoubleEncoded(deliveredPayload(UUID.randomUUID().toString(), order.getId()), order.getId());
 
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 shape that
+        // in-flight/retained records may still carry.
         ConsumerRecord<String, String> record = awaitRecord(TOPIC, order.getId().toString());
-
         assertThat(record).as("record on %s with key=orderId", TOPIC).isNotNull();
-        JsonNode node = readTree(record.value());
-        // Under the old JsonDeserializer-only config this exact record was
-        // dropped before the listener ever ran.
-        assertThat(node.isTextual())
-            .as("H-1 pin: wire value must be double-encoded (JSON string token)")
+        JsonNode token = readTree(record.value());
+        assertThat(token.isTextual())
+            .as("legacy wire shape is a JSON string token")
             .isTrue();
-        JsonNode unwrapped = readTree(node.textValue());
+        JsonNode unwrapped = readTree(token.textValue());
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("shipping.delivered.v1");
         assertThat(unwrapped.get("orderId").textValue()).isEqualTo(order.getId().toString());
+
+        // ...and the legacy double-encoded record is actually ingested.
+        await().atMost(AWAIT).untilAsserted(() ->
+            assertThat(orderRepository.findById(order.getId()).orElseThrow().getStatus())
+                .as("legacy double-encoded delivered event must still apply")
+                .isEqualTo(OrderStatus.DELIVERED));
     }
 
     @Test
-    @DisplayName("poison double-encoded token never stalls the partition — a later delivered event still applies")
+    @DisplayName("poison bytes never stall the partition — a later delivered event still applies")
     void poisonTokenDoesNotStallPartition() {
         Order order = shippedOrder();
         publishExactlyLikeRelay("{\"broken\"", order.getId());

@@ -3,6 +3,7 @@ package com.shop.productservice.kafka;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
+import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.entity.OutboxEvent;
 import com.shop.productservice.entity.Product;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -34,17 +34,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * Rating lifecycle consumer against the REAL Kafka wire (H-1): the fleet
- * relay (rating-service {@code RatingOutboxRelay}) publishes the outbox
- * payload STRING through the {@code JsonKafkaSerializer} producer, so records
- * arrive DOUBLE-ENCODED — a JSON string token wrapping the event JSON. This
- * IT publishes through the SAME context {@code KafkaTemplate}, reproducing
- * the exact wire shape. Under the previous {@code JsonDeserializer} wiring
- * the token failed value deserialization before the listener ever ran — the
- * fleet's rating→product aggregation silently dropped every event; with the
- * H-1 String base the event is unwrapped-once at the consumer boundary and
- * the product aggregates update. Poison tokens must never stall the
- * partition.
+ * Rating lifecycle consumer against the REAL Kafka wire (R1 + H-1): this IT
+ * publishes through the SAME production path as rating-service's
+ * {@code RatingOutboxRelay} — the context {@link KafkaMessagePublisher} (R1
+ * single-encode: the outbox payload STRING forwarded as raw UTF-8 bytes), so
+ * records arrive SINGLE-ENCODED UTF-8 JSON. Under the previous
+ * {@code JsonDeserializer} wiring real records failed value deserialization
+ * before the listener ever ran — the fleet's rating→product aggregation
+ * silently dropped every event; with the H-1 String base the event binds
+ * directly (and a legacy double-encoded token from pre-R1 producers would be
+ * unwrapped-once — tolerance pinned in {@link MediaDeletedConsumerIT}). Poison
+ * tokens must never stall the partition.
  */
 class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
 
@@ -62,7 +62,7 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
     private OutboxEventRepository outboxRepository;
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaMessagePublisher kafkaMessagePublisher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -99,9 +99,9 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
         return productRepository.save(p);
     }
 
-    /** Publishes EXACTLY like RatingOutboxRelay: payload String via the fleet KafkaTemplate. */
+    /** Publishes EXACTLY like RatingOutboxRelay: payload String via the fleet KafkaMessagePublisher (R1 single-encode). */
     private void publishExactlyLikeRelay(String payloadJson, UUID productId) {
-        kafkaTemplate.send(TOPIC, productId.toString(), payloadJson).join();
+        kafkaMessagePublisher.publish(TOPIC, productId.toString(), payloadJson);
     }
 
     /** Mirrors RatingEventService.record: 13 contract fields, LinkedHashMap order. */
@@ -132,8 +132,8 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("double-encoded rating.submitted.v1 copies the snapshot onto the product and emits ProductUpdated")
-    void doubleEncodedRatingSubmittedUpdatesAggregatesAndEmitsProductUpdated() {
+    @DisplayName("rating.submitted.v1 (production single-encoded wire) copies the snapshot onto the product and emits ProductUpdated")
+    void ratingSubmittedUpdatesAggregatesAndEmitsProductUpdated() {
         Product product = product("iPhone 15");
         outboxRepository.deleteAllInBatch(); // isolate this test's ProductUpdated assertions
 
@@ -159,9 +159,9 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("real kafka record value is a JSON string token wrapping the event (H-1 wire shape)")
-    void wireShapeIsDoubleEncodedOnTheRealBroker() {
-        Product product = product("Pin Product");
+    @DisplayName("production wire (KafkaMessagePublisher) is SINGLE-ENCODED JSON on the real broker (R1)")
+    void wireShapeIsSingleEncodedOnTheRealBroker() {
+        Product product = product("Wire Product");
         publishExactlyLikeRelay(ratingPayload(UUID.randomUUID().toString(), product.getId(), "CREATED", "4.00", 1),
             product.getId());
 
@@ -174,25 +174,18 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-        // The fleet serializer string-encodes the payload String — the raw wire
-        // value is a STRING TOKEN, not the event object itself. Under the old
-        // JsonDeserializer-only config this exact record was dropped.
+        // R1: the payload String is forwarded as raw UTF-8 bytes — the raw
+        // wire value IS the event object, not a JSON string token.
         assertThat(node.isTextual())
-            .as("H-1 pin: wire value must be double-encoded (JSON string token)")
-            .isTrue();
-        JsonNode unwrapped;
-        try {
-            unwrapped = objectMapper.readTree(node.textValue());
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-        assertThat(unwrapped.get("eventType").textValue()).isEqualTo("rating.submitted.v1");
-        assertThat(unwrapped.get("productId").textValue()).isEqualTo(product.getId().toString());
-        assertThat(unwrapped.get("avgRating").decimalValue()).isEqualByComparingTo("4.00");
+            .as("R1 pin: wire value must be single-encoded (a JSON object, not a string token)")
+            .isFalse();
+        assertThat(node.get("eventType").textValue()).isEqualTo("rating.submitted.v1");
+        assertThat(node.get("productId").textValue()).isEqualTo(product.getId().toString());
+        assertThat(node.get("avgRating").decimalValue()).isEqualByComparingTo("4.00");
     }
 
     @Test
-    @DisplayName("poison double-encoded token never stalls the partition — a later rating event still applies")
+    @DisplayName("poison bytes never stall the partition — a later rating event still applies")
     void poisonTokenDoesNotStallPartition() {
         Product product = product("Poison Product");
         publishExactlyLikeRelay("{\"broken\"", product.getId());

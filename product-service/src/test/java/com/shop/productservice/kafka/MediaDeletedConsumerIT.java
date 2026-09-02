@@ -3,6 +3,7 @@ package com.shop.productservice.kafka;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
+import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.entity.OutboxEvent;
 import com.shop.productservice.entity.Product;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -33,14 +33,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * MediaDeleted consumer against the REAL Kafka wire (media epic spec D4):
- * the fleet relay publishes the outbox payload STRING through the
- * JsonKafkaSerializer producer, so records arrive DOUBLE-ENCODED (T4 gate —
- * this IT publishes through the SAME context KafkaTemplate, reproducing the
- * exact wire shape of MediaOutboxRelay). On MediaDeleted the product's
- * media_id is cleared, the derived image falls back to the legacy imageUrl,
- * and a ProductUpdated outbox row (→ search refresh) is emitted per product.
- * Unknown eventTypes and poison bytes must not stall the partition.
+ * MediaDeleted consumer against the REAL Kafka wire (media epic spec D4, R1 +
+ * H-1): this IT publishes through the SAME production path as MediaOutboxRelay
+ * — the context {@link KafkaMessagePublisher} (R1 single-encode: JSON-as-String
+ * forwarded as raw UTF-8 bytes). On MediaDeleted the product's media_id is
+ * cleared, the derived image falls back to the legacy imageUrl, and a
+ * ProductUpdated outbox row (→ search refresh) is emitted per product. One
+ * pin keeps the LEGACY double-encoded shape (a JSON string token wrapping the
+ * event JSON, from pre-R1 producers) accepted — H-1 defense-in-depth for
+ * in-flight/retained records. Unknown eventTypes and poison bytes must not
+ * stall the partition.
  */
 class MediaDeletedConsumerIT extends AbstractIntegrationTest {
 
@@ -55,7 +57,7 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
     private OutboxEventRepository outboxRepository;
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaMessagePublisher kafkaMessagePublisher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -95,9 +97,14 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
         return p;
     }
 
-    /** Publishes EXACTLY like MediaOutboxRelay: payload String via the fleet KafkaTemplate. */
+    /** Publishes EXACTLY like MediaOutboxRelay: payload String via the fleet KafkaMessagePublisher (R1 single-encode). */
     private void publishExactlyLikeRelay(String payloadJson, UUID key) {
-        kafkaTemplate.send(TOPIC, key.toString(), payloadJson).join();
+        kafkaMessagePublisher.publish(TOPIC, key.toString(), payloadJson);
+    }
+
+    /** Publishes the pre-R1 legacy wire: a JSON string token wrapping the event JSON (H-1 in-flight tolerance). */
+    private void publishLegacyDoubleEncoded(String payloadJson, UUID key) throws Exception {
+        kafkaMessagePublisher.publish(TOPIC, key.toString(), objectMapper.writeValueAsString(payloadJson));
     }
 
     private String mediaPayload(String eventType, UUID mediaId) {
@@ -120,8 +127,8 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("double-encoded MediaDeleted clears media_id and emits one ProductUpdated per product")
-    void doubleEncodedMediaDeleted_clearsReferenceAndEmitsProductUpdated() {
+    @DisplayName("MediaDeleted (production single-encoded wire) clears media_id and emits one ProductUpdated per product")
+    void mediaDeleted_clearsReferenceAndEmitsProductUpdated() {
         Product product = productWithMedia(MEDIA_ID, "iPhone 15");
         publishExactlyLikeRelay(mediaPayload("MediaDeleted", MEDIA_ID), MEDIA_ID);
 
@@ -149,23 +156,28 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("real kafka record value is a JSON string token wrapping the event (T4 wire shape)")
-    void wireShapeIsDoubleEncodedOnTheRealBroker() throws Exception {
-        productWithMedia(MEDIA_ID, "iPhone 15");
-        publishExactlyLikeRelay(mediaPayload("MediaDeleted", MEDIA_ID), MEDIA_ID);
+    @DisplayName("H-1 pin: a LEGACY double-encoded record (pre-R1 in-flight shape) is unwrapped and processed")
+    void legacyDoubleEncodedMediaDeletedIsStillProcessed() throws Exception {
+        Product product = productWithMedia(MEDIA_ID, "iPhone 15");
+        publishLegacyDoubleEncoded(mediaPayload("MediaDeleted", MEDIA_ID), MEDIA_ID);
 
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 shape that
+        // in-flight/retained records may still carry.
         ConsumerRecord<String, String> record = awaitRecord(TOPIC, MEDIA_ID.toString());
-
         assertThat(record).as("record on media.lifecycle.v1 with key=mediaId").isNotNull();
-        JsonNode node = objectMapper.readTree(record.value());
-        // The fleet serializer string-encodes the payload String — the raw wire
-        // value is a STRING TOKEN, not the event object itself.
-        assertThat(node.isTextual())
-            .as("T4 gate: wire value must be double-encoded (JSON string token)")
+        JsonNode token = objectMapper.readTree(record.value());
+        assertThat(token.isTextual())
+            .as("legacy wire shape is a JSON string token")
             .isTrue();
-        JsonNode unwrapped = objectMapper.readTree(node.textValue());
+        JsonNode unwrapped = objectMapper.readTree(token.textValue());
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("MediaDeleted");
         assertThat(unwrapped.get("mediaId").textValue()).isEqualTo(MEDIA_ID.toString());
+
+        // ...and the legacy double-encoded record is actually ingested.
+        await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+            assertThat(productRepository.findById(product.getId()).orElseThrow().getMediaId())
+                .as("legacy double-encoded MediaDeleted must still clear the reference").isNull());
     }
 
     @Test
