@@ -90,8 +90,10 @@ class UploadIT extends AbstractMediaIntegrationTest {
         duplicateCount = counter(MediaMetrics.OUTCOME_DUPLICATE);
         rejectedCount = counter(MediaMetrics.OUTCOME_REJECTED);
         FlakyStorage.writtenKeys.clear();
+        FlakyStorage.deletedKeys.clear();
         FlakyStorage.failAfter = Integer.MAX_VALUE;
         FlakyStorage.writes = 0;
+        FlakyMedia.failSaveAndFlush = false;
     }
 
     // --- happy path: one test per allowed format ---
@@ -304,6 +306,80 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(counter(MediaMetrics.OUTCOME_REJECTED) - rejectedCount).isEqualTo(1.0);
     }
 
+    // --- undecodable but magic-valid (Task-3 reclassification) ---
+
+    @Test
+    @DisplayName("magic-valid but undecodable upload → 415 MED-12003 (not a decodable image), nothing stored")
+    void undecodableButMagicValid_returns415Med12003() {
+        byte[] head = new byte[32];
+        head[0] = (byte) 0xFF; head[1] = (byte) 0xD8; head[2] = (byte) 0xFF; head[3] = (byte) 0xE0;
+        head[4] = 0x00; head[5] = 0x02; // invalid APP0 segment length — no codec can read the body
+        for (int i = 6; i < head.length; i++) {
+            head[i] = 'x';
+        }
+
+        assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", head)))
+                .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo("MED-12003");
+                    assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+                });
+
+        assertThat(mediaRepository.count()).isZero();
+        assertThat(listAllKeys()).isEmpty();
+        assertThat(counter(MediaMetrics.OUTCOME_REJECTED) - rejectedCount).isEqualTo(1.0);
+    }
+
+    // --- no-upscale (D2 downscale-only contract) ---
+
+    @Test
+    @DisplayName("small image: no upscaling — display/thumb keep the original dims, no padding")
+    void smallImage_noUpscale_variantsKeepOriginalDims() throws Exception {
+        int width = 100;
+        int height = 80;
+        byte[] source = TestImages.jpeg(width, height);
+
+        MediaResponse response = uploadService.upload(multipart("image/jpeg", source));
+
+        assertThat(properties.displayWidth()).as("test needs a cap above the source").isGreaterThan(width);
+        assertThat(properties.thumbWidth()).as("test needs a cap above the source").isGreaterThan(height);
+        for (MediaVariantResponse variant : response.variants()) {
+            assertThat(variant.width())
+                    .as("%s variant of a %dx%d image is NOT upscaled", variant.variant(), width, height)
+                    .isEqualTo(width);
+        }
+        // the rendered bytes are exactly the original dims — no padding, no scaling
+        for (MediaVariantResponse variant : response.variants()) {
+            StorageObject object = storage.download(BUCKET, variant.objectKey());
+            byte[] stored;
+            try (InputStream in = object.content()) {
+                stored = in.readAllBytes();
+            }
+            var decoded = ImageIO.read(new ByteArrayInputStream(stored));
+            assertThat(decoded).as("stored %s decodes", variant.objectKey()).isNotNull();
+            assertThat(decoded.getWidth()).isEqualTo(width);
+            assertThat(decoded.getHeight()).isEqualTo(height);
+        }
+    }
+
+    // --- persist failure after the S3 writes (orphan purge path) ---
+
+    @Test
+    @DisplayName("persist failure after S3 writes → objects purged (S3 delete attempted), no media row")
+    void persistFailure_purgesOrphans_noRow() throws Exception {
+        byte[] source = TestImages.jpeg(640, 480);
+        FlakyMedia.failSaveAndFlush = true;
+
+        assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", source)))
+                .isInstanceOf(RuntimeException.class);
+
+        // the row never persisted, and the storage-side orphan cleanup ran:
+        // every key the pipeline wrote was deleted again
+        assertThat(FlakyStorage.writtenKeys).isNotEmpty();
+        assertThat(FlakyStorage.deletedKeys).containsExactlyInAnyOrderElementsOf(FlakyStorage.writtenKeys);
+        assertThat(listAllKeys()).isEmpty();
+        assertThat(mediaRepository.count()).isZero();
+    }
+
     // --- helpers ---
 
     private MultipartFile multipart(String contentType, byte[] bytes) {
@@ -348,6 +424,7 @@ class UploadIT extends AbstractMediaIntegrationTest {
     static final class FlakyStorage implements ObjectStorageService {
 
         static final List<String> writtenKeys = Collections.synchronizedList(new ArrayList<>());
+        static final List<String> deletedKeys = Collections.synchronizedList(new ArrayList<>());
         static volatile int failAfter = Integer.MAX_VALUE;
         static volatile int writes = 0;
 
@@ -404,6 +481,7 @@ class UploadIT extends AbstractMediaIntegrationTest {
 
         @Override
         public void delete(String bucket, String key) {
+            deletedKeys.add(key);
             delegate.delete(bucket, key);
         }
 
@@ -421,5 +499,28 @@ class UploadIT extends AbstractMediaIntegrationTest {
         public URL presignedPutUrl(String key, String contentType, Duration ttl) {
             return delegate.presignedPutUrl(key, contentType, ttl);
         }
+    }
+
+    /** Test-only media-repository wrapper: persist failure while the flag is set. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class FlakyMediaConfig {
+
+        @Bean
+        @Primary
+        MediaRepository flakyMediaRepository(MediaRepository real) {
+            return (MediaRepository) java.lang.reflect.Proxy.newProxyInstance(
+                    MediaRepository.class.getClassLoader(),
+                    new Class<?>[] {MediaRepository.class},
+                    (proxy, method, args) -> {
+                        if (FlakyMedia.failSaveAndFlush && method.getName().equals("saveAndFlush")) {
+                            throw new RuntimeException("Injected media persist failure (test)");
+                        }
+                        return method.invoke(real, args);
+                    });
+        }
+    }
+
+    static final class FlakyMedia {
+        static volatile boolean failSaveAndFlush = false;
     }
 }

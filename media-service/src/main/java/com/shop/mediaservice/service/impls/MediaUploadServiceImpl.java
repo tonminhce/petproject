@@ -39,8 +39,8 @@ import java.util.UUID;
  * D1/D2 pipeline, in binding order:
  * <ol>
  *   <li>mime allowlist on the declared type → 415 MED-12003;</li>
- *   <li>magic-byte sniff must agree with the declared type — a corrupted or
- *       lying file → 400 MED-12001;</li>
+ *   <li>magic-byte sniff must agree with the declared type — a lying file →
+ *       400 MED-12001;</li>
  *   <li>size guard against {@code media.max-upload} → 413 MED-12002;</li>
  *   <li>SHA-256 dedup lookup — an existing media is returned (duplicate flag,
  *       same id) BEFORE any object is written;</li>
@@ -55,9 +55,11 @@ import java.util.UUID;
  * </ol>
  * Any failure after the first object write triggers best-effort orphan
  * deletion of the already-written keys; object-storage failures surface as
- * 503 MED-12006, undecodable uploads as 400 MED-12001. A unique-index race
- * with a concurrent duplicate upload resolves to the winner's media
- * (duplicate:true) and cleans up the loser's objects.
+ * 503 MED-12006, and undecodable uploads — magic-valid heads whose bodies no
+ * codec can read (H-5/Task-3 reclassification, the bytes are simply not a
+ * supported decodable image) — as 415 MED-12003. A unique-index race with a
+ * concurrent duplicate upload resolves to the winner's media (duplicate:true)
+ * and cleans up the loser's objects.
  */
 @Service
 @RequiredArgsConstructor
@@ -121,14 +123,17 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         // 5. metadata audit log (M1) — inspect, log, never store
         metadataInspector.inspect(source);
 
-        // 6. decode + full-res re-encode + six variants (corrupt render → 400)
+        // 6. decode + full-res re-encode + six variants (undecodable → 415)
         List<VariantRenderer.Render> renders;
         try {
             renders = renderer.render(source, format, properties.displayWidth(), properties.thumbWidth());
         } catch (VariantRenderer.InvalidImageException e) {
+            // magic-valid but undecodable — the bytes are NOT a supported
+            // image despite the head, so the type classification (415 family)
+            // is the honest answer, not "corrupt file" (Task-3 review ruling)
             log.warn("Upload rejected: magic-valid '{}' bytes are not decodable — {}", format, e.getMessage());
             metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
-            throw BusinessException.of(ErrorCode.MEDIA_INVALID_FILE);
+            throw BusinessException.of(ErrorCode.MEDIA_TYPE_NOT_ALLOWED);
         }
 
         UUID mediaId = UUID.randomUUID();
