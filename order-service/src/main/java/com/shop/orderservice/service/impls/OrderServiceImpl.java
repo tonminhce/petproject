@@ -258,9 +258,9 @@ public class OrderServiceImpl implements OrderService {
         orderStatusService.validateTransition(order.getStatus(), OrderStatus.CANCELLED);
 
         // Release stock only when PENDING (reservations are still PENDING in inventory).
-        // CONFIRMED: reservations are already COMMITTED — the release endpoint would
-        // reject them; restocking a confirmed order belongs to the refund flow
-        // (Phase 8) or a manual admin stock adjustment.
+        // CONFIRMED: reservations are already COMMITTED — H9 fix releases them via the
+        // releaseCommitted endpoint (restocking) on admin cancel. Without it, admin
+        // cancellation leaves stock stranded after the order is marked CANCELLED.
         if (order.getStatus() == OrderStatus.PENDING) {
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
@@ -268,13 +268,29 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
             releaseAllReservationsById(reservationIds);
             // Best-effort promotion release (spec §12 swallow pattern — TTL sweep covers
-            // failures; never mask the cancel flow). CONFIRMED branch: nothing —
-            // reservations are already COMMITTED; Phase 8 refund handles those.
+            // failures; never mask the cancel flow).
             if (order.getPromotionReservationId() != null) {
                 try {
                     promotionClient.release(order.getPromotionReservationId());
                 } catch (Exception pex) {
                     log.error("Failed to release promotion reservation {} during cancel",
+                        order.getPromotionReservationId(), pex);
+                }
+            }
+        } else if (order.getStatus() == OrderStatus.CONFIRMED && isAdmin) {
+            // H9 — admin cancel of CONFIRMED must restock (releaseCommitted). The
+            // release() path would reject the row because it's COMMITTED, not
+            // PENDING. Best-effort per the same convention as the PENDING branch.
+            List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
+                .map(OrderItem::getReservationId)
+                .filter(Objects::nonNull)
+                .toList();
+            releaseAllCommittedReservationsById(reservationIds);
+            if (order.getPromotionReservationId() != null) {
+                try {
+                    promotionClient.releaseCommitted(order.getPromotionReservationId());
+                } catch (Exception pex) {
+                    log.error("Failed to release committed promotion reservation {} during admin cancel",
                         order.getPromotionReservationId(), pex);
                 }
             }
@@ -295,6 +311,17 @@ public class OrderServiceImpl implements OrderService {
                 stockReservationService.release(id);
             } catch (Exception ex) {
                 log.error("Failed to release reservation {} during cancel", id, ex);
+            }
+        }
+    }
+
+    /** H9 — admin cancel CONFIRMED path; restocks via releaseCommitted. */
+    private void releaseAllCommittedReservationsById(List<UUID> reservationIds) {
+        for (UUID id : reservationIds) {
+            try {
+                stockReservationService.releaseCommitted(id);
+            } catch (Exception ex) {
+                log.error("Failed to release committed reservation {} during admin cancel", id, ex);
             }
         }
     }

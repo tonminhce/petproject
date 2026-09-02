@@ -23,4 +23,9 @@ public class StockReservationServiceImpl implements StockReservationService {
     public void release(UUID reservationId) {
         inventoryClient.release(reservationId);
     }
+
+    @Override
+    public void releaseCommitted(UUID reservationId) {
+        inventoryClient.releaseCommitted(reservationId);
+    }
 }
