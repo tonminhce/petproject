@@ -1,0 +1,24 @@
+databaseChangeLog:
+
+  # H29 — multi-tenant-scoped idempotency-key lookup needs the user on the
+  # payments row. The column is nullable: pre-existing service-to-service
+  # callers (and the @Audited rows that predate this change) keep working
+  # via the unscoped findByIdempotencyKey path until they're migrated.
+
+  - changeSet:
+      id: 006-payment-user-id
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: user_id
+                  type: uuid
+
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_user_idempotency
+            columns:
+              - column: { name: user_id }
+              - column: { name: idempotency_key }

@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       file: changelog-005-outbox-retention.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-006-payment-user-id.yaml
+      relativeToChangelogFile: true

@@ -47,6 +47,10 @@ public class Payment extends AbstractMappedEntity {
     @Column(name = "idempotency_key", nullable = false, length = 64)
     private String idempotencyKey;
 
+    /** H29 — multi-tenant scoping: idempotency-key lookup must include the user/tenant. */
+    @Column(name = "user_id")
+    private UUID userId;
+
     @Column(name = "receipt_key")
     private String receiptKey;
 
