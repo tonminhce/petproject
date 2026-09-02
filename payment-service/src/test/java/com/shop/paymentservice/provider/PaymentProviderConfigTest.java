@@ -54,6 +54,8 @@ class PaymentProviderConfigTest {
 
     @Test
     void stripeFailsFastOnBlankSecretKey() {
+        // C5 Task 4 (D10) — config-level belt; StripeProvider's constructor
+        // enforces the same rule. Message must name the env var ops has to set.
         contextRunner.withPropertyValues(
                         "shop.payment.provider=stripe",
                         "shop.payment.stripe.secret-key=")
@@ -61,7 +63,8 @@ class PaymentProviderConfigTest {
                     assertThat(ctx).hasFailed();
                     assertThat(rootCause(ctx.getStartupFailure()))
                             .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("STRIPE_SECRET_KEY");
+                            .hasMessageContaining("requires shop.payment.stripe.secret-key")
+                            .hasMessageContaining("SHOP_PAYMENT_STRIPE_SECRET_KEY");
                 });
     }
 
