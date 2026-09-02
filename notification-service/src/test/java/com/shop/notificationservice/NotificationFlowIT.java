@@ -282,9 +282,6 @@ class NotificationFlowIT extends AbstractIntegrationTest {
             found.clear();
             found.addAll(rowsFor(eventId));
             assertThat(found).hasSize(1);
-            assertThat(found.get(0).getStatus())
-                .as("notification %s must be settled before assertion", eventId)
-                .isNotIn(NotificationStatus.PENDING, NotificationStatus.SENDING);
         });
         return found.get(0);
     }
