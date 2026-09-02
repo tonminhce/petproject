@@ -1,0 +1,3712 @@
+{
+  "info": {
+    "name": "Petproject API - Comprehensive",
+    "description": "Every unique Spring MVC controller and webhook mapping discovered across services. Run Login first for bearer chaining. Limitations: replace the empty accessToken/refreshToken variables with credentials for your environment; localhost URLs and service ports must be reachable or overridden per environment. Collection-level bearer auth applies by default, while public login and webhook requests may override it. Service-to-service endpoints may require a SERVICE token and admin endpoints require an ADMIN token; the collection does not provision Keycloak users, secrets, Kafka, databases, or external provider credentials.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "authUrl",
+      "value": "http://localhost:8088"
+    },
+    {
+      "key": "productUrl",
+      "value": "http://localhost:8086"
+    },
+    {
+      "key": "inventoryUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "orderUrl",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "favouritesUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "paymentUrl",
+      "value": "http://localhost:8085"
+    },
+    {
+      "key": "shippingUrl",
+      "value": "http://localhost:8087"
+    },
+    {
+      "key": "promotionUrl",
+      "value": "http://localhost:8093"
+    },
+    {
+      "key": "taxUrl",
+      "value": "http://localhost:8091"
+    },
+    {
+      "key": "ratingUrl",
+      "value": "http://localhost:8089"
+    },
+    {
+      "key": "searchUrl",
+      "value": "http://localhost:8094"
+    },
+    {
+      "key": "mediaUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "notificationUrl",
+      "value": "http://localhost:8090"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "provider",
+      "value": "mock"
+    },
+    {
+      "key": "carrier",
+      "value": "mock"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Auth chaining and errors",
+      "item": [
+        {
+          "name": "Login (stores bearer tokens)",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeds',()=>pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "const j=pm.response.json(); if(j.data?.accessToken) pm.environment.set('accessToken',j.data.accessToken); if(j.data?.refreshToken) pm.environment.set('refreshToken',j.data.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Error - missing authentication",
+          "request": {
+            "method": "GET",
+            "url": "{{gatewayUrl}}/api/v1/users/me",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rejects unauthenticated request',()=>pm.expect(pm.response.code).to.be.oneOf([401,403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "auth service",
+      "item": [
+        {
+          "name": "PUT /api/v1/users/me",
+          "request": {
+            "method": "PUT",
+            "url": "{{authUrl}}/api/v1/users/me",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "PUT /api/v1/users/me/password",
+          "request": {
+            "method": "PUT",
+            "url": "{{authUrl}}/api/v1/users/me/password",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "DELETE /api/v1/users/me",
+          "request": {
+            "method": "DELETE",
+            "url": "{{authUrl}}/api/v1/users/me",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "GET /api/v1/users/me",
+          "request": {
+            "method": "GET",
+            "url": "{{authUrl}}/api/v1/users/me",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "GET /api/v1/users/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{authUrl}}/api/v1/users/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "GET /api/v1/users",
+          "request": {
+            "method": "GET",
+            "url": "{{authUrl}}/api/v1/users",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "PUT /api/v1/users/{id}/restore",
+          "request": {
+            "method": "PUT",
+            "url": "{{authUrl}}/api/v1/users/{id}/restore",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/UserController.java"
+        },
+        {
+          "name": "POST /api/v1/auth/sign-up",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/sign-up",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/AuthController.java"
+        },
+        {
+          "name": "POST /api/v1/auth/login",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/login",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/AuthController.java"
+        },
+        {
+          "name": "POST /api/v1/auth/refresh",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/refresh",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/AuthController.java"
+        },
+        {
+          "name": "POST /api/v1/auth/logout",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/logout",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/AuthController.java"
+        },
+        {
+          "name": "POST /api/v1/roles/users/{userId}/assign",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/roles/users/{userId}/assign",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/RoleController.java"
+        },
+        {
+          "name": "POST /api/v1/roles/users/{userId}/revoke",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/roles/users/{userId}/revoke",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/RoleController.java"
+        },
+        {
+          "name": "GET /api/v1/roles/users/{userId}",
+          "request": {
+            "method": "GET",
+            "url": "{{authUrl}}/api/v1/roles/users/{userId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: auth-service/src/main/java/com/shop/authservice/controller/RoleController.java"
+        }
+      ]
+    },
+    {
+      "name": "favourites service",
+      "item": [
+        {
+          "name": "GET /api/v1/favourites",
+          "request": {
+            "method": "GET",
+            "url": "{{favouritesUrl}}/api/v1/favourites",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java"
+        },
+        {
+          "name": "GET /api/v1/favourites/{favouriteId}",
+          "request": {
+            "method": "GET",
+            "url": "{{favouritesUrl}}/api/v1/favourites/{favouriteId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java"
+        },
+        {
+          "name": "POST /api/v1/favourites",
+          "request": {
+            "method": "POST",
+            "url": "{{favouritesUrl}}/api/v1/favourites",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java"
+        },
+        {
+          "name": "DELETE /api/v1/favourites/{favouriteId}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{favouritesUrl}}/api/v1/favourites/{favouriteId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java"
+        },
+        {
+          "name": "DELETE /api/v1/favourites/by-product/{productId}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{favouritesUrl}}/api/v1/favourites/by-product/{productId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java"
+        }
+      ]
+    },
+    {
+      "name": "inventory service",
+      "item": [
+        {
+          "name": "GET /api/v1/inventory",
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryUrl}}/api/v1/inventory",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "GET /api/v1/inventory/{productId}",
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryUrl}}/api/v1/inventory/{productId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "POST /api/v1/inventory",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "PUT /api/v1/inventory/{productId}",
+          "request": {
+            "method": "PUT",
+            "url": "{{inventoryUrl}}/api/v1/inventory/{productId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "DELETE /api/v1/inventory/{productId}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{inventoryUrl}}/api/v1/inventory/{productId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "POST /api/v1/inventory/{productId}/reserve",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory/{productId}/reserve",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "POST /api/v1/inventory/reservations/{reservationId}/commit",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory/reservations/{reservationId}/commit",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "POST /api/v1/inventory/reservations/{reservationId}/release",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory/reservations/{reservationId}/release",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "POST /api/v1/inventory/reservations/{reservationId}/release-committed",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory/reservations/{reservationId}/release-committed",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        },
+        {
+          "name": "GET /api/v1/inventory/reservations/{reservationId}/state",
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryUrl}}/api/v1/inventory/reservations/{reservationId}/state",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java"
+        }
+      ]
+    },
+    {
+      "name": "media service",
+      "item": [
+        {
+          "name": "POST /api/v1/backoffice/medias",
+          "request": {
+            "method": "POST",
+            "url": "{{mediaUrl}}/api/v1/backoffice/medias",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: media-service/src/main/java/com/shop/mediaservice/controller/BackofficeMediaController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/medias/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{mediaUrl}}/api/v1/backoffice/medias/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: media-service/src/main/java/com/shop/mediaservice/controller/BackofficeMediaController.java"
+        },
+        {
+          "name": "GET /api/v1/medias/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{mediaUrl}}/api/v1/medias/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: media-service/src/main/java/com/shop/mediaservice/controller/MediaPublicController.java"
+        },
+        {
+          "name": "HEAD /api/v1/medias",
+          "request": {
+            "method": "HEAD",
+            "url": "{{mediaUrl}}/api/v1/medias",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: media-service/src/main/java/com/shop/mediaservice/controller/MediaPublicController.java"
+        }
+      ]
+    },
+    {
+      "name": "notification service",
+      "item": [
+        {
+          "name": "GET /api/v1/backoffice/notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{notificationUrl}}/api/v1/backoffice/notifications",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: notification-service/src/main/java/com/shop/notificationservice/controller/BackofficeNotificationController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/notifications/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{notificationUrl}}/api/v1/backoffice/notifications/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: notification-service/src/main/java/com/shop/notificationservice/controller/BackofficeNotificationController.java"
+        }
+      ]
+    },
+    {
+      "name": "order service",
+      "item": [
+        {
+          "name": "GET /api/v1/carts/me",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/carts/me",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/CartController.java"
+        },
+        {
+          "name": "POST /api/v1/carts/me/items",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/CartController.java"
+        },
+        {
+          "name": "PUT /api/v1/carts/me/items/{cartItemId}",
+          "request": {
+            "method": "PUT",
+            "url": "{{orderUrl}}/api/v1/carts/me/items/{cartItemId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/CartController.java"
+        },
+        {
+          "name": "DELETE /api/v1/carts/me/items/{cartItemId}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{orderUrl}}/api/v1/carts/me/items/{cartItemId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/CartController.java"
+        },
+        {
+          "name": "DELETE /api/v1/carts/me",
+          "request": {
+            "method": "DELETE",
+            "url": "{{orderUrl}}/api/v1/carts/me",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/CartController.java"
+        },
+        {
+          "name": "POST /api/v1/orders",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderController.java"
+        },
+        {
+          "name": "GET /api/v1/orders/me",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/orders/me",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderController.java"
+        },
+        {
+          "name": "GET /api/v1/orders",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/orders",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderController.java"
+        },
+        {
+          "name": "GET /api/v1/orders/{orderId}",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/orders/{orderId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderController.java"
+        },
+        {
+          "name": "POST /api/v1/orders/{orderId}/cancel",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{orderId}/cancel",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderController.java"
+        },
+        {
+          "name": "GET /api/v1/orders/verify-purchase",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/orders/verify-purchase",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderController.java"
+        },
+        {
+          "name": "POST /api/v1/orders/{orderId}/confirm",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{orderId}/confirm",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderStatusController.java"
+        },
+        {
+          "name": "POST /api/v1/orders/{orderId}/ship",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{orderId}/ship",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderStatusController.java"
+        },
+        {
+          "name": "POST /api/v1/orders/{orderId}/deliver",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{orderId}/deliver",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: order-service/src/main/java/com/shop/orderservice/controller/OrderStatusController.java"
+        }
+      ]
+    },
+    {
+      "name": "payment service",
+      "item": [
+        {
+          "name": "GET /api/v1/backoffice/payments",
+          "request": {
+            "method": "GET",
+            "url": "{{paymentUrl}}/api/v1/backoffice/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/BackofficePaymentController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/payments/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{paymentUrl}}/api/v1/backoffice/payments/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/BackofficePaymentController.java"
+        },
+        {
+          "name": "POST /api/v1/payments",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
+        },
+        {
+          "name": "POST /api/v1/payments/{id}/capture",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments/{id}/capture",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
+        },
+        {
+          "name": "POST /api/v1/payments/{id}/refund",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments/{id}/refund",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
+        },
+        {
+          "name": "GET /api/v1/payments",
+          "request": {
+            "method": "GET",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
+        },
+        {
+          "name": "POST /api/v1/webhooks/payments/{provider}",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/webhooks/payments/{provider}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java"
+        }
+      ]
+    },
+    {
+      "name": "product service",
+      "item": [
+        {
+          "name": "GET /internal/products/media-references/{mediaId}",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/internal/products/media-references/{mediaId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/InternalProductMediaController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/categories",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/categories",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeCategoryController.java"
+        },
+        {
+          "name": "PUT /api/v1/backoffice/categories/{id}",
+          "request": {
+            "method": "PUT",
+            "url": "{{productUrl}}/api/v1/backoffice/categories/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeCategoryController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/categories/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{productUrl}}/api/v1/backoffice/categories/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeCategoryController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/brands",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/brands",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeBrandController.java"
+        },
+        {
+          "name": "PUT /api/v1/backoffice/brands/{id}",
+          "request": {
+            "method": "PUT",
+            "url": "{{productUrl}}/api/v1/backoffice/brands/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeBrandController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/brands/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{productUrl}}/api/v1/backoffice/brands/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeBrandController.java"
+        },
+        {
+          "name": "GET /api/v1/categories",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/categories",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/CategoryController.java"
+        },
+        {
+          "name": "GET /api/v1/categories/tree",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/categories/tree",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/CategoryController.java"
+        },
+        {
+          "name": "GET /api/v1/categories/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/categories/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/CategoryController.java"
+        },
+        {
+          "name": "GET /api/v1/brands",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/brands",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BrandController.java"
+        },
+        {
+          "name": "GET /api/v1/brands/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/brands/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BrandController.java"
+        },
+        {
+          "name": "GET /api/v1/products",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/products",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/ProductController.java"
+        },
+        {
+          "name": "GET /api/v1/products/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/products/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/ProductController.java"
+        },
+        {
+          "name": "GET /api/v1/products/slug/{slug}",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/products/slug/{slug}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/ProductController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/products",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/backoffice/products",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeProductController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/products",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/products",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeProductController.java"
+        },
+        {
+          "name": "PUT /api/v1/backoffice/products/{id}",
+          "request": {
+            "method": "PUT",
+            "url": "{{productUrl}}/api/v1/backoffice/products/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeProductController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/products/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{productUrl}}/api/v1/backoffice/products/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeProductController.java"
+        }
+      ]
+    },
+    {
+      "name": "promotion service",
+      "item": [
+        {
+          "name": "GET /api/v1/backoffice/promotions",
+          "request": {
+            "method": "GET",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/promotions/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/promotions",
+          "request": {
+            "method": "POST",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java"
+        },
+        {
+          "name": "PUT /api/v1/backoffice/promotions/{id}",
+          "request": {
+            "method": "PUT",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/promotions/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/promotions/{id}/usages",
+          "request": {
+            "method": "GET",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions/{id}/usages",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java"
+        },
+        {
+          "name": "POST /api/v1/promotions/{code}/reserve",
+          "request": {
+            "method": "POST",
+            "url": "{{promotionUrl}}/api/v1/promotions/{code}/reserve",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/PromotionReservationController.java"
+        },
+        {
+          "name": "POST /api/v1/promotions/reservations/{reservationId}/commit",
+          "request": {
+            "method": "POST",
+            "url": "{{promotionUrl}}/api/v1/promotions/reservations/{reservationId}/commit",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/PromotionReservationController.java"
+        },
+        {
+          "name": "POST /api/v1/promotions/reservations/{reservationId}/release",
+          "request": {
+            "method": "POST",
+            "url": "{{promotionUrl}}/api/v1/promotions/reservations/{reservationId}/release",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/PromotionReservationController.java"
+        },
+        {
+          "name": "POST /api/v1/promotions/reservations/{reservationId}/release-committed",
+          "request": {
+            "method": "POST",
+            "url": "{{promotionUrl}}/api/v1/promotions/reservations/{reservationId}/release-committed",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/PromotionReservationController.java"
+        },
+        {
+          "name": "GET /api/v1/promotions/reservations/{reservationId}/state",
+          "request": {
+            "method": "GET",
+            "url": "{{promotionUrl}}/api/v1/promotions/reservations/{reservationId}/state",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: promotion-service/src/main/java/com/shop/promotionservice/controller/PromotionReservationController.java"
+        }
+      ]
+    },
+    {
+      "name": "rating service",
+      "item": [
+        {
+          "name": "GET /api/v1/ratings",
+          "request": {
+            "method": "GET",
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: rating-service/src/main/java/com/shop/ratingservice/controller/StorefrontRatingController.java"
+        },
+        {
+          "name": "POST /api/v1/ratings",
+          "request": {
+            "method": "POST",
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: rating-service/src/main/java/com/shop/ratingservice/controller/StorefrontRatingController.java"
+        },
+        {
+          "name": "PUT /api/v1/ratings/{productId}",
+          "request": {
+            "method": "PUT",
+            "url": "{{ratingUrl}}/api/v1/ratings/{productId}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: rating-service/src/main/java/com/shop/ratingservice/controller/StorefrontRatingController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/ratings/{id}/hide",
+          "request": {
+            "method": "POST",
+            "url": "{{ratingUrl}}/api/v1/backoffice/ratings/{id}/hide",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: rating-service/src/main/java/com/shop/ratingservice/controller/BackofficeRatingController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/ratings/{id}/unhide",
+          "request": {
+            "method": "POST",
+            "url": "{{ratingUrl}}/api/v1/backoffice/ratings/{id}/unhide",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: rating-service/src/main/java/com/shop/ratingservice/controller/BackofficeRatingController.java"
+        }
+      ]
+    },
+    {
+      "name": "search service",
+      "item": [
+        {
+          "name": "GET /api/v1/search",
+          "request": {
+            "method": "GET",
+            "url": "{{searchUrl}}/api/v1/search",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: search-service/src/main/java/com/shop/searchservice/controller/SearchController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/search/reindex",
+          "request": {
+            "method": "POST",
+            "url": "{{searchUrl}}/api/v1/backoffice/search/reindex",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: search-service/src/main/java/com/shop/searchservice/controller/BackofficeSearchController.java"
+        }
+      ]
+    },
+    {
+      "name": "shipping service",
+      "item": [
+        {
+          "name": "POST /api/v1/webhooks/shipping",
+          "request": {
+            "method": "POST",
+            "url": "{{shippingUrl}}/api/v1/webhooks/shipping",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/webhook/CarrierWebhookController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/shipments",
+          "request": {
+            "method": "GET",
+            "url": "{{shippingUrl}}/api/v1/backoffice/shipments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/shipments/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{shippingUrl}}/api/v1/backoffice/shipments/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/shipments/{id}/tracking",
+          "request": {
+            "method": "POST",
+            "url": "{{shippingUrl}}/api/v1/backoffice/shipments/{id}/tracking",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/shipments/{id}/transition",
+          "request": {
+            "method": "POST",
+            "url": "{{shippingUrl}}/api/v1/backoffice/shipments/{id}/transition",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/shipments/{id}/fail",
+          "request": {
+            "method": "POST",
+            "url": "{{shippingUrl}}/api/v1/backoffice/shipments/{id}/fail",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/shipments/{id}/retry",
+          "request": {
+            "method": "POST",
+            "url": "{{shippingUrl}}/api/v1/backoffice/shipments/{id}/retry",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java"
+        }
+      ]
+    },
+    {
+      "name": "tax service",
+      "item": [
+        {
+          "name": "GET /api/v1/backoffice/tax-classes",
+          "request": {
+            "method": "GET",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/tax-classes/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/tax-classes",
+          "request": {
+            "method": "POST",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java"
+        },
+        {
+          "name": "PUT /api/v1/backoffice/tax-classes/{id}",
+          "request": {
+            "method": "PUT",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/tax-classes/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/tax-rates",
+          "request": {
+            "method": "GET",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-rates",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java"
+        },
+        {
+          "name": "GET /api/v1/backoffice/tax-rates/{id}",
+          "request": {
+            "method": "GET",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-rates/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java"
+        },
+        {
+          "name": "POST /api/v1/backoffice/tax-rates",
+          "request": {
+            "method": "POST",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-rates",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java"
+        },
+        {
+          "name": "PUT /api/v1/backoffice/tax-rates/{id}",
+          "request": {
+            "method": "PUT",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-rates/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java"
+        },
+        {
+          "name": "DELETE /api/v1/backoffice/tax-rates/{id}",
+          "request": {
+            "method": "DELETE",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-rates/{id}",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java"
+        },
+        {
+          "name": "POST /api/v1/tax/calculate",
+          "request": {
+            "method": "POST",
+            "url": "{{taxUrl}}/api/v1/tax/calculate",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "description": "Source: tax-service/src/main/java/com/shop/taxservice/controller/TaxCalculationController.java"
+        }
+      ]
+    }
+  ]
+}
