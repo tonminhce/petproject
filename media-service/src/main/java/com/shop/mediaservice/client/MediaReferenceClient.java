@@ -20,14 +20,19 @@ import java.util.UUID;
  * products still point at the media. Per-call Authorization header from
  * {@link ServiceTokenProvider} — the endpoint is SERVICE-role.
  *
- * <p>Error posture — fail-closed, EligibilityClient shape: ANY failure
+ * <p>Error posture — fail-closed, EligibilityClient shape: ANY HTTP failure
  * (non-2xx, timeout, connection refused, malformed body) maps to an EMPTY
- * result instead of a thrown exception; the raw downstream exception never
- * leaves this class (logged instead). An empty result means "cannot prove the
- * media is unreferenced" and the caller ({@code ProductMediaReferenceChecker})
- * turns that into fail-safe REFERENCED — a purge must never hard-delete on
- * doubt. There is no benign "purge anyway" answer when product is
- * unreachable.</p>
+ * result instead of a thrown exception — the downstream {@link RestClientException}
+ * never leaves this class (logged instead). What CAN propagate is the service
+ * token itself: {@link ServiceTokenProvider#getToken()} throws IllegalStateException
+ * when Keycloak rejects the client_credentials grant (e.g. empty/rotated
+ * secret). That is still fail-safe end to end — the caller
+ * ({@code ProductMediaReferenceChecker}) maps an empty result to REFERENCED and
+ * the purge job additionally treats any checker exception as REFERENCED — but
+ * it is not swallowed here. An empty result means "cannot prove the media is
+ * unreferenced" and the caller turns that into fail-safe REFERENCED — a purge
+ * must never hard-delete on doubt. There is no benign "purge anyway" answer
+ * when product is unreachable.</p>
  */
 @Component
 @RequiredArgsConstructor

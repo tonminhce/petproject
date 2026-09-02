@@ -141,6 +141,23 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(upload(TestImages.jpeg(64, 64), null).getStatusCode().value()).isEqualTo(401);
     }
 
+    /**
+     * T3 review M3 — the 415 MED-12003 contract asserted at the CONTROLLER
+     * level: over real HTTP the part's Content-Type is guessed from the
+     * filename (Spring's MediaTypeFactory), "clip.gif" arrives as image/gif,
+     * the upload allowlist rejects it, and the API envelope maps to 415 with
+     * the MED code — nothing stored.
+     */
+    @Test
+    @DisplayName("real-HTTP multipart with an allowlist-external content type → 415 MED-12003")
+    void uploadViaRealHttp_gifContentType_415Med12003() throws Exception {
+        ResponseEntity<String> resp = upload(TestImages.nonImageBytes(), ADMIN_TOKEN, "clip.gif");
+        assertThat(resp.getStatusCode().value()).isEqualTo(415);
+        assertThat(JSON.readTree(resp.getBody()).get("code").asText()).isEqualTo("MED-12003");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM medias", Integer.class)).isZero();
+    }
+
     // --- presigned GET: 302 Location that actually WORKS against MinIO ---
 
     @Test
@@ -243,6 +260,10 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
     // --- helpers ---
 
     private ResponseEntity<String> upload(byte[] bytes, String token) {
+        return upload(bytes, token, "photo.jpg");
+    }
+
+    private ResponseEntity<String> upload(byte[] bytes, String token, String filename) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         if (token != null) {
@@ -252,7 +273,7 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         body.add("file", new ByteArrayResource(bytes) {
             @Override
             public String getFilename() {
-                return "photo.jpg";
+                return filename;
             }
         });
         return rest.postForEntity(ApiPaths.BACKOFFICE_MEDIAS, new HttpEntity<>(body, headers), String.class);
