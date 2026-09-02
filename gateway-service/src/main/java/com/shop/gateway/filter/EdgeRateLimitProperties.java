@@ -24,10 +24,10 @@ public record EdgeRateLimitProperties(
         @DefaultValue("10") @Positive int backofficeRequestsPerMinute,
         @DefaultValue("60") @Positive int searchRequestsPerMinute,
         @DefaultValue("10000") @Positive int maximumBuckets,
-        @DefaultValue("PT15M") java.time.Duration bucketExpiration
+        @DefaultValue("PT15M") Duration bucketExpiration
 ) {
     public EdgeRateLimitProperties(final boolean enabled, final int backofficeRequestsPerMinute,
                                    final int searchRequestsPerMinute) {
-        this(enabled, backofficeRequestsPerMinute, searchRequestsPerMinute, 10_000, java.time.Duration.ofMinutes(15));
+        this(enabled, backofficeRequestsPerMinute, searchRequestsPerMinute, 10_000, Duration.ofMinutes(15));
     }
 }

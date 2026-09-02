@@ -44,18 +44,10 @@ public final class ClientIpResolver {
     private String clientEntry(final String forwarded) {
         if (trustedProxyHops == 0 || forwarded == null || forwarded.isBlank()) return null;
         final String[] entries = forwarded.split(",");
-        final int index = entries.length - trustedProxyHops;
+        final int index = Math.max(0, entries.length - trustedProxyHops - 1);
         if (index < 0) return null;
         final String entry = entries[index].trim();
         return entry.isEmpty() ? null : entry;
-    }
-
-    private String firstForwardedEntry(final String forwarded) {
-        if (forwarded == null || forwarded.isBlank()) {
-            return null;
-        }
-        final String first = forwarded.split(",")[0].trim();
-        return first.isEmpty() ? null : first;
     }
 
     /**
