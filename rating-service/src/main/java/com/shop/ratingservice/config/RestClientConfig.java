@@ -1,10 +1,10 @@
 package com.shop.ratingservice.config;
 
 import com.shop.common.core.constants.MdcKey;
-import com.shop.common.spring.tracing.TraceparentInterceptor;
 import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
@@ -21,21 +21,26 @@ import java.time.Duration;
  * attached PER-CALL inside {@code EligibilityClient} — the verify-purchase
  * endpoint is SERVICE-role and the header value comes from
  * {@code ServiceTokenProvider.getToken()}.</p>
+ *
+ * <p>R1 — traceparent propagation is central: the {@code RestClient.Builder}
+ * bean is enriched by common-spring's
+ * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
+ * that bean and no interceptor is hand-added here.</p>
  */
 @Configuration
 public class RestClientConfig {
 
     @Bean("orderRestClient")
-    public RestClient orderRestClient(RatingClientProperties props, TraceparentInterceptor traceparent) {
-        return baseRestClient(props.orderService().url(), props.orderService().timeoutMs(), traceparent);
+    public RestClient orderRestClient(RatingClientProperties props, RestClient.Builder restClientBuilder) {
+        return baseRestClient(restClientBuilder, props.orderService().url(), props.orderService().timeoutMs());
     }
 
-    private RestClient baseRestClient(String baseUrl, long timeoutMs, TraceparentInterceptor traceparent) {
+    private RestClient baseRestClient(RestClient.Builder builder, String baseUrl, long timeoutMs) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofMillis(timeoutMs).toMillis());
         factory.setReadTimeout((int) Duration.ofMillis(timeoutMs).toMillis());
 
-        return RestClient.builder()
+        return builder
             .baseUrl(baseUrl)
             .requestFactory(factory)
             .defaultHeader("Accept", "application/json")
@@ -44,14 +49,19 @@ public class RestClientConfig {
                 String corrId = MDC.get(MdcKey.CORRELATION_ID);
                 if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);
             })
-            // D3 — W3C traceparent propagation on every fleet outbound call.
-            .requestInterceptor(traceparent)
             .build();
     }
 
-    /** Spring Boot 4 does not auto-register RestClient.Builder as a bean; ServiceTokenProvider needs it. */
+    /**
+     * Spring Boot 4 does not auto-register {@code RestClient.Builder} as a bean;
+     * ServiceTokenProvider needs it. R1 — prototype scope so every consumer
+     * gets a FRESH builder that the common-spring BPP has already enriched
+     * with the traceparent interceptor; a shared mutable builder would
+     * accumulate per-client config.
+     */
     @Bean
-    public RestClient.Builder restClientBuilder(TraceparentInterceptor traceparent) {
-        return RestClient.builder().requestInterceptor(traceparent);
+    @Scope("prototype")
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder();
     }
 }

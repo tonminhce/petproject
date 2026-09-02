@@ -30,6 +30,14 @@ public class KeycloakAutoConfiguration {
      * common-spring (cycle: common-spring depends on common-keycloak), so the
      * injection mirrors {@code TraceparentInterceptor} inline instead of
      * reusing the shared class.
+     *
+     * <p>R1 — deliberately NOT folded into common-spring's
+     * {@code traceparentRestClientBuilderPostProcessor}: the builders here are
+     * transient values consumed inside the {@code KeycloakTokenClient} /
+     * {@code KeycloakAdminClient} bean construction, never exposed as
+     * {@code RestClient.Builder} beans — no BeanPostProcessor can see them.
+     * A BPP also cannot bridge the module cycle above. So this manual wiring
+     * stays as the tracing seam for common-keycloak clients.</p>
      */
     private static RestClient.Builder traceAware(RestClient.Builder builder) {
         return builder.requestInitializer(req -> {
