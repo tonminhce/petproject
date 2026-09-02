@@ -18,5 +18,5 @@ package com.shop.common.core.constants;
  * </ul>
  */
 public enum OutboxStatus {
-    PENDING, SENT, FAILED, DEAD
+    PENDING, SENDING, SENT, FAILED, DEAD
 }
