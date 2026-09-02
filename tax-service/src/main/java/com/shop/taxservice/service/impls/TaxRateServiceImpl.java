@@ -9,6 +9,7 @@ import com.shop.taxservice.repository.TaxClassRepository;
 import com.shop.taxservice.repository.TaxRateRepository;
 import com.shop.taxservice.service.TaxRateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ public class TaxRateServiceImpl implements TaxRateService {
             .postalCode(postalCode)
             .ratePct(request.ratePct())
             .build();
-        return toResponse(taxRateRepository.save(taxRate));
+        return toResponse(saveHandlingDuplicate(taxRate));
     }
 
     @Override
@@ -51,7 +52,7 @@ public class TaxRateServiceImpl implements TaxRateService {
         taxRate.setCountry(request.country());
         taxRate.setPostalCode(postalCode);
         taxRate.setRatePct(request.ratePct());
-        return toResponse(taxRateRepository.save(taxRate));
+        return toResponse(saveHandlingDuplicate(taxRate));
     }
 
     @Override
@@ -75,6 +76,14 @@ public class TaxRateServiceImpl implements TaxRateService {
             .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
         taxRate.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         taxRateRepository.save(taxRate);
+    }
+
+    private TaxRate saveHandlingDuplicate(TaxRate taxRate) {
+        try {
+            return taxRateRepository.saveAndFlush(taxRate);
+        } catch (DataIntegrityViolationException ex) {
+            throw BusinessException.of(ErrorCode.DUPLICATE_TAX_RATE, taxRate.getCountry() + " " + taxRate.getPostalCode());
+        }
     }
 
     private void requireTaxClass(UUID classId) {

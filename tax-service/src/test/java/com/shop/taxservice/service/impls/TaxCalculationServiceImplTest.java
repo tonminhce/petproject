@@ -55,7 +55,7 @@ class TaxCalculationServiceImplTest {
     @Test
     void tier1HitReturnsPostalSpecificRate() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(taxClass("Standard", "19.00")));
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, "DE", "10115")).thenReturn(Optional.of(taxRate("10115", "7.00")));
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of(taxRate("10115", "7.00")));
 
         TaxCalculateResponse response = service.calculate(request("10115"));
 
@@ -67,8 +67,8 @@ class TaxCalculationServiceImplTest {
     @Test
     void tier1MissFallsBackToCountryWideRate() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(taxClass("Standard", "19.00")));
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, "DE", "10115")).thenReturn(Optional.empty());
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCodeIsNull(classId, "DE")).thenReturn(Optional.of(taxRate(null, "9.50")));
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of());
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of(taxRate(null, "9.50")));
 
         TaxCalculateResponse response = service.calculate(request("10115"));
 
@@ -79,8 +79,8 @@ class TaxCalculationServiceImplTest {
     @Test
     void bothTiersMissFallsBackToClassDefault() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(taxClass("Standard", "19.00")));
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, "DE", "10115")).thenReturn(Optional.empty());
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCodeIsNull(classId, "DE")).thenReturn(Optional.empty());
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of());
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of());
 
         TaxCalculateResponse response = service.calculate(request("10115"));
 
@@ -103,8 +103,8 @@ class TaxCalculationServiceImplTest {
     void noRateAnywhereThrowsTax8002() {
         TaxClass nullDefault = TaxClass.builder().id(classId).name("Zero").defaultRatePct(null).build();
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(nullDefault));
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, "DE", "10115")).thenReturn(Optional.empty());
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCodeIsNull(classId, "DE")).thenReturn(Optional.empty());
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of());
+        when(taxRateRepository.findMatchingRates(classId, "DE", "10115")).thenReturn(java.util.List.of());
 
         assertThatThrownBy(() -> service.calculate(request("10115")))
             .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -114,22 +114,22 @@ class TaxCalculationServiceImplTest {
     @Test
     void blankPostalCodeIsNormalizedToNullBeforeTier1() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(taxClass("Standard", "19.00")));
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, "DE", null)).thenReturn(Optional.of(taxRate(null, "9.50")));
+        when(taxRateRepository.findMatchingRates(classId, "DE", null)).thenReturn(java.util.List.of(taxRate(null, "9.50")));
 
         service.calculate(request("   "));
 
         ArgumentCaptor<String> postalCaptor = ArgumentCaptor.forClass(String.class);
-        verify(taxRateRepository).findByTaxClassIdAndCountryAndPostalCode(any(), anyString(), postalCaptor.capture());
+        verify(taxRateRepository).findMatchingRates(any(), anyString(), postalCaptor.capture());
         assertThat(postalCaptor.getValue()).isNull();
     }
 
     @Test
     void nullPostalCodeSkipsLookupWithPostal() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(taxClass("Standard", "19.00")));
-        when(taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, "DE", null)).thenReturn(Optional.of(taxRate(null, "9.50")));
+        when(taxRateRepository.findMatchingRates(classId, "DE", null)).thenReturn(java.util.List.of(taxRate(null, "9.50")));
 
         service.calculate(request(null));
 
-        verify(taxRateRepository).findByTaxClassIdAndCountryAndPostalCode(classId, "DE", null);
+        verify(taxRateRepository).findMatchingRates(classId, "DE", null);
     }
 }

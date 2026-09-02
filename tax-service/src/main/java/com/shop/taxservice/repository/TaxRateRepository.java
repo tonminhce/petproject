@@ -15,6 +15,9 @@ public interface TaxRateRepository extends JpaRepository<TaxRate, UUID> {
 
     Optional<TaxRate> findByTaxClassIdAndCountryAndPostalCodeIsNull(UUID classId, String country);
 
+    @Query("select r from TaxRate r where r.taxClassId = :classId and r.country = :country and (r.postalCode = :postalCode or r.postalCode is null) order by case when r.postalCode is null then 1 else 0 end")
+    List<TaxRate> findMatchingRates(@Param("classId") UUID classId, @Param("country") String country, @Param("postalCode") String postalCode);
+
     List<TaxRate> findAllByTaxClassId(UUID classId);
 
     @Query("select count(r) from TaxRate r where r.taxClassId = :classId")

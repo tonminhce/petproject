@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public record TaxRateRequest(
     @NotNull UUID taxClassId,
-    @Pattern(regexp = "^[A-Z]{2}$") String country,
+    @NotNull @Pattern(regexp = "^[A-Z]{2}$") String country,
     String postalCode,
     @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal ratePct
 ) {}

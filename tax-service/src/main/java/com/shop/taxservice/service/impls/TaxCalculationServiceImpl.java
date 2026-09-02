@@ -41,10 +41,9 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
     }
 
     private Optional<BigDecimal> resolveRatePct(UUID classId, String country, String postalCode) {
-        return taxRateRepository.findByTaxClassIdAndCountryAndPostalCode(classId, country, postalCode)
-            .map(TaxRate::getRatePct)
-            .or(() -> taxRateRepository.findByTaxClassIdAndCountryAndPostalCodeIsNull(classId, country)
-                .map(TaxRate::getRatePct));
+        return taxRateRepository.findMatchingRates(classId, country, postalCode).stream()
+            .findFirst()
+            .map(TaxRate::getRatePct);
     }
 
     private String normalize(String postalCode) {

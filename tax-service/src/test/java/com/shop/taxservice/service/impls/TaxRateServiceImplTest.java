@@ -57,7 +57,7 @@ class TaxRateServiceImplTest {
     void createSavesAndReturnsResponse() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(new com.shop.taxservice.entity.TaxClass()));
         when(taxRateRepository.countDuplicate(classId, "DE", "10115", null)).thenReturn(0L);
-        when(taxRateRepository.save(any(TaxRate.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(taxRateRepository.saveAndFlush(any(TaxRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TaxRateResponse response = service.create(request("10115"));
 
@@ -95,12 +95,12 @@ class TaxRateServiceImplTest {
     void createBlankPostalIsNormalizedToNullOnSave() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(new com.shop.taxservice.entity.TaxClass()));
         when(taxRateRepository.countDuplicate(classId, "DE", null, null)).thenReturn(0L);
-        when(taxRateRepository.save(any(TaxRate.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(taxRateRepository.saveAndFlush(any(TaxRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.create(request("   "));
 
         ArgumentCaptor<TaxRate> captor = ArgumentCaptor.forClass(TaxRate.class);
-        verify(taxRateRepository).save(captor.capture());
+        verify(taxRateRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPostalCode()).isNull();
     }
 
@@ -121,7 +121,7 @@ class TaxRateServiceImplTest {
         when(taxRateRepository.findById(rateId)).thenReturn(Optional.of(existing));
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(new com.shop.taxservice.entity.TaxClass()));
         when(taxRateRepository.countDuplicate(classId, "DE", "20095", rateId)).thenReturn(0L);
-        when(taxRateRepository.save(existing)).thenReturn(existing);
+        when(taxRateRepository.saveAndFlush(existing)).thenReturn(existing);
 
         TaxRateResponse response = service.update(rateId, new TaxRateRequest(classId, "DE", "20095", new BigDecimal("7.00")));
 
