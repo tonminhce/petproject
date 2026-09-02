@@ -11,7 +11,16 @@ import java.util.Map;
  * Jackson-based JSON serializer used by the platform's Kafka producer.
  * Falls back to the string representation of the payload when Jackson cannot
  * serialise it so the producer never blocks the caller.
+ *
+ * @deprecated since 2026-09-02 — use {@link com.shop.common.kafka.producer.KafkaMessagePublisher}
+ *             (which uses {@code StringSerializer}) for outbox producers. The fleet
+ *             contract is JSON-as-String and serialising through Jackson again
+ *             causes the R1 double-encoding bug this class was the last to
+ *             trigger. Retained only for non-outbox callers that genuinely want
+ *             a typed JSON envelope; will be removed once all such callers have
+ *             migrated.
  */
+@Deprecated(since = "2026-09-02", forRemoval = true)
 public class JsonKafkaSerializer<T> implements Serializer<T> {
 
     private final ObjectMapper objectMapper;
