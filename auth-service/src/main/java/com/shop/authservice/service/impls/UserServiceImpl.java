@@ -78,11 +78,11 @@ public class UserServiceImpl implements UserService {
         User currentUser = getCurrentAuthenticatedUser();
         String username = currentUser.getUsername();
 
-        verifyOldPassword(username, request.getOldPassword());
+        verifyOldPassword(username, request.oldPassword());
 
         keycloakAdminClient.resetUserPassword(
                 currentUser.getKeycloakUserId(),
-                request.getNewPassword(),
+                request.newPassword(),
                 false
         );
 
@@ -140,24 +140,24 @@ public class UserServiceImpl implements UserService {
     // ==================================
 
     private void validateUniqueConstraints(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw BusinessException.conflict("auth.username.exists", request.getUsername());
+        if (userRepository.existsByUsername(request.username())) {
+            throw BusinessException.conflict("auth.username.exists", request.username());
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw BusinessException.conflict("auth.email.exists", request.getEmail());
+        if (userRepository.existsByEmail(request.email())) {
+            throw BusinessException.conflict("auth.email.exists", request.email());
         }
-        if (userRepository.existsByPhone(request.getPhone())) {
-            throw BusinessException.conflict("auth.phone.exists", request.getPhone());
+        if (userRepository.existsByPhone(request.phone())) {
+            throw BusinessException.conflict("auth.phone.exists", request.phone());
         }
     }
 
     private String createKeycloakUser(RegisterRequest request) {
-        List<String> roles = extractRoles(request.getRoles());
+        List<String> roles = extractRoles(request.roles());
         return keycloakAdminClient.createUser(
-                request.getUsername(),
-                request.getEmail(),
-                request.getFullName(),
-                request.getPassword(),
+                request.username(),
+                request.email(),
+                request.fullName(),
+                request.password(),
                 roles
         );
     }
@@ -186,7 +186,7 @@ public class UserServiceImpl implements UserService {
     private User buildUserFromRequest(RegisterRequest request, String keycloakUserId) {
         User user = userMapper.toEntity(request);
         user.setKeycloakUserId(keycloakUserId);
-        user.setRoles(resolveRoles(request.getRoles()));
+        user.setRoles(resolveRoles(request.roles()));
         return user;
     }
 
@@ -209,25 +209,25 @@ public class UserServiceImpl implements UserService {
     }
 
     private void updateUserFields(User user, UpdateUserRequest request) {
-        if (request.getFullName() != null) {
-            user.setFullName(request.getFullName());
+        if (request.fullName() != null) {
+            user.setFullName(request.fullName());
         }
-        if (request.getEmail() != null) {
-            user.setEmail(request.getEmail());
+        if (request.email() != null) {
+            user.setEmail(request.email());
         }
-        if (request.getGender() != null) {
-            user.setGender(request.getGender());
+        if (request.gender() != null) {
+            user.setGender(request.gender());
         }
-        if (request.getPhone() != null) {
-            user.setPhone(request.getPhone());
+        if (request.phone() != null) {
+            user.setPhone(request.phone());
         }
-        if (request.getAvatar() != null) {
-            user.setAvatar(request.getAvatar());
+        if (request.avatar() != null) {
+            user.setAvatar(request.avatar());
         }
     }
 
     private void validatePasswordMatch(ChangePasswordRequest request) {
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+        if (!request.newPassword().equals(request.confirmPassword())) {
             throw BusinessException.badRequest("auth.password.mismatch");
         }
     }

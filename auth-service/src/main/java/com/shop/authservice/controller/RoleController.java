@@ -28,13 +28,13 @@ public class RoleController {
     @PostMapping("/users/{userId}/assign")
     public ApiResponse<Boolean> assignRole(@PathVariable UUID userId,
                                            @Valid @RequestBody RoleRequest request) {
-        return ApiResponse.ok(roleService.assignRole(userId, request.getRoleName()));
+        return ApiResponse.ok(roleService.assignRole(userId, request.roleName()));
     }
 
     @PostMapping("/users/{userId}/revoke")
     public ApiResponse<Boolean> revokeRole(@PathVariable UUID userId,
                                            @Valid @RequestBody RoleRequest request) {
-        return ApiResponse.ok(roleService.revokeRole(userId, request.getRoleName()));
+        return ApiResponse.ok(roleService.revokeRole(userId, request.roleName()));
     }
 
     @GetMapping("/users/{userId}")

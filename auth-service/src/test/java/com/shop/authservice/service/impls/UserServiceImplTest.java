@@ -80,14 +80,17 @@ class UserServiceImplTest {
     }
 
     private RegisterRequest registerRequest() {
-        RegisterRequest req = new RegisterRequest();
-        req.setFullName("Alice Wonder");
-        req.setUsername("alice");
-        req.setPassword("Passw0rd");
-        req.setEmail("alice@example.com");
-        req.setGender("female");
-        req.setPhone("0901234567");
-        return req;
+        return new RegisterRequest(
+                "Alice Wonder", "alice", "Passw0rd",
+                "alice@example.com", "female", "0901234567",
+                null, null);
+    }
+
+    private RegisterRequest registerRequestWithRoles(java.util.Set<String> roles) {
+        return new RegisterRequest(
+                "Alice Wonder", "alice", "Passw0rd",
+                "alice@example.com", "female", "0901234567",
+                null, roles);
     }
 
     private User newUser() {
@@ -156,13 +159,12 @@ class UserServiceImplTest {
         when(userMapper.toResponse(user))
                 .thenReturn(UserResponse.builder().id(userId).fullname("Alice Wonder II").build());
 
-        UpdateUserRequest req = new UpdateUserRequest();
-        req.setFullName("Alice Wonder II");
+        UpdateUserRequest req = new UpdateUserRequest("Alice Wonder II", null, null, null, null);
 
         UserResponse response = userService.update(userId, req);
 
         assertEquals("Alice Wonder II", user.getFullName());
-        assertEquals("Alice Wonder II", response.getFullname());
+        assertEquals("Alice Wonder II", response.fullname());
     }
 
     @Test
@@ -170,17 +172,14 @@ class UserServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> userService.update(userId, new UpdateUserRequest()));
+                () -> userService.update(userId, new UpdateUserRequest(null, null, null, null, null)));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
     }
 
     @Test
     void changePasswordRejectsMismatchedConfirmation() {
-        ChangePasswordRequest req = new ChangePasswordRequest();
-        req.setOldPassword("Oldpass1");
-        req.setNewPassword("Newpass1");
-        req.setConfirmPassword("Newpass2");
+        ChangePasswordRequest req = new ChangePasswordRequest("Oldpass1", "Newpass1", "Newpass2");
 
         BusinessException ex = assertThrows(BusinessException.class, () -> userService.changePassword(req));
 
@@ -195,10 +194,7 @@ class UserServiceImplTest {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(keycloakTokenClient.verifyCredentials("alice", "Oldpass1")).thenReturn(true);
 
-        ChangePasswordRequest req = new ChangePasswordRequest();
-        req.setOldPassword("Oldpass1");
-        req.setNewPassword("Newpass1");
-        req.setConfirmPassword("Newpass1");
+        ChangePasswordRequest req = new ChangePasswordRequest("Oldpass1", "Newpass1", "Newpass1");
 
         String result = userService.changePassword(req);
 
@@ -213,10 +209,7 @@ class UserServiceImplTest {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(keycloakTokenClient.verifyCredentials("alice", "Wrong1")).thenReturn(false);
 
-        ChangePasswordRequest req = new ChangePasswordRequest();
-        req.setOldPassword("Wrong1");
-        req.setNewPassword("Newpass1");
-        req.setConfirmPassword("Newpass1");
+        ChangePasswordRequest req = new ChangePasswordRequest("Wrong1", "Newpass1", "Newpass1");
 
         BusinessException ex = assertThrows(BusinessException.class, () -> userService.changePassword(req));
 
@@ -271,7 +264,7 @@ class UserServiceImplTest {
         Page<UserResponse> page = userService.findAllUsers(0, 10, "id", "ASC");
 
         assertEquals(1, page.getTotalElements());
-        assertEquals("alice", page.getContent().get(0).getUsername());
+        assertEquals("alice", page.getContent().get(0).username());
     }
 
     // ------------------------------------------------------------------
@@ -283,8 +276,7 @@ class UserServiceImplTest {
 
     @Test
     void registerStripsDisallowedRolesFromRequest() {
-        RegisterRequest req = registerRequest();
-        req.setRoles(Set.of("ADMIN", "USER", "SERVICE"));
+        RegisterRequest req = registerRequestWithRoles(Set.of("ADMIN", "USER", "SERVICE"));
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);
@@ -326,8 +318,7 @@ class UserServiceImplTest {
 
     @Test
     void registerAllDisallowedRolesResultsInEmptyList() {
-        RegisterRequest req = registerRequest();
-        req.setRoles(Set.of("ADMIN", "SERVICE", "MANAGER"));
+        RegisterRequest req = registerRequestWithRoles(Set.of("ADMIN", "SERVICE", "MANAGER"));
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);

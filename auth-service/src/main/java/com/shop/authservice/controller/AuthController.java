@@ -31,19 +31,19 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        TokenResponse tokens = authService.login(request.getUsername(), request.getPassword());
+        TokenResponse tokens = authService.login(request.username(), request.password());
         return ApiResponse.ok(tokens);
     }
 
     @PostMapping("/refresh")
     public ApiResponse<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        TokenResponse tokens = authService.refreshToken(request.getRefreshToken());
-        return ApiResponse.ok(tokens);
+        TokenResponse tokens = authService.refreshToken(request.refreshToken());
+        return ApiResponse.ok(tokens, "Token refreshed successfully");
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.getRefreshToken());
+        authService.logout(request.refreshToken());
         return ApiResponse.message("Logged out successfully");
     }
 }

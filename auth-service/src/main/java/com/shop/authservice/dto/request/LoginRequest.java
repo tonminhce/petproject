@@ -1,15 +1,15 @@
 package com.shop.authservice.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
-public class LoginRequest {
-    @NotBlank(message = "Username must not be blank")
-    private String username;
+/**
+ * Username + password login payload. H3 — Java record (fleet convention rule 1).
+ */
+public record LoginRequest(
+        @NotBlank(message = "Username must not be blank")
+        String username,
 
-    @NotBlank(message = "Password must not be blank")
-    private String password;
+        @NotBlank(message = "Password must not be blank")
+        String password
+) {
 }

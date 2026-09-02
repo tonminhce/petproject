@@ -1,22 +1,24 @@
 package com.shop.authservice.dto.response;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter
-@Setter
+/**
+ * Read-side projection of the User aggregate. H3 — Java record (fleet
+ * convention rule 1). Constructed by {@code UserServiceImpl} / {@code
+ * UserController} — never returned by an entity accessor directly.
+ * Lombok {@code @Builder} generates the canonical {@code builder()} for
+ * tests that build partial responses.
+ */
 @Builder
-@AllArgsConstructor
-public class UserResponse {
-    private UUID id;
-    private String fullname;
-    private String username;
-    private String email;
-    private String gender;
-    private String phone;
-    private String avatar;
+public record UserResponse(
+        UUID id,
+        String fullname,
+        String username,
+        String email,
+        String gender,
+        String phone,
+        String avatar
+) {
 }

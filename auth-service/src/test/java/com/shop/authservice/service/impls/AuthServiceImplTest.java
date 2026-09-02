@@ -32,10 +32,10 @@ class AuthServiceImplTest {
 
         TokenResponse response = authService.login("alice", "secret");
 
-        assertEquals("access-1", response.getAccessToken());
-        assertEquals("refresh-1", response.getRefreshToken());
-        assertEquals("Bearer", response.getTokenType());
-        assertEquals(300L, response.getExpiresIn());
+        assertEquals("access-1", response.accessToken());
+        assertEquals("refresh-1", response.refreshToken());
+        assertEquals("Bearer", response.tokenType());
+        assertEquals(300L, response.expiresIn());
         verify(keycloakTokenClient).login("alice", "secret");
     }
 
@@ -45,7 +45,7 @@ class AuthServiceImplTest {
 
         TokenResponse response = authService.refreshToken("refresh-1");
 
-        assertEquals("access-1", response.getAccessToken());
+        assertEquals("access-1", response.accessToken());
         verify(keycloakTokenClient).refreshToken("refresh-1");
     }
 

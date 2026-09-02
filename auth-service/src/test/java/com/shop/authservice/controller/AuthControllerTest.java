@@ -39,13 +39,10 @@ class AuthControllerTest {
 
     @Test
     void signUpRegistersUser() throws Exception {
-        RegisterRequest req = new RegisterRequest();
-        req.setFullName("Alice Wonder");
-        req.setUsername("alice123");
-        req.setPassword("Passw0rd");
-        req.setEmail("alice@example.com");
-        req.setGender("female");
-        req.setPhone("0901234567");
+        RegisterRequest req = new RegisterRequest(
+                "Alice Wonder", "alice123", "Passw0rd",
+                "alice@example.com", "female", "0901234567",
+                null, null);
 
         mockMvc.perform(post("/api/v1/auth/sign-up")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -60,16 +57,9 @@ class AuthControllerTest {
     @Test
     void loginReturnsTokens() throws Exception {
         when(authService.login(eq("alice"), eq("Passw0rd")))
-                .thenReturn(TokenResponse.builder()
-                        .accessToken("at")
-                        .refreshToken("rt")
-                        .tokenType("Bearer")
-                        .expiresIn(300L)
-                        .build());
+                .thenReturn(new TokenResponse("at", "rt", "Bearer", 300L));
 
-        LoginRequest req = new LoginRequest();
-        req.setUsername("alice");
-        req.setPassword("Passw0rd");
+        LoginRequest req = new LoginRequest("alice", "Passw0rd");
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -82,7 +72,7 @@ class AuthControllerTest {
     @Test
     void refreshReturnsTokens() throws Exception {
         when(authService.refreshToken("refresh-1"))
-                .thenReturn(TokenResponse.builder().accessToken("at2").build());
+                .thenReturn(new TokenResponse("at2", null, "Bearer", null));
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
