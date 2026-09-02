@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,8 +54,12 @@ public class FavouriteServiceImpl implements FavouriteService {
                 .userId(userId)
                 .productId(request.productId())
                 .build();
-        Favourite saved = repo.save(favourite);
-        return mapper.toResponse(saved);
+        try {
+            Favourite saved = repo.save(favourite);
+            return mapper.toResponse(saved);
+        } catch (DataIntegrityViolationException exception) {
+            throw BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS);
+        }
     }
 
     @Override

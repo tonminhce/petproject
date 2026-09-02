@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Instant;
 import java.util.List;
@@ -124,6 +125,16 @@ class FavouriteServiceImplTest {
 
         assertThatThrownBy(() -> service.create(userId,
                 new FavouriteCreateRequest(productId)))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6002"));
+    }
+
+    @Test
+    void create_throwsConflict_whenConcurrentInsertViolatesUniqueConstraint() {
+        when(repo.existsByUserIdAndProductId(userId, productId)).thenReturn(false);
+        when(repo.save(any(Favourite.class))).thenThrow(new DataIntegrityViolationException("duplicate active favourite"));
+
+        assertThatThrownBy(() -> service.create(userId, new FavouriteCreateRequest(productId)))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo("FAV-6002"));
     }
