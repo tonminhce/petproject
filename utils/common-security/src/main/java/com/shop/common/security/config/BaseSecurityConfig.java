@@ -96,6 +96,13 @@ public class BaseSecurityConfig {
      * but exposing it here keeps the module self-contained when a service
      * configures only {@code shop.security.issuer-uri}.
      *
+     * <p>H33 — this factory returns a {@link LazyJwtDecoder} holder instead of
+     * building the {@link NimbusJwtDecoder} directly. The eager build path
+     * did a synchronous HTTP fetch of the OIDC discovery document, which made
+     * every service hang on Keycloak being reachable at startup. The Holder
+     * defers that fetch to the first JWT decode, with a background pre-warm so
+     * the first request path is rarely affected.</p>
+     *
      * <p>C1 fix — the validator chain now asserts (in order): issuer matches
      * {@link SecurityProperties#issuerUri()}, exp/nbf timestamps are valid,
      * and — if {@code shop.security.expected-audiences} is set — the {@code aud}
@@ -107,9 +114,12 @@ public class BaseSecurityConfig {
     @Bean
     @ConditionalOnMissingBean(JwtDecoder.class)
     public JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withIssuerLocation(properties.issuerUri()).build();
-        decoder.setJwtValidator(buildValidatorChain());
-        return decoder;
+        OAuth2TokenValidator<Jwt> validator = buildValidatorChain();
+        return new LazyJwtDecoder(() -> {
+            NimbusJwtDecoder decoder = NimbusJwtDecoder.withIssuerLocation(properties.issuerUri()).build();
+            decoder.setJwtValidator(validator);
+            return decoder;
+        });
     }
 
     private OAuth2TokenValidator<Jwt> buildValidatorChain() {
