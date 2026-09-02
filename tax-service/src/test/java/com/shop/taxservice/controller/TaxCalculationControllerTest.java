@@ -62,7 +62,7 @@ class TaxCalculationControllerTest {
         when(taxCalculationService.calculate(request()))
             .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
 
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("service-client"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -78,7 +78,7 @@ class TaxCalculationControllerTest {
         when(taxCalculationService.calculate(request()))
             .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
 
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("admin"))
                     .authorities(createAuthorityList("ROLE_ADMIN")))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -90,7 +90,7 @@ class TaxCalculationControllerTest {
 
     @Test
     void calculate_noAuth_returns401() throws Exception {
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(calculateBody()))
             .andExpect(status().isUnauthorized());
@@ -98,7 +98,7 @@ class TaxCalculationControllerTest {
 
     @Test
     void calculate_userRole_returns403() throws Exception {
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("alice"))
                     .authorities(createAuthorityList("ROLE_USER")))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -108,7 +108,7 @@ class TaxCalculationControllerTest {
 
     @Test
     void calculate_lowercaseCountry_returns400WithValidationCode() throws Exception {
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("service-client"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -122,7 +122,7 @@ class TaxCalculationControllerTest {
 
     @Test
     void calculate_negativeAmount_returns400WithValidationCode() throws Exception {
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("service-client"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -139,7 +139,7 @@ class TaxCalculationControllerTest {
         when(taxCalculationService.calculate(request()))
             .thenThrow(BusinessException.of(ErrorCode.NO_MATCHING_RATE, "DE"));
 
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("service-client"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))

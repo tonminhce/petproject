@@ -122,7 +122,7 @@ class BackofficeTaxAuditTest {
                 any(com.shop.taxservice.dto.request.TaxCalculateRequest.class)))
             .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
 
-        mockMvc.perform(post("/api/v1/backoffice/tax-rates/calculate")
+        mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000b004")
                         .claim("azp", "checkout-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
