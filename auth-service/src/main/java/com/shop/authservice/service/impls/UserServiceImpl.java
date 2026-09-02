@@ -157,6 +157,15 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    /**
+     * C1 — server-side whitelist of role names assignable through the PUBLIC sign-up
+     * endpoint. Only {@code USER} is allowed; {@code ADMIN}, {@code SERVICE},
+     * {@code MANAGER} must be assigned via an authenticated admin endpoint (or via
+     * Keycloak directly). Unknown values from the request are silently dropped — not
+     * rejected with 400 — so existing clients that still send the field keep working.
+     */
+    private static final Set<String> SELF_REGISTRATION_ALLOWED_ROLES = Set.of("USER");
+
     private List<String> extractRoles(Set<String> requestedRoles) {
         if (requestedRoles == null || requestedRoles.isEmpty()) {
             return List.of("USER");
@@ -164,6 +173,8 @@ public class UserServiceImpl implements UserService {
         return requestedRoles.stream()
                 .map(String::trim)
                 .filter(role -> !role.isBlank())
+                .filter(SELF_REGISTRATION_ALLOWED_ROLES::contains)
+                .distinct()
                 .toList();
     }
 
