@@ -131,13 +131,22 @@ services:
       <<: *audit-env
 
   inventory-service:
+    <<: *audit-volume
     ports: !override []
+    environment:
+      <<: *audit-env
 
   favourite-service:
     ports: !override []
 
   media-service:
+    <<: *audit-volume
     ports: !override []
+    environment:
+      <<: *audit-env
+      # Rotation item (D2) — client_credentials secret for media-service's
+      # product-reference (purge gate) client. See order-service note.
+      MEDIA_SERVICE_CLIENT_SECRET: ${MEDIA_SERVICE_CLIENT_SECRET:-}
 
   tax-service:
     <<: *audit-volume

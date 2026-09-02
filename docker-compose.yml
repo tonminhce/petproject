@@ -136,8 +136,10 @@ services:
       - ecommerce-network
 
   # ----- RustFS (S3-compatible object storage for media) -----
+  # Pinned (H-10): 1.0.0-rc.5 is upstream's newest published tag (Docker Hub,
+  # verified 2026-09-02) — no stable 1.x tag exists yet; revisit on release.
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0-rc.5
     container_name: rustfs
     <<: [*restart, *logging]
     environment:
