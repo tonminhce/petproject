@@ -34,7 +34,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Full-stack edge matrix (no Docker): the 9 backoffice routes proxy to a
+ * Full-stack edge matrix (no Docker): the 12 backoffice routes proxy to a
  * WireMock target; no-token -> 401, user-token -> 403 envelope, admin-token
  * -> 200. The IP allowlist env is ABSENT here — D5 semantics say INACTIVE.
  */
@@ -126,6 +126,8 @@ class WebFluxRouteTests {
     @ValueSource(strings = {
             "/api/v1/backoffice/ratings",
             "/api/v1/backoffice/products",
+            "/api/v1/backoffice/categories",
+            "/api/v1/backoffice/brands",
             "/api/v1/backoffice/search",
             "/api/v1/backoffice/promotions",
             "/api/v1/backoffice/tax-classes",

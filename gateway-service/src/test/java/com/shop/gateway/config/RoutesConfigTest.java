@@ -27,7 +27,7 @@ class RoutesConfigTest {
 
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(27);
+        assertThat(routes).hasSize(29);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).hasSize(1));
     }
 
@@ -41,12 +41,12 @@ class RoutesConfigTest {
 
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(27);
+        assertThat(routes).hasSize(29);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).isEmpty());
     }
 
     @Test
-    void registersAllTenBackofficeRoutesWithTargetUris() {
+    void registersAllTwelveBackofficeRoutesWithTargetUris() {
         var rateLimiter = mock(RateLimiter.class);
         var keyResolver = mock(KeyResolver.class);
         var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
@@ -58,8 +58,20 @@ class RoutesConfigTest {
         var backofficeRoutes = routes.stream()
                 .filter(route -> route.getId().startsWith("backoffice-"))
                 .toList();
-        assertThat(backofficeRoutes).hasSize(10);
+        assertThat(backofficeRoutes).hasSize(12);
         assertThat(backofficeRoutes)
+                .satisfiesOnlyOnce(route -> {
+                    assertThat(route.getUri().toString()).isEqualTo("http://product-service:8086");
+                    assertThat(route.getPredicate().toString()).contains("/api/v1/backoffice/products");
+                })
+                .satisfiesOnlyOnce(route -> {
+                    assertThat(route.getUri().toString()).isEqualTo("http://product-service:8086");
+                    assertThat(route.getPredicate().toString()).contains("/api/v1/backoffice/categories");
+                })
+                .satisfiesOnlyOnce(route -> {
+                    assertThat(route.getUri().toString()).isEqualTo("http://product-service:8086");
+                    assertThat(route.getPredicate().toString()).contains("/api/v1/backoffice/brands");
+                })
                 .satisfiesOnlyOnce(route -> {
                     assertThat(route.getUri().toString()).isEqualTo("http://tax-service:8091");
                     assertThat(route.getPredicate().toString()).contains("/api/v1/backoffice/tax-classes");
