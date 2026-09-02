@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Positive;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
@@ -26,6 +27,10 @@ public record EdgeRateLimitProperties(
         @DefaultValue("10000") @Positive int maximumBuckets,
         @DefaultValue("PT15M") Duration bucketExpiration
 ) {
+    @ConstructorBinding
+    public EdgeRateLimitProperties {
+    }
+
     public EdgeRateLimitProperties(final boolean enabled, final int backofficeRequestsPerMinute,
                                    final int searchRequestsPerMinute) {
         this(enabled, backofficeRequestsPerMinute, searchRequestsPerMinute, 10_000, Duration.ofMinutes(15));
