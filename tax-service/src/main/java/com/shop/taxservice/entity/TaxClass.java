@@ -1,6 +1,7 @@
 package com.shop.taxservice.entity;
 
 import com.shop.common.core.data.AbstractMappedEntity;
+import com.shop.taxservice.constant.TaxConstants;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -22,6 +23,7 @@ public class TaxClass extends AbstractMappedEntity {
     private String name;
 
     @Column(name = "default_rate_pct", nullable = false, precision = 5, scale = 2)
+    @jakarta.validation.constraints.DecimalMax(TaxConstants.MAX_PERCENTAGE)
     private BigDecimal defaultRatePct;
 
     @Version
