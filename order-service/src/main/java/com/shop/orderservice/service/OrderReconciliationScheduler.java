@@ -18,6 +18,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Reconciliation scheduler for stuck PENDING orders (hardening §6, D8).
@@ -43,6 +46,16 @@ import java.util.List;
  * the commit orchestration and recurse. Races with a concurrent admin transition are
  * caught by the Order {@code @Version} guard; the losing write rolls back and the
  * order is re-examined next cycle.</p>
+ *
+ * <h3>H38 — bounded chunking + parallel fan-out</h3>
+ * The pre-fix design loaded ALL stuck orders in a single unbounded
+ * {@code findByStatusAndCreatedAtBefore(...)} and processed them serially —
+ * one poll + one HTTP per order. A backlog of 1000 orders held the scheduler
+ * thread for 1000 round-trips. The fix loads in chunks of
+ * {@code order.reconciliation.batch-size} (default 50) and fans the per-order
+ * reconcile across an executor — N orders complete in roughly the slowest
+ * single remote poll, not the sum. The chunk size caps memory; the fan-out
+ * caps wall time.
  */
 @Component
 @Slf4j
@@ -60,6 +73,16 @@ public class OrderReconciliationScheduler {
     private final OrderConfirmMetrics confirmMetrics;
     private final TransactionTemplate transactionTemplate;
     private final long stuckMinutes;
+    private final int batchSize;
+
+    private static final ExecutorService RECONCILE_EXECUTOR =
+        Executors.newFixedThreadPool(
+            Math.max(2, Runtime.getRuntime().availableProcessors() * 2),
+            r -> {
+                Thread t = new Thread(r, "reconciliation-fanout");
+                t.setDaemon(true);
+                return t;
+            });
 
     public OrderReconciliationScheduler(OrderRepository orderRepository,
                                         OrderItemRepository orderItemRepository,
@@ -68,7 +91,8 @@ public class OrderReconciliationScheduler {
                                         OrderEventPublisher orderEventPublisher,
                                         OrderConfirmMetrics confirmMetrics,
                                         TransactionTemplate transactionTemplate,
-                                        @Value("${order.reconciliation.stuck-minutes:30}") long stuckMinutes) {
+                                        @Value("${order.reconciliation.stuck-minutes:30}") long stuckMinutes,
+                                        @Value("${order.reconciliation.batch-size:50}") int batchSize) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.promotionClient = promotionClient;
@@ -77,6 +101,7 @@ public class OrderReconciliationScheduler {
         this.confirmMetrics = confirmMetrics;
         this.transactionTemplate = transactionTemplate;
         this.stuckMinutes = stuckMinutes;
+        this.batchSize = batchSize;
     }
 
     /** Gauge must be registered exactly once — supplier re-reads on every scrape. */
@@ -88,18 +113,33 @@ public class OrderReconciliationScheduler {
     @Scheduled(fixedDelayString = "${order.reconciliation.interval-ms:300000}")
     public void reconcileStuckOrders() {
         Instant cutoff = stuckCutoff();
-        List<Order> candidates =
-            orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
+        // H38 — bounded chunk: load up to batchSize stuck orders per pass. A
+        // backlog of 1000 orders is processed as 20 successive batches (each
+        // tick); a scheduler tick that finds >batchSize orders leaves the rest
+        // for the next tick. The repository overload takes Pageable so the
+        // SQL LIMIT is set in the DB layer (cheap, no over-fetch).
+        List<Order> candidates = orderRepository.findByStatusAndCreatedAtBefore(
+            OrderStatus.PENDING, cutoff,
+            org.springframework.data.domain.PageRequest.of(0, batchSize));
         if (candidates.isEmpty()) return;
-        log.info("RECONCILIATION_SCAN candidates={} cutoff={}", candidates.size(), cutoff);
+        log.info("RECONCILIATION_SCAN candidates={} batch_size={} cutoff={}",
+            candidates.size(), batchSize, cutoff);
+
+        // H38 — fan-out per-order reconcile in parallel so a 50-order chunk
+        // completes in ~slowest poll rather than sum. The catch below isolates
+        // one poisoned order — the rest of the chunk keeps its progress.
+        List<CompletableFuture<Void>> futures = new ArrayList<>(candidates.size());
         for (Order order : candidates) {
-            try {
-                reconcile(order);
-            } catch (Exception ex) {
-                // one poisoned candidate must not abort the sweep — retried next cycle
-                log.error("RECONCILIATION_ERROR order={} — retried next cycle", order.getId(), ex);
-            }
+            futures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    reconcile(order);
+                } catch (Exception ex) {
+                    log.error("RECONCILIATION_ERROR order={} — retried next cycle",
+                        order.getId(), ex);
+                }
+            }, RECONCILE_EXECUTOR));
         }
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
     private void reconcile(Order order) {

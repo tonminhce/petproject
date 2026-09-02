@@ -25,5 +25,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
      */
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff);
 
+    /**
+     * H38 — bounded chunk variant. The scheduler pulls at most {@code limit}
+     * stuck orders per pass; a backlog larger than the limit is processed on
+     * the next tick. Keeps memory and round-trips bounded.
+     */
+    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff,
+                                               org.springframework.data.domain.Pageable pageable);
+
     long countByStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff);
 }

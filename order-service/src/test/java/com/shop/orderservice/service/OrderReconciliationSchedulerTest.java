@@ -65,7 +65,7 @@ class OrderReconciliationSchedulerTest {
         confirmMetrics = new OrderConfirmMetrics(meterRegistry);
         TransactionTemplate txTemplate = new TransactionTemplate(mock(PlatformTransactionManager.class));
         scheduler = new OrderReconciliationScheduler(orderRepository, orderItemRepository,
-            promotionClient, inventoryClient, eventPublisher, confirmMetrics, txTemplate, 30);
+            promotionClient, inventoryClient, eventPublisher, confirmMetrics, txTemplate, 30, 50);
         scheduler.registerStuckGauge();
     }
 
@@ -81,7 +81,7 @@ class OrderReconciliationSchedulerTest {
     }
 
     private void givenCandidates(Order order, OrderItem... items) {
-        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class)))
+        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class), any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(List.of(order));
         when(orderItemRepository.findByOrderId(order.getId())).thenReturn(List.of(items));
     }
@@ -188,7 +188,7 @@ class OrderReconciliationSchedulerTest {
     void promotionStatePoll4xx_serviceUnavailable_routesToMixed() {
         Order order = stuckOrder(promoId);
         // promotion is polled before items — neither item repo nor inventory is reached
-        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class)))
+        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class), any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(List.of(order));
         when(promotionClient.getReservationState(promoId))
             .thenThrow(BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "promotion"));
@@ -205,13 +205,13 @@ class OrderReconciliationSchedulerTest {
     @Test
     void usesStuckMinutesCutoff_andEmptyCandidatesPollNothing() {
         Instant before = Instant.now();
-        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class)))
+        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class), any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(List.of());
 
         scheduler.reconcileStuckOrders();
 
         ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
-        verify(orderRepository).findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), cutoff.capture());
+        verify(orderRepository).findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), cutoff.capture(), any(org.springframework.data.domain.Pageable.class));
         // cutoff ≈ now - 30 min (stuckMinutes=30), computed between `before` and the assertion
         Instant expectedFloor = before.minusSeconds(30 * 60 + 5);
         Instant expectedCeiling = Instant.now().minusSeconds(30 * 60 - 5);
@@ -272,7 +272,7 @@ class OrderReconciliationSchedulerTest {
     void unexpectedErrorOnOneOrder_doesNotAbortSweep() {
         Order bad = Order.builder().id(UUID.randomUUID()).status(OrderStatus.PENDING).build();
         Order good = stuckOrder(null);
-        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class)))
+        when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class), any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(List.of(bad, good));
         when(orderItemRepository.findByOrderId(bad.getId())).thenThrow(new IllegalStateException("db hiccup"));
         when(orderItemRepository.findByOrderId(good.getId())).thenReturn(List.of(item(null)));
