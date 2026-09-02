@@ -15,7 +15,10 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * D4 — bucket4j per-IP token buckets for the two edge scopes:
@@ -46,7 +49,7 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
     private final GatewayErrorResponseWriter errorResponseWriter;
     private final ClientIpResolver clientIpResolver;
     private final List<String> backofficePrefixes;
-    private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Cache<String, Bucket> buckets;
 
     public RateLimitFilter(final EdgeRateLimitProperties properties,
                            final GatewayErrorResponseWriter errorResponseWriter,
@@ -55,6 +58,7 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
         this.errorResponseWriter = errorResponseWriter;
         this.clientIpResolver = clientIpResolver;
         this.backofficePrefixes = ServiceRoute.backofficeRoutes().map(ServiceRoute::prefix).toList();
+        this.buckets = Caffeine.newBuilder().maximumSize(properties.maximumBuckets()).expireAfterAccess(properties.bucketExpiration().toMillis(), TimeUnit.MILLISECONDS).build();
     }
 
     @Override
@@ -73,7 +77,7 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
         }
 
         final String key = scope + ":" + clientIpResolver.resolve(exchange);
-        final Bucket bucket = buckets.computeIfAbsent(key, ignored -> newBucket(scope));
+        final Bucket bucket = buckets.get(key, ignored -> newBucket(scope));
         if (!bucket.tryConsume(1)) {
             exchange.getResponse().getHeaders().set(REMAINING_HEADER, "0");
             return errorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS);

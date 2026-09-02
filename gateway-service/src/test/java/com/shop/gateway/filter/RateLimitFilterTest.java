@@ -20,7 +20,7 @@ class RateLimitFilterTest {
 
     private final GatewayFilterChain chain = mock(GatewayFilterChain.class);
     private final GatewayErrorResponseWriter errorWriter = new GatewayErrorResponseWriter(new ObjectMapper());
-    private final ClientIpResolver ipResolver = new ClientIpResolver();
+    private final ClientIpResolver ipResolver = new ClientIpResolver(1);
 
     @Test
     void backofficeBurstExceedingLimitYields429EnvelopeAndZeroRemainingHeader() throws Exception {

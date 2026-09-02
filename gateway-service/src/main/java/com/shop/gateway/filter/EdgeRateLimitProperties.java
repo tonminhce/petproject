@@ -1,6 +1,8 @@
 package com.shop.gateway.filter;
 
 import jakarta.validation.constraints.Positive;
+
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
@@ -20,6 +22,12 @@ import org.springframework.validation.annotation.Validated;
 public record EdgeRateLimitProperties(
         @DefaultValue("true") boolean enabled,
         @DefaultValue("10") @Positive int backofficeRequestsPerMinute,
-        @DefaultValue("60") @Positive int searchRequestsPerMinute
+        @DefaultValue("60") @Positive int searchRequestsPerMinute,
+        @DefaultValue("10000") @Positive int maximumBuckets,
+        @DefaultValue("PT15M") java.time.Duration bucketExpiration
 ) {
+    public EdgeRateLimitProperties(final boolean enabled, final int backofficeRequestsPerMinute,
+                                   final int searchRequestsPerMinute) {
+        this(enabled, backofficeRequestsPerMinute, searchRequestsPerMinute, 10_000, java.time.Duration.ofMinutes(15));
+    }
 }
