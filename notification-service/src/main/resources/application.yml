@@ -36,6 +36,13 @@ shop:
     smtp:
       enabled: ${SMTP_ENABLED:false}
       fallback-recipient: ${SMTP_FALLBACK_RECIPIENT:ops@example.com}
+    retry:
+      poll-ms: ${NOTIFICATION_RETRY_POLL_MS:60000}
+      initial-delay-ms: ${NOTIFICATION_RETRY_INITIAL_DELAY_MS:0}
+      batch-size: ${NOTIFICATION_RETRY_BATCH_SIZE:50}
+      max-attempts: ${NOTIFICATION_RETRY_MAX_ATTEMPTS:6}
+      backoff-base-seconds: ${NOTIFICATION_RETRY_BACKOFF_BASE_SECONDS:300}
+      stale-sending-seconds: ${NOTIFICATION_RETRY_STALE_SENDING_SECONDS:900}
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}
