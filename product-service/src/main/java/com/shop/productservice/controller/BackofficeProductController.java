@@ -35,14 +35,12 @@ import java.util.UUID;
  * the production reindex), while human CRUD lives in ADMIN-only methods added
  * here under the C13 fix.
  *
- * <p>Security model mirrors {@code OrderController.verifyPurchase}: class-level
- * isAuthenticated() gives every authenticated identity access, then each method
- * downgrades to a tighter rule.</p>
+ * <p>Each endpoint declares its required role explicitly. This keeps the security
+ * policy local to the operation and avoids a redundant class-level guard.</p>
  */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_PRODUCTS)
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class BackofficeProductController {
 
     private final ProductService productService;
