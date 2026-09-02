@@ -1,6 +1,7 @@
 package com.shop.inventoryservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.InventoryResponse;
@@ -110,11 +111,9 @@ class InventoryServiceImplTest {
     @Test
     void reserve_incrementsReservedAndPublishes() {
         ReserveRequest req = new ReserveRequest(5, null);
-        when(reservationRepository.findByProductIdAndStatusAndExpiresAtBefore(
-            eq(productId), eq(ReservationStatus.PENDING), any(Instant.class)))
-            .thenReturn(List.of());
+        // H10 — atomic UPDATE returns 1 row updated, capacity was sufficient.
+        when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(1);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(inventory)).thenReturn(inventory);
         when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
         when(mapper.toReservationResponse(any(Reservation.class)))
             .thenReturn(new ReservationResponse(reservationId, productId, 5, ReservationStatus.PENDING,
@@ -123,7 +122,11 @@ class InventoryServiceImplTest {
         var result = service.reserve(productId, req);
 
         assertThat(result.quantity()).isEqualTo(5);
-        assertThat(inventory.getReservedQuantity()).isEqualTo(5);
+        // H10 — the in-memory Inventory entity's reservedQuantity is NOT mutated
+        // by the service; the atomic UPDATE on the inventory row owns the
+        // authoritative count. Verify the SQL update was issued with the right
+        // quantity, and the published event carries the request quantity.
+        verify(inventoryRepository).atomicReserve(productId, req.quantity());
         ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
         verify(publisher).publishReserved(eq(inventory), reservationCaptor.capture());
         Reservation published = reservationCaptor.getValue();
@@ -136,13 +139,17 @@ class InventoryServiceImplTest {
     @Test
     void reserve_throwsStockInsufficient() {
         ReserveRequest req = new ReserveRequest(999, null);
-        when(reservationRepository.findByProductIdAndStatusAndExpiresAtBefore(
-            eq(productId), eq(ReservationStatus.PENDING), any(Instant.class)))
-            .thenReturn(List.of());
+        // H10 — atomic UPDATE returns 0 (insufficient capacity OR product missing).
+        // The disambiguation find returns the inventory, so STOCK_INSUFFICIENT wins.
+        when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(0);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
 
         assertThatThrownBy(() -> service.reserve(productId, req))
-            .isInstanceOf(BusinessException.class);
+            .isInstanceOf(BusinessException.class)
+            .satisfies(ex -> {
+                BusinessException be = (BusinessException) ex;
+                assertThat(be.getErrorCode()).isEqualTo(ErrorCode.STOCK_INSUFFICIENT.getCode());
+            });
     }
 
     @Test
@@ -320,10 +327,9 @@ class InventoryServiceImplTest {
     @Test
     void reserve_evictsCacheAfterCommit() {
         ReserveRequest req = new ReserveRequest(5, null);
-        when(reservationRepository.findByProductIdAndStatusAndExpiresAtBefore(
-                eq(productId), eq(ReservationStatus.PENDING), any(Instant.class))).thenReturn(List.of());
+        // H10 — atomic reserve succeeds first, then the cache is evicted.
+        when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(1);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
-        when(inventoryRepository.save(inventory)).thenReturn(inventory);
         when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
 
         service.reserve(productId, req);

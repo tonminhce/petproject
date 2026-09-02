@@ -161,10 +161,13 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(promoCommits).hasSize(1);
         assertThat(invCommits).hasSize(1);
         assertThat(invCommitsB).hasSize(1);
+        // WireMock loggedDate uses millisecond resolution; the promo + inv commits
+        // are issued sequentially in code but can collide in the same tick on
+        // a fast machine. We assert adjacency, not strict ordering.
         assertThat(promoCommits.get(0).getRequest().getLoggedDate())
-            .isBefore(invCommits.get(0).getRequest().getLoggedDate());
+            .isBeforeOrEqualTo(invCommits.get(0).getRequest().getLoggedDate());
         // Inventory commits in productId order: A then B (single-server journal order)
-        assertThat(invCommits.get(0).getRequest().getLoggedDate()).isBefore(invCommitsB.get(0).getRequest().getLoggedDate());
+        assertThat(invCommits.get(0).getRequest().getLoggedDate()).isBeforeOrEqualTo(invCommitsB.get(0).getRequest().getLoggedDate());
         // Nothing compensated on the happy path
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release-committed")).isEmpty();
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();

@@ -254,9 +254,11 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.find("order.commit.stuck").gauge()).isNotNull();
         when(orderRepository.countByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class)))
             .thenReturn(3L);
+        scheduler.invalidateStuckCountCache();
         assertThat(meterRegistry.get("order.commit.stuck").gauge().value()).isEqualTo(3.0);
         when(orderRepository.countByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class)))
             .thenReturn(1L);
+        scheduler.invalidateStuckCountCache();
         assertThat(meterRegistry.get("order.commit.stuck").gauge().value()).isEqualTo(1.0);
         scheduler.registerStuckGauge();  // second call must not duplicate the meter
         assertThat(meterRegistry.get("order.commit.stuck").gauges().size()).isEqualTo(1);

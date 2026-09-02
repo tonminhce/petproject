@@ -9,6 +9,7 @@ import com.shop.orderservice.repository.OrderItemRepository;
 import com.shop.orderservice.repository.OrderRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -84,6 +85,7 @@ public class OrderReconciliationScheduler {
                 return t;
             });
 
+    @Autowired
     public OrderReconciliationScheduler(OrderRepository orderRepository,
                                         OrderItemRepository orderItemRepository,
                                         PromotionServiceClient promotionClient,
@@ -102,6 +104,16 @@ public class OrderReconciliationScheduler {
     @PostConstruct
     public void registerStuckGauge() {
         confirmMetrics.stuckGauge(this::stuckPendingCount);
+    }
+
+    /**
+     * Invalidate the memoised gauge count cache. Used by tests to observe a
+     * {@code thenReturn(...)} swap in a single JVM run. Production code never
+     * calls this; the cache self-refreshes when its TTL elapses.
+     */
+    // VisibleForTesting — production must not call this; see class javadoc.
+    void invalidateStuckCountCache() {
+        stuckPendingCountCache.invalidateForTest();
     }
 
     @Scheduled(fixedDelayString = "${order.reconciliation.interval-ms:300000}")
@@ -244,6 +256,13 @@ public class OrderReconciliationScheduler {
                 lastValue = supplier.getAsLong();
                 lastUpdatedNanos = now;
                 return lastValue;
+            }
+        }
+
+        // VisibleForTesting — force the next get() to re-invoke the supplier.
+        void invalidateForTest() {
+            synchronized (this) {
+                this.lastUpdatedNanos = 0L;
             }
         }
     }
