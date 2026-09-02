@@ -19,7 +19,7 @@ public class TaxCalculationController {
 
     private final TaxCalculationService taxCalculationService;
 
-    @PostMapping(ApiPaths.BACKOFFICE_TAX_RATES + "/calculate")
+    @PostMapping(ApiPaths.TAX_CALCULATION)
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "tax.calculate", resourceType = "tax-calculation")
     public ApiResponse<TaxCalculateResponse> calculate(@Valid @RequestBody TaxCalculateRequest request) {
