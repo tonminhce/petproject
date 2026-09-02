@@ -2,7 +2,7 @@
 
 > Status: PARTIAL / REPORTING ONLY. Commits listed below are present on main; this report does not claim every planned item completed.
 > Scope: Product, search, gateway, rating, promotion, shipping, tax, and favourite.
-> Observed HEAD: a48f158.
+> Observed HEAD: ff29d88 (the report commit).
 
 ## Evidence-backed findings
 

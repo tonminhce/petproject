@@ -2,7 +2,7 @@
 
 > Status: PARTIAL. Only the notification/auth commits listed below are evidenced. Remaining findings are not silently marked done.
 > Scope: Notification, auth, and remaining M+L items.
-> Observed HEAD: a48f158.
+> Observed HEAD: ff29d88 (the report commit).
 
 ## Evidence-backed work
 
