@@ -31,7 +31,15 @@ public class PaymentWebhookController {
     public ApiResponse<Void> handle(
             @PathVariable String provider,
             @RequestBody byte[] rawBody,
-            @RequestHeader(value = "X-Webhook-Signature", required = false) String signature) {
+            @RequestHeader(value = "X-Webhook-Signature", required = false) String signature,
+            @RequestHeader(value = "Stripe-Signature", required = false) String stripeSignature) {
+        // C5 Task 3 — Stripe signs with its own t=/v1= scheme verified by
+        // stripe-java's Webhook.constructEvent inside the service; every other
+        // provider keeps the fleet HMAC verifier. Same endpoint, no additions.
+        if ("stripe".equals(provider)) {
+            webhookEventService.handleStripe(rawBody, stripeSignature);
+            return ApiResponse.message("accepted");
+        }
         if (!WebhookSignatureVerifier.verify(webhookSecret, rawBody, signature)) {
             throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         }

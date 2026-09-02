@@ -60,7 +60,8 @@ class WebhookEventServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(), receiptService);
+        service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(), receiptService,
+                new com.shop.paymentservice.config.PaymentStripeProperties("", "mock-webhook-secret", "2024-06-20", false));
         org.mockito.Mockito.lenient().doAnswer(inv -> {
             inv.getArgument(1, PaymentEvent.class).setStatus(PaymentEvent.STATUS_PROCESSED);
             return inv.getArgument(0, Payment.class);

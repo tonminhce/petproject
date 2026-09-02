@@ -1,14 +1,20 @@
 package com.shop.paymentservice.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.paymentservice.config.PaymentStripeProperties;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.entity.PaymentEvent;
+import com.shop.paymentservice.provider.StripeCurrencyUnits;
 import com.shop.paymentservice.repository.PaymentEventRepository;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.webhook.WebhookPayload;
+import com.stripe.exception.SignatureVerificationException;
+import com.stripe.model.Event;
+import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,6 +25,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,11 +49,60 @@ public class WebhookEventService {
     static final String INVALID_PREFIX = "invalid-";
     static final String UNKNOWN_TYPE = "unknown";
 
+    /** The stripe webhook path provider label (mirrors {@code {provider}=stripe}). */
+    static final String STRIPE_PROVIDER = "stripe";
+
+    /**
+     * C5 Task 3 (spec D4) — Stripe event types mapped onto the payment
+ * lifecycle. Exactly these three; everything else Stripe emits is
+     * deliberately-ignored (stored PROCESSED so dedupe swallows retries).
+     */
+    private static final Map<String, String> STRIPE_EVENT_STATUS = Map.of(
+            "payment_intent.succeeded", "CAPTURED",
+            "payment_intent.payment_failed", "FAILED",
+            "charge.refunded", "REFUNDED");
+
     private final PaymentRepository paymentRepository;
     private final PaymentEventRepository eventRepository;
     private final PaymentWriter writer;
     private final ObjectMapper objectMapper;
     private final ReceiptService receiptService;
+    private final PaymentStripeProperties stripeProperties;
+
+    /**
+     * C5 Task 3 — Stripe webhook entry ({@code POST /api/v1/webhooks/payments/stripe}).
+     * Signature verification is delegated to stripe-java's
+     * {@link Webhook#constructEvent} (spec D4 — NEVER hand-rolled HMAC);
+     * {@code SignatureVerificationException} → 401 PAY-5005 with no state
+     * change. A verified event is converted into the fleet carrier payload
+     * (minor units → major) and delegated to {@link #handle(String, byte[])}
+     * so dedupe, the state machine, the amount check, the outbox row and
+     * receipts reuse the existing C3 machinery untouched.
+     */
+    public void handleStripe(byte[] rawBody, String signatureHeader) {
+        String webhookSecret = stripeProperties == null ? null : stripeProperties.webhookSecret();
+        if (webhookSecret == null || webhookSecret.isBlank()
+                || signatureHeader == null || signatureHeader.isBlank()) {
+            // Fail-closed: an unconfigured secret must behave exactly like a
+            // bad signature, never like an open receiver.
+            throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
+        }
+        Event event;
+        try {
+            event = Webhook.constructEvent(new String(rawBody, StandardCharsets.UTF_8),
+                    signatureHeader, webhookSecret);
+        } catch (SignatureVerificationException e) {
+            log.warn("Stripe webhook signature verification failed: {}", e.getMessage());
+            throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
+        }
+        String stripeType = event.getType();
+        String mappedStatus = STRIPE_EVENT_STATUS.get(stripeType);
+        if (mappedStatus == null) {
+            storeProcessedNoOp(event.getId(), stripeType, rawBody);
+            return;
+        }
+        handle(STRIPE_PROVIDER, toCarrierPayload(event.getId(), stripeType, mappedStatus, rawBody));
+    }
 
     public void handle(String provider, byte[] rawBody) {
         WebhookPayload payload = tryParse(rawBody);
@@ -155,6 +211,58 @@ public class WebhookEventService {
         Payment saved = writer.completeWithEvent(payment, event, outboxEventType(next));
         if (next == PaymentStatus.CAPTURED) {
             attachReceipt(saved);
+        }
+    }
+
+    /**
+     * C5 Task 3 — convert a signature-verified Stripe event into the fleet
+     * carrier payload: payment id comes from {@code data.object.metadata}
+     * (set by StripeProvider at intent creation; Stripe copies PaymentIntent
+     * metadata onto its charges), amount goes minor → major units so the
+     * existing {@code process()} amount check compares like with like.
+     */
+    private byte[] toCarrierPayload(String eventId, String stripeType, String mappedStatus, byte[] rawBody) {
+        try {
+            JsonNode obj = objectMapper.readTree(rawBody).path("data").path("object");
+            String paymentId = obj.path("metadata").path("payment_id").asText(null);
+            String currency = obj.path("currency").asText(null);
+            Long amountMinor = obj.path("amount").isNumber() ? obj.path("amount").asLong() : null;
+            WebhookPayload payload = WebhookPayload.builder()
+                    .eventId(eventId)
+                    .eventType(stripeType)
+                    .paymentId(paymentId)
+                    .amount(StripeCurrencyUnits.fromMinor(amountMinor, currency))
+                    .currency(currency == null ? null : currency.toUpperCase(java.util.Locale.ROOT))
+                    .status(mappedStatus)
+                    .providerEventId(eventId)
+                    .build();
+            return objectMapper.writeValueAsBytes(payload);
+        } catch (Exception e) {
+            // Signature was valid but the body shape defeated extraction —
+            // surface as an unparseable carrier delivery; the generic handle()
+            // path stores it FAILED_RETRYABLE for the scheduler to flag. The
+            // synthetic non-JSON body embeds the stable event id so dedupe
+            // stays deterministic across Stripe's retries.
+            log.warn("Stripe event {} could not be converted to the carrier payload", eventId, e);
+            return ("not-json-" + eventId).getBytes(StandardCharsets.UTF_8);
+        }
+    }
+
+    /**
+     * C5 Task 3 — deliberately-ignored Stripe types (e.g. charge.succeeded
+     * companion events). Stored PROCESSED keyed by the Stripe event id so
+     * dedupe swallows Stripe's delivery retries without the retry scheduler
+     * flagging them FAILED_PERMANENT for ops.
+     */
+    private void storeProcessedNoOp(String eventId, String stripeType, byte[] rawBody) {
+        PaymentEvent event = buildEvent(STRIPE_PROVIDER, eventId, null, rawBody);
+        event.setType(stripeType);
+        event.setStatus(PaymentEvent.STATUS_PROCESSED);
+        event.setLastError("ignored stripe event type (not mapped to payment lifecycle)");
+        try {
+            writer.insertEvent(event);
+        } catch (DataIntegrityViolationException e) {
+            log.debug("Ignored stripe event already stored (eventId={}, type={})", eventId, stripeType);
         }
     }
 

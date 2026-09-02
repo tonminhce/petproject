@@ -53,7 +53,7 @@ class PaymentWebhookControllerTest {
 
     @Test
     void validSignature_delegatesToReceiver_andAcks() {
-        ApiResponse<Void> response = controller.handle("mock", rawBody, hmacHex(SECRET, rawBody));
+        ApiResponse<Void> response = controller.handle("mock", rawBody, hmacHex(SECRET, rawBody), null);
 
         verify(webhookEventService).handle("mock", rawBody);
         assertThat(response.success()).isTrue();
@@ -63,7 +63,7 @@ class PaymentWebhookControllerTest {
     void badSignature_throwsPay5005_beforeAnyRowIsWritten() {
         String signature = hmacHex("whsec_other_secret", rawBody);
 
-        assertThatThrownBy(() -> controller.handle("mock", rawBody, signature))
+        assertThatThrownBy(() -> controller.handle("mock", rawBody, signature, null))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.WEBHOOK_SIGNATURE_INVALID.getCode()));
@@ -72,7 +72,7 @@ class PaymentWebhookControllerTest {
 
     @Test
     void missingSignatureHeader_throwsPay5005() {
-        assertThatThrownBy(() -> controller.handle("mock", rawBody, null))
+        assertThatThrownBy(() -> controller.handle("mock", rawBody, null, null))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.WEBHOOK_SIGNATURE_INVALID.getCode()));
@@ -84,7 +84,7 @@ class PaymentWebhookControllerTest {
         String signature = hmacHex(SECRET, rawBody);
         rawBody[0] = ' ';
 
-        assertThatThrownBy(() -> controller.handle("mock", rawBody, signature))
+        assertThatThrownBy(() -> controller.handle("mock", rawBody, signature, null))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.WEBHOOK_SIGNATURE_INVALID.getCode()));
