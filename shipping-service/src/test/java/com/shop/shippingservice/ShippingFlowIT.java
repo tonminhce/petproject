@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.kafka.config.KafkaProperties;
-import com.shop.common.kafka.serialization.JsonKafkaSerializer;
+import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
@@ -57,22 +57,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * Shipping flow ITs over the REAL fleet inbound wire (H-1): order lifecycle
- * records are produced through the fleet producer path — {@code KafkaTemplate}
- * with the fleet {@code JsonKafkaSerializer} (the exact producer path of
- * order-service's {@code OrderOutboxRelay}), so the payload String lands
- * DOUBLE-ENCODED (a JSON string token wrapping the event JSON). The helper
- * previously used a {@code StringSerializer} (single-encoded) — a test wire
- * that never matched production, which is exactly why the old
- * {@code JsonDeserializer}-based consumer config silently dropped every real
- * order event while the ITs stayed green.
+ * Shipping flow ITs over the REAL fleet inbound wire (R1 + H-1): order
+ * lifecycle records are produced through the SAME path production uses —
+ * {@link KafkaMessagePublisher} over a StringSerializer ×2 template (the
+ * {@code stringKafkaTemplate} semantics of order-service's
+ * {@code OrderOutboxRelay}) — so the payload String lands SINGLE-ENCODED
+ * UTF-8 JSON on the wire. The consumer unwraps-once at the
+ * {@code BaseKafkaConsumer} boundary and also tolerates the legacy
+ * double-encoded shape (a JSON string token wrapping the event JSON) that
+ * pre-R1 in-flight records may still carry — pinned by test 9. The helper
+ * previously used a {@code JsonKafkaSerializer} double-encoding template —
+ * a wire production no longer emits.
  */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @AutoConfigureTestRestTemplate
@@ -114,22 +115,25 @@ class ShippingFlowIT extends AbstractIntegrationTest {
     @Value("${shop.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaTemplate<String, String> producerTemplate;
+    private KafkaMessagePublisher kafkaMessagePublisher;
 
     @BeforeEach
     void initProducer() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        // The fleet producer's value serializer (KafkaAutoConfiguration): a
-        // payload String gets JSON-string-encoded → double-encoded on the wire.
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonKafkaSerializer.class.getName());
-        kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
+        // The R1 production path: KafkaMessagePublisher over StringSerializer
+        // ×2 (stringKafkaTemplate semantics) — the payload String is forwarded
+        // as raw UTF-8 bytes, single-encoded JSON on the wire.
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        producerTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
+        kafkaMessagePublisher = new KafkaMessagePublisher(producerTemplate);
     }
 
     @AfterEach
     void closeProducer() {
-        kafkaTemplate.destroy();
+        producerTemplate.destroy();
     }
 
     @Test
@@ -308,25 +312,27 @@ class ShippingFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("9. H-1 pin: real wire value is a double-encoded token AND the shipment is created")
-    void doubleEncodedFleetWireTokenIsAccepted() throws Exception {
+    @DisplayName("9. H-1 pin: a LEGACY double-encoded token (pre-R1 in-flight shape) is unwrapped AND the shipment is created")
+    void legacyDoubleEncodedTokenIsAccepted() throws Exception {
         UUID orderId = UUID.randomUUID();
-        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+        sendOrderEventLegacyDoubleEncoded(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
         Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
         assertThat(shipment.getCarrier()).isEqualTo(Carrier.MANUAL);
 
-        // Wire proof on the real topic: the record value is a JSON string
-        // token wrapping the event JSON — the shape that the old
-        // JsonDeserializer-only consumer config dropped before the listener.
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 wire that
+        // in-flight records may still carry; the unwrap-once boundary
+        // accepts it.
         ConsumerRecord<String, String> record = awaitRecord(ORDER_TOPIC, orderId.toString());
         assertThat(record).as("record on %s with key=orderId", ORDER_TOPIC).isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
-        assertThat(token.isTextual()).as("fleet wire shape is a JSON string token").isTrue();
+        assertThat(token.isTextual()).as("legacy wire shape is a JSON string token").isTrue();
         JsonNode unwrapped = objectMapper.readTree(token.textValue());
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo(EVENT_ORDER_CONFIRMED);
         assertThat(unwrapped.get("orderId").textValue()).isEqualTo(orderId.toString());
     }
 
+    /** Publishes through the R1 production path: single-encoded JSON on the wire. */
     private void sendOrderEvent(UUID orderId, String eventType, String status) {
         Map<String, Object> event = Map.of(
             "eventId", UUID.randomUUID().toString(),
@@ -335,11 +341,28 @@ class ShippingFlowIT extends AbstractIntegrationTest {
             "orderId", orderId.toString(),
             "status", status);
         try {
-            kafkaTemplate.send(ORDER_TOPIC, orderId.toString(), objectMapper.writeValueAsString(event))
-                .get(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            kafkaMessagePublisher.publish(ORDER_TOPIC, orderId.toString(),
+                objectMapper.writeValueAsString(event));
+        } catch (Exception e) {
             throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Publishes the pre-R1 legacy wire: a JSON string token wrapping the event
+     * JSON (H-1 tolerance pin for in-flight records from pre-R1 producers).
+     */
+    private void sendOrderEventLegacyDoubleEncoded(UUID orderId, String eventType, String status) {
+        Map<String, Object> event = Map.of(
+            "eventId", UUID.randomUUID().toString(),
+            "eventType", eventType,
+            "occurredAt", Instant.now().toString(),
+            "orderId", orderId.toString(),
+            "status", status);
+        try {
+            String payloadJson = objectMapper.writeValueAsString(event);
+            kafkaMessagePublisher.publish(ORDER_TOPIC, orderId.toString(),
+                objectMapper.writeValueAsString(payloadJson));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
