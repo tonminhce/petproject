@@ -1,8 +1,8 @@
 # Wave C — Customer-Facing Bug Sweep Report (2026-09-03)
 
-> Status: PARTIAL / REPORTING ONLY. Commits listed below are present on main; this report does not claim every planned item completed.
+> Status: PARTIAL / REPORTING ONLY. This is an evidence ledger at current HEAD; it does not claim every planned item completed.
 > Scope: Product, search, gateway, rating, promotion, shipping, tax, and favourite.
-> Observed HEAD: ff29d88 (the report commit).
+> Observed HEAD: 90cea14 (2026-09-03; origin/main).
 
 ## Evidence-backed findings
 
@@ -17,11 +17,12 @@
 | H24 reindex cleanup errors surfaced | 3b7d63a | No result identified | Implemented in source; verification not evidenced. |
 | H37 search_after/PIT | No commit identified; deep pagination is rejected instead | No result identified | NOT IMPLEMENTED AS PLANNED; unresolved. |
 | H4 bounded rate-limit state | 727865f, 26cb5bb | No result identified | Implemented in source; verification not evidenced. |
-| H28 trusted forwarded-for handling | 347d510, 26cb5bb | ClientIpResolverTest changed | Implemented; standalone rerun not recorded. |
+| H28 trusted forwarded-for handling | 347d510, 26cb5bb, 90cea14 | ClientIpResolverTest and ClientIpResolverTrustedHopsTest reports | Implemented; focused gateway run has one stale expectation failure (see tests below), so no all-green claim. |
 | H39 promotion query index | c284bff | Changelog changed | Implemented in changelog; migration verification not evidenced. |
 | H49 idempotent promotion reservation | 78b154d | CampaignReserveTest added | Implemented; standalone rerun not recorded. |
 | H48 shipment status constraint | No reliable commit identified | No reliable result identified | UNRESOLVED. |
 | H50 tax path/validation/duplicates/round trips | f5708a5, 509d4cb, fa216fa, adabff8 | Tax tests changed | Implemented in source; standalone result not recorded. |
+| H7 rating outbox isolation | 190e136 is payment H27; rating relay work is present in e25af8b/61a46c7 | RatingOutboxRelayTest: 4 tests, 0 failures; RatingOutboxClaimConcurrencyIT: 2 tests, 0 failures | Evidence supports rating relay tests passing; no production-wide claim. |
 | Favourite sanity | 3a0a2e2, 472c23d, 44e3c50 | No Wave C battery identified | Prior changes exist; no new completion claim. |
 
 ## Tests actually run
