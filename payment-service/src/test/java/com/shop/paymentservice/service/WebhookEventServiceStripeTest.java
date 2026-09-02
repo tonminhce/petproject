@@ -285,6 +285,27 @@ class WebhookEventServiceStripeTest {
     }
 
     @Test
+    void jsonCorruptingTampering_failsClosedAsPay5005_never500() {
+        // Webhook.constructEvent raises UNCHECKED Gson errors on unparseable
+        // bodies (C5 Task 5 IT finding). Fail-closed: identical to a bad
+        // signature — 401 PAY-5005, never a 500.
+        byte[] garbage = "this is not json at all {{{".getBytes(StandardCharsets.UTF_8);
+        String header = signedHeader(garbage, STRIPE_WEBHOOK_SECRET);
+        byte[] tampered = java.util.Arrays.copyOf(garbage, garbage.length + 1);
+        tampered[tampered.length - 1] = '!'; // signature was over different bytes anyway
+
+        assertThatThrownBy(() -> service.handleStripe(tampered, header))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> {
+                    assertThat(((BusinessException) e).getErrorCode())
+                            .isEqualTo(ErrorCode.WEBHOOK_SIGNATURE_INVALID.getCode());
+                    assertThat(((BusinessException) e).getStatus()).isEqualTo(org.springframework.http.HttpStatus.UNAUTHORIZED);
+                });
+        verifyNoInteractions(writer);
+        verifyNoInteractions(paymentRepository);
+    }
+
+    @Test
     void blankWebhookSecret_failsClosed_throwsPay5005() {
         WebhookEventService unconfigured = new WebhookEventService(paymentRepository, eventRepository, writer,
                 new ObjectMapper(), receiptService,

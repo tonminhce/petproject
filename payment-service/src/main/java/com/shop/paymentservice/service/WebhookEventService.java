@@ -94,6 +94,13 @@ public class WebhookEventService {
         } catch (SignatureVerificationException e) {
             log.warn("Stripe webhook signature verification failed: {}", e.getMessage());
             throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
+        } catch (RuntimeException e) {
+            // Fail-closed: constructEvent also raises unchecked Gson errors on
+            // JSON-corrupting tampering — an unparseable body can never be a
+            // legitimate delivery, so it gets exactly the bad-signature
+            // treatment (401 PAY-5005, no state change), never a 500.
+            log.warn("Stripe webhook payload rejected during verification: {}", e.getMessage());
+            throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         }
         String stripeType = event.getType();
         String mappedStatus = STRIPE_EVENT_STATUS.get(stripeType);
