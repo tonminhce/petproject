@@ -21,15 +21,24 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -197,6 +206,73 @@ class NotificationServiceImplTest {
 
         verify(writer, never()).markSending(any(), any(), any());
         verify(delivery, never()).deliver(any());
+    }
+
+    /**
+     * H43 — concurrent-dedup proof. N threads race the same event id through
+     * {@code handle()}. All N threads see {@code existsByEventId == false} (the
+     * race window). One insert wins; every other insert fails with the unique
+     * constraint firing. Exactly one delivery happens.
+     *
+     * <p>This pins the contract that {@code saveAndFlush + catch
+     * DataIntegrityViolationException} (the Java equivalent of
+     * {@code ON CONFLICT DO NOTHING}) is the safety net — the optimistic
+     * {@code existsByEventId} check is only an optimization.</p>
+     */
+    @Test
+    void concurrentDuplicate_insertLosesRaceAndExactlyOneDelivery() throws Exception {
+        int parallelism = 4;
+        CyclicBarrier barrier = new CyclicBarrier(parallelism);
+        AtomicInteger insertAttempts = new AtomicInteger();
+        CountDownLatch firstInsertHeld = new CountDownLatch(1);
+
+        when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
+        // First insert blocks on the latch so the other threads pile up
+        // inside insert() too — exactly the race window the unique index
+        // exists to catch.
+        when(writer.insert(any(Notification.class))).thenAnswer(inv -> {
+            int attempt = insertAttempts.incrementAndGet();
+            if (attempt == 1) {
+                // hold the winning insert open until the losers have all tried
+                firstInsertHeld.await(5, TimeUnit.SECONDS);
+                return savedNotification();
+            }
+            throw new DataIntegrityViolationException("uk_notification_event_id");
+        });
+        when(sender.channel()).thenReturn(NotificationChannel.LOG);
+        when(writer.markSending(eq(NOTIFICATION_ID), any(), any())).thenReturn(true);
+
+        ExecutorService executor = Executors.newFixedThreadPool(parallelism);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < parallelism; i++) {
+                futures.add(executor.submit(() -> {
+                    try {
+                        barrier.await(5, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                    service.handle(createdEvent());
+                }));
+            }
+            // give the losers time to enter insert() and fail
+            Thread.sleep(200);
+            firstInsertHeld.countDown();
+            for (Future<?> f : futures) {
+                f.get(10, TimeUnit.SECONDS);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(insertAttempts.get())
+                .as("every thread attempted insert inside the race window")
+                .isEqualTo(parallelism);
+        verify(delivery, times(1)).deliver(NOTIFICATION_ID);
+        // markSending only ran for the winning thread; the rest saw no
+        // inserted row to claim.
+        verify(writer, times(1)).markSending(eq(NOTIFICATION_ID), any(), any());
     }
 
     @Test
