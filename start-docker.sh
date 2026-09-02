@@ -232,9 +232,10 @@ print_summary() {
     printf '  order-service        :8084  | payment-service    :8085\n'
     printf '  shipping-service     :8087  | inventory-service  :8082\n'
     printf '  favourite-service    :8081  | rating-service     :8089\n'
-    printf '  media-service        :8083  | tax-service        :8091\n'
-    printf '  promotion-service    :8093  | search-service     :8094\n'
-    printf '  notification-service :8090\n'
+    printf '  tax-service          :8091  | promotion-service  :8093\n'
+    printf '  search-service       :8094  | notification-service :8090\n'
+    printf '\n'
+    printf '%bIngress-only (via gateway :8080, no host port):%b media-service\n' "${CYAN}" "${NC}"
     printf '\n'
 
     printf '%bFollow-up commands:%b\n' "${BOLD}" "${NC}"
