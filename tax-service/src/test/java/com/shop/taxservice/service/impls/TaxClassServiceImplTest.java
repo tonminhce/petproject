@@ -50,7 +50,7 @@ class TaxClassServiceImplTest {
 
     @Test
     void createSavesAndReturnsResponse() {
-        when(taxClassRepository.findByNameIgnoreCase("Standard")).thenReturn(Optional.empty());
+        when(taxClassRepository.findByNameIgnoreCaseAndDeletedFalse("Standard")).thenReturn(Optional.empty());
         when(taxClassRepository.save(any(TaxClass.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TaxClassResponse response = service.create(new TaxClassRequest("Standard", new BigDecimal("19.00")));
@@ -64,7 +64,7 @@ class TaxClassServiceImplTest {
 
     @Test
     void createDuplicateNameThrowsTax8003WithNameParam() {
-        when(taxClassRepository.findByNameIgnoreCase("Standard")).thenReturn(Optional.of(taxClass("Standard")));
+        when(taxClassRepository.findByNameIgnoreCaseAndDeletedFalse("Standard")).thenReturn(Optional.of(taxClass("Standard")));
 
         assertThatThrownBy(() -> service.create(new TaxClassRequest("Standard", new BigDecimal("19.00"))))
             .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -75,7 +75,7 @@ class TaxClassServiceImplTest {
 
     @Test
     void createDuplicateNameIgnoreCaseThrowsTax8003() {
-        when(taxClassRepository.findByNameIgnoreCase("STANDARD")).thenReturn(Optional.of(taxClass("standard")));
+        when(taxClassRepository.findByNameIgnoreCaseAndDeletedFalse("STANDARD")).thenReturn(Optional.of(taxClass("standard")));
 
         assertThatThrownBy(() -> service.create(new TaxClassRequest("STANDARD", new BigDecimal("19.00"))))
             .isInstanceOfSatisfying(BusinessException.class, ex ->
@@ -86,7 +86,7 @@ class TaxClassServiceImplTest {
     void updateAppliesFieldsAndReturnsResponse() {
         TaxClass existing = taxClass("Old");
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(existing));
-        when(taxClassRepository.existsByNameIgnoreCaseAndIdNot("New", classId)).thenReturn(false);
+        when(taxClassRepository.existsByNameIgnoreCaseAndDeletedFalseAndIdNot("New", classId)).thenReturn(false);
         when(taxClassRepository.save(existing)).thenReturn(existing);
 
         TaxClassResponse response = service.update(classId, new TaxClassRequest("New", new BigDecimal("7.00")));
@@ -98,7 +98,7 @@ class TaxClassServiceImplTest {
     @Test
     void updateRenameToExistingNameThrowsTax8003() {
         when(taxClassRepository.findById(classId)).thenReturn(Optional.of(taxClass("Old")));
-        when(taxClassRepository.existsByNameIgnoreCaseAndIdNot("Taken", classId)).thenReturn(true);
+        when(taxClassRepository.existsByNameIgnoreCaseAndDeletedFalseAndIdNot("Taken", classId)).thenReturn(true);
 
         assertThatThrownBy(() -> service.update(classId, new TaxClassRequest("Taken", new BigDecimal("7.00"))))
             .isInstanceOfSatisfying(BusinessException.class, ex ->

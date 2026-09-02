@@ -60,6 +60,20 @@ class TaxCatalogIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void softDeletedClassNameCanBeReused() {
+        TaxClassResponse original = taxClassService.create(
+            new TaxClassRequest("IT Catalog Soft Delete Reuse", new BigDecimal("19.00")));
+
+        taxClassService.delete(original.id());
+
+        TaxClassResponse recreated = taxClassService.create(
+            new TaxClassRequest("IT Catalog Soft Delete Reuse", new BigDecimal("7.00")));
+
+        assertThat(recreated.id()).isNotEqualTo(original.id());
+        assertThat(recreated.defaultRatePct()).isEqualTo(new BigDecimal("7.00"));
+    }
+
+    @Test
     void softDeletedClassIsInvisibleToCalculate() {
         TaxClassResponse taxClass = taxClassService.create(
             new TaxClassRequest("IT Catalog Deleted", new BigDecimal("19.00")));

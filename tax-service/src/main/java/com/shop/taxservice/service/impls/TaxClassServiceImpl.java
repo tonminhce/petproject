@@ -27,7 +27,7 @@ public class TaxClassServiceImpl implements TaxClassService {
     @Override
     @Transactional
     public TaxClassResponse create(TaxClassRequest request) {
-        if (taxClassRepository.findByNameIgnoreCase(request.name()).isPresent()) {
+        if (taxClassRepository.findByNameIgnoreCaseAndDeletedFalse(request.name()).isPresent()) {
             throw BusinessException.of(ErrorCode.DUPLICATE_TAX_RATE, request.name());
         }
         TaxClass taxClass = TaxClass.builder()
@@ -43,7 +43,7 @@ public class TaxClassServiceImpl implements TaxClassService {
         TaxClass taxClass = taxClassRepository.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_CLASS_NOT_FOUND, id));
         if (!request.name().equals(taxClass.getName())
-                && taxClassRepository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+                && taxClassRepository.existsByNameIgnoreCaseAndDeletedFalseAndIdNot(request.name(), id)) {
             throw BusinessException.of(ErrorCode.DUPLICATE_TAX_RATE, request.name());
         }
         taxClass.setName(request.name());

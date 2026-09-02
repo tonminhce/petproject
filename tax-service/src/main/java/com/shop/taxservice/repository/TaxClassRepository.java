@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface TaxClassRepository extends JpaRepository<TaxClass, UUID> {
 
-    Optional<TaxClass> findByNameIgnoreCase(String name);
+    Optional<TaxClass> findByNameIgnoreCaseAndDeletedFalse(String name);
 
-    boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
+    boolean existsByNameIgnoreCaseAndDeletedFalseAndIdNot(String name, UUID id);
 }
