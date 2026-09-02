@@ -18,11 +18,11 @@ import java.util.UUID;
  * chain). Other event types — e.g. the audit-only {@code MediaCreated} — are
  * ack-skipped.
  *
- * <p>T4 GATE: the relay publishes the payload STRING through the fleet
- * producer ({@code JsonKafkaSerializer}), so records arrive DOUBLE-ENCODED —
- * a JSON string token wrapping the event JSON. The raw value is therefore
- * parsed once and, when textual, unwrapped and parsed again; the shape check
- * also tolerates a future single-encoded relay. Malformed bytes (poison
+ * <p>Wire contract (R1 + H-1): producers publish JSON-as-String via the fleet
+ * {@code KafkaMessagePublisher}, so records arrive SINGLE-ENCODED UTF-8 JSON.
+ * The raw value is parsed once and, when textual (a LEGACY double-encoded
+ * token — a JSON string token wrapping the event JSON, from pre-R1 producers),
+ * unwrapped and parsed again; both shapes bind. Malformed bytes (poison
  * records) are contained at parse time — never a listener throw.</p>
  *
  * <p>Ack-always poison posture (ProductRatingConsumer precedent): the
@@ -120,8 +120,8 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
     private MediaLifecycleEvent decode(String rawValue) throws Exception {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
-            // Double-encoded wire (T4): the fleet producer JSON-string-encoded
-            // the payload — unwrap once before binding.
+            // Legacy double-encoded wire (pre-R1): an old producer
+            // JSON-string-encoded the payload — unwrap once before binding.
             node = objectMapper.readTree(node.textValue());
         }
         return objectMapper.treeToValue(node, MediaLifecycleEvent.class);

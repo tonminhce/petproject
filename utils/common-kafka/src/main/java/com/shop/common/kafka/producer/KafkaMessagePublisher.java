@@ -31,7 +31,10 @@ import java.util.concurrent.TimeoutException;
  * layer of JSON on the wire — which is what {@code JsonDeserializer<V>}-typed
  * consumers expect to bind. The previous implementation routed the String
  * through a {@code JsonKafkaSerializer}, which double-encoded it
- * ({@code "{\"x\":1}"} → {@code "\"{x:1}\""}) and broke every typed consumer.
+ * ({@code "{\"x\":1}"} → {@code "\"{x:1}\""}) and broke every typed consumer. Fleet consumers (StringDeserializer +
+ * unwrap-once) read this single-encoded wire directly and still tolerate the
+ * legacy pre-R1 double-encoded shape for in-flight records (H-1
+ * defense-in-depth).
  *
  * <p>If a caller passes a non-String value (rare; reserved for tests / future
  * typed producers), the value is coerced via {@link Object#toString()} — this is

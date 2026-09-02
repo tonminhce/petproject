@@ -10,14 +10,14 @@ import org.springframework.stereotype.Component;
 
 /**
  * Product lifecycle consumer (search spec D1 — primary consumer of
- * {@code shop.product.lifecycle.v1}). The fleet producer serializes the outbox
- * payload STRING via {@code JsonKafkaSerializer} (product OutboxRelay path),
- * so records arrive DOUBLE-ENCODED — a JSON string token wrapping the event
- * JSON (search spec §4.2 unwrap-once contract). The raw value is parsed once
- * and, when textual, unwrapped and parsed again before binding to
- * {@link ProductLifecycleEvent}; the shape check also tolerates a future
- * single-encoded relay. Malformed bytes (poison records) are contained at
- * parse time — never a listener throw.
+ * {@code shop.product.lifecycle.v1}). Wire contract (R1 + H-1): producers
+ * publish JSON-as-String via {@code KafkaMessagePublisher} (product
+ * OutboxRelay path), so records arrive SINGLE-ENCODED UTF-8 JSON (search spec
+ * §4.2 unwrap-once contract). The raw value is parsed once and, when textual
+ * (a LEGACY double-encoded token — a JSON string token wrapping the event
+ * JSON, from pre-R1 producers), unwrapped and parsed again before binding to
+ * {@link ProductLifecycleEvent}; both shapes bind. Malformed bytes (poison
+ * records) are contained at parse time — never a listener throw.
  */
 @Component
 public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
@@ -56,8 +56,8 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
     private ProductLifecycleEvent decode(String rawValue) throws Exception {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
-            // Double-encoded wire (D4/F-5): the fleet producer JSON-string-
-            // encoded the payload — unwrap once before binding.
+            // Legacy double-encoded wire (pre-R1): an old producer
+            // JSON-string-encoded the payload — unwrap once before binding.
             node = objectMapper.readTree(node.textValue());
         }
         return objectMapper.treeToValue(node, ProductLifecycleEvent.class);

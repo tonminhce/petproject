@@ -160,15 +160,17 @@ sink shippers).
    (degradation path is sub-first). Re-verify on Keycloak upgrades
    (KeycloakRealmImportIT gates the token shape). Both consumers were aligned
    in fleet-hardening H-6 so there is exactly ONE coupling point.
-2. **Kafka wire-shape contract (BINDING, restated):** the only sanctioned wire
-   format is producer-side `JsonKafkaSerializer` double-encoding (payload
-   serialized to JSON String, then serialized again — fleet precedent
-   `JsonKafkaSerializer`). Consumers MUST tolerate single- AND double-encoded
-   values (the `BaseKafkaConsumer` unwrap boundary), and IT helpers MUST
-   publish through the real fleet path (`KafkaTemplate` +
-   `JsonKafkaSerializer`), never a bare String serializer. New typed
-   consumers inherit the tolerant base by construction — do not reintroduce
-   typed `JsonDeserializer` bindings.
+2. **Kafka wire-shape contract (BINDING, restated post-R1):** producers
+   publish JSON-as-String via `KafkaMessagePublisher` →
+   `stringKafkaTemplate` (StringSerializer ×2) — SINGLE-ENCODED UTF-8 JSON
+   on the wire (R1). Consumers use `StringDeserializer` + the
+   `BaseKafkaConsumer` unwrap-once boundary and MUST tolerate single- AND
+   legacy double-encoded values (H-1 defense-in-depth for in-flight/retained
+   records from pre-R1 producers). IT helpers MUST publish through the same
+   production path (`KafkaMessagePublisher`); one legacy double-encoded pin
+   per service is kept as in-flight-tolerance proof. New typed consumers
+   inherit the tolerant base by construction — do not reintroduce typed
+   `JsonDeserializer` bindings.
 
 Closed items (kept for traceability, resolved by fleet-hardening):
 

@@ -12,19 +12,20 @@ import java.util.Map;
 /**
  * Base class for a typed Kafka listener container factory.
  *
- * <h3>Fleet wire contract (H-1)</h3>
+ * <h3>Fleet wire contract (R1 + H-1)</h3>
  *
- * <p>The <em>value</em> deserializes as RAW STRING ({@link StringDeserializer}):
- * every fleet producer publishes the outbox payload STRING through
- * {@code JsonKafkaSerializer}, so records arrive DOUBLE-ENCODED on the wire —
- * a JSON string token wrapping the event JSON. Double-encode is the ONLY
- * sanctioned wire. Binding the token straight to a DTO (the previous
- * {@code JsonDeserializer} wiring) throws before the listener ever runs and
- * silently drops every real record — which is why the base no longer offers a
- * typed value path. The unwrap-once + typed bind happens at the
- * {@link BaseKafkaConsumer} boundary, tolerant of BOTH the sanctioned
- * double-encoded wire and a future single-encoded relay; a decode failure is
- * a contained ack-skip there, never a listener-container crash.</p>
+ * <p>The <em>value</em> deserializes as RAW STRING ({@link StringDeserializer}).
+ * Producers: JSON-as-String via {@code KafkaMessagePublisher} →
+ * {@code stringKafkaTemplate} (StringSerializer ×2, R1) — records arrive
+ * SINGLE-ENCODED UTF-8 JSON on the wire. Consumers: unwrap-once at the
+ * {@link BaseKafkaConsumer} boundary, tolerant of BOTH the production
+ * single-encoded wire AND the legacy double-encoded shape (a JSON string
+ * token wrapping the event JSON) that in-flight/retained records may still
+ * carry (H-1 defense-in-depth). Binding a record straight to a DTO (the
+ * previous {@code JsonDeserializer} wiring) throws before the listener ever
+ * runs and silently drops real records — which is why the base no longer
+ * offers a typed value path; a decode failure is a contained ack-skip there,
+ * never a listener-container crash.</p>
  *
  * <p>The <em>key</em> deserializer is likewise fixed to
  * {@link StringDeserializer}: the fleet-wide producer convention is String
