@@ -28,15 +28,21 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * C3 — webhook entry + retry. Same shape as payment-service's WebhookEventService:
+ * events start as {@link ShipmentEvent#STATUS_FAILED_RETRYABLE}, are processed
+ * once, and the new {@code WebhookRetryScheduler} picks up any that didn't
+ * reach {@link ShipmentEvent#STATUS_PROCESSED}. After max retries the row
+ * transitions to {@link ShipmentEvent#STATUS_FAILED_PERMANENT}.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WebhookEventServiceImpl implements WebhookEventService {
 
-    private static final String EVENT_STATUS_PROCESSED = "PROCESSED";
-    private static final String EVENT_STATUS_FAILED = "FAILED";
     private static final String EVENT_TYPE_UNPARSEABLE = "UNPARSEABLE";
     private static final String UNPARSEABLE_EVENT_ID_PREFIX = "unparseable-";
     private static final int PROVIDER_EVENT_ID_MAX_LENGTH = 128;
@@ -62,52 +68,91 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         try {
             payload = parse(rawBody);
         } catch (IllegalStateException e) {
-            log.warn("Webhook body from carrier {} failed to parse, persisting FAILED event", carrier);
+            log.warn("Webhook body from carrier {} failed to parse, persisting FAILED_RETRYABLE event", carrier);
             persistUnparseableEvent(parsedCarrier, rawBody);
             return;
         }
 
-        if (eventRepository.existsByCarrierAndProviderEventId(parsedCarrier, payload.getEventId())) {
+        // C3 — dedup: skip only PROCESSED rows. FAILED_RETRYABLE rows fall through
+        // so the retry scheduler can re-process them.
+        Optional<ShipmentEvent> existing = eventRepository
+                .findFirstByCarrierAndProviderEventId(parsedCarrier, payload.getEventId());
+        if (existing.isPresent() && ShipmentEvent.STATUS_PROCESSED.equals(existing.get().getStatus())) {
             log.info("Webhook event {} from carrier {} already processed, acking no-op", payload.getEventId(), carrier);
             return;
         }
-
-        ShipmentEvent event = ShipmentEvent.builder()
-                .id(UUID.randomUUID())
-                .carrier(parsedCarrier)
-                .providerEventId(payload.getEventId())
-                .type(payload.getEventType())
-                .payload(new String(rawBody, StandardCharsets.UTF_8))
-                .status(EVENT_STATUS_FAILED)
-                .build();
-        try {
-            writer.insert(event);
-        } catch (DataIntegrityViolationException e) {
-            log.info("Webhook event {} from carrier {} raced a concurrent insert, acking no-op",
-                    payload.getEventId(), carrier);
-            return;
+        ShipmentEvent event;
+        if (existing.isEmpty()) {
+            event = ShipmentEvent.builder()
+                    .id(UUID.randomUUID())
+                    .carrier(parsedCarrier)
+                    .providerEventId(payload.getEventId())
+                    .type(payload.getEventType())
+                    .payload(new String(rawBody, StandardCharsets.UTF_8))
+                    .status(ShipmentEvent.STATUS_FAILED_RETRYABLE)
+                    .retryCount(0)
+                    .nextRetryAt(Instant.now())
+                    .build();
+            try {
+                writer.insert(event);
+            } catch (DataIntegrityViolationException e) {
+                log.info("Webhook event {} from carrier {} raced a concurrent insert, acking no-op",
+                        payload.getEventId(), carrier);
+                return;
+            }
+        } else {
+            event = existing.get();
         }
 
+        try {
+            process(payload, event);
+        } catch (Exception e) {
+            log.error("Webhook processing failed (carrier={}, providerEventId={})", carrier, payload.getEventId(), e);
+            markFailedRetryable(event, e.getMessage());
+        }
+    }
+
+    @Override
+    public void retry(ShipmentEvent event) {
+        byte[] rawBody = event.getPayload() == null
+                ? new byte[0]
+                : event.getPayload().getBytes(StandardCharsets.UTF_8);
+        CarrierWebhookPayload payload;
+        try {
+            payload = parse(rawBody);
+        } catch (IllegalStateException e) {
+            event.setStatus(ShipmentEvent.STATUS_FAILED_PERMANENT);
+            event.setLastError("payload unparseable on retry");
+            writer.saveEvent(event);
+            return;
+        }
+        try {
+            process(payload, event);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void process(CarrierWebhookPayload payload, ShipmentEvent event) {
         Shipment shipment = shipmentRepository.findByTrackingNumber(payload.getTrackingNumber()).orElse(null);
         if (shipment == null) {
-            log.warn("Webhook event {} references unknown tracking number {}, event marked FAILED",
-                    payload.getEventId(), payload.getTrackingNumber());
-            return;
+            // Unknown tracking — almost always a carrier mistake. Throw a retryable
+            // error so the scheduler eventually surfaces FAILED_PERMANENT and ops
+            // can investigate. We avoid logging inside the exception path because
+            // WebhookRetryScheduler will log attempt context.
+            throw BusinessException.badRequest("shipping.webhook.unknown.tracking",
+                payload.getTrackingNumber());
         }
-
         if (payload.getCarrierStatus() == null) {
-            log.warn("Webhook event {} has null carrierStatus, event marked FAILED", payload.getEventId());
-            return;
+            throw BusinessException.badRequest("shipping.webhook.missing.status");
         }
-
         ShipmentStatus next;
         try {
             next = ShipmentStateMachine.transition(shipment.getStatus(),
                     ShipmentStatus.valueOf(payload.getCarrierStatus()));
-        } catch (BusinessException | IllegalArgumentException e) {
-            log.warn("Webhook event {} transition {} -> {} rejected, event marked FAILED",
-                    payload.getEventId(), shipment.getStatus(), payload.getCarrierStatus());
-            return;
+        } catch (IllegalArgumentException e) {
+            throw BusinessException.badRequest("shipping.webhook.invalid.status",
+                payload.getCarrierStatus());
         }
 
         ShipmentStatus from = shipment.getStatus();
@@ -121,12 +166,18 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         }
 
         event.setShipmentId(shipment.getId());
-        event.setStatus(EVENT_STATUS_PROCESSED);
+        event.setStatus(ShipmentEvent.STATUS_PROCESSED);
         writer.complete(shipment, event, next == ShipmentStatus.DELIVERED);
         metrics.recordAdvance(from, next);
         if (next == ShipmentStatus.DELIVERY_FAILED) {
             metrics.recordFailed();
         }
+    }
+
+    private void markFailedRetryable(ShipmentEvent event, String error) {
+        event.setStatus(ShipmentEvent.STATUS_FAILED_RETRYABLE);
+        event.setLastError(truncate(error, 1024));
+        writer.saveEvent(event);
     }
 
     private Carrier resolveCarrier(String carrier) {
@@ -139,9 +190,10 @@ public class WebhookEventServiceImpl implements WebhookEventService {
 
     private void persistUnparseableEvent(Carrier carrier, byte[] rawBody) {
         String providerEventId = syntheticEventId(rawBody);
-        if (eventRepository.existsByCarrierAndProviderEventId(carrier, providerEventId)) {
-            log.info("Unparseable webhook body from carrier {} already recorded, acking no-op", carrier);
-            return;
+        Optional<ShipmentEvent> existing = eventRepository
+                .findFirstByCarrierAndProviderEventId(carrier, providerEventId);
+        if (existing.isPresent()) {
+            return; // already on the retry queue
         }
         ShipmentEvent event = ShipmentEvent.builder()
                 .id(UUID.randomUUID())
@@ -149,7 +201,9 @@ public class WebhookEventServiceImpl implements WebhookEventService {
                 .providerEventId(providerEventId)
                 .type(EVENT_TYPE_UNPARSEABLE)
                 .payload(new String(rawBody, StandardCharsets.UTF_8))
-                .status(EVENT_STATUS_FAILED)
+                .status(ShipmentEvent.STATUS_FAILED_RETRYABLE)
+                .retryCount(0)
+                .nextRetryAt(Instant.now())
                 .build();
         try {
             writer.insert(event);
@@ -177,5 +231,10 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         } catch (IOException e) {
             throw new IllegalStateException("Unparseable webhook payload", e);
         }
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null) return null;
+        return s.length() <= max ? s : s.substring(0, max);
     }
 }

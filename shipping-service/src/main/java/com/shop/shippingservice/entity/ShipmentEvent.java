@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -25,6 +26,12 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class ShipmentEvent extends AbstractMappedEntity {
+
+    public static final String STATUS_PROCESSED = "PROCESSED";
+    public static final String STATUS_FAILED = "FAILED";
+    // C3 — new lifecycle states for the webhook retry scheduler.
+    public static final String STATUS_FAILED_RETRYABLE = "FAILED_RETRYABLE";
+    public static final String STATUS_FAILED_PERMANENT = "FAILED_PERMANENT";
 
     @Id
     @Column(name = "id", nullable = false)
@@ -52,4 +59,15 @@ public class ShipmentEvent extends AbstractMappedEntity {
     @Version
     @Column(name = "version")
     private Long version;
+
+    // C3 — added in changelog-003-webhook-retry.
+    @Column(name = "retry_count", nullable = false)
+    @Builder.Default
+    private int retryCount = 0;
+
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
+    @Column(name = "last_error", length = 1024)
+    private String lastError;
 }

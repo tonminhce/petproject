@@ -1,0 +1,34 @@
+databaseChangeLog:
+  # C3 — webhook retry support. The previous flow marked events FAILED-from-birth
+  # and dedup'd on `existsByProviderAndProviderEventId`, which meant a provider
+  # retry of the same `provider_event_id` was silently swallowed and the original
+  # failure had no replay path. This migration adds retry bookkeeping and
+  # backfills existing FAILED rows so the new retry scheduler can pick them up.
+  - changeSet:
+      id: 003-webhook-retry-fields
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: payment_events
+            columns:
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_retry_at
+                  type: timestamp
+              - column:
+                  name: last_error
+                  type: varchar(1024)
+        # Backfill: every historical FAILED row becomes FAILED_RETRYABLE with an
+        # immediate next-retry window. The new scheduler will re-process them.
+        # Safe because the state machine is idempotent.
+        - sql:
+            sql: >-
+              UPDATE payment_events
+              SET status = 'FAILED_RETRYABLE',
+                  next_retry_at = NOW()
+              WHERE status = 'FAILED'

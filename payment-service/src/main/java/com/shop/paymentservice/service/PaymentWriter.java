@@ -38,6 +38,16 @@ public class PaymentWriter {
         return eventRepository.saveAndFlush(event);
     }
 
+    /**
+     * C3 — generic event save used by the retry scheduler and the webhook entry
+     * path. The caller is expected to have set all fields (status, retryCount,
+     * nextRetryAt, lastError) before calling.
+     */
+    @Transactional
+    public PaymentEvent saveEvent(PaymentEvent event) {
+        return eventRepository.saveAndFlush(event);
+    }
+
     @Transactional
     public Payment completeWithEvent(Payment payment, PaymentEvent event, String outboxEventType) {
         event.setStatus(PaymentEvent.STATUS_PROCESSED);

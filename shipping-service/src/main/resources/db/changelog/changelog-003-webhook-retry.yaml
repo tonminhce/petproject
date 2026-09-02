@@ -1,0 +1,29 @@
+databaseChangeLog:
+  # C3 — webhook retry support. Same shape as payment-service/changelog-003.
+  # Backfills historical FAILED rows on shipment_events so the new retry
+  # scheduler can re-process them.
+  - changeSet:
+      id: 003-webhook-retry-fields
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: shipment_events
+            columns:
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_retry_at
+                  type: timestamp
+              - column:
+                  name: last_error
+                  type: varchar(1024)
+        - sql:
+            sql: >-
+              UPDATE shipment_events
+              SET status = 'FAILED_RETRYABLE',
+                  next_retry_at = NOW()
+              WHERE status = 'FAILED'

@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: changelog-002-payment-outbox.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-003-webhook-retry.yaml
+      relativeToChangelogFile: true
