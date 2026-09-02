@@ -65,7 +65,7 @@ class ConfirmOrchestrationWebMvcTest {
 
     @Test
     void confirm_withoutHeader_passesNullKeyAndAdminIdFromJwt() throws Exception {
-        when(orderService.confirmOrder(eq(orderId), eq(adminId), isNull()))
+        when(orderService.confirmOrder(eq(orderId), eq(adminId.toString()), isNull()))
             .thenReturn(sampleConfirmed());
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm"))
@@ -73,13 +73,33 @@ class ConfirmOrchestrationWebMvcTest {
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
 
-        // admin id resolved from the JWT subject (AuthenticatedUser.requireCurrent().id())
-        verify(orderService).confirmOrder(orderId, adminId, null);
+        // H-6: ADMIN token (no azp/session-free machine claims) → actor = sub string
+        verify(orderService).confirmOrder(orderId, adminId.toString(), null);
+    }
+
+    @Test
+    void confirm_serviceToken_passesServiceLabelFromAzp() throws Exception {
+        // KC26 machine token shape: sub = service-account UUID, azp = client id,
+        // ROLE_SERVICE authority (matches the endpoint's SERVICE-or-ADMIN gate).
+        Jwt serviceJwt = Jwt.withTokenValue("svc").header("alg", "none")
+            .subject("00000000-0000-0000-0000-00000000f3a1")
+            .claim("azp", "fulfillment-service").build();
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(
+            serviceJwt, List.of(() -> "ROLE_SERVICE")));
+
+        when(orderService.confirmOrder(eq(orderId), eq("service:fulfillment-service"), isNull()))
+            .thenReturn(sampleConfirmed());
+
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm"))
+            .andExpect(status().isOk());
+
+        // H-6: SERVICE token → actor label "service:<azp>", NEVER the service-account UUID
+        verify(orderService).confirmOrder(orderId, "service:fulfillment-service", null);
     }
 
     @Test
     void confirm_sameKeyReplay_returnsSameBody() throws Exception {
-        when(orderService.confirmOrder(eq(orderId), eq(adminId), eq("key-1")))
+        when(orderService.confirmOrder(eq(orderId), eq(adminId.toString()), eq("key-1")))
             .thenReturn(sampleConfirmed());
 
         String first = mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm")
@@ -95,12 +115,12 @@ class ConfirmOrchestrationWebMvcTest {
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         assertThat(mapper.readTree(second).get("data"))
             .isEqualTo(mapper.readTree(first).get("data"));
-        verify(orderService, times(2)).confirmOrder(orderId, adminId, "key-1");
+        verify(orderService, times(2)).confirmOrder(orderId, adminId.toString(), "key-1");
     }
 
     @Test
     void confirm_coordinatorFailure_returns409Ord4011() throws Exception {
-        when(orderService.confirmOrder(eq(orderId), eq(adminId), isNull()))
+        when(orderService.confirmOrder(eq(orderId), eq(adminId.toString()), isNull()))
             .thenThrow(BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm"))

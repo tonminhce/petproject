@@ -82,9 +82,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // 1. Idempotency pre-insert (in-flight row commits in its own TX, before the saga)
+        // 1. Idempotency pre-insert (in-flight row commits in its own TX, before the saga).
+        // Actor label = the customer's sub (UUID canonical text) — H-6 rows are string-keyed.
         String requestHash = hash(request);
-        Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId, requestHash);
+        Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId.toString(), requestHash);
         if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the saga
 
         // 2. Delegate to doCreateOrder — all-or-nothing failure wrapped in single catch
@@ -94,7 +95,7 @@ public class OrderServiceImpl implements OrderService {
             // Single catch covers validation, pricing, reserve, etc. begin() throws are
             // deliberately OUTSIDE this try: a collision 409 must never delete another
             // execution's in-flight row; the requestHash guard in abort() is the second lock.
-            idempotencyService.abort(idempotencyKey, userId, requestHash);
+            idempotencyService.abort(idempotencyKey, userId.toString(), requestHash);
             throw ex;
         }
     }
@@ -193,7 +194,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 7. Build response + complete idempotency (same TX)
         OrderResponse response = orderMapper.toResponse(order, orderItems);
-        idempotencyService.complete(idempotencyKey, userId, response, 201);
+        idempotencyService.complete(idempotencyKey, userId.toString(), response, 201);
         return response;
     }
 
@@ -303,15 +304,17 @@ public class OrderServiceImpl implements OrderService {
     // ========================================================================
 
     // Endpoint-level authz lives on OrderStatusController (SERVICE or ADMIN); the
-    // service layer only enforces the state machine.
+    // service layer only enforces the state machine. {@code actor} is the caller
+    // label resolved by token shape at the controller (H-6: ADMIN → sub,
+    // SERVICE → service:<azp>) — stored verbatim on idempotency rows.
     @Override
     @Transactional
-    public OrderResponse confirmOrder(UUID orderId, UUID adminUserId, String idempotencyKey) {
+    public OrderResponse confirmOrder(UUID orderId, String actor, String idempotencyKey) {
         confirmMetrics.attempt();
         String requestHash = sha256Hex(orderId.toString());
         Optional<OrderResponse> cached = (idempotencyKey == null)
             ? Optional.empty()
-            : idempotencyService.begin(idempotencyKey, adminUserId, requestHash);
+            : idempotencyService.begin(idempotencyKey, actor, requestHash);
         if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the commit
 
         try {
@@ -360,13 +363,13 @@ public class OrderServiceImpl implements OrderService {
 
             OrderResponse response = orderMapper.toResponse(order, items);
             if (idempotencyKey != null)
-                idempotencyService.complete(idempotencyKey, adminUserId, response, 200);
+                idempotencyService.complete(idempotencyKey, actor, response, 200);
             return response;
         } catch (RuntimeException ex) {
             // begin() throws are deliberately OUTSIDE this try: a collision 409 must
             // never delete another execution's in-flight row (same as createOrder).
             if (idempotencyKey != null)
-                idempotencyService.abort(idempotencyKey, adminUserId, requestHash);
+                idempotencyService.abort(idempotencyKey, actor, requestHash);
             if (!(ex instanceof BusinessException)) {  // infra failure → 409 ORD-4011, order stays PENDING
                 // Wrap drops the root cause — log it so the infra failure stays diagnosable
                 log.error("Confirm commit failed for order {}", orderId, ex);

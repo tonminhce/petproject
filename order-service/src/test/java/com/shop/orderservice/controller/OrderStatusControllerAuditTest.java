@@ -110,4 +110,36 @@ class OrderStatusControllerAuditTest {
         assertThat(event.outcome()).isEqualTo("success");
         assertThat(event.toJson()).contains("\"action\":\"order.deliver\"");
     }
+
+    /**
+     * H-6: a SERVICE token confirming an order passes the actor label
+     * {@code service:<azp>} into the service layer (idempotency rows key on it)
+     * and emits the service-shaped audit line — the service-account UUID sub
+     * never surfaces as the actor.
+     */
+    @Test
+    void confirm_byServiceToken_passesServiceLabelAndEmitsServiceAudit() throws Exception {
+        UUID orderId = UUID.fromString("00000000-0000-0000-0000-00000000f005");
+        when(orderService.confirmOrder(orderId, "service:fulfillment-service", null))
+            .thenReturn(new OrderResponse(orderId,
+                UUID.fromString("00000000-0000-0000-0000-00000000f002"),
+                OrderStatus.CONFIRMED, List.of(), null, null, null, null,
+                null, null, null, null, null, null));
+
+        mockMvc.perform(post("/api/v1/orders/{orderId}/confirm", orderId)
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000f003")
+                        .claim("azp", "fulfillment-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE"))))
+            .andExpect(status().isOk());
+
+        verify(orderService).confirmOrder(orderId, "service:fulfillment-service", null);
+
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventWriter).write(captor.capture());
+        AuditEvent event = captor.getValue();
+        assertThat(event.action()).isEqualTo("order.confirm");
+        assertThat(event.actorType()).isEqualTo("service");
+        assertThat(event.actorId()).isEqualTo("fulfillment-service");
+        assertThat(event.outcome()).isEqualTo("success");
+    }
 }

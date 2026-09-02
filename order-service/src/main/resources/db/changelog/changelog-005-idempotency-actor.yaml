@@ -1,0 +1,26 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  H-6 — idempotency_keys.actor: user_id (uuid) → actor (varchar). The idem-
+  #  potency row owner is a caller LABEL, not always a user id: confirm() is
+  #  SERVICE-or-ADMIN gated, and a SERVICE token's sub is a service-account
+  #  UUID that must never be misattributed as an admin. Rows now store the
+  #  controller-resolved actor string verbatim — ADMIN → sub (a UUID in
+  #  canonical text form, byte-compatible with existing rows after the cast),
+  #  SERVICE → "service:<azp>", checkout → the customer sub.
+  #
+  #  PK pk_idempotency_keys (user_id, key) follows the rename automatically
+  #  (Postgres constraints track their columns); idx_idempotency_expires_at is
+  #  untouched. uuid→varchar rides the I/O-conversion USING cast explicitly so
+  #  the migration is deterministic on every Postgres major.
+  # ===========================================================================
+  - changeSet:
+      id: 005-idempotency-actor-string
+      author: hardening
+      changes:
+        - sql:
+            sql: ALTER TABLE idempotency_keys ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text
+        - renameColumn:
+            tableName: idempotency_keys
+            oldColumnName: user_id
+            newColumnName: actor

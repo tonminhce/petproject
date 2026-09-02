@@ -147,8 +147,12 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         Order saved = orderRepository.findById(order.id()).orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(saved.getConfirmedAt()).isNotNull();
-        assertThat(idempotencyKeyRepository.findByUserIdAndKey(adminId, confirmKey))
-            .hasValueSatisfying(ik -> assertThat(ik.getResponseStatus()).isEqualTo(200));
+        assertThat(idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey))
+            .hasValueSatisfying(ik -> {
+                assertThat(ik.getResponseStatus()).isEqualTo(200);
+                // H-6: ADMIN token → the row owner label is the sub (UUID text), not a parsed column
+                assertThat(ik.getActor()).isEqualTo(adminId.toString());
+            });
 
         // Ordering: promotion commit strictly before the first inventory commit
         List<ServeEvent> promoCommits = posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit");
@@ -201,7 +205,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(saved.getStatus()).isEqualTo(OrderStatus.PENDING);
         assertThat(saved.getConfirmedAt()).isNull();
         // abort() removed the in-flight row — the key is free for a retry
-        assertThat(idempotencyKeyRepository.findByUserIdAndKey(adminId, confirmKey)).isEmpty();
+        assertThat(idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey)).isEmpty();
 
         // LIFO compensation: item-1 (last committed) FIRST, then promotion — only
         // release-committed (coordinator), never the saga's plain release.
@@ -292,7 +296,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         mockMvc.perform(MockMvcRequestBuilders.post(confirmUrl).header("Idempotency-Key", confirmKey))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("ORD-4011"));
-        assertThat(idempotencyKeyRepository.findByUserIdAndKey(adminId, confirmKey)).isEmpty();
+        assertThat(idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey)).isEmpty();
 
         // "Fix the stubs": a later-registered matching stub wins in WireMock
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/reservations/" + resB + "/commit"))
@@ -304,7 +308,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
 
-        var row = idempotencyKeyRepository.findByUserIdAndKey(adminId, confirmKey).orElseThrow();
+        var row = idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey).orElseThrow();
         assertThat(row.getResponseStatus()).isEqualTo(200);
         assertThat(row.getResponseBody()).contains(order.id().toString());
 
@@ -324,6 +328,33 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
     }
 
     // ------------------------------------------------------------------
+    // 5. H-6 SERVICE-token shape — a machine caller's idempotency row owns
+    //    the label "service:<azp>", never the service-account UUID sub
+    // ------------------------------------------------------------------
+
+    @Test
+    void confirm_byServiceToken_idempotencyRowStoresServiceLabelNotSub() throws Exception {
+        OrderResponse order = pendingOrderWithPromotion("create-svc-actor");
+        seedServicePrincipal("fulfillment-service", "00000000-0000-0000-0000-00000000f3a1");
+        stubCommitsAllOk();
+        stubReleaseCommittedSafetyNet();
+
+        String confirmKey = "confirm-svc-actor-key";
+        mockMvc.perform(MockMvcRequestBuilders
+                .post("/api/v1/orders/" + order.id() + "/confirm")
+                .header("Idempotency-Key", confirmKey))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+
+        var row = idempotencyKeyRepository
+            .findByActorAndKey("service:fulfillment-service", confirmKey).orElseThrow();
+        assertThat(row.getResponseStatus()).isEqualTo(200);
+        // the misattribution this task kills: the service-account UUID sub must NOT be the owner
+        assertThat(row.getActor()).isEqualTo("service:fulfillment-service");
+        assertThat(row.getActor()).isNotEqualTo("00000000-0000-0000-0000-00000000f3a1");
+    }
+
+    // ------------------------------------------------------------------
     // 5a. CONCURRENCY (deferred from task 11) — same key, two threads:
     //     exactly ONE orchestrates, the other is rejected/replayed
     // ------------------------------------------------------------------
@@ -335,7 +366,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         stubReleaseCommittedSafetyNet();
 
         String key = "confirm-race-same-key";
-        Callable<Object> sameConfirm = () -> orderService.confirmOrder(order.id(), adminId, key);
+        Callable<Object> sameConfirm = () -> orderService.confirmOrder(order.id(), adminId.toString(), key);
         List<Object> outcomes = race(sameConfirm, sameConfirm);
 
         // Exactly one orchestrator: every remote commit branch hit exactly once
@@ -385,8 +416,8 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         stubCommitsAllOk();
         stubReleaseCommittedSafetyNet();
 
-        List<Object> outcomes = race(() -> orderService.confirmOrder(order.id(), adminId, "race-key-1"),
-                                     () -> orderService.confirmOrder(order.id(), adminId, "race-key-2"));
+        List<Object> outcomes = race(() -> orderService.confirmOrder(order.id(), adminId.toString(), "race-key-1"),
+                                     () -> orderService.confirmOrder(order.id(), adminId.toString(), "race-key-2"));
 
         // Expected loser outcomes (all spec §3.7-safe): ORD-4004 clean-state
         // guard (loaded after the winner committed), an @Version
@@ -416,7 +447,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         // Follow-up confirm: state guard rejects CONFIRMED→CONFIRMED and the
         // coordinator is NOT re-invoked remotely (journal unchanged).
         long promoCommitsBefore = posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit").size();
-        assertThatThrownBy(() -> orderService.confirmOrder(order.id(), adminId, "race-retry-key"))
+        assertThatThrownBy(() -> orderService.confirmOrder(order.id(), adminId.toString(), "race-retry-key"))
             .isInstanceOfSatisfying(BusinessException.class,
                 be -> assertThat(be.getErrorCode()).isEqualTo("ORD-4004"));
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit"))
@@ -454,7 +485,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         // TX rollback — no order row for this user, idempotency row aborted away
         assertThat(orderRepository.findAll()
             .stream().filter(o -> o.getUserId().equals(userId)).toList()).isEmpty();
-        assertThat(idempotencyKeyRepository.findByUserIdAndKey(userId, "create-taxfail-key")).isEmpty();
+        assertThat(idempotencyKeyRepository.findByActorAndKey(userId.toString(), "create-taxfail-key")).isEmpty();
 
         // Promotion reservation was created remotely, so it must be RELEASED
         // (best-effort, plain /release — the saga's compensation convention; the

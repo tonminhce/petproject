@@ -15,7 +15,13 @@ public interface OrderService {
 
     OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin);
 
-    OrderResponse confirmOrder(UUID orderId, UUID adminUserId, String idempotencyKey);
+    /**
+     * Confirm a PENDING order (admin / service-to-service). {@code actor} is the
+     * caller label resolved by token shape (H-6): ADMIN → sub, SERVICE →
+     * {@code service:<azp>} — stored verbatim on idempotency rows so machine
+     * callers are never misattributed to a service-account UUID.
+     */
+    OrderResponse confirmOrder(UUID orderId, String actor, String idempotencyKey);
     OrderResponse shipOrder(UUID orderId);
     OrderResponse deliverOrder(UUID orderId);
 
