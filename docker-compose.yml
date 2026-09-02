@@ -497,6 +497,12 @@ services:
       MEDIA_MAX_UPLOAD: ${MEDIA_MAX_UPLOAD:-10MB}
       MEDIA_PRESIGN_TTL: ${MEDIA_PRESIGN_TTL:-7d}
       MEDIA_PURGE_GRACE: ${MEDIA_PURGE_GRACE:-30d}
+      # H-4 — purge reference gate: client_credentials for media's
+      # product-reference client (media-service confidential client in the
+      # realm import). Same explicit pattern as product's media client.
+      MEDIA_SERVICE_CLIENT_ID: media-service
+      MEDIA_SERVICE_CLIENT_SECRET: changeme
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       postgres:
         condition: service_healthy

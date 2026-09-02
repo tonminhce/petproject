@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code --import-realm} skips import when the realm already exists), mounts the
  * ACTUAL {@code docker/keycloak/import/ecommerce-realm.json} from the repo, and
  * proves end-to-end that the import renders AND the service-account grants work:
- * the 4 confidential clients exist with service accounts enabled, each obtains a
+ * the 5 confidential clients exist with service accounts enabled, each obtains a
  * client_credentials token whose JWT claims identify the service account
  * (preferred_username = service-account-&lt;clientId&gt;, sub = that service
  * account's user id) AND carries the SERVICE realm role (final-review F2 —
@@ -278,7 +278,7 @@ class KeycloakRealmImportIT {
                 ids.add(c.path("clientId").asText());
             }
         });
-        assertThat(ids).as("realm JSON declares the 4 confidential clients").hasSize(4);
+        assertThat(ids).as("realm JSON declares the 5 confidential clients").hasSize(5);
         return ids;
     }
 
