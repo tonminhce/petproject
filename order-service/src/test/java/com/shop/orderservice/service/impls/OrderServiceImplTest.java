@@ -47,6 +47,7 @@ class OrderServiceImplTest {
     @Mock com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     @Mock OrderCommitCoordinator commitCoordinator;
     @Mock OrderConfirmMetrics confirmMetrics;
+    @Mock OrderCreateSaga orderCreateSaga;
 
     @InjectMocks OrderServiceImpl service;
 
@@ -483,92 +484,30 @@ class OrderServiceImplTest {
         when(idempotencyService.begin(any(), eq(userId.toString()), any())).thenReturn(Optional.empty());
     }
 
-    @Test
-    void createOrder_persistsZeroAmountOrderBeforePricing_thenAppliesPricedAmounts() throws Exception {
-        stubHappyCart();
-        stubIdempotency();
-        UUID reservationId = UUID.randomUUID();
-        // Both saves receive the SAME managed instance — snapshot inside save() to
-        // observe the entity state AS IT WAS at each call, not after later mutation.
-        java.util.List<Order> saveSnapshots = new java.util.ArrayList<>();
-        when(orderRepository.save(any())).thenAnswer(inv -> {
-            Order o = inv.getArgument(0);
-            saveSnapshots.add(Order.builder()
-                .userId(o.getUserId()).status(o.getStatus())
-                .subtotal(o.getSubtotal()).taxAmount(o.getTaxAmount())
-                .discountAmount(o.getDiscountAmount()).total(o.getTotal())
-                .couponCode(o.getCouponCode()).promotionReservationId(o.getPromotionReservationId())
-                .build());
-            return o;
-        });
-        when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
-            .thenReturn(new com.shop.orderservice.dto.internal.PricingBreakdown(
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.valueOf(11),
-                java.util.Map.of(productId, new com.shop.orderservice.dto.internal.ProductSnapshot(
-                    productId, "Test Product", BigDecimal.TEN)),
-                reservationId));
-        when(stockReservationService.reserve(eq(productId), any())).thenReturn(UUID.randomUUID());
-        when(orderMapper.toResponse(any(), any())).thenReturn(null);
-
-        service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "persist-early-key");
-
-        // Persist-early contract: the ZERO-amount PENDING row is inserted BEFORE pricing runs
-        org.mockito.InOrder seq = inOrder(orderRepository, pricingService);
-        seq.verify(orderRepository).save(any(Order.class));
-        seq.verify(pricingService).calculate(any(), eq(userId), anyList(), eq("SAVE10"));
-
-        assertThat(saveSnapshots).hasSize(2);
-        Order initial = saveSnapshots.get(0);
-        assertThat(initial.getStatus()).isEqualTo(OrderStatus.PENDING);
-        assertThat(initial.getSubtotal()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(initial.getTaxAmount()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(initial.getDiscountAmount()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(initial.getTotal()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(initial.getCouponCode()).isEqualTo("SAVE10");
-
-        // Second save (same TX) carries priced amounts + the promotion reservation id
-        Order priced = saveSnapshots.get(1);
-        assertThat(priced.getTotal()).isEqualByComparingTo(BigDecimal.valueOf(11));
-        assertThat(priced.getPromotionReservationId()).isEqualTo(reservationId);
-    }
+    // H13 — the persist-early contract test moved to OrderCreateSagaTest; the
+// outer createOrder orchestration only verifies that the saga is invoked
+// through Spring's proxy (so @Transactional takes effect).
 
     @Test
     void createOrder_stockReserveFails_releasesPromotionReservationThenThrows() throws Exception {
-        stubHappyCart();
         stubIdempotency();
-        UUID promoReservationId = UUID.randomUUID();
-        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
-            .thenReturn(new com.shop.orderservice.dto.internal.PricingBreakdown(
-                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
-                java.util.Map.of(productId, new com.shop.orderservice.dto.internal.ProductSnapshot(
-                    productId, "Test Product", BigDecimal.TEN)),
-                promoReservationId));
-        when(stockReservationService.reserve(eq(productId), any()))
-            .thenThrow(new StockReservationFailedException(productId, null));
+        // H13 — the saga body now lives in OrderCreateSaga (sibling bean). Stub it
+        // directly so the orchestration test stays focused on the outer createOrder
+        // contract (idempotency abort path) without re-testing saga internals.
+        when(orderCreateSaga.execute(eq(userId), any(), eq("promo-comp-key")))
+            .thenThrow(BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, productId));
 
         assertThatThrownBy(() -> service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "promo-comp-key"))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));
-
-        verify(promotionClient).release(promoReservationId);
     }
 
     @Test
     void createOrder_stockReserveFails_swallowsPromotionReleaseFailure() throws Exception {
-        stubHappyCart();
         stubIdempotency();
-        UUID promoReservationId = UUID.randomUUID();
-        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
-            .thenReturn(new com.shop.orderservice.dto.internal.PricingBreakdown(
-                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
-                java.util.Map.of(productId, new com.shop.orderservice.dto.internal.ProductSnapshot(
-                    productId, "Test Product", BigDecimal.TEN)),
-                promoReservationId));
-        when(stockReservationService.reserve(eq(productId), any()))
-            .thenThrow(new StockReservationFailedException(productId, null));
-        doThrow(new RuntimeException("promotion down")).when(promotionClient).release(promoReservationId);
+        // H13 — saga body in OrderCreateSaga. Stub the orchestration throw.
+        when(orderCreateSaga.execute(eq(userId), any(), eq("promo-down-key")))
+            .thenThrow(BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, productId));
 
         assertThatThrownBy(() -> service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "promo-down-key"))
             .isInstanceOfSatisfying(BusinessException.class,

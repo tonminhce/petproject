@@ -74,6 +74,7 @@ public class OrderServiceImpl implements OrderService {
     private final ObjectMapper objectMapper;
     private final OrderCommitCoordinator commitCoordinator;
     private final OrderConfirmMetrics confirmMetrics;
+    private final OrderCreateSaga orderCreateSaga;
 
     // ========================================================================
     // CREATE ORDER — SAGA with explicit compensation
@@ -88,127 +89,17 @@ public class OrderServiceImpl implements OrderService {
         Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId.toString(), requestHash);
         if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the saga
 
-        // 2. Delegate to doCreateOrder — all-or-nothing failure wrapped in single catch
+        // 2. H13 — delegate to OrderCreateSaga (sibling bean) so the @Transactional
+        // boundary on the saga body is honoured through the Spring proxy. Self-invocation
+        // on this class would bypass the proxy, leaving the saga outside any tx.
         try {
-            return doCreateOrder(userId, request, idempotencyKey);
+            return orderCreateSaga.execute(userId, request, idempotencyKey);
         } catch (RuntimeException ex) {
             // Single catch covers validation, pricing, reserve, etc. begin() throws are
             // deliberately OUTSIDE this try: a collision 409 must never delete another
             // execution's in-flight row; the requestHash guard in abort() is the second lock.
             idempotencyService.abort(idempotencyKey, userId.toString(), requestHash);
             throw ex;
-        }
-    }
-
-    /**
-     * Saga body — NOT annotated {@code @Transactional}. Runs in the TX opened by
-     * {@link #createOrder(UUID, OrderCreateRequest, String)} (proxy-invoked). Self-invocation
-     * would bypass the proxy — do not call this method from inside the same class.
-     */
-    private OrderResponse doCreateOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // 1. Load cart + validate
-        Cart cart = (request.cartId() != null)
-            ? cartRepository.findByIdAndUserIdAndDeletedFalse(request.cartId(), userId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.CART_NOT_FOUND, request.cartId()))
-            : cartRepository.findByUserIdAndDeletedFalse(userId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.CART_EMPTY));
-        // Deterministic reserve order (sorted by productId): the compensation path
-        // must not depend on arbitrary DB row order — a stable sequence makes
-        // partial-failure outcomes reproducible and testable.
-        List<CartItem> items = cartItemRepository.findByCartId(cart.getId()).stream()
-            .sorted(Comparator.comparing(CartItem::getProductId))
-            .toList();
-        if (items.isEmpty()) throw BusinessException.of(ErrorCode.CART_EMPTY);
-
-        // 2. Persist-early: insert the Order row BEFORE pricing so the Hibernate-generated
-        // id exists when the promotion reservation is created — reservation is frozen at
-        // reserve time (spec D3) and must carry the real orderId. Amounts are NOT NULL
-        // schema columns → seeded ZERO, updated with priced values in the same TX below
-        // (no external visibility until commit).
-        Order order = orderRepository.save(Order.builder()
-            .userId(userId).status(OrderStatus.PENDING)
-            .subtotal(BigDecimal.ZERO).taxAmount(BigDecimal.ZERO)
-            .discountAmount(BigDecimal.ZERO).total(BigDecimal.ZERO)
-            .couponCode(request.couponCode())
-            .build());
-
-        // 3. Pricing (remote: product + tax + promotion) — reserve now carries real orderId
-        PricingBreakdown pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
-
-        // 4. Update the same managed entity with priced amounts + reservation correlation
-        order.setSubtotal(pricing.subtotal());
-        order.setTaxAmount(pricing.taxAmount());
-        order.setDiscountAmount(pricing.discountAmount());
-        order.setTotal(pricing.total());
-        order.setPromotionReservationId(pricing.promotionReservationId());
-        orderRepository.save(order);
-        List<OrderItem> orderItems = new ArrayList<>();
-        for (CartItem item : items) {
-            ProductSnapshot snapshot = pricing.snapshots().get(item.getProductId());
-            OrderItem orderItem = OrderItem.builder()
-                .orderId(order.getId())
-                .productId(item.getProductId())
-                .productTitle(snapshot.title())
-                .quantity(item.getQuantity())
-                .unitPrice(snapshot.unitPrice())
-                .lineTotal(snapshot.unitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))
-                .build();
-            orderItems.add(orderItem);
-        }
-        orderItemRepository.saveAll(orderItems);
-
-        // 4. Reserve stock per item — reservationId stored on OrderItem for cancel/compensation
-        List<OrderItem> reserved = new ArrayList<>();
-        try {
-            for (OrderItem orderItem : orderItems) {
-                UUID reservationId = stockReservationService.reserve(
-                    orderItem.getProductId(),
-                    new ReserveRequest(orderItem.getQuantity(), order.getId()));
-                orderItem.setReservationId(reservationId);
-                reserved.add(orderItem);
-            }
-            orderItemRepository.saveAll(orderItems);  // persist reservationIds
-        } catch (StockReservationFailedException ex) {
-            // Compensation: release all reservations, then best-effort release the
-            // promotion reservation (spec §12 swallow pattern — TTL sweep covers
-            // failures; never mask the original error).
-            releaseAllReservations(reserved);
-            if (order.getPromotionReservationId() != null) {
-                try {
-                    promotionClient.release(order.getPromotionReservationId());
-                } catch (Exception pex) {
-                    log.error("Failed to release promotion reservation {} — TTL sweep covers",
-                        order.getPromotionReservationId(), pex);
-                }
-            }
-            throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getProductId());
-        }
-
-        // 5. Clear cart — actor is the requesting user (same convention as clearCart)
-        cartItemRepository.deleteAll(items);
-        cart.markDeleted(userId.toString());
-        cartRepository.save(cart);
-
-        // 6. Publish OrderCreated event (same TX — atomic with order insert)
-        orderEventPublisher.publishCreated(order, orderItems);
-
-        // 7. Build response + complete idempotency (same TX)
-        OrderResponse response = orderMapper.toResponse(order, orderItems);
-        idempotencyService.complete(idempotencyKey, userId.toString(), response, 201);
-        return response;
-    }
-
-    private void releaseAllReservations(List<OrderItem> reserved) {
-        for (OrderItem item : reserved) {
-            try {
-                if (item.getReservationId() != null) {
-                    stockReservationService.release(item.getReservationId());
-                }
-            } catch (Exception ex) {
-                log.error("Failed to release reservation {} for product {} during compensation",
-                    item.getReservationId(), item.getProductId(), ex);
-                // DO NOT throw — would mask original error
-            }
         }
     }
 
