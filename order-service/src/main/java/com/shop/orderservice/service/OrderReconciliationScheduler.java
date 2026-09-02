@@ -93,15 +93,9 @@ public class OrderReconciliationScheduler {
                                         TransactionTemplate transactionTemplate,
                                         @Value("${order.reconciliation.stuck-minutes:30}") long stuckMinutes,
                                         @Value("${order.reconciliation.batch-size:50}") int batchSize) {
-        this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
-        this.promotionClient = promotionClient;
-        this.inventoryClient = inventoryClient;
-        this.orderEventPublisher = orderEventPublisher;
-        this.confirmMetrics = confirmMetrics;
-        this.transactionTemplate = transactionTemplate;
-        this.stuckMinutes = stuckMinutes;
-        this.batchSize = batchSize;
+        this(orderRepository, orderItemRepository, promotionClient, inventoryClient,
+             orderEventPublisher, confirmMetrics, transactionTemplate,
+             stuckMinutes, batchSize, /*gauge-ttl-millis*/ 10_000L);
     }
 
     /** Gauge must be registered exactly once — supplier re-reads on every scrape. */
@@ -217,7 +211,73 @@ public class OrderReconciliationScheduler {
         return Instant.now().minus(Duration.ofMinutes(stuckMinutes));
     }
 
+    /**
+     * H46 — the gauge supplier runs on every Prometheus scrape (default 15s).
+     * Without memoization each scrape issues a {@code COUNT(*)} against
+     * {@code orders}; with hundreds of scrapes per minute the table sees
+     * orders of magnitude more read traffic than the reconcile sweep itself.
+     * The fix caches the value with a TTL slightly less than the scrape
+     * interval so the DB sees at most one COUNT per scrape window. A pure
+     * in-process cache is fine here — this metric is per-instance; fleet-wide
+     * aggregation is the Prometheus server's job.
+     */
+    private static final class MemoizedCount {
+        private final long ttlNanos;
+        private final java.util.function.LongSupplier supplier;
+        private volatile long lastValue;
+        private volatile long lastUpdatedNanos;
+
+        MemoizedCount(long ttlMillis, java.util.function.LongSupplier supplier) {
+            this.ttlNanos = java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(ttlMillis);
+            this.supplier = supplier;
+        }
+
+        long get() {
+            long now = System.nanoTime();
+            if (now - lastUpdatedNanos < ttlNanos) {
+                return lastValue;
+            }
+            synchronized (this) {
+                if (now - lastUpdatedNanos < ttlNanos) {
+                    return lastValue;
+                }
+                lastValue = supplier.getAsLong();
+                lastUpdatedNanos = now;
+                return lastValue;
+            }
+        }
+    }
+
+    private final MemoizedCount stuckPendingCountCache;
+
+    /** Test seam — pass an explicit gauge TTL. */
+    OrderReconciliationScheduler(OrderRepository orderRepository,
+                                 OrderItemRepository orderItemRepository,
+                                 PromotionServiceClient promotionClient,
+                                 InventoryServiceClient inventoryClient,
+                                 OrderEventPublisher orderEventPublisher,
+                                 OrderConfirmMetrics confirmMetrics,
+                                 TransactionTemplate transactionTemplate,
+                                 long stuckMinutes,
+                                 int batchSize,
+                                 long gaugeTtlMillis) {
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.promotionClient = promotionClient;
+        this.inventoryClient = inventoryClient;
+        this.orderEventPublisher = orderEventPublisher;
+        this.confirmMetrics = confirmMetrics;
+        this.transactionTemplate = transactionTemplate;
+        this.stuckMinutes = stuckMinutes;
+        this.batchSize = batchSize;
+        this.stuckPendingCountCache = new MemoizedCount(gaugeTtlMillis, this::countStuckPending);
+    }
+
     private long stuckPendingCount() {
+        return stuckPendingCountCache.get();
+    }
+
+    private long countStuckPending() {
         return orderRepository.countByStatusAndCreatedAtBefore(OrderStatus.PENDING, stuckCutoff());
     }
 }
