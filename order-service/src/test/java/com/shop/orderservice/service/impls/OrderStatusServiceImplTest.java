@@ -31,9 +31,10 @@ class OrderStatusServiceImplTest {
             Arguments.of(OrderStatus.CONFIRMED, OrderStatus.SHIPPED, true),
             Arguments.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED, true),
             Arguments.of(OrderStatus.CONFIRMED, OrderStatus.PENDING, false),
-            // SHIPPED: DELIVERED only
+            // SHIPPED: DELIVERED + CANCELLED — H12 opens the SHIPPED→CANCELLED
+            // transition for admin tooling (carrier-side loss / fraud / recall).
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.DELIVERED, true),
-            Arguments.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED, false),
+            Arguments.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED, true),
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.PENDING, false),
             // DELIVERED: terminal — including CANCELLED (asserted against the real
             // state machine because OrderServiceImplTest stubs the service for the
