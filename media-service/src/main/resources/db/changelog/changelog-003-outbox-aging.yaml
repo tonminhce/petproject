@@ -1,0 +1,18 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  H-5 relay aging: terminal DEAD state needs a clock for FAILED rows. SENT
+  #  rows age on sent_at (relay stamps it on success), but a FAILED row has
+  #  never been published — without failed_at there is nothing to measure the
+  #  7-day terminal window against. The relay stamps failed_at when it parks a
+  #  row as FAILED and clears it when the row later publishes; the nightly
+  #  retention scheduler flips FAILED rows whose failed_at is past the window
+  #  to DEAD. Additive, nullable column — no backfill needed.
+  # ===========================================================================
+  - changeSet:
+      id: 003-add-outbox-failed-at
+      author: shop-platform
+      changes:
+        - sql: |
+            ALTER TABLE outbox_events ADD COLUMN failed_at timestamptz;
+            CREATE INDEX idx_outbox_failed_at ON outbox_events (failed_at);

@@ -15,18 +15,22 @@ import software.amazon.awssdk.services.s3.model.Type;
 /**
  * D1 — startup bootstrap of the PRIVATE media bucket. Creates the bucket when
  * missing (idempotent) and then asserts the ACL carries no public grant. The
- * two failure modes are split (final review F-4):
+ * two failure modes are split (final review F-4), stated precisely:
  *
  * <ul>
- *   <li><strong>Storage unavailable</strong> (connectivity/SDK errors from
- *   bucket discovery, creation or the ACL read): logged, not fatal — the
- *   service boots degraded and recovers once the object store is reachable
- *   (mirrors search's IndexProvisioner tolerance).</li>
- *   <li><strong>Bucket exists but is NOT private</strong> (the ACL assertion
- *   itself fails, {@link IllegalStateException} from
- *   {@link #assertPrivateAcl}): FATAL — the runner rethrows and startup
- *   crashes. A misconfigured public bucket must never serve private media,
- *   not even degraded.</li>
+ *   <li><strong>FATAL — ACL violation:</strong> the bucket exists but the ACL
+ *   assertion itself fails ({@link IllegalStateException} from
+ *   {@link #assertPrivateAcl}): the runner rethrows and STARTUP CRASHES. A
+ *   misconfigured public bucket must never serve private media, not even
+ *   degraded.</li>
+ *   <li><strong>DEGRADE — storage outage:</strong> connectivity/SDK errors
+ *   from bucket discovery, creation or the ACL read are logged and swallowed,
+ *   so the service boots without its bucket. PRECISELY: an
+ *   {@code ApplicationRunner} runs ONCE — a degraded boot stays degraded
+ *   until the service RESTARTS with the object store reachable; the bootstrap
+ *   does not retry, and no later code re-creates the bucket (uploads/presigns
+ *   will fail MED-12006 until then). Degrade is thus a restart-gated
+ *   recovery, not a self-healing one.</li>
  * </ul>
  */
 @Component

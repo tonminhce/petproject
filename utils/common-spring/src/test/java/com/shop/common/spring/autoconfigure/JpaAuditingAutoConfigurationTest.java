@@ -38,7 +38,23 @@ class JpaAuditingAutoConfigurationTest {
     void registersAuditorAwareBean() {
         contextRunner.run(ctx -> {
             assertThat(ctx).hasSingleBean(AuditorAware.class);
+            assertThat(ctx.containsBean("jpaAuditingHandler"))
+                .as("JPA auditing infrastructure must be registered when an EntityManagerFactory is present")
+                .isTrue();
         });
+    }
+
+    @Test
+    void doesNotRegisterAuditingWhenOptedOut() {
+        new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(JpaAuditingAutoConfiguration.class))
+            .withPropertyValues("shop.jpa.auditing.enabled=false")
+            .run(ctx -> {
+                assertThat(ctx).doesNotHaveBean(AuditorAware.class);
+                assertThat(ctx.containsBean("jpaAuditingHandler"))
+                    .as("No auditing infrastructure must exist in a no-JPA context")
+                    .isFalse();
+            });
     }
 
     @Test

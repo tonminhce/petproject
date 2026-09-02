@@ -9,15 +9,15 @@ import org.springframework.context.annotation.Configuration;
 
 @EnableKafka
 @Configuration
-public class RatingLifecycleListenerConfig extends BaseKafkaListenerConfig<String, RatingLifecycleEvent> {
+public class RatingLifecycleListenerConfig extends BaseKafkaListenerConfig<String> {
 
     public RatingLifecycleListenerConfig(KafkaProperties kafkaProperties) {
-        super(String.class, RatingLifecycleEvent.class, kafkaProperties);
+        super(String.class, kafkaProperties);
     }
 
     @Override
     @Bean(name = "ratingListenerFactory")
-    public ConcurrentKafkaListenerContainerFactory<String, RatingLifecycleEvent> listenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, String> listenerContainerFactory() {
         return kafkaListenerContainerFactory();
     }
 }

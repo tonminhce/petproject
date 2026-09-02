@@ -26,6 +26,13 @@ import java.util.UUID;
  * of an already-gone key is a no-op. A media still REPORTED referenced by the
  * {@link MediaReferenceChecker} port is skipped with a WARN and retried next
  * cycle — never deleted behind a live reference.</p>
+ *
+ * <p>H-4: the checker call sits INSIDE the per-row try — the checker (the
+ * real one consults product-service over HTTP) failing for ONE row must never
+ * abort the cycle. A checker exception is fail-safe REFERENCED (WARN + skip,
+ * same as a mapped "unavailable" answer from the checker itself); the cycle
+ * moves on to the next candidate. Only a successful zero-reference answer
+ * lets {@link #purgeOne} run.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -46,8 +53,17 @@ public class MediaPurgeJob {
         }
         log.info("Purge cycle: {} media past the {} grace window", candidates.size(), properties.purgeGrace());
         for (UUID mediaId : candidates) {
-            if (referenceChecker.isReferenced(mediaId)) {
-                log.warn("Media {} is still referenced — purge SKIPPED, will retry next cycle", mediaId);
+            try {
+                if (referenceChecker.isReferenced(mediaId)) {
+                    log.warn("Media {} is still referenced — purge SKIPPED, will retry next cycle", mediaId);
+                    continue;
+                }
+            } catch (Exception checkerFailure) {
+                // H-4 fail-safe: cannot PROVE the media is unreferenced → keep it.
+                // WARN (not ERROR): expected during product outages; the row simply
+                // retries next cycle. The cycle continues with the next candidate.
+                log.warn("Reference check FAILED for media {} — FAIL-SAFE: treating as REFERENCED, "
+                        + "purge skips (cycle continues)", mediaId, checkerFailure);
                 continue;
             }
             purgeOne(mediaId);

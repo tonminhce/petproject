@@ -20,4 +20,16 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
     int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
+
+    /**
+     * H-5 relay aging: flips every FAILED row whose {@code failed_at} is past
+     * the terminal window to DEAD (one bulk UPDATE — DEAD is terminal, the
+     * relay never polls it again).
+     *
+     * @return number of rows aged to DEAD (drives the WARN + dead meter)
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE OutboxEvent e SET e.status = com.shop.common.core.constants.OutboxStatus.DEAD "
+            + "WHERE e.status = com.shop.common.core.constants.OutboxStatus.FAILED AND e.failedAt < :cutoff")
+    int ageDeadFailedBefore(@Param("cutoff") Instant cutoff);
 }

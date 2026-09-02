@@ -134,4 +134,34 @@ class ProductRepositoryTest {
         assertThat(productRepository.existsBySlugAndIdNot("t", p.getId())).isFalse();
         assertThat(productRepository.existsBySlugAndIdNot("other", p.getId())).isFalse();
     }
+
+    @Test
+    void countByMediaId_countsOnlyLiveRowsPointingAtTheMedia() {
+        UUID mediaId = UUID.randomUUID();
+        Product referencing = Product.builder()
+            .title("Ref").slug("ref").sku("REF-1")
+            .priceUnit(BigDecimal.ONE).quantity(1).status(ProductStatus.ACTIVE)
+            .mediaId(mediaId).build();
+        Product referencingDeleted = Product.builder()
+            .title("RefDel").slug("ref-del").sku("REF-2")
+            .priceUnit(BigDecimal.ONE).quantity(1).status(ProductStatus.ACTIVE)
+            .mediaId(mediaId).build();
+        Product other = Product.builder()
+            .title("Other").slug("other").sku("OTH-1")
+            .priceUnit(BigDecimal.ONE).quantity(1).status(ProductStatus.ACTIVE).build();
+        em.persistAndFlush(referencing);
+        em.persistAndFlush(referencingDeleted);
+        em.persistAndFlush(other);
+        em.clear();
+
+        assertThat(productRepository.countByMediaId(mediaId)).isEqualTo(2);
+        assertThat(productRepository.countByMediaId(UUID.randomUUID())).isZero();
+
+        // soft-deleted rows leave the count — the purge gate must not see them
+        Product fresh = productRepository.findById(referencingDeleted.getId()).orElseThrow();
+        fresh.markDeleted("test");
+        em.persistAndFlush(fresh);
+        em.clear();
+        assertThat(productRepository.countByMediaId(mediaId)).isEqualTo(1);
+    }
 }

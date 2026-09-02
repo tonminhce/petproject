@@ -25,6 +25,12 @@ import java.util.List;
  * a broker outage past {@code max-retries} delays delivery instead of
  * killing it. Containment fleet posture.
  *
+ * <p>H-5: FAILED is deliberately NOT terminal — but it is not forever either.
+ * A parked row is stamped {@code failed_at} (cleared again on any later
+ * success) and the nightly {@link MediaOutboxRetentionScheduler} ages
+ * FAILED rows past the terminal window to DEAD, which this relay never
+ * polls. Replay for younger FAILED rows continues unchanged.</p>
+ *
  * <p>Type-agnostic by design: the row carries its eventType and FULL
  * snapshot payload; the relay publishes whatever the row carries and
  * consumers ack-skip unknown types.</p>
@@ -57,14 +63,19 @@ public class MediaOutboxRelay {
                 event.setStatus(OutboxStatus.SENT);
                 event.setSentAt(Instant.now());
                 event.setLastError(null);
+                event.setFailedAt(null); // H-5: a replayed FAILED row leaves the aging clock
                 outboxRepo.save(event);
             } catch (Exception ex) {
                 event.setRetryCount(event.getRetryCount() + 1);
                 event.setLastError(ex.getMessage());
                 if (event.getRetryCount() >= maxRetries) {
                     event.setStatus(OutboxStatus.FAILED);
+                    // H-5: stamp the aging clock the row is parked with — the
+                    // retention scheduler measures the terminal window against it
+                    event.setFailedAt(Instant.now());
                     log.error("Media outbox event {} failed {} attempt(s) — parked as FAILED, "
-                            + "will be replayed on a later cycle", event.getEventId(), event.getRetryCount(), ex);
+                            + "will be replayed on a later cycle (aged to DEAD after the "
+                            + "retention window)", event.getEventId(), event.getRetryCount(), ex);
                 } else {
                     log.warn("Media outbox event {} retry {}/{}", event.getEventId(), event.getRetryCount(), maxRetries, ex);
                 }

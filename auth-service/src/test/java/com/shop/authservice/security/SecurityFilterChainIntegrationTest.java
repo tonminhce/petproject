@@ -74,6 +74,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
                 "shop.security.issuer-uri=http://localhost:9999/realms/test",
+                // No datasource → no EntityManagerFactory; common-spring's
+                // JpaAuditingAutoConfiguration would otherwise register an eager
+                // jpaMappingContext that fails with "JPA metamodel must not be
+                // empty". Same opt-out contract as common-spring's
+                // CommonLibraryStarterTests (fleet-hardening T4 carry).
+                "shop.jpa.auditing.enabled=false",
                 // Strip JPA / datasource / liquibase autoconfigs so the
                 // test does not require a running PostgreSQL. The
                 // mocked services (@MockitoBean UserService etc.)

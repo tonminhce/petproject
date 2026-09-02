@@ -3,12 +3,15 @@ package com.shop.productservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.common.spring.autoconfigure.I18nAutoConfiguration;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.productservice.dto.request.ProductCreateRequest;
+import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
 import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.service.ProductService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -20,7 +23,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -31,7 +37,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ProductController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(ApiExceptionHandler.class)
+// I18nAutoConfiguration = the fleet MessageSource (messages/messages EN+VI) —
+// the WebMvcTest slice otherwise ships Boot's empty basename-"messages" bean,
+// so the H-2 constraint's {product.media.clear.conflict} could not interpolate.
+@Import({ApiExceptionHandler.class, I18nAutoConfiguration.class})
 class ProductControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -112,5 +121,71 @@ class ProductControllerTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.code").value("MED-12004"))
             .andExpect(jsonPath("$.message").value("Media not found"));
+    }
+
+    // --- H-2: explicit clearMediaId on PUT (binding + validation) ---
+
+    @Test
+    void update_clearMediaIdTrue_bindsExplicitClearToService() throws Exception {
+        when(productService.update(eq(ID), any())).thenReturn(sample());
+
+        mockMvc.perform(put("/api/v1/products/{id}", ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"clearMediaId\": true}"))
+            .andExpect(status().isOk());
+
+        ProductUpdateRequest sent = capturedUpdateRequest();
+        assertThat(sent.clearMediaId()).as("explicit clear flag must reach the service").isTrue();
+        assertThat(sent.mediaId()).isNull();
+    }
+
+    @Test
+    void update_absentClearFlag_bindsNull_referenceUntouched() throws Exception {
+        when(productService.update(eq(ID), any())).thenReturn(sample());
+
+        mockMvc.perform(put("/api/v1/products/{id}", ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"Renamed\"}"))
+            .andExpect(status().isOk());
+
+        ProductUpdateRequest sent = capturedUpdateRequest();
+        assertThat(sent.clearMediaId()).as("omitting the flag must mean no clear").isNull();
+    }
+
+    @Test
+    void update_clearMediaIdFalse_explicitKeep_reachesService() throws Exception {
+        when(productService.update(eq(ID), any())).thenReturn(sample());
+
+        mockMvc.perform(put("/api/v1/products/{id}", ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"Renamed\", \"clearMediaId\": false}"))
+            .andExpect(status().isOk());
+
+        assertThat(capturedUpdateRequest().clearMediaId()).isFalse();
+    }
+
+    @Test
+    void update_clearFlagTogetherWithMediaId_conflictingInput_rejected400() throws Exception {
+        // H-2: clear=true + replacement mediaId is ambiguous — binding-time
+        // validation rejects it on the common 400 channel (ERR-0422-V) with
+        // the interpolated i18n message (both bundle texts name the flag; the
+        // rendered locale depends on the request — see ProductI18nKeysTest
+        // pinning the EN+VI keys).
+        mockMvc.perform(put("/api/v1/products/{id}", ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mediaId\": \"88888888-8888-8888-8888-888888888888\", \"clearMediaId\": true}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("ERR-0422-V"))
+            .andExpect(jsonPath("$.errors[0]").value(
+                org.hamcrest.Matchers.containsString("mediaClearConsistent: clearMediaId=true")));
+
+        verifyNoInteractions(productService);
+    }
+
+    private ProductUpdateRequest capturedUpdateRequest() throws Exception {
+        ArgumentCaptor<ProductUpdateRequest> captor = ArgumentCaptor.forClass(ProductUpdateRequest.class);
+        verify(productService).update(eq(ID), captor.capture());
+        return captor.getValue();
     }
 }

@@ -91,9 +91,11 @@
 | order-service | 8084 | | payment-service | 8085 |
 | shipping-service | 8087 | | inventory-service | 8082 |
 | favourite-service | 8081 | | rating-service | 8089 |
-| media-service | 8083 | | tax-service | 8091 |
-| promotion-service | 8093 | | search-service | 8094 |
-| notification-service | 8090 | | | |
+| tax-service | 8091 | | promotion-service | 8093 |
+| search-service | 8094 | | notification-service | 8090 |
+
+*media-service publishes no host port (dev or prod) — it is reached through
+the gateway (:8080, ServiceRoute MEDIA).*
 
 ## Useful Commands
 

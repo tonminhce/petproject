@@ -8,12 +8,11 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface IdempotencyKeyRepository
         extends JpaRepository<IdempotencyKey, IdempotencyKey.IdempotencyKeyId> {
 
-    Optional<IdempotencyKey> findByUserIdAndKey(UUID userId, String key);
+    Optional<IdempotencyKey> findByActorAndKey(String actor, String key);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM IdempotencyKey ik WHERE ik.expiresAt < :cutoff")

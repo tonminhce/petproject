@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,10 +23,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.core.authority.AuthorityUtils.createAuthorityList;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -72,5 +77,28 @@ class ProductControllerAuditTest {
             "\"action\":\"product.delete\"",
             "\"resourceType\":\"product\"",
             "\"resourceId\":\"" + productId + "\"");
+    }
+
+    @Test
+    void update_emitsAuditLineWithAnnotatedActionAndResourceId() throws Exception {
+        // H-2 guard: adding the clearMediaId flag must not disturb the PUT
+        // audit wiring — the annotated action/resourceId stay unchanged.
+        UUID productId = UUID.fromString("00000000-0000-0000-0000-000000006002");
+        when(productService.update(eq(productId), any())).thenReturn(null);
+
+        mockMvc.perform(put("/api/v1/products/{id}", productId)
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-000000006003"))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"clearMediaId\": true}"))
+            .andExpect(status().isOk());
+
+        ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventWriter).write(captor.capture());
+        AuditEvent event = captor.getValue();
+        assertThat(event.action()).isEqualTo("product.update");
+        assertThat(event.resourceType()).isEqualTo("product");
+        assertThat(event.resourceId()).isEqualTo(productId.toString());
+        assertThat(event.outcome()).isEqualTo("success");
     }
 }

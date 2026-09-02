@@ -38,11 +38,12 @@ class IdempotencyServiceImplTest {
     // @InjectMocks would leave the primitive parameter at 0.
     IdempotencyServiceImpl service;
 
-    private final UUID userId = UUID.randomUUID();
+    /** H-6 — idempotency rows are string-keyed by the caller label (actor). */
+    private final String actor = UUID.randomUUID().toString();
     private final String key = "test-key";
     private final String requestHash = "abc123";
     private final OrderResponse response = new OrderResponse(
-        UUID.randomUUID(), userId, OrderStatus.PENDING, List.of(),
+        UUID.randomUUID(), UUID.randomUUID(), OrderStatus.PENDING, List.of(),
         BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, null,
         Instant.now(), null, null, null, null);
 
@@ -60,7 +61,7 @@ class IdempotencyServiceImplTest {
 
     @Test
     void begin_nullKeyReturnsEmpty() {
-        Optional<OrderResponse> result = service.begin(null, userId, requestHash);
+        Optional<OrderResponse> result = service.begin(null, actor, requestHash);
 
         assertThat(result).isEmpty();
         verifyNoInteractions(repository);
@@ -70,13 +71,13 @@ class IdempotencyServiceImplTest {
     void begin_successSavesRowReturnsEmpty() {
         when(repository.saveAndFlush(any(IdempotencyKey.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Optional<OrderResponse> result = service.begin(key, userId, requestHash);
+        Optional<OrderResponse> result = service.begin(key, actor, requestHash);
 
         assertThat(result).isEmpty();  // owner — proceed with saga
         ArgumentCaptor<IdempotencyKey> captor = ArgumentCaptor.forClass(IdempotencyKey.class);
         verify(repository).saveAndFlush(captor.capture());
         IdempotencyKey saved = captor.getValue();
-        assertThat(saved.getUserId()).isEqualTo(userId);
+        assertThat(saved.getActor()).isEqualTo(actor);
         assertThat(saved.getKey()).isEqualTo(key);
         assertThat(saved.getRequestHash()).isEqualTo(requestHash);
         assertThat(saved.getResponseStatus()).isEqualTo(0);  // in-flight
@@ -86,10 +87,10 @@ class IdempotencyServiceImplTest {
     @Test
     void begin_collisionWithCompleteReturnsCached() throws Exception {
         IdempotencyKey existing = completedRow(requestHash);
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
         when(objectMapper.readValue(existing.getResponseBody(), OrderResponse.class)).thenReturn(response);
 
-        Optional<OrderResponse> result = service.begin(key, userId, requestHash);
+        Optional<OrderResponse> result = service.begin(key, actor, requestHash);
 
         assertThat(result).isPresent();
         assertThat(result.get()).isEqualTo(response);  // REPLAY — return cached
@@ -98,9 +99,9 @@ class IdempotencyServiceImplTest {
     @Test
     void begin_collisionWithDifferentPayloadThrows409() {
         IdempotencyKey existing = completedRow("abc");  // different hash
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.begin(key, userId, requestHash))
+        assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));  // DUPLICATE_REQUEST
     }
@@ -108,9 +109,9 @@ class IdempotencyServiceImplTest {
     @Test
     void begin_collisionInFlightThrows() {
         IdempotencyKey existing = inFlightRow(requestHash);
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.begin(key, userId, requestHash))
+        assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));  // DUPLICATE_REQUEST
     }
@@ -121,14 +122,14 @@ class IdempotencyServiceImplTest {
     void begin_lostRace_replaysCompletedWinner() throws Exception {
         // 1st read: empty (winner's insert not visible yet) → our insert hits the
         // unique composite PK → re-read finds the completed winner → REPLAY.
-        when(repository.findByUserIdAndKey(userId, key))
+        when(repository.findByActorAndKey(actor, key))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.of(completedRow(requestHash)));
         when(repository.saveAndFlush(any(IdempotencyKey.class)))
             .thenThrow(new DataIntegrityViolationException("uk_idempotency"));
         when(objectMapper.readValue(anyString(), eq(OrderResponse.class))).thenReturn(response);
 
-        Optional<OrderResponse> result = service.begin(key, userId, requestHash);
+        Optional<OrderResponse> result = service.begin(key, actor, requestHash);
 
         assertThat(result).isPresent();
         assertThat(result.get()).isEqualTo(response);
@@ -136,26 +137,26 @@ class IdempotencyServiceImplTest {
 
     @Test
     void begin_lostRace_inFlightWinnerThrows409() {
-        when(repository.findByUserIdAndKey(userId, key))
+        when(repository.findByActorAndKey(actor, key))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.of(inFlightRow(requestHash)));
         when(repository.saveAndFlush(any(IdempotencyKey.class)))
             .thenThrow(new DataIntegrityViolationException("uk_idempotency"));
 
-        assertThatThrownBy(() -> service.begin(key, userId, requestHash))
+        assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));
     }
 
     @Test
     void begin_lostRace_rowVanished_rethrowsOriginal() {
-        when(repository.findByUserIdAndKey(userId, key))
+        when(repository.findByActorAndKey(actor, key))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.empty());
         DataIntegrityViolationException dive = new DataIntegrityViolationException("uk_idempotency");
         when(repository.saveAndFlush(any(IdempotencyKey.class))).thenThrow(dive);
 
-        assertThatThrownBy(() -> service.begin(key, userId, requestHash))
+        assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isSameAs(dive);
     }
 
@@ -164,11 +165,11 @@ class IdempotencyServiceImplTest {
     @Test
     void complete_updatesExistingRow() throws Exception {
         IdempotencyKey existing = inFlightRow(requestHash);
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(existing));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
         when(objectMapper.writeValueAsString(response)).thenReturn("{\"json\":\"serialized\"}");
         when(repository.save(any(IdempotencyKey.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.complete(key, userId, response, 201);
+        service.complete(key, actor, response, 201);
 
         ArgumentCaptor<IdempotencyKey> captor = ArgumentCaptor.forClass(IdempotencyKey.class);
         verify(repository).save(captor.capture());
@@ -179,7 +180,7 @@ class IdempotencyServiceImplTest {
 
     @Test
     void complete_nullKeyNoOp() {
-        service.complete(null, userId, response, 201);
+        service.complete(null, actor, response, 201);
 
         verifyNoInteractions(repository);
     }
@@ -189,9 +190,9 @@ class IdempotencyServiceImplTest {
     @Test
     void abort_deletesInFlightRowWithMatchingHash() {
         IdempotencyKey inFlight = inFlightRow(requestHash);
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(inFlight));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(inFlight));
 
-        service.abort(key, userId, requestHash);
+        service.abort(key, actor, requestHash);
 
         verify(repository).delete(inFlight);
     }
@@ -201,9 +202,9 @@ class IdempotencyServiceImplTest {
         // Defense-in-depth for review I1: a row belonging to a different payload
         // (or a different racing execution) must never be deleted by ours.
         IdempotencyKey otherPayload = inFlightRow("other-hash");
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(otherPayload));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(otherPayload));
 
-        service.abort(key, userId, requestHash);
+        service.abort(key, actor, requestHash);
 
         verify(repository, never()).delete(any(IdempotencyKey.class));
     }
@@ -211,9 +212,9 @@ class IdempotencyServiceImplTest {
     @Test
     void abort_keepsCompletedRow() {
         IdempotencyKey completed = completedRow(requestHash);
-        when(repository.findByUserIdAndKey(userId, key)).thenReturn(Optional.of(completed));
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(completed));
 
-        service.abort(key, userId, requestHash);
+        service.abort(key, actor, requestHash);
 
         verify(repository, never()).delete(any(IdempotencyKey.class));
     }
@@ -222,7 +223,7 @@ class IdempotencyServiceImplTest {
 
     private IdempotencyKey inFlightRow(String hash) {
         return IdempotencyKey.builder()
-            .userId(userId).key(key).requestHash(hash)
+            .actor(actor).key(key).requestHash(hash)
             .responseStatus(0)
             .responseBody("")
             .createdAt(Instant.now()).expiresAt(Instant.now().plusSeconds(3600))
@@ -231,7 +232,7 @@ class IdempotencyServiceImplTest {
 
     private IdempotencyKey completedRow(String hash) {
         return IdempotencyKey.builder()
-            .userId(userId).key(key).requestHash(hash)
+            .actor(actor).key(key).requestHash(hash)
             .responseStatus(201)
             .responseBody("{\"cached\":\"json\"}")
             .createdAt(Instant.now()).expiresAt(Instant.now().plusSeconds(3600))

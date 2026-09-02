@@ -199,6 +199,11 @@ public abstract class AbstractIntegrationTest {
         }
 
         @Override
+        public URL presignedGetUrl(String bucket, String key, Duration ttl) {
+            return presignedUrl(key);
+        }
+
+        @Override
         public URL presignedPutUrl(String key, String contentType, Duration ttl) {
             return presignedUrl(key);
         }

@@ -147,7 +147,7 @@ class ProductServiceImplTest {
     void update_throwsCategoryNotFoundWhenFkMissing() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
-            null, null, null, null, null, null, null, CATEGORY_ID, null);
+            null, null, null, null, null, null, null, CATEGORY_ID, null, false);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(categoryRepo.findById(CATEGORY_ID)).thenReturn(Optional.empty());
 
@@ -161,7 +161,7 @@ class ProductServiceImplTest {
     void update_throwsBrandNotFoundWhenFkMissing() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
-            null, null, null, null, null, null, null, null, BRAND_ID);
+            null, null, null, null, null, null, null, null, BRAND_ID, false);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(brandRepo.findById(BRAND_ID)).thenReturn(Optional.empty());
 
@@ -175,7 +175,7 @@ class ProductServiceImplTest {
     void update_throwsConflictOnDuplicateSlug() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, "taken", null, null,
-            null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, false);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.existsBySlugAndIdNot("taken", ID)).thenReturn(true);
 
@@ -188,7 +188,7 @@ class ProductServiceImplTest {
     void update_throwsConflictOnDuplicateSku() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, "taken-sku",
-            null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, false);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(repo.existsBySkuAndIdNot("taken-sku", ID)).thenReturn(true);
 
@@ -201,7 +201,7 @@ class ProductServiceImplTest {
     void update_appliesPartialUpdateAndPublishes() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, "new desc", null,
-            new BigDecimal("1099.00"), null, null, null, null, null, null, null, null);
+            new BigDecimal("1099.00"), null, null, null, null, null, null, null, null, false);
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
             null, null, null, null, null, null, null, null, null, null, null, null);
@@ -327,7 +327,7 @@ class ProductServiceImplTest {
     void update_mediaIdExists_appliesReferenceAndPublishes() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
-            null, null, null, null, MEDIA_ID, null, null, null, null);
+            null, null, null, null, MEDIA_ID, null, null, null, null, false);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(mediaHeadClient.exists(MEDIA_ID)).thenReturn(true);
         when(repo.save(existing)).thenReturn(existing);
@@ -349,7 +349,7 @@ class ProductServiceImplTest {
     void update_unknownMediaId_rejectedWithMed12004() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
-            null, null, null, null, MEDIA_ID, null, null, null, null);
+            null, null, null, null, MEDIA_ID, null, null, null, null, false);
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
         when(mediaHeadClient.exists(MEDIA_ID)).thenReturn(false);
 
@@ -363,7 +363,7 @@ class ProductServiceImplTest {
     void update_nullMediaId_skipsHeadCheck() {
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, "new desc", null,
-            new BigDecimal("1099.00"), null, null, null, null, null, null, null, null);
+            new BigDecimal("1099.00"), null, null, null, null, null, null, null, null, false);
         ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
             "new desc", "IP15-001", new BigDecimal("1099.00"), 10, ProductStatus.ACTIVE,
             null, null, null, null, null, null, null, null, null, null, null, null);
@@ -374,5 +374,26 @@ class ProductServiceImplTest {
         service.update(ID, req);
 
         verifyNoInteractions(mediaHeadClient);
+    }
+
+    @Test
+    void update_clearMediaId_skipsHeadCheckAndProceeds() {
+        // H-2: an explicit clear carries no mediaId → the write-time gate must
+        // not fire (nothing to verify) — the mapper removes the reference.
+        Product existing = sampleProduct();
+        ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
+            null, null, null, null, null, null, null, null, null, true);
+        ProductDetailResponse resp = new ProductDetailResponse(ID, "iPhone 15", "iphone-15",
+            null, "IP15-001", new BigDecimal("999.00"), 10, ProductStatus.ACTIVE,
+            null, null, null, null, null, null, null, null, null, null, null, null);
+        when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(repo.save(existing)).thenReturn(existing);
+        when(mapper.toDetailResponse(existing)).thenReturn(resp);
+
+        service.update(ID, req);
+
+        verifyNoInteractions(mediaHeadClient);
+        verify(mapper).partialUpdate(existing, req);
+        verify(publisher).publishUpdated(existing);
     }
 }

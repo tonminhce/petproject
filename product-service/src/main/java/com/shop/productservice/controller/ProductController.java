@@ -64,6 +64,18 @@ public class ProductController {
         return ApiResponse.ok(productService.create(request), "Product created successfully");
     }
 
+    /**
+     * Partial update (ruling H-2 media-reference semantics): fields present in
+     * the body overwrite their current value; absent/null fields keep it.
+     * {@code mediaId} present → HEAD-verified against media-service (Option C
+     * write-time gate, MED-12004 on unknown). Clearing the reference is
+     * EXPLICIT: send {@code clearMediaId=true} with no {@code mediaId} — the
+     * stored reference is removed and the derived image falls back to the
+     * legacy free-text {@code imageUrl}. {@code clearMediaId=true} together
+     * with a non-null {@code mediaId} is rejected at binding time (400,
+     * ERR-0422-V, i18n {@code product.media.clear.conflict}); omitting the
+     * flag never touches the reference.
+     */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Audited(action = "product.update", resourceType = "product")

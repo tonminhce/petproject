@@ -31,12 +31,23 @@ public class ProductMediaService {
     private final ProductRepository productRepository;
     private final ProductEventPublisher productEventPublisher;
 
+    /**
+     * Clears every live product reference to the given media and re-publishes
+     * each cleared product as {@code ProductUpdated} (one transaction — rows
+     * and outbox events commit atomically). Serves both the event path
+     * ({@code MediaDeleted} consumer) and the H-3 reconciliation sweep; the
+     * sweep uses the returned count for its {@code product_media_sweep_cleared_total}
+     * meter.
+     *
+     * @return number of product rows whose media_id was cleared (0 when the
+     *         reference is already gone — idempotent replay)
+     */
     @Transactional
-    public void clearReference(UUID mediaId) {
+    public int clearReference(UUID mediaId) {
         List<Product> affected = productRepository.findByMediaId(mediaId);
         if (affected.isEmpty()) {
             log.info("No products reference media {} — nothing to clear", mediaId);
-            return;
+            return 0;
         }
         for (Product product : affected) {
             product.setMediaId(null);
@@ -47,5 +58,20 @@ public class ProductMediaService {
             productEventPublisher.publishUpdated(saved);
         }
         log.info("Cleared media reference {} on {} product(s)", mediaId, affected.size());
+        return affected.size();
+    }
+
+    /**
+     * H-4: how many LIVE products still reference the given media — served to
+     * media-service via the internal SERVICE-gated endpoint
+     * {@code GET /internal/products/media-references/{mediaId}}. Read-only,
+     * indexed (changelog 005), never mutates state.
+     *
+     * @return exact count of live rows with {@code media_id} = the given media
+     */
+    public long referenceCount(UUID mediaId) {
+        long count = productRepository.countByMediaId(mediaId);
+        log.debug("Reference count for media {}: {} product(s)", mediaId, count);
+        return count;
     }
 }

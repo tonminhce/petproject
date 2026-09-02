@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -67,15 +66,15 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     }
 
     @Override
-    public Optional<OrderResponse> begin(String key, UUID userId, String requestHash) {
+    public Optional<OrderResponse> begin(String key, String actor, String requestHash) {
         if (key == null) return Optional.empty();
 
-        Optional<IdempotencyKey> preExisting = repository.findByUserIdAndKey(userId, key);
+        Optional<IdempotencyKey> preExisting = repository.findByActorAndKey(actor, key);
         if (preExisting.isPresent()) {
             return resolve(preExisting.get(), requestHash, key);
         }
 
-        IdempotencyKey ik = newInFlight(key, userId, requestHash);
+        IdempotencyKey ik = newInFlight(key, actor, requestHash);
         try {
             requiresNewTemplate.executeWithoutResult(status -> repository.saveAndFlush(ik));
             return Optional.empty();  // owner — proceed with saga
@@ -85,7 +84,7 @@ public class IdempotencyServiceImpl implements IdempotencyService {
             // has been loaded into it yet, so the query sees the winner's committed
             // row. Resolve exactly like any other collision — never leak a raw
             // constraint violation as a 500 (review finding I1).
-            IdempotencyKey winner = repository.findByUserIdAndKey(userId, key)
+            IdempotencyKey winner = repository.findByActorAndKey(actor, key)
                 .orElseThrow(() -> ex);
             return resolve(winner, requestHash, key);
         }
@@ -104,9 +103,9 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
     }
 
-    private IdempotencyKey newInFlight(String key, UUID userId, String requestHash) {
+    private IdempotencyKey newInFlight(String key, String actor, String requestHash) {
         IdempotencyKey ik = new IdempotencyKey();
-        ik.setUserId(userId);
+        ik.setActor(actor);
         ik.setKey(key);
         ik.setRequestHash(requestHash);
         ik.setResponseStatus(0);  // in-flight
@@ -118,9 +117,9 @@ public class IdempotencyServiceImpl implements IdempotencyService {
 
     @Override
     @Transactional
-    public void complete(String key, UUID userId, OrderResponse response, int status) {
+    public void complete(String key, String actor, OrderResponse response, int status) {
         if (key == null) return;
-        IdempotencyKey ik = repository.findByUserIdAndKey(userId, key)
+        IdempotencyKey ik = repository.findByActorAndKey(actor, key)
             .orElseThrow(() -> new IllegalStateException("Idempotency row not found for complete: " + key));
         ik.setResponseStatus(status);
         ik.setResponseBody(serialize(response));
@@ -129,17 +128,17 @@ public class IdempotencyServiceImpl implements IdempotencyService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void abort(String key, UUID userId, String requestHash) {
+    public void abort(String key, String actor, String requestHash) {
         if (key == null) return;
         try {
-            repository.findByUserIdAndKey(userId, key)
+            repository.findByActorAndKey(actor, key)
                 .filter(ik -> ik.getResponseStatus() == 0)
                 // Defense-in-depth: only ever delete the row THIS execution created —
                 // a hash mismatch means the row belongs to a different payload.
                 .filter(ik -> Objects.equals(ik.getRequestHash(), requestHash))
                 .ifPresent(repository::delete);
         } catch (Exception ex) {
-            log.warn("Failed to abort in-flight idempotency key {}/{}: {}", userId, key, ex.getMessage());
+            log.warn("Failed to abort in-flight idempotency key {}/{}: {}", actor, key, ex.getMessage());
             // Row will be TTL-purged (rev 2 fallback)
         }
     }

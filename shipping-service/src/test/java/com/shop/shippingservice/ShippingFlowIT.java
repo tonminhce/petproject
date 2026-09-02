@@ -5,12 +5,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.kafka.config.KafkaProperties;
+import com.shop.common.kafka.serialization.JsonKafkaSerializer;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.scheduler.ReconciliationScheduler;
 import com.shop.shippingservice.support.AbstractIntegrationTest;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -59,6 +63,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * Shipping flow ITs over the REAL fleet inbound wire (H-1): order lifecycle
+ * records are produced through the fleet producer path — {@code KafkaTemplate}
+ * with the fleet {@code JsonKafkaSerializer} (the exact producer path of
+ * order-service's {@code OrderOutboxRelay}), so the payload String lands
+ * DOUBLE-ENCODED (a JSON string token wrapping the event JSON). The helper
+ * previously used a {@code StringSerializer} (single-encoded) — a test wire
+ * that never matched production, which is exactly why the old
+ * {@code JsonDeserializer}-based consumer config silently dropped every real
+ * order event while the ITs stayed green.
+ */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @AutoConfigureTestRestTemplate
 class ShippingFlowIT extends AbstractIntegrationTest {
@@ -106,7 +121,9 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        // The fleet producer's value serializer (KafkaAutoConfiguration): a
+        // payload String gets JSON-string-encoded → double-encoded on the wire.
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonKafkaSerializer.class.getName());
         kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
     }
 
@@ -290,6 +307,26 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         assertThat(cancelled.getPreviousStatus()).isEqualTo(ShipmentStatus.CREATED);
     }
 
+    @Test
+    @DisplayName("9. H-1 pin: real wire value is a double-encoded token AND the shipment is created")
+    void doubleEncodedFleetWireTokenIsAccepted() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+        Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
+        assertThat(shipment.getCarrier()).isEqualTo(Carrier.MANUAL);
+
+        // Wire proof on the real topic: the record value is a JSON string
+        // token wrapping the event JSON — the shape that the old
+        // JsonDeserializer-only consumer config dropped before the listener.
+        ConsumerRecord<String, String> record = awaitRecord(ORDER_TOPIC, orderId.toString());
+        assertThat(record).as("record on %s with key=orderId", ORDER_TOPIC).isNotNull();
+        JsonNode token = objectMapper.readTree(record.value());
+        assertThat(token.isTextual()).as("fleet wire shape is a JSON string token").isTrue();
+        JsonNode unwrapped = objectMapper.readTree(token.textValue());
+        assertThat(unwrapped.get("eventType").textValue()).isEqualTo(EVENT_ORDER_CONFIRMED);
+        assertThat(unwrapped.get("orderId").textValue()).isEqualTo(orderId.toString());
+    }
+
     private void sendOrderEvent(UUID orderId, String eventType, String status) {
         Map<String, Object> event = Map.of(
             "eventId", UUID.randomUUID().toString(),
@@ -404,6 +441,28 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** Raw readback (StringDeserializer) to prove the actual wire shape. */
+    private ConsumerRecord<String, String> awaitRecord(String topic, String key) {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "shipping-wire-it-" + UUID.randomUUID());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(List.of(topic));
+            long deadline = System.currentTimeMillis() + 20_000;
+            while (System.currentTimeMillis() < deadline) {
+                for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(500))) {
+                    if (key.equals(record.key())) {
+                        return record;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     static class Recorder {

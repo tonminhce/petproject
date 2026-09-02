@@ -32,15 +32,16 @@ import static org.mockito.Mockito.when;
 
 /**
  * Purge unit proofs with a STUBBED reference checker — the stub controls
- * behavior, the production default bean ({@code NoopMediaReferenceChecker},
- * fail-safe TRUE = "referenced") merely decides what happens when nothing is
- * stubbed in: skip everything. So: stubbed-false proves the purge path works
- * (grace boundary — a row at EXACTLY the grace horizon is purgeable, the
- * repo's {@code <=} query is IT-proven in {@code MediaPurgeIT};
- * referenced-skip logs WARN + leaves objects/rows for the NEXT cycle;
- * unreferenced purge is objects-then-rows in order; one failing media never
- * aborts the batch), and the always-true Noop default means the un-stubbed
- * production job skips all candidates until a real checker lands (F-3).
+ * behavior. H-4 replaced the always-true Noop default with the real
+ * {@code ProductMediaReferenceChecker} (product-service count over HTTP), so
+ * the stubbed-false path proves the purge path works (grace boundary — a row
+ * at EXACTLY the grace horizon is purgeable, the repo's {@code <=} query is
+ * IT-proven in {@code MediaPurgeIT}; referenced-skip logs WARN + leaves
+ * objects/rows for the NEXT cycle; unreferenced purge is objects-then-rows in
+ * order; one failing media never aborts the batch). A checker that THROWS is
+ * fail-safe REFERENCED for that row only — WARN + skip, and the cycle
+ * continues with the next candidate (the real checker maps its own outages to
+ * "referenced" already; this covers anything outside that contract).
  */
 @ExtendWith(MockitoExtension.class)
 class MediaPurgeJobTest {
@@ -151,6 +152,24 @@ class MediaPurgeJobTest {
         InOrder order = inOrder(storage, mediaRepository);
         order.verify(storage).delete(BUCKET, MEDIA_A + "/thumb.webp");
         order.verify(mediaRepository).deleteIncludingDeleted(MEDIA_A);
+    }
+
+    @Test
+    @DisplayName("checker exception → fail-safe REFERENCED for that row; the cycle CONTINUES with the next candidate")
+    void purge_checkerThrows_skipsRowAndCycleContinues() {
+        when(mediaRepository.findPurgeableIds(any())).thenReturn(List.of(MEDIA_A, MEDIA_B));
+        candidate(MEDIA_B, MEDIA_B + "/original.jpg");
+        when(referenceChecker.isReferenced(MEDIA_A)).thenThrow(new RuntimeException("product down"));
+        when(referenceChecker.isReferenced(MEDIA_B)).thenReturn(false);
+
+        assertThatCode(() -> job.purge()).doesNotThrowAnyException();
+
+        // A: checker blew up → never touched (fail-safe keep, retried next cycle)
+        verify(storage, never()).delete(BUCKET, MEDIA_A + "/original.jpg");
+        verify(mediaRepository, never()).deleteIncludingDeleted(MEDIA_A);
+        // B: next candidate still processed — the cycle did not abort
+        verify(storage).delete(BUCKET, MEDIA_B + "/original.jpg");
+        verify(mediaRepository).deleteIncludingDeleted(MEDIA_B);
     }
 
     @Test

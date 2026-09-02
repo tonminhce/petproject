@@ -51,6 +51,14 @@
             <artifactId>metadata-extractor</artifactId>
             <version>2.19.0</version>
         </dependency>
+        <!-- Real-HTTP ITs for the H-4 purge-gate client (product-service's
+             precedent) — same standalone jar as search/order/gateway/product. -->
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>3.13.1</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>com.github.usefulness</groupId>
             <artifactId>webp-imageio</artifactId>

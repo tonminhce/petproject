@@ -157,7 +157,12 @@ public class S3ObjectStorageService implements ObjectStorageService {
 
     @Override
     public URL presignedGetUrl(String key, Duration ttl) {
-        GetObjectRequest get = GetObjectRequest.builder().bucket(defaultBucket()).key(key).build();
+        return presignedGetUrl(defaultBucket(), key, ttl);
+    }
+
+    @Override
+    public URL presignedGetUrl(String bucket, String key, Duration ttl) {
+        GetObjectRequest get = GetObjectRequest.builder().bucket(bucket).key(key).build();
         GetObjectPresignRequest presign = GetObjectPresignRequest.builder()
                 .signatureDuration(ttlOrDefault(ttl))
                 .getObjectRequest(get)

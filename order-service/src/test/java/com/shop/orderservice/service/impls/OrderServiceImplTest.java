@@ -51,7 +51,8 @@ class OrderServiceImplTest {
     @InjectMocks OrderServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();
-    private final UUID adminId = UUID.randomUUID();
+    /** H-6 actor label — ADMIN token resolves to the sub string. */
+    private final String actor = UUID.randomUUID().toString();
     private final UUID orderId = UUID.randomUUID();
     private final UUID productId = UUID.randomUUID();
     private Order order;
@@ -126,7 +127,7 @@ class OrderServiceImplTest {
 
         // hash() runs BEFORE idempotencyService.begin() — stub ObjectMapper to return non-null bytes
         when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
-        when(idempotencyService.begin(eq("key1"), eq(userId), any()))
+        when(idempotencyService.begin(eq("key1"), eq(userId.toString()), any()))
             .thenReturn(Optional.of(cached));
 
         OrderResponse result = service.createOrder(userId, req, "key1");
@@ -170,10 +171,10 @@ class OrderServiceImplTest {
     @Test
     void confirmOrder_happy_commitsThenConfirmsAndCompletesIdempotency() {
         OrderResponse response = stubConfirmHappy();
-        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(actor), eq(confirmHash())))
             .thenReturn(Optional.empty());
 
-        OrderResponse result = service.confirmOrder(orderId, adminId, CONFIRM_KEY);
+        OrderResponse result = service.confirmOrder(orderId, actor, CONFIRM_KEY);
 
         assertThat(result).isSameAs(response);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
@@ -181,7 +182,7 @@ class OrderServiceImplTest {
         verify(commitCoordinator).commitForConfirm(order, List.of());
         verify(orderRepository).save(order);
         verify(orderEventPublisher).publishStatusChanged(order);
-        verify(idempotencyService).complete(CONFIRM_KEY, adminId, response, 200);
+        verify(idempotencyService).complete(CONFIRM_KEY, actor, response, 200);
         verify(confirmMetrics).attempt();
         // Phase timers are coordinator-owned — service must NOT sample them itself
         // (review fix: caller-side commit_inventory sample double-counted every confirm)
@@ -192,18 +193,18 @@ class OrderServiceImplTest {
         seq.verify(commitCoordinator).commitForConfirm(order, List.of());
         seq.verify(orderRepository).save(order);
         seq.verify(orderEventPublisher).publishStatusChanged(order);
-        seq.verify(idempotencyService).complete(CONFIRM_KEY, adminId, response, 200);
+        seq.verify(idempotencyService).complete(CONFIRM_KEY, actor, response, 200);
     }
 
     @Test
     void confirmOrder_coordinatorFails_wr4011AbortsAndStaysPending() {
         stubConfirmLoad();
-        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(actor), eq(confirmHash())))
             .thenReturn(Optional.empty());
         doThrow(new RuntimeException("inventory down"))
             .when(commitCoordinator).commitForConfirm(any(), anyList());
 
-        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, CONFIRM_KEY))
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, CONFIRM_KEY))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4011"));
 
@@ -211,7 +212,7 @@ class OrderServiceImplTest {
         assertThat(order.getConfirmedAt()).isNull();
         verify(orderRepository, never()).save(any());
         verify(orderEventPublisher, never()).publishStatusChanged(any());
-        verify(idempotencyService).abort(CONFIRM_KEY, adminId, confirmHash());
+        verify(idempotencyService).abort(CONFIRM_KEY, actor, confirmHash());
         verify(idempotencyService, never()).complete(any(), any(), any(), anyInt());
     }
 
@@ -221,12 +222,12 @@ class OrderServiceImplTest {
         OrderResponse cached = new OrderResponse(orderId, userId, OrderStatus.CONFIRMED,
             List.of(), BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO,
             BigDecimal.valueOf(110), null, Instant.now(), Instant.now(), null, null, null);
-        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(actor), eq(confirmHash())))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.of(cached));
 
-        OrderResponse r1 = service.confirmOrder(orderId, adminId, CONFIRM_KEY);
-        OrderResponse r2 = service.confirmOrder(orderId, adminId, CONFIRM_KEY);
+        OrderResponse r1 = service.confirmOrder(orderId, actor, CONFIRM_KEY);
+        OrderResponse r2 = service.confirmOrder(orderId, actor, CONFIRM_KEY);
 
         assertThat(r1).isSameAs(first);
         assertThat(r2).isSameAs(cached);
@@ -239,27 +240,27 @@ class OrderServiceImplTest {
     void confirmOrder_invalidState_rethrowsGuardAsIs_andAborts() {
         order.setStatus(OrderStatus.SHIPPED);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(adminId), eq(confirmHash())))
+        when(idempotencyService.begin(eq(CONFIRM_KEY), eq(actor), eq(confirmHash())))
             .thenReturn(Optional.empty());
         doThrow(BusinessException.of(ErrorCode.ORDER_INVALID_STATE_TRANSITION,
                 OrderStatus.SHIPPED, OrderStatus.CONFIRMED))
             .when(orderStatusService).validateTransition(OrderStatus.SHIPPED, OrderStatus.CONFIRMED);
 
-        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, CONFIRM_KEY))
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, CONFIRM_KEY))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4004"));  // NOT wrapped to 4011
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
         verify(confirmMetrics).attempt();
         verify(commitCoordinator, never()).commitForConfirm(any(), any());
-        verify(idempotencyService).abort(CONFIRM_KEY, adminId, confirmHash());
+        verify(idempotencyService).abort(CONFIRM_KEY, actor, confirmHash());
     }
 
     @Test
     void confirmOrder_nullKey_skipsIdempotencyStillOrchestrates() {
         stubConfirmHappy();
 
-        OrderResponse result = service.confirmOrder(orderId, adminId, null);
+        OrderResponse result = service.confirmOrder(orderId, actor, null);
 
         verifyNoInteractions(idempotencyService);
         assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
@@ -277,7 +278,7 @@ class OrderServiceImplTest {
     void confirmOrder_flagOff_bypassesPaymentGuard() {
         stubConfirmHappy();
 
-        OrderResponse result = service.confirmOrder(orderId, adminId, null);
+        OrderResponse result = service.confirmOrder(orderId, actor, null);
 
         assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
         verify(paymentClient).isEnabled();  // flag consulted...
@@ -293,7 +294,7 @@ class OrderServiceImplTest {
             .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
                 orderId, "CAPTURED", UUID.randomUUID())));
 
-        OrderResponse result = service.confirmOrder(orderId, adminId, null);
+        OrderResponse result = service.confirmOrder(orderId, actor, null);
 
         assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(order.getConfirmedAt()).isNotNull();
@@ -308,7 +309,7 @@ class OrderServiceImplTest {
             .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
                 orderId, "PENDING", UUID.randomUUID())));
 
-        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4012"));
 
@@ -327,7 +328,7 @@ class OrderServiceImplTest {
             .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
                 orderId, "REFUNDED", UUID.randomUUID())));
 
-        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4012"));
 
@@ -340,7 +341,7 @@ class OrderServiceImplTest {
         when(paymentClient.isEnabled()).thenReturn(true);
         when(paymentClient.findCapturedByOrderId(orderId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4012"));
 
@@ -354,7 +355,7 @@ class OrderServiceImplTest {
         when(paymentClient.findCapturedByOrderId(orderId))
             .thenThrow(new RuntimeException("payment-service down"));
 
-        assertThatThrownBy(() -> service.confirmOrder(orderId, adminId, null))
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> {
                     assertThat(ex.getErrorCode()).isEqualTo("ORD-4012");
@@ -479,7 +480,7 @@ class OrderServiceImplTest {
 
     private void stubIdempotency() throws Exception {
         when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
-        when(idempotencyService.begin(any(), eq(userId), any())).thenReturn(Optional.empty());
+        when(idempotencyService.begin(any(), eq(userId.toString()), any())).thenReturn(Optional.empty());
     }
 
     @Test

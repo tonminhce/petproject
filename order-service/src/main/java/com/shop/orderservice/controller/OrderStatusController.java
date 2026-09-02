@@ -2,6 +2,8 @@ package com.shop.orderservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.logging.audit.AuditActorResolver;
+import com.shop.common.logging.audit.AuditEvent;
 import com.shop.common.logging.audit.Audited;
 import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.orderservice.dto.response.OrderResponse;
@@ -29,8 +31,7 @@ public class OrderStatusController {
     @Audited(action = "order.confirm", resourceType = "order")
     public ApiResponse<OrderResponse> confirm(@PathVariable UUID orderId,
         @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        UUID adminId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
-        return ApiResponse.ok(orderService.confirmOrder(orderId, adminId, idempotencyKey));
+        return ApiResponse.ok(orderService.confirmOrder(orderId, resolveActor(), idempotencyKey));
     }
 
     @PostMapping("/{orderId}/ship")
@@ -43,5 +44,20 @@ public class OrderStatusController {
     @Audited(action = "order.deliver", resourceType = "order")
     public ApiResponse<OrderResponse> deliver(@PathVariable UUID orderId) {
         return ApiResponse.ok(orderService.deliverOrder(orderId));
+    }
+
+    /**
+     * H-6 actor label by token shape: ADMIN → {@code sub} (the human id),
+     * SERVICE → {@code service:<azp>} (the machine identity). Reuses the audit
+     * fleet's {@link AuditActorResolver} — the same KC26-probed claim rules the
+     * {@code @Audited} aspect applies — so idempotency rows and audit lines can
+     * never disagree about who confirmed an order.
+     */
+    private static String resolveActor() {
+        AuthenticatedUser.requireCurrent();  // fail fast when unauthenticated (401 semantics preserved)
+        AuditActorResolver.Actor actor = AuditActorResolver.resolve();
+        return AuditEvent.ACTOR_TYPE_SERVICE.equals(actor.type())
+            ? "service:" + actor.id()
+            : actor.id();
     }
 }

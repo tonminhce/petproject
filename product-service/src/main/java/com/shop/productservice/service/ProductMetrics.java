@@ -76,4 +76,24 @@ public class ProductMetrics {
     public void recordRelayDuration(Duration d) { relayDuration.record(d); }
 
     public void setPendingOutboxCount(int n) { pendingOutboxCount.set(n); }
+
+    // --- H-3 media reconciliation sweep ---
+
+    /**
+     * H-3 sweep observability: one increment per product row whose media
+     * reference was HEAD-checked this cycle (kept or cleared alike).
+     */
+    public void recordSweepChecked() {
+        registry.counter("product_media_sweep_checked_total").increment();
+    }
+
+    /**
+     * H-3 sweep observability: incremented by the number of media references
+     * actually removed. A dangling mediaId shared by several rows repairs in
+     * one {@code clearReference} call — the caller passes the affected-row
+     * count so the meter tracks cleared ROWS, not repair calls.
+     */
+    public void recordSweepCleared(long cleared) {
+        registry.counter("product_media_sweep_cleared_total").increment(cleared);
+    }
 }

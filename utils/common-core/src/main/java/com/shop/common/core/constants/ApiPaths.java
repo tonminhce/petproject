@@ -39,6 +39,9 @@ public final class ApiPaths {
     // ---- Ratings ----
     public static final String RATINGS = API_V1 + "/ratings";
 
+    // ---- Product internal (SERVICE-token gated, fleet-internal only) ----
+    public static final String INTERNAL_PRODUCT_MEDIA_REFERENCES = "/internal/products/media-references";
+
     // ---- Storefront / Backoffice ----
     public static final String BACKOFFICE_RATINGS = API_V1 + "/backoffice/ratings";
     public static final String BACKOFFICE_PRODUCTS = API_V1 + "/backoffice/products";

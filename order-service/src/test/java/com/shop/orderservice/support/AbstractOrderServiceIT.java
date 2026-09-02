@@ -199,4 +199,17 @@ public abstract class AbstractOrderServiceIT {
             .subject(adminId.toString()).claim("preferred_username", "it-admin").build();
         SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt, java.util.List.of()));
     }
+
+    /**
+     * Seeds a KC26 machine-token-shaped principal (sub = service-account UUID,
+     * {@code azp} = client id, ROLE_SERVICE authority) — the H-6 SERVICE shape:
+     * {@code OrderStatusController} must resolve the actor to
+     * {@code service:<azp>}, never the service-account UUID.
+     */
+    protected static void seedServicePrincipal(String clientId, String serviceAccountSub) {
+        Jwt jwt = Jwt.withTokenValue("it-service-token").header("alg", "none")
+            .subject(serviceAccountSub).claim("azp", clientId).build();
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt,
+            java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_SERVICE"))));
+    }
 }

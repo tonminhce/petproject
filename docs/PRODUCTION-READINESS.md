@@ -120,13 +120,14 @@ working end-to-end (HTTP + Kafka headers).
 ### AUDIT_LOG_PATH volume (D6)
 
 `@Audited` events are emitted per-service (never at the gateway). The overlay
-sets `AUDIT_LOG_PATH=/var/log/audit/audit.jsonl` on the 8 audited services
-(product, rating, tax, notification, shipping, payment, search, promotion)
-and mounts the named volume `audit_logs` at `/var/log/audit` (parent dirs are
-created by the sink; appends are crash-safe, transient IO failures recover on
-the next event). If the var were unset, events fall back to the stdout
-`AUDIT` logger. Ship `audit.jsonl` off-box with filebeat/vector — the file
-sink is the seam (spec §6 open item: audit sink shippers).
+sets `AUDIT_LOG_PATH=/var/log/audit/audit.jsonl` on the 10 audited services
+(product, rating, tax, notification, shipping, payment, search, promotion,
+media, inventory) and mounts the named volume `audit_logs` at
+`/var/log/audit` (parent dirs are created by the sink; appends are crash-safe,
+transient IO failures recover on the next event). If the var were unset,
+events fall back to the stdout `AUDIT` logger. Ship `audit.jsonl` off-box
+with filebeat/vector — the file sink is the seam (spec §6 open item: audit
+sink shippers).
 
 ## 2. Known open items carried (spec §6)
 
@@ -136,27 +137,74 @@ sink is the seam (spec §6 open item: audit sink shippers).
   one instance (also closes the in-process bucket-map growth note).
 - XFF trust gating for the allowlist filter (mirroring
   `GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS`) — see §4.1.
-- **Media purge is FAIL-SAFE by design (F-3):** the production
-  `MediaReferenceChecker` is a Noop that answers "referenced" for every
-  media, so the purge job SKIPS all candidates (WARN per cycle) until a real
-  checker lands (product-side reference endpoint — future epic;
-  `NoopMediaReferenceChecker` javadoc has the trail). Soft-deleted objects
-  therefore ACCUMULATE past the 30d grace window by design — not a bug;
-  storage growth is bounded by delete volume. The media outbox relay
-  replays FAILED rows on later cycles (broker outage delays delivery, never
-  kills it). Media's `@Audited` events go to the stdout `AUDIT` logger until
-  the service joins the `AUDIT_LOG_PATH` volume wiring above.
+- **Media purge FAIL-SAFE policy (F-3, H-4):** the production
+  `MediaReferenceChecker` asks product-service's internal reference-count
+  endpoint (`/internal/products/media-references/{id}`, SERVICE-token gated)
+  how many live products still reference the media. When the check cannot
+  PROVE zero references — product outage, non-2xx, timeout, malformed body,
+  rejected service token — the answer is REFERENCED: the purge job skips the
+  candidate with a WARN and retries next cycle. Purge never hard-deletes on
+  doubt; soft-deleted objects accumulating during an outage is the accepted
+  cost, bounded by delete volume. A successful count of 0 is the only
+  purge-green answer. Media's outbox relay replays FAILED rows on later
+  cycles (broker outage delays delivery, never kills it), and rows older than
+  the 7d retention window age to the terminal DEAD state (metric + WARN).
+  Media and inventory both write `@Audited` events to the `AUDIT_LOG_PATH`
+  volume wiring in §4.1 (fleet-hardening H-7).
 
 ## Future hardening (ratified follow-ups, non-blocking)
 
-1. **Central OTel wiring (Phase 9+, R1 follow-up):** outbound traceparent injection
-   currently lives at 4 per-service RestClient builder sites. Add a common-spring
-   `BeanPostProcessor` that auto-injects the OTel interceptor into EVERY
-   `RestClient.Builder` bean (and `RestTemplate.Builder` if present) so future
-   services inherit tracing with zero wiring. ~20 LOC, 1 commit.
-2. **`confirm()` semantic (pre-existing):** OrderStatusController.confirm parses the
-   authenticated id as a UUID — valid for SERVICE tokens (service-account UUID) but
-   semantically expects an admin id; revisit if order confirm becomes admin-facing.
-3. **Actor resolution Keycloak-shape coupling:** audit actor uses
-   azp-present-without-session-marker ⇒ service; degradation path is sub-first.
-   Re-verify on Keycloak upgrades (KeycloakRealmImportIT gates the token shape).
+1. **Actor resolution Keycloak-shape coupling (runbook item — STAYS):** audit
+   actor AND the confirm() idempotency actor both resolve through
+   `AuditActorResolver`'s azp-present-without-session-marker ⇒ service rule
+   (degradation path is sub-first). Re-verify on Keycloak upgrades
+   (KeycloakRealmImportIT gates the token shape). Both consumers were aligned
+   in fleet-hardening H-6 so there is exactly ONE coupling point.
+2. **Kafka wire-shape contract (BINDING, restated):** the only sanctioned wire
+   format is producer-side `JsonKafkaSerializer` double-encoding (payload
+   serialized to JSON String, then serialized again — fleet precedent
+   `JsonKafkaSerializer`). Consumers MUST tolerate single- AND double-encoded
+   values (the `BaseKafkaConsumer` unwrap boundary), and IT helpers MUST
+   publish through the real fleet path (`KafkaTemplate` +
+   `JsonKafkaSerializer`), never a bare String serializer. New typed
+   consumers inherit the tolerant base by construction — do not reintroduce
+   typed `JsonDeserializer` bindings.
+
+Closed items (kept for traceability, resolved by fleet-hardening):
+
+- ~~Central OTel wiring~~ — CLOSED (R1/T5): the common-spring tracing
+  `BeanPostProcessor` auto-injects the traceparent interceptor into EVERY
+  `RestClient.Builder` bean; the 4 per-service manual sites were removed.
+- ~~`confirm()` semantic~~ — CLOSED (H-6/T6): the controller resolves the
+  actor by token shape (ADMIN → sub, SERVICE → `service:<azp>`); idempotency
+  rows store the string actor label, so machine callers are no longer
+  misattributed to a service-account UUID.
+
+## Battery (stability gate — BINDING)
+
+The battery is the fleet's full-suite stability gate, run from the repo root
+before and after every hardening pass:
+
+```bash
+./mvnw -T1C install -DskipTests -q          # whole-reactor compile gate
+./mvnw -pl <touched services...> test       # full suites of touched modules
+docker compose config -q                    # when compose/overlay was touched
+```
+
+**Scope (BINDING since fleet-hardening H-11):** the battery permanently
+includes the seven shared modules — their suites must never be masked again.
+
+```bash
+./mvnw -pl utils/common-core,utils/common-spring,utils/common-kafka,\
+utils/common-keycloak,utils/common-logging,utils/common-security,\
+utils/common-storage test \
+  && ./mvnw -T1C install -DskipTests -q
+```
+
+Contract notes (H-9): ITs execute under `mvn test` via the per-module
+surefire `**/*IT.java` includes — `mvn test`, not `failsafe`, is the
+battery's integration gate; `install -DskipTests` is the fleet compile gate,
+not a quality gate. `common-spring` intentionally ships a no-datasource
+boot proof (`CommonLibraryStarterTests`) that opts JPA auditing out via
+`shop.jpa.auditing.enabled=false` — JPA services keep the default
+`matchIfMissing=true` behavior and are covered by their own suites.

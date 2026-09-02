@@ -24,6 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * dependency for compile-time convenience, but the starter has no
  * opinion on which database each service uses. A real service adds its
  * own datasource configuration on top of this starter.</p>
+ *
+ * <p>This test doubles as the reference "no-datasource consumer" boot
+ * proof. JPA auditing must therefore be opted out explicitly via
+ * {@code shop.jpa.auditing.enabled=false} — auditing cannot activate
+ * without an EntityManagerFactory (see {@code JpaAuditingAutoConfiguration}
+ * for why this is a property and not a bean condition).</p>
  */
 @SpringBootTest(
         classes = CommonLibraryStarter.class,
@@ -38,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "shop.security.issuer-uri=http://localhost:9999/realms/test",
         "shop.storage.enabled=false",
         "shop.kafka.enabled=false",
+        "shop.jpa.auditing.enabled=false",
         "spring.autoconfigure.exclude="
                 + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"

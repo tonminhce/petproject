@@ -45,11 +45,25 @@ shop:
     public-paths: []
 
   # D4 outbox relay scheduling (ports rating-service's convention)
+  # H-5 aging: nightly retention — SENT>retention-days purged, FAILED>retention-days → terminal DEAD
   media:
     outbox:
       poll-millis: ${MEDIA_OUTBOX_POLL_MILLIS:2000}
       batch-size: 100
       max-retries: 10
+      retention-days: ${MEDIA_OUTBOX_RETENTION_DAYS:7}
+      retention-cron: ${MEDIA_OUTBOX_RETENTION_CRON:0 0 3 * * *}
+
+  # H-4 purge gate: product-service internal reference-count endpoint
+  # (SERVICE-token gated) + client_credentials token endpoint. Compose wiring
+  # for these env vars rides the fleet env sweep.
+  product:
+    base-url: ${PRODUCT_SERVICE_URL:http://localhost:8086}
+    timeout-ms: 3000
+    keycloak:
+      token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:9090/realms/ecommerce/protocol/openid-connect/token}
+      client-id: ${MEDIA_SERVICE_CLIENT_ID:media-service}
+      client-secret: ${MEDIA_SERVICE_CLIENT_SECRET:changeme}
 
 media:
   bucket: ${STORAGE_BUCKET:media}

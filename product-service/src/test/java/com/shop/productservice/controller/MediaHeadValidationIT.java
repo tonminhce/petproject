@@ -3,6 +3,8 @@ package com.shop.productservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.productservice.entity.OutboxEvent;
+import com.shop.productservice.entity.Product;
 import com.shop.productservice.repository.OutboxEventRepository;
 import com.shop.productservice.repository.ProductRepository;
 import com.shop.productservice.support.AbstractIntegrationTest;
@@ -20,6 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -216,6 +219,69 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
         assertThat(json.get("data").get("imageUrl").asText()).isEqualTo("http://legacy.example/legacy.png");
         assertThat(mediaServer.getServeEvents().getRequests())
             .as("no media call for null mediaId").isEmpty();
+    }
+
+    // --- H-2: explicit clearMediaId on PUT ---
+
+    @Test
+    @DisplayName("PUT clearMediaId=true → media_id cleared end-to-end, legacy fallback, no extra HEAD call")
+    void putClearMediaId_clearsReferenceEndToEnd() {
+        UUID mediaId = UUID.randomUUID();
+        mediaServer.stubFor(head(urlEqualTo(ApiPaths.MEDIAS + "/" + mediaId))
+            .willReturn(aResponse().withStatus(200)));
+        ResponseEntity<String> created = create(mediaId);
+        assertThat(created.getStatusCode().value()).isEqualTo(200);
+        UUID productId = UUID.fromString(readBody(created.getBody()).get("data").get("id").asText());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(ADMIN_TOKEN);
+        ResponseEntity<String> resp = rest.exchange(ApiPaths.PRODUCTS + "/" + productId,
+            HttpMethod.PUT, new HttpEntity<>("{\"clearMediaId\": true}", headers), String.class);
+
+        assertThat(resp.getStatusCode().value()).isEqualTo(200);
+        JsonNode json = readBody(resp.getBody());
+        assertThat(json.get("data").get("mediaId").isNull()).as("clear must persist a null media_id").isTrue();
+        assertThat(json.get("data").get("imageUrl").asText())
+            .as("derived image falls back to the legacy imageUrl (D5)")
+            .isEqualTo("http://legacy.example/ip15.png");
+        Product fresh = productRepository.findById(productId).orElseThrow();
+        assertThat(fresh.getMediaId()).isNull();
+        // exactly ONE media call overall — the create-time gate; a clear never re-verifies
+        assertThat(mediaServer.getServeEvents().getRequests()).hasSize(1);
+        List<OutboxEvent> updates = outboxRepository.findAll().stream()
+            .filter(r -> "ProductUpdated".equals(r.getEventType())).toList();
+        assertThat(updates).as("cleared product is re-published for the search refresh").hasSize(1);
+    }
+
+    @Test
+    @DisplayName("PUT clearMediaId=true together with mediaId → 400 ERR-0422-V, nothing persisted")
+    void putConflictingClearAndMediaId_rejected400() {
+        UUID mediaId = UUID.randomUUID();
+        mediaServer.stubFor(head(urlEqualTo(ApiPaths.MEDIAS + "/" + mediaId))
+            .willReturn(aResponse().withStatus(200)));
+        ResponseEntity<String> created = create(mediaId);
+        assertThat(created.getStatusCode().value()).isEqualTo(200);
+        UUID productId = UUID.fromString(readBody(created.getBody()).get("data").get("id").asText());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(ADMIN_TOKEN);
+        ResponseEntity<String> resp = rest.exchange(ApiPaths.PRODUCTS + "/" + productId,
+            HttpMethod.PUT, new HttpEntity<>(
+                "{\"mediaId\": \"" + mediaId + "\", \"clearMediaId\": true}", headers), String.class);
+
+        assertThat(resp.getStatusCode().value()).isEqualTo(400);
+        JsonNode json = readBody(resp.getBody());
+        assertThat(json.get("code").asText()).isEqualTo("ERR-0422-V");
+        // T2 review carry-over: pin the INTERPOLATED constraint message (the
+        // raw template "{product.media.clear.conflict}" would not contain this
+        // fragment — both bundles render "mediaClearConsistent: clearMediaId=true …").
+        assertThat(json.get("errors").get(0).asText())
+            .contains("mediaClearConsistent")
+            .contains("clearMediaId=true");
+        assertThat(productRepository.findById(productId).orElseThrow().getMediaId())
+            .as("conflicting body must not touch the stored reference").isEqualTo(mediaId);
     }
 
     // --- helpers ---

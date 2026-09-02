@@ -44,6 +44,14 @@ public interface ObjectStorageService {
     /** Pre-signed URL granting temporary GET access to a default-bucket object. */
     URL presignedGetUrl(String key, Duration ttl);
 
+    /**
+     * Pre-signed URL granting temporary GET access to a {@code bucket} object —
+     * the bucket-qualified read path. Callers that own an explicit bucket
+     * config (e.g. media-service's {@code media.bucket}) MUST use this
+     * overload so read/write/delete all resolve through one property.
+     */
+    URL presignedGetUrl(String bucket, String key, Duration ttl);
+
     /** Pre-signed URL granting temporary PUT access to upload a default-bucket object. */
     URL presignedPutUrl(String key, String contentType, Duration ttl);
 }

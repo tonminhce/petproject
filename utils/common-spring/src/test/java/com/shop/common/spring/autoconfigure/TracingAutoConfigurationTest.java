@@ -10,16 +10,21 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetrySdkAutoConfiguration;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.mock.http.client.MockClientHttpResponse;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -113,6 +118,76 @@ class TracingAutoConfigurationTest {
             } finally {
                 span.end();
             }
+        });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class PlainBuilderConfig {
+        @Bean
+        RestClient.Builder myBuilder() {
+            return RestClient.builder();
+        }
+    }
+
+    /** R1 — an arbitrary RestClient.Builder bean is enriched with no wiring of its own. */
+    @Test
+    void beanPostProcessorEnrichesArbitraryRestClientBuilderBean() {
+        runner.withUserConfiguration(PlainBuilderConfig.class).run(ctx -> {
+            assertThat(ctx).hasBean("traceparentRestClientBuilderPostProcessor");
+
+            RestClient.Builder builder = ctx.getBean(RestClient.Builder.class);
+            List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
+            builder.requestInterceptors(interceptors::addAll);
+            assertThat(interceptors).hasSize(1);
+            assertThat(interceptors.get(0))
+                .isInstanceOf(com.shop.common.spring.tracing.TraceparentInterceptor.class)
+                .isSameAs(ctx.getBean(com.shop.common.spring.tracing.TraceparentInterceptor.class));
+
+            AtomicReference<MockClientHttpRequest> sent = new AtomicReference<>();
+            ClientHttpRequestFactory capturingFactory = (uri, method) -> {
+                MockClientHttpRequest request = new MockClientHttpRequest(method, uri);
+                request.setResponse(new MockClientHttpResponse(new byte[0], HttpStatus.OK));
+                sent.set(request);
+                return request;
+            };
+            RestClient client = builder.requestFactory(capturingFactory).build();
+
+            Tracer tracer = ctx.getBean(Tracer.class);
+            Span span = tracer.nextSpan().name("bpp-roundtrip").start();
+            try (var scope = tracer.withSpan(span)) {
+                io.opentelemetry.api.trace.SpanContext otelContext = io.opentelemetry.api.trace.Span
+                    .fromContext(io.opentelemetry.context.Context.current()).getSpanContext();
+                client.get().uri(URI.create("http://downstream.test/api")).retrieve().toBodilessEntity();
+
+                assertThat(sent.get()).as("outbound request captured").isNotNull();
+                assertThat(sent.get().getHeaders().getFirst("traceparent"))
+                    .isEqualTo("00-" + otelContext.getTraceId() + "-" + otelContext.getSpanId() + "-"
+                        + otelContext.getTraceFlags().asHex());
+            } finally {
+                span.end();
+            }
+        });
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class PreLoadedBuilderConfig {
+        @Bean
+        RestClient.Builder preLoadedBuilder() {
+            return RestClient.builder().requestInterceptor(new com.shop.common.spring.tracing.TraceparentInterceptor());
+        }
+    }
+
+    /** R1 — a builder that already carries the interceptor is NOT double-instrumented. */
+    @Test
+    void beanPostProcessorIsIdempotentWhenInterceptorPreAdded() {
+        runner.withUserConfiguration(PreLoadedBuilderConfig.class).run(ctx -> {
+            RestClient.Builder builder = ctx.getBean(RestClient.Builder.class);
+            List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
+            builder.requestInterceptors(interceptors::addAll);
+
+            assertThat(interceptors)
+                .hasSize(1)
+                .allMatch(com.shop.common.spring.tracing.TraceparentInterceptor.class::isInstance);
         });
     }
 }
