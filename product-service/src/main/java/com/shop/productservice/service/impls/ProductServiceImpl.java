@@ -4,6 +4,7 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.productservice.client.MediaHeadClient;
+import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.dto.ProductFilter;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
@@ -47,10 +48,28 @@ public class ProductServiceImpl implements ProductService {
     private final MediaHeadClient mediaHeadClient;
     private final CacheManager cacheManager;
 
+    /**
+     * Storefront catalog list — H21 default.
+     *
+     * <p>A missing {@code status} is normalised to {@link ProductStatus#ACTIVE}
+     * at the SERVICE layer so the public catalog never leaks DRAFT,
+     * DISCONTINUED, or OUT_OF_STOCK rows. The {@code ProductController} also
+     * defaults at the HTTP boundary; this is defence-in-depth so a future
+     * internal caller that forgets the default does not silently re-open the
+     * privacy leak. The backoffice / reindex path
+     * {@link #findAllDetail(ProductFilter, Pageable)} deliberately keeps the
+     * {@code null = all statuses} semantics.
+     *
+     * <p>Spec construction reference:
+     * https://docs.spring.io/spring-data/jpa/reference/jpa/specifications.html
+     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductSummaryResponse> findAll(ProductFilter filter, Pageable pageable) {
-        Page<Product> page = repo.findAll(filterSpec(filter), pageable);
+        ProductFilter storefrontFilter = (filter.status() == null)
+            ? new ProductFilter(filter.categoryId(), filter.brandId(), ProductStatus.ACTIVE)
+            : filter;
+        Page<Product> page = repo.findAll(filterSpec(storefrontFilter), pageable);
         return PageResponse.of(
             page.map(mapper::toSummaryResponse).getContent(),
             page.getNumber(),
