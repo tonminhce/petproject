@@ -77,7 +77,7 @@ public class TaxRateServiceImpl implements TaxRateService {
     public void delete(UUID id) {
         TaxRate taxRate = taxRateRepository.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
-        taxRate.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        taxRate.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         taxRateRepository.save(taxRate);
     }
 

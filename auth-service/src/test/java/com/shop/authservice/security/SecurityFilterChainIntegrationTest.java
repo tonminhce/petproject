@@ -4,6 +4,7 @@ import com.shop.authservice.dto.response.TokenResponse;
 import com.shop.authservice.dto.response.UserResponse;
 import com.shop.authservice.entity.User;
 import com.shop.authservice.mapper.UserMapper;
+import com.shop.authservice.service.AddressService;
 import com.shop.authservice.service.AuthService;
 import com.shop.authservice.service.RoleService;
 import com.shop.authservice.service.UserService;
@@ -132,6 +133,9 @@ class SecurityFilterChainIntegrationTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private AddressService addressService;
 
     @Test
     @DisplayName("S1: GET /actuator/health without auth → 200 (platform default public path)")

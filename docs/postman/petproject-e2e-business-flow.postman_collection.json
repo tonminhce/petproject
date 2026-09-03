@@ -197,6 +197,39 @@
               }
             }
           ]
+        },
+        {
+          "name": "1.3 Forgot Password Flow",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/forgot-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"admin@shop.internal\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Forgot password request accepted\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -555,7 +588,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\"recipientName\": \"Test Customer\", \"phoneNumber\": \"0987654321\", \"shippingAddress\": \"123 Commerce St, District 1, HCM City\"}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -573,6 +606,9 @@
                   "const res = pm.response.json();",
                   "pm.expect(res.data.id).to.be.a(\"string\");",
                   "pm.expect(res.data.status).to.eql(\"PENDING\");",
+                  "pm.expect(res.data.recipientName).to.eql(\"Test Customer\");",
+                  "pm.expect(res.data.phoneNumber).to.eql(\"0987654321\");",
+                  "pm.expect(res.data.shippingAddress).to.eql(\"123 Commerce St, District 1, HCM City\");",
                   "pm.collectionVariables.set(\"orderId\", res.data.id);"
                 ]
               }
@@ -1196,6 +1232,24 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Search routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.4 Anonymous Public Catalog Access via Gateway (No Token)",
+          "request": {
+            "method": "GET",
+            "url": "{{gatewayUrl}}/api/v1/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Anonymous storefront catalog accessible without token via Gateway\", () => pm.expect(pm.response.code).to.eql(200));"
                 ]
               }
             }

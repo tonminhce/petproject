@@ -7,32 +7,39 @@ import com.shop.authservice.dto.request.UpdateUserRequest;
 import com.shop.authservice.dto.response.UserResponse;
 import com.shop.authservice.entity.Role;
 import com.shop.authservice.entity.User;
+import com.shop.authservice.dto.request.ResetPasswordRequest;
+import com.shop.authservice.dto.request.UpdateUserRequest;
+import com.shop.authservice.dto.response.UserResponse;
+import com.shop.authservice.entity.PasswordResetToken;
+import com.shop.authservice.entity.Role;
+import com.shop.authservice.entity.User;
 import com.shop.authservice.mapper.UserMapper;
+import com.shop.authservice.repository.PasswordResetTokenRepository;
 import com.shop.authservice.repository.RoleRepository;
 import com.shop.authservice.repository.UserRepository;
 import com.shop.authservice.service.UserService;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.keycloak.client.KeycloakAdminClient;
-import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
+import com.shop.common.logging.LogPerformance;
+import com.shop.common.security.jwt.AuthenticatedUser;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.shop.authservice.dto.request.ResetPasswordRequest;
-import com.shop.common.logging.LogPerformance;
-import lombok.RequiredArgsConstructor;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +56,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final KeycloakAdminClient keycloakAdminClient;
     private final KeycloakTokenClient keycloakTokenClient;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Override
     // C2 fix — logInput=true was a latent password-leak vector: RegisterRequest
@@ -266,15 +274,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    private final ConcurrentMap<String, ResetTokenEntry> resetTokens = new ConcurrentHashMap<>();
-
-    private record ResetTokenEntry(String email, Instant expiresAt) {
-        boolean isExpired() {
-            return Instant.now().isAfter(expiresAt);
-        }
-    }
-
     @Override
+    @Transactional
     public void forgotPassword(String email) {
         if (email == null || email.isBlank()) {
             return;
@@ -284,24 +285,56 @@ public class UserServiceImpl implements UserService {
             log.info("Password reset requested for non-existent email: {}", email);
             return;
         }
-        String token = UUID.randomUUID().toString().replace("-", "");
-        resetTokens.put(token, new ResetTokenEntry(email.trim(), Instant.now().plus(15, ChronoUnit.MINUTES)));
-        log.info("Password reset token generated for user {}: {}", userOpt.get().getUsername(), token);
+        User user = userOpt.get();
+        String rawToken = UUID.randomUUID().toString().replace("-", "");
+        String tokenHash = hashToken(rawToken);
+
+        passwordResetTokenRepository.deleteByUserId(user.getId());
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .userId(user.getId())
+                .tokenHash(tokenHash)
+                .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
+                .used(false)
+                .createdAt(Instant.now())
+                .build();
+        passwordResetTokenRepository.save(resetToken);
+        log.info("Password reset token generated successfully for user {}", user.getUsername());
     }
 
     @Override
+    @Transactional
     public String resetPassword(ResetPasswordRequest request) {
         if (!request.newPassword().equals(request.confirmPassword())) {
             throw BusinessException.badRequest("auth.password.mismatch");
         }
-        ResetTokenEntry entry = resetTokens.remove(request.token());
-        if (entry == null || entry.isExpired()) {
+        String tokenHash = hashToken(request.token());
+        PasswordResetToken resetToken = passwordResetTokenRepository
+                .findByTokenHashAndUsedFalse(tokenHash)
+                .orElseThrow(() -> BusinessException.badRequest("auth.token.invalid.or.expired"));
+
+        if (resetToken.isExpired()) {
             throw BusinessException.badRequest("auth.token.invalid.or.expired");
         }
-        User user = userRepository.findByEmail(entry.email())
-                .orElseThrow(() -> BusinessException.notFound("auth.user.not.found", entry.email()));
+
+        User user = userRepository.findById(resetToken.getUserId())
+                .orElseThrow(() -> BusinessException.notFound("auth.user.not.found", resetToken.getUserId()));
+
         keycloakAdminClient.resetUserPassword(user.getKeycloakUserId(), request.newPassword(), false);
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
         log.info("Password successfully reset for user {}", user.getUsername());
         return "Password reset successfully";
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 algorithm not available", e);
+        }
     }
 }

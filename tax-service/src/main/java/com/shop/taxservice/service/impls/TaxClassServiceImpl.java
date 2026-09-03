@@ -73,7 +73,7 @@ public class TaxClassServiceImpl implements TaxClassService {
         if (taxRateRepository.countByClassId(id) > 0) {
             throw BusinessException.of(ErrorCode.TAX_CLASS_IN_USE, id);
         }
-        taxClass.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        taxClass.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         taxClassRepository.save(taxClass);
     }
 

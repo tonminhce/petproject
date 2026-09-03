@@ -1,6 +1,7 @@
 package com.shop.ratingservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.security.jwt.AuthenticatedUser;

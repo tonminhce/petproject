@@ -7,3 +7,5 @@ databaseChangeLog:
       file: db/changelog/changeset/002-add-soft-delete.yaml
   - include:
       file: db/changelog/changeset/003-partial-unique-users.yaml
+  - include:
+      file: db/changelog/changeset/004-password-reset-and-addresses.yaml
