@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-safety-stock-threshold
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: inventory
+            columns:
+              - column:
+                  name: safety_stock_threshold
+                  type: INTEGER
+                  defaultValueNumeric: 10
+                  constraints:
+                    nullable: false

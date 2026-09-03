@@ -7,5 +7,10 @@ public record InventoryResponse(
     UUID productId,
     Integer availableQuantity,
     Integer reservedQuantity,
-    Instant lastUpdated
-) {}
+    Instant lastUpdated,
+    Integer safetyStockThreshold
+) {
+    public InventoryResponse(UUID productId, Integer availableQuantity, Integer reservedQuantity, Instant lastUpdated) {
+        this(productId, availableQuantity, reservedQuantity, lastUpdated, 10);
+    }
+}

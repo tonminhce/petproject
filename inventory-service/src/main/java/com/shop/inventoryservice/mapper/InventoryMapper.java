@@ -23,7 +23,8 @@ public class InventoryMapper {
             inventory.getProductId(),
             inventory.getAvailableQuantity(),
             inventory.getReservedQuantity(),
-            inventory.getLastUpdated()
+            inventory.getLastUpdated(),
+            inventory.getSafetyStockThreshold()
         );
     }
 

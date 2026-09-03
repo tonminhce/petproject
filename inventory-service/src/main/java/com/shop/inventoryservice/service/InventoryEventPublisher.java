@@ -14,4 +14,6 @@ public interface InventoryEventPublisher {
     void publishAdjusted(Inventory inventory);
 
     void publishDeleted(Inventory inventory);
+
+    void publishLowStock(Inventory inventory);
 }

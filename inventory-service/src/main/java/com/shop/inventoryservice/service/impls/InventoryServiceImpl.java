@@ -97,6 +97,9 @@ public class InventoryServiceImpl implements InventoryService {
         existing.setLastUpdated(Instant.now());
         Inventory saved = inventoryRepository.save(existing);
         publisher.publishAdjusted(saved);
+        if (saved.getAvailableQuantity() <= saved.getSafetyStockThreshold()) {
+            publisher.publishLowStock(saved);
+        }
         cacheService.evictAfterCommit(productId);
         return mapper.toResponse(saved);
     }
@@ -181,6 +184,9 @@ public class InventoryServiceImpl implements InventoryService {
         inventoryRepository.save(inventory);
         reservationRepository.save(r);
         publisher.publishCommitted(inventory, r);
+        if (inventory.getAvailableQuantity() <= inventory.getSafetyStockThreshold()) {
+            publisher.publishLowStock(inventory);
+        }
         cacheService.evictAfterCommit(r.getProductId());
     }
 

@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       file: changelog-001-initial-schema.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-002-safety-stock-threshold.yaml
+      relativeToChangelogFile: true

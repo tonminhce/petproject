@@ -100,6 +100,15 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
         ));
     }
 
+    @Override
+    public void publishLowStock(Inventory inventory) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("productId", inventory.getProductId());
+        data.put("availableQuantity", inventory.getAvailableQuantity());
+        data.put("safetyStockThreshold", inventory.getSafetyStockThreshold());
+        save(inventory, "inventory.low_stock.v1", data);
+    }
+
     private void save(Inventory inventory, String eventType, Map<String, Object> data) {
         OutboxEvent event = new OutboxEvent();
         event.setEventId(UUID.randomUUID().toString());

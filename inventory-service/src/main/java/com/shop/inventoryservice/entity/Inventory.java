@@ -52,6 +52,10 @@ public class Inventory {
     @Builder.Default
     private Integer reservedQuantity = 0;
 
+    @Column(name = "safety_stock_threshold", nullable = false)
+    @Builder.Default
+    private Integer safetyStockThreshold = 10;
+
     @Version
     private Long version;
 
