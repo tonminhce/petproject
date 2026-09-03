@@ -1,14 +1,13 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **petproject** (11138 symbols, 24994 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **petproject** (11162 symbols, 25036 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
 ## Always Do
 
 - **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run quality gate before committing:** Run `./mvnw -T1C -pl <changed-module> validate` (Checkstyle in `config/checkstyle.xml`) and `./mvnw -T1C -pl utils/common-spring test` (see `docs/PATTERNS.md`).
 - **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
 - When exploring unfamiliar code, use `query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
@@ -57,3 +56,10 @@ g fresh                          # re-analyze the index
 ```
 
 `g` auto-resolves `-r` from the CWD so you don't need to pass the repo name.
+
+## Quality Gate
+
+- **MUST run quality gate before committing:** Run `./mvnw -T1C -pl <changed-module> validate` (Checkstyle in `config/checkstyle.xml`) and `./mvnw -T1C -pl utils/common-spring test` (see `docs/PATTERNS.md`).
+- **Fleet Quality Gate:** Run `./mvnw -T1C validate` to check the entire repository.
+- **SonarQube Quality Gate:** Run `./scripts/run-sonar-scan.sh` against local SonarQube Community Build.
+
