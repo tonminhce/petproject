@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -158,8 +159,8 @@ public class KafkaMessagePublisher {
         }
         AtomicInteger sent = new AtomicInteger();
         AtomicInteger success = new AtomicInteger();
-        java.util.concurrent.CountDownLatch latch =
-            new java.util.concurrent.CountDownLatch(records.size());
+        CountDownLatch latch =
+            new CountDownLatch(records.size());
         List<CompletableFuture<SendResult<String, String>>> inFlight = new ArrayList<>(records.size());
         for (OutboxMessage msg : records) {
             String payload = (msg.value() == null) ? null : msg.value().toString();

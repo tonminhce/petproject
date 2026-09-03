@@ -7,6 +7,7 @@ import com.shop.common.core.viewmodel.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -82,7 +83,7 @@ public class ApiExceptionHandler {
             HandlerMethodValidationException exception, WebRequest request) {
 
         List<String> errorMessages = new ArrayList<>();
-        for (org.springframework.context.MessageSourceResolvable error : exception.getAllErrors()) {
+        for (MessageSourceResolvable error : exception.getAllErrors()) {
             if (error instanceof FieldError fieldError) {
                 errorMessages.add(fieldError.getField() + ": " + fieldError.getDefaultMessage());
             } else {

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.UUID;
 
@@ -42,7 +43,7 @@ public class MediaPublicController {
             @RequestParam(required = false, defaultValue = MediaQueryService.DEFAULT_FORMAT) MediaFormatQuery format) {
         URL url = mediaQueryService.resolve(id, variant, format.name());
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(java.net.URI.create(url.toString()))
+                .location(URI.create(url.toString()))
                 .build();
     }
 

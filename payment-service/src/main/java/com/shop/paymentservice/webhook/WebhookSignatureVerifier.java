@@ -3,6 +3,7 @@ package com.shop.paymentservice.webhook;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Instant;
@@ -162,7 +163,7 @@ public final class WebhookSignatureVerifier {
             Mac mac = Mac.getInstance(HMAC_SHA256);
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
             return mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-        } catch (java.security.GeneralSecurityException ex) {
+        } catch (GeneralSecurityException ex) {
             throw new IllegalStateException("HMAC-SHA256 unavailable — JRE is misconfigured", ex);
         }
     }
@@ -172,7 +173,7 @@ public final class WebhookSignatureVerifier {
             Mac mac = Mac.getInstance(HMAC_SHA256);
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
             return mac.doFinal(payload);
-        } catch (java.security.GeneralSecurityException ex) {
+        } catch (GeneralSecurityException ex) {
             throw new IllegalStateException("HMAC-SHA256 unavailable — JRE is misconfigured", ex);
         }
     }

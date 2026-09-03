@@ -17,6 +17,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -65,7 +66,7 @@ public class PromotionServiceClient {
             // Caller (PricingService) should have already rejected user-supplied coupon when
             // promotion is disabled — see PricingServiceImpl.calculate for the check.
             // Defensive fallback: no discount.
-            return new PromotionReserveResponse(null, java.math.BigDecimal.ZERO, request.orderAmount());
+            return new PromotionReserveResponse(null, BigDecimal.ZERO, request.orderAmount());
         }
         try {
             ApiResponse<PromotionReserveResponse> resp = restClient.post()

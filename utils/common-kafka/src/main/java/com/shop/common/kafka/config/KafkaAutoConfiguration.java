@@ -5,6 +5,7 @@ import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.common.kafka.serialization.JsonKafkaSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -80,7 +81,7 @@ public class KafkaAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public KafkaMessagePublisher kafkaMessagePublisher(
-            @org.springframework.beans.factory.annotation.Qualifier("stringKafkaTemplate")
+            @Qualifier("stringKafkaTemplate")
             KafkaTemplate<String, String> stringKafkaTemplate) {
         return new KafkaMessagePublisher(stringKafkaTemplate);
     }

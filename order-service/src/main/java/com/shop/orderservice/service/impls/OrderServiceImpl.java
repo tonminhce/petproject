@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -310,7 +311,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderResponse transitionStatus(UUID orderId, OrderStatus to,
-                                          java.util.function.Supplier<Instant> timestampSupplier) {
+                                          Supplier<Instant> timestampSupplier) {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
         orderStatusService.validateTransition(order.getStatus(), to);

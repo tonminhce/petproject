@@ -4,6 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch.core.DeleteResponse;
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.searchservice.kafka.ProductLifecycleEvent;
 import com.shop.searchservice.search.IndexProvisioner;
 import lombok.RequiredArgsConstructor;
@@ -47,8 +49,8 @@ public class ProductSearchService {
             // C18 fix — surface a domain exception so ApiExceptionHandler maps it
             // to a 503 with the canonical envelope instead of leaking the raw
             // IllegalStateException (which would be 500 with a stack trace).
-            throw com.shop.common.core.exception.BusinessException.of(
-                com.shop.common.core.exception.ErrorCode.SEARCH_INDEX_FAILED,
+            throw BusinessException.of(
+                ErrorCode.SEARCH_INDEX_FAILED,
                 event.productId());
         }
     }
@@ -61,13 +63,13 @@ public class ProductSearchService {
             }
         } catch (ElasticsearchException ex) {
             if (ex.status() != 404) {
-                throw com.shop.common.core.exception.BusinessException.of(
-                    com.shop.common.core.exception.ErrorCode.SEARCH_DELETE_FAILED, productId);
+                throw BusinessException.of(
+                    ErrorCode.SEARCH_DELETE_FAILED, productId);
             }
             log.debug("Delete for missing product doc {} — nothing to do", productId);
         } catch (IOException ex) {
-            throw com.shop.common.core.exception.BusinessException.of(
-                com.shop.common.core.exception.ErrorCode.SEARCH_DELETE_FAILED, productId);
+            throw BusinessException.of(
+                ErrorCode.SEARCH_DELETE_FAILED, productId);
         }
     }
 }

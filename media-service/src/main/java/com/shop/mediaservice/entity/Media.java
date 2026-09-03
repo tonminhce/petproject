@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
@@ -65,8 +67,8 @@ public class Media extends AbstractMappedEntity implements Persistable<UUID> {
         return isNew;
     }
 
-    @jakarta.persistence.PostLoad
-    @jakarta.persistence.PrePersist
+    @PostLoad
+    @PrePersist
     void markNotNew() {
         this.isNew = false;
     }

@@ -3,6 +3,7 @@ package com.shop.shippingservice.webhook;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
@@ -27,7 +28,7 @@ public final class WebhookSignatureVerifier {
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
             byte[] expected = mac.doFinal(rawBody);
             return MessageDigest.isEqual(expected, provided);
-        } catch (RuntimeException | java.security.GeneralSecurityException e) {
+        } catch (RuntimeException | GeneralSecurityException e) {
             return false;
         }
     }

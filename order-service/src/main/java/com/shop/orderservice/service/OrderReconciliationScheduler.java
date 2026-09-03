@@ -11,6 +11,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 /**
  * Reconciliation scheduler for stuck PENDING orders (hardening §6, D8).
@@ -126,7 +129,7 @@ public class OrderReconciliationScheduler {
         // SQL LIMIT is set in the DB layer (cheap, no over-fetch).
         List<Order> candidates = orderRepository.findByStatusAndCreatedAtBefore(
             OrderStatus.PENDING, cutoff,
-            org.springframework.data.domain.PageRequest.of(0, batchSize));
+            PageRequest.of(0, batchSize));
         if (candidates.isEmpty()) return;
         log.info("RECONCILIATION_SCAN candidates={} batch_size={} cutoff={}",
             candidates.size(), batchSize, cutoff);
@@ -235,12 +238,12 @@ public class OrderReconciliationScheduler {
      */
     private static final class MemoizedCount {
         private final long ttlNanos;
-        private final java.util.function.LongSupplier supplier;
+        private final LongSupplier supplier;
         private volatile long lastValue;
         private volatile long lastUpdatedNanos;
 
-        MemoizedCount(long ttlMillis, java.util.function.LongSupplier supplier) {
-            this.ttlNanos = java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(ttlMillis);
+        MemoizedCount(long ttlMillis, LongSupplier supplier) {
+            this.ttlNanos = TimeUnit.MILLISECONDS.toNanos(ttlMillis);
             this.supplier = supplier;
         }
 

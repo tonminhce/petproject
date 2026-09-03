@@ -599,3 +599,149 @@ All identified findings and live deployment issues were remediated, verified, an
   │ total run duration: 2.9s                                      │
   └───────────────────────────────────────────────────────────────┘
   ```
+
+---
+
+## 🔬 Deep Code Review (Round 2) — New Findings & Architectural Analysis
+
+> **Date**: 2026-09-03  
+> **Scope**: Complete line-by-line inspection across all 21 modules (14 microservices + 7 shared libraries)  
+> **Tools**: GitNexus AST & Call Graph Intelligence (`gitnexus-harness.sh`), Maven Enforcer/Checkstyle, Python AST Scanner  
+> **Status**: Review Complete, Reformatting Applied, Verified with 0 Checkstyle Violations  
+
+### Round 2 Summary Table
+
+| ID | Severity | Category | Target Module & File | Status |
+|----|----------|----------|----------------------|--------|
+| **REV-C1** | 🔴 CRITICAL | Security / Availability | `gateway-service`: `AdminIpAllowlistFilter.java:58-75` | OPEN |
+| **REV-C2** | 🔴 CRITICAL | Concurrency / Data Integrity | `order-service`: `OrderCreateSaga.java:125-145` | OPEN |
+| **REV-H1** | 🟠 HIGH | Resource Leak / Security | `utils/common-keycloak`: `KeycloakTokenClient.java:146-153` | OPEN |
+| **REV-H2** | 🟠 HIGH | Performance / OOM Risk | `utils/common-core`: `DateTimeUtils.java:16, 30` | OPEN |
+| **REV-H3** | 🟠 HIGH | Runtime Stability / 500 Error | `product-service`: `CategoryServiceImpl.java:160`, `ProductServiceImpl.java:188`, `BrandServiceImpl.java:88` | OPEN |
+| **REV-H4** | 🟠 HIGH | Security / Route Filtering | `gateway-service`: `application.yml:43-54` | OPEN |
+| **REV-H5** | 🟠 HIGH | Security / Image Bomb DoS | `media-service`: `VariantRenderer.java:77` | OPEN |
+| **REV-M1** | 🟡 MEDIUM | Business Logic / Concurrency | `promotion-service`: `CampaignReservationServiceImpl.java:71-79` | OPEN |
+| **REV-M2** | 🟡 MEDIUM | API Contract Consistency | `gateway-service`: `GlobalRateLimitFilter.java:50-54` | OPEN |
+| **REV-M3** | 🟡 MEDIUM | Fleet Standardization | `utils/common-core`: `PageableConstant.java:9-10` vs `docs/PATTERNS.md#r7` | OPEN |
+| **REV-M4** | 🟡 MEDIUM | Rule R7 Page Compliance | `tax-service`: `BackofficeTaxClassController.java`, `BackofficeTaxRateController.java` | OPEN |
+| **REV-L1** | 🔵 LOW | Code Quality / Clean Imports | Fleet-wide: 23 files across `utils`, `gateway`, and 7 microservices | **RESOLVED** |
+
+---
+
+### Detailed Findings & Impact Analysis
+
+#### 🔴 CRITICAL Findings
+
+##### REV-C1. `AdminIpAllowlistFilter` Blocks Entire Storefront When Active
+- **Category**: Security / Architectural Availability
+- **File**: `gateway-service/src/main/java/com/shop/gateway/filter/AdminIpAllowlistFilter.java:58-75`
+- **Failure Mechanism**: When `ADMIN_IP_ALLOWLIST` is configured in production (`properties.active() == true`), `AdminIpAllowlistFilter` applies to **every route** passing through Spring Cloud Gateway, with bypasses only for `/actuator/health` and `/api/v1/webhooks/**`. Unlike `AdminRoleGateFilter` (which checks `backofficePrefixes`), `AdminIpAllowlistFilter` does not restrict its evaluation to administrative paths. Consequently, activating the admin IP allowlist in production immediately blocks all ordinary public customers across the entire platform from viewing products, browsing categories, logging in, or checking out (`403 ACCESS_DENIED`).
+- **Blast Radius**: Critical platform-wide storefront outage.
+- **Recommendation**: Restrict the IP allowlist check strictly to backoffice routes (`ServiceRoute.backofficeRoutes()` / `/api/v1/backoffice/**`), permitting public and customer traffic to proceed.
+
+##### REV-C2. `OrderCreateSaga` Leaves Dangling Stock Reservation on Uncaught Runtime Exceptions
+- **Category**: Concurrency / Saga Data Consistency
+- **File**: `order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:125-145`
+- **Failure Mechanism**: During the `reserveStockStep` phase of `OrderCreateSaga`, the loop iterates over order items and invokes `inventoryServiceClient.reserve()`. The enclosing catch block explicitly catches only `StockReservationFailedException`. If an unexpected `RuntimeException` occurs mid-loop (such as a transient network timeout, HTTP 504 from gateway, socket reset, or deserialization error), the saga terminates abnormally without entering the compensation rollback. Any stock reserved for earlier items in that order remains committed in `inventory-service`, causing permanent ghost stock reduction without an associated order.
+- **Blast Radius**: Inventory divergence and phantom stock depletion under network instability.
+- **Recommendation**: Broaden the exception handler in `reserveStockStep` to `catch (Exception ex)` to guarantee that any failure during item reservation triggers full compensation rollback.
+
+---
+
+#### 🟠 HIGH Findings
+
+##### REV-H1. Keycloak Session Leak in `verifyCredentials`
+- **Category**: Resource Leak / Security
+- **File**: `utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakTokenClient.java:146-153`
+- **Failure Mechanism**: `verifyCredentials(username, password)` calls `login(username, password)` using OAuth2 Resource Owner Password Credentials grant. Keycloak provisions an active user session with access and refresh tokens. `verifyCredentials` only returns a boolean check without revoking the refresh token via `logout(refreshToken)`. Every call to `verifyCredentials` (e.g. during password change or credential validation) leaves an orphaned active session on Keycloak until its session idle timeout expires.
+- **Recommendation**: In `verifyCredentials`, obtain the token response and invoke `logout(response.refreshToken())` in a `finally` block.
+
+##### REV-H2. Unbounded In-Memory Formatting Map in `DateTimeUtils`
+- **Category**: Performance / Memory Leak (OOM)
+- **File**: `utils/common-core/src/main/java/com/shop/common/core/util/DateTimeUtils.java:16, 30`
+- **Failure Mechanism**: `DateTimeUtils` caches `DateTimeFormatter` instances in a static `ConcurrentHashMap<String, DateTimeFormatter> FORMATTERS`. If callers pass dynamic or custom date format strings, the map grows indefinitely with no eviction strategy or size bounds, creating a slow memory leak in long-running services.
+- **Recommendation**: Replace `ConcurrentHashMap` with a bounded cache (e.g., Caffeine cache with `maximumSize(100)`).
+
+##### REV-H3. Inconsistent Auditor Extraction Causing Unhandled 500 on Deletion
+- **Category**: Runtime Stability / Exception Handling
+- **Files**:
+  - `product-service/src/main/java/com/shop/productservice/service/impls/CategoryServiceImpl.java:160`
+  - `product-service/src/main/java/com/shop/productservice/service/impls/ProductServiceImpl.java:188`
+  - `product-service/src/main/java/com/shop/productservice/service/impls/BrandServiceImpl.java:88`
+- **Failure Mechanism**: Deletion methods call `existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow())`. If deletion is invoked from an asynchronous job, scheduled task, system pipeline, or unauthenticated worker where `SecurityContextHolder` is not initialized, `getCurrentAuditor()` returns `Optional.empty()`. Calling `.orElseThrow()` throws `NoSuchElementException`, which is unhandled by `ApiExceptionHandler` and results in a raw 500 INTERNAL_SERVER_ERROR. In contrast, `favourite-service` safely does `.orElse("system")`.
+- **Recommendation**: Replace `.orElseThrow()` with `.orElse("system")` across all soft-delete methods.
+
+##### REV-H4. Gateway Rejects Anonymous Storefront Catalog Access Due to Missing Public Endpoints
+- **Category**: Security / Architectural Route Filtering
+- **File**: `gateway-service/src/main/resources/application.yml:43-54`
+- **Failure Mechanism**: In `application.yml`, `gateway.public-endpoints` lists paths that bypass authentication. While auth and webhooks are included, public storefront endpoints (`/api/v1/products/**`, `/api/v1/categories/**`, `/api/v1/brands/**`, `/api/v1/search/**`, `/api/v1/ratings/**`) are omitted. Consequently, Spring Cloud Gateway's `ServerHttpSecurity` enforces `.anyExchange().authenticated()`, returning 401 Unauthorized to anonymous storefront users trying to browse products or execute public searches, directly conflicting with `PATTERNS.md` Rule R8.
+- **Recommendation**: Add public catalog read endpoints (`/api/v1/products/**`, `/api/v1/categories/**`, `/api/v1/brands/**`, `/api/v1/search/**`, `/api/v1/ratings/**`) to `gateway.public-endpoints` in `application.yml`.
+
+##### REV-H5. `ImageIO.read` Susceptibility to Image Decompression Bomb (DoS)
+- **Category**: Security / Resource Exhaustion
+- **File**: `media-service/src/main/java/com/shop/mediaservice/service/impls/VariantRenderer.java:77`
+- **Failure Mechanism**: `VariantRenderer.render()` passes the input stream directly to `ImageIO.read(source)`. `ImageIO.read` allocates uncompressed pixel rasters directly into heap based on image header dimensions. A malicious user uploading a small compressed image with header dimensions of 50,000 x 50,000 pixels (an Image Bomb) will consume several gigabytes of JVM heap on `ImageIO.read`, triggering immediate OOM crashes and killing the container.
+- **Recommendation**: Inspect image dimensions using `ImageReader` metadata before decoding full raster pixels into heap, and enforce a maximum width and height cap (e.g. 4096 x 4096 max pixels).
+
+---
+
+#### 🟡 MEDIUM Findings
+
+##### REV-M1. Expired/Released Promotion Reservations Reused in Order Creation
+- **Category**: Business Logic / Concurrency
+- **File**: `promotion-service/src/main/java/com/shop/promotionservice/service/impls/CampaignReservationServiceImpl.java:71-79`
+- **Failure Mechanism**: When `reserve` is called for an `orderId`, if a row exists in `CouponUsageReservationRepository`, it checks campaignId and user and immediately returns `ReservationResponse.from(campaign, existing)`. It does NOT verify that `existing.getStatus() == UsageStatus.PENDING`. If an earlier attempt expired or was released (`UsageStatus.RELEASED` or `EXPIRED`), returning this dead reservation causes the subsequent order commit step to crash with `PROMOTION_RESERVATION_INVALID_STATE` (PRO-7010).
+- **Recommendation**: Check `if (existing.getStatus() == UsageStatus.PENDING)` before returning existing reservation; if terminal, reject with `PROMOTION_RESERVATION_INVALID_STATE` or re-reserve cleanly.
+
+##### REV-M2. `GlobalRateLimitFilter` Emits Empty Body on 429 Instead of Standard Envelope
+- **Category**: API Contract Consistency
+- **File**: `gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java:50-54`
+- **Failure Mechanism**: When `GlobalRateLimitFilter` rejects a request due to system capacity exhaustion, it calls `exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS)` and `setComplete()`, returning an empty HTTP body. In contrast, `RateLimitFilter` and `GatewayErrorResponseWriter` return the fleet `ApiResponse` JSON error envelope with `code: "ERR-0429"`. Client SDKs and frontend consumers expecting a JSON payload encounter parse exceptions.
+- **Recommendation**: Use `GatewayErrorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS)` to format the 429 response.
+
+##### REV-M3. Pageable Constraints Inconsistency Between Fleet Rule R7 and `PageableConstant`
+- **Category**: Fleet Standardization
+- **File**: `utils/common-core/src/main/java/com/shop/common/core/constants/PageableConstant.java:9-10` vs `docs/PATTERNS.md#r7`
+- **Failure Mechanism**: `PATTERNS.md` Rule R7 dictates: `Default page size is 20; maxPageSize is hard-capped at 100`. In contrast, `PageableConstant.java` specifies `DEFAULT_PAGE_SIZE = 10` and `MAX_PAGE_SIZE = 200`. While services safely clamp to `PageableConstant.MAX_PAGE_SIZE`, the divergence between documentation and code creates ambiguity for client developers.
+- **Recommendation**: Synchronize documentation in `docs/PATTERNS.md` and `PageableConstant.java` to explicitly confirm the fleet-wide standard cap (100 vs 200).
+
+##### REV-M4. Tax Class & Rate Backoffice List Endpoints Return Unpaginated Lists
+- **Category**: Rule R7 Page Compliance
+- **Files**:
+  - `tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java`
+  - `tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java`
+- **Failure Mechanism**: `BackofficeTaxClassController.list()` and `BackofficeTaxRateController.list()` return `ApiResponse<List<TaxClassResponse>>` and `ApiResponse<List<TaxRateResponse>>` without pagination. This violates Rule R7 ("Every list endpoint returns ApiResponse<PageResponse<T>> (not List<T>)"). While the number of tax jurisdictions is currently small, unbounded list returns violate fleet consistency and invite memory bloat.
+- **Recommendation**: Refactor both endpoints to accept `Pageable` parameters and return `ApiResponse<PageResponse<T>>`.
+
+---
+
+#### 🔵 LOW Findings (Resolved)
+
+##### REV-L1. Inline Fully Qualified Class Names (FQCNs) Across 23 Source Files
+- **Category**: Code Quality / Checkstyle Violation
+- **Files Affected & Refactored**:
+  1. `utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java` (`ArrayList`)
+  2. `utils/common-logging/src/main/java/com/shop/common/logging/aspect/AuditAspect.java` (`Instant`)
+  3. `utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java` (`Instant`)
+  4. `utils/common-kafka/src/main/java/com/shop/common/kafka/producer/KafkaMessagePublisher.java` (`CountDownLatch`)
+  5. `utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaAutoConfiguration.java` (`Qualifier`)
+  6. `utils/common-spring/src/main/java/com/shop/common/spring/web/exception/ApiExceptionHandler.java` (`MessageSourceResolvable`)
+  7. `utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/I18nAutoConfiguration.java` (`Locale`)
+  8. `gateway-service/src/main/java/com/shop/gateway/filter/GatewayErrorResponseWriter.java` (`StandardCharsets`)
+  9. `order-service/src/main/java/com/shop/orderservice/repository/OrderRepository.java` (`Pageable`)
+  10. `order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java` (`PageRequest`, `TimeUnit`, `LongSupplier`)
+  11. `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java` (`Supplier`)
+  12. `order-service/src/main/java/com/shop/orderservice/client/TaxServiceClient.java` (`BigDecimal`)
+  13. `order-service/src/main/java/com/shop/orderservice/client/PromotionServiceClient.java` (`BigDecimal`)
+  14. `order-service/src/main/java/com/shop/orderservice/mapper/CartMapper.java` (`BigDecimal`)
+  15. `payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java` (`Autowired`)
+  16. `payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java` (`Locale`)
+  17. `payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java` (`ProviderResult`)
+  18. `payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java` (`GeneralSecurityException`)
+  19. `shipping-service/src/main/java/com/shop/shippingservice/webhook/WebhookSignatureVerifier.java` (`GeneralSecurityException`)
+  20. `tax-service/src/main/java/com/shop/taxservice/entity/TaxRate.java` (`DecimalMax`)
+  21. `media-service/src/main/java/com/shop/mediaservice/entity/Media.java` (`PostLoad`, `PrePersist`)
+  22. `media-service/src/main/java/com/shop/mediaservice/controller/MediaPublicController.java` (`URI`)
+  23. `search-service/src/main/java/com/shop/searchservice/service/ProductSearchService.java` (`BusinessException`, `ErrorCode`)
+- **Status**: **RESOLVED** — all inline FQCNs have been replaced with top-level imports. Verified with `./mvnw -T1C validate` with 0 Checkstyle violations.
+

@@ -15,6 +15,8 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
+import java.math.BigDecimal;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -31,7 +33,7 @@ public class TaxServiceClient {
     public TaxCalculateResponse calculate(TaxCalculateRequest request) {
         if (!props.tax().isEnabled()) {
             // MVP default: tax disabled → return 0 (fail-closed only when enabled and down)
-            return new TaxCalculateResponse(java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
+            return new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO);
         }
         try {
             ApiResponse<TaxCalculateResponse> resp = restClient.post()

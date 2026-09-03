@@ -229,7 +229,7 @@ public class KeycloakAdminClient {
             }
 
             long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
-            cachedToken.set(new CachedAdminToken(response.accessToken(), java.time.Instant.now().plusSeconds(ttl)));
+            cachedToken.set(new CachedAdminToken(response.accessToken(), Instant.now().plusSeconds(ttl)));
 
             return response.accessToken();
         } catch (RestClientResponseException e) {

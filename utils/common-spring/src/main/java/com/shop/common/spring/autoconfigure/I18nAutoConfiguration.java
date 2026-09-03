@@ -13,6 +13,7 @@ import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Sets up the platform-wide {@link MessageSource} and bridges it into the static
@@ -57,7 +58,7 @@ public class I18nAutoConfiguration {
     public LocaleResolver localeResolver() {
         AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
         resolver.setDefaultLocale(props.getDefaultLocale());
-        resolver.setSupportedLocales(List.of(props.getDefaultLocale(), java.util.Locale.ENGLISH));
+        resolver.setSupportedLocales(List.of(props.getDefaultLocale(), Locale.ENGLISH));
         return resolver;
     }
 

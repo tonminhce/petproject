@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -123,7 +124,7 @@ public class BaseSecurityConfig {
     }
 
     private OAuth2TokenValidator<Jwt> buildValidatorChain() {
-        var validators = new java.util.ArrayList<OAuth2TokenValidator<Jwt>>();
+        var validators = new ArrayList<OAuth2TokenValidator<Jwt>>();
         validators.add(new JwtIssuerValidator(properties.issuerUri()));
         validators.add(new JwtTimestampValidator());
         if (!properties.expectedAudiences().isEmpty()) {

@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import java.time.Instant;
+
 /**
  * Emits ONE audit event per invocation of an {@link Audited} endpoint.
  *
@@ -55,7 +57,7 @@ public class AuditAspect {
         try {
             AuditActorResolver.Actor actor = AuditActorResolver.resolve();
             writer.write(new AuditEvent(
-                    java.time.Instant.now(),
+                    Instant.now(),
                     actor.id(),
                     actor.type(),
                     audited.action(),

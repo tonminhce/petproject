@@ -8,6 +8,7 @@ import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 
@@ -85,7 +86,7 @@ public final class GatewayErrorResponseWriter {
         final String escapedPath = escapeJson(exchange.getRequest().getPath().value());
         return ("{\"success\":false,\"code\":\"" + errorCode.getCode()
                 + "\",\"path\":\"" + escapedPath + "\"}")
-                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                .getBytes(StandardCharsets.UTF_8);
     }
 
     private static String escapeJson(final String input) {

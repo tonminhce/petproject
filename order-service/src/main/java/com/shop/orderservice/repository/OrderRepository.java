@@ -31,7 +31,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
      * the next tick. Keeps memory and round-trips bounded.
      */
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff,
-                                               org.springframework.data.domain.Pageable pageable);
+                                               Pageable pageable);
 
     long countByStatusAndCreatedAtBefore(OrderStatus status, Instant cutoff);
 }

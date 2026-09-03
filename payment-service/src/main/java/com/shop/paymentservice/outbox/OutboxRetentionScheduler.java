@@ -1,6 +1,7 @@
 package com.shop.paymentservice.outbox;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -54,7 +55,7 @@ public class OutboxRetentionScheduler {
     @Value("${shop.payment.outbox.dead-retention-seconds:604800}")  // 7d default
     private long deadRetentionSeconds;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public OutboxRetentionScheduler(OutboxEventRepository outboxRepo) {
         this(outboxRepo, Clock.systemUTC());
     }

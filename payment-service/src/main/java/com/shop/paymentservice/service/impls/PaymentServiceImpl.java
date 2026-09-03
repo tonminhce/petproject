@@ -7,6 +7,7 @@ import com.shop.paymentservice.dto.CreatePaymentRequest;
 import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.provider.PaymentProvider;
+import com.shop.paymentservice.provider.PaymentProvider.ProviderResult;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.service.PaymentService;
 import com.shop.paymentservice.service.PaymentWriter;
@@ -57,7 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
         // previous code discarded the result, leaving a PENDING row on a real
         // provider FAILURE with no signal to the caller. Surface the rejection
         // as a domain 502 so the saga can compensate.
-        com.shop.paymentservice.provider.PaymentProvider.ProviderResult result =
+        ProviderResult result =
                 provider.capture(payment.getId(), payment.getAmount(), payment.getCurrency(), payment.getIdempotencyKey());
         if (!result.accepted()) {
             throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
@@ -72,7 +73,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
         }
-        com.shop.paymentservice.provider.PaymentProvider.ProviderResult result =
+        ProviderResult result =
                 provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey());
         if (!result.accepted()) {
             throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());

@@ -6,6 +6,7 @@ import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Component
@@ -32,7 +33,7 @@ public class CartMapper {
             item.getProductTitle(),
             item.getQuantity(),
             item.getUnitPrice(),
-            item.getUnitPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity()))
+            item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
         );
     }
 }

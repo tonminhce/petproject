@@ -25,7 +25,13 @@
 
 set -euo pipefail
 
-REPO_NAME="$(basename "$(pwd)")"
+REPO_NAME="${GITNEXUS_REPO:-}"
+if [[ -z "$REPO_NAME" && -f .gitnexus/meta.json ]]; then
+  REPO_NAME=$(node -e 'try { const m = JSON.parse(require("fs").readFileSync(".gitnexus/meta.json")); const r = m.remoteUrl ? m.remoteUrl.split("/").pop().replace(/\.git$/, "") : ""; console.log(r); } catch(e){}' 2>/dev/null || true)
+fi
+if [[ -z "$REPO_NAME" ]]; then
+  REPO_NAME="$(basename "$(pwd)")"
+fi
 
 usage() {
   sed -n '2,21p' "$0"

@@ -25,6 +25,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -239,7 +240,7 @@ public class WebhookEventService {
                     .eventType(stripeType)
                     .paymentId(paymentId)
                     .amount(StripeCurrencyUnits.fromMinor(amountMinor, currency))
-                    .currency(currency == null ? null : currency.toUpperCase(java.util.Locale.ROOT))
+                    .currency(currency == null ? null : currency.toUpperCase(Locale.ROOT))
                     .status(mappedStatus)
                     .providerEventId(eventId)
                     .build();
