@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!--
+  Checkstyle Suppressions for PetProject Fleet Quality Gate.
+  TODO: remove these suppressions one module at a time as legacy debt is paid down. Tracking issue: #quality-debt
+-->
+<suppressions>
+    <!-- Ignore generated and build output -->
+    <suppress checks=".*" files="[/\\]target[/\\]"/>
+    <suppress checks=".*" files="[/\\]generated[/\\]"/>
+    <suppress checks=".*" files="src[/\\]main[/\\]java[/\\]org[/\\]example[/\\]Main\.java"/>
+
+    <!-- Legacy technical debt per module (2026-09-03): suppress line length, import order, method length while strictly enforcing R1, R3, R4 -->
+    <!-- TODO: pay down auth-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="auth-service[/\\]"/>
+    <!-- TODO: pay down product-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="product-service[/\\]"/>
+    <!-- TODO: pay down order-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="order-service[/\\]"/>
+    <!-- TODO: pay down payment-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="payment-service[/\\]"/>
+    <!-- TODO: remove @Builder on WebhookPayload record once callers are refactored to canonical constructor. Tracking issue: #quality-debt -->
+    <suppress checks="RegexpMultiline" files="payment-service[/\\]src[/\\]main[/\\]java[/\\]com[/\\]shop[/\\]paymentservice[/\\]webhook[/\\]WebhookPayload\.java"/>
+    <!-- TODO: pay down inventory-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="inventory-service[/\\]"/>
+    <!-- TODO: pay down shipping-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="shipping-service[/\\]"/>
+    <!-- TODO: pay down notification-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="notification-service[/\\]"/>
+    <!-- TODO: pay down rating-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="rating-service[/\\]"/>
+    <!-- TODO: pay down search-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="search-service[/\\]"/>
+    <!-- TODO: pay down promotion-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="promotion-service[/\\]"/>
+    <!-- TODO: pay down tax-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="tax-service[/\\]"/>
+    <!-- TODO: pay down favourite-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="favourite-service[/\\]"/>
+    <!-- TODO: pay down media-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="media-service[/\\]"/>
+    <!-- TODO: pay down gateway-service style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="gateway-service[/\\]"/>
+    <!-- TODO: pay down utils style debt -->
+    <suppress checks="LineLength|FileTabCharacter|ImportOrder|UnusedImports|RedundantImport|MethodLength|ParameterNumber" files="utils[/\\]"/>
+</suppressions>

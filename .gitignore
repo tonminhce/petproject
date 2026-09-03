@@ -162,3 +162,6 @@ scratch/
 .reference/
 .superpowers/
 .worktrees/
+.cache/
+**/cache/
+.env.sonar

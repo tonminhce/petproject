@@ -64,6 +64,7 @@
         <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <dependency-check-maven.version>13.0.0</dependency-check-maven.version>
+        <sonar-maven-plugin.version>4.0.0.4121</sonar-maven-plugin.version>
         <sonar.organization></sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <spring-dotenv.version>5.1.0</spring-dotenv.version>
@@ -294,10 +295,22 @@
                     <artifactId>maven-checkstyle-plugin</artifactId>
                     <version>${maven-checkstyle-plugin.version}</version>
                     <configuration>
+                        <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle.xml</configLocation>
+                        <suppressionsLocation>${maven.multiModuleProjectDirectory}/config/checkstyle-suppressions.xml</suppressionsLocation>
                         <consoleOutput>true</consoleOutput>
-                        <failsOnError>false</failsOnError>
-                        <failOnViolation>false</failOnViolation>
+                        <failsOnError>true</failsOnError>
+                        <failOnViolation>true</failOnViolation>
+                        <includeTestSourceDirectory>false</includeTestSourceDirectory>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <id>checkstyle-check</id>
+                            <phase>validate</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
@@ -337,7 +350,22 @@
                     <configuration>
                         <failBuildOnCVSS>8</failBuildOnCVSS>
                         <skipTestScope>true</skipTestScope>
+                        <dataDirectory>${maven.multiModuleProjectDirectory}/.cache/owasp-dependency-check</dataDirectory>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <id>dependency-check-verify</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -421,6 +449,10 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

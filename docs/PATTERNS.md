@@ -2,8 +2,8 @@
 
 > **Every Wave B/C/D agent AND every maintainer MUST read this before touching a
 > service.** When you change a pattern, prove it with research; update the
-> `Reasoning` and `Citation` rows. The compliance tests in
-> `utils/common-patterns` enforce most of these rules at build time.
+> `Reasoning` and `Citation` rows. The quality gate in
+> `config/checkstyle.xml` and automated tests enforce these rules at build time.
 
 This document is the single source of truth for fleet conventions. Whenever the
 "best practice" question comes up, **cite a doc**, not memory.
@@ -281,13 +281,26 @@ without `SKIP LOCKED`, or processing them outside the claim tx.
 
 ---
 
-## How to apply this
-
+## How to run the gate
+ 
 1. **Before patching** for any wave finding, open this doc, find the matching
    rule, click through the citation, then design the fix.
-2. **After patching** run the harness:
+2. **Validate rules locally** with Checkstyle before committing:
    ```bash
-   ./mvnw -T1C -pl utils/common-patterns test
+   ./mvnw -T1C -pl <changed-module> validate
+   # Or run across the entire fleet:
+   ./mvnw -T1C validate
    ```
-   The build fails if any rule is regressed.
-3. **In your commits** cite the rule (e.g., `R2 (H32)`) in the commit body.
+   The build fails immediately if any fleet rule (R1, R3, R4) or code hygiene rule is violated.
+3. **Verify tests & quality checks**:
+   ```bash
+   ./mvnw -T1C -pl utils/common-spring test
+   ./mvnw -T1C verify
+   ```
+4. **Run SonarQube quality gate**:
+   ```bash
+   docker compose -f docker-compose.sonar.yml up -d
+   ./scripts/setup-sonar-project.sh
+   ./scripts/run-sonar-scan.sh
+   ```
+5. **In your commits** cite the rule (e.g., `R2 (H32)`) in the commit body.
