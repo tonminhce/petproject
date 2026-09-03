@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: changelog-006-orders-shipping-address.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-007-order-returns.yaml
+      relativeToChangelogFile: true

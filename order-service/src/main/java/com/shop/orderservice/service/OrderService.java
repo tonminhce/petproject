@@ -1,11 +1,12 @@
 package com.shop.orderservice.service;
 
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
+import com.shop.orderservice.dto.response.OrderTrackingResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import com.shop.orderservice.constant.OrderStatus;
 
 import java.util.UUID;
 
@@ -32,4 +33,7 @@ public interface OrderService {
 
     /** SERVICE-facing rating-eligibility probe (rating-service epic Task 7). */
     Page<OrderItemResponse> findDeliveredItemsByUserAndProduct(UUID userId, UUID productId, Pageable pageable);
+
+    /** Public guest tracking by order ID and matching recipient phone number. */
+    OrderTrackingResponse trackOrder(UUID orderId, String phoneNumber);
 }

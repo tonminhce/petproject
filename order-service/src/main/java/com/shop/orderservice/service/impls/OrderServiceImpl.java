@@ -13,6 +13,7 @@ import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
+import com.shop.orderservice.dto.response.OrderTrackingResponse;
 import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.entity.Order;
@@ -383,5 +384,35 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.groupingBy(OrderItem::getOrderId));
         return page.map(order -> orderMapper.toResponse(
             order, itemsByOrder.getOrDefault(order.getId(), List.of())));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderTrackingResponse trackOrder(UUID orderId, String phoneNumber) {
+        if (orderId == null || phoneNumber == null || phoneNumber.isBlank()) {
+            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
+        }
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
+
+        if (order.getPhoneNumber() == null || !order.getPhoneNumber().trim().equalsIgnoreCase(phoneNumber.trim())) {
+            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
+        }
+
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        List<OrderItemResponse> itemResponses = items.stream()
+                .map(orderMapper::toItemResponse)
+                .toList();
+
+        return new OrderTrackingResponse(
+                order.getId(),
+                order.getStatus(),
+                order.getRecipientName(),
+                order.getShippingAddress(),
+                order.getTotal(),
+                order.getCreatedAt(),
+                itemResponses
+        );
     }
 }
