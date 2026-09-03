@@ -186,6 +186,11 @@ public class OrderServiceImpl implements OrderService {
                         order.getPromotionReservationId(), pex);
                 }
             }
+            try {
+                paymentClient.refundByOrderId(orderId);
+            } catch (Exception rex) {
+                log.error("Failed to trigger payment refund during admin cancel for order {}", orderId, rex);
+            }
         }
 
         order.setStatus(OrderStatus.CANCELLED);

@@ -21,5 +21,16 @@ public record OrderResponse(
     Instant confirmedAt,
     Instant shippedAt,
     Instant deliveredAt,
-    Instant cancelledAt
-) {}
+    Instant cancelledAt,
+    String recipientName,
+    String phoneNumber,
+    String shippingAddress
+) {
+    public OrderResponse(UUID id, UUID userId, OrderStatus status, List<OrderItemResponse> items,
+                         BigDecimal subtotal, BigDecimal taxAmount, BigDecimal discountAmount,
+                         BigDecimal total, String couponCode, Instant createdAt,
+                         Instant confirmedAt, Instant shippedAt, Instant deliveredAt, Instant cancelledAt) {
+        this(id, userId, status, items, subtotal, taxAmount, discountAmount, total, couponCode,
+             createdAt, confirmedAt, shippedAt, deliveredAt, cancelledAt, null, null, null);
+    }
+}

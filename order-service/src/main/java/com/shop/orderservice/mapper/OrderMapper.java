@@ -27,7 +27,10 @@ public class OrderMapper {
             order.getConfirmedAt(),
             order.getShippedAt(),
             order.getDeliveredAt(),
-            order.getCancelledAt()
+            order.getCancelledAt(),
+            order.getRecipientName(),
+            order.getPhoneNumber(),
+            order.getShippingAddress()
         );
     }
 

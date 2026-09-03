@@ -2,6 +2,7 @@ package com.shop.authservice.service;
 
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
+import com.shop.authservice.dto.request.ResetPasswordRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;
 import com.shop.authservice.dto.response.UserResponse;
 import com.shop.authservice.entity.User;
@@ -37,4 +38,8 @@ public interface UserService {
     User findByUsername(String userName);
 
     Page<UserResponse> findAllUsers(int page, int size, String sortBy, String sortOrder);
+
+    void forgotPassword(String email);
+
+    String resetPassword(ResetPasswordRequest request);
 }

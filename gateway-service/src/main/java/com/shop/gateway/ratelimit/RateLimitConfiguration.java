@@ -1,9 +1,10 @@
 package com.shop.gateway.ratelimit;
 
-import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
-import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
-import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
+import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
+import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
+import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -20,7 +21,7 @@ public class RateLimitConfiguration {
                 properties.requestedTokens());
     }
 
-    @Bean
+    @Bean("globalRateLimiter")
     public RedisRateLimiter globalRateLimiter(final GlobalRateLimitProperties properties) {
         return new RedisRateLimiter(
                 properties.replenishRate(),
@@ -37,7 +38,8 @@ public class RateLimitConfiguration {
     public GlobalRateLimitFilter globalRateLimitFilter(
             @Qualifier("globalRateLimiter") final RateLimiter<?> rateLimiter,
             final RateLimitProperties rateLimitProperties,
-            final GlobalRateLimitProperties globalRateLimitProperties) {
-        return new GlobalRateLimitFilter(rateLimiter, rateLimitProperties, globalRateLimitProperties);
+            final GlobalRateLimitProperties globalRateLimitProperties,
+            final GatewayErrorResponseWriter errorResponseWriter) {
+        return new GlobalRateLimitFilter(rateLimiter, rateLimitProperties, globalRateLimitProperties, errorResponseWriter);
     }
 }

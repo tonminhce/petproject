@@ -60,6 +60,22 @@ class SmtpNotificationSenderTest {
     }
 
     @Test
+    void send_usesRecipientEmailFromPayloadWhenPresent() throws Exception {
+        MimeMessage message = messageFactory.createMimeMessage();
+        given(mailSender.createMimeMessage()).willReturn(message);
+
+        Notification n = Notification.builder()
+                .subject("Order 1111 created")
+                .body("status=NEW, items=2")
+                .payload("{\"recipientEmail\":\"customer@example.com\"}")
+                .build();
+        sender.send(n);
+
+        verify(mailSender).send(message);
+        assertThat(message.getAllRecipients()[0].toString()).isEqualTo("customer@example.com");
+    }
+
+    @Test
     void sendFailure_wrapsInIllegalState() {
         given(mailSender.createMimeMessage()).willReturn(messageFactory.createMimeMessage());
         willThrow(new MailSendException("smtp down")).given(mailSender).send(any(MimeMessage.class));

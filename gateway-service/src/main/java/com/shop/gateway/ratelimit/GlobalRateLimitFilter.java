@@ -1,5 +1,7 @@
 package com.shop.gateway.ratelimit;
 
+import com.shop.common.core.exception.ErrorCode;
+import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
@@ -21,13 +23,22 @@ public final class GlobalRateLimitFilter implements GlobalFilter, Ordered {
     private final RateLimiter<?> rateLimiter;
     private final RateLimitProperties rateLimitProperties;
     private final GlobalRateLimitProperties globalRateLimitProperties;
+    private final GatewayErrorResponseWriter errorResponseWriter;
+
+    public GlobalRateLimitFilter(final RateLimiter<?> rateLimiter,
+                                 final RateLimitProperties rateLimitProperties,
+                                 final GlobalRateLimitProperties globalRateLimitProperties,
+                                 final GatewayErrorResponseWriter errorResponseWriter) {
+        this.rateLimiter = rateLimiter;
+        this.rateLimitProperties = rateLimitProperties;
+        this.globalRateLimitProperties = globalRateLimitProperties;
+        this.errorResponseWriter = errorResponseWriter;
+    }
 
     public GlobalRateLimitFilter(final RateLimiter<?> rateLimiter,
                                  final RateLimitProperties rateLimitProperties,
                                  final GlobalRateLimitProperties globalRateLimitProperties) {
-        this.rateLimiter = rateLimiter;
-        this.rateLimitProperties = rateLimitProperties;
-        this.globalRateLimitProperties = globalRateLimitProperties;
+        this(rateLimiter, rateLimitProperties, globalRateLimitProperties, null);
     }
 
     @Override
@@ -49,6 +60,9 @@ public final class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
     private Mono<Void> reject(final ServerWebExchange exchange, final Map<String, String> headers) {
         headers.forEach((name, value) -> exchange.getResponse().getHeaders().add(name, value));
+        if (errorResponseWriter != null) {
+            return errorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS);
+        }
         exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
         return exchange.getResponse().setComplete();
     }

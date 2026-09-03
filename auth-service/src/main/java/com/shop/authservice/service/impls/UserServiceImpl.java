@@ -17,6 +17,7 @@ import com.shop.common.security.jwt.AuthenticatedUser;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.shop.authservice.dto.request.ResetPasswordRequest;
 import com.shop.common.logging.LogPerformance;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +26,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 @RequiredArgsConstructor
@@ -259,5 +264,44 @@ public class UserServiceImpl implements UserService {
         if (!isValid) {
             throw BusinessException.unauthorized("auth.invalid.credentials");
         }
+    }
+
+    private final ConcurrentMap<String, ResetTokenEntry> resetTokens = new ConcurrentHashMap<>();
+
+    private record ResetTokenEntry(String email, Instant expiresAt) {
+        boolean isExpired() {
+            return Instant.now().isAfter(expiresAt);
+        }
+    }
+
+    @Override
+    public void forgotPassword(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        var userOpt = userRepository.findByEmail(email.trim());
+        if (userOpt.isEmpty()) {
+            log.info("Password reset requested for non-existent email: {}", email);
+            return;
+        }
+        String token = UUID.randomUUID().toString().replace("-", "");
+        resetTokens.put(token, new ResetTokenEntry(email.trim(), Instant.now().plus(15, ChronoUnit.MINUTES)));
+        log.info("Password reset token generated for user {}: {}", userOpt.get().getUsername(), token);
+    }
+
+    @Override
+    public String resetPassword(ResetPasswordRequest request) {
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw BusinessException.badRequest("auth.password.mismatch");
+        }
+        ResetTokenEntry entry = resetTokens.remove(request.token());
+        if (entry == null || entry.isExpired()) {
+            throw BusinessException.badRequest("auth.token.invalid.or.expired");
+        }
+        User user = userRepository.findByEmail(entry.email())
+                .orElseThrow(() -> BusinessException.notFound("auth.user.not.found", entry.email()));
+        keycloakAdminClient.resetUserPassword(user.getKeycloakUserId(), request.newPassword(), false);
+        log.info("Password successfully reset for user {}", user.getUsername());
+        return "Password reset successfully";
     }
 }

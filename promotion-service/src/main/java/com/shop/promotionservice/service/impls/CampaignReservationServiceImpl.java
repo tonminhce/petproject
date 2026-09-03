@@ -75,6 +75,9 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
                     || existing.getOrderAmount().compareTo(request.orderAmount()) != 0) {
                 throw BusinessException.of(ErrorCode.PROMOTION_DUPLICATE_REQUEST, request.orderId());
             }
+            if (existing.getStatus() != UsageStatus.PENDING) {
+                throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_INVALID_STATE, existing.getStatus());
+            }
             return ReservationResponse.from(campaign, existing);
         }
 

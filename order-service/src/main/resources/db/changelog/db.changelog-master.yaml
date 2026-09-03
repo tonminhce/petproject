@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       file: changelog-005-idempotency-actor.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-006-orders-shipping-address.yaml
+      relativeToChangelogFile: true

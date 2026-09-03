@@ -145,7 +145,14 @@ public class KeycloakTokenClient {
      */
     public boolean verifyCredentials(String username, String password) {
         try {
-            login(username, password);
+            KeycloakTokenResponse response = login(username, password);
+            if (response != null && response.refreshToken() != null) {
+                try {
+                    logout(response.refreshToken());
+                } catch (Exception ex) {
+                    log.warn("Failed to logout temporary session during credential verification: {}", ex.getMessage());
+                }
+            }
             return true;
         } catch (KeycloakClientException e) {
             return false;

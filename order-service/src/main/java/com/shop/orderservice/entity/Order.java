@@ -66,6 +66,15 @@ public class Order extends AbstractMappedEntity {
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
 
+    @Column(name = "recipient_name", length = 100)
+    private String recipientName;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(name = "shipping_address", length = 500)
+    private String shippingAddress;
+
     /**
      * Optimistic-lock guard for status transitions (review I3): without it, a
      * concurrent confirm + cancel both pass the state machine and last-write-wins,

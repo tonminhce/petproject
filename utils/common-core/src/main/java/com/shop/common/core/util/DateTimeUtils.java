@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentMap;
 public final class DateTimeUtils {
 
     public static final String DEFAULT_PATTERN = "dd-MM-yyyy_HH-mm-ss";
+    private static final int MAX_CACHE_SIZE = 100;
 
     private static final ConcurrentMap<String, DateTimeFormatter> FORMATTERS = new ConcurrentHashMap<>();
 
@@ -27,6 +28,9 @@ public final class DateTimeUtils {
             return null;
         }
         String resolvedPattern = (pattern != null && !pattern.isBlank()) ? pattern : DEFAULT_PATTERN;
+        if (!FORMATTERS.containsKey(resolvedPattern) && FORMATTERS.size() >= MAX_CACHE_SIZE) {
+            FORMATTERS.clear();
+        }
         return FORMATTERS.computeIfAbsent(resolvedPattern, DateTimeFormatter::ofPattern).format(dateTime);
     }
 }

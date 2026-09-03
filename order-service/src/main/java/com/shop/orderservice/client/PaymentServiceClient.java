@@ -76,4 +76,25 @@ public class PaymentServiceClient {
             return Optional.empty();
         }
     }
+
+    public void refundByOrderId(UUID orderId) {
+        if (!isEnabled()) {
+            return;
+        }
+        Optional<PaymentStatusSnapshot> captured = findCapturedByOrderId(orderId);
+        if (captured.isEmpty()) {
+            return;
+        }
+        UUID paymentId = captured.get().id();
+        try {
+            restClient.post()
+                .uri("/api/v1/payments/{id}/refund", paymentId)
+                .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
+                .retrieve()
+                .toBodilessEntity();
+            log.info("Successfully triggered refund for payment {} on order {}", paymentId, orderId);
+        } catch (RestClientException ex) {
+            log.error("Failed to trigger refund for payment {} on order {}", paymentId, orderId, ex);
+        }
+    }
 }

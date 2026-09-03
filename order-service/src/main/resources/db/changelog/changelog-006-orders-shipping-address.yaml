@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: orders-006-shipping-address
+      author: dev
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: recipient_name
+                  type: varchar(100)
+              - column:
+                  name: phone_number
+                  type: varchar(20)
+              - column:
+                  name: shipping_address
+                  type: varchar(500)

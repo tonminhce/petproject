@@ -82,7 +82,18 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
     private boolean isBypassed(final String path) {
         return path.equals(HEALTH_BYPASS_PATH)
                 || path.startsWith(HEALTH_BYPASS_PREFIX)
-                || path.startsWith(WEBHOOK_BYPASS_PREFIX);
+                || path.startsWith(WEBHOOK_BYPASS_PREFIX)
+                || isPublicStorefront(path);
+    }
+
+    private boolean isPublicStorefront(final String path) {
+        return path.startsWith("/api/v1/products")
+                || path.startsWith("/api/v1/categories")
+                || path.startsWith("/api/v1/brands")
+                || path.startsWith("/api/v1/search")
+                || path.startsWith("/api/v1/ratings")
+                || path.startsWith("/api/v1/medias")
+                || path.startsWith("/api/v1/auth");
     }
 
     private boolean isAllowed(final String clientIp) {

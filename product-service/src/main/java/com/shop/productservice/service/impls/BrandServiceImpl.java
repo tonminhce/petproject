@@ -85,7 +85,7 @@ public class BrandServiceImpl implements BrandService {
     public void delete(UUID id) {
         Brand existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, id));
-        existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         repo.save(existing);
         publisher.publishDeleted(existing);
     }

@@ -1,9 +1,12 @@
 package com.shop.notificationservice.service.sender;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.notificationservice.constant.NotificationChannel;
 import com.shop.notificationservice.entity.Notification;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.MailException;
@@ -19,17 +22,12 @@ public class SmtpNotificationSender implements NotificationSender {
 
     private final JavaMailSender mailSender;
     private final String fallbackRecipient;
+    private final ObjectMapper objectMapper;
 
+    @Autowired
     public SmtpNotificationSender(JavaMailSender mailSender,
-                                  @Value("${shop.notification.smtp.fallback-recipient}") String fallbackRecipient) {
-        // H22 — fail-fast on a missing/blank property. Spring's @Value without
-        // a default would still throw BeanCreationException when the property
-        // is unset, but an explicitly empty string (e.g. SHOP_NOTIFICATION_SMTP_FALLBACK_RECIPIENT=)
-        // would silently resolve to "" and the SMTP path would dispatch to an
-        // empty recipient. This guard catches that case at construction time
-        // before the bean enters the application context. See Spring's
-        // @ConfigurationProperties / @Value failure-mode docs:
-        // https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/value-annotations.html
+                                  @Value("${shop.notification.smtp.fallback-recipient}") String fallbackRecipient,
+                                  @Autowired(required = false) ObjectMapper objectMapper) {
         if (fallbackRecipient == null || fallbackRecipient.isBlank()) {
             throw new IllegalStateException(
                     "shop.notification.smtp.fallback-recipient must be configured when "
@@ -37,6 +35,11 @@ public class SmtpNotificationSender implements NotificationSender {
         }
         this.mailSender = mailSender;
         this.fallbackRecipient = fallbackRecipient;
+        this.objectMapper = (objectMapper != null) ? objectMapper : new ObjectMapper();
+    }
+
+    public SmtpNotificationSender(JavaMailSender mailSender, String fallbackRecipient) {
+        this(mailSender, fallbackRecipient, new ObjectMapper());
     }
 
     @Override
@@ -49,12 +52,36 @@ public class SmtpNotificationSender implements NotificationSender {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
-            helper.setTo(fallbackRecipient);
+            String recipient = resolveRecipient(n);
+            helper.setTo(recipient);
             helper.setSubject(n.getSubject());
             helper.setText(n.getBody(), false);
             mailSender.send(message);
         } catch (MessagingException | MailException e) {
             throw new IllegalStateException("Failed to send SMTP notification", e);
         }
+    }
+
+    private String resolveRecipient(Notification n) {
+        if (n.getPayload() != null && !n.getPayload().isBlank()) {
+            try {
+                JsonNode node = objectMapper.readTree(n.getPayload());
+                if (node.hasNonNull("recipientEmail")) {
+                    String email = node.get("recipientEmail").asText();
+                    if (!email.isBlank()) {
+                        return email;
+                    }
+                }
+                if (node.hasNonNull("email")) {
+                    String email = node.get("email").asText();
+                    if (!email.isBlank()) {
+                        return email;
+                    }
+                }
+            } catch (Exception ignored) {
+                // fall back to fallbackRecipient
+            }
+        }
+        return fallbackRecipient;
     }
 }

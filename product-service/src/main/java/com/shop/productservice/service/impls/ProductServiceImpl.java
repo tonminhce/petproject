@@ -185,7 +185,7 @@ public class ProductServiceImpl implements ProductService {
     public void delete(UUID id) {
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
-        existing.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
         repo.save(existing);
         var productCache = cacheManager.getCache("product");
         if (productCache != null) {

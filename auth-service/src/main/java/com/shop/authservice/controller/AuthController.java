@@ -1,8 +1,10 @@
 package com.shop.authservice.controller;
 
+import com.shop.authservice.dto.request.ForgotPasswordRequest;
 import com.shop.authservice.dto.request.LoginRequest;
 import com.shop.authservice.dto.request.RefreshTokenRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
+import com.shop.authservice.dto.request.ResetPasswordRequest;
 import com.shop.authservice.dto.response.TokenResponse;
 import com.shop.authservice.service.AuthService;
 import com.shop.authservice.service.UserService;
@@ -45,5 +47,17 @@ public class AuthController {
     public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request.refreshToken());
         return ApiResponse.message("Logged out successfully");
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request.email());
+        return ApiResponse.message("If the email exists, a password reset instruction has been sent");
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ApiResponse.message("Password has been reset successfully");
     }
 }

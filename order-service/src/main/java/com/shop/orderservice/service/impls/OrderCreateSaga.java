@@ -92,6 +92,9 @@ public class OrderCreateSaga {
             .subtotal(BigDecimal.ZERO).taxAmount(BigDecimal.ZERO)
             .discountAmount(BigDecimal.ZERO).total(BigDecimal.ZERO)
             .couponCode(request.couponCode())
+            .recipientName(request.recipientName())
+            .phoneNumber(request.phoneNumber())
+            .shippingAddress(request.shippingAddress())
             .build());
 
         // 3. Pricing (remote: product + tax + promotion)
@@ -131,7 +134,7 @@ public class OrderCreateSaga {
                 reserved.add(orderItem);
             }
             orderItemRepository.saveAll(orderItems);
-        } catch (StockReservationFailedException ex) {
+        } catch (Exception ex) {
             releaseAllReservations(reserved);
             if (order.getPromotionReservationId() != null) {
                 try {
@@ -141,7 +144,13 @@ public class OrderCreateSaga {
                         order.getPromotionReservationId(), pex);
                 }
             }
-            throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getProductId());
+            if (ex instanceof StockReservationFailedException sfe) {
+                throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, sfe.getProductId());
+            }
+            if (ex instanceof BusinessException be) {
+                throw be;
+            }
+            throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getMessage());
         }
 
         // 6. Clear cart
