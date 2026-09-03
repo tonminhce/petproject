@@ -1,13 +1,13 @@
 ---
 name: gitnexus-harness
-description: "Use when the user wants to query, search, or navigate the codebase with GitNexus from the terminal or in chat. Provides the `./utils/gitnexus-harness.sh` wrapper (aliases `q`, `ctx`, `imp`, `dc`, `ls`, `fresh`, `status`) plus when to reach for the MCP tools vs the CLI."
+description: "Use when the user wants to query, search, or navigate the codebase with GitNexus from the terminal. The `g` wrapper handles `flow`/`symbol`/`here`/`blast`/`changed`/`fresh`/`status`. Use MCP gitnexus tools when paginating large results or when you need flags the CLI doesn't expose (`--kind`, `api_impact`, `route_map`, `shape_check`)."
 ---
 
-# GitNexus Harness — short, terminal-friendly
+# gitnexus harness — when and how
 
-The project ships a tiny wrapper at `./utils/gitnexus-harness.sh` that turns the verbose `gitnexus <tool>` invocations into short aliases. Use it BEFORE reaching for `Grep` / `Read` against code files.
+The wrapper at `utils/gitnexus-harness.sh` shortens the most common look-ups. Use it instead of raw `gitnexus ...` for one-shots.
 
-> Index stale? Run `./utils/gitnexus-harness.sh fresh` first.
+> Index stale? Run `g fresh` first.
 
 ## Quick aliases (from project root)
 

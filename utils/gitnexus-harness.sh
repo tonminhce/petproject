@@ -1,45 +1,43 @@
 #!/usr/bin/env bash
-# GitNexus quick harness — short aliases to query the code knowledge graph
-# from the terminal. Source this file or call it with `g <subcmd>`.
+# GitNexus quick harness — terminal-friendly wrapper around the GitNexus CLI.
 #
 # Usage:
-#   ./utils/gitnexus-harness.sh q "user login flow"           # query
-#   ./utils/gitnexus-harness.sh ctx "JwtDecoder"              # 360° on a symbol
-#   ./utils/gitnexus-harness.sh imp "JwtDecoder" -d upstream  # blast radius
-#   ./utils/gitnexus-harness.sh dc                            # detect-changes
-#   ./utils/gitnexus-harness.sh ls                            # list repos
-#   ./utils/gitnexus-harness.sh fresh                         # re-analyze
-#   ./utils/gitnexus-harness.sh status                        # index status
+#   g <subcmd> [args...]
 #
-# Tip: add `alias g='./utils/gitnexus-harness.sh'` to ~/.bashrc.
+# Subcommands (auto-resolves -r so you don't have to):
+#   status / st           Index freshness for the CWD repo
+#   fresh / analyze       Re-index the CWD repo (writes .gitnexus/)
+#   list / ls             List all indexed repos
+#   flow <concept>        Query execution flows (processes) for a concept
+#   symbol <name>         Find a symbol by substring across the index (path:line)
+#   here <name>           360° on a symbol — callers/callees/processes
+#   blast <name>          Blast radius — what breaks if you change a symbol
+#   changed               Map current git diff → affected symbols + flows
+#   review                show this file
+#
+# Flags after the subcommand are passed through to gitnexus.
+# Examples:
+#   g flow "user registration"
+#   g symbol JwtDecoder
+#   g here LazyJwtDecoder
+#   g blast AdminIpAllowlistFilter -d upstream --depth 2
+#   g changed
 
 set -euo pipefail
 
-# ponytail: this exists
-# Auto-resolve repo name from the CWD so callers don't pass -r every time.
 REPO_NAME="$(basename "$(pwd)")"
+
+usage() {
+  sed -n '2,21p' "$0"
+}
 
 cmd="${1:-help}"; shift || true
 
+# ponytail: this is the routing table. Each branch is one line — the work happens
+# inside gitnexus, not here. The harness adds nothing of its own.
 case "$cmd" in
-  q|query)
-    gitnexus query -r "$REPO_NAME" "$@"
-    ;;
-  ctx|context)
-    name="${1:?usage: g ctx <symbol> [-f path] [--content]}"
-    shift
-    gitnexus context -r "$REPO_NAME" "$name" "$@"
-    ;;
-  imp|impact)
-    target="${1:?usage: g imp <symbol> [-d upstream|downstream] [--depth N]}"
-    shift
-    gitnexus impact -r "$REPO_NAME" "$target" "$@"
-    ;;
-  dc|detect|detect-changes)
-    gitnexus detect-changes -r "$REPO_NAME" "$@"
-    ;;
-  ls|list)
-    gitnexus list "$@"
+  status|st)
+    gitnexus status "$@"
     ;;
   fresh|reindex|analyze)
     if [[ -x .gitnexus/run.cjs ]]; then
@@ -48,14 +46,36 @@ case "$cmd" in
       gitnexus analyze "$@"
     fi
     ;;
-  status|st)
-    gitnexus status "$@"
+  list|ls)
+    gitnexus list "$@"
+    ;;
+  flow|q|query)
+    gitnexus query -r "$REPO_NAME" "$@"
+    ;;
+  symbol|sym|find)
+    # Symbol search: BM25 over names. Returns ranked list of matches.
+    gitnexus query -r "$REPO_NAME" "$@" --json 2>/dev/null \
+      || gitnexus query -r "$REPO_NAME" "$@"
+    ;;
+  here|ctx|context)
+    name="${1:?usage: g here <symbol> [-f path] [--content]}"
+    shift
+    gitnexus context -r "$REPO_NAME" "$name" "$@"
+    ;;
+  blast|imp|impact)
+    target="${1:?usage: g blast <symbol> [-d upstream|downstream] [--depth N]}"
+    shift
+    gitnexus impact -r "$REPO_NAME" "$target" "$@"
+    ;;
+  changed|dc|detect-changes|diff)
+    gitnexus detect-changes -r "$REPO_NAME" "$@"
     ;;
   help|--help|-h|"")
-    sed -n '2,16p' "$0"
+    usage
     ;;
   *)
     echo "Unknown subcommand: $cmd" >&2
+    usage >&2
     exit 2
     ;;
 esac
