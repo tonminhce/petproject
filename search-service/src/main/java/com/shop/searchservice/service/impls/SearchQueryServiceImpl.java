@@ -2,14 +2,20 @@ package com.shop.searchservice.service.impls;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOptions;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.Time;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.NumberRangeQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
+import co.elastic.clients.elasticsearch.core.ClosePointInTimeRequest;
+import co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest;
+import co.elastic.clients.elasticsearch.core.OpenPointInTimeResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch.core.search.PointInTimeReference;
 import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
@@ -65,10 +71,41 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         SortKey effectiveSort = resolveSort(request.sort(), queryPresent);
         int size = Math.min(request.size(), SIZE_CAP);
         long from = (long) request.page() * size;
+        BoolQuery boolQuery = buildBoolQuery(request, queryPresent);
+        List<SortOptions> sort = sortOptions(effectiveSort);
+
+        SearchResponse<Map> response;
         if (from + size > SearchRequest.MAX_RESULT_WINDOW) {
-            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+            // Wave-C finding H37: deep pagination beyond the index
+            // max_result_window (10000) uses a Point-In-Time + search_after
+            // cursor walk instead of the from+size path that ES would refuse
+            // (result_window_total_hits_exceeded). The PIT fixes a stable
+            // snapshot of the index, then we step forward one size per
+            // "page" using the last hit's sort values as the next cursor.
+            // https://www.elastic.co/guide/en/elasticsearch/reference/9.4/paginate-search-results.html
+            // https://www.elastic.co/guide/en/elasticsearch/reference/9.4/point-in-time-api.html
+            response = searchDeepWithPit(boolQuery, sort, size, request.page());
+        } else {
+            response = searchShallow(boolQuery, sort, size, from);
         }
 
+        metrics.recordQuery(effectiveSort.wire);
+
+        long total = response.hits().total() != null
+            ? response.hits().total().value()
+            : response.hits().hits().size();
+        List<ProductSearchResponse> content = response.hits().hits().stream()
+            .map(SearchQueryServiceImpl::toResponse)
+            .toList();
+        return PageResponse.of(content, request.page(), size, total);
+    }
+
+    /**
+     * Build the bool query (multi_match / match_all, brand/category filters,
+     * price range, minRating floor). Pure construction; safe to invoke from
+     * both the shallow and the deep (PIT) search paths.
+     */
+    private static BoolQuery buildBoolQuery(SearchRequest request, boolean queryPresent) {
         BoolQuery.Builder bool = new BoolQuery.Builder();
         if (queryPresent) {
             bool.must(m -> m.multiMatch(mm -> mm
@@ -94,36 +131,116 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .gte(request.minRating().doubleValue())
                 .build())));
         }
+        return bool.build();
+    }
 
-        SearchResponse<Map> response;
+    /**
+     * The fast path: a single ES search with from+size, scoped to the products
+     * alias, with the resolved sort. Any failure surfaces as 503 SRH-12002
+     * (spec D6).
+     */
+    private SearchResponse<Map> searchShallow(BoolQuery boolQuery, List<SortOptions> sort, int size, long from) {
         try {
-            response = client.search(s -> s
+            return client.search(s -> s
                 .index(IndexProvisioner.ALIAS)
-                .query(q -> q.bool(bool.build()))
+                .query(q -> q.bool(boolQuery))
                 .from(Math.toIntExact(from))
                 .size(size)
-                .sort(sortOptions(effectiveSort)), Map.class);
+                .sort(sort), Map.class);
         } catch (ElasticsearchException ex) {
             // ES error responses — e.g. index_not_found_exception on a missing
             // alias during the degraded provisioning window.
             log.warn("Search query failed — Elasticsearch error response", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         } catch (IOException ex) {
-            // 8.15 transport failures (connect refused, timeout, socket reset)
-            // all surface as IOException — TransportException included.
+            // 8.15/9.15 transport failures (connect refused, timeout, socket
+            // reset) all surface as IOException — TransportException included.
             log.warn("Search query failed — Elasticsearch unavailable", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         }
+    }
 
-        metrics.recordQuery(effectiveSort.wire);
+    /**
+     * Deep-pagination path: open a PIT on the alias, walk forward {@code page}
+     * times with {@code search_after} (one size per step), and return the
+     * final page. PIT open/close failures map to 503 SRH-12002 (spec D6).
+     *
+     * <p>Reference:
+     * https://www.elastic.co/guide/en/elasticsearch/reference/9.4/paginate-search-results.html
+     * https://www.elastic.co/guide/en/elasticsearch/reference/9.4/point-in-time-api.html</p>
+     */
+    private SearchResponse<Map> searchDeepWithPit(BoolQuery boolQuery, List<SortOptions> sort, int size, int page) {
+        String pitId = openPit();
+        try {
+            List<FieldValue> cursor = null;
+            SearchResponse<Map> response = null;
+            for (int step = 0; step <= page; step++) {
+                final List<FieldValue> nextCursor = cursor;
+                response = executePitSearch(pitId, boolQuery, sort, size, nextCursor);
+                List<Hit<Map>> hits = response.hits().hits();
+                if (hits.isEmpty()) {
+                    // We walked past the last matching doc; ES will keep
+                    // returning empty hits indefinitely, so stop here.
+                    return response;
+                }
+                cursor = hits.get(hits.size() - 1).sort();
+                if (cursor == null) {
+                    throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+                }
+            }
+            return response;
+        } finally {
+            closePit(pitId);
+        }
+    }
 
-        long total = response.hits().total() != null
-            ? response.hits().total().value()
-            : response.hits().hits().size();
-        List<ProductSearchResponse> content = response.hits().hits().stream()
-            .map(SearchQueryServiceImpl::toResponse)
-            .toList();
-        return PageResponse.of(content, request.page(), size, total);
+    private String openPit() {
+        try {
+            OpenPointInTimeResponse opened = client.openPointInTime(OpenPointInTimeRequest.of(p -> p
+                .index(IndexProvisioner.ALIAS)
+                .keepAlive(Time.of(t -> t.time("1m")))));
+            return opened.id();
+        } catch (ElasticsearchException ex) {
+            log.warn("Search query failed — PIT open rejected by Elasticsearch", ex);
+            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+        } catch (IOException ex) {
+            log.warn("Search query failed — PIT open transport error", ex);
+            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+        }
+    }
+
+    private void closePit(String pitId) {
+        try {
+            client.closePointInTime(ClosePointInTimeRequest.of(c -> c.id(pitId)));
+        } catch (Exception ex) {
+            // PIT close is best-effort — the cluster will reclaim the context
+            // at keepAlive expiry regardless. Surfacing the failure here would
+            // turn a successful query into a 503.
+            log.warn("Search query warning — PIT close failed (cluster will reclaim context)", ex);
+        }
+    }
+
+    private SearchResponse<Map> executePitSearch(String pitId, BoolQuery boolQuery, List<SortOptions> sort,
+                                                 int size, List<FieldValue> searchAfter) {
+        try {
+            return client.search(s -> {
+                s.pit(PointInTimeReference.of(p -> p.id(pitId).keepAlive(Time.of(t -> t.time("1m")))))
+                    .query(q -> q.bool(boolQuery))
+                    .size(size)
+                    .sort(sort)
+                    .trackTotalHits(t -> t.enabled(true));
+                if (searchAfter != null) {
+                    s.searchAfter(searchAfter);
+                }
+                return s;
+            }, Map.class);
+        } catch (ElasticsearchException ex) {
+            log.warn("Search query failed — PIT search rejected by Elasticsearch", ex);
+            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+        } catch (IOException ex) {
+            log.warn("Search query failed — PIT search transport error", ex);
+            throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
+        }
     }
 
     private static Query priceRange(BigDecimal minPrice, BigDecimal maxPrice) {
