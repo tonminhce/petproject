@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Drains {@code outbox_events} and publishes each PENDING row to Kafka.
@@ -94,12 +95,14 @@ public class PaymentOutboxRelay {
             messages.add(new OutboxMessage(e.getTopic(), e.getAggregateId().toString(), e.getPayload()));
         }
         BatchOutcome outcome = kafkaPublisher.publishBatch(
-            messages, publishTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+            messages, publishTimeoutMs, TimeUnit.MILLISECONDS);
         log.debug("Outbox batch sent={} success={} completed={}", outcome.sent(), outcome.success(), outcome.completed());
+
+        boolean allSuccess = outcome.completed() && outcome.success() == outcome.sent();
 
         // Phase 3 — mark each row SENT or record the retry/failure.
         for (OutboxEvent e : rows) {
-            transactionTemplate.executeWithoutResult(tx -> markFinalState(e, outcome.completed()));
+            transactionTemplate.executeWithoutResult(tx -> markFinalState(e, allSuccess));
         }
     }
 

@@ -45,6 +45,7 @@ public class ProductMediaSweepJob {
     private final ProductMediaService productMediaService;
     private final ProductMediaSweepProperties properties;
     private final ProductMetrics metrics;
+    private int currentPage = 0;
 
     @Scheduled(cron = "${shop.product.media-sweep.cron:0 */30 * * * *}")
     public void sweep() {
@@ -54,10 +55,13 @@ public class ProductMediaSweepJob {
         int checked = 0;
         int cleared = 0;
         try {
-            // Bounded: exactly one page per cycle — cycles are short and the
-            // next tick continues; no unbounded pagination loops.
             var page = productRepository.findByMediaIdIsNotNull(
-                PageRequest.of(0, properties.limit()));
+                PageRequest.of(currentPage, properties.limit()));
+            if (page.isEmpty() || !page.hasNext()) {
+                currentPage = 0;
+            } else {
+                currentPage++;
+            }
             for (Product product : page.getContent()) {
                 UUID mediaId = product.getMediaId();
                 checked++;

@@ -66,7 +66,10 @@ public class TaxRateServiceImpl implements TaxRateService {
     @Override
     @Transactional(readOnly = true)
     public List<TaxRateResponse> list(UUID classId) {
-        return taxRateRepository.findAllByTaxClassId(classId).stream().map(this::toResponse).toList();
+        var rates = (classId == null)
+            ? taxRateRepository.findAll()
+            : taxRateRepository.findAllByTaxClassId(classId);
+        return rates.stream().map(this::toResponse).toList();
     }
 
     @Override

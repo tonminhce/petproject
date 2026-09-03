@@ -47,7 +47,7 @@ public class ServiceTokenProvider {
                                 MediaClientProperties properties) {
         MediaClientProperties.Keycloak kc = properties.keycloak();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        int timeoutMs = properties.timeoutMs() > 0 ? properties.timeoutMs() : 5000;
+        int timeoutMs = properties.timeoutMs() > 0 ? (int) properties.timeoutMs() : 5000;
         factory.setConnectTimeout(timeoutMs);
         factory.setReadTimeout(timeoutMs);
         this.restClient = restClientBuilder.requestFactory(factory).build();

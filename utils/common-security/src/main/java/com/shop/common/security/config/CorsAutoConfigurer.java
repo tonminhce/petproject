@@ -1,5 +1,7 @@
 package com.shop.common.security.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,7 +38,7 @@ public class CorsAutoConfigurer {
         return source;
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CorsAutoConfigurer.class);
+    private static final Logger log = LoggerFactory.getLogger(CorsAutoConfigurer.class);
 
     private static CorsConfiguration buildConfiguration(SecurityProperties.Cors props) {
         if (Boolean.TRUE.equals(props.allowCredentials()) && props.resolvedAllowedOriginPatterns().contains("*")) {

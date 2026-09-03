@@ -19,6 +19,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Logs every HTTP request/response for servlet-stack services (virtual thread compatible).
@@ -121,9 +122,9 @@ public class HttpLoggingFilter extends OncePerRequestFilter implements Ordered {
         return query != null ? path + "?" + query : path;
     }
 
-    private static final java.util.regex.Pattern SENSITIVE_JSON_PATTERN = java.util.regex.Pattern.compile(
+    private static final Pattern SENSITIVE_JSON_PATTERN = Pattern.compile(
             "\"([^\"]*(?:password|secret|token|credential|authorization|cardNumber|cvv|accessToken)[^\"]*)\"\\s*:\\s*(\"[^\"]*\"|[^,\\}\\]\\s]+)",
-            java.util.regex.Pattern.CASE_INSENSITIVE);
+            Pattern.CASE_INSENSITIVE);
 
     private static String maskBody(String content) {
         if (content == null || content.isEmpty()) {

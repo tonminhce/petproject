@@ -8,14 +8,17 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -73,8 +76,8 @@ public class OrderCommitCoordinator {
                 // (handle() callback) so a failure doesn't poison the
                 // compensation list — the failed row was never committed
                 // and so must not be released-committed on rollback.
-                java.util.concurrent.ConcurrentLinkedQueue<RuntimeException> failures =
-                    new java.util.concurrent.ConcurrentLinkedQueue<>();
+                ConcurrentLinkedQueue<RuntimeException> failures = new ConcurrentLinkedQueue<>();
+                Map<String, String> mdcContext = MDC.getCopyOfContextMap();
                 List<CompletableFuture<Void>> commitFutures = new ArrayList<>(sorted.size());
                 for (OrderItem item : sorted) {
                     if (item.getReservationId() == null) {
@@ -84,7 +87,21 @@ public class OrderCommitCoordinator {
                     }
                     UUID reservationId = item.getReservationId();
                     CompletableFuture<Void> future = CompletableFuture
-                        .runAsync(() -> inventoryClient.commit(reservationId), COMMIT_EXECUTOR)
+                        .runAsync(() -> {
+                            Map<String, String> prev = MDC.getCopyOfContextMap();
+                            if (mdcContext != null) {
+                                MDC.setContextMap(mdcContext);
+                            }
+                            try {
+                                inventoryClient.commit(reservationId);
+                            } finally {
+                                if (prev != null) {
+                                MDC.setContextMap(prev);
+                                } else {
+                                    MDC.clear();
+                                }
+                            }
+                        }, COMMIT_EXECUTOR)
                         .handle((v, ex) -> {
                             if (ex != null) {
                                 // unwrap and queue for rethrow below

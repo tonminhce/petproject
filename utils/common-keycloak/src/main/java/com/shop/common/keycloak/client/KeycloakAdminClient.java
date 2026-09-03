@@ -14,10 +14,12 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames.*;
 
@@ -198,14 +200,13 @@ public class KeycloakAdminClient {
     }
 
     private static final long SKEW_SECONDS = 30L;
-    private final java.util.concurrent.atomic.AtomicReference<CachedAdminToken> cachedToken =
-            new java.util.concurrent.atomic.AtomicReference<>();
+    private final AtomicReference<CachedAdminToken> cachedToken = new AtomicReference<>();
 
-    private record CachedAdminToken(String token, java.time.Instant expiresAt) {}
+    private record CachedAdminToken(String token, Instant expiresAt) {}
 
     private synchronized String getAdminAccessToken() {
         CachedAdminToken current = cachedToken.get();
-        if (current != null && current.expiresAt().isAfter(java.time.Instant.now().plusSeconds(SKEW_SECONDS))) {
+        if (current != null && current.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS))) {
             return current.token();
         }
 

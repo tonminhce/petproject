@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -29,15 +30,19 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public Payment create(CreatePaymentRequest req) {
-        return repository.findByIdempotencyKey(req.idempotencyKey())
-                .orElseGet(() -> writer.insert(Payment.builder()
-                        .orderId(req.orderId())
-                        .amount(req.amount())
-                        .currency(req.currency())
-                        .status(PaymentStatus.PENDING)
-                        .provider(provider.name())
-                        .idempotencyKey(req.idempotencyKey())
-                        .build()));
+        Optional<Payment> existing = (req.userId() != null)
+                ? repository.findByIdempotencyKeyAndUserId(req.idempotencyKey(), req.userId())
+                : repository.findByIdempotencyKey(req.idempotencyKey());
+
+        return existing.orElseGet(() -> writer.insert(Payment.builder()
+                .orderId(req.orderId())
+                .userId(req.userId())
+                .amount(req.amount())
+                .currency(req.currency())
+                .status(PaymentStatus.PENDING)
+                .provider(provider.name())
+                .idempotencyKey(req.idempotencyKey())
+                .build()));
     }
 
     @Override

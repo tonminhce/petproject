@@ -14,6 +14,7 @@ import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -71,11 +72,25 @@ public class PricingServiceImpl implements PricingService {
         }
 
         // 1. H14 — fetch product snapshots in parallel via CompletableFuture.
+        Map<String, String> mdcContext = MDC.getCopyOfContextMap();
         Map<UUID, CompletableFuture<ProductSnapshot>> futures = new HashMap<>();
         for (CartItem item : items) {
             futures.put(item.getProductId(),
-                CompletableFuture.supplyAsync(() -> productClient.getProduct(item.getProductId()),
-                    SNAPSHOT_EXECUTOR));
+                CompletableFuture.supplyAsync(() -> {
+                    Map<String, String> prev = MDC.getCopyOfContextMap();
+                    if (mdcContext != null) {
+                        MDC.setContextMap(mdcContext);
+                    }
+                    try {
+                        return productClient.getProduct(item.getProductId());
+                    } finally {
+                        if (prev != null) {
+                            MDC.setContextMap(prev);
+                        } else {
+                            MDC.clear();
+                        }
+                    }
+                }, SNAPSHOT_EXECUTOR));
         }
 
         Map<UUID, ProductSnapshot> snapshots = new HashMap<>();

@@ -161,6 +161,7 @@ public class ProductServiceImpl implements ProductService {
             throw BusinessException.of(ErrorCode.PRODUCT_SKU_EXISTS);
         }
         assertMediaExists(request.mediaId());
+        String previousSlug = existing.getSlug();
         mapper.partialUpdate(existing, request);
         if (request.categoryId() != null) {
             Category category = categoryRepo.findById(request.categoryId())
@@ -172,7 +173,6 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
             existing.setBrand(brand);
         }
-        String previousSlug = existing.getSlug();
         Product saved = repo.save(existing);
         evictProductSlug(previousSlug);
         evictProductSlug(saved.getSlug());
