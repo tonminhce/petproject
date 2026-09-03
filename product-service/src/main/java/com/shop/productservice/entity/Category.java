@@ -38,6 +38,7 @@ public class Category extends AbstractMappedEntity {
     private Category parent;
 
     @JsonIgnore
+    @Builder.Default
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     private Set<Category> children = new HashSet<>();
 }

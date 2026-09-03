@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: changelog-002-notification-retry.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-003-retry-index.yaml
+      relativeToChangelogFile: true

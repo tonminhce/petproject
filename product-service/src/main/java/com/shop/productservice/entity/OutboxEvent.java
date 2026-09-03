@@ -43,6 +43,7 @@ public class OutboxEvent extends AbstractMappedEntity {
     @Column(nullable = false, length = 20)
     private OutboxStatus status;
 
+    @Builder.Default
     @Column(name = "retry_count", nullable = false)
     private Integer retryCount = 0;
 
