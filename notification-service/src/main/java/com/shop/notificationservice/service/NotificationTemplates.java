@@ -11,8 +11,8 @@ public final class NotificationTemplates {
     }
 
     public static Draft build(OrderLifecycleEvent e) {
-        if (e.eventType() == null) {
-            return skipped(e);
+        if (e == null || e.eventType() == null) {
+            return new Draft("[skipped] unknown", "null or empty event", false);
         }
         return switch (e.eventType()) {
             case "order.created.v1" -> created(e);
