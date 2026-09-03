@@ -4,7 +4,8 @@
 > **Initial Baseline**: ~46.05% (Đợt 3)  
 > **Sprint 1 Progress**: ~62.80% (Đợt 4)  
 > **Sprint 2 Progress**: ~79.40% (Đợt 5 - Feature Completeness: 95.0%)  
-> **Current Progress (Sprint 3 Delivered)**: **>= 92.50% (Production-Ready Target Achieved)** 🚀  
+> **Sprint 3 Progress**: ~93.62% (Đợt 6 - Production Target Achieved)  
+> **Current Progress (Sprint 4 Delivered)**: **~96.50% (Enterprise Go-Live Standard)** 🚀  
 
 ---
 
@@ -17,8 +18,9 @@
 | **Phase 3: Reliability, Resilience & Fleet Consistency (P2)** | 3 | 3 | 0 | ✅ COMPLETED |
 | **Phase 4: DevOps, CI/CD & Deployment Manifests (P2)** | 2 | 2 | 0 | ✅ COMPLETED |
 | **Phase 5: Sprint 2 Feature Extensions (SPU/SKU, Stock, VNPay/MoMo, GHN/GHTK)** | 6 | 6 | 0 | ✅ COMPLETED |
-| **Phase 6: Sprint 3 Final Hardening (Streaming, DLT, Email, K8s Alerts)** | 6 | 6 | 0 | ✅ COMPLETED |
-| **Total** | **28** | **28** | **0** | **100% (Target: >= 90% EXCEEDED)** |
+| **Phase 6: Sprint 3 Hardening (Streaming, DLT, Email, K8s Alerts)** | 6 | 6 | 0 | ✅ COMPLETED |
+| **Phase 7: Sprint 4 Advanced Capabilities (RMA Returns, Guest Tracking, MoneyUtils)** | 3 | 3 | 0 | ✅ COMPLETED |
+| **Total** | **31** | **31** | **0** | **100% (Target: >= 90% EXCEEDED)** |
 
 ---
 
@@ -210,3 +212,26 @@
   - **File**: `k8s/grafana-dashboard.yaml`
   - **Goal**: ConfigMap dashboard with panels for RPS, 5xx rate, P95 latency, and JVM Heap usage.
   - **Status**: ✅ RESOLVED (Commit `4885a70`)
+
+---
+
+## Phase 7: Sprint 4 Advanced Capabilities (RMA Returns, Guest Tracking, MoneyUtils)
+
+- [x] **Task 7.1: RMA (Return Merchandise Authorization) Order Returns Workflow**
+  - **Module**: `order-service`
+  - **Files**: `OrderReturn.java`, `OrderReturnRepository.java`, `OrderReturnService.java`, `OrderReturnServiceImpl.java`, `OrderReturnController.java`, `BackofficeOrderReturnController.java`, `changelog-007-order-returns.yaml`
+  - **Goal**: Complete order return/refund workflow for delivered orders, verification of ownership, refund amount validation, and automated payment refund trigger upon approval with `@Audited` logging.
+  - **Status**: ✅ RESOLVED (Commit `1f68002`)
+
+- [x] **Task 7.2: Public Guest Order Tracking by Order ID & Phone Number**
+  - **Modules**: `order-service`, `gateway-service`
+  - **Files**: `OrderTrackingController.java`, `OrderTrackingResponse.java`, `application.yml`
+  - **Goal**: Allow guest shoppers to track order delivery status without logging in, protected against phone enumeration, exposed via gateway public-endpoints.
+  - **Status**: ✅ RESOLVED (Commit `1f68002`)
+
+- [x] **Task 7.3: Enterprise Multi-Currency Financial MoneyUtils**
+  - **Module**: `utils/common-core`
+  - **Files**: `MoneyUtils.java`, `MoneyUtilsTest.java`
+  - **Goal**: Financial scale/precision handling (scale 0 for VND/JPY, scale 2 for USD/EUR), localized currency formatting, and safe percentage discount/tax calculations.
+  - **Status**: ✅ RESOLVED (Commit `1f68002`)
+
