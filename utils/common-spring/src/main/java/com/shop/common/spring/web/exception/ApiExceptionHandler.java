@@ -28,6 +28,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -184,6 +185,20 @@ public class ApiExceptionHandler {
                 HttpStatus.PAYLOAD_TOO_LARGE,
                 ErrorCode.PAYLOAD_TOO_LARGE.getCode(),
                 message,
+                null,
+                request,
+                exception,
+                false
+        );
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMultipart(
+            MultipartException exception, WebRequest request) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                ErrorCode.BAD_REQUEST.getCode(),
+                exception.getMessage(),
                 null,
                 request,
                 exception,

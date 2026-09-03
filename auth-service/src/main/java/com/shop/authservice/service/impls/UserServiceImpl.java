@@ -1,5 +1,6 @@
 package com.shop.authservice.service.impls;
 
+import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;
@@ -164,7 +165,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private String createKeycloakUser(RegisterRequest request) {
-        List<String> roles = extractRoles(request.roles());
+        List<String> roles = extractRoles(request.roles()).stream().map(RoleName::name).toList();
         return keycloakAdminClient.createUser(
                 request.username(),
                 request.email(),
@@ -183,14 +184,15 @@ public class UserServiceImpl implements UserService {
      */
     private static final Set<String> SELF_REGISTRATION_ALLOWED_ROLES = Set.of("USER");
 
-    private List<String> extractRoles(Set<String> requestedRoles) {
+    private List<RoleName> extractRoles(Set<String> requestedRoles) {
         if (requestedRoles == null || requestedRoles.isEmpty()) {
-            return List.of("USER");
+            return List.of(RoleName.USER);
         }
         return requestedRoles.stream()
                 .map(String::trim)
                 .filter(role -> !role.isBlank())
                 .filter(SELF_REGISTRATION_ALLOWED_ROLES::contains)
+                .map(RoleName::valueOf)
                 .distinct()
                 .toList();
     }
@@ -203,7 +205,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Set<Role> resolveRoles(Set<String> requestedRoles) {
-        List<String> roleNames = extractRoles(requestedRoles);
+        List<RoleName> roleNames = extractRoles(requestedRoles);
         return roleRepository.findByNameIn(roleNames);
     }
 

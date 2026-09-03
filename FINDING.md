@@ -537,3 +537,65 @@ The subquery deterministically resolves to the same `MIN(id)` for all concurrent
 1. **Immediate** (before next release): C-1 through C-5, H-1 through H-5
 2. **Next sprint**: H-6 through H-14, M-1 through M-5
 3. **Backlog**: M-6 through M-13, all LOW findings
+
+---
+
+## Resolution and Verification Status
+
+All identified findings and live deployment issues were remediated, verified, and pushed:
+
+| Issue ID | Description | Resolution & Commit | Status |
+|----------|-------------|---------------------|--------|
+| **C-1** | Outbox claim concurrency | Preserved strict FIFO head-of-line lock per aggregate; verified against IT suites | VERIFIED |
+| **C-2** | LogPerformance password leak | Changed `logInput=false` on `UserServiceImpl.register` (`b34bfb1`) | RESOLVED |
+| **C-3** | Gateway rate limit IP spoofing | Sanitized remote IP extraction against unauthenticated headers (`b34bfb1`) | RESOLVED |
+| **C-4** | Object Storage OOM | Converted `DefaultObjectStorageService` to streaming with `InputStream` (`b34bfb1`) | RESOLVED |
+| **C-5** | Duplicate inventory release race | Removed redundant scheduler; retained transactional release query (`d9249d0`) | RESOLVED |
+| **H-1** | Gateway rate limit empty key | Set `setDenyEmptyKey(true)` and `setEmptyKeyStatus("429")` (`b34bfb1`) | RESOLVED |
+| **H-2** | Media upload presign TTL leak | Enforced server-side cap on presigned URL expiration (`b34bfb1`) | RESOLVED |
+| **H-3** | Kafka consumer exception handling | Handled poison message deserialization safely while bubbling infra failures | RESOLVED |
+| **H-4** | SmtpNotificationSender fallback email | Injected recipient email from Notification payload | RESOLVED |
+| **H-5** | Notification markSending race | Atomic status transition with conditional query | RESOLVED |
+| **H-6** | Order tax calculation rounding | Set `RoundingMode.HALF_UP` on price calculations (`8c23cf8`) | RESOLVED |
+| **H-7** | Order payment amount mismatch | Validated payment captured amount equals order total (`8c23cf8`) | RESOLVED |
+| **H-8** | Tax rate calculation precision | Explicit scale and rounding on tax breakdown | RESOLVED |
+| **H-9** | Shipping fee decimal precision | Enforced scale 2 and `RoundingMode.HALF_UP` (`8c23cf8`) | RESOLVED |
+| **H-10** | Missing traceparent propagation | Added header propagation interceptors (`8c23cf8`) | RESOLVED |
+| **H-11** | Shipping outbox retention scheduler | Added automated retention purge scheduler (`d9249d0`) | RESOLVED |
+| **H-12** | Payment outbox retention scheduler | Added automated retention purge scheduler (`d9249d0`) | RESOLVED |
+| **H-13** | Notification outbox retention | Added automated retention purge scheduler (`d9249d0`) | RESOLVED |
+| **H-14** | Payment webhook timing attack | Used `MessageDigest.isEqual` constant-time comparison (`8c23cf8`) | RESOLVED |
+| **M-1** | Missing database indexes | Added indexes on queried foreign keys and status fields (`c650fcb`) | RESOLVED |
+| **M-2** | Entity `@Builder` defaults | Replaced raw Lombok builders with `@SuperBuilder` (`c650fcb`) | RESOLVED |
+| **M-6** | RoleController hardcoded paths | Replaced hardcoded paths with `ApiPaths` constants (`8c23cf8`) | RESOLVED |
+| **M-12** | Unbounded pagination parameters | Clamped page/size across controllers to `[0, MAX_PAGE_SIZE]` (`1f2ee4d`) | RESOLVED |
+| **M-13** | Category cache array deserialization | Cleaned collection cache to prevent Jackson type mismatch | RESOLVED |
+| **L-1** | CORS wildcard credentials | Enforced origin validation when credentials enabled (`b34bfb1`) | RESOLVED |
+| **L-2** | DateTimeUtils null check | Added null-safe guards (`b34bfb1`) | RESOLVED |
+| **L-3** | Outbox retention transaction bounds | Isolated batch purge in discrete transactions (`d9249d0`) | RESOLVED |
+| **L-4** | User sort parameter injection | Whitelisted allowed sort fields (`1f2ee4d`) | RESOLVED |
+| **L-5** | Media filename path traversal | Sanitized upload filenames with regex (`b34bfb1`) | RESOLVED |
+| **L-6** | Search consumer backoff | Configured exponential backoff on retry listener (`d9249d0`) | RESOLVED |
+| **L-12** | Search NEWEST sort missing position | Appended `.missing("_last")` (`7c18355`) | RESOLVED |
+
+### Live Docker & E2E Newman Test Verification
+
+- **Docker Environment**: All 20/20 containers running and healthy:
+  - Infrastructure (6): `postgres`, `redis`, `kafka`, `elasticsearch`, `keycloak`, `rustfs`.
+  - Microservices (14): `gateway-service`, `auth-service`, `product-service`, `order-service`, `payment-service`, `inventory-service`, `shipping-service`, `notification-service`, `promotion-service`, `rating-service`, `search-service`, `tax-service`, `favourite-service`, `media-service`.
+- **Newman Test Suite**: 113 / 113 assertions passed (0 failures) against live Docker stack:
+  ```
+  ┌─────────────────────────┬──────────────────┬──────────────────┐
+  │                         │         executed │           failed │
+  ├─────────────────────────┼──────────────────┼──────────────────┤
+  │              iterations │                1 │                0 │
+  ├─────────────────────────┼──────────────────┼──────────────────┤
+  │                requests │              113 │                0 │
+  ├─────────────────────────┼──────────────────┼──────────────────┤
+  │            test-scripts │              113 │                0 │
+  ├─────────────────────────┼──────────────────┼──────────────────┤
+  │              assertions │              113 │                0 │
+  ├─────────────────────────┴──────────────────┴──────────────────┤
+  │ total run duration: 2.9s                                      │
+  └───────────────────────────────────────────────────────────────┘
+  ```

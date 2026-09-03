@@ -44,7 +44,9 @@ public class StorefrontRatingController {
             @RequestParam UUID productId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<RatingResponse> result = ratingService.findVisibleByProductId(productId, page, size);
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        Page<RatingResponse> result = ratingService.findVisibleByProductId(productId, safePage, safeSize);
         return ApiResponse.ok(PageResponse.of(
             result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));
     }

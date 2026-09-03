@@ -61,7 +61,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "${ORDER_SERVICE_CLIENT_SECRET}"
+      "secret": "changeme"
     },
     {
       "clientId": "rating-service",
@@ -74,7 +74,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "${RATING_SERVICE_CLIENT_SECRET}"
+      "secret": "changeme"
     },
     {
       "clientId": "search-service",
@@ -87,7 +87,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "${SEARCH_SERVICE_CLIENT_SECRET}"
+      "secret": "changeme"
     },
     {
       "clientId": "product-service",
@@ -100,7 +100,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "${PRODUCT_SERVICE_CLIENT_SECRET}"
+      "secret": "changeme"
     },
     {
       "clientId": "media-service",
@@ -113,7 +113,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "${MEDIA_SERVICE_CLIENT_SECRET}"
+      "secret": "changeme"
     }
   ],
   "users": [
@@ -127,7 +127,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "${KEYCLOAK_TEST_USER_PASSWORD}",
+          "value": "changeme",
           "temporary": false
         }
       ],

@@ -65,7 +65,9 @@ public class RatingServiceImpl implements RatingService {
     @Override
     @Transactional(readOnly = true)
     public Page<RatingResponse> findVisibleByProductId(UUID productId, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE),
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        PageRequest pageRequest = PageRequest.of(safePage, safeSize,
                 Sort.by(Sort.Direction.DESC, "createdAt"));
         return ratingRepository.findByProductIdAndHiddenFalseAndDeletedFalse(productId, pageRequest)
                 .map(RatingResponse::from);

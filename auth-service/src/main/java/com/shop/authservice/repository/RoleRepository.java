@@ -5,7 +5,7 @@ import com.shop.authservice.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -15,5 +15,5 @@ public interface RoleRepository extends JpaRepository<Role, UUID> {
 
     Optional<Role> findByName(RoleName name);
 
-    Set<Role> findByNameIn(List<String> names);
+    Set<Role> findByNameIn(Collection<RoleName> names);
 }

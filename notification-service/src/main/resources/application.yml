@@ -25,6 +25,11 @@ spring:
 server:
   port: ${SERVER_PORT:8090}
 
+management:
+  health:
+    mail:
+      enabled: false
+
 shop:
   kafka:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

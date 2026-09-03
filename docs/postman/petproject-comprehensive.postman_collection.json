@@ -133,7 +133,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"changeme\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -440,7 +440,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"testpass\"\n}",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"changeme\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

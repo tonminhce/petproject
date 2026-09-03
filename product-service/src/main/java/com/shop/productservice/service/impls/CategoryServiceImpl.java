@@ -35,7 +35,6 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "category", key = "'all'")
     public List<CategoryResponse> findAll() {
         return repo.findAllByOrderByTitleAsc().stream()
             .map(mapper::toResponse)
@@ -44,7 +43,6 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "category", key = "'tree'")
     public List<CategoryTreeResponse> findTree() {
         List<Category> all = repo.findAllByOrderByTitleAsc();
         Map<UUID, CategoryTreeResponse> nodeMap = new LinkedHashMap<>();

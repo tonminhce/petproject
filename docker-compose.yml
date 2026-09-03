@@ -11,6 +11,7 @@
 # ------------------------------------------------------------
 x-restart: &restart
   restart: unless-stopped
+  pull_policy: never
 
 x-logging: &logging
   logging:
@@ -49,6 +50,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "max_connections=300"]
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
@@ -395,11 +397,11 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
-      # Promotion reservation flow (reserve/commit/release) — service is live.
+      PRODUCT_SERVICE_URL: http://product-service:8086
+      INVENTORY_SERVICE_URL: http://inventory-service:8082
       PROMOTION_SERVICE_ENABLED: "true"
       PROMOTION_SERVICE_URL: http://promotion-service:8093
       TAX_SERVICE_URL: http://tax-service:8091
-      # order-wiring D1 — payment-captured confirm gate (fail-closed), flip on post-verify.
       PAYMENT_SERVICE_ENABLED: ${PAYMENT_SERVICE_ENABLED:-false}
       PAYMENT_SERVICE_URL: http://payment-service:8085
       SPRING_DATA_REDIS_HOST: redis
@@ -553,6 +555,8 @@ services:
     image: media-service:latest
     container_name: media-service
     <<: [*restart, *logging]
+    ports:
+      - "8083:8083"
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mediaservice

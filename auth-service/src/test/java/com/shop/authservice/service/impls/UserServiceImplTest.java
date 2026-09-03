@@ -113,7 +113,7 @@ class UserServiceImplTest {
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);
         when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder", "Passw0rd", List.of("USER")))
                 .thenReturn("kc-123");
-        when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
+        when(roleRepository.findByNameIn(List.of(RoleName.USER))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(user);
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -290,7 +290,7 @@ class UserServiceImplTest {
         when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
                 "Passw0rd", List.of("USER")))
                 .thenReturn("kc-123");
-        when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
+        when(roleRepository.findByNameIn(List.of(RoleName.USER))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -300,7 +300,7 @@ class UserServiceImplTest {
         // before the call to Keycloak and before resolveRoles().
         verify(keycloakAdminClient).createUser("alice", "alice@example.com",
                 "Alice Wonder", "Passw0rd", List.of("USER"));
-        verify(roleRepository).findByNameIn(List.of("USER"));
+        verify(roleRepository).findByNameIn(List.of(RoleName.USER));
     }
 
     @Test
@@ -313,7 +313,7 @@ class UserServiceImplTest {
         when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
                 "Passw0rd", List.of("USER")))
                 .thenReturn("kc-123");
-        when(roleRepository.findByNameIn(List.of("USER"))).thenReturn(Set.of(userRole));
+        when(roleRepository.findByNameIn(List.of(RoleName.USER))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -334,7 +334,7 @@ class UserServiceImplTest {
         when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
                 "Passw0rd", List.of()))
                 .thenReturn("kc-123");
-        when(roleRepository.findByNameIn(List.of())).thenReturn(Set.of());
+        when(roleRepository.findByNameIn(List.<RoleName>of())).thenReturn(Set.of());
         when(userMapper.toEntity(req)).thenReturn(newUser());
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -342,7 +342,7 @@ class UserServiceImplTest {
 
         verify(keycloakAdminClient).createUser("alice", "alice@example.com",
                 "Alice Wonder", "Passw0rd", List.of());
-        verify(roleRepository).findByNameIn(List.of());
+        verify(roleRepository).findByNameIn(List.<RoleName>of());
     }
 
     // ------------------------------------------------------------------

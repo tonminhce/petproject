@@ -4,9 +4,11 @@ import com.shop.common.core.data.AbstractMappedEntity;
 import com.shop.taxservice.constant.TaxConstants;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
+import java.sql.Types;
 import java.util.UUID;
 
 @Entity
@@ -22,7 +24,8 @@ public class TaxRate extends AbstractMappedEntity {
     @Column(name = "tax_class_id", nullable = false)
     private UUID taxClassId;
 
-    @Column(name = "country", nullable = false, length = 2)
+    @JdbcTypeCode(Types.CHAR)
+    @Column(name = "country", nullable = false, length = 2, columnDefinition = "char(2)")
     private String country;
 
     @Column(name = "postal_code", length = 16)
