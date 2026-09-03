@@ -11,7 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * Storefront product search (spec D5). Deliberately NOT annotated with
@@ -32,5 +35,10 @@ public class SearchController {
     public ApiResponse<PageResponse<ProductSearchResponse>> search(
             @Valid @ModelAttribute SearchRequest request) {
         return ApiResponse.ok(searchQueryService.search(request));
+    }
+
+    @GetMapping("/suggestions")
+    public ApiResponse<List<String>> getSuggestions(@RequestParam("q") String query) {
+        return ApiResponse.ok(searchQueryService.getSuggestions(query));
     }
 }

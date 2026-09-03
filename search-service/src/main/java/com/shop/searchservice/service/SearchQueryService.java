@@ -4,6 +4,8 @@ import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.searchservice.dto.request.SearchRequest;
 import com.shop.searchservice.dto.response.ProductSearchResponse;
 
+import java.util.List;
+
 /**
  * Storefront product query over the {@code products} alias (spec D5):
  * multi_match full-text search with keyword/price/rating filters, the five
@@ -16,4 +18,6 @@ import com.shop.searchservice.dto.response.ProductSearchResponse;
 public interface SearchQueryService {
 
     PageResponse<ProductSearchResponse> search(SearchRequest request);
+
+    List<String> getSuggestions(String query);
 }

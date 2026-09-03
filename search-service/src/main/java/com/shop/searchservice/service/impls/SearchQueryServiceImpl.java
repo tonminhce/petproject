@@ -100,6 +100,34 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         return PageResponse.of(content, request.page(), size, total);
     }
 
+    @Override
+    public List<String> getSuggestions(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        try {
+            SearchResponse<Map> response = client.search(s -> s
+                    .index(IndexProvisioner.ALIAS)
+                    .query(q -> q.matchPhrasePrefix(mpp -> mpp
+                            .field("title")
+                            .query(query.trim())))
+                    .size(10),
+                    Map.class);
+            if (response.hits() == null || response.hits().hits() == null) {
+                return List.of();
+            }
+            return response.hits().hits().stream()
+                    .map(Hit::source)
+                    .map(doc -> str(doc, "title"))
+                    .filter(title -> title != null && !title.isBlank())
+                    .distinct()
+                    .toList();
+        } catch (ElasticsearchException | IOException ex) {
+            log.warn("Failed to fetch search suggestions for query: {}", query, ex);
+            return List.of();
+        }
+    }
+
     /**
      * Build the bool query (multi_match / match_all, brand/category filters,
      * price range, minRating floor). Pure construction; safe to invoke from
