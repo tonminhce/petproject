@@ -50,6 +50,10 @@ public interface ProductRepository
     @EntityGraph(attributePaths = {"category", "brand"})
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
+    @Override
+    @EntityGraph(attributePaths = {"category", "brand"})
+    Page<Product> findAll(Pageable pageable);
+
     boolean existsBySlug(String slug);
 
     boolean existsBySku(String sku);

@@ -4,13 +4,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.shop.orderservice.config.ShopServicesProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Client-credentials token cache for outbound service-to-service calls.
@@ -36,11 +39,15 @@ public class ServiceTokenProvider {
     private final String clientSecret;
 
     private final AtomicReference<CachedToken> cache = new AtomicReference<>();
+    private final ReentrantLock refreshLock = new ReentrantLock();
 
     public ServiceTokenProvider(RestClient.Builder restClientBuilder,
                                 ShopServicesProperties properties) {
         ShopServicesProperties.Keycloak kc = properties.keycloak();
-        this.restClient = restClientBuilder.build();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(5000);
+        this.restClient = restClientBuilder.requestFactory(factory).build();
         this.tokenUrl = kc.tokenUrl();
         this.clientId = kc.clientId();
         this.clientSecret = kc.clientSecret();
@@ -56,10 +63,27 @@ public class ServiceTokenProvider {
         if (current != null && current.expiresAt().isAfter(cutoff)) {
             return current.accessToken();
         }
-        return refreshToken();
+        try {
+            if (refreshLock.tryLock(5, TimeUnit.SECONDS)) {
+                try {
+                    return refreshToken();
+                } finally {
+                    refreshLock.unlock();
+                }
+            } else {
+                current = cache.get();
+                if (current != null && current.expiresAt().isAfter(Instant.now())) {
+                    return current.accessToken();
+                }
+                throw new IllegalStateException("Timeout acquiring Keycloak token refresh lock");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted waiting for Keycloak token refresh", e);
+        }
     }
 
-    private synchronized String refreshToken() {
+    private String refreshToken() {
         CachedToken current = cache.get();
         Instant cutoff = Instant.now().plusSeconds(REFRESH_SKEW_SECONDS);
         if (current != null && current.expiresAt().isAfter(cutoff)) {
