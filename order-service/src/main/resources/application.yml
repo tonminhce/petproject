@@ -39,6 +39,7 @@ shop:
   security:
     public-paths:
       - path: /api/v1/carts/**
+      - path: /api/v1/orders/track
 
   services:
     product:

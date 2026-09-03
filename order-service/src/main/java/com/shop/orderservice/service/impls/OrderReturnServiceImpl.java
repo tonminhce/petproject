@@ -52,6 +52,13 @@ public class OrderReturnServiceImpl implements OrderReturnService {
             throw BusinessException.badRequest("order.return.refund.exceeds.total");
         }
 
+        List<OrderReturn> existingReturns = orderReturnRepository.findByOrderId(orderId);
+        boolean hasActive = existingReturns.stream()
+                .anyMatch(r -> r.getStatus() == ReturnStatus.REQUESTED);
+        if (hasActive) {
+            throw BusinessException.conflict("order.return.pending.exists");
+        }
+
         OrderReturn orderReturn = OrderReturn.builder()
                 .order(order)
                 .userId(userId)
@@ -107,7 +114,10 @@ public class OrderReturnServiceImpl implements OrderReturnService {
         orderReturn.setReviewedAt(Instant.now());
 
         if (request.status() == ReturnStatus.APPROVED || request.status() == ReturnStatus.REFUNDED) {
-            paymentServiceClient.refundByOrderId(orderReturn.getOrder().getId());
+            boolean refunded = paymentServiceClient.refundByOrderId(orderReturn.getOrder().getId());
+            if (!refunded) {
+                throw BusinessException.badRequest("order.return.refund.gateway.failed");
+            }
             orderReturn.setStatus(ReturnStatus.REFUNDED);
         }
 

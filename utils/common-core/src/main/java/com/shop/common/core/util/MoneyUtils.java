@@ -58,16 +58,27 @@ public final class MoneyUtils {
     }
 
     public static BigDecimal calculateDiscount(BigDecimal amount, BigDecimal percentage) {
+        return calculateDiscount(amount, percentage, "USD");
+    }
+
+    public static BigDecimal calculateDiscount(BigDecimal amount, BigDecimal percentage, String currency) {
         if (amount == null || percentage == null || percentage.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
-        return amount.multiply(percentage).divide(HUNDRED, 2, RoundingMode.HALF_UP);
+        BigDecimal cappedPercentage = percentage.compareTo(HUNDRED) > 0 ? HUNDRED : percentage;
+        int scale = getScaleForCurrency(currency);
+        return amount.multiply(cappedPercentage).divide(HUNDRED, scale, RoundingMode.HALF_UP);
     }
 
     public static BigDecimal calculateTax(BigDecimal subtotal, BigDecimal taxRate) {
+        return calculateTax(subtotal, taxRate, "USD");
+    }
+
+    public static BigDecimal calculateTax(BigDecimal subtotal, BigDecimal taxRate, String currency) {
         if (subtotal == null || taxRate == null || taxRate.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
-        return subtotal.multiply(taxRate).divide(HUNDRED, 2, RoundingMode.HALF_UP);
+        int scale = getScaleForCurrency(currency);
+        return subtotal.multiply(taxRate).divide(HUNDRED, scale, RoundingMode.HALF_UP);
     }
 }

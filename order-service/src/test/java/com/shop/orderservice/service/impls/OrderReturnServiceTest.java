@@ -132,6 +132,7 @@ class OrderReturnServiceTest {
                 .build();
         when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentServiceClient.refundByOrderId(orderId)).thenReturn(true);
 
         OrderReturnReviewRequest review = new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager");
 

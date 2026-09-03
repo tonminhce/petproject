@@ -77,13 +77,13 @@ public class PaymentServiceClient {
         }
     }
 
-    public void refundByOrderId(UUID orderId) {
+    public boolean refundByOrderId(UUID orderId) {
         if (!isEnabled()) {
-            return;
+            return true;
         }
         Optional<PaymentStatusSnapshot> captured = findCapturedByOrderId(orderId);
         if (captured.isEmpty()) {
-            return;
+            return false;
         }
         UUID paymentId = captured.get().id();
         try {
@@ -93,8 +93,10 @@ public class PaymentServiceClient {
                 .retrieve()
                 .toBodilessEntity();
             log.info("Successfully triggered refund for payment {} on order {}", paymentId, orderId);
+            return true;
         } catch (RestClientException ex) {
             log.error("Failed to trigger refund for payment {} on order {}", paymentId, orderId, ex);
+            return false;
         }
     }
 }

@@ -49,4 +49,18 @@ class MoneyUtilsTest {
         BigDecimal tax = MoneyUtils.calculateTax(subtotal, new BigDecimal("8.5"));
         assertThat(tax).isEqualByComparingTo("8.50");
     }
+
+    @Test
+    void calculateDiscount_vndCurrency_returnsZeroDecimals() {
+        BigDecimal amount = new BigDecimal("150000");
+        BigDecimal discount = MoneyUtils.calculateDiscount(amount, new BigDecimal("10"), "VND");
+        assertThat(discount).isEqualByComparingTo("15000");
+    }
+
+    @Test
+    void calculateDiscount_cappedAtHundredPercent() {
+        BigDecimal amount = new BigDecimal("200.00");
+        BigDecimal discount = MoneyUtils.calculateDiscount(amount, new BigDecimal("150"), "USD");
+        assertThat(discount).isEqualByComparingTo("200.00");
+    }
 }
