@@ -5,7 +5,7 @@ import com.shop.notificationservice.entity.Notification;
 import com.shop.notificationservice.repository.NotificationRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -33,8 +33,18 @@ import java.util.UUID;
  * heartbeat has elapsed is reclaimable — that is the crash-mid-send recovery
  * path. F3 — {@code notification_failed_permanent_total} increments on every
  * terminal failure so ops can alert on it.</p>
+ *
+ * <p>H23 — {@code @Repository} (not {@code @Service}): the class is a pure
+ * persistence-layer component — every method writes through {@link
+ * com.shop.notificationservice.repository.NotificationRepository} and the
+ * status-machine guards exist solely to keep the row's {@code @Enumerated}
+ * column in a legal state. {@code @Service} is reserved for classes that own
+ * business logic. See Spring's stereotype docs:
+ * <a href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html">@Repository javadoc</a>
+ * and
+ * <a href="https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html">classpath scanning / stereotype page</a>.</p>
  */
-@Service
+@Repository
 public class NotificationWriter {
 
     private static final int MAX_ERROR_LENGTH = 1024;

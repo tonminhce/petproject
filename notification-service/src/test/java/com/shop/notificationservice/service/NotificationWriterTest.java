@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -54,6 +56,26 @@ class NotificationWriterTest {
     }
 
     // ---- insert -------------------------------------------------------
+
+    /**
+     * H23 — the writer is a persistence-layer component: its only job is to
+     * mediate writes to the notifications table through {@link NotificationRepository}.
+     * Per Spring's stereotype guidance, that is exactly what
+     * {@link Repository @Repository} is for (a specialization of {@code @Component}
+     * marking the persistence layer); {@link Service @Service} should be reserved
+     * for classes that own business logic. See:
+     * https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html
+     * https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html
+     */
+    @Test
+    void writerIsAnnotatedAsRepositoryNotService() {
+        assertThat(NotificationWriter.class.isAnnotationPresent(Repository.class))
+                .as("@Repository marks NotificationWriter as a persistence-layer component (H23)")
+                .isTrue();
+        assertThat(NotificationWriter.class.isAnnotationPresent(Service.class))
+                .as("@Service is reserved for classes that own business logic, not pure DB writes (H23)")
+                .isFalse();
+    }
 
     @Test
     void insert_flushesAndReturnsSavedRow() {
