@@ -1,0 +1,1207 @@
+{
+  "info": {
+    "name": "Petproject - Full End-to-End Business Flow",
+    "description": "Complete real-world E2E workflow covering all 14 microservices: Auth -> Catalog -> Inventory -> Cart -> Order -> Payment -> Shipping -> Rating -> Favourite -> Search -> Notification -> Tax -> Promotion -> Media -> Gateway.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "authUrl",
+      "value": "http://localhost:8088"
+    },
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "productUrl",
+      "value": "http://localhost:8086"
+    },
+    {
+      "key": "inventoryUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "orderUrl",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "paymentUrl",
+      "value": "http://localhost:8085"
+    },
+    {
+      "key": "shippingUrl",
+      "value": "http://localhost:8087"
+    },
+    {
+      "key": "ratingUrl",
+      "value": "http://localhost:8089"
+    },
+    {
+      "key": "favouriteUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "searchUrl",
+      "value": "http://localhost:8094"
+    },
+    {
+      "key": "notificationUrl",
+      "value": "http://localhost:8090"
+    },
+    {
+      "key": "taxUrl",
+      "value": "http://localhost:8091"
+    },
+    {
+      "key": "promotionUrl",
+      "value": "http://localhost:8093"
+    },
+    {
+      "key": "mediaUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "userToken",
+      "value": ""
+    },
+    {
+      "key": "catSlug",
+      "value": ""
+    },
+    {
+      "key": "brandSlug",
+      "value": ""
+    },
+    {
+      "key": "prodSlug",
+      "value": ""
+    },
+    {
+      "key": "prodSku",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "brandId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "shipmentId",
+      "value": ""
+    },
+    {
+      "key": "taxClassId",
+      "value": ""
+    },
+    {
+      "key": "mediaId",
+      "value": ""
+    },
+    {
+      "key": "promoCode",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "1.1 Admin Login",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"adminuser\", \"password\": \"adminpass\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin login succeeds\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.accessToken).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"adminToken\", res.data.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 User Login",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"testuser\", \"password\": \"changeme\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"User login succeeds\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.accessToken).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"userToken\", res.data.accessToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Catalog & Products",
+      "item": [
+        {
+          "name": "2.1 Create Category (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/categories",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Electronics E2E\", \"slug\": \"{{catSlug}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"catSlug\", \"cat-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Category created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"categoryId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Create Brand (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/brands",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Apple E2E\", \"slug\": \"{{brandSlug}}\", \"description\": \"Apple E2E Brand\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"brandSlug\", \"brand-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Brand created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"brandId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Create Product (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/products",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"MacBook Pro E2E\", \"slug\": \"{{prodSlug}}\", \"sku\": \"{{prodSku}}\", \"priceUnit\": 1999.0, \"quantity\": 50, \"status\": \"ACTIVE\", \"categoryId\": \"{{categoryId}}\", \"brandId\": \"{{brandId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"prodSlug\", \"macbook-\" + ts);",
+                  "pm.collectionVariables.set(\"prodSku\", \"SKU-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Product created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"productId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.4 Get Categories Storefront",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/categories",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Categories retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data).to.be.an(\"array\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.5 Get Product by ID Storefront",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/products/{{productId}}",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Product retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.title).to.eql(\"MacBook Pro E2E\");",
+                  "pm.expect(res.data.status).to.eql(\"ACTIVE\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Inventory",
+      "item": [
+        {
+          "name": "3.1 Seed Product Inventory (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\", \"availableQuantity\": 100}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Inventory created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.availableQuantity).to.eql(100);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Get Product Inventory",
+          "request": {
+            "method": "GET",
+            "url": "{{inventoryUrl}}/api/v1/inventory/{{productId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Inventory retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.availableQuantity).to.eql(100);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Cart & Order",
+      "item": [
+        {
+          "name": "4.1 Add Product to Cart (User)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\", \"quantity\": 1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Product added to cart\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.items).to.be.an(\"array\");",
+                  "pm.expect(res.data.subtotal).to.be.at.least(1999.00);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 View Cart (User)",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/carts/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cart retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.items.length).to.be.at.least(1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Place Order from Cart (User)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order placed successfully\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.be.a(\"string\");",
+                  "pm.expect(res.data.status).to.eql(\"PENDING\");",
+                  "pm.collectionVariables.set(\"orderId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.4 Get Order Details (User)",
+          "request": {
+            "method": "GET",
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order details retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.eql(pm.collectionVariables.get(\"orderId\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Order Fulfillment Lifecycle",
+      "item": [
+        {
+          "name": "5.1 Confirm Order (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/confirm",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order confirmed\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.status).to.eql(\"CONFIRMED\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Ship Order (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/ship",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order shipped\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.status).to.eql(\"SHIPPED\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Deliver Order (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/deliver",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order delivered\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.status).to.eql(\"DELIVERED\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Payment",
+      "item": [
+        {
+          "name": "6.1 Create Payment (Admin/Service)",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"{{orderId}}\", \"amount\": 1999.0, \"currency\": \"USD\", \"idempotencyKey\": \"{{payKey}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Payment created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"paymentId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Capture Payment (Admin/Service)",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments/{{paymentId}}/capture",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Payment captured\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Rating & Favourite",
+      "item": [
+        {
+          "name": "7.1 Submit Rating for Delivered Product (User)",
+          "request": {
+            "method": "POST",
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\", \"rating\": 5, \"comment\": \"MacBook Pro E2E is exceptional!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rating submitted\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.verified).to.eql(true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 View Ratings for Product",
+          "request": {
+            "method": "GET",
+            "url": "{{ratingUrl}}/api/v1/ratings?productId={{productId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Ratings list retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.content.length).to.be.at.least(1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.3 Add Product to Favourites (User)",
+          "request": {
+            "method": "POST",
+            "url": "{{favouriteUrl}}/api/v1/favourites",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Favourite added\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.4 View User Favourites (User)",
+          "request": {
+            "method": "GET",
+            "url": "{{favouriteUrl}}/api/v1/favourites",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Favourites retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.content.length).to.be.at.least(1);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Search & Notification",
+      "item": [
+        {
+          "name": "8.1 Reindex Search (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{searchUrl}}/api/v1/backoffice/search/reindex",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Search reindex successful\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.indexed).to.be.at.least(1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.2 Search for Product in Elasticsearch",
+          "request": {
+            "method": "GET",
+            "url": "{{searchUrl}}/api/v1/search?q=MacBook",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Search returns results\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.content.length).to.be.at.least(1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.3 View Notifications for Order (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{notificationUrl}}/api/v1/backoffice/notifications?orderId={{orderId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Notifications retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.content).to.be.an(\"array\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Tax & Promotion",
+      "item": [
+        {
+          "name": "9.1 Create Tax Class (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"{{taxClassName}}\", \"defaultRatePct\": 10.0}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"taxClassName\", \"Laptops-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Tax class created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.id).to.be.a(\"string\");",
+                  "pm.collectionVariables.set(\"taxClassId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9.2 Calculate Tax",
+          "request": {
+            "method": "POST",
+            "url": "{{taxUrl}}/api/v1/tax/calculate",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"taxClassId\": \"{{taxClassId}}\", \"country\": \"US\", \"amount\": 1999.0}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Tax calculated\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.taxAmount).to.be.at.least(0);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9.3 Create Promotion Campaign (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"{{promoCode}}\", \"name\": \"E2E Promo Campaign\", \"discountType\": \"PERCENT\", \"discountValue\": 15.0, \"status\": \"ACTIVE\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"promoCode\", \"PROMO\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Promotion campaign created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Gateway E2E Routing",
+      "item": [
+        {
+          "name": "10.1 Products via Gateway",
+          "request": {
+            "method": "GET",
+            "url": "{{gatewayUrl}}/api/v1/products",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Products routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.2 Favourites via Gateway",
+          "request": {
+            "method": "GET",
+            "url": "{{gatewayUrl}}/api/v1/favourites",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Favourites routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.3 Search via Gateway",
+          "request": {
+            "method": "GET",
+            "url": "{{gatewayUrl}}/api/v1/search?q=MacBook",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Search routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

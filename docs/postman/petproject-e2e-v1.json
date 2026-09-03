@@ -96,7 +96,7 @@
           "name": "[Public] Login testuser",
           "request": {
             "method": "POST",
-            "header": [{"key":"Content-Type","value":"{\"username\":\"testuser\",\"password\":\"testpass\"}"}],
+            "header": [{"key":"Content-Type","value":"{\"username\":\"testuser\",\"password\":\"changeme\"}"}],
             "url": {
               "raw": "{{auth_url}}/api/v1/auth/login"
             }
