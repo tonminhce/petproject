@@ -1202,6 +1202,533 @@
           ]
         }
       ]
+    },
+    {
+      "name": "11. Edge Cases - Auth & Security",
+      "item": [
+        {
+          "name": "11.1 Login with Invalid Password (expect 401)",
+          "request": {
+            "method": "POST",
+            "url": "{{authUrl}}/api/v1/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"testuser\", \"password\": \"wrongpassword123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects invalid password with 401\", () => pm.expect(pm.response.code).to.eql(401));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);",
+                  "pm.expect(res.code).to.eql(\"ERR-0401\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.2 Access Protected Route Without Token (expect 401)",
+          "request": {
+            "method": "GET",
+            "url": "{{authUrl}}/api/v1/users/me",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects unauthenticated request with 401\", () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.3 Regular User Accesses Admin Endpoint (expect 403)",
+          "request": {
+            "method": "GET",
+            "url": "{{authUrl}}/api/v1/users",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects non-admin access with 403\", () => pm.expect(pm.response.code).to.eql(403));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);",
+                  "pm.expect(res.code).to.eql(\"ERR-0403\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12. Edge Cases - Catalog & Products",
+      "item": [
+        {
+          "name": "12.1 Create Product with Negative Price (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/products",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Invalid Price Product\", \"slug\": \"{{badSlug}}\", \"sku\": \"{{badSku}}\", \"priceUnit\": -10.0, \"quantity\": 5, \"status\": \"ACTIVE\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"badSku\", \"BAD-\" + ts);",
+                  "pm.collectionVariables.set(\"badSlug\", \"bad-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects negative price with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.2 Regular User Tries to Create Product (expect 403)",
+          "request": {
+            "method": "POST",
+            "url": "{{productUrl}}/api/v1/backoffice/products",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Unauthorized Product\", \"slug\": \"unauth-prod\", \"sku\": \"UNAUTH-01\", \"priceUnit\": 100.0, \"quantity\": 5, \"status\": \"ACTIVE\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects regular user product creation with 403\", () => pm.expect(pm.response.code).to.eql(403));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.3 Get Product by Non-Existent ID (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": "{{productUrl}}/api/v1/products/00000000-0000-0000-0000-000000000000",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Returns 404 for non-existent product\", () => pm.expect(pm.response.code).to.eql(404));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13. Edge Cases - Inventory & Cart",
+      "item": [
+        {
+          "name": "13.1 Add Item to Cart with Zero Quantity (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\", \"quantity\": 0}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects zero quantity with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13.2 Add Item to Cart for Non-Existent Product (expect 404)",
+          "request": {
+            "method": "POST",
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"00000000-0000-0000-0000-000000000000\", \"quantity\": 1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Returns 404 for non-existent product in cart\", () => pm.expect(pm.response.code).to.eql(404));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);",
+                  "pm.expect(res.code).to.eql(\"PRD-2001\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13.3 Seed Inventory with Negative Stock (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\", \"availableQuantity\": -10}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects negative stock with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13.4 Reserve Stock Exceeding Available (expect 400/409)",
+          "request": {
+            "method": "POST",
+            "url": "{{inventoryUrl}}/api/v1/inventory/{{productId}}/reserve",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"00000000-0000-0000-0000-000000000002\", \"quantity\": 999999}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects excessive reservation with 400 or 409\", () => pm.expect(pm.response.code).to.be.oneOf([400, 409]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);",
+                  "pm.expect(res.code).to.eql(\"INV-3002\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14. Edge Cases - Order & Rating & Tax & Media",
+      "item": [
+        {
+          "name": "14.1 Unverified Purchaser Rates Unpurchased Product (expect 400/403)",
+          "request": {
+            "method": "POST",
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"00000000-0000-0000-0000-000000000001\", \"rating\": 5, \"comment\": \"Great product!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects unverified rating with 400 or 403\", () => pm.expect(pm.response.code).to.be.oneOf([400, 403]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.2 Submit Rating with Invalid Star Count (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"productId\": \"{{productId}}\", \"rating\": 10, \"comment\": \"Invalid rating score\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects rating > 5 with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.3 Create Tax Rate with Invalid Country Code (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-rates",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"taxClassId\": \"00000000-0000-0000-0000-000000000001\", \"country\": \"INVALID\", \"ratePct\": 5.0}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects invalid country pattern with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14.4 Send Non-Multipart Payload to Media Upload (expect 400)",
+          "request": {
+            "method": "POST",
+            "url": "{{mediaUrl}}/api/v1/backoffice/medias",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"raw\": \"bad request\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects non-multipart upload with 400\", () => pm.expect(pm.response.code).to.eql(400));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(false);",
+                  "pm.expect(res.code).to.eql(\"ERR-0400\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

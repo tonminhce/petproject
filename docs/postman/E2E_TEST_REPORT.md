@@ -13,7 +13,7 @@ All 14 microservices and 6 infrastructure containers are fully implemented, cont
 | Service | Port | Status | Capabilities & Workflows |
 |---------|------|--------|--------------------------|
 | **gateway-service** | 8080 | **HEALTHY** | Spring Cloud Gateway, JWT verification, rate limiting, CORS |
-| **auth-service** | 8088 | **HEALTHY** | Keycloak facade, user registration, JWT authentication, user profile |
+| **auth-service** | 8088 | **HEALTHY** | Keycloak facade, user registration, JWT authentication, profile, custom Keycloak exception mapping |
 | **product-service** | 8086 | **HEALTHY** | Products, categories, brands, Redis cache, outbox event publishing |
 | **inventory-service** | 8082 | **HEALTHY** | Stock management, reservations, auto-release, outbox event publishing |
 | **order-service** | 8084 | **HEALTHY** | Shopping cart, order placement, saga choreography, status transitions |
@@ -31,8 +31,8 @@ All 14 microservices and 6 infrastructure containers are fully implemented, cont
 
 ## 2. Test Execution Commands
 
-### 2.1 Full E2E Business Lifecycle Collection (31 requests)
-Runs the entire business lifecycle end-to-end with real data chaining:
+### 2.1 Full E2E Lifecycle & Edge Cases Collection (45 requests)
+Runs both the full happy path business lifecycle and edge/negative validation cases with real data chaining:
 ```bash
 npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collection.json
 ```
@@ -47,11 +47,12 @@ npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.js
 
 ## 3. Newman Test Results
 
-### 3.1 Suite 1: Full E2E Business Lifecycle (`petproject-e2e-business-flow.postman_collection.json`)
+### 3.1 Suite 1: Full E2E Business Lifecycle & Edge Cases (`petproject-e2e-business-flow.postman_collection.json`)
 
-**Executed**: 31 requests  
-**Assertions**: 31 / 31 passed (0 failures)  
-**Duration**: 1.01s  
+**Executed**: 45 requests across 14 folders (31 Happy Path + 14 Edge/Negative Cases)  
+**Assertions**: 45 / 45 passed (0 failures)  
+**Pass Rate**: **100%**  
+**Duration**: 1.72s  
 
 ```
 ┌─────────────────────────┬───────────────────┬──────────────────┐
@@ -59,64 +60,54 @@ npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.js
 ├─────────────────────────┼───────────────────┼──────────────────┤
 │              iterations │                 1 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│                requests │                31 │                0 │
+│                requests │                45 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│            test-scripts │                31 │                0 │
+│            test-scripts │                45 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│      prerequest-scripts │                 6 │                0 │
+│      prerequest-scripts │                 7 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│              assertions │                31 │                0 │
+│              assertions │                45 │                0 │
 ├─────────────────────────┴───────────────────┴──────────────────┤
-│ total run duration: 1015ms                                     │
+│ total run duration: 1728ms                                     │
 ├────────────────────────────────────────────────────────────────┤
-│ total data received: 25.44kB (approx)                          │
+│ total data received: 30.41kB (approx)                          │
 ├────────────────────────────────────────────────────────────────┤
-│ average response time: 19ms [min: 4ms, max: 186ms, s.d.: 31ms] │
+│ average response time: 24ms [min: 6ms, max: 301ms, s.d.: 43ms] │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-#### Detailed Workflow Breakdown:
-1. **Authentication**:
-   - `Admin Login` (`POST /api/v1/auth/login`) -> 200 OK (captures `adminToken`)
-   - `User Login` (`POST /api/v1/auth/login`) -> 200 OK (captures `userToken`)
-2. **Catalog & Products**:
-   - `Create Category` (`POST /api/v1/backoffice/categories`) -> 200 OK (captures `categoryId`)
-   - `Create Brand` (`POST /api/v1/backoffice/brands`) -> 200 OK (captures `brandId`)
-   - `Create Product` (`POST /api/v1/backoffice/products`) -> 200 OK (captures `productId`)
-   - `Get Categories Storefront` (`GET /api/v1/categories`) -> 200 OK
-   - `Get Product by ID Storefront` (`GET /api/v1/products/{productId}`) -> 200 OK
-3. **Inventory**:
-   - `Seed Inventory Stock` (`POST /api/v1/inventory`) -> 200 OK (100 units available)
-   - `Get Product Inventory` (`GET /api/v1/inventory/{productId}`) -> 200 OK
-4. **Cart & Order**:
-   - `Add Product to Cart` (`POST /api/v1/carts/me/items`) -> 200 OK
-   - `View Cart` (`GET /api/v1/carts/me`) -> 200 OK
-   - `Place Order from Cart` (`POST /api/v1/orders`) -> 200 OK (captures `orderId`, status `PENDING`)
-   - `Get Order Details` (`GET /api/v1/orders/{orderId}`) -> 200 OK
-5. **Order Fulfillment Lifecycle**:
-   - `Confirm Order` (`POST /api/v1/orders/{orderId}/confirm`) -> 200 OK (status `CONFIRMED`)
-   - `Ship Order` (`POST /api/v1/orders/{orderId}/ship`) -> 200 OK (status `SHIPPED`)
-   - `Deliver Order` (`POST /api/v1/orders/{orderId}/deliver`) -> 200 OK (status `DELIVERED`)
-6. **Payment**:
-   - `Create Payment` (`POST /api/v1/payments`) -> 200 OK (captures `paymentId`)
-   - `Capture Payment` (`POST /api/v1/payments/{paymentId}/capture`) -> 200 OK
-7. **Rating & Favourite**:
-   - `Submit Rating for Delivered Product` (`POST /api/v1/ratings`) -> 201 Created (`verified: true`)
-   - `View Ratings for Product` (`GET /api/v1/ratings?productId={productId}`) -> 200 OK
-   - `Add to Favourites` (`POST /api/v1/favourites`) -> 200 OK
-   - `View Favourites` (`GET /api/v1/favourites`) -> 200 OK
-8. **Search & Notification**:
-   - `Reindex Search` (`POST /api/v1/backoffice/search/reindex`) -> 200 OK (indexed in Elasticsearch)
-   - `Search Product` (`GET /api/v1/search?q=MacBook`) -> 200 OK (found with 5-star avg rating)
-   - `View Order Notifications` (`GET /api/v1/backoffice/notifications?orderId={orderId}`) -> 200 OK
-9. **Tax & Promotion**:
-   - `Create Tax Class` (`POST /api/v1/backoffice/tax-classes`) -> 200 OK (captures `taxClassId`)
-   - `Calculate Tax` (`POST /api/v1/tax/calculate`) -> 200 OK
-   - `Create Promotion Campaign` (`POST /api/v1/backoffice/promotions`) -> 200 OK
-10. **Gateway E2E Routing**:
-    - `Products via Gateway` (`GET http://localhost:8080/api/v1/products`) -> 200 OK
-    - `Favourites via Gateway` (`GET http://localhost:8080/api/v1/favourites`) -> 200 OK
-    - `Search via Gateway` (`GET http://localhost:8080/api/v1/search?q=MacBook`) -> 200 OK
+#### Detailed Scenarios Covered:
+- **Part I: Happy Path Business Lifecycle (31 requests)**
+  1. **Authentication**: Admin Login (captures `adminToken`), User Login (captures `userToken`).
+  2. **Catalog & Products**: Admin tạo Category -> Tạo Brand -> Tạo Product với slug/SKU động -> Storefront xem danh mục -> Storefront xem chi tiết sản phẩm.
+  3. **Inventory**: Admin nhập kho 100 sản phẩm -> Kiểm tra tồn kho sẵn có.
+  4. **Cart & Order**: User thêm sản phẩm vào giỏ -> Xem giỏ hàng -> Đặt đơn hàng (`PENDING`) -> Xem chi tiết đơn hàng.
+  5. **Order Fulfillment**: Admin xác nhận đơn hàng (`CONFIRMED`) -> Admin xuất kho vận chuyển (`SHIPPED`) -> Admin giao hàng thành công (`DELIVERED`).
+  6. **Payment**: Tạo giao dịch thanh toán với Idempotency Key -> Capture thanh toán thành công.
+  7. **Rating & Favourite**: User đánh giá 5 sao cho sản phẩm vừa mua (hệ thống kiểm tra `verified: true`) -> Xem danh sách ratings -> Thêm vào Wishlist Favourites.
+  8. **Search & Notification**: Reindex Elasticsearch -> Tìm kiếm sản phẩm `"MacBook"` ra đúng sản phẩm kèm average rating 5.0 -> Kiểm tra thông báo trạng thái đơn hàng.
+  9. **Tax & Promotion**: Tạo Tax Class -> Tính thuế 10% -> Tạo Campaign khuyến mãi.
+  10. **Gateway Routing**: Gọi tất cả API (Products, Favourites, Search) thông qua Spring Cloud Gateway port `8080`.
+
+- **Part II: Edge & Negative Validation Scenarios (14 requests)**
+  11. **Edge Cases - Auth & Security**:
+      - `11.1 Login with Invalid Password`: Rejects with `401 Unauthorized` and `ERR-0401` (`"Invalid username or password."`).
+      - `11.2 Access Protected Route Without Token`: Rejects with `401 Unauthorized`.
+      - `11.3 Regular User Accesses Admin Endpoint`: Rejects with `403 Forbidden` and `ERR-0403`.
+  12. **Edge Cases - Catalog & Products**:
+      - `12.1 Create Product with Negative Price`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"priceUnit: Price unit must be at least 0.0"`).
+      - `12.2 Regular User Tries to Create Product`: Rejects with `403 Forbidden`.
+      - `12.3 Get Product by Non-Existent ID`: Returns `404 Not Found`.
+  13. **Edge Cases - Inventory & Cart**:
+      - `13.1 Add Item to Cart with Zero Quantity`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"quantity: must be greater than or equal to 1"`).
+      - `13.2 Add Item to Cart for Non-Existent Product`: Returns `404 Not Found` with `PRD-2001`.
+      - `13.3 Seed Inventory with Negative Stock`: Rejects with `400 Bad Request` and `ERR-0422-V`.
+      - `13.4 Reserve Stock Exceeding Available`: Rejects with `409 Conflict` and `INV-3002` (`"Insufficient stock for the requested quantity."`).
+  14. **Edge Cases - Order & Rating & Tax & Media**:
+      - `14.1 Unverified Purchaser Rates Unpurchased Product`: Rejects with `403 Forbidden` and `RTG-11001` (`"Only verified purchasers can rate this product"`).
+      - `14.2 Submit Rating with Invalid Star Count (10 stars)`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"rating: must be less than or equal to 5"`).
+      - `14.3 Create Tax Rate with Invalid Country Code ("INVALID")`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"country: must match ^[A-Z]{2}$"`).
+      - `14.4 Send Non-Multipart Payload to Media Upload`: Rejects with `400 Bad Request` and `ERR-0400`.
 
 ---
 
@@ -150,8 +141,11 @@ npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.js
 
 ---
 
-## 4. Summary
+## 4. Summary & Quality Gate
 
-- **Total Requests Tested**: 144 requests across both suites.
-- **Pass Rate**: **100% (144/144 passed, 0 failures)**.
-- **Cross-Service Event Choreography**: Verified Kafka event propagation between `order-service` -> `inventory-service` (stock reservation), `order-service` -> `shipping-service` (shipment creation), `order-service` -> `notification-service` (email/log notifications), and `rating-service` -> `product-service` -> `search-service` (rating aggregation and search reindexing).
+- **Total Requests Tested**: **158 requests** across both test suites (45 business lifecycle & edge cases + 113 endpoint inventory).
+- **Total Assertions Executed**: **158 assertions**.
+- **Pass Rate**: **100% (158 / 158 passed, 0 failures)**.
+- **Coverage**:
+  - **Happy paths**: Verified end-to-end purchasing, inventory deduction, order state transitions, asynchronous event choreography, payment capture, and Elasticsearch reindexing.
+  - **Edge & Security negative paths**: Verified authentication rejections, role-based access control (403), input validation rules (negative price, zero quantity, invalid country patterns, invalid star rating), inventory over-reservation guard (409 `INV-3002`), purchase verification on product reviews (`RTG-11001`), and media content integrity (`MED-12001`).
