@@ -271,7 +271,9 @@ public class SearchQueryServiceImpl implements SearchQueryService {
             case RATING_DESC -> List.of(SortOptions.of(s -> s.field(f -> f.field("avgRating")
                 .order(SortOrder.Desc)
                 .missing("_last"))));
-            case NEWEST -> List.of(SortOptions.of(s -> s.field(f -> f.field("updatedAt").order(SortOrder.Desc))));
+            case NEWEST -> List.of(SortOptions.of(s -> s.field(f -> f.field("updatedAt")
+                .order(SortOrder.Desc)
+                .missing("_last"))));
         };
     }
 
