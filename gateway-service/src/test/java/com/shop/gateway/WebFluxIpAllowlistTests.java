@@ -30,11 +30,16 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 /**
  * D5 with ADMIN_IP_ALLOWLIST PRESENT (10.0.0.0/8,192.168.0.0/16):
  * non-matching source -> 403 envelope; webhooks and actuator health bypass;
- * first X-Forwarded-For entry is the trusted one.
+ * the rightmost trusted X-Forwarded-For entry (after {@code trusted-proxy-hops})
+ * is the one we evaluate — never the leftmost (which an attacker controls).
  */
 @SpringBootTest(
         classes = {GatewayServiceApplication.class, WebFluxIpAllowlistTests.WireMockProps.class},
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+                "server.forward-headers-strategy=NONE",
+                "gateway.rate-limit.trusted-proxy-hops=1"
+        })
 class WebFluxIpAllowlistTests {
 
     private static final RSAKey JWK = TestKeys.rsaKey();
@@ -99,13 +104,26 @@ class WebFluxIpAllowlistTests {
         WIRE_MOCK.verify(0, anyRequestedFor(urlMatching("/api/v1/backoffice/.*")));
     }
 
+    /**
+     * Pins the post-H28 contract (commit {@code 90cea14} — "fix(gateway):
+     * prevent forwarded IP allowlist spoofing"): the entry selected for the
+     * allowlist check is the one just before the trusted-proxy tail of the
+     * X-Forwarded-For chain, not the leftmost entry. With one trusted proxy
+     * hop, {@code "8.8.8.8, 10.42.0.7"} resolves the client to {@code 10.42.0.7}
+     * (matching {@code 10.0.0.0/8}) — even though a naive "first XFF entry"
+     * read would have picked {@code 8.8.8.8} and blocked the request. The
+     * leftmost entry must never be decisive; treating it as authoritative
+     * is the spoofing vector H28 closed.
+     */
     @Test
-    void firstForwardedEntryIsDecisive() {
+    void rightmostTrustedForwardedEntryIsDecisive() {
         client.get().uri("/api/v1/backoffice/products")
                 .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
                 .header("X-Forwarded-For", "8.8.8.8, 10.42.0.7")
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isOk();
+
+        WIRE_MOCK.verify(1, anyRequestedFor(urlEqualTo("/api/v1/backoffice/products")));
     }
 
     @Test
