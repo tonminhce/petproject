@@ -16,26 +16,41 @@ class NotificationTemplatesTest {
     private static final UUID ORDER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final UUID USER_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
     private static final UUID EVENT_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    private static final String OCCURRED_AT = "2026-08-30T10:00:00Z";
 
+    /**
+     * H26 — OrderLifecycleEvent is a Java record. Per R1, construction goes
+     * through the canonical ctor (no Lombok @Builder). The {@code event()}
+     * helper returns a base record with the test-wide identifiers filled in;
+     * each test builds a derived record inline so the fields actually
+     * exercised by the production code path are obvious in the test body.
+     */
     private OrderLifecycleEvent event(String eventType) {
-        OrderLifecycleEvent e = new OrderLifecycleEvent();
-        e.setEventId(EVENT_ID.toString());
-        e.setEventType(eventType);
-        e.setOccurredAt("2026-08-30T10:00:00Z");
-        e.setOrderId(ORDER_ID);
-        e.setUserId(USER_ID);
-        return e;
+        return new OrderLifecycleEvent(
+                EVENT_ID.toString(),
+                eventType,
+                OCCURRED_AT,
+                ORDER_ID,
+                USER_ID,
+                null, null, null, null, null,
+                null, null, null, null);
     }
 
     @Test
     void createdEvent_buildsSubjectAndBody() {
-        OrderLifecycleEvent e = event("order.created.v1");
-        e.setStatus("NEW");
-        e.setSubtotal(new BigDecimal("100.00"));
-        e.setTaxAmount(new BigDecimal("8.00"));
-        e.setDiscountAmount(new BigDecimal("10.00"));
-        e.setTotal(new BigDecimal("98.00"));
-        e.setItems(List.of(Map.of("sku", "A"), Map.of("sku", "B")));
+        OrderLifecycleEvent e = new OrderLifecycleEvent(
+                EVENT_ID.toString(),
+                "order.created.v1",
+                OCCURRED_AT,
+                ORDER_ID,
+                USER_ID,
+                "NEW",
+                new BigDecimal("100.00"),
+                new BigDecimal("8.00"),
+                new BigDecimal("10.00"),
+                new BigDecimal("98.00"),
+                null, null, null,
+                List.of(Map.of("sku", "A"), Map.of("sku", "B")));
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
 
@@ -47,12 +62,18 @@ class NotificationTemplatesTest {
 
     @Test
     void createdEventWithoutItems_rendersZeroItems() {
-        OrderLifecycleEvent e = event("order.created.v1");
-        e.setStatus("NEW");
-        e.setSubtotal(new BigDecimal("50.00"));
-        e.setTaxAmount(new BigDecimal("4.00"));
-        e.setDiscountAmount(BigDecimal.ZERO);
-        e.setTotal(new BigDecimal("54.00"));
+        OrderLifecycleEvent e = new OrderLifecycleEvent(
+                EVENT_ID.toString(),
+                "order.created.v1",
+                OCCURRED_AT,
+                ORDER_ID,
+                USER_ID,
+                "NEW",
+                new BigDecimal("50.00"),
+                new BigDecimal("4.00"),
+                BigDecimal.ZERO,
+                new BigDecimal("54.00"),
+                null, null, null, null);
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
 
@@ -75,10 +96,16 @@ class NotificationTemplatesTest {
 
     @Test
     void updatedEvent_buildsSubjectAndBody() {
-        OrderLifecycleEvent e = event("order.updated.v1");
-        e.setUserId(null);
-        e.setStatus("PAID");
-        e.setTransitionedAt(Instant.parse("2026-08-30T10:15:00Z"));
+        OrderLifecycleEvent e = new OrderLifecycleEvent(
+                EVENT_ID.toString(),
+                "order.updated.v1",
+                OCCURRED_AT,
+                ORDER_ID,
+                null,
+                "PAID",
+                null, null, null, null,
+                Instant.parse("2026-08-30T10:15:00Z"),
+                null, null, null);
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
 
@@ -89,10 +116,17 @@ class NotificationTemplatesTest {
 
     @Test
     void cancelledEvent_buildsSubjectAndBody() {
-        OrderLifecycleEvent e = event("order.cancelled.v1");
-        e.setUserId(null);
-        e.setCancelledAt(Instant.parse("2026-08-30T11:00:00Z"));
-        e.setRefunded(true);
+        OrderLifecycleEvent e = new OrderLifecycleEvent(
+                EVENT_ID.toString(),
+                "order.cancelled.v1",
+                OCCURRED_AT,
+                ORDER_ID,
+                null,
+                null, null, null, null, null,
+                null,
+                Instant.parse("2026-08-30T11:00:00Z"),
+                Boolean.TRUE,
+                null);
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
 

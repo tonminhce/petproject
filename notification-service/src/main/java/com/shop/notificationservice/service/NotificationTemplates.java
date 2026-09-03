@@ -11,10 +11,10 @@ public final class NotificationTemplates {
     }
 
     public static Draft build(OrderLifecycleEvent e) {
-        if (e.getEventType() == null) {
+        if (e.eventType() == null) {
             return skipped(e);
         }
-        return switch (e.getEventType()) {
+        return switch (e.eventType()) {
             case "order.created.v1" -> created(e);
             case "order.updated.v1" -> updated(e);
             case "order.cancelled.v1" -> cancelled(e);
@@ -23,29 +23,29 @@ public final class NotificationTemplates {
     }
 
     private static Draft created(OrderLifecycleEvent e) {
-        int itemCount = e.getItems() == null ? 0 : e.getItems().size();
-        String subject = String.format("Order %s created", e.getOrderId());
+        int itemCount = e.items() == null ? 0 : e.items().size();
+        String subject = String.format("Order %s created", e.orderId());
         String body = String.format("status=%s, subtotal=%s, tax=%s, discount=%s, total=%s, items=%d",
-                e.getStatus(), e.getSubtotal(), e.getTaxAmount(), e.getDiscountAmount(), e.getTotal(), itemCount);
+                e.status(), e.subtotal(), e.taxAmount(), e.discountAmount(), e.total(), itemCount);
         return new Draft(subject, body, true);
     }
 
     private static Draft updated(OrderLifecycleEvent e) {
-        String subject = String.format("Order %s → %s", e.getOrderId(), e.getStatus());
-        String body = String.format("status=%s, transitionedAt=%s", e.getStatus(), e.getTransitionedAt());
+        String subject = String.format("Order %s → %s", e.orderId(), e.status());
+        String body = String.format("status=%s, transitionedAt=%s", e.status(), e.transitionedAt());
         return new Draft(subject, body, true);
     }
 
     private static Draft cancelled(OrderLifecycleEvent e) {
-        String subject = String.format("Order %s cancelled", e.getOrderId());
-        String body = String.format("cancelledAt=%s, refunded=%s", e.getCancelledAt(), e.getRefunded());
+        String subject = String.format("Order %s cancelled", e.orderId());
+        String body = String.format("cancelledAt=%s, refunded=%s", e.cancelledAt(), e.refunded());
         return new Draft(subject, body, true);
     }
 
     private static Draft skipped(OrderLifecycleEvent e) {
-        String subject = String.format("[skipped] %s", e.getEventType());
+        String subject = String.format("[skipped] %s", e.eventType());
         String body = String.format("eventId=%s, eventType=%s, occurredAt=%s, orderId=%s",
-                e.getEventId(), e.getEventType(), e.getOccurredAt(), e.getOrderId());
+                e.eventId(), e.eventType(), e.occurredAt(), e.orderId());
         return new Draft(subject, body, false);
     }
 }

@@ -70,20 +70,29 @@ class NotificationServiceImplTest {
         service = new NotificationServiceImpl(repository, writer, sender, delivery, objectMapper, 900);
     }
 
+    /**
+     * H26 — OrderLifecycleEvent is a Java record. Per R1, construction goes
+     * through the canonical ctor (no Lombok @Builder).
+     */
     private OrderLifecycleEvent createdEvent() {
-        OrderLifecycleEvent e = new OrderLifecycleEvent();
-        e.setEventId(EVENT_ID.toString());
-        e.setEventType("order.created.v1");
-        e.setOccurredAt("2026-08-30T10:00:00Z");
-        e.setOrderId(ORDER_ID);
-        e.setUserId(USER_ID);
-        e.setStatus("NEW");
-        e.setSubtotal(new BigDecimal("100.00"));
-        e.setTaxAmount(new BigDecimal("8.00"));
-        e.setDiscountAmount(new BigDecimal("10.00"));
-        e.setTotal(new BigDecimal("98.00"));
-        e.setItems(List.of(Map.of("sku", "A"), Map.of("sku", "B")));
-        return e;
+        return createdEvent(EVENT_ID.toString(), "order.created.v1");
+    }
+
+    /** Variant used by tests that need to override {@code eventId} or {@code eventType}. */
+    private OrderLifecycleEvent createdEvent(String eventId, String eventType) {
+        return new OrderLifecycleEvent(
+                eventId,
+                eventType,
+                "2026-08-30T10:00:00Z",
+                ORDER_ID,
+                USER_ID,
+                "NEW",
+                new BigDecimal("100.00"),
+                new BigDecimal("8.00"),
+                new BigDecimal("10.00"),
+                new BigDecimal("98.00"),
+                null, null, null,
+                List.of(Map.of("sku", "A"), Map.of("sku", "B")));
     }
 
     private Notification savedNotification() {
@@ -141,8 +150,7 @@ class NotificationServiceImplTest {
 
     @Test
     void unknownEventType_insertsSkippedRowAndNeverDelivers() {
-        OrderLifecycleEvent e = createdEvent();
-        e.setEventType("order.exploded.v9");
+        OrderLifecycleEvent e = createdEvent(EVENT_ID.toString(), "order.exploded.v9");
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
 
         service.handle(e);
@@ -157,8 +165,7 @@ class NotificationServiceImplTest {
 
     @Test
     void nullEventType_routesToSkipped() {
-        OrderLifecycleEvent e = createdEvent();
-        e.setEventType(null);
+        OrderLifecycleEvent e = createdEvent(EVENT_ID.toString(), null);
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
 
         service.handle(e);
@@ -173,8 +180,7 @@ class NotificationServiceImplTest {
 
     @Test
     void blankEventType_storedAsUnknown() {
-        OrderLifecycleEvent e = createdEvent();
-        e.setEventType("   ");
+        OrderLifecycleEvent e = createdEvent(EVENT_ID.toString(), "   ");
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
 
         service.handle(e);
@@ -188,8 +194,7 @@ class NotificationServiceImplTest {
 
     @Test
     void nullEventId_isSkippedWithoutThrowing() {
-        OrderLifecycleEvent event = createdEvent();
-        event.setEventId(null);
+        OrderLifecycleEvent event = createdEvent(null, "order.created.v1");
 
         assertThatCode(() -> service.handle(event)).doesNotThrowAnyException();
 
@@ -199,8 +204,7 @@ class NotificationServiceImplTest {
 
     @Test
     void malformedEventId_isSkippedWithoutThrowing() {
-        OrderLifecycleEvent event = createdEvent();
-        event.setEventId("not-a-uuid");
+        OrderLifecycleEvent event = createdEvent("not-a-uuid", "order.created.v1");
 
         assertThatCode(() -> service.handle(event)).doesNotThrowAnyException();
 

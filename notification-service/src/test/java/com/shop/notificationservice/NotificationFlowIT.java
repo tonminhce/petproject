@@ -98,11 +98,11 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     void createdEventProducesSentLogRowWithSubjectAndUserId() {
         UUID orderId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        OrderLifecycleEvent event = createdEvent(orderId, userId);
-        event.setItems(List.of(Map.of("sku", "SKU-1", "quantity", 2), Map.of("sku", "SKU-2", "quantity", 1)));
+        OrderLifecycleEvent event = createdEvent(orderId, userId,
+                List.of(Map.of("sku", "SKU-1", "quantity", 2), Map.of("sku", "SKU-2", "quantity", 1)));
         send(event);
 
-        Notification row = awaitRow(event.getEventId());
+        Notification row = awaitRow(event.eventId());
         assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
         assertThat(row.getChannel()).isEqualTo(NotificationChannel.LOG);
         assertThat(row.getSubject()).isEqualTo("Order " + orderId + " created");
@@ -113,13 +113,11 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("2. order.updated.v1 → SENT row with user_id NULL")
     void updatedEventProducesSentRowWithNullUserId() {
-        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), null);
-        event.setEventType("order.updated.v1");
-        event.setStatus("CONFIRMED");
-        event.setTransitionedAt(Instant.now());
+        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), null, null,
+                "order.updated.v1", "CONFIRMED", null, null, null);
         send(event);
 
-        Notification row = awaitRow(event.getEventId());
+        Notification row = awaitRow(event.eventId());
         assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
         assertThat(row.getUserId()).isNull();
         assertThat(row.getEventType()).isEqualTo("order.updated.v1");
@@ -128,14 +126,11 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("3. order.cancelled.v1 → SENT row whose body contains refunded=false")
     void cancelledEventProducesSentRowWithRefundedFalseBody() {
-        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID());
-        event.setEventType("order.cancelled.v1");
-        event.setStatus("CANCELLED");
-        event.setCancelledAt(Instant.now());
-        event.setRefunded(false);
+        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null,
+                "order.cancelled.v1", "CANCELLED", null, Instant.now(), Boolean.FALSE);
         send(event);
 
-        Notification row = awaitRow(event.getEventId());
+        Notification row = awaitRow(event.eventId());
         assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
         assertThat(row.getBody()).contains("refunded=false");
     }
@@ -144,27 +139,27 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     @DisplayName("4. duplicate eventId re-send → still exactly 1 row")
     void duplicateEventIdProducesExactlyOneRow() {
         UUID orderId = UUID.randomUUID();
-        OrderLifecycleEvent event = createdEvent(orderId, UUID.randomUUID());
+        OrderLifecycleEvent event = createdEvent(orderId, UUID.randomUUID(), null);
         send(event);
-        awaitRow(event.getEventId());
+        awaitRow(event.eventId());
 
         send(event);
-        OrderLifecycleEvent marker = createdEvent(orderId, UUID.randomUUID());
+        OrderLifecycleEvent marker = createdEvent(orderId, UUID.randomUUID(), null);
         send(marker);
-        awaitRow(marker.getEventId());
+        awaitRow(marker.eventId());
 
         await().atMost(AWAIT).untilAsserted(() ->
-            assertThat(rowsFor(event.getEventId())).hasSize(1));
+            assertThat(rowsFor(event.eventId())).hasSize(1));
     }
 
     @Test
     @DisplayName("5. unknown eventType → SKIPPED row")
     void unknownEventTypeProducesSkippedRow() {
-        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID());
-        event.setEventType("order.teleported.v9");
+        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null,
+                "order.teleported.v9", "NEW", null, null, null);
         send(event);
 
-        Notification row = awaitRow(event.getEventId());
+        Notification row = awaitRow(event.eventId());
         assertThat(row.getStatus()).isEqualTo(NotificationStatus.SKIPPED);
         assertThat(row.getSubject()).isEqualTo("[skipped] order.teleported.v9");
     }
@@ -174,18 +169,18 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     void senderFailureMarksRowFailedAndPartitionSurvives() {
         doThrow(new RuntimeException("smtp-down")).doCallRealMethod().when(sender).send(any());
 
-        OrderLifecycleEvent failing = createdEvent(UUID.randomUUID(), UUID.randomUUID());
+        OrderLifecycleEvent failing = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(failing);
-        Notification failedRow = awaitRow(failing.getEventId());
+        Notification failedRow = awaitRow(failing.eventId());
         // C12: the row never claims SENT; C17: the failure is retryable with bookkeeping.
         assertThat(failedRow.getStatus()).isEqualTo(NotificationStatus.FAILED_RETRYABLE);
         assertThat(failedRow.getRetryCount()).isEqualTo(1);
         assertThat(failedRow.getNextRetryAt()).isNotNull();
         assertThat(failedRow.getLastError()).contains("smtp-down");
 
-        OrderLifecycleEvent following = createdEvent(UUID.randomUUID(), UUID.randomUUID());
+        OrderLifecycleEvent following = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(following);
-        Notification sentRow = awaitRow(following.getEventId());
+        Notification sentRow = awaitRow(following.eventId());
         assertThat(sentRow.getStatus()).isEqualTo(NotificationStatus.SENT);
     }
 
@@ -194,51 +189,62 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     void poisonedRecordSkippedAndListenerSurvives() {
         sendRaw("{ this is not json }");
 
-        OrderLifecycleEvent valid = createdEvent(UUID.randomUUID(), UUID.randomUUID());
+        OrderLifecycleEvent valid = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(valid);
-        Notification row = awaitRow(valid.getEventId());
+        Notification row = awaitRow(valid.eventId());
         assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
     }
 
     @Test
     @DisplayName("8. H-1 pin: a LEGACY double-encoded token (pre-R1 in-flight shape) is unwrapped and ingested")
     void legacyDoubleEncodedTokenIsAccepted() throws Exception {
-        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID());
+        OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         sendLegacyDoubleEncoded(event);
-        Notification row = awaitRow(event.getEventId());
+        Notification row = awaitRow(event.eventId());
         assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
 
         // Wire proof on the real topic: the record value is a JSON string
         // token wrapping the event JSON — the pre-R1 wire that in-flight
         // records may still carry; the unwrap-once boundary accepts it.
-        ConsumerRecord<String, String> record = awaitRecord(TOPIC, event.getOrderId().toString());
+        ConsumerRecord<String, String> record = awaitRecord(TOPIC, event.orderId().toString());
         assertThat(record).as("record on %s with key=orderId", TOPIC).isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
         assertThat(token.isTextual()).as("legacy wire shape is a JSON string token").isTrue();
         JsonNode unwrapped = objectMapper.readTree(token.textValue());
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("order.created.v1");
-        assertThat(unwrapped.get("orderId").textValue()).isEqualTo(event.getOrderId().toString());
+        assertThat(unwrapped.get("orderId").textValue()).isEqualTo(event.orderId().toString());
     }
 
-    private OrderLifecycleEvent createdEvent(UUID orderId, UUID userId) {
-        OrderLifecycleEvent event = new OrderLifecycleEvent();
-        event.setEventId(UUID.randomUUID().toString());
-        event.setEventType("order.created.v1");
-        event.setOccurredAt(Instant.now().toString());
-        event.setOrderId(orderId);
-        event.setUserId(userId);
-        event.setStatus("NEW");
-        event.setSubtotal(new BigDecimal("100.00"));
-        event.setTaxAmount(new BigDecimal("8.00"));
-        event.setDiscountAmount(new BigDecimal("0.00"));
-        event.setTotal(new BigDecimal("108.00"));
-        return event;
+    /** H26 — OrderLifecycleEvent is a Java record; construction goes through the canonical ctor. */
+    private OrderLifecycleEvent createdEvent(UUID orderId, UUID userId, List<Map<String, Object>> items) {
+        return createdEvent(orderId, userId, items, "order.created.v1", "NEW", null, null, null);
+    }
+
+    /** Variant for tests that need to override eventType/status/transitionedAt/cancelledAt/refunded. */
+    private OrderLifecycleEvent createdEvent(UUID orderId, UUID userId, List<Map<String, Object>> items,
+                                             String eventType, String status,
+                                             Instant transitionedAt, Instant cancelledAt, Boolean refunded) {
+        return new OrderLifecycleEvent(
+                UUID.randomUUID().toString(),
+                eventType,
+                Instant.now().toString(),
+                orderId,
+                userId,
+                status,
+                new BigDecimal("100.00"),
+                new BigDecimal("8.00"),
+                new BigDecimal("0.00"),
+                new BigDecimal("108.00"),
+                transitionedAt,
+                cancelledAt,
+                refunded,
+                items);
     }
 
     /** Publishes through the R1 production path: single-encoded JSON on the wire. */
     private void send(OrderLifecycleEvent event) {
         try {
-            sendRaw(objectMapper.writeValueAsString(event), event.getOrderId().toString());
+            sendRaw(objectMapper.writeValueAsString(event), event.orderId().toString());
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
@@ -251,7 +257,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     private void sendLegacyDoubleEncoded(OrderLifecycleEvent event) {
         try {
             String payloadJson = objectMapper.writeValueAsString(event);
-            kafkaMessagePublisher.publish(TOPIC, event.getOrderId().toString(),
+            kafkaMessagePublisher.publish(TOPIC, event.orderId().toString(),
                 objectMapper.writeValueAsString(payloadJson));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);

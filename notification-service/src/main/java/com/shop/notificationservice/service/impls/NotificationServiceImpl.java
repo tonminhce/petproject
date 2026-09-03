@@ -74,9 +74,9 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationTemplates.Draft draft = NotificationTemplates.build(event);
         Notification notification = Notification.builder()
                 .eventId(eventId)
-                .orderId(event.getOrderId())
-                .userId(event.getUserId())
-                .eventType(eventTypeOrUnknown(event.getEventType()))
+                .orderId(event.orderId())
+                .userId(event.userId())
+                .eventType(eventTypeOrUnknown(event.eventType()))
                 .status(draft.known() ? NotificationStatus.PENDING : NotificationStatus.SKIPPED)
                 .channel(draft.known() ? sender.channel() : NotificationChannel.LOG)
                 .subject(draft.subject())
@@ -110,14 +110,14 @@ public class NotificationServiceImpl implements NotificationService {
      * value that can never produce a valid notification row.
      */
     private UUID parseEventId(OrderLifecycleEvent event) {
-        if (event == null || event.getEventId() == null || event.getEventId().isBlank()) {
+        if (event == null || event.eventId() == null || event.eventId().isBlank()) {
             log.warn("Skipping notification event with missing eventId");
             return null;
         }
         try {
-            return UUID.fromString(event.getEventId());
+            return UUID.fromString(event.eventId());
         } catch (IllegalArgumentException e) {
-            log.warn("Skipping notification event with invalid eventId {}", event.getEventId());
+            log.warn("Skipping notification event with invalid eventId {}", event.eventId());
             return null;
         }
     }
