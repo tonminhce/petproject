@@ -197,7 +197,18 @@ public class KeycloakAdminClient {
         }
     }
 
-    private String getAdminAccessToken() {
+    private static final long SKEW_SECONDS = 30L;
+    private final java.util.concurrent.atomic.AtomicReference<CachedAdminToken> cachedToken =
+            new java.util.concurrent.atomic.AtomicReference<>();
+
+    private record CachedAdminToken(String token, java.time.Instant expiresAt) {}
+
+    private synchronized String getAdminAccessToken() {
+        CachedAdminToken current = cachedToken.get();
+        if (current != null && current.expiresAt().isAfter(java.time.Instant.now().plusSeconds(SKEW_SECONDS))) {
+            return current.token();
+        }
+
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add(GRANT_TYPE, PASSWORD);
         form.add(CLIENT_ID, adminClientId);
@@ -215,6 +226,9 @@ public class KeycloakAdminClient {
             if (response == null || response.accessToken() == null) {
                 throw new KeycloakClientException("Failed to obtain admin access token", HttpStatus.UNAUTHORIZED);
             }
+
+            long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
+            cachedToken.set(new CachedAdminToken(response.accessToken(), java.time.Instant.now().plusSeconds(ttl)));
 
             return response.accessToken();
         } catch (RestClientResponseException e) {

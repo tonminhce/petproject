@@ -82,8 +82,36 @@ public final class GatewayErrorResponseWriter {
     }
 
     private byte[] fallbackJson(final ErrorCode errorCode, final ServerWebExchange exchange) {
+        final String escapedPath = escapeJson(exchange.getRequest().getPath().value());
         return ("{\"success\":false,\"code\":\"" + errorCode.getCode()
-                + "\",\"path\":\"" + exchange.getRequest().getPath().value() + "\"}")
+                + "\",\"path\":\"" + escapedPath + "\"}")
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static String escapeJson(final String input) {
+        if (input == null) {
+            return "";
+        }
+        final StringBuilder sb = new StringBuilder(input.length() + 16);
+        for (int i = 0; i < input.length(); i++) {
+            final char c = input.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c <= 0x1F) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 }

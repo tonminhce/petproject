@@ -121,12 +121,24 @@ public class HttpLoggingFilter extends OncePerRequestFilter implements Ordered {
         return query != null ? path + "?" + query : path;
     }
 
+    private static final java.util.regex.Pattern SENSITIVE_JSON_PATTERN = java.util.regex.Pattern.compile(
+            "\"([^\"]*(?:password|secret|token|credential|authorization|cardNumber|cvv|accessToken)[^\"]*)\"\\s*:\\s*(\"[^\"]*\"|[^,\\}\\]\\s]+)",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private static String maskBody(String content) {
+        if (content == null || content.isEmpty()) {
+            return content;
+        }
+        return SENSITIVE_JSON_PATTERN.matcher(content).replaceAll("\"$1\":\"***\"");
+    }
+
     private static void appendBody(StringBuilder sb, String label, byte[] body, int maxBytes) {
         if (body == null || body.length == 0) return;
         int len = Math.min(body.length, maxBytes);
         String content = new String(body, 0, len, StandardCharsets.UTF_8)
                 .replaceAll("\\s+", " ")
                 .trim();
+        content = maskBody(content);
         sb.append(" | ").append(label).append("=").append(content);
         if (body.length > maxBytes) {
             sb.append("...[truncated]");

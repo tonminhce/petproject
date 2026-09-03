@@ -108,17 +108,21 @@ public class S3ObjectStorageService implements ObjectStorageService {
         return download(defaultBucket(), key);
     }
 
+    private static final int MAX_BUFFER_BYTES = 50 * 1024 * 1024; // 50MB safety limit against OOM
+
     @Override
     public StorageObject download(String bucket, String key) {
         GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key).build();
         try (ResponseInputStream<GetObjectResponse> stream = s3Client.getObject(request)) {
             GetObjectResponse response = stream.response();
-            // H31 — buffer the body inside the try-with-resources so the S3
-            // stream is closed BEFORE the StorageObject leaves this method.
-            // Callers no longer own the live S3 stream; calling close() on the
-            // returned content is best-effort cleanup of an in-memory copy.
-            byte[] body = stream.readAllBytes();
             long advertised = response.contentLength() == null ? -1L : response.contentLength();
+            if (advertised > MAX_BUFFER_BYTES) {
+                throw new StorageException("Object too large to download into memory: " + advertised + " bytes");
+            }
+            byte[] body = stream.readNBytes(MAX_BUFFER_BYTES + 1);
+            if (body.length > MAX_BUFFER_BYTES) {
+                throw new StorageException("Object exceeded max in-memory download buffer limit of " + MAX_BUFFER_BYTES + " bytes");
+            }
             long length = advertised < 0 ? body.length : advertised;
             return StorageObject.of(
                     new ByteArrayInputStream(body),

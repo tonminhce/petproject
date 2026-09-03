@@ -36,7 +36,13 @@ public class CorsAutoConfigurer {
         return source;
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CorsAutoConfigurer.class);
+
     private static CorsConfiguration buildConfiguration(SecurityProperties.Cors props) {
+        if (Boolean.TRUE.equals(props.allowCredentials()) && props.resolvedAllowedOriginPatterns().contains("*")) {
+            log.warn("CORS configured with allowCredentials=true and wildcard '*' origin pattern. "
+                    + "This allows any origin to send credentialed cross-origin requests.");
+        }
         var config = new CorsConfiguration();
         config.setAllowedOriginPatterns(unwrap(props.resolvedAllowedOriginPatterns()));
         config.setAllowedMethods(unwrap(props.resolvedAllowedMethods()));

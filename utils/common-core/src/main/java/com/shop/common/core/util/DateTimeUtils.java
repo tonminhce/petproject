@@ -23,6 +23,10 @@ public final class DateTimeUtils {
     }
 
     public static String format(LocalDateTime dateTime, String pattern) {
-        return FORMATTERS.computeIfAbsent(pattern, DateTimeFormatter::ofPattern).format(dateTime);
+        if (dateTime == null) {
+            return null;
+        }
+        String resolvedPattern = (pattern != null && !pattern.isBlank()) ? pattern : DEFAULT_PATTERN;
+        return FORMATTERS.computeIfAbsent(resolvedPattern, DateTimeFormatter::ofPattern).format(dateTime);
     }
 }

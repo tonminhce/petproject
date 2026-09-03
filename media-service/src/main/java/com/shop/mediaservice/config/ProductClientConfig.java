@@ -32,8 +32,8 @@ public class ProductClientConfig {
     @Bean("productRestClient")
     public RestClient productRestClient(ProductClientProperties props, RestClient.Builder restClientBuilder) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout((int) Duration.ofMillis(props.timeoutMs()).toMillis());
-        factory.setReadTimeout((int) Duration.ofMillis(props.timeoutMs()).toMillis());
+        factory.setConnectTimeout(props.timeoutMs());
+        factory.setReadTimeout(props.timeoutMs());
 
         return restClientBuilder
             .baseUrl(props.baseUrl())
