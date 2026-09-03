@@ -48,7 +48,9 @@ public class ShippingOutboxRelay {
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
-    @Scheduled(fixedDelayString = "${shop.shipping.outbox.poll-millis:2000}", initialDelayString = "${shop.shipping.outbox.poll-millis:2000}")
+    @Scheduled(
+            fixedDelayString = "${shop.shipping.outbox.poll-millis:2000}",
+            initialDelayString = "${shop.shipping.outbox.poll-millis:2000}")
     public void relay() {
         for (int drained = 0; drained < batchSize; drained++) {
             Boolean claimed = transactionTemplate.execute(tx -> {

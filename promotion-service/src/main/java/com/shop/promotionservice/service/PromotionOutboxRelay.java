@@ -64,7 +64,9 @@ public class PromotionOutboxRelay {
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
-    @Scheduled(fixedDelayString = "${promotion.outbox.poll-interval-ms:5000}", initialDelayString = "${promotion.outbox.poll-interval-ms:5000}")
+    @Scheduled(
+            fixedDelayString = "${promotion.outbox.poll-interval-ms:5000}",
+            initialDelayString = "${promotion.outbox.poll-interval-ms:5000}")
     public void relay() {
         Instant started = Instant.now();
         try {

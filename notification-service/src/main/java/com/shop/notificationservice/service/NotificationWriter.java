@@ -40,9 +40,10 @@ import java.util.UUID;
  * status-machine guards exist solely to keep the row's {@code @Enumerated}
  * column in a legal state. {@code @Service} is reserved for classes that own
  * business logic. See Spring's stereotype docs:
- * <a href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html">@Repository javadoc</a>
- * and
- * <a href="https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html">classpath scanning / stereotype page</a>.</p>
+ * <a href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html">
+ * @Repository javadoc</a> and
+ * <a href="https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html">
+ * classpath scanning / stereotype page</a>.</p>
  */
 @Repository
 public class NotificationWriter {

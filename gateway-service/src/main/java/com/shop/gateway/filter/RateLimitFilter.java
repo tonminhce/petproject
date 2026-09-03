@@ -57,7 +57,10 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
         this.errorResponseWriter = errorResponseWriter;
         this.clientIpResolver = clientIpResolver;
         this.backofficePrefixes = ServiceRoute.backofficeRoutes().map(ServiceRoute::prefix).toList();
-        this.buckets = Caffeine.newBuilder().maximumSize(properties.maximumBuckets()).expireAfterAccess(properties.bucketExpiration().toMillis(), TimeUnit.MILLISECONDS).build();
+        this.buckets = Caffeine.newBuilder()
+                .maximumSize(properties.maximumBuckets())
+                .expireAfterAccess(properties.bucketExpiration().toMillis(), TimeUnit.MILLISECONDS)
+                .build();
     }
 
     @Override

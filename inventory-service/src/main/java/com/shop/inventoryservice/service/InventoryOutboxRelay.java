@@ -62,7 +62,9 @@ public class InventoryOutboxRelay {
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
-    @Scheduled(fixedDelayString = "${inventory.outbox.poll-interval-ms:5000}", initialDelayString = "${inventory.outbox.poll-interval-ms:5000}")
+    @Scheduled(
+            fixedDelayString = "${inventory.outbox.poll-interval-ms:5000}",
+            initialDelayString = "${inventory.outbox.poll-interval-ms:5000}")
     public void relay() {
         Instant started = Instant.now();
         try {
