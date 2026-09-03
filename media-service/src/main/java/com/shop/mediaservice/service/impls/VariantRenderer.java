@@ -4,6 +4,8 @@ import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -11,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -23,6 +26,8 @@ import java.util.List;
  */
 @Component
 class VariantRenderer {
+
+    private static final int MAX_DIMENSION = 8192;
 
     /** One rendered variant pending its S3 write. */
     record Render(String variant, String format, int width, byte[] bytes) {
@@ -74,6 +79,28 @@ class VariantRenderer {
 
     private BufferedImage decode(byte[] source) throws InvalidImageException {
         try {
+            try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(source))) {
+                if (in == null) {
+                    throw new InvalidImageException("Unable to create image input stream");
+                }
+                Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+                if (!readers.hasNext()) {
+                    throw new InvalidImageException("No ImageIO reader could decode the upload");
+                }
+                ImageReader reader = readers.next();
+                try {
+                    reader.setInput(in, true, true);
+                    int width = reader.getWidth(0);
+                    int height = reader.getHeight(0);
+                    if (width > MAX_DIMENSION || height > MAX_DIMENSION
+                            || ((long) width * height) > (long) MAX_DIMENSION * MAX_DIMENSION) {
+                        throw new InvalidImageException("Image dimensions exceed maximum allowed limits: "
+                                + width + "x" + height);
+                    }
+                } finally {
+                    reader.dispose();
+                }
+            }
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(source));
             if (image == null) {
                 throw new InvalidImageException("No ImageIO reader could decode the upload");

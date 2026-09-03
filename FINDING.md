@@ -613,17 +613,17 @@ All identified findings and live deployment issues were remediated, verified, an
 
 | ID | Severity | Category | Target Module & File | Status |
 |----|----------|----------|----------------------|--------|
-| **REV-C1** | 🔴 CRITICAL | Security / Availability | `gateway-service`: `AdminIpAllowlistFilter.java:58-75` | OPEN |
-| **REV-C2** | 🔴 CRITICAL | Concurrency / Data Integrity | `order-service`: `OrderCreateSaga.java:125-145` | OPEN |
-| **REV-H1** | 🟠 HIGH | Resource Leak / Security | `utils/common-keycloak`: `KeycloakTokenClient.java:146-153` | OPEN |
-| **REV-H2** | 🟠 HIGH | Performance / OOM Risk | `utils/common-core`: `DateTimeUtils.java:16, 30` | OPEN |
-| **REV-H3** | 🟠 HIGH | Runtime Stability / 500 Error | `product-service`: `CategoryServiceImpl.java:160`, `ProductServiceImpl.java:188`, `BrandServiceImpl.java:88` | OPEN |
-| **REV-H4** | 🟠 HIGH | Security / Route Filtering | `gateway-service`: `application.yml:43-54` | OPEN |
-| **REV-H5** | 🟠 HIGH | Security / Image Bomb DoS | `media-service`: `VariantRenderer.java:77` | OPEN |
-| **REV-M1** | 🟡 MEDIUM | Business Logic / Concurrency | `promotion-service`: `CampaignReservationServiceImpl.java:71-79` | OPEN |
-| **REV-M2** | 🟡 MEDIUM | API Contract Consistency | `gateway-service`: `GlobalRateLimitFilter.java:50-54` | OPEN |
-| **REV-M3** | 🟡 MEDIUM | Fleet Standardization | `utils/common-core`: `PageableConstant.java:9-10` vs `docs/PATTERNS.md#r7` | OPEN |
-| **REV-M4** | 🟡 MEDIUM | Rule R7 Page Compliance | `tax-service`: `BackofficeTaxClassController.java`, `BackofficeTaxRateController.java` | OPEN |
+| **REV-C1** | 🔴 CRITICAL | Security / Availability | `gateway-service`: `AdminIpAllowlistFilter.java:58-75` | **RESOLVED** |
+| **REV-C2** | 🔴 CRITICAL | Concurrency / Data Integrity | `order-service`: `OrderCreateSaga.java:125-145` | **RESOLVED** |
+| **REV-H1** | 🟠 HIGH | Resource Leak / Security | `utils/common-keycloak`: `KeycloakTokenClient.java:146-153` | **RESOLVED** |
+| **REV-H2** | 🟠 HIGH | Performance / OOM Risk | `utils/common-core`: `DateTimeUtils.java:16, 30` | **RESOLVED** |
+| **REV-H3** | 🟠 HIGH | Runtime Stability / 500 Error | `product-service`: `CategoryServiceImpl.java:160`, `ProductServiceImpl.java:188`, `BrandServiceImpl.java:88` | **RESOLVED** |
+| **REV-H4** | 🟠 HIGH | Security / Route Filtering | `gateway-service`: `application.yml:43-54` | **RESOLVED** |
+| **REV-H5** | 🟠 HIGH | Security / Image Bomb DoS | `media-service`: `VariantRenderer.java:77` | **RESOLVED** |
+| **REV-M1** | 🟡 MEDIUM | Business Logic / Concurrency | `promotion-service`: `CampaignReservationServiceImpl.java:71-79` | **RESOLVED** |
+| **REV-M2** | 🟡 MEDIUM | API Contract Consistency | `gateway-service`: `GlobalRateLimitFilter.java:50-54` | **RESOLVED** |
+| **REV-M3** | 🟡 MEDIUM | Fleet Standardization | `utils/common-core`: `PageableConstant.java:9-10` vs `docs/PATTERNS.md#r7` | **RESOLVED** |
+| **REV-M4** | 🟡 MEDIUM | Rule R7 Page Compliance | `tax-service`: `BackofficeTaxClassController.java`, `BackofficeTaxRateController.java` | **RESOLVED** |
 | **REV-L1** | 🔵 LOW | Code Quality / Clean Imports | Fleet-wide: 23 files across `utils`, `gateway`, and 7 microservices | **RESOLVED** |
 
 ---

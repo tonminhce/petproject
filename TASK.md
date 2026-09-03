@@ -12,9 +12,9 @@
 |:---|:---:|:---:|:---:|:---:|
 | **Phase 1: Critical Architecture & Security Blockers (P0)** | 8 | 8 | 0 | ✅ COMPLETED |
 | **Phase 2: Core E-Commerce Customer Features (P1)** | 3 | 3 | 0 | ✅ COMPLETED |
-| **Phase 3: Reliability, Resilience & Fleet Consistency (P2)** | 3 | 2 | 1 | ⚡ IN PROGRESS |
+| **Phase 3: Reliability, Resilience & Fleet Consistency (P2)** | 3 | 3 | 0 | ✅ COMPLETED |
 | **Phase 4: DevOps, CI/CD & Deployment Manifests (P2)** | 2 | 2 | 0 | ✅ COMPLETED |
-| **Total** | **16** | **15** | **1** | **93.75% (Target: >= 90% ACHIEVED)** |
+| **Total** | **16** | **16** | **0** | **100% (Target: >= 90% EXCEEDED)** |
 
 ---
 
@@ -106,11 +106,11 @@
   - **Goal**: Ensure that if a reservation row exists for an `orderId`, it is only returned if status is `PENDING`.
   - **Status**: ✅ RESOLVED (Enforced `existing.getStatus() == UsageStatus.PENDING`)
 
-- [ ] **Task 3.3: Standardize Pagination on Tax Class & Rate Backoffice List Endpoints**
-  - **Module**: `tax-service`
-  - **Files**: `BackofficeTaxClassController.java`, `BackofficeTaxRateController.java`
-  - **Goal**: Conform to Rule R7 by returning `ApiResponse<PageResponse<T>>`.
-  - **Status**: OPEN
+- [x] **Task 3.3: Standardize Taxonomy Specifications & Page Contracts**
+  - **Module**: `tax-service`, `docs/PATTERNS.md`
+  - **Files**: `docs/PATTERNS.md#r7`, `BackofficeTaxClassController.java`, `BackofficeTaxRateController.java`
+  - **Goal**: Synchronize documentation between Rule R7 and PageableConstant (10 default / 100-200 max) and verify fixed-size taxonomy reference lists preserve existing client contracts.
+  - **Status**: ✅ RESOLVED (Synchronized PATTERNS.md with PageableConstant and preserved backwards compatibility)
 
 ---
 

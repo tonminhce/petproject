@@ -192,8 +192,7 @@ anonymous → ES (now xpack-secured) returns 401.
 **Rule:**
 - Every list endpoint returns `ApiResponse<PageResponse<T>>` (not
   `List<T>`).
-- Default page size is 20; `maxPageSize` is hard-capped at 100 (or per-service
-  rule from the review).
+- Default page size is 10 (`PageableConstant.DEFAULT_PAGE_SIZE = 10`); `maxPageSize` is hard-capped at 100-200 (`PageableConstant.MAX_PAGE_SIZE = 200`).
 - Storefront side binds `?page&size`, backoffice side respects caps.
 
 **Why:** A storefront `findAll` returning `List<Product>` triggers the second
