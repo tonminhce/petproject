@@ -26,12 +26,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+
 @ExtendWith(MockitoExtension.class)
 class ReservationCleanupSchedulerTest {
 
     @Mock ReservationRepository reservationRepository;
     @Mock InventoryRepository inventoryRepository;
-    @Mock EntityManager entityManager;
+    @Mock PlatformTransactionManager txManager;
     @Mock InventoryCacheService cacheService;
     @InjectMocks ReservationCleanupScheduler scheduler;
 
@@ -40,9 +43,8 @@ class ReservationCleanupSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        // @Value and @PersistenceContext fields are not injected by Mockito - set explicitly
         ReflectionTestUtils.setField(scheduler, "batchSize", 500);
-        ReflectionTestUtils.setField(scheduler, "entityManager", entityManager);
+        lenient().when(txManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
         inventory = Inventory.builder()
             .id(UUID.randomUUID()).productId(productId)
             .availableQuantity(100).reservedQuantity(8).build();
@@ -69,8 +71,6 @@ class ReservationCleanupSchedulerTest {
         // Cache invariant — every batch that mutates Inventory.reservedQuantity
         // must drop the corresponding cache entry.
         verify(cacheService).evictAfterCommit(productId);
-        verify(entityManager).flush();
-        verify(entityManager).clear();
     }
 
     @Test
@@ -84,6 +84,5 @@ class ReservationCleanupSchedulerTest {
         verify(inventoryRepository, never()).findByProductId(any());
         verify(reservationRepository, never()).saveAll(any());
         verify(cacheService, never()).evictAfterCommit(any());
-        verify(entityManager, never()).flush();
     }
 }

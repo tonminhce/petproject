@@ -15,6 +15,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -26,10 +29,8 @@ import java.util.stream.Collectors;
  * Background jobs:
  * <ol>
  *   <li>{@link #releaseAllExpiredReservations()} - releases stock held by PENDING
- *       reservations whose TTL elapsed. Without it, reservedQuantity stays inflated
- *       between expiry and the next reserve() call -> spurious STOCK_INSUFFICIENT.
- *       Runs in BATCHES (never loads the whole backlog) with flush+clear per batch
- *       to bound persistence-context memory.</li>
+ *       reservations whose TTL elapsed. Runs in BATCHES with per-batch transaction
+ *       boundaries to avoid holding long row locks.</li>
  *   <li>{@link #purgeOldExpiredReservations()} - retention purge for terminal
  *       EXPIRED rows.</li>
  * </ol>
@@ -42,36 +43,35 @@ public class ReservationCleanupScheduler {
     private final ReservationRepository reservationRepository;
     private final InventoryRepository inventoryRepository;
     private final InventoryCacheService cacheService;
-
-    @jakarta.persistence.PersistenceContext
-    private EntityManager entityManager;
+    private final PlatformTransactionManager txManager;
 
     @Value("${inventory.reservation-cleanup-batch-size:500}")
     private int batchSize;
 
     @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}")
-    @Transactional
     public void releaseAllExpiredReservations() {
+        TransactionTemplate txTemplate = new TransactionTemplate(txManager);
         try {
             int total = 0;
             while (true) {
-                List<Reservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
-                    ReservationStatus.PENDING, Instant.now(), PageRequest.of(0, batchSize));
-                if (batch.isEmpty()) {
+                Integer processed = txTemplate.execute(status -> {
+                    List<Reservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
+                        ReservationStatus.PENDING, Instant.now(), PageRequest.of(0, batchSize));
+                    if (batch.isEmpty()) {
+                        return 0;
+                    }
+                    releaseBatch(batch);
+                    return batch.size();
+                });
+                if (processed == null || processed == 0) {
                     break;
                 }
-                releaseBatch(batch);
-                total += batch.size();
-                entityManager.flush();
-                entityManager.clear();
+                total += processed;
             }
             if (total > 0) {
                 log.info("Expired-reservation sweep released {} reservation(s)", total);
             }
         } catch (Exception ex) {
-            // Same posture as the retention jobs below: log at ERROR with full
-            // context instead of letting the scheduler swallow the stack trace.
-            // Batches already flushed stay committed; the next cycle continues.
             log.error("Expired-reservation sweep failed - will retry next cycle", ex);
         }
     }

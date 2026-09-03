@@ -259,33 +259,4 @@ public class InventoryServiceImpl implements InventoryService {
         return mapper.toReservationResponse(r);
     }
 
-    /**
-     * Release all EXPIRED PENDING reservations for a product and adjust the
-     * inventory reservedQuantity accordingly. Called FIRST in reserve()
-     * so the inventory read reflects freed capacity. Runs in the callers
-     * transaction (increments @Version on Inventory).
-     *
-     * <p>Evicts the cache entry after commit — same invariant as every other
-     * write path that touches {@code Inventory.reservedQuantity}. When called
-     * from {@link #reserve(UUID, ReserveRequest)}, the caller also evicts,
-     * so this call is a defensive no-op there; when someone wires this
-     * helper into a different flow, the cache invariant still holds.</p>
-     */
-    private void releaseExpiredReservations(UUID productId) {
-        List<Reservation> expired = reservationRepository
-            .findByProductIdAndStatusAndExpiresAtBefore(
-                productId, ReservationStatus.PENDING, Instant.now());
-        if (expired.isEmpty()) {
-            return;
-        }
-        Inventory inventory = inventoryRepository.findByProductId(productId)
-            .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
-        int total = expired.stream().mapToInt(Reservation::getQuantity).sum();
-        inventory.setReservedQuantity(inventory.getReservedQuantity() - total);
-        inventory.setLastUpdated(Instant.now());
-        expired.forEach(r -> r.setStatus(ReservationStatus.EXPIRED));
-        reservationRepository.saveAll(expired);
-        inventoryRepository.save(inventory);
-        cacheService.evictAfterCommit(productId);
-    }
 }

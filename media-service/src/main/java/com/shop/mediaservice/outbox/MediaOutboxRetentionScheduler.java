@@ -65,6 +65,7 @@ public class MediaOutboxRetentionScheduler {
             }
         } catch (Exception ex) {
             log.error("Media outbox retention failed - needs ops attention", ex);
+            throw ex;
         }
     }
 }

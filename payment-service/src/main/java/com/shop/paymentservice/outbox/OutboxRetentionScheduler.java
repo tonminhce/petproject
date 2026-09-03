@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shop.common.core.constants.OutboxStatus;
 
@@ -68,6 +69,7 @@ public class OutboxRetentionScheduler {
         fixedDelayString = "${shop.payment.outbox.retention-poll-ms:3600000}",
         initialDelayString = "${shop.payment.outbox.retention-initial-delay-ms:60000}"
     )
+    @Transactional
     public void purge() {
         Instant now = Instant.now(clock);
 
