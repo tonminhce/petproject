@@ -40,11 +40,9 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
-    Optional<OutboxEvent> findFirstByStatusInOrderByIdAsc(Collection<OutboxStatus> statuses);
-
-    default Optional<OutboxEvent> claimOneDue(Collection<OutboxStatus> statuses) {
-        return findFirstByStatusInOrderByIdAsc(statuses);
-    }
+    @Query("SELECT e FROM OutboxEvent e WHERE e.status IN :statuses AND e.id = ("
+         + "SELECT MIN(e2.id) FROM OutboxEvent e2 WHERE e2.status IN :statuses)")
+    Optional<OutboxEvent> claimOneDue(@Param("statuses") Collection<OutboxStatus> statuses);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")

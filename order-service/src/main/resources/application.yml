@@ -37,7 +37,8 @@ shop:
       group-id: order-service
       auto-offset-reset: latest
   security:
-    public-paths: []
+    public-paths:
+      - path: /api/v1/carts/**
 
   services:
     product:

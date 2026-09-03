@@ -82,7 +82,6 @@ public class OrderServiceImpl implements OrderService {
     // ========================================================================
 
     @Override
-    @Transactional
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
         // 1. Idempotency pre-insert (in-flight row commits in its own TX, before the saga).
         // Actor label = the customer's sub (UUID canonical text) — H-6 rows are string-keyed.

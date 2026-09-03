@@ -57,6 +57,7 @@ gateway:
     - /api/v1/search/**
     - /api/v1/ratings/**
     - /api/v1/medias/**
+    - /api/v1/carts/**
   rate-limit:
     enabled: ${GATEWAY_RATE_LIMIT_ENABLED:true}
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:100}

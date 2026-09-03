@@ -130,6 +130,51 @@ public class CartServiceImpl implements CartService {
         cartRepository.save(cart);
     }
 
+    @Override
+    @Transactional
+    public CartResponse mergeCart(UUID userId, UUID guestCartUserId) {
+        if (guestCartUserId == null || guestCartUserId.equals(userId)) {
+            return getMyCart(userId);
+        }
+        Optional<Cart> guestCartOpt = cartRepository.findByUserIdAndDeletedFalse(guestCartUserId);
+        if (guestCartOpt.isEmpty()) {
+            return getMyCart(userId);
+        }
+        Cart guestCart = guestCartOpt.get();
+        List<CartItem> guestItems = cartItemRepository.findByCartId(guestCart.getId());
+        if (guestItems.isEmpty()) {
+            return getMyCart(userId);
+        }
+        Cart userCart = getOrCreateCart(userId);
+        for (CartItem guestItem : guestItems) {
+            Optional<CartItem> existingUserItem = cartItemRepository.findByCartIdAndProductId(userCart.getId(), guestItem.getProductId());
+            if (existingUserItem.isPresent()) {
+                CartItem item = existingUserItem.get();
+                int mergedQty = Math.min(MAX_QUANTITY_PER_LINE, item.getQuantity() + guestItem.getQuantity());
+                item.setQuantity(mergedQty);
+                item.setUnitPrice(guestItem.getUnitPrice());
+                item.setProductTitle(guestItem.getProductTitle());
+                cartItemRepository.save(item);
+            } else {
+                CartItem newItem = CartItem.builder()
+                        .cartId(userCart.getId())
+                        .productId(guestItem.getProductId())
+                        .productTitle(guestItem.getProductTitle())
+                        .unitPrice(guestItem.getUnitPrice())
+                        .quantity(guestItem.getQuantity())
+                        .build();
+                cartItemRepository.save(newItem);
+            }
+        }
+        cartItemRepository.deleteAll(guestItems);
+        guestCart.markDeleted("merged-to-" + userId);
+        cartRepository.save(guestCart);
+
+        userCart.setSubtotal(calculateSubtotal(userCart));
+        cartRepository.save(userCart);
+        return cartMapper.toResponse(userCart, cartItemRepository.findByCartId(userCart.getId()));
+    }
+
     private Cart getOrCreateCart(UUID userId) {
         Optional<Cart> existing = cartRepository.findByUserIdAndDeletedFalse(userId);
         if (existing.isPresent()) return existing.get();

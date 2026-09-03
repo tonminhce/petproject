@@ -36,11 +36,9 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
-    Optional<OutboxEvent> findFirstByStatusOrderByIdAsc(OutboxStatus status);
-
-    default Optional<OutboxEvent> claimOnePending(OutboxStatus status) {
-        return findFirstByStatusOrderByIdAsc(status);
-    }
+    @Query("SELECT e FROM OutboxEvent e WHERE e.status = :status AND e.id = ("
+         + "SELECT MIN(e2.id) FROM OutboxEvent e2 WHERE e2.status = :status)")
+    Optional<OutboxEvent> claimOnePending(@Param("status") OutboxStatus status);
 
     // OrderOutboxRelay pending gauge — true backlog, not batch-capped.
     long countByStatus(OutboxStatus status);
