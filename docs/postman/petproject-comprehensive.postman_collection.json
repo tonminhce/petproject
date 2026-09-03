@@ -2441,6 +2441,32 @@
             }
           ],
           "description": "Source: product-service/src/main/java/com/shop/productservice/controller/BackofficeProductController.java"
+        },
+        {
+          "name": "GET /api/v1/internal/product-media-references/{mediaId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{productUrl}}/api/v1/internal/product-media-references/00000000-0000-0000-0000-000000000000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Response is not server error\", function () {",
+                  "    pm.expect(pm.response.code).to.be.below(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -3020,10 +3046,10 @@
       "name": "shipping service",
       "item": [
         {
-          "name": "POST /api/v1/webhooks/shipping",
+          "name": "POST /api/v1/webhooks/shipping/{carrier}",
           "request": {
             "method": "POST",
-            "url": "{{shippingUrl}}/api/v1/webhooks/shipping",
+            "url": "{{shippingUrl}}/api/v1/webhooks/shipping/fedex",
             "header": [
               {
                 "key": "Accept",
