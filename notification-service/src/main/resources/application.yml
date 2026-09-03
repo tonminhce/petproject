@@ -35,7 +35,11 @@ shop:
   notification:
     smtp:
       enabled: ${SMTP_ENABLED:false}
-      fallback-recipient: ${SMTP_FALLBACK_RECIPIENT:ops@example.com}
+      # H22 — required, no default. A misconfigured deploy must fail fast
+      # (SmtpNotificationSender guards against null/blank at construction);
+      # we deliberately drop the historical "ops@example.com" fallback so
+      # nothing silently routes to a hardcoded address.
+      fallback-recipient: ${SMTP_FALLBACK_RECIPIENT}
     retry:
       poll-ms: ${NOTIFICATION_RETRY_POLL_MS:60000}
       initial-delay-ms: ${NOTIFICATION_RETRY_INITIAL_DELAY_MS:0}

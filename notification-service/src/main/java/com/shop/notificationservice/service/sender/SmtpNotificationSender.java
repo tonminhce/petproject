@@ -22,6 +22,19 @@ public class SmtpNotificationSender implements NotificationSender {
 
     public SmtpNotificationSender(JavaMailSender mailSender,
                                   @Value("${shop.notification.smtp.fallback-recipient}") String fallbackRecipient) {
+        // H22 — fail-fast on a missing/blank property. Spring's @Value without
+        // a default would still throw BeanCreationException when the property
+        // is unset, but an explicitly empty string (e.g. SHOP_NOTIFICATION_SMTP_FALLBACK_RECIPIENT=)
+        // would silently resolve to "" and the SMTP path would dispatch to an
+        // empty recipient. This guard catches that case at construction time
+        // before the bean enters the application context. See Spring's
+        // @ConfigurationProperties / @Value failure-mode docs:
+        // https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/value-annotations.html
+        if (fallbackRecipient == null || fallbackRecipient.isBlank()) {
+            throw new IllegalStateException(
+                    "shop.notification.smtp.fallback-recipient must be configured when "
+                            + "shop.notification.smtp.enabled=true (set SHOP_NOTIFICATION_SMTP_FALLBACK_RECIPIENT)");
+        }
         this.mailSender = mailSender;
         this.fallbackRecipient = fallbackRecipient;
     }

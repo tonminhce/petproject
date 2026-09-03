@@ -17,6 +17,15 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+/**
+ * H22 — fail-fast: misconfigured deploys must NOT silently fall through to
+ * a hardcoded default recipient. Spring's {@code @Value} without a default
+ * would already fail bean instantiation when the property is absent, but a
+ * blank value (e.g. {@code SHOP_NOTIFICATION_SMTP_FALLBACK_RECIPIENT=}) would
+ * silently resolve to empty and the SMTP sender would dispatch to "". The
+ * explicit guard below catches that case at construction time, before the
+ * bean enters the application context.
+ */
 class SmtpNotificationSenderTest {
 
     private static final String FALLBACK_RECIPIENT = "ops@example.com";
@@ -58,5 +67,19 @@ class SmtpNotificationSenderTest {
         assertThatThrownBy(() -> sender.send(notification()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasCauseInstanceOf(MailSendException.class);
+    }
+
+    @Test
+    void constructor_nullFallbackRecipient_rejects() {
+        assertThatThrownBy(() -> new SmtpNotificationSender(mailSender, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("shop.notification.smtp.fallback-recipient");
+    }
+
+    @Test
+    void constructor_blankFallbackRecipient_rejects() {
+        assertThatThrownBy(() -> new SmtpNotificationSender(mailSender, "   "))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("shop.notification.smtp.fallback-recipient");
     }
 }
