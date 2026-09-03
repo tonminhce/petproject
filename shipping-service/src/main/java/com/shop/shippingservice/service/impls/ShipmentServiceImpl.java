@@ -3,6 +3,7 @@ package com.shop.shippingservice.service.impls;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.shippingservice.carrier.CarrierAdapter;
+import com.shop.shippingservice.carrier.CarrierFactory;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.dto.OrderLifecycleEvent;
@@ -13,8 +14,8 @@ import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentService;
 import com.shop.shippingservice.service.ShipmentStateMachine;
 import com.shop.shippingservice.service.ShipmentWriter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ShipmentServiceImpl implements ShipmentService {
 
@@ -35,9 +35,35 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     private final ShipmentRepository repository;
     private final ShipmentWriter writer;
-    private final CarrierAdapter carrierAdapter;
+    private final CarrierAdapter defaultCarrierAdapter;
     private final Clock clock;
     private final ShippingMetrics metrics;
+    private final CarrierFactory carrierFactory;
+
+    @Autowired
+    public ShipmentServiceImpl(
+            ShipmentRepository repository,
+            ShipmentWriter writer,
+            CarrierAdapter defaultCarrierAdapter,
+            Clock clock,
+            ShippingMetrics metrics,
+            @Autowired(required = false) CarrierFactory carrierFactory) {
+        this.repository = repository;
+        this.writer = writer;
+        this.defaultCarrierAdapter = defaultCarrierAdapter;
+        this.clock = clock;
+        this.metrics = metrics;
+        this.carrierFactory = carrierFactory;
+    }
+
+    public ShipmentServiceImpl(
+            ShipmentRepository repository,
+            ShipmentWriter writer,
+            CarrierAdapter defaultCarrierAdapter,
+            Clock clock,
+            ShippingMetrics metrics) {
+        this(repository, writer, defaultCarrierAdapter, clock, metrics, null);
+    }
 
     @Override
     public void handleOrderEvent(OrderLifecycleEvent event) {
@@ -55,12 +81,13 @@ public class ShipmentServiceImpl implements ShipmentService {
             log.info("Shipment for order {} already exists, skipping", orderId);
             return;
         }
+        CarrierAdapter adapter = defaultCarrierAdapter;
         Shipment shipment = Shipment.builder()
                 .id(UUID.randomUUID())
                 .orderId(orderId)
-                .carrier(carrierAdapter.carrier())
+                .carrier(adapter.carrier())
                 .build();
-        CarrierAdapter.ShipmentDraft draft = carrierAdapter.createShipment(orderId);
+        CarrierAdapter.ShipmentDraft draft = adapter.createShipment(orderId);
         shipment.setTrackingNumber(draft.trackingNumber());
         shipment.setStatus(draft.initialStatus());
         shipment.setAutoDelivered(draft.initialStatus() == ShipmentStatus.DELIVERED);

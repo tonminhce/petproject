@@ -6,13 +6,15 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaOperations;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.Map;
 
 /**
- * Base class for a typed Kafka listener container factory.
+ * Base class for a typed Kafka listener container factory with Dead Letter Topic (DLT) recovery support.
  *
  * <h3>Fleet wire contract (R1 + H-1)</h3>
  *
@@ -53,19 +55,34 @@ public abstract class BaseKafkaListenerConfig<K> {
 
     private final Class<K> keyType;
     private final KafkaProperties kafkaProperties;
+    private final KafkaOperations<?, ?> kafkaTemplate;
 
-    protected BaseKafkaListenerConfig(Class<K> keyType, KafkaProperties kafkaProperties) {
+    protected BaseKafkaListenerConfig(Class<K> keyType, KafkaProperties kafkaProperties, KafkaOperations<?, ?> kafkaTemplate) {
         this.keyType = keyType;
         this.kafkaProperties = kafkaProperties;
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    protected BaseKafkaListenerConfig(Class<K> keyType, KafkaProperties kafkaProperties) {
+        this(keyType, kafkaProperties, null);
     }
 
     public abstract ConcurrentKafkaListenerContainerFactory<K, String> listenerContainerFactory();
 
     protected ConcurrentKafkaListenerContainerFactory<K, String> kafkaListenerContainerFactory() {
+        return kafkaListenerContainerFactory(this.kafkaTemplate);
+    }
+
+    protected ConcurrentKafkaListenerContainerFactory<K, String> kafkaListenerContainerFactory(KafkaOperations<?, ?> template) {
         var factory = new ConcurrentKafkaListenerContainerFactory<K, String>();
         factory.setConsumerFactory(rawStringConsumerFactory());
         factory.getContainerProperties().setObservationEnabled(true);
-        factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3L)));
+        if (template != null) {
+            DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(template);
+            factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 3L)));
+        } else {
+            factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3L)));
+        }
         return factory;
     }
 

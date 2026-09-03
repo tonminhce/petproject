@@ -6,6 +6,7 @@ import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.TaxCalculateRequest;
 import com.shop.orderservice.dto.internal.TaxCalculateResponse;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -30,6 +31,7 @@ public class TaxServiceClient {
     private static final ParameterizedTypeReference<ApiResponse<TaxCalculateResponse>> RESPONSE_TYPE =
         new ParameterizedTypeReference<>() {};
 
+    @CircuitBreaker(name = "taxService")
     public TaxCalculateResponse calculate(TaxCalculateRequest request) {
         if (!props.tax().isEnabled()) {
             // MVP default: tax disabled → return 0 (fail-closed only when enabled and down)

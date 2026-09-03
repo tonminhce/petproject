@@ -14,9 +14,14 @@ public record CreatePaymentRequest(
         @NotNull @DecimalMin("0.01") @Digits(integer = 17, fraction = 2) BigDecimal amount,
         @NotBlank @Size(min = 3, max = 3) String currency,
         @NotBlank @Size(max = 64) String idempotencyKey,
-        UUID userId) {
+        UUID userId,
+        String provider) {
 
     public CreatePaymentRequest(UUID orderId, BigDecimal amount, String currency, String idempotencyKey) {
-        this(orderId, amount, currency, idempotencyKey, null);
+        this(orderId, amount, currency, idempotencyKey, null, null);
+    }
+
+    public CreatePaymentRequest(UUID orderId, BigDecimal amount, String currency, String idempotencyKey, UUID userId) {
+        this(orderId, amount, currency, idempotencyKey, userId, null);
     }
 }

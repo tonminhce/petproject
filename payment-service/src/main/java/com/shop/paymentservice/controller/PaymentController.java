@@ -46,7 +46,7 @@ public class PaymentController {
     }
 
     @PostMapping("/{id}/refund")
-    @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Audited(action = "payment.refund", resourceType = "payment")
     public ApiResponse<PaymentResponse> refund(@PathVariable UUID id) {
         return ApiResponse.ok(PaymentResponse.from(paymentService.refund(id)));

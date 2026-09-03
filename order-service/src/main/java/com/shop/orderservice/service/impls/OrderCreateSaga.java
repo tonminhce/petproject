@@ -2,6 +2,8 @@ package com.shop.orderservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.orderservice.client.PromotionServiceClient;
+import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.dto.internal.PricingBreakdown;
 import com.shop.orderservice.dto.internal.ProductSnapshot;
 import com.shop.orderservice.dto.internal.ReserveRequest;
@@ -11,7 +13,6 @@ import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.entity.OrderItem;
-import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.mapper.OrderMapper;
 import com.shop.orderservice.repository.CartItemRepository;
@@ -22,38 +23,27 @@ import com.shop.orderservice.service.IdempotencyService;
 import com.shop.orderservice.service.OrderEventPublisher;
 import com.shop.orderservice.service.PricingService;
 import com.shop.orderservice.service.StockReservationService;
-import com.shop.orderservice.client.PromotionServiceClient;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
- * H13 — saga body for {@code OrderServiceImpl.createOrder} lives in a sibling
- * bean so the {@code @Transactional} boundary is honoured on every entry.
+ * Saga orchestrator for {@code OrderServiceImpl.createOrder}.
  *
- * <p>The pre-fix code defined {@code doCreateOrder} as a {@code private}
- * method on {@code OrderServiceImpl} and called it from
- * {@code OrderServiceImpl.createOrder}. Self-invocation on the same Spring
- * bean bypasses the proxy, so the {@code @Transactional} on the outer method
- * was the only thing keeping the saga in one transaction — and a refactor
- * that introduced a second {@code @Transactional} on {@code doCreateOrder}
- * would silently NOT take effect, leaving the boundary in the wrong place.</p>
- *
- * <p>This sibling bean re-states the {@code @Transactional} boundary
- * explicitly (so a regression that drops it on the caller still has the
- * proxy wrap the body) and is invoked through Spring, so the proxy is on
- * the path.</p>
+ * <p>Separates DB transaction boundaries from remote HTTP calls (Pricing,
+ * Stock Reservation) to prevent HikariCP connection pool exhaustion during
+ * downstream latency spikes.</p>
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OrderCreateSaga {
 
@@ -67,46 +57,117 @@ public class OrderCreateSaga {
     private final OrderEventPublisher orderEventPublisher;
     private final IdempotencyService idempotencyService;
     private final OrderMapper orderMapper;
+    private final TransactionTemplate transactionTemplate;
+
+    @Autowired
+    public OrderCreateSaga(
+            OrderRepository orderRepository,
+            OrderItemRepository orderItemRepository,
+            CartRepository cartRepository,
+            CartItemRepository cartItemRepository,
+            PricingService pricingService,
+            StockReservationService stockReservationService,
+            PromotionServiceClient promotionClient,
+            OrderEventPublisher orderEventPublisher,
+            IdempotencyService idempotencyService,
+            OrderMapper orderMapper,
+            @Autowired(required = false) PlatformTransactionManager transactionManager) {
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.cartRepository = cartRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.pricingService = pricingService;
+        this.stockReservationService = stockReservationService;
+        this.promotionClient = promotionClient;
+        this.orderEventPublisher = orderEventPublisher;
+        this.idempotencyService = idempotencyService;
+        this.orderMapper = orderMapper;
+        this.transactionTemplate = (transactionManager != null) ? new TransactionTemplate(transactionManager) : null;
+    }
+
+    public OrderCreateSaga(
+            OrderRepository orderRepository,
+            OrderItemRepository orderItemRepository,
+            CartRepository cartRepository,
+            CartItemRepository cartItemRepository,
+            PricingService pricingService,
+            StockReservationService stockReservationService,
+            PromotionServiceClient promotionClient,
+            OrderEventPublisher orderEventPublisher,
+            IdempotencyService idempotencyService,
+            OrderMapper orderMapper) {
+        this(orderRepository, orderItemRepository, cartRepository, cartItemRepository,
+             pricingService, stockReservationService, promotionClient,
+             orderEventPublisher, idempotencyService, orderMapper, null);
+    }
+
+    private <T> T executeInTx(Supplier<T> action) {
+        if (transactionTemplate != null) {
+            return transactionTemplate.execute(status -> action.get());
+        }
+        return action.get();
+    }
+
+    private void executeInTxWithoutResult(Runnable action) {
+        if (transactionTemplate != null) {
+            transactionTemplate.executeWithoutResult(status -> action.run());
+        } else {
+            action.run();
+        }
+    }
+
+    private record CartAndOrder(Cart cart, List<CartItem> items, Order order) {
+    }
 
     /**
-     * The full saga body — explicitly {@code @Transactional} so the proxy
-     * is on the path and any rollback (e.g. {@link StockReservationFailedException})
-     * evicts everything done before the throw.
+     * Executes the order creation saga with isolated transaction boundaries.
      */
-    @Transactional
     public OrderResponse execute(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // 1. Load cart + validate
-        Cart cart = (request.cartId() != null)
-            ? cartRepository.findByIdAndUserIdAndDeletedFalse(request.cartId(), userId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.CART_NOT_FOUND, request.cartId()))
-            : cartRepository.findByUserIdAndDeletedFalse(userId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.CART_EMPTY));
-        List<CartItem> items = cartItemRepository.findByCartId(cart.getId()).stream()
-            .sorted(Comparator.comparing(CartItem::getProductId))
-            .toList();
-        if (items.isEmpty()) throw BusinessException.of(ErrorCode.CART_EMPTY);
+        // Step 1 (DB TX): Load cart + persist-early PENDING order
+        CartAndOrder initial = executeInTx(() -> {
+            Cart cart = (request.cartId() != null)
+                ? cartRepository.findByIdAndUserIdAndDeletedFalse(request.cartId(), userId)
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.CART_NOT_FOUND, request.cartId()))
+                : cartRepository.findByUserIdAndDeletedFalse(userId)
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.CART_EMPTY));
+            List<CartItem> items = cartItemRepository.findByCartId(cart.getId()).stream()
+                .sorted(Comparator.comparing(CartItem::getProductId))
+                .toList();
+            if (items.isEmpty()) {
+                throw BusinessException.of(ErrorCode.CART_EMPTY);
+            }
 
-        // 2. Persist-early
-        Order order = orderRepository.save(Order.builder()
-            .userId(userId).status(OrderStatus.PENDING)
-            .subtotal(BigDecimal.ZERO).taxAmount(BigDecimal.ZERO)
-            .discountAmount(BigDecimal.ZERO).total(BigDecimal.ZERO)
-            .couponCode(request.couponCode())
-            .recipientName(request.recipientName())
-            .phoneNumber(request.phoneNumber())
-            .shippingAddress(request.shippingAddress())
-            .build());
+            Order order = orderRepository.save(Order.builder()
+                .userId(userId).status(OrderStatus.PENDING)
+                .subtotal(BigDecimal.ZERO).taxAmount(BigDecimal.ZERO)
+                .discountAmount(BigDecimal.ZERO).total(BigDecimal.ZERO)
+                .couponCode(request.couponCode())
+                .recipientName(request.recipientName())
+                .phoneNumber(request.phoneNumber())
+                .shippingAddress(request.shippingAddress())
+                .build());
 
-        // 3. Pricing (remote: product + tax + promotion)
-        PricingBreakdown pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
+            return new CartAndOrder(cart, items, order);
+        });
 
-        // 4. Update amounts
+        Cart cart = initial.cart();
+        List<CartItem> items = initial.items();
+        Order order = initial.order();
+
+        // Step 2 (OUTSIDE DB TX - HikariCP released): Pricing calculation
+        PricingBreakdown pricing;
+        try {
+            pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
+        } catch (Exception ex) {
+            executeInTxWithoutResult(() -> orderRepository.delete(order));
+            throw ex;
+        }
+
         order.setSubtotal(pricing.subtotal());
         order.setTaxAmount(pricing.taxAmount());
         order.setDiscountAmount(pricing.discountAmount());
         order.setTotal(pricing.total());
         order.setPromotionReservationId(pricing.promotionReservationId());
-        orderRepository.save(order);
 
         List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem item : items) {
@@ -121,9 +182,8 @@ public class OrderCreateSaga {
                 .build();
             orderItems.add(orderItem);
         }
-        orderItemRepository.saveAll(orderItems);
 
-        // 5. Reserve stock per item
+        // Step 3 (OUTSIDE DB TX - HikariCP released): Reserve stock per item
         List<OrderItem> reserved = new ArrayList<>();
         try {
             for (OrderItem orderItem : orderItems) {
@@ -133,7 +193,6 @@ public class OrderCreateSaga {
                 orderItem.setReservationId(reservationId);
                 reserved.add(orderItem);
             }
-            orderItemRepository.saveAll(orderItems);
         } catch (Exception ex) {
             releaseAllReservations(reserved);
             if (order.getPromotionReservationId() != null) {
@@ -144,6 +203,7 @@ public class OrderCreateSaga {
                         order.getPromotionReservationId(), pex);
                 }
             }
+            executeInTxWithoutResult(() -> orderRepository.delete(order));
             if (ex instanceof StockReservationFailedException sfe) {
                 throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, sfe.getProductId());
             }
@@ -153,15 +213,17 @@ public class OrderCreateSaga {
             throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getMessage());
         }
 
-        // 6. Clear cart
-        cartItemRepository.deleteAll(items);
-        cart.markDeleted(userId.toString());
-        cartRepository.save(cart);
+        // Step 4 (DB TX): Save finalized order, items, clear cart, publish outbox
+        executeInTxWithoutResult(() -> {
+            orderRepository.save(order);
+            orderItemRepository.saveAll(orderItems);
+            cartItemRepository.deleteAll(items);
+            cart.markDeleted(userId.toString());
+            cartRepository.save(cart);
+            orderEventPublisher.publishCreated(order, orderItems);
+        });
 
-        // 7. Publish event
-        orderEventPublisher.publishCreated(order, orderItems);
-
-        // 8. Response + complete idempotency
+        // Step 5: Complete idempotency and map response
         OrderResponse response = orderMapper.toResponse(order, orderItems);
         idempotencyService.complete(idempotencyKey, userId.toString(), response, 201);
         return response;

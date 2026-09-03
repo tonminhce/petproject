@@ -94,7 +94,6 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot4</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.modelmapper</groupId>

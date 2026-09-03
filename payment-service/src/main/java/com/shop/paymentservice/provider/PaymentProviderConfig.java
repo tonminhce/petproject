@@ -42,4 +42,10 @@ public class PaymentProviderConfig {
                 () -> "Expected exactly one active PaymentProvider but found " + all.size());
         return all.get(0);
     }
+
+    @Bean
+    public PaymentProviderFactory paymentProviderFactory(List<PaymentProvider> all,
+            @Value("${shop.payment.provider:mock}") String defaultProviderName) {
+        return new PaymentProviderFactory(all, defaultProviderName);
+    }
 }

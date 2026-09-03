@@ -8,25 +8,47 @@ import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.provider.PaymentProvider;
 import com.shop.paymentservice.provider.PaymentProvider.ProviderResult;
+import com.shop.paymentservice.provider.PaymentProviderFactory;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.service.PaymentService;
 import com.shop.paymentservice.service.PaymentWriter;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository repository;
     private final PaymentWriter writer;
-    private final PaymentProvider provider;
+    private final PaymentProvider defaultProvider;
+    private final PaymentProviderFactory providerFactory;
+
+    @Autowired
+    public PaymentServiceImpl(PaymentRepository repository, PaymentWriter writer, PaymentProvider defaultProvider,
+                              @Autowired(required = false) PaymentProviderFactory providerFactory) {
+        this.repository = repository;
+        this.writer = writer;
+        this.defaultProvider = defaultProvider;
+        this.providerFactory = providerFactory;
+    }
+
+    public PaymentServiceImpl(PaymentRepository repository, PaymentWriter writer, PaymentProvider defaultProvider) {
+        this(repository, writer, defaultProvider, null);
+    }
+
+    private PaymentProvider resolveProvider(String requestedProvider) {
+        if (providerFactory != null && requestedProvider != null && !requestedProvider.isBlank()) {
+            return providerFactory.getProvider(requestedProvider);
+        }
+        return defaultProvider;
+    }
 
     @Override
     @Transactional
@@ -34,6 +56,8 @@ public class PaymentServiceImpl implements PaymentService {
         Optional<Payment> existing = (req.userId() != null)
                 ? repository.findByIdempotencyKeyAndUserId(req.idempotencyKey(), req.userId())
                 : repository.findByIdempotencyKey(req.idempotencyKey());
+
+        PaymentProvider provider = resolveProvider(req.provider());
 
         return existing.orElseGet(() -> writer.insert(Payment.builder()
                 .orderId(req.orderId())
@@ -53,6 +77,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.PENDING) {
             throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus());
         }
+        PaymentProvider provider = resolveProvider(payment.getProvider());
         // C7 fix — the provider response carries an `accepted` flag (Stripe
         // returns false for invalid_request_error / card_declined). The
         // previous code discarded the result, leaving a PENDING row on a real
@@ -73,6 +98,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
         }
+        PaymentProvider provider = resolveProvider(payment.getProvider());
         ProviderResult result =
                 provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey());
         if (!result.accepted()) {

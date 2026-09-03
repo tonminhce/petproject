@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
-// A11: no `matchIfMissing` — a provider must be selected explicitly (A12).
-// C5 (spec §3): the yml default is now mock (env SHOP_PAYMENT_PROVIDER); dev
-// compose injects SHOP_PAYMENT_PROVIDER=mock explicitly and prod must opt into
-// stripe. Mock "capture" never charges — real money requires provider=stripe.
 @ConditionalOnProperty(name = "shop.payment.provider", havingValue = "mock")
 public class MockProvider implements PaymentProvider {
 

@@ -8,6 +8,7 @@ import com.shop.orderservice.dto.internal.PromotionReserveRequest;
 import com.shop.orderservice.dto.internal.PromotionReserveResponse;
 import com.shop.orderservice.dto.internal.ReservationStateResponse;
 import com.shop.orderservice.security.ServiceTokenProvider;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -61,6 +62,7 @@ public class PromotionServiceClient {
         return props.promotion().isEnabled();
     }
 
+    @CircuitBreaker(name = "promotionService")
     public PromotionReserveResponse reserve(PromotionReserveRequest request) {
         if (!props.promotion().isEnabled()) {
             // Caller (PricingService) should have already rejected user-supplied coupon when

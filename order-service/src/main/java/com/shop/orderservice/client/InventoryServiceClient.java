@@ -8,6 +8,7 @@ import com.shop.orderservice.dto.internal.ReservationResponse;
 import com.shop.orderservice.dto.internal.ReservationStateResponse;
 import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.security.ServiceTokenProvider;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -41,6 +42,7 @@ public class InventoryServiceClient {
     private static final ParameterizedTypeReference<ApiResponse<ReservationStateResponse>> STATE_RESPONSE =
         new ParameterizedTypeReference<>() {};
 
+    @CircuitBreaker(name = "inventoryService")
     public UUID reserve(UUID productId, ReserveRequest request) {
         try {
             ApiResponse<ReservationResponse> resp = restClient.post()

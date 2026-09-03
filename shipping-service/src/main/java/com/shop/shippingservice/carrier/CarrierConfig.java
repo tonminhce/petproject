@@ -17,4 +17,9 @@ public class CarrierConfig {
                 () -> "Expected exactly one active CarrierAdapter but found " + all.size());
         return all.get(0);
     }
+
+    @Bean
+    public CarrierFactory carrierFactory(List<CarrierAdapter> all) {
+        return new CarrierFactory(all);
+    }
 }
