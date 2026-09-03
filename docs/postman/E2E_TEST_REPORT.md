@@ -1,6 +1,7 @@
 # E2E Test Report — Petproject (Docker Compose)
 
 > Generated 2026-08-29 via deep exploration + docker compose up
+> Last refreshed 2026-09-03 (postman collection coverage sweep against `docs/postman/API_ENDPOINT_INVENTORY.md`)
 > Working dir: /Users/tonminh-mac/IdeaProjects/untitled5
 > Stack: Spring Boot 4.1.1 / Java 25 / Keycloak 26 / Postgres 16 / Redis 7.4 / Kafka 3.9.0 (KRaft) / Elasticsearch 8.15 / RustFS
 
@@ -186,6 +187,54 @@ curl -X POST http://localhost:8084/api/v1/carts/me/items \
 
 ## 5. Postman Collection
 
+Files:
+- `docs/postman/petproject-comprehensive.postman_collection.json` — **primary**,
+  full surface coverage (113 requests, 14 folders, see §5.1 below)
+- `docs/postman/petproject-e2e-v1.json` — historical 41-request E2E (Wave C/D
+  evidence, kept for diff with the comprehensive version)
+- `docs/postman/E-commerce-Auth-Product-E2E.postman_collection.json` —
+  vertical slice (auth + product)
+- `docs/postman/E-commerce-Favourite-Inventory-E2E.postman_collection.json` —
+  vertical slice (favourite + inventory)
+
+### 5.1 Comprehensive collection coverage (as of 2026-09-03)
+
+| Service | Folder | Requests | Inventory endpoints | Coverage |
+|---|---|---:|---:|---:|
+| Auth + chaining | `00 - Auth chaining and errors` | 2 | (cross-cutting) | n/a |
+| auth-service | `auth service` | 14 | 14 | 100% |
+| product-service | `product service` | 19 | 19 | 100% |
+| inventory-service | `inventory service` | 10 | 10 | 100% |
+| order-service | `order service` | 14 | 14 | 100% |
+| favourite-service | `favourites service` | 5 | 5 | 100% |
+| payment-service | `payment service` | 7 | 7 | 100% |
+| media-service | `media service` | 4 | 4 | 100% |
+| promotion-service | `promotion service` | 11 | 11 | 100% |
+| rating-service | `rating service` | 5 | 5 | 100% |
+| search-service | `search service` | 2 | 2 | 100% |
+| shipping-service | `shipping service` | 7 | 7 | 100% |
+| tax-service | `tax service` | 11 | 11 | 100% |
+| notification-service | `notification service` | 2 | 2 | 100% |
+| **Total** | | **113** | **111** | **100%** |
+
+The collection contains one extra request beyond the inventory —
+`GET /internal/products/media-references/{mediaId}` — which is the
+service-to-service endpoint used by media-service to resolve product → media
+links; it is gated by the SERVICE realm role per
+`utils/common-core/src/main/java/com/shop/common/core/constants/ApiPaths.java`.
+
+Every URL was verified to begin with one of the constants declared in
+`utils/common-core/src/main/java/com/shop/common/core/constants/ApiPaths.java`
+(`/api/v1/auth`, `/api/v1/users`, `/api/v1/products`, …). See `docs/SERVICE-CATALOG.md`
+for path conventions per service.
+
+JSON syntax validated via:
+```bash
+python3 -c "import json; json.load(open('docs/postman/petproject-comprehensive.postman_collection.json'))"
+```
+
+### 5.2 Historical E2E collection
+
 File: docs/postman/petproject-e2e-v1.json
 
 **Coverage:** 41 requests across 8 folders
@@ -216,6 +265,11 @@ gateway_url      = http://localhost:8080
 testuser_token   = (auto-populated)
 admin_token      = (auto-populated)
 ```
+
+### 5.3 Postman schema
+
+The collection conforms to the
+[Postman Collection v2.1.0 schema](https://schema.getpostman.com/json/collection/v2.1.0/collection.json).
 
 ---
 
