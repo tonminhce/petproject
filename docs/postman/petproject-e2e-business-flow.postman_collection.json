@@ -780,7 +780,109 @@
           ]
         },
         {
-          "name": "6.2 Capture Payment (Admin/Service)",
+          "name": "6.2 Create Payment via COD",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"{{orderId}}\", \"amount\": 1999.0, \"currency\": \"USD\", \"idempotencyKey\": \"{{payKey}}-cod\", \"provider\": \"cod\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Payment created with COD provider\", () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.data.provider).to.eql(\"COD\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Create Payment via VNPay",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"{{orderId}}\", \"amount\": 50000000, \"currency\": \"VND\", \"idempotencyKey\": \"{{payKey}}-vnpay\", \"provider\": \"vnpay\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Payment created with VNPay provider\", () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  const res = pm.response.json();",
+                  "  pm.expect(res.data.provider).to.eql(\"VNPAY\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.4 Capture Payment (Admin/Service)",
           "request": {
             "method": "POST",
             "url": "{{paymentUrl}}/api/v1/payments/{{paymentId}}/capture",

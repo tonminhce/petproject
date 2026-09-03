@@ -1742,7 +1742,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 10,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"postman-{{$guid}}\"\n}",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 10,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"postman-{{$guid}}\",\n  \"provider\": \"mock\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1756,12 +1756,142 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));"
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "  pm.collectionVariables.set('paymentId', jsonData.data.id);",
+                  "}"
                 ]
               }
             }
           ],
           "description": "Source: payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
+        },
+        {
+          "name": "POST /api/v1/payments (COD)",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 25.50,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"postman-cod-{{$guid}}\",\n  \"provider\": \"cod\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data) {",
+                  "  pm.expect(jsonData.data.provider).to.eql('COD');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "description": "Multi-Provider Factory: Cash On Delivery (COD) dispatch"
+        },
+        {
+          "name": "POST /api/v1/payments (VNPay)",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 500000,\n  \"currency\": \"VND\",\n  \"idempotencyKey\": \"postman-vnpay-{{$guid}}\",\n  \"provider\": \"vnpay\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data) {",
+                  "  pm.expect(jsonData.data.provider).to.eql('VNPAY');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "description": "Multi-Provider Factory: VNPay gateway dispatch"
+        },
+        {
+          "name": "POST /api/v1/payments (MoMo)",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 300000,\n  \"currency\": \"VND\",\n  \"idempotencyKey\": \"postman-momo-{{$guid}}\",\n  \"provider\": \"momo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data) {",
+                  "  pm.expect(jsonData.data.provider).to.eql('MOMO');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "description": "Multi-Provider Factory: MoMo e-wallet dispatch"
         },
         {
           "name": "POST /api/v1/payments/{id}/capture",
