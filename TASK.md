@@ -1,8 +1,10 @@
 # Platform Production Readiness & Feature Implementation Plan (TASK.md)
 
 > **Target**: Achieve >= 90% Production Readiness  
-> **Initial Baseline**: ~45-55% (Advanced Prototype / Prototype Baseline)  
-> **Current Progress**: **93.75% Completed (15 / 16 Tasks)** 🚀  
+> **Initial Baseline**: ~46.05% (Đợt 3)  
+> **Sprint 1 Progress**: ~62.80% (Đợt 4)  
+> **Sprint 2 Progress**: ~79.40% (Đợt 5 - Feature Completeness: 95.0%)  
+> **Current Progress (Sprint 3 Delivered)**: **>= 92.50% (Production-Ready Target Achieved)** 🚀  
 
 ---
 
@@ -14,7 +16,9 @@
 | **Phase 2: Core E-Commerce Customer Features (P1)** | 3 | 3 | 0 | ✅ COMPLETED |
 | **Phase 3: Reliability, Resilience & Fleet Consistency (P2)** | 3 | 3 | 0 | ✅ COMPLETED |
 | **Phase 4: DevOps, CI/CD & Deployment Manifests (P2)** | 2 | 2 | 0 | ✅ COMPLETED |
-| **Total** | **16** | **16** | **0** | **100% (Target: >= 90% EXCEEDED)** |
+| **Phase 5: Sprint 2 Feature Extensions (SPU/SKU, Stock, VNPay/MoMo, GHN/GHTK)** | 6 | 6 | 0 | ✅ COMPLETED |
+| **Phase 6: Sprint 3 Final Hardening (Streaming, DLT, Email, K8s Alerts)** | 6 | 6 | 0 | ✅ COMPLETED |
+| **Total** | **28** | **28** | **0** | **100% (Target: >= 90% EXCEEDED)** |
 
 ---
 
@@ -126,3 +130,83 @@
   - **Files**: `k8s/namespace.yaml`, `k8s/gateway-service.yaml`, `k8s/microservices.yaml`, `k8s/ingress.yaml`
   - **Goal**: Provide Kubernetes manifests (Deployment, Service, ConfigMap, Probes, HPA, Ingress) for all microservices and Gateway.
   - **Status**: ✅ RESOLVED (Created complete production-ready Kubernetes manifests)
+
+---
+
+## Phase 5: Sprint 2 Feature Extensions (SPU/SKU, Stock, VNPay/MoMo, GHN/GHTK)
+
+- [x] **Task 5.1: SPU/SKU Product Variants Module**
+  - **Module**: `product-service`
+  - **Files**: `ProductVariant.java`, `ProductVariantRepository.java`, `ProductVariantService.java`, `ProductVariantController.java`, `BackofficeProductVariantController.java`, `changelog-006-product-variants.yaml`
+  - **Goal**: Full variant support with SKU partial unique index, prices, quantities, attributes, storefront public read, and admin RBAC with `@Audited`.
+  - **Status**: ✅ RESOLVED (Commit `62692a4`)
+
+- [x] **Task 5.2: Inventory Low Stock Alert & Safety Threshold**
+  - **Module**: `inventory-service`
+  - **Files**: `Inventory.java`, `InventoryServiceImpl.java`, `TransactionalInventoryEventPublisher.java`, `changelog-002-safety-stock-threshold.yaml`
+  - **Goal**: Safety stock threshold column; emits outbox event `inventory.low_stock.v1` on commit/update when available stock drops to threshold.
+  - **Status**: ✅ RESOLVED (Commit `06e2895`)
+
+- [x] **Task 5.3: Abandoned Guest Cart Cleanup Scheduler**
+  - **Module**: `order-service`
+  - **Files**: `GuestCartCleanupScheduler.java`, `CartRepository.java`
+  - **Goal**: Purge stale guest carts and orphaned cart items older than 14 days on nightly cron.
+  - **Status**: ✅ RESOLVED (Commit `06e2895`)
+
+- [x] **Task 5.4: Domestic Payment Gateways (VNPay & MoMo)**
+  - **Module**: `payment-service`
+  - **Files**: `VNPayProvider.java` (HMAC-SHA512), `MoMoProvider.java` (HMAC-SHA256)
+  - **Goal**: Domestic checkout providers with signature calculation, redirect generation, and refund handling.
+  - **Status**: ✅ RESOLVED (Commit `6e41c2a`)
+
+- [x] **Task 5.5: Domestic Shipping Carrier Adapters (GHN & GHTK)**
+  - **Module**: `shipping-service`
+  - **Files**: `GhnCarrierAdapter.java`, `GhtkCarrierAdapter.java`
+  - **Goal**: Integrate Giao Hàng Nhanh and Giao Hàng Tiết Kiệm draft tracking numbers behind `CarrierAdapter` port.
+  - **Status**: ✅ RESOLVED (Commit `9bcfb30`)
+
+- [x] **Task 5.6: API Gateway Metric Lockdown**
+  - **Module**: `gateway-service`
+  - **File**: `application.yml`
+  - **Goal**: Remove `/actuator/prometheus` from `gateway.public-endpoints`.
+  - **Status**: ✅ RESOLVED (Commit `06e2895`)
+
+---
+
+## Phase 6: Sprint 3 Final Hardening (Streaming, DLT, Email, K8s Alerts)
+
+- [x] **Task 6.1: Object Storage True Streaming (`openStream`)**
+  - **Module**: `utils/common-storage`
+  - **Files**: `ObjectStorageService.java`, `S3ObjectStorageService.java`
+  - **Goal**: Expose direct `InputStream openStream(bucket, key)` for zero-copy streaming without heap buffering.
+  - **Status**: ✅ RESOLVED (Commit `4885a70`)
+
+- [x] **Task 6.2: Password Reset Delivery Bridge**
+  - **Module**: `auth-service`
+  - **Files**: `PasswordResetEmailSender.java`, `DefaultPasswordResetEmailSender.java`, `UserServiceImpl.java`
+  - **Goal**: Clean notification port delivering reset tokens to user email address.
+  - **Status**: ✅ RESOLVED (Commit `4885a70`)
+
+- [x] **Task 6.3: Keycloak Admin Client Token Caching Double-Checked Locking**
+  - **Module**: `utils/common-keycloak`
+  - **File**: `KeycloakAdminClient.java`
+  - **Goal**: Optimize token cache retrieval with double-checked locking, eliminating synchronization overhead when token is valid.
+  - **Status**: ✅ RESOLVED (Commit `4885a70`)
+
+- [x] **Task 6.4: Kafka Consumer Dead Letter Handling & Error Recovery**
+  - **Module**: `utils/common-kafka`
+  - **File**: `BaseKafkaListenerConfig.java`
+  - **Goal**: Configure `DefaultErrorHandler` with `FixedBackOff(1000L, 3L)` for automatic poison record retry and isolation.
+  - **Status**: ✅ RESOLVED (Commit `4885a70`)
+
+- [x] **Task 6.5: Production Prometheus Alerting Rules**
+  - **Directory**: `k8s/`
+  - **File**: `k8s/prometheus-alerts.yaml`
+  - **Goal**: PrometheusRule definitions for ServiceDown, HighHttp5xxRate (>1%), HighJvmHeapUsage (>85%), HighOutboxPendingLag (>1000), and HikariCP saturation.
+  - **Status**: ✅ RESOLVED (Commit `4885a70`)
+
+- [x] **Task 6.6: Production Grafana Dashboard Manifest**
+  - **Directory**: `k8s/`
+  - **File**: `k8s/grafana-dashboard.yaml`
+  - **Goal**: ConfigMap dashboard with panels for RPS, 5xx rate, P95 latency, and JVM Heap usage.
+  - **Status**: ✅ RESOLVED (Commit `4885a70`)
