@@ -43,8 +43,9 @@ public class InventoryController {
     public ApiResponse<PageResponse<InventoryResponse>> findAll(
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
-        // Cap page size — PageableConstant.MAX_PAGE_SIZE guards against ?size=100000 dumps.
-        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        Pageable pageable = PageRequest.of(safePage, safeSize);
         return ApiResponse.ok(inventoryService.findAll(pageable));
     }
 

@@ -13,7 +13,6 @@ import com.shop.productservice.service.CategoryEventPublisher;
 import com.shop.productservice.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
@@ -36,6 +35,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "category", key = "'all'")
     public List<CategoryResponse> findAll() {
         return repo.findAllByOrderByTitleAsc().stream()
             .map(mapper::toResponse)
@@ -44,6 +44,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "category", key = "'tree'")
     public List<CategoryTreeResponse> findTree() {
         List<Category> all = repo.findAllByOrderByTitleAsc();
         Map<UUID, CategoryTreeResponse> nodeMap = new LinkedHashMap<>();
@@ -76,6 +77,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "category", allEntries = true)
     public CategoryResponse create(CategoryCreateRequest request) {
         if (repo.existsBySlug(request.slug())) {
             throw BusinessException.of(ErrorCode.CATEGORY_SLUG_EXISTS);
@@ -99,7 +101,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    @CachePut(value = "category", key = "#id")
+    @CacheEvict(value = "category", allEntries = true)
     public CategoryResponse update(UUID id, CategoryUpdateRequest request) {
         Category existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));

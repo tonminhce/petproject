@@ -34,6 +34,10 @@ public class UserServiceImpl implements UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+        "id", "username", "email", "phone", "fullName", "createdAt", "updatedAt"
+    );
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
@@ -136,7 +140,9 @@ public class UserServiceImpl implements UserService {
         // or unbounded sizes (DoS via full-table materialisation). Mirrors fleet PageableConstant cap.
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
-        Sort sort = Sort.by(Sort.Direction.fromString(sortOrder), sortBy);
+        String safeSortBy = (sortBy != null && ALLOWED_SORT_FIELDS.contains(sortBy)) ? sortBy : "id";
+        Sort.Direction direction = "DESC".equalsIgnoreCase(sortOrder) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Sort sort = Sort.by(direction, safeSortBy);
         PageRequest pageRequest = PageRequest.of(safePage, safeSize, sort);
         return userRepository.findAll(pageRequest).map(userMapper::toResponse);
     }

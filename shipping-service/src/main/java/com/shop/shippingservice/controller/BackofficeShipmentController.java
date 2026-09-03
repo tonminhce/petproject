@@ -41,7 +41,9 @@ public class BackofficeShipmentController {
             @RequestParam(required = false) UUID orderId,
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
-        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
+        Pageable pageable = PageRequest.of(safePage, safeSize);
         Page<ShipmentResponse> result = shipmentService.findAll(status, carrier, orderId, pageable);
         return ApiResponse.ok(PageResponse.of(
             result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));
