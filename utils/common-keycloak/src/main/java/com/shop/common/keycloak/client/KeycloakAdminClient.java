@@ -204,41 +204,48 @@ public class KeycloakAdminClient {
 
     private record CachedAdminToken(String token, Instant expiresAt) {}
 
-    private synchronized String getAdminAccessToken() {
+    private String getAdminAccessToken() {
         CachedAdminToken current = cachedToken.get();
         if (current != null && current.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS))) {
             return current.token();
         }
 
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add(GRANT_TYPE, PASSWORD);
-        form.add(CLIENT_ID, adminClientId);
-        form.add(USERNAME, adminUsername);
-        form.add(PASSWORD, adminPassword);
-
-        try {
-            KeycloakTokenResponse response = restClient.post()
-                    .uri(adminTokenEndpoint)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(form)
-                    .retrieve()
-                    .body(KeycloakTokenResponse.class);
-
-            if (response == null || response.accessToken() == null) {
-                throw new KeycloakClientException("Failed to obtain admin access token", HttpStatus.UNAUTHORIZED);
+        synchronized (this) {
+            current = cachedToken.get();
+            if (current != null && current.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS))) {
+                return current.token();
             }
 
-            long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
-            cachedToken.set(new CachedAdminToken(response.accessToken(), Instant.now().plusSeconds(ttl)));
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add(GRANT_TYPE, PASSWORD);
+            form.add(CLIENT_ID, adminClientId);
+            form.add(USERNAME, adminUsername);
+            form.add(PASSWORD, adminPassword);
 
-            return response.accessToken();
-        } catch (RestClientResponseException e) {
-            log.error("Keycloak admin token request failed: {}", e.getResponseBodyAsString());
-            throw new KeycloakClientException(
-                    "Admin token request failed: " + e.getResponseBodyAsString(),
-                    HttpStatus.valueOf(e.getStatusCode().value()),
-                    e
-            );
+            try {
+                KeycloakTokenResponse response = restClient.post()
+                        .uri(adminTokenEndpoint)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(form)
+                        .retrieve()
+                        .body(KeycloakTokenResponse.class);
+
+                if (response == null || response.accessToken() == null) {
+                    throw new KeycloakClientException("Failed to obtain admin access token", HttpStatus.UNAUTHORIZED);
+                }
+
+                long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
+                cachedToken.set(new CachedAdminToken(response.accessToken(), Instant.now().plusSeconds(ttl)));
+
+                return response.accessToken();
+            } catch (RestClientResponseException e) {
+                log.error("Keycloak admin token request failed: {}", e.getResponseBodyAsString());
+                throw new KeycloakClientException(
+                        "Admin token request failed: " + e.getResponseBodyAsString(),
+                        HttpStatus.valueOf(e.getStatusCode().value()),
+                        e
+                );
+            }
         }
     }
 

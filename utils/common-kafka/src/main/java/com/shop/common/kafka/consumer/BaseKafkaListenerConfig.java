@@ -6,6 +6,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.Map;
 
@@ -63,6 +65,7 @@ public abstract class BaseKafkaListenerConfig<K> {
         var factory = new ConcurrentKafkaListenerContainerFactory<K, String>();
         factory.setConsumerFactory(rawStringConsumerFactory());
         factory.getContainerProperties().setObservationEnabled(true);
+        factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3L)));
         return factory;
     }
 

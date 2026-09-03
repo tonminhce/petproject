@@ -1,0 +1,56 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shop-system-alerts
+  namespace: shop-system
+  labels:
+    role: alert-rules
+    app.kubernetes.io/part-of: ecommerce-platform
+spec:
+  groups:
+    - name: shop.ecommerce.rules
+      rules:
+        - alert: ServiceDown
+          expr: up{namespace="shop-system"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service instance down: {{ $labels.instance }}"
+            description: "Instance {{ $labels.instance }} of job {{ $labels.job }} in namespace shop-system has been unreachable for more than 1 minute."
+
+        - alert: HighHttp5xxRate
+          expr: (sum(rate(http_server_requests_seconds_count{status=~"5..", namespace="shop-system"}[5m])) / sum(rate(http_server_requests_seconds_count{namespace="shop-system"}[5m]))) * 100 > 1
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High HTTP 5xx error rate on {{ $labels.job }}"
+            description: "5xx error rate on service {{ $labels.job }} exceeds 1% over the last 5 minutes."
+
+        - alert: HighJvmHeapUsage
+          expr: (jvm_memory_used_bytes{area="heap", namespace="shop-system"} / jvm_memory_max_bytes{area="heap", namespace="shop-system"}) * 100 > 85
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "JVM Heap usage > 85% on {{ $labels.instance }}"
+            description: "JVM Heap usage on pod {{ $labels.pod }} exceeds 85% for more than 3 minutes."
+
+        - alert: HighOutboxPendingLag
+          expr: sum by (application) (outbox_pending_events_count{namespace="shop-system"}) > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Outbox pending lag is high on {{ $labels.application }}"
+            description: "Application {{ $labels.application }} has more than 1000 pending outbox events awaiting relay."
+
+        - alert: HighHikariPoolSaturation
+          expr: (hikaricp_connections_active{namespace="shop-system"} / hikaricp_connections_max{namespace="shop-system"}) * 100 > 90
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HikariCP pool saturation on {{ $labels.instance }}"
+            description: "Hikari connection pool usage exceeds 90% capacity on {{ $labels.instance }}."

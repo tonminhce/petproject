@@ -3,10 +3,6 @@ package com.shop.authservice.service.impls;
 import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
-import com.shop.authservice.dto.request.UpdateUserRequest;
-import com.shop.authservice.dto.response.UserResponse;
-import com.shop.authservice.entity.Role;
-import com.shop.authservice.entity.User;
 import com.shop.authservice.dto.request.ResetPasswordRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;
 import com.shop.authservice.dto.response.UserResponse;
@@ -17,6 +13,7 @@ import com.shop.authservice.mapper.UserMapper;
 import com.shop.authservice.repository.PasswordResetTokenRepository;
 import com.shop.authservice.repository.RoleRepository;
 import com.shop.authservice.repository.UserRepository;
+import com.shop.authservice.service.PasswordResetEmailSender;
 import com.shop.authservice.service.UserService;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.keycloak.client.KeycloakAdminClient;
@@ -57,6 +54,7 @@ public class UserServiceImpl implements UserService {
     private final KeycloakAdminClient keycloakAdminClient;
     private final KeycloakTokenClient keycloakTokenClient;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final PasswordResetEmailSender passwordResetEmailSender;
 
     @Override
     // C2 fix — logInput=true was a latent password-leak vector: RegisterRequest
@@ -299,6 +297,7 @@ public class UserServiceImpl implements UserService {
                 .createdAt(Instant.now())
                 .build();
         passwordResetTokenRepository.save(resetToken);
+        passwordResetEmailSender.sendResetEmail(user.getEmail(), user.getUsername(), rawToken);
         log.info("Password reset token generated successfully for user {}", user.getUsername());
     }
 

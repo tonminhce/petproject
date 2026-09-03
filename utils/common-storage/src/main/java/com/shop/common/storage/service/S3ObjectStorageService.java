@@ -140,6 +140,18 @@ public class S3ObjectStorageService implements ObjectStorageService {
     }
 
     @Override
+    public InputStream openStream(String bucket, String key) {
+        GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key).build();
+        try {
+            return s3Client.getObject(request);
+        } catch (NoSuchKeyException e) {
+            throw new StorageException("Object not found: " + bucket + "/" + key, e);
+        } catch (S3Exception e) {
+            throw new StorageException("Failed to open object stream: " + key, e);
+        }
+    }
+
+    @Override
     public boolean exists(String key) {
         HeadObjectRequest request = HeadObjectRequest.builder().bucket(defaultBucket()).key(key).build();
         try {
