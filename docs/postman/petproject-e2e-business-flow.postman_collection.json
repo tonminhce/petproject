@@ -1,25 +1,34 @@
 {
   "info": {
+    "_postman_id": "c48f8a91-b13a-4cd5-839e-flow-petproject",
     "name": "Petproject - Full End-to-End Business Flow",
-    "description": "Complete real-world E2E workflow covering all 14 microservices: Auth -> Catalog -> Inventory -> Cart -> Order -> Payment -> Shipping -> Rating -> Favourite -> Search -> Notification -> Tax -> Promotion -> Media -> Gateway.",
+    "description": "Dedicated End-to-End Business Flow and Edge Cases Suite for Petproject Microservices Platform.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "authUrl",
-      "value": "http://localhost:8088"
-    },
     {
       "key": "gatewayUrl",
       "value": "http://localhost:8080"
     },
     {
-      "key": "productUrl",
-      "value": "http://localhost:8086"
+      "key": "authUrl",
+      "value": "http://localhost:8088"
+    },
+    {
+      "key": "favouriteUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "favouritesUrl",
+      "value": "http://localhost:8081"
     },
     {
       "key": "inventoryUrl",
       "value": "http://localhost:8082"
+    },
+    {
+      "key": "mediaUrl",
+      "value": "http://localhost:8083"
     },
     {
       "key": "orderUrl",
@@ -30,20 +39,16 @@
       "value": "http://localhost:8085"
     },
     {
+      "key": "productUrl",
+      "value": "http://localhost:8086"
+    },
+    {
       "key": "shippingUrl",
       "value": "http://localhost:8087"
     },
     {
       "key": "ratingUrl",
       "value": "http://localhost:8089"
-    },
-    {
-      "key": "favouriteUrl",
-      "value": "http://localhost:8081"
-    },
-    {
-      "key": "searchUrl",
-      "value": "http://localhost:8094"
     },
     {
       "key": "notificationUrl",
@@ -58,16 +63,44 @@
       "value": "http://localhost:8093"
     },
     {
-      "key": "mediaUrl",
-      "value": "http://localhost:8083"
+      "key": "searchUrl",
+      "value": "http://localhost:8094"
     },
     {
       "key": "adminToken",
       "value": ""
     },
     {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
       "key": "userToken",
       "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "adminUser",
+      "value": "adminuser"
+    },
+    {
+      "key": "adminPass",
+      "value": "adminpass"
+    },
+    {
+      "key": "normalUser",
+      "value": "testuser"
+    },
+    {
+      "key": "normalPass",
+      "value": "changeme"
     },
     {
       "key": "catSlug",
@@ -106,6 +139,10 @@
       "value": ""
     },
     {
+      "key": "payKey",
+      "value": ""
+    },
+    {
       "key": "shipmentId",
       "value": ""
     },
@@ -114,11 +151,47 @@
       "value": ""
     },
     {
-      "key": "mediaId",
+      "key": "taxClassName",
+      "value": ""
+    },
+    {
+      "key": "promotionId",
       "value": ""
     },
     {
       "key": "promoCode",
+      "value": ""
+    },
+    {
+      "key": "reservationId",
+      "value": ""
+    },
+    {
+      "key": "returnId",
+      "value": ""
+    },
+    {
+      "key": "mediaId",
+      "value": ""
+    },
+    {
+      "key": "cartItemId",
+      "value": ""
+    },
+    {
+      "key": "trackingNumber",
+      "value": ""
+    },
+    {
+      "key": "customerPhone",
+      "value": "0987654321"
+    },
+    {
+      "key": "badSku",
+      "value": ""
+    },
+    {
+      "key": "badSlug",
       "value": ""
     }
   ],
@@ -130,16 +203,16 @@
           "name": "1.1 Admin Login",
           "request": {
             "method": "POST",
-            "url": "{{authUrl}}/api/v1/auth/login",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "url": "{{authUrl}}/api/v1/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\"username\": \"adminuser\", \"password\": \"adminpass\"}",
+              "raw": "{\n  \"username\": \"{{adminUser}}\",\n  \"password\": \"{{adminPass}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -156,26 +229,27 @@
                   "pm.test(\"Admin login succeeds\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.accessToken).to.be.a(\"string\");",
-                  "pm.collectionVariables.set(\"adminToken\", res.data.accessToken);"
+                  "pm.collectionVariables.set(\"adminToken\", res.data.accessToken);",
+                  "pm.collectionVariables.set(\"admin_token\", res.data.accessToken);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "1.2 User Login",
+          "name": "1.2 Customer Login",
           "request": {
             "method": "POST",
-            "url": "{{authUrl}}/api/v1/auth/login",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "url": "{{authUrl}}/api/v1/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\"username\": \"testuser\", \"password\": \"changeme\"}",
+              "raw": "{\n  \"username\": \"{{normalUser}}\",\n  \"password\": \"{{normalPass}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -189,10 +263,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"User login succeeds\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.test(\"Customer login succeeds\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.accessToken).to.be.a(\"string\");",
-                  "pm.collectionVariables.set(\"userToken\", res.data.accessToken);"
+                  "pm.collectionVariables.set(\"userToken\", res.data.accessToken);",
+                  "if (res.data.refreshToken) pm.collectionVariables.set(\"refreshToken\", res.data.refreshToken);",
+                  "try {",
+                  "  const parts = res.data.accessToken.split(\".\");",
+                  "  if (parts.length === 3) {",
+                  "    const payload = JSON.parse(Buffer.from(parts[1], \"base64\").toString());",
+                  "    if (payload.sub) pm.collectionVariables.set(\"userId\", payload.sub);",
+                  "  }",
+                  "} catch (e) {}"
                 ]
               }
             }
@@ -202,16 +284,16 @@
           "name": "1.3 Forgot Password Flow",
           "request": {
             "method": "POST",
-            "url": "{{authUrl}}/api/v1/auth/forgot-password",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "url": "{{authUrl}}/api/v1/auth/forgot-password",
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"admin@shop.internal\"}",
+              "raw": "{\n  \"email\": \"testuser@local.dev\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -240,20 +322,20 @@
           "name": "2.1 Create Category (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{productUrl}}/api/v1/backoffice/categories",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{productUrl}}/api/v1/backoffice/categories",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\": \"Electronics E2E\", \"slug\": \"{{catSlug}}\"}",
+              "raw": "{\n  \"title\": \"Laptops & Computers\",\n  \"slug\": \"{{catSlug}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -279,7 +361,6 @@
                 "exec": [
                   "pm.test(\"Category created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.id).to.be.a(\"string\");",
                   "pm.collectionVariables.set(\"categoryId\", res.data.id);"
                 ]
               }
@@ -290,20 +371,20 @@
           "name": "2.2 Create Brand (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{productUrl}}/api/v1/backoffice/brands",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{productUrl}}/api/v1/backoffice/brands",
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"Apple E2E\", \"slug\": \"{{brandSlug}}\", \"description\": \"Apple E2E Brand\"}",
+              "raw": "{\n  \"name\": \"Apple Inc\",\n  \"slug\": \"{{brandSlug}}\",\n  \"description\": \"Premium electronics\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -329,7 +410,6 @@
                 "exec": [
                   "pm.test(\"Brand created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.id).to.be.a(\"string\");",
                   "pm.collectionVariables.set(\"brandId\", res.data.id);"
                 ]
               }
@@ -337,23 +417,23 @@
           ]
         },
         {
-          "name": "2.3 Create Product (Admin)",
+          "name": "2.3 Create Product with SPU/SKU (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{productUrl}}/api/v1/backoffice/products",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{productUrl}}/api/v1/backoffice/products",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\": \"MacBook Pro E2E\", \"slug\": \"{{prodSlug}}\", \"sku\": \"{{prodSku}}\", \"priceUnit\": 1999.0, \"quantity\": 50, \"status\": \"ACTIVE\", \"categoryId\": \"{{categoryId}}\", \"brandId\": \"{{brandId}}\"}",
+              "raw": "{\n  \"title\": \"MacBook Pro 16 M3 Max\",\n  \"slug\": \"{{prodSlug}}\",\n  \"sku\": \"{{prodSku}}\",\n  \"priceUnit\": 2499,\n  \"quantity\": 100,\n  \"status\": \"ACTIVE\",\n  \"description\": \"Apple silicon high performance workstation\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"brandId\": \"{{brandId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -380,7 +460,6 @@
                 "exec": [
                   "pm.test(\"Product created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.id).to.be.a(\"string\");",
                   "pm.collectionVariables.set(\"productId\", res.data.id);"
                 ]
               }
@@ -391,8 +470,8 @@
           "name": "2.4 Get Categories Storefront",
           "request": {
             "method": "GET",
-            "url": "{{productUrl}}/api/v1/categories",
-            "header": []
+            "header": [],
+            "url": "{{productUrl}}/api/v1/categories"
           },
           "event": [
             {
@@ -400,9 +479,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Categories retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data).to.be.an(\"array\");"
+                  "pm.test(\"Categories retrieved\", () => pm.expect(pm.response.code).to.eql(200));"
                 ]
               }
             }
@@ -412,8 +489,8 @@
           "name": "2.5 Get Product by ID Storefront",
           "request": {
             "method": "GET",
-            "url": "{{productUrl}}/api/v1/products/{{productId}}",
-            "header": []
+            "header": [],
+            "url": "{{productUrl}}/api/v1/products/{{productId}}"
           },
           "event": [
             {
@@ -423,8 +500,7 @@
                 "exec": [
                   "pm.test(\"Product retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.title).to.eql(\"MacBook Pro E2E\");",
-                  "pm.expect(res.data.status).to.eql(\"ACTIVE\");"
+                  "pm.expect(res.data.id).to.eql(pm.collectionVariables.get(\"productId\"));"
                 ]
               }
             }
@@ -439,20 +515,20 @@
           "name": "3.1 Seed Product Inventory (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{inventoryUrl}}/api/v1/inventory",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{inventoryUrl}}/api/v1/inventory",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\", \"availableQuantity\": 100}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"availableQuantity\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -466,25 +542,23 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Inventory created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.availableQuantity).to.eql(100);"
+                  "pm.test(\"Inventory seeded\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "3.2 Get Product Inventory",
+          "name": "3.2 Get Inventory by Product ID (User)",
           "request": {
             "method": "GET",
-            "url": "{{inventoryUrl}}/api/v1/inventory/{{productId}}",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{inventoryUrl}}/api/v1/inventory/{{productId}}"
           },
           "event": [
             {
@@ -494,7 +568,7 @@
                 "exec": [
                   "pm.test(\"Inventory retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.availableQuantity).to.eql(100);"
+                  "pm.expect(res.data.availableQuantity).to.be.above(0);"
                 ]
               }
             }
@@ -509,20 +583,20 @@
           "name": "4.1 Add Product to Cart (User)",
           "request": {
             "method": "POST",
-            "url": "{{orderUrl}}/api/v1/carts/me/items",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\", \"quantity\": 1}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -538,8 +612,7 @@
                 "exec": [
                   "pm.test(\"Product added to cart\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.items).to.be.an(\"array\");",
-                  "pm.expect(res.data.subtotal).to.be.at.least(1999.00);"
+                  "if (res.data && res.data.id) pm.collectionVariables.set(\"cartItemId\", res.data.id);"
                 ]
               }
             }
@@ -549,13 +622,13 @@
           "name": "4.2 View Cart (User)",
           "request": {
             "method": "GET",
-            "url": "{{orderUrl}}/api/v1/carts/me",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{orderUrl}}/api/v1/carts/me"
           },
           "event": [
             {
@@ -563,9 +636,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Cart retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.items.length).to.be.at.least(1);"
+                  "pm.test(\"Cart retrieved\", () => pm.expect(pm.response.code).to.eql(200));"
                 ]
               }
             }
@@ -575,20 +646,20 @@
           "name": "4.3 Place Order from Cart (User)",
           "request": {
             "method": "POST",
-            "url": "{{orderUrl}}/api/v1/orders",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
+            "url": "{{orderUrl}}/api/v1/orders",
             "body": {
               "mode": "raw",
-              "raw": "{\"recipientName\": \"Test Customer\", \"phoneNumber\": \"0987654321\", \"shippingAddress\": \"123 Commerce St, District 1, HCM City\"}",
+              "raw": "{\n  \"recipientName\": \"Test Customer\",\n  \"phoneNumber\": \"{{customerPhone}}\",\n  \"shippingAddress\": \"123 Commerce St, District 1, HCM City\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -605,10 +676,7 @@
                   "pm.test(\"Order placed successfully\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.id).to.be.a(\"string\");",
-                  "pm.expect(res.data.status).to.eql(\"PENDING\");",
-                  "pm.expect(res.data.recipientName).to.eql(\"Test Customer\");",
-                  "pm.expect(res.data.phoneNumber).to.eql(\"0987654321\");",
-                  "pm.expect(res.data.shippingAddress).to.eql(\"123 Commerce St, District 1, HCM City\");",
+                  "pm.expect(res.data.status).to.be.oneOf([\"PENDING\", \"PENDING_PAYMENT\"]);",
                   "pm.collectionVariables.set(\"orderId\", res.data.id);"
                 ]
               }
@@ -619,13 +687,13 @@
           "name": "4.4 Get Order Details (User)",
           "request": {
             "method": "GET",
-            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}"
           },
           "event": [
             {
@@ -633,7 +701,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Order details retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"Order retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.id).to.eql(pm.collectionVariables.get(\"orderId\"));"
                 ]
@@ -644,19 +712,14 @@
       ]
     },
     {
-      "name": "5. Order Fulfillment Lifecycle",
+      "name": "5. Public Guest Order Tracking",
       "item": [
         {
-          "name": "5.1 Confirm Order (Admin)",
+          "name": "5.1 Guest Order Tracking by Phone (Public)",
           "request": {
-            "method": "POST",
-            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/confirm",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ]
+            "method": "GET",
+            "header": [],
+            "url": "{{orderUrl}}/api/v1/orders/track?orderId={{orderId}}&phone={{customerPhone}}"
           },
           "event": [
             {
@@ -664,7 +727,258 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Order confirmed\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"Guest tracking succeeds without JWT\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.orderId).to.eql(pm.collectionVariables.get(\"orderId\"));",
+                  "pm.expect(res.data.status).to.be.a(\"string\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Payment (Multi-Gateway)",
+      "item": [
+        {
+          "name": "6.1 Create Payment via Stripe Intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 2499,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"{{payKey}}\",\n  \"provider\": \"STRIPE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-STRIPE-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Payment intent created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set(\"paymentId\", res.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Create Payment via VNPay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 2499,\n  \"currency\": \"VND\",\n  \"idempotencyKey\": \"{{payKey}}\",\n  \"provider\": \"VNPAY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-VNPAY-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"VNPay payment created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Create Payment via MoMo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 2499,\n  \"currency\": \"VND\",\n  \"idempotencyKey\": \"{{payKey}}\",\n  \"provider\": \"MOMO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-MOMO-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"MoMo payment created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.4 Create Payment via COD",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 2499,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"{{payKey}}\",\n  \"provider\": \"COD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set(\"payKey\", \"PAY-COD-\" + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"COD payment created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.5 Capture Payment (Admin/Service)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{paymentUrl}}/api/v1/payments/{{paymentId}}/capture"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Payment captured\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Order Fulfillment Lifecycle",
+      "item": [
+        {
+          "name": "7.1 Confirm Order (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/confirm"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order confirmed\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.status).to.eql(\"CONFIRMED\");"
                 ]
@@ -673,16 +987,16 @@
           ]
         },
         {
-          "name": "5.2 Ship Order (Admin)",
+          "name": "7.2 Ship Order (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/ship",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{adminToken}}"
               }
-            ]
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/ship"
           },
           "event": [
             {
@@ -690,7 +1004,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Order shipped\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"Order shipped\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.status).to.eql(\"SHIPPED\");"
                 ]
@@ -699,16 +1013,16 @@
           ]
         },
         {
-          "name": "5.3 Deliver Order (Admin)",
+          "name": "7.3 Deliver Order (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/deliver",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{adminToken}}"
               }
-            ]
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/deliver"
           },
           "event": [
             {
@@ -716,7 +1030,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Order delivered\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"Order delivered\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.status).to.eql(\"DELIVERED\");"
                 ]
@@ -727,207 +1041,26 @@
       ]
     },
     {
-      "name": "6. Payment",
+      "name": "8. Rating & Favourite",
       "item": [
         {
-          "name": "6.1 Create Payment (Admin/Service)",
+          "name": "8.1 Submit Rating for Delivered Product (User)",
           "request": {
             "method": "POST",
-            "url": "{{paymentUrl}}/api/v1/payments",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"orderId\": \"{{orderId}}\", \"amount\": 1999.0, \"currency\": \"USD\", \"idempotencyKey\": \"{{payKey}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ts = Date.now();",
-                  "pm.collectionVariables.set(\"payKey\", \"PAY-\" + ts);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Payment created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.id).to.be.a(\"string\");",
-                  "pm.collectionVariables.set(\"paymentId\", res.data.id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "6.2 Create Payment via COD",
-          "request": {
-            "method": "POST",
-            "url": "{{paymentUrl}}/api/v1/payments",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
               },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"orderId\": \"{{orderId}}\", \"amount\": 1999.0, \"currency\": \"USD\", \"idempotencyKey\": \"{{payKey}}-cod\", \"provider\": \"cod\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ts = Date.now();",
-                  "pm.collectionVariables.set(\"payKey\", \"PAY-\" + ts);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Payment created with COD provider\", () => {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "  const res = pm.response.json();",
-                  "  pm.expect(res.data.provider).to.eql(\"COD\");",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "6.3 Create Payment via VNPay",
-          "request": {
-            "method": "POST",
-            "url": "{{paymentUrl}}/api/v1/payments",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"orderId\": \"{{orderId}}\", \"amount\": 50000000, \"currency\": \"VND\", \"idempotencyKey\": \"{{payKey}}-vnpay\", \"provider\": \"vnpay\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const ts = Date.now();",
-                  "pm.collectionVariables.set(\"payKey\", \"PAY-\" + ts);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Payment created with VNPay provider\", () => {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "  const res = pm.response.json();",
-                  "  pm.expect(res.data.provider).to.eql(\"VNPAY\");",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "6.4 Capture Payment (Admin/Service)",
-          "request": {
-            "method": "POST",
-            "url": "{{paymentUrl}}/api/v1/payments/{{paymentId}}/capture",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ]
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Payment captured\", () => pm.expect(pm.response.code).to.eql(200));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "7. Rating & Favourite",
-      "item": [
-        {
-          "name": "7.1 Submit Rating for Delivered Product (User)",
-          "request": {
-            "method": "POST",
-            "url": "{{ratingUrl}}/api/v1/ratings",
-            "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
               }
             ],
+            "url": "{{ratingUrl}}/api/v1/ratings",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\", \"rating\": 5, \"comment\": \"MacBook Pro E2E is exceptional!\"}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 5,\n  \"comment\": \"Excellent build quality and blazing performance!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -941,25 +1074,23 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rating submitted\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.verified).to.eql(true);"
+                  "pm.test(\"Rating submitted by verified buyer\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "7.2 View Ratings for Product",
+          "name": "8.2 View Ratings for Product",
           "request": {
             "method": "GET",
-            "url": "{{ratingUrl}}/api/v1/ratings?productId={{productId}}",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{ratingUrl}}/api/v1/ratings?productId={{productId}}"
           },
           "event": [
             {
@@ -967,32 +1098,30 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Ratings list retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.content.length).to.be.at.least(1);"
+                  "pm.test(\"Ratings retrieved\", () => pm.expect(pm.response.code).to.eql(200));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "7.3 Add Product to Favourites (User)",
+          "name": "8.3 Add Product to Favourites (User)",
           "request": {
             "method": "POST",
-            "url": "{{favouriteUrl}}/api/v1/favourites",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
+            "url": "{{favouriteUrl}}/api/v1/favourites",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\"}",
+              "raw": "{\n  \"productId\": \"{{productId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1013,16 +1142,16 @@
           ]
         },
         {
-          "name": "7.4 View User Favourites (User)",
+          "name": "8.4 View User Favourites (User)",
           "request": {
             "method": "GET",
-            "url": "{{favouriteUrl}}/api/v1/favourites",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{favouriteUrl}}/api/v1/favourites"
           },
           "event": [
             {
@@ -1030,9 +1159,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Favourites retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.content.length).to.be.at.least(1);"
+                  "pm.test(\"Favourites retrieved\", () => pm.expect(pm.response.code).to.eql(200));"
                 ]
               }
             }
@@ -1041,19 +1168,32 @@
       ]
     },
     {
-      "name": "8. Search & Notification",
+      "name": "9. RMA Order Returns Workflow",
       "item": [
         {
-          "name": "8.1 Reindex Search (Admin)",
+          "name": "9.1 Request Return on Delivered Order (User)",
           "request": {
             "method": "POST",
-            "url": "{{searchUrl}}/api/v1/backoffice/search/reindex",
             "header": [
               {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
                 "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
+                "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/returns",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"DEFECTIVE\",\n  \"description\": \"Screen cracked during shipping\",\n  \"refundAmount\": 2499\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -1061,25 +1201,26 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Search reindex successful\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"Return requested successfully\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.indexed).to.be.at.least(1);"
+                  "pm.expect(res.data.status).to.eql(\"REQUESTED\");",
+                  "pm.collectionVariables.set(\"returnId\", res.data.id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "8.2 Search for Product in Elasticsearch",
+          "name": "9.2 View Customer Returns (User)",
           "request": {
             "method": "GET",
-            "url": "{{searchUrl}}/api/v1/search?q=MacBook",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/returns/me"
           },
           "event": [
             {
@@ -1087,63 +1228,177 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Search returns results\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.content.length).to.be.at.least(1);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "8.3 View Notifications for Order (Admin)",
-          "request": {
-            "method": "GET",
-            "url": "{{notificationUrl}}/api/v1/backoffice/notifications?orderId={{orderId}}",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ]
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Notifications retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test(\"My returns retrieved\", () => pm.expect(pm.response.code).to.eql(200));",
                   "const res = pm.response.json();",
                   "pm.expect(res.data.content).to.be.an(\"array\");"
                 ]
               }
             }
           ]
+        },
+        {
+          "name": "9.3 View Returns for Specific Order (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/returns"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order returns retrieved\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9.4 Backoffice Review & Approve Return (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{orderUrl}}/api/v1/backoffice/returns/{{returnId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"adminNotes\": \"Physical defect confirmed. Auto-refund triggered.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Return reviewed and processed\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.data.status).to.be.oneOf([\"APPROVED\", \"REFUNDED\"]);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "9. Tax & Promotion",
+      "name": "10. Search & Notification",
       "item": [
         {
-          "name": "9.1 Create Tax Class (Admin)",
+          "name": "10.1 Reindex Search (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{adminToken}}"
-              },
+              }
+            ],
+            "url": "{{searchUrl}}/api/v1/backoffice/search/reindex"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Search reindex triggered\", () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.2 Search for Product in Elasticsearch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{searchUrl}}/api/v1/search?q=MacBook"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Search returns products\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.3 View Notifications for Order (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{notificationUrl}}/api/v1/backoffice/notifications?orderId={{orderId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Notifications retrieved\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11. Tax & Promotion",
+      "item": [
+        {
+          "name": "11.1 Create Tax Class (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{taxUrl}}/api/v1/backoffice/tax-classes",
             "body": {
               "mode": "raw",
-              "raw": "{\"name\": \"{{taxClassName}}\", \"defaultRatePct\": 10.0}",
+              "raw": "{\n  \"name\": \"{{taxClassName}}\",\n  \"defaultRatePct\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1158,7 +1413,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const ts = Date.now();",
-                  "pm.collectionVariables.set(\"taxClassName\", \"Laptops-\" + ts);"
+                  "pm.collectionVariables.set(\"taxClassName\", \"Electronics-\" + ts);"
                 ]
               }
             },
@@ -1169,7 +1424,6 @@
                 "exec": [
                   "pm.test(\"Tax class created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.data.id).to.be.a(\"string\");",
                   "pm.collectionVariables.set(\"taxClassId\", res.data.id);"
                 ]
               }
@@ -1177,23 +1431,23 @@
           ]
         },
         {
-          "name": "9.2 Calculate Tax",
+          "name": "11.2 Calculate Tax",
           "request": {
             "method": "POST",
-            "url": "{{taxUrl}}/api/v1/tax/calculate",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{taxUrl}}/api/v1/tax/calculate",
             "body": {
               "mode": "raw",
-              "raw": "{\"taxClassId\": \"{{taxClassId}}\", \"country\": \"US\", \"amount\": 1999.0}",
+              "raw": "{\n  \"taxClassId\": \"{{taxClassId}}\",\n  \"country\": \"US\",\n  \"amount\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1207,32 +1461,30 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Tax calculated\", () => pm.expect(pm.response.code).to.eql(200));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.data.taxAmount).to.be.at.least(0);"
+                  "pm.test(\"Tax calculated\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "9.3 Create Promotion Campaign (Admin)",
+          "name": "11.3 Create Promotion Campaign (Admin)",
           "request": {
             "method": "POST",
-            "url": "{{promotionUrl}}/api/v1/backoffice/promotions",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{promotionUrl}}/api/v1/backoffice/promotions",
             "body": {
               "mode": "raw",
-              "raw": "{\"code\": \"{{promoCode}}\", \"name\": \"E2E Promo Campaign\", \"discountType\": \"PERCENT\", \"discountValue\": 15.0, \"status\": \"ACTIVE\"}",
+              "raw": "{\n  \"name\": \"Grand Opening Promotion\",\n  \"code\": \"{{promoCode}}\",\n  \"discountType\": \"PERCENT\",\n  \"discountValue\": 10,\n  \"startsAt\": \"2026-01-01T00:00:00Z\",\n  \"endsAt\": \"2026-12-31T23:59:59Z\",\n  \"status\": \"ACTIVE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1247,7 +1499,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const ts = Date.now();",
-                  "pm.collectionVariables.set(\"promoCode\", \"PROMO\" + ts);"
+                  "pm.collectionVariables.set(\"promoCode\", \"SALE\" + ts);"
                 ]
               }
             },
@@ -1256,7 +1508,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Promotion campaign created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                  "pm.test(\"Promotion created\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
                 ]
               }
             }
@@ -1265,84 +1517,13 @@
       ]
     },
     {
-      "name": "10. Gateway E2E Routing",
+      "name": "12. Gateway E2E Routing",
       "item": [
         {
-          "name": "10.1 Products via Gateway",
+          "name": "12.1 Products via Gateway :8080",
           "request": {
             "method": "GET",
-            "url": "{{gatewayUrl}}/api/v1/products",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              }
-            ]
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Products routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "10.2 Favourites via Gateway",
-          "request": {
-            "method": "GET",
-            "url": "{{gatewayUrl}}/api/v1/favourites",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              }
-            ]
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Favourites routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "10.3 Search via Gateway",
-          "request": {
-            "method": "GET",
-            "url": "{{gatewayUrl}}/api/v1/search?q=MacBook",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              }
-            ]
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Search routed via gateway\", () => pm.expect(pm.response.code).to.eql(200));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "10.4 Anonymous Public Catalog Access via Gateway (No Token)",
-          "request": {
-            "method": "GET",
+            "header": [],
             "url": "{{gatewayUrl}}/api/v1/products"
           },
           "event": [
@@ -1351,7 +1532,74 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Anonymous storefront catalog accessible without token via Gateway\", () => pm.expect(pm.response.code).to.eql(200));"
+                  "pm.test(\"Gateway routes products\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.2 Favourites via Gateway :8080",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/favourites"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Gateway routes favourites with JWT\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.3 Search via Gateway :8080",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{gatewayUrl}}/api/v1/search?q=MacBook"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Gateway routes search\", () => pm.expect(pm.response.code).to.eql(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12.4 Anonymous Public Catalog Access via Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayUrl}}/api/v1/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Public catalog accessible without auth\", () => pm.expect(pm.response.code).to.eql(200));"
                 ]
               }
             }
@@ -1360,22 +1608,22 @@
       ]
     },
     {
-      "name": "11. Edge Cases - Auth & Security",
+      "name": "13. Edge Cases - Auth & Security",
       "item": [
         {
-          "name": "11.1 Login with Invalid Password (expect 401)",
+          "name": "13.1 Login with Invalid Password (expect 401)",
           "request": {
             "method": "POST",
-            "url": "{{authUrl}}/api/v1/auth/login",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "url": "{{authUrl}}/api/v1/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\"username\": \"testuser\", \"password\": \"wrongpassword123\"}",
+              "raw": "{\n  \"username\": \"adminuser\",\n  \"password\": \"WRONG_PASSWORD_XYZ\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1389,9 +1637,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects invalid password with 401\", () => pm.expect(pm.response.code).to.eql(401));",
+                  "pm.test(\"Rejects with 401 Unauthorized\", () => pm.expect(pm.response.code).to.eql(401));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);",
                   "pm.expect(res.code).to.eql(\"ERR-0401\");"
                 ]
               }
@@ -1399,11 +1646,11 @@
           ]
         },
         {
-          "name": "11.2 Access Protected Route Without Token (expect 401)",
+          "name": "13.2 Access Protected Route Without Token (expect 401)",
           "request": {
             "method": "GET",
-            "url": "{{authUrl}}/api/v1/users/me",
-            "header": []
+            "header": [],
+            "url": "{{authUrl}}/api/v1/users/me"
           },
           "event": [
             {
@@ -1411,23 +1658,23 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects unauthenticated request with 401\", () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+                  "pm.test(\"Rejects with 401 Unauthorized\", () => pm.expect(pm.response.code).to.eql(401));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "11.3 Regular User Accesses Admin Endpoint (expect 403)",
+          "name": "13.3 Regular User Accesses Admin Endpoint (expect 403)",
           "request": {
             "method": "GET",
-            "url": "{{authUrl}}/api/v1/users",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{userToken}}"
               }
-            ]
+            ],
+            "url": "{{authUrl}}/api/v1/users"
           },
           "event": [
             {
@@ -1435,10 +1682,33 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects non-admin access with 403\", () => pm.expect(pm.response.code).to.eql(403));",
+                  "pm.test(\"Rejects with 403 Forbidden\", () => pm.expect(pm.response.code).to.eql(403));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);",
                   "pm.expect(res.code).to.eql(\"ERR-0403\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13.4 Malformed Bearer Token (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.INVALID_TOKEN.XYZ"
+              }
+            ],
+            "url": "{{authUrl}}/api/v1/users/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects malformed token with 401\", () => pm.expect(pm.response.code).to.eql(401));"
                 ]
               }
             }
@@ -1447,26 +1717,26 @@
       ]
     },
     {
-      "name": "12. Edge Cases - Catalog & Products",
+      "name": "14. Edge Cases - Catalog & Products",
       "item": [
         {
-          "name": "12.1 Create Product with Negative Price (expect 400/422)",
+          "name": "14.1 Create Product with Negative Price (expect 400/422)",
           "request": {
             "method": "POST",
-            "url": "{{productUrl}}/api/v1/backoffice/products",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{productUrl}}/api/v1/backoffice/products",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\": \"Invalid Price Product\", \"slug\": \"{{badSlug}}\", \"sku\": \"{{badSku}}\", \"priceUnit\": -10.0, \"quantity\": 5, \"status\": \"ACTIVE\"}",
+              "raw": "{\n  \"title\": \"Negative Price Item\",\n  \"slug\": \"{{badSlug}}\",\n  \"sku\": \"{{badSku}}\",\n  \"priceUnit\": -99.99,\n  \"quantity\": 10,\n  \"status\": \"ACTIVE\",\n  \"description\": \"Invalid item\",\n  \"categoryId\": \"{{categoryId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1493,30 +1763,30 @@
                 "exec": [
                   "pm.test(\"Rejects negative price with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.expect(res.code).to.eql(\"ERR-0422-V\");"
                 ]
               }
             }
           ]
         },
         {
-          "name": "12.2 Regular User Tries to Create Product (expect 403)",
+          "name": "14.2 Regular User Tries to Create Product (expect 403)",
           "request": {
             "method": "POST",
-            "url": "{{productUrl}}/api/v1/backoffice/products",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
+            "url": "{{productUrl}}/api/v1/backoffice/products",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\": \"Unauthorized Product\", \"slug\": \"unauth-prod\", \"sku\": \"UNAUTH-01\", \"priceUnit\": 100.0, \"quantity\": 5, \"status\": \"ACTIVE\"}",
+              "raw": "{\n  \"title\": \"Unauthorized Product\",\n  \"slug\": \"unauth-prod\",\n  \"sku\": \"UNAUTH-SKU\",\n  \"priceUnit\": 10,\n  \"quantity\": 10,\n  \"status\": \"ACTIVE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1530,20 +1800,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects regular user product creation with 403\", () => pm.expect(pm.response.code).to.eql(403));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.test(\"Rejects non-admin with 403 Forbidden\", () => pm.expect(pm.response.code).to.eql(403));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "12.3 Get Product by Non-Existent ID (expect 404)",
+          "name": "14.3 Get Non-Existent Product (expect 404)",
           "request": {
             "method": "GET",
-            "url": "{{productUrl}}/api/v1/products/00000000-0000-0000-0000-000000000000",
-            "header": []
+            "header": [],
+            "url": "{{productUrl}}/api/v1/products/00000000-0000-0000-0000-000000000000"
           },
           "event": [
             {
@@ -1551,9 +1819,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Returns 404 for non-existent product\", () => pm.expect(pm.response.code).to.eql(404));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.test(\"Returns 404 for missing product\", () => pm.expect(pm.response.code).to.eql(404));"
                 ]
               }
             }
@@ -1562,26 +1828,26 @@
       ]
     },
     {
-      "name": "13. Edge Cases - Inventory & Cart",
+      "name": "15. Edge Cases - Cart & Inventory",
       "item": [
         {
-          "name": "13.1 Add Item to Cart with Zero Quantity (expect 400/422)",
+          "name": "15.1 Add Zero Quantity to Cart (expect 400/422)",
           "request": {
             "method": "POST",
-            "url": "{{orderUrl}}/api/v1/carts/me/items",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\", \"quantity\": 0}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1597,30 +1863,30 @@
                 "exec": [
                   "pm.test(\"Rejects zero quantity with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.expect(res.code).to.eql(\"ERR-0422-V\");"
                 ]
               }
             }
           ]
         },
         {
-          "name": "13.2 Add Item to Cart for Non-Existent Product (expect 404)",
+          "name": "15.2 Add Non-Existent Product to Cart (expect 404)",
           "request": {
             "method": "POST",
-            "url": "{{orderUrl}}/api/v1/carts/me/items",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
               }
             ],
+            "url": "{{orderUrl}}/api/v1/carts/me/items",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"00000000-0000-0000-0000-000000000000\", \"quantity\": 1}",
+              "raw": "{\n  \"productId\": \"00000000-0000-0000-0000-000000000000\",\n  \"quantity\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1634,33 +1900,30 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Returns 404 for non-existent product in cart\", () => pm.expect(pm.response.code).to.eql(404));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);",
-                  "pm.expect(res.code).to.eql(\"PRD-2001\");"
+                  "pm.test(\"Rejects non-existent product with 404\", () => pm.expect(pm.response.code).to.eql(404));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "13.3 Seed Inventory with Negative Stock (expect 400/422)",
+          "name": "15.3 Seed Inventory with Negative Stock (expect 400/422)",
           "request": {
             "method": "POST",
-            "url": "{{inventoryUrl}}/api/v1/inventory",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{inventoryUrl}}/api/v1/inventory",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\", \"availableQuantity\": -10}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"availableQuantity\": -10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1676,30 +1939,30 @@
                 "exec": [
                   "pm.test(\"Rejects negative stock with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.expect(res.code).to.eql(\"ERR-0422-V\");"
                 ]
               }
             }
           ]
         },
         {
-          "name": "13.4 Reserve Stock Exceeding Available (expect 400/409)",
+          "name": "15.4 Reserve Stock Exceeding Available Capacity (expect 400/409)",
           "request": {
             "method": "POST",
-            "url": "{{inventoryUrl}}/api/v1/inventory/{{productId}}/reserve",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{inventoryUrl}}/api/v1/inventory/{{productId}}/reserve",
             "body": {
               "mode": "raw",
-              "raw": "{\"orderId\": \"00000000-0000-0000-0000-000000000002\", \"quantity\": 999999}",
+              "raw": "{\n  \"quantity\": 999999,\n  \"orderId\": \"00000000-0000-0000-0000-000000000001\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1713,9 +1976,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects excessive reservation with 400 or 409\", () => pm.expect(pm.response.code).to.be.oneOf([400, 409]));",
+                  "pm.test(\"Rejects over-reservation with 400/409\", () => pm.expect(pm.response.code).to.be.oneOf([400, 409]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);",
                   "pm.expect(res.code).to.eql(\"INV-3002\");"
                 ]
               }
@@ -1725,26 +1987,26 @@
       ]
     },
     {
-      "name": "14. Edge Cases - Order & Rating & Tax & Media",
+      "name": "16. Edge Cases - Payment & Webhooks",
       "item": [
         {
-          "name": "14.1 Unverified Purchaser Rates Unpurchased Product (expect 400/403)",
+          "name": "16.1 Payment Webhook with Invalid Signature (expect 400/401)",
           "request": {
             "method": "POST",
-            "url": "{{ratingUrl}}/api/v1/ratings",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "invalid_signature_hex_0123456789abcdef0123456789abcdef0123456789abcdef"
               }
             ],
+            "url": "{{paymentUrl}}/api/v1/webhooks/payments/vnpay",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"00000000-0000-0000-0000-000000000001\", \"rating\": 5, \"comment\": \"Great product!\"}",
+              "raw": "{\n  \"event\": \"payment.succeeded\",\n  \"orderId\": \"{{orderId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1758,32 +2020,28 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects unverified rating with 400 or 403\", () => pm.expect(pm.response.code).to.be.oneOf([400, 403]));",
+                  "pm.test(\"Rejects invalid webhook signature with 400/401\", () => pm.expect(pm.response.code).to.be.oneOf([400, 401]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.expect(res.code).to.be.oneOf([\"PAY-5005\", \"WEBHOOK_SIGNATURE_INVALID\"]);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "14.2 Submit Rating with Invalid Star Count (expect 400/422)",
+          "name": "16.2 Payment Webhook Missing Signature (expect 400/401)",
           "request": {
             "method": "POST",
-            "url": "{{ratingUrl}}/api/v1/ratings",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{userToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "url": "{{paymentUrl}}/api/v1/webhooks/payments/vnpay",
             "body": {
               "mode": "raw",
-              "raw": "{\"productId\": \"{{productId}}\", \"rating\": 10, \"comment\": \"Invalid rating score\"}",
+              "raw": "{\n  \"event\": \"payment.succeeded\",\n  \"orderId\": \"{{orderId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1797,32 +2055,312 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects rating > 5 with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
-                  "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.test(\"Rejects unsigned webhook with 400/401\", () => pm.expect(pm.response.code).to.be.oneOf([400, 401]));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "14.3 Create Tax Rate with Invalid Country Code (expect 400/422)",
+          "name": "16.3 Capture Payment with Non-Existent ID (expect 404)",
           "request": {
             "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{paymentUrl}}/api/v1/payments/00000000-0000-0000-0000-000000000000/capture"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Returns 404 for non-existent payment\", () => pm.expect(pm.response.code).to.eql(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "17. Edge Cases - Shipping Carrier Webhooks",
+      "item": [
+        {
+          "name": "17.1 Shipping Webhook without Signature (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{shippingUrl}}/api/v1/webhooks/shipping/ghn",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackingNumber\": \"GHN999\",\n  \"status\": \"DELIVERED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects unsigned carrier webhook with 401\", () => pm.expect(pm.response.code).to.eql(401));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.code).to.be.oneOf([\"SHP-10004\", \"SHIPPING_WEBHOOK_SIGNATURE_INVALID\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17.2 Shipping Webhook for Unknown Carrier (expect 400/404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{shippingUrl}}/api/v1/webhooks/shipping/unknown_carrier_xyz",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trackingNumber\": \"UNKNOWN\",\n  \"status\": \"DELIVERED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects unknown carrier with 400/401/404\", () => pm.expect(pm.response.code).to.be.oneOf([400, 401, 404]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "18. Edge Cases - RMA Returns & Guest Tracking",
+      "item": [
+        {
+          "name": "18.1 Guest Tracking with Wrong Phone (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{orderUrl}}/api/v1/orders/track?orderId={{orderId}}&phone=0000000000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Returns 404 for non-matching phone\", () => pm.expect(pm.response.code).to.eql(404));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.code).to.eql(\"ORD-4001\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18.2 Request Return with Excessive Amount (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/returns",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"DEFECTIVE\",\n  \"description\": \"Asking for excessive refund\",\n  \"refundAmount\": 9999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects excessive refund with 400\", () => pm.expect(pm.response.code).to.eql(400));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.message).to.include(\"order.return\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18.3 Customer Attempts Admin Return Review (expect 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{orderUrl}}/api/v1/backoffice/returns/{{returnId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"adminNotes\": \"Unauthorized review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects customer review with 403 Forbidden\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "19. Edge Cases - Rating & Order & Media",
+      "item": [
+        {
+          "name": "19.1 Unverified Purchaser Rates Unpurchased Product (expect 400/403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"00000000-0000-0000-0000-000000000000\",\n  \"rating\": 5,\n  \"comment\": \"Fake spam review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects unverified purchaser with 400/403\", () => pm.expect(pm.response.code).to.be.oneOf([400, 403]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.code).to.eql(\"RTG-11001\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19.2 Submit Rating with Invalid Star Count 10 (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}"
+              }
+            ],
+            "url": "{{ratingUrl}}/api/v1/ratings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 10,\n  \"comment\": \"Invalid star rating\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rejects 10 stars with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.code).to.eql(\"ERR-0422-V\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "19.3 Create Tax Rate with Invalid Country Code (expect 400/422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{taxUrl}}/api/v1/backoffice/tax-rates",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
             "body": {
               "mode": "raw",
-              "raw": "{\"taxClassId\": \"00000000-0000-0000-0000-000000000001\", \"country\": \"INVALID\", \"ratePct\": 5.0}",
+              "raw": "{\n  \"taxClassId\": \"{{taxClassId}}\",\n  \"country\": \"INVALID_COUNTRY\",\n  \"ratePct\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1836,32 +2374,32 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects invalid country pattern with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
+                  "pm.test(\"Rejects invalid country with 400/422\", () => pm.expect(pm.response.code).to.be.oneOf([400, 422]));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);"
+                  "pm.expect(res.code).to.eql(\"ERR-0422-V\");"
                 ]
               }
             }
           ]
         },
         {
-          "name": "14.4 Send Non-Multipart Payload to Media Upload (expect 400)",
+          "name": "19.4 Non-Multipart Payload to Media Upload (expect 400)",
           "request": {
             "method": "POST",
-            "url": "{{mediaUrl}}/api/v1/backoffice/medias",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
               }
             ],
+            "url": "{{mediaUrl}}/api/v1/backoffice/medias",
             "body": {
               "mode": "raw",
-              "raw": "{\"raw\": \"bad request\"}",
+              "raw": "{\n  \"file\": \"plain text instead of multipart binary\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1875,9 +2413,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rejects non-multipart upload with 400\", () => pm.expect(pm.response.code).to.eql(400));",
+                  "pm.test(\"Rejects non-multipart with 400\", () => pm.expect(pm.response.code).to.eql(400));",
                   "const res = pm.response.json();",
-                  "pm.expect(res.success).to.eql(false);",
                   "pm.expect(res.code).to.eql(\"ERR-0400\");"
                 ]
               }

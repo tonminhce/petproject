@@ -682,16 +682,17 @@ Bạn có thể chạy thử từng dịch vụ trên máy cục bộ hoặc đ�
 ## 8. Kiểm thử Tự động & Giám sát Hệ thống (Testing & Observability)
 
 ### Bộ Test Postman & Newman E2E
-Hệ thống đi kèm bộ sưu tập kiểm thử API toàn diện, kiểm tra tự động từ luồng Đăng ký/Đăng nhập, Quản lý sản phẩm, Giỏ hàng, Đặt hàng, Thanh toán Stripe đến Đánh giá sản phẩm:
+Hệ thống cung cấp **01 Bộ Test Postman Master duy nhất** (`petproject-comprehensive.postman_collection.json`) gồm **190 requests** được phân chia rõ ràng thành 3 tầng:
+1. **PART 1: E2E Business Lifecycle (41 requests)**: Luồng nghiệp vụ liên hoàn từ Auth -> Catalog -> Inventory 2PC -> Cart -> Public Guest Tracking -> Thanh toán đa cổng (Stripe, VNPay, MoMo, COD) -> Vận chuyển 3 trạng thái -> Đánh giá verified-purchaser -> Quy trình RMA hoàn hàng (Customer Request & Backoffice Approval) -> Search Elasticsearch & Thông báo.
+2. **PART 2: Edge Cases & Security Audits (23 requests)**: Kiểm thử biên & bảo mật toàn diện: 401 Unauthorized (sai mật khẩu, token dị dạng), 403 Forbidden (RBAC chặn regular user vào admin API, buyer verification chặn đánh giá ảo), 400/422 Validation (giá âm, số lượng giỏ hàng bằng 0, mã quốc gia sai), 409 Conflict (đặt trước vượt tồn kho `INV-3002`), 401 Webhook HMAC signature giả mạo (`PAY-5005`, `SHP-10004`), 400 Non-multipart media upload.
+3. **PART 3: Fleet Service Catalog (126 requests)**: Danh mục toàn bộ API endpoints của đầy đủ 14 microservices phục vụ tra cứu và gọi ad-hoc.
 
 ```bash
-# Cài đặt Newman CLI nếu chưa có
-npm install -g newman
+# 1. Chạy toàn bộ Master Suite (190 requests - tỷ lệ đỗ 100%)
+npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.json
 
-# Chạy kịch bản kiểm thử E2E tích hợp qua Newman
-newman run docs/postman/petproject-comprehensive.postman_collection.json \
-  --reporters cli,json \
-  --reporter-json-export docs/postman/E2E_TEST_REPORT.json
+# 2. Chạy nhanh bộ E2E Flow & Edge Cases cho CI/CD (<2s)
+npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collection.json --bail
 ```
 
 ### Tài liệu API Trực quan (Swagger OpenAPI 3.1)

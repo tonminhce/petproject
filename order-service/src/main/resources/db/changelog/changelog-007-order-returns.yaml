@@ -65,6 +65,12 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
+                  name: created_by
+                  type: VARCHAR(100)
+              - column:
+                  name: updated_by
+                  type: VARCHAR(100)
+              - column:
                   name: deleted
                   type: BOOLEAN
                   defaultValueBoolean: false

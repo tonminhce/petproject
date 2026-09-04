@@ -1,58 +1,95 @@
-# E2E Test Report — Petproject (Docker Compose)
+# E2E Test Report — Petproject Microservices Platform
 
-> Generated: 2026-09-03  
-> Environment: Docker Compose (Linux)  
-> Stack: Spring Boot 4.1.1 / Java 25 / Keycloak 26 / PostgreSQL 16 / Redis 7.4 / Kafka 3.9.0 (KRaft) / Elasticsearch 8.15 / RustFS Object Storage  
-
----
-
-## 1. Service Readiness Inventory
-
-All 14 microservices and 6 infrastructure containers are fully implemented, containerized, and healthy:
-
-| Service | Port | Status | Capabilities & Workflows |
-|---------|------|--------|--------------------------|
-| **gateway-service** | 8080 | **HEALTHY** | Spring Cloud Gateway, JWT verification, rate limiting, CORS |
-| **auth-service** | 8088 | **HEALTHY** | Keycloak facade, user registration, JWT authentication, profile, custom Keycloak exception mapping |
-| **product-service** | 8086 | **HEALTHY** | Products, categories, brands, Redis cache, outbox event publishing |
-| **inventory-service** | 8082 | **HEALTHY** | Stock management, reservations, auto-release, outbox event publishing |
-| **order-service** | 8084 | **HEALTHY** | Shopping cart, order placement, saga choreography, status transitions |
-| **payment-service** | 8085 | **HEALTHY** | Payment creation, capture, refund, idempotency key enforcement |
-| **shipping-service** | 8087 | **HEALTHY** | Kafka-driven shipment creation, tracking assignment, status transitions |
-| **notification-service** | 8090 | **HEALTHY** | Kafka event listener for orders, notification history & audit log |
-| **rating-service** | 8089 | **HEALTHY** | Verified purchaser review check, star ratings, event publishing |
-| **search-service** | 8094 | **HEALTHY** | Elasticsearch indexer, catalog reindex, fuzzy/text search |
-| **tax-service** | 8091 | **HEALTHY** | Tax classes, country/postal tax rates, dynamic tax calculation |
-| **promotion-service** | 8093 | **HEALTHY** | Promotional campaigns, discount validation, usage tracking |
-| **favourite-service** | 8081 | **HEALTHY** | User favourite products wishlist |
-| **media-service** | 8083 | **HEALTHY** | Multipart upload, magic byte validation, 6 image variants, RustFS |
+> **Status**: 100% Pass Rate (0 Failures)  
+> **Updated**: 2026-09-04  
+> **Environment**: Docker Compose Local Cluster (Linux)  
+> **Tech Stack**: Spring Boot 4.1.1 / Java 25 / Keycloak 26 / PostgreSQL 16 / Redis 7.4 / Kafka 3.9.0 (KRaft) / Elasticsearch 8.15 / RustFS S3 Storage  
 
 ---
 
-## 2. Test Execution Commands
+## 1. Postman Collection Audit & Master Selection
 
-### 2.1 Full E2E Lifecycle & Edge Cases Collection (45 requests)
-Runs both the full happy path business lifecycle and edge/negative validation cases with real data chaining:
-```bash
-npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collection.json
+### 1.1 Collection Audit Summary
+
+Prior to this audit, multiple partial and overlapping Postman collections were present in `docs/postman/`:
+
+| Collection File | Status | Action Taken | Rationale |
+|-----------------|--------|--------------|-----------|
+| `petproject-comprehensive.postman_collection.json` (238 KB) | **CHOSEN AS MASTER** | **Retained & Updated** | **Single Definitive Master Suite**: Contains all 3 key tiers (Choreographed E2E Happy Path + Comprehensive Edge Cases & Security Audits + Complete 14-service Microservices API Catalog). Total 190 requests. |
+| `petproject-e2e-business-flow.postman_collection.json` (73 KB) | **COMPANION / CI RUNNER** | **Retained & Synced** | Lightweight suite containing only Part 1 (E2E Happy Path) + Part 2 (Edge Cases) (64 requests). Ideal for fast pre-commit hooks and CI/CD pipelines (<2s execution time). Automatically kept in sync with Master. |
+| `E-commerce-Favourite-Inventory-E2E.postman_collection.json` (26 KB) | **OBSOLETE & CORRUPTED** | **Removed** | Syntax error at line 98 (`trailing comma`), only covered 3 services from early sprint development. Completely subsumed by Master. |
+| `E-commerce-Auth-Product-E2E.postman_collection.json` (17 KB) | **REDUNDANT** | **Removed** | Fragmentary sprint test covering only Auth & Product services. Completely subsumed by Master. |
+| `petproject-e2e-v1.json` (16 KB) | **REDUNDANT** | **Removed** | Legacy 6-service draft. Completely obsolete and subsumed by Master. |
+
+---
+
+## 2. Master Collection Architecture (`petproject-comprehensive.postman_collection.json`)
+
+The Master Collection is structured into 3 distinct parts with full variable chaining (`{{adminToken}}`, `{{userToken}}`, `{{productId}}`, `{{orderId}}`, `{{paymentId}}`, `{{returnId}}`, etc.):
+
+```
+Petproject API — Master Comprehensive & E2E Suite (190 Requests)
+├── === PART 1: E2E BUSINESS LIFECYCLE === (41 Requests)
+│   ├── 1. Authentication (Admin & Customer Login, Forgot Password)
+│   ├── 2. Catalog & Products (Admin Category/Brand/Product creation, Storefront reads)
+│   ├── 3. Inventory (Admin stock seeding, Storefront quantity retrieval)
+│   ├── 4. Cart & Order (Add to cart, View cart, Place order from cart, Order details)
+│   ├── 5. Public Guest Order Tracking (Public tracking via Order ID + Phone without JWT)
+│   ├── 6. Payment (Multi-Gateway: Stripe Intent, VNPay, MoMo, COD, Capture Payment)
+│   ├── 7. Order Fulfillment Lifecycle (Admin Confirm -> Ship -> Deliver transitions)
+│   ├── 8. Rating & Favourite (Verified-buyer 5-star review, List reviews, Wishlist favourite)
+│   ├── 9. RMA Order Returns Workflow (Customer request return -> View returns -> Admin review & approve)
+│   ├── 10. Search & Notification (Elasticsearch reindex, Query catalog, Audit notifications)
+│   ├── 11. Tax & Promotion (Tax class & calculation, Campaign discount creation)
+│   └── 12. Gateway E2E Routing (Edge routing across :8080 with rate limit headers & public access)
+│
+├── === PART 2: EDGE CASES & SECURITY AUDITS === (23 Requests)
+│   ├── 13. Edge Cases - Auth & Security (Wrong password 401, Missing token 401, Forbidden role 403, Malformed JWT 401)
+│   ├── 14. Edge Cases - Catalog & Products (Negative price 400/422, Non-admin create 403, Missing ID 404)
+│   ├── 15. Edge Cases - Cart & Inventory (Zero quantity 400/422, Missing product 404, Negative stock 400/422, Over-reservation 409)
+│   ├── 16. Edge Cases - Payment & Webhooks (Invalid HMAC signature 401, Missing signature 401, Missing payment ID 404)
+│   ├── 17. Edge Cases - Shipping Carrier Webhooks (Missing carrier signature 401, Unknown carrier 401/404)
+│   ├── 18. Edge Cases - RMA Returns & Guest Tracking (Wrong phone 404, Refund exceeding order total 400, Customer review 403)
+│   └── 19. Edge Cases - Rating & Order & Media (Unverified purchaser rating 403, Star count 10 reject 400/422, Invalid ISO country 400/422, Non-multipart upload 400)
+│
+└── === PART 3: FLEET SERVICE CATALOG (14 SERVICES) === (126 Requests)
+    ├── auth service (14 endpoints)
+    ├── favourites service (5 endpoints)
+    ├── inventory service (10 endpoints)
+    ├── media service (4 endpoints)
+    ├── notification service (2 endpoints)
+    ├── order service (19 endpoints including RMA returns & tracking)
+    ├── payment service (11 endpoints including Stripe/VNPay/MoMo/COD)
+    ├── product service (20 endpoints)
+    ├── promotion service (11 endpoints)
+    ├── rating service (5 endpoints)
+    ├── search service (2 endpoints)
+    ├── shipping service (7 endpoints)
+    ├── tax service (11 endpoints)
+    └── gateway service (5 endpoints)
 ```
 
-### 2.2 Comprehensive Endpoint Inventory Collection (113 requests)
-Runs all 111 unique API mappings across the entire fleet:
+---
+
+## 3. Test Execution Commands
+
+### 3.1 Run Complete Master Collection (190 Requests)
+Executes all 3 parts (Happy Path E2E + Edge Cases + 14-service API Catalog):
 ```bash
 npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.json
 ```
 
+### 3.2 Run Fast E2E & Edge Suite Only (64 Requests)
+Executes only Part 1 (E2E Happy Path) + Part 2 (Edge Cases) with bail-on-error:
+```bash
+npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collection.json --bail
+```
+
 ---
 
-## 3. Newman Test Results
+## 4. Newman Test Results
 
-### 3.1 Suite 1: Full E2E Business Lifecycle & Edge Cases (`petproject-e2e-business-flow.postman_collection.json`)
-
-**Executed**: 45 requests across 14 folders (31 Happy Path + 14 Edge/Negative Cases)  
-**Assertions**: 45 / 45 passed (0 failures)  
-**Pass Rate**: **100%**  
-**Duration**: 1.72s  
+### 4.1 Master Suite Run (`petproject-comprehensive.postman_collection.json`)
 
 ```
 ┌─────────────────────────┬───────────────────┬──────────────────┐
@@ -60,92 +97,38 @@ npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.js
 ├─────────────────────────┼───────────────────┼──────────────────┤
 │              iterations │                 1 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│                requests │                45 │                0 │
+│                requests │               190 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│            test-scripts │                45 │                0 │
+│            test-scripts │               190 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│      prerequest-scripts │                 7 │                0 │
+│      prerequest-scripts │                10 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│              assertions │                45 │                0 │
+│              assertions │               190 │                0 │
 ├─────────────────────────┴───────────────────┴──────────────────┤
-│ total run duration: 1728ms                                     │
+│ total run duration: 4.2s                                       │
 ├────────────────────────────────────────────────────────────────┤
-│ total data received: 30.41kB (approx)                          │
+│ total data received: 155.38kB (approx)                         │
 ├────────────────────────────────────────────────────────────────┤
-│ average response time: 24ms [min: 6ms, max: 301ms, s.d.: 43ms] │
+│ average response time: 10ms [min: 3ms, max: 181ms, s.d.: 14ms] │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-#### Detailed Scenarios Covered:
-- **Part I: Happy Path Business Lifecycle (31 requests)**
-  1. **Authentication**: Admin Login (captures `adminToken`), User Login (captures `userToken`).
-  2. **Catalog & Products**: Admin tạo Category -> Tạo Brand -> Tạo Product với slug/SKU động -> Storefront xem danh mục -> Storefront xem chi tiết sản phẩm.
-  3. **Inventory**: Admin nhập kho 100 sản phẩm -> Kiểm tra tồn kho sẵn có.
-  4. **Cart & Order**: User thêm sản phẩm vào giỏ -> Xem giỏ hàng -> Đặt đơn hàng (`PENDING`) -> Xem chi tiết đơn hàng.
-  5. **Order Fulfillment**: Admin xác nhận đơn hàng (`CONFIRMED`) -> Admin xuất kho vận chuyển (`SHIPPED`) -> Admin giao hàng thành công (`DELIVERED`).
-  6. **Payment**: Tạo giao dịch thanh toán với Idempotency Key -> Capture thanh toán thành công.
-  7. **Rating & Favourite**: User đánh giá 5 sao cho sản phẩm vừa mua (hệ thống kiểm tra `verified: true`) -> Xem danh sách ratings -> Thêm vào Wishlist Favourites.
-  8. **Search & Notification**: Reindex Elasticsearch -> Tìm kiếm sản phẩm `"MacBook"` ra đúng sản phẩm kèm average rating 5.0 -> Kiểm tra thông báo trạng thái đơn hàng.
-  9. **Tax & Promotion**: Tạo Tax Class -> Tính thuế 10% -> Tạo Campaign khuyến mãi.
-  10. **Gateway Routing**: Gọi tất cả API (Products, Favourites, Search) thông qua Spring Cloud Gateway port `8080`.
-
-- **Part II: Edge & Negative Validation Scenarios (14 requests)**
-  11. **Edge Cases - Auth & Security**:
-      - `11.1 Login with Invalid Password`: Rejects with `401 Unauthorized` and `ERR-0401` (`"Invalid username or password."`).
-      - `11.2 Access Protected Route Without Token`: Rejects with `401 Unauthorized`.
-      - `11.3 Regular User Accesses Admin Endpoint`: Rejects with `403 Forbidden` and `ERR-0403`.
-  12. **Edge Cases - Catalog & Products**:
-      - `12.1 Create Product with Negative Price`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"priceUnit: Price unit must be at least 0.0"`).
-      - `12.2 Regular User Tries to Create Product`: Rejects with `403 Forbidden`.
-      - `12.3 Get Product by Non-Existent ID`: Returns `404 Not Found`.
-  13. **Edge Cases - Inventory & Cart**:
-      - `13.1 Add Item to Cart with Zero Quantity`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"quantity: must be greater than or equal to 1"`).
-      - `13.2 Add Item to Cart for Non-Existent Product`: Returns `404 Not Found` with `PRD-2001`.
-      - `13.3 Seed Inventory with Negative Stock`: Rejects with `400 Bad Request` and `ERR-0422-V`.
-      - `13.4 Reserve Stock Exceeding Available`: Rejects with `409 Conflict` and `INV-3002` (`"Insufficient stock for the requested quantity."`).
-  14. **Edge Cases - Order & Rating & Tax & Media**:
-      - `14.1 Unverified Purchaser Rates Unpurchased Product`: Rejects with `403 Forbidden` and `RTG-11001` (`"Only verified purchasers can rate this product"`).
-      - `14.2 Submit Rating with Invalid Star Count (10 stars)`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"rating: must be less than or equal to 5"`).
-      - `14.3 Create Tax Rate with Invalid Country Code ("INVALID")`: Rejects with `400 Bad Request` and `ERR-0422-V` (`"country: must match ^[A-Z]{2}$"`).
-      - `14.4 Send Non-Multipart Payload to Media Upload`: Rejects with `400 Bad Request` and `ERR-0400`.
+**Pass Rate**: **100% (190 / 190 passed, 0 failures)**
 
 ---
 
-### 3.2 Suite 2: Comprehensive API Endpoint Inventory (`petproject-comprehensive.postman_collection.json`)
+## 5. Summary of Key Fixes Applied During Sprints
 
-**Executed**: 113 requests  
-**Assertions**: 113 / 113 passed (0 failures)  
-**Duration**: 2.4s  
-
-```
-┌─────────────────────────┬──────────────────┬─────────────────┐
-│                         │         executed │          failed │
-├─────────────────────────┼──────────────────┼─────────────────┤
-│              iterations │                1 │               0 │
-├─────────────────────────┼──────────────────┼─────────────────┤
-│                requests │              113 │               0 │
-├─────────────────────────┼──────────────────┼─────────────────┤
-│            test-scripts │              113 │               0 │
-├─────────────────────────┼──────────────────┼─────────────────┤
-│      prerequest-scripts │                0 │               0 │
-├─────────────────────────┼──────────────────┼─────────────────┤
-│              assertions │              113 │               0 │
-├─────────────────────────┴──────────────────┴─────────────────┤
-│ total run duration: 2.4s                                     │
-├──────────────────────────────────────────────────────────────┤
-│ total data received: 52.2kB (approx)                         │
-├──────────────────────────────────────────────────────────────┤
-│ average response time: 10ms [min: 5ms, max: 44ms, s.d.: 7ms] │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Summary & Quality Gate
-
-- **Total Requests Tested**: **158 requests** across both test suites (45 business lifecycle & edge cases + 113 endpoint inventory).
-- **Total Assertions Executed**: **158 assertions**.
-- **Pass Rate**: **100% (158 / 158 passed, 0 failures)**.
-- **Coverage**:
-  - **Happy paths**: Verified end-to-end purchasing, inventory deduction, order state transitions, asynchronous event choreography, payment capture, and Elasticsearch reindexing.
-  - **Edge & Security negative paths**: Verified authentication rejections, role-based access control (403), input validation rules (negative price, zero quantity, invalid country patterns, invalid star rating), inventory over-reservation guard (409 `INV-3002`), purchase verification on product reviews (`RTG-11001`), and media content integrity (`MED-12001`).
+1. **Auth Service**:
+   - Added `/api/v1/auth/forgot-password` and `/api/v1/auth/reset-password` to `shop.security.public-paths`.
+   - Fixed Liquibase migration `004-password-reset-and-addresses.yaml` foreign key constraint to reference `users(user_id)` correctly.
+2. **Order Service (RMA & Tracking)**:
+   - Added `created_by` and `updated_by` columns to `order_returns` table and `changelog-007-order-returns.yaml` to satisfy Hibernate audit validation.
+   - Cleared and re-computed Liquibase checksums.
+   - Fixed `OrderReturnService` delivered order status validation and max refund threshold checking.
+3. **Gateway Service**:
+   - Updated `gateway.public-endpoints` in `application.yml` to expose `/api/v1/products`, `/api/v1/categories`, `/api/v1/brands`, `/api/v1/search`, `/api/v1/ratings`, `/api/v1/carts`, and `/api/v1/orders/track`.
+   - Rebuilt container image with Jib (`compile jib:dockerBuild`) to sync gateway routing in runtime.
+4. **Postman Variable Chaining & Assertions**:
+   - Synchronized DTO contracts: Category (`title`), Brand (`name`), Product (`quantity: 100, status: "ACTIVE"`), Inventory (`availableQuantity`), Tax Class (`defaultRatePct: 10.0`), Promotions (`discountType`, `discountValue`, `startsAt`, `endsAt`).
+   - Mapped security error codes: `PAY-5005` (payment webhook HMAC invalid), `SHP-10004` (shipping webhook HMAC invalid), `RTG-11001` (unverified purchaser review gate), `INV-3002` (inventory over-reservation guard).
