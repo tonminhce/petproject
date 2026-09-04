@@ -19,6 +19,7 @@ class CarrierConfigTest {
     void manualIsActiveByDefaultAndResolvesAsPrimary() {
         contextRunner.run(ctx -> {
             assertThat(ctx).hasBean("manualCarrierAdapter");
+            // Noop requires explicit property, so not loaded here
             assertThat(ctx).doesNotHaveBean("noopCarrierAdapter");
             assertThat(ctx.getBean(CarrierAdapter.class)).isSameAs(ctx.getBean("manualCarrierAdapter"));
             assertThat(ctx.getBean(CarrierAdapter.class).carrier()).isEqualTo(Carrier.MANUAL);
@@ -37,23 +38,18 @@ class CarrierConfigTest {
     }
 
     @Test
-    void failsWhenNotExactlyOneAdapterActive() {
+    void multipleAdaptersCoexistAndFactoryRoutesCorrectly() {
         new ApplicationContextRunner()
                 .withUserConfiguration(CarrierConfig.class, ManualCarrierAdapter.class, ExtraAdapterConfig.class)
                 .run(ctx -> {
-                    assertThat(ctx).hasFailed();
-                    assertThat(rootCause(ctx.getStartupFailure()))
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("exactly one");
+                    assertThat(ctx).hasNotFailed();
+                    // Primary resolves to manual (default property)
+                    assertThat(ctx.getBean(CarrierAdapter.class).carrier()).isEqualTo(Carrier.MANUAL);
+                    // Factory contains both adapters
+                    CarrierFactory factory = ctx.getBean(CarrierFactory.class);
+                    assertThat(factory.getCarrier(Carrier.MANUAL).carrier()).isEqualTo(Carrier.MANUAL);
+                    assertThat(factory.getCarrier(Carrier.GHN).carrier()).isEqualTo(Carrier.GHN);
                 });
-    }
-
-    private static Throwable rootCause(Throwable failure) {
-        Throwable cause = failure;
-        while (cause.getCause() != null) {
-            cause = cause.getCause();
-        }
-        return cause;
     }
 
     @Configuration

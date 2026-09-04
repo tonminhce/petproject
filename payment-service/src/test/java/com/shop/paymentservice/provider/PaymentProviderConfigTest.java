@@ -16,7 +16,7 @@ class PaymentProviderConfigTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, StripeProvider.class,
-                    PropsConfig.class);
+                    CodProvider.class, PropsConfig.class);
 
     /**
      * C5 Task 2 — StripeProvider consumes PaymentStripeProperties
@@ -29,13 +29,20 @@ class PaymentProviderConfigTest {
 
     @Test
     void mockIsActiveWhenExplicitlySelectedAndResolvesAsPrimary() {
-        // A11: no matchIfMissing — prod must pick a provider explicitly,
-        // so the mock is only active with shop.payment.provider=mock.
         contextRunner.withPropertyValues("shop.payment.provider=mock").run(ctx -> {
             assertThat(ctx).hasBean("mockProvider");
-            assertThat(ctx).doesNotHaveBean("stripeProvider");
-            assertThat(ctx.getBean(PaymentProvider.class)).isSameAs(ctx.getBean("mockProvider"));
+            // Multi-provider: other lightweight providers also load
+            assertThat(ctx).hasBean("codProvider");
             assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("mock");
+        });
+    }
+
+    @Test
+    void codResolvesAsPrimaryWhenSelected() {
+        contextRunner.withPropertyValues("shop.payment.provider=cod").run(ctx -> {
+            assertThat(ctx).hasBean("mockProvider");
+            assertThat(ctx).hasBean("codProvider");
+            assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("COD");
         });
     }
 
@@ -46,8 +53,8 @@ class PaymentProviderConfigTest {
                         "shop.payment.stripe.secret-key=sk_test_123")
                 .run(ctx -> {
                     assertThat(ctx).hasBean("stripeProvider");
-                    assertThat(ctx).doesNotHaveBean("mockProvider");
-                    assertThat(ctx.getBean(PaymentProvider.class)).isSameAs(ctx.getBean("stripeProvider"));
+                    // Multi-provider: mock and cod also load alongside stripe
+                    assertThat(ctx).hasBean("mockProvider");
                     assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("stripe");
                 });
     }
@@ -69,15 +76,18 @@ class PaymentProviderConfigTest {
     }
 
     @Test
-    void failsWhenNotExactlyOneProviderActive() {
+    void multipleProvidersCoexistAndFactoryRoutesCorrectly() {
         new ApplicationContextRunner()
                 .withPropertyValues("shop.payment.provider=mock")
                 .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, ExtraProviderConfig.class)
                 .run(ctx -> {
-                    assertThat(ctx).hasFailed();
-                    assertThat(rootCause(ctx.getStartupFailure()))
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("exactly one");
+                    assertThat(ctx).hasNotFailed();
+                    // Primary resolves to mock per property
+                    assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("mock");
+                    // Factory contains both providers
+                    PaymentProviderFactory factory = ctx.getBean(PaymentProviderFactory.class);
+                    assertThat(factory.getProvider("mock").name()).isEqualTo("mock");
+                    assertThat(factory.getProvider("extra").name()).isEqualTo("extra");
                 });
     }
 

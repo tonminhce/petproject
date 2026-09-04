@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
-@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "mock")
 public class MockProvider implements PaymentProvider {
 
     @Override

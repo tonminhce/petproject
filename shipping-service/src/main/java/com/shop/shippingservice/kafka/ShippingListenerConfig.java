@@ -3,8 +3,10 @@ package com.shop.shippingservice.kafka;
 import com.shop.common.kafka.config.KafkaProperties;
 import com.shop.common.kafka.consumer.BaseKafkaListenerConfig;
 import com.shop.shippingservice.dto.OrderLifecycleEvent;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,8 +14,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ShippingListenerConfig extends BaseKafkaListenerConfig<String> {
 
-    public ShippingListenerConfig(KafkaProperties kafkaProperties) {
-        super(String.class, kafkaProperties);
+    public ShippingListenerConfig(KafkaProperties kafkaProperties,
+            @Qualifier("stringKafkaTemplate") KafkaTemplate<String, String> kafkaTemplate) {
+        super(String.class, kafkaProperties, kafkaTemplate);
     }
 
     @Override

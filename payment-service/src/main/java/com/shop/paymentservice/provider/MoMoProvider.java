@@ -13,7 +13,6 @@ import java.util.HexFormat;
 import java.util.UUID;
 
 @Component
-@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "momo")
 @Slf4j
 public class MoMoProvider implements PaymentProvider {
 

@@ -58,8 +58,8 @@ public class RestClientConfig {
 
     private ClientHttpRequestFactory createPooledRequestFactory(int timeoutMs) {
         PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
-            .setMaxConnTotal(100)
-            .setMaxConnPerRoute(30)
+            .setMaxConnTotal(200)
+            .setMaxConnPerRoute(50)
             .build();
         RequestConfig requestConfig = RequestConfig.custom()
             .setConnectTimeout(Timeout.ofMilliseconds(timeoutMs))

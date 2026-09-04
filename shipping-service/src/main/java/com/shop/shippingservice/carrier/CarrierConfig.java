@@ -1,21 +1,29 @@
 package com.shop.shippingservice.carrier;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.util.Assert;
 
 import java.util.List;
 
 @Configuration
 public class CarrierConfig {
 
+    /**
+     * Multi-carrier aware: selects the carrier matching
+     * {@code shop.shipping.carrier} as the primary injection target.
+     * Falls back to the first registered adapter if no match is found.
+     */
     @Bean
     @Primary
-    public CarrierAdapter primary(List<CarrierAdapter> all) {
-        Assert.state(all.size() == 1,
-                () -> "Expected exactly one active CarrierAdapter but found " + all.size());
-        return all.get(0);
+    public CarrierAdapter primary(List<CarrierAdapter> all,
+            @Value("${shop.shipping.carrier:manual}") String carrierName) {
+        return all.stream()
+                .filter(a -> a.carrier() != null
+                        && a.carrier().name().equalsIgnoreCase(carrierName))
+                .findFirst()
+                .orElse(all.get(0));
     }
 
     @Bean

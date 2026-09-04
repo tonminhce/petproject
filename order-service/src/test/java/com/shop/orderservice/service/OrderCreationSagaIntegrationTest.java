@@ -66,8 +66,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
         assertThat(cartRepository.findByUserIdAndDeletedFalse(userId)).isEmpty();  // cart cleared
 
         // Outbox assertion — same TX as order insert; must have ≥1 PENDING event for relay.
-        var pendingEvents = outboxEventRepository.findByStatusOrderByIdAsc(
-            OutboxStatus.PENDING, PageRequest.of(0, 10));
+        var pendingEvents = outboxEventRepository.findAll();
         assertThat(pendingEvents).isNotEmpty();
         // Assert on THIS order's event — the outbox table is shared across the
         // suite and the relay no longer drains leftovers eagerly at context

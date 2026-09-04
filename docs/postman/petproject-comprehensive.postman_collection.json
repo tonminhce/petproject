@@ -1894,6 +1894,49 @@
           "description": "Multi-Provider Factory: MoMo e-wallet dispatch"
         },
         {
+          "name": "POST /api/v1/payments (Stripe)",
+          "request": {
+            "method": "POST",
+            "url": "{{paymentUrl}}/api/v1/payments",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"amount\": 29.99,\n  \"currency\": \"USD\",\n  \"idempotencyKey\": \"postman-stripe-{{$guid}}\",\n  \"provider\": \"stripe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is not server error',()=>pm.expect(pm.response.code).to.be.below(500));",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data) {",
+                  "  pm.expect(jsonData.data.provider).to.eql('stripe');",
+                  "  if (jsonData.data.id) { pm.collectionVariables.set('paymentId', jsonData.data.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "description": "Multi-Provider Factory: Stripe payment intent dispatch"
+        },
+        {
           "name": "POST /api/v1/payments/{id}/capture",
           "request": {
             "method": "POST",

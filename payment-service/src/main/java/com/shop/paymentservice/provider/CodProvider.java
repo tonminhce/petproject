@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
-@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "cod")
 public class CodProvider implements PaymentProvider {
 
     @Override

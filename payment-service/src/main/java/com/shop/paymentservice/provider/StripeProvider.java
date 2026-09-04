@@ -12,6 +12,7 @@ import com.stripe.param.PaymentIntentListParams;
 import com.stripe.param.RefundCreateParams;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +45,7 @@ import java.util.UUID;
  * Stripe's cached original — accepted, never an error.</p>
  */
 @Component
-@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "stripe")
+@ConditionalOnExpression("'${shop.payment.provider:}'.equalsIgnoreCase('stripe') || T(org.springframework.util.StringUtils).hasText('${shop.payment.stripe.secret-key:}')")
 @Slf4j
 public class StripeProvider implements PaymentProvider {
 

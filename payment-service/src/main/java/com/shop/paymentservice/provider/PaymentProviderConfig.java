@@ -5,9 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.util.Assert;
 
 import java.util.List;
+import java.util.Locale;
 
 @Configuration
 public class PaymentProviderConfig {
@@ -35,12 +35,20 @@ public class PaymentProviderConfig {
         }
     }
 
+    /**
+     * Multi-provider aware: selects the provider matching
+     * {@code shop.payment.provider} as the primary injection target.
+     * Falls back to the first registered provider if no match is found.
+     */
     @Bean
     @Primary
-    public PaymentProvider primary(List<PaymentProvider> all) {
-        Assert.state(all.size() == 1,
-                () -> "Expected exactly one active PaymentProvider but found " + all.size());
-        return all.get(0);
+    public PaymentProvider primary(List<PaymentProvider> all,
+            @Value("${shop.payment.provider:mock}") String defaultProviderName) {
+        String normalized = defaultProviderName.toUpperCase(Locale.ROOT);
+        return all.stream()
+                .filter(p -> p.name() != null && p.name().toUpperCase(Locale.ROOT).equals(normalized))
+                .findFirst()
+                .orElse(all.get(0));
     }
 
     @Bean

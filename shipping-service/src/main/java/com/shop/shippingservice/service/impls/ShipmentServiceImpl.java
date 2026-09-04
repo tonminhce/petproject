@@ -81,7 +81,9 @@ public class ShipmentServiceImpl implements ShipmentService {
             log.info("Shipment for order {} already exists, skipping", orderId);
             return;
         }
-        CarrierAdapter adapter = defaultCarrierAdapter;
+        CarrierAdapter adapter = (carrierFactory != null)
+                ? carrierFactory.getDefaultCarrier()
+                : defaultCarrierAdapter;
         Shipment shipment = Shipment.builder()
                 .id(UUID.randomUUID())
                 .orderId(orderId)
