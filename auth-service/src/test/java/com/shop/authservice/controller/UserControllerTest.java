@@ -3,8 +3,6 @@ package com.shop.authservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.response.UserResponse;
-import com.shop.authservice.entity.User;
-import com.shop.authservice.mapper.UserMapper;
 import com.shop.authservice.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,15 +39,10 @@ class UserControllerTest {
     @MockitoBean
     private UserService userService;
 
-    @MockitoBean
-    private UserMapper userMapper;
-
     @Test
     void getUserByIdReturnsUser() throws Exception {
         UUID id = UUID.randomUUID();
-        User user = User.builder().id(id).username("alice").build();
-        when(userService.findById(id)).thenReturn(user);
-        when(userMapper.toResponse(user))
+        when(userService.findById(id))
                 .thenReturn(new UserResponse(id, null, "alice", null, null, null, null));
 
         mockMvc.perform(get("/api/v1/users/{id}", id))

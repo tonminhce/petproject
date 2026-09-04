@@ -75,9 +75,10 @@ class PaymentServiceImplTest {
         Payment saved = payment(PaymentStatus.PENDING);
         when(writer.insert(any(Payment.class))).thenReturn(saved);
 
-        Payment result = service.create(request());
+        PaymentResponse result = service.create(request());
 
-        assertThat(result).isSameAs(saved);
+        assertThat(result.id()).isEqualTo(saved.getId());
+        assertThat(result.status()).isEqualTo(saved.getStatus());
         ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
         verify(writer).insert(captor.capture());
         Payment inserted = captor.getValue();
@@ -94,9 +95,10 @@ class PaymentServiceImplTest {
         Payment existing = payment(PaymentStatus.PENDING);
         when(repository.findByIdempotencyKey(IDEMPOTENCY_KEY)).thenReturn(Optional.of(existing));
 
-        Payment result = service.create(request());
+        PaymentResponse result = service.create(request());
 
-        assertThat(result).isSameAs(existing);
+        assertThat(result.id()).isEqualTo(existing.getId());
+        assertThat(result.status()).isEqualTo(existing.getStatus());
         verifyNoInteractions(writer);
     }
 
@@ -118,11 +120,11 @@ class PaymentServiceImplTest {
         when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
                 .thenReturn(new PaymentProvider.ProviderResult("mock-evt-1", true));
 
-        Payment result = service.capture(PAYMENT_ID);
+        PaymentResponse result = service.capture(PAYMENT_ID);
 
         verify(provider).capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY);
-        assertThat(result).isSameAs(pending);
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(result.id()).isEqualTo(pending.getId());
+        assertThat(result.status()).isEqualTo(PaymentStatus.PENDING);
         verifyNoInteractions(writer);
     }
 
@@ -143,10 +145,11 @@ class PaymentServiceImplTest {
         when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY))
                 .thenReturn(new PaymentProvider.ProviderResult("mock-evt-2", true));
 
-        Payment result = service.refund(PAYMENT_ID);
+        PaymentResponse result = service.refund(PAYMENT_ID);
 
         verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
+        assertThat(result.id()).isEqualTo(PAYMENT_ID);
+        assertThat(result.status()).isEqualTo(PaymentStatus.CAPTURED);
         verifyNoInteractions(writer);
     }
 

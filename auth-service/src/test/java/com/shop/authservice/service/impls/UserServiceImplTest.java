@@ -248,9 +248,22 @@ class UserServiceImplTest {
 
     @Test
     void findByUsernameReturnsUser() {
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(newUser()));
+        User user = newUser();
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userMapper.toResponse(user))
+                .thenReturn(new UserResponse(userId, null, "alice", null, null, null, null));
 
-        assertEquals("alice", userService.findByUsername("alice").getUsername());
+        assertEquals("alice", userService.findByUsername("alice").username());
+    }
+
+    @Test
+    void findByIdReturnsUser() {
+        User user = newUser();
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userMapper.toResponse(user))
+                .thenReturn(new UserResponse(userId, null, "alice", null, null, null, null));
+
+        assertEquals("alice", userService.findById(userId).username());
     }
 
     @Test

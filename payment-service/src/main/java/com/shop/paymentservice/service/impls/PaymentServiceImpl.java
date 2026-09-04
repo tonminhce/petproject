@@ -52,14 +52,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public Payment create(CreatePaymentRequest req) {
+    public PaymentResponse create(CreatePaymentRequest req) {
         Optional<Payment> existing = (req.userId() != null)
                 ? repository.findByIdempotencyKeyAndUserId(req.idempotencyKey(), req.userId())
                 : repository.findByIdempotencyKey(req.idempotencyKey());
 
         PaymentProvider provider = resolveProvider(req.provider());
 
-        return existing.orElseGet(() -> writer.insert(Payment.builder()
+        Payment payment = existing.orElseGet(() -> writer.insert(Payment.builder()
                 .orderId(req.orderId())
                 .userId(req.userId())
                 .amount(req.amount())
@@ -68,11 +68,12 @@ public class PaymentServiceImpl implements PaymentService {
                 .provider(provider.name())
                 .idempotencyKey(req.idempotencyKey())
                 .build()));
+        return PaymentResponse.from(payment);
     }
 
     @Override
     @Transactional
-    public Payment capture(UUID id) {
+    public PaymentResponse capture(UUID id) {
         Payment payment = requirePayment(id);
         if (payment.getStatus() != PaymentStatus.PENDING) {
             throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus());
@@ -88,12 +89,12 @@ public class PaymentServiceImpl implements PaymentService {
         if (!result.accepted()) {
             throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
         }
-        return payment;
+        return PaymentResponse.from(payment);
     }
 
     @Override
     @Transactional
-    public Payment refund(UUID id) {
+    public PaymentResponse refund(UUID id) {
         Payment payment = requirePayment(id);
         if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
@@ -104,7 +105,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (!result.accepted()) {
             throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
         }
-        return payment;
+        return PaymentResponse.from(payment);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.storage.service.ObjectStorageService;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
+import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.entity.PaymentEvent;
 import com.shop.paymentservice.repository.PaymentEventRepository;
@@ -257,10 +258,10 @@ class PaymentFlowIT extends AbstractIntegrationTest {
     }
 
     private Payment createCapturedPendingPayment() {
-        Payment payment = paymentService.create(new CreatePaymentRequest(
+        PaymentResponse payment = paymentService.create(new CreatePaymentRequest(
                 UUID.randomUUID(), new BigDecimal("100.00"), "USD", UUID.randomUUID().toString()));
-        paymentService.capture(payment.getId());
-        return paymentRepository.findById(payment.getId()).orElseThrow();
+        paymentService.capture(payment.id());
+        return paymentRepository.findById(payment.id()).orElseThrow();
     }
 
     private String capturedBody(Payment payment) {

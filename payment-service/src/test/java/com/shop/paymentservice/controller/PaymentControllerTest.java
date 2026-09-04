@@ -57,8 +57,8 @@ class PaymentControllerTest {
     private final UUID paymentId = UUID.fromString("00000000-0000-0000-0000-000000009001");
     private final UUID orderId = UUID.fromString("00000000-0000-0000-0000-000000009003");
 
-    private Payment pendingPayment() {
-        return Payment.builder()
+    private PaymentResponse pendingPayment() {
+        return PaymentResponse.from(Payment.builder()
             .id(paymentId)
             .orderId(orderId)
             .amount(new BigDecimal("98.00"))
@@ -66,11 +66,11 @@ class PaymentControllerTest {
             .status(PaymentStatus.PENDING)
             .provider("mock")
             .idempotencyKey("idem-9001")
-            .build();
+            .build());
     }
 
-    private Payment capturedPayment() {
-        return Payment.builder()
+    private PaymentResponse capturedPayment() {
+        return PaymentResponse.from(Payment.builder()
             .id(paymentId)
             .orderId(orderId)
             .amount(new BigDecimal("98.00"))
@@ -80,11 +80,11 @@ class PaymentControllerTest {
             .provider("mock")
             .idempotencyKey("idem-9001")
             .receiptKey("rcpt_12345")
-            .build();
+            .build());
     }
 
     private PaymentResponse capturedResponse() {
-        return PaymentResponse.from(capturedPayment());
+        return capturedPayment();
     }
 
     private String createBody() {

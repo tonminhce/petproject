@@ -5,13 +5,12 @@ import com.shop.authservice.dto.request.RegisterRequest;
 import com.shop.authservice.dto.request.ResetPasswordRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;
 import com.shop.authservice.dto.response.UserResponse;
-import com.shop.authservice.entity.User;
 import org.springframework.data.domain.Page;
 
 import java.util.UUID;
 
 public interface UserService {
-    User register(RegisterRequest request);
+    UserResponse register(RegisterRequest request);
 
     UserResponse update(UUID userId, UpdateUserRequest request);
 
@@ -33,9 +32,9 @@ public interface UserService {
      * Finds a user by id, excluding soft-deleted records. To look up a deleted
      * record (admin restore flow), call {@code repository.findByIdIncludingDeleted}.
      */
-    User findById(UUID userId);
+    UserResponse findById(UUID userId);
 
-    User findByUsername(String userName);
+    UserResponse findByUsername(String userName);
 
     Page<UserResponse> findAllUsers(int page, int size, String sortBy, String sortOrder);
 

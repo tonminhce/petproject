@@ -25,13 +25,13 @@ public class BusinessException extends RuntimeException {
     private final HttpStatus status;
     private final String errorCode;
 
-    private BusinessException(ErrorCode code, String message) {
+    private BusinessException(ErrorCatalog code, String message) {
         super(message);
         this.status = code.getHttpStatus();
         this.errorCode = code.getCode();
     }
 
-    private BusinessException(ErrorCode code, String message, Throwable cause) {
+    private BusinessException(ErrorCatalog code, String message, Throwable cause) {
         super(message, cause);
         this.status = code.getHttpStatus();
         this.errorCode = code.getCode();
@@ -59,15 +59,15 @@ public class BusinessException extends RuntimeException {
     // Canonical factory — preferred entry point
     // ------------------------------------------------------------------
 
-    public static BusinessException of(ErrorCode code, Object... messageArgs) {
+    public static BusinessException of(ErrorCatalog code, Object... messageArgs) {
         return new BusinessException(code, Messages.get(code.getMessageKey(), messageArgs));
     }
 
     /**
-     * Use when a single {@link ErrorCode} maps to multiple i18n keys depending on context
+     * Use when a single {@link ErrorCatalog} maps to multiple i18n keys depending on context
      * (e.g. {@code AUTH_USER_NOT_FOUND} surfaces as different sentences per endpoint).
      */
-    public static BusinessException ofKey(ErrorCode code, String messageKey, Object... messageArgs) {
+    public static BusinessException ofKey(ErrorCatalog code, String messageKey, Object... messageArgs) {
         return new BusinessException(code, Messages.get(messageKey, messageArgs));
     }
 

@@ -3,8 +3,6 @@ package com.shop.authservice.controller;
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;
 import com.shop.authservice.dto.response.UserResponse;
-import com.shop.authservice.entity.User;
-import com.shop.authservice.mapper.UserMapper;
 import com.shop.authservice.service.UserService;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
@@ -30,7 +28,6 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
-    private final UserMapper userMapper;
 
     @PutMapping("/me")
     @PreAuthorize("isAuthenticated()")
@@ -60,15 +57,13 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<UserResponse> getCurrentUser() {
         String username = AuthenticatedUser.requireCurrent().username();
-        User user = userService.findByUsername(username);
-        return ApiResponse.ok(userMapper.toResponse(user));
+        return ApiResponse.ok(userService.findByUsername(username));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated() and hasRole('ADMIN')")
     public ApiResponse<UserResponse> getUserById(@PathVariable UUID id) {
-        User user = userService.findById(id);
-        return ApiResponse.ok(userMapper.toResponse(user));
+        return ApiResponse.ok(userService.findById(id));
     }
 
     @GetMapping

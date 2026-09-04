@@ -35,21 +35,21 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.create", resourceType = "payment")
     public ApiResponse<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
-        return ApiResponse.ok(PaymentResponse.from(paymentService.create(request)));
+        return ApiResponse.ok(paymentService.create(request));
     }
 
     @PostMapping("/{id}/capture")
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.capture", resourceType = "payment")
     public ApiResponse<PaymentResponse> capture(@PathVariable UUID id) {
-        return ApiResponse.ok(PaymentResponse.from(paymentService.capture(id)));
+        return ApiResponse.ok(paymentService.capture(id));
     }
 
     @PostMapping("/{id}/refund")
     @PreAuthorize("hasRole('ADMIN')")
     @Audited(action = "payment.refund", resourceType = "payment")
     public ApiResponse<PaymentResponse> refund(@PathVariable UUID id) {
-        return ApiResponse.ok(PaymentResponse.from(paymentService.refund(id)));
+        return ApiResponse.ok(paymentService.refund(id));
     }
 
     @GetMapping

@@ -9,6 +9,7 @@ import com.shop.common.storage.service.StorageObject;
 import com.shop.paymentservice.config.TestLiquibaseConfig;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
+import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.entity.PaymentEvent;
 import com.shop.paymentservice.provider.PaymentProvider;
@@ -233,8 +234,9 @@ class StripeWebhookIT {
     }
 
     private Payment createPendingPayment() {
-        return paymentService.create(new CreatePaymentRequest(
+        PaymentResponse response = paymentService.create(new CreatePaymentRequest(
                 UUID.randomUUID(), new BigDecimal("98.00"), "USD", "it-stripe-" + UUID.randomUUID()));
+        return paymentRepository.findById(response.id()).orElseThrow();
     }
 
     private byte[] stripeSucceededBody(String eventId, String paymentId) {
@@ -361,10 +363,10 @@ class StripeWebhookIT {
             // (fleet ITs are service-layer and skip the filter chain).
             CreatePaymentRequest request = new CreatePaymentRequest(
                     UUID.randomUUID(), new BigDecimal("98.00"), "USD", idempotencyKey);
-            Payment first = paymentService.create(request);
-            Payment second = paymentService.create(request);
+            PaymentResponse first = paymentService.create(request);
+            PaymentResponse second = paymentService.create(request);
 
-            assertThat(second.getId()).isEqualTo(first.getId());
+            assertThat(second.id()).isEqualTo(first.id());
             assertThat(paymentRepository.findAll()).filteredOn(
                     p -> idempotencyKey.equals(p.getIdempotencyKey())).hasSize(1);
             // Create never calls the provider — zero SDK calls so far.
@@ -374,7 +376,7 @@ class StripeWebhookIT {
 
             // One capture → exactly ONE PaymentIntent.create carrying the
             // payments.idempotency_key (spec D2).
-            paymentService.capture(first.getId());
+            paymentService.capture(first.id());
             paymentIntentStatic.verify(() -> PaymentIntent.create(
                     any(com.stripe.param.PaymentIntentCreateParams.class),
                     any(com.stripe.net.RequestOptions.class)), times(1));

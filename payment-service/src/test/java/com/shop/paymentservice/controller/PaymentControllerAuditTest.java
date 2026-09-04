@@ -7,6 +7,7 @@ import com.shop.common.security.config.SecurityAutoConfiguration;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
+import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.service.PaymentService;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ class PaymentControllerAuditTest {
     void refund_emitsAuditLineWithAnnotatedActionAndResourceId() throws Exception {
         UUID paymentId = UUID.fromString("00000000-0000-0000-0000-00000000d001");
         when(paymentService.refund(paymentId))
-            .thenReturn(Payment.builder()
+            .thenReturn(PaymentResponse.from(Payment.builder()
                 .id(paymentId)
                 .orderId(UUID.fromString("00000000-0000-0000-0000-00000000d002"))
                 .amount(new BigDecimal("49.90"))
@@ -72,7 +73,7 @@ class PaymentControllerAuditTest {
                 .provider("stripe")
                 .idempotencyKey("idem-123")
                 .receiptKey("receipt-123")
-                .build());
+                .build()));
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d003"))
@@ -97,7 +98,7 @@ class PaymentControllerAuditTest {
     void create_byServiceToken_emitsAuditLineWithServiceActor() throws Exception {
         UUID orderId = UUID.fromString("00000000-0000-0000-0000-00000000d004");
         when(paymentService.create(any(CreatePaymentRequest.class)))
-            .thenReturn(Payment.builder()
+            .thenReturn(PaymentResponse.from(Payment.builder()
                 .id(UUID.fromString("00000000-0000-0000-0000-00000000d005"))
                 .orderId(orderId)
                 .amount(new BigDecimal("49.90"))
@@ -105,7 +106,7 @@ class PaymentControllerAuditTest {
                 .status(PaymentStatus.CAPTURED)
                 .provider("stripe")
                 .idempotencyKey("idem-456")
-                .build());
+                .build()));
 
         mockMvc.perform(post("/api/v1/payments")
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d006")

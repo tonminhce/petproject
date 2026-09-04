@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
  * <p>Why an enum: gives compile-time exhaustiveness checks at every {@code switch} site
  * and prevents typos in {@code code} / {@code messageKey} drift.</p>
  */
-public enum ErrorCode {
+public enum ErrorCode implements ErrorCatalog {
 
     // ---- Generic ----
     BAD_REQUEST("ERR-0400", "error.bad.request", HttpStatus.BAD_REQUEST),

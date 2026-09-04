@@ -63,14 +63,15 @@ public class UserServiceImpl implements UserService {
     // or switches to a record would start logging plaintext passwords via the
     // perfLogger. Drop logInput rather than rely on the DTO's current shape.
     @LogPerformance(title = "Register user")
-    public User register(RegisterRequest request) {
+    public UserResponse register(RegisterRequest request) {
         validateUniqueConstraints(request);
 
         String keycloakUserId = createKeycloakUser(request);
 
         try {
             User user = buildUserFromRequest(request, keycloakUserId);
-            return userRepository.saveAndFlush(user);
+            User saved = userRepository.saveAndFlush(user);
+            return userMapper.toResponse(saved);
         } catch (RuntimeException e) {
             rollbackKeycloakUser(keycloakUserId);
             throw e;
@@ -133,15 +134,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public User findById(UUID userId) {
-        return findUserOrThrow(userId);
+    public UserResponse findById(UUID userId) {
+        return userMapper.toResponse(findUserOrThrow(userId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public User findByUsername(String userName) {
-        return userRepository.findByUsername(userName)
+    public UserResponse findByUsername(String userName) {
+        User user = userRepository.findByUsername(userName)
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found.with.username", userName));
+        return userMapper.toResponse(user);
     }
 
     @Override

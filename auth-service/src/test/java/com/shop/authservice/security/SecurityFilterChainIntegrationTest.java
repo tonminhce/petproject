@@ -159,7 +159,8 @@ class SecurityFilterChainIntegrationTest {
     @Test
     @DisplayName("S3: POST /api/v1/auth/sign-up without auth → 200 (service public-path, any method)")
     void signUpIsPublicWithoutAuthentication() throws Exception {
-        when(userService.register(any())).thenReturn(User.builder().username("alice123").build());
+        when(userService.register(any()))
+                .thenReturn(new UserResponse(UUID.randomUUID(), null, "alice123", null, null, null, null));
 
         mockMvc.perform(post("/api/v1/auth/sign-up")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,11 +179,9 @@ class SecurityFilterChainIntegrationTest {
     @DisplayName("S5: GET /api/v1/users/me with valid JWT (sub=alice) → 200 (chain authenticates)")
     void getCurrentUserWithJwtIsOk() throws Exception {
         UUID id = UUID.randomUUID();
-        User user = User.builder().id(id).username("alice").build();
         UserResponse response = new UserResponse(id, null, "alice", null, null, null, null);
 
-        when(userService.findByUsername("alice")).thenReturn(user);
-        when(userMapper.toResponse(user)).thenReturn(response);
+        when(userService.findByUsername("alice")).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/users/me")
                         .with(jwt().jwt(j -> j.subject("alice"))))
