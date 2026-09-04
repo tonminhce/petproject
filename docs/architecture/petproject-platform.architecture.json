@@ -2,88 +2,696 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Petproject Microservices Platform — System Landscape",
-    "quality_profile": "showcase",
+    "title": "Kiến trúc Chi tiết 14 Microservices & Luồng Dữ liệu Petproject Platform",
+    "quality_profile": "standard",
+    "viewBox": [
+      1640,
+      960
+    ],
     "views": [
       {
-        "id": "ingress-flow",
-        "label": "Ingress & Edge Security",
-        "focus": ["clients", "gateway", "keycloak", "redis", "auth"],
-        "note": "Traffic enters via Spring Cloud Gateway with dual-layer token bucket rate limiting and Keycloak JWT validation."
+        "id": "ingress-view",
+        "label": "1. Ingress & Security",
+        "focus": [
+          "clients",
+          "gateway",
+          "keycloak",
+          "redis",
+          "auth"
+        ],
+        "note": "Xác thực tập trung JWT OIDC qua Keycloak, giới hạn tốc độ 2 tầng qua Redis Token Bucket."
       },
       {
-        "id": "core-saga",
-        "label": "Core Commerce & Fulfillment",
-        "focus": ["gateway", "core", "fulfillment", "stripe", "postgres"],
-        "note": "End-to-end commerce operations across order, inventory, pricing, and fulfillment domains."
+        "id": "saga-view",
+        "label": "2. SAGA & Stock Reservation",
+        "focus": [
+          "gateway",
+          "order",
+          "tax",
+          "promotion",
+          "inventory",
+          "payment",
+          "stripe"
+        ],
+        "note": "Orchestrated SAGA tính giá, khóa kho 2 pha và đền bù rollback tự động."
       },
       {
-        "id": "async-backbone",
-        "label": "Event-Driven & Search Sync",
-        "focus": ["core", "cx", "fulfillment", "kafka", "es"],
-        "note": "Transactional Outbox relays events to Kafka KRaft for asynchronous fulfillment and Elasticsearch CDC sync."
+        "id": "event-view",
+        "label": "3. Kafka Event Backbone & Outbox",
+        "focus": [
+          "inventory",
+          "promotion",
+          "kafka",
+          "shipping",
+          "notification",
+          "search"
+        ],
+        "note": "Transactional Outbox loại trừ Dual-write, Kafka KRaft điều phối sự kiện theo aggregateId."
+      },
+      {
+        "id": "fulfillment-view",
+        "label": "4. Fulfillment, Search & Storage",
+        "focus": [
+          "shipping",
+          "carriers",
+          "search",
+          "es",
+          "media",
+          "s3"
+        ],
+        "note": "Tạo vận đơn hãng vận chuyển, tìm kiếm phân tán Elasticsearch và lưu trữ hình ảnh MinIO S3."
       }
     ]
   },
   "components": [
-    { "id": "clients", "type": "external", "label": "Clients & Apps", "sublabel": "Web, Mobile, Admin", "pos": [30, 280], "size": [130, 60] },
-    { "id": "gateway", "type": "security", "label": "gateway-service", "sublabel": "Spring Cloud :8080", "brand": "spring", "pos": [260, 280], "size": [140, 60], "tag": "Edge Gateway" },
-    { "id": "keycloak", "type": "security", "label": "Keycloak IAM", "sublabel": "OAuth2 / OIDC :9090", "pos": [260, 100], "size": [140, 60], "tag": "Identity Provider" },
-    { "id": "auth", "type": "backend", "label": "auth-service", "sublabel": "IAM Facade :8088", "brand": "spring", "pos": [510, 100], "size": [140, 60] },
-    { "id": "postgres", "type": "database", "label": "PostgreSQL 16", "sublabel": "12 Isolated DBs :5432", "brand": "postgresql", "pos": [760, 100], "size": [140, 60], "tag": "ACID Data Store" },
-    { "id": "core", "type": "backend", "label": "Core Commerce", "sublabel": "Order / Product / Inv", "brand": "spring", "pos": [510, 280], "size": [140, 60] },
-    { "id": "fulfillment", "type": "backend", "label": "Fulfillment Tier", "sublabel": "Pay / Ship / Notif", "brand": "spring", "pos": [760, 280], "size": [140, 60] },
-    { "id": "stripe", "type": "external", "label": "Stripe & Carriers", "sublabel": "Payments & Webhooks", "brand": "stripe", "pos": [1000, 280], "size": [140, 60] },
-    { "id": "redis", "type": "database", "label": "Redis 7.4", "sublabel": "Rate Limit & Cache :6379", "brand": "redis", "pos": [260, 460], "size": [140, 60] },
-    { "id": "cx", "type": "backend", "label": "CX & Pricing", "sublabel": "Rating / Promo / Tax", "brand": "spring", "pos": [510, 460], "size": [140, 60] },
-    { "id": "kafka", "type": "messagebus", "label": "Kafka KRaft", "sublabel": "Event Bus :9092", "brand": "apache-kafka", "pos": [760, 460], "size": [140, 60], "tag": "Event Backbone" },
-    { "id": "es", "type": "database", "label": "Elasticsearch", "sublabel": "Search BM25 :9200", "brand": "elasticsearch", "pos": [1000, 460], "size": [140, 60] }
+    {
+      "id": "clients",
+      "type": "frontend",
+      "label": "Clients & Apps",
+      "sublabel": "Vue.js / Mobile / Admin",
+      "pos": [
+        40,
+        240
+      ],
+      "size": [
+        150,
+        62
+      ]
+    },
+    {
+      "id": "favourite",
+      "type": "backend",
+      "label": "favourite-service",
+      "sublabel": "Wishlists :8091",
+      "brand": "spring",
+      "pos": [
+        40,
+        400
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Engagement"
+    },
+    {
+      "id": "rating",
+      "type": "backend",
+      "label": "rating-service",
+      "sublabel": "Reviews & Scores :8086",
+      "brand": "spring",
+      "pos": [
+        40,
+        560
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Social Domain"
+    },
+    {
+      "id": "keycloak",
+      "type": "security",
+      "label": "Keycloak IAM",
+      "sublabel": "OAuth2 / OIDC :9090",
+      "pos": [
+        270,
+        80
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Identity Provider"
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "gateway-service",
+      "sublabel": "Spring Cloud :8080",
+      "brand": "spring",
+      "pos": [
+        270,
+        240
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "API Gateway"
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis 7.4 Cluster",
+      "sublabel": "Token Bucket :6379",
+      "brand": "redis",
+      "pos": [
+        270,
+        400
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Rate Limit & Cache"
+    },
+    {
+      "id": "auth",
+      "type": "backend",
+      "label": "auth-service",
+      "sublabel": "IAM & RBAC :8088",
+      "brand": "spring",
+      "pos": [
+        500,
+        80
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Auth Facade"
+    },
+    {
+      "id": "order",
+      "type": "backend",
+      "label": "order-service",
+      "sublabel": "SAGA Orchestrator :8083",
+      "brand": "spring",
+      "pos": [
+        500,
+        240
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Commerce Core"
+    },
+    {
+      "id": "payment",
+      "type": "backend",
+      "label": "payment-service",
+      "sublabel": "Stripe & Webhook :8084",
+      "brand": "spring",
+      "pos": [
+        500,
+        400
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Payment Core"
+    },
+    {
+      "id": "stripe",
+      "type": "external",
+      "label": "Stripe API",
+      "sublabel": "Payment Processing",
+      "brand": "stripe",
+      "pos": [
+        500,
+        560
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "External PSP"
+    },
+    {
+      "id": "tax",
+      "type": "backend",
+      "label": "tax-service",
+      "sublabel": "Postal & VAT :8090",
+      "brand": "spring",
+      "pos": [
+        730,
+        80
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Tax Engine"
+    },
+    {
+      "id": "promotion",
+      "type": "backend",
+      "label": "promotion-service",
+      "sublabel": "Voucher Engine :8089",
+      "brand": "spring",
+      "pos": [
+        730,
+        240
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Promotions"
+    },
+    {
+      "id": "inventory",
+      "type": "backend",
+      "label": "inventory-service",
+      "sublabel": "2-Phase Reserve :8082",
+      "brand": "spring",
+      "pos": [
+        730,
+        400
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Warehouse Core"
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL 16 Fleet",
+      "sublabel": "12 Isolated DBs :5432",
+      "brand": "postgresql",
+      "pos": [
+        730,
+        560
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "ACID Data Store"
+    },
+    {
+      "id": "notification",
+      "type": "backend",
+      "label": "notification-service",
+      "sublabel": "Email & Push SMS :8093",
+      "brand": "spring",
+      "pos": [
+        960,
+        80
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Alert Service"
+    },
+    {
+      "id": "kafka",
+      "type": "messagebus",
+      "label": "Apache Kafka 3.9",
+      "sublabel": "KRaft Cluster :9092",
+      "brand": "apache-kafka",
+      "pos": [
+        960,
+        240
+      ],
+      "size": [
+        150,
+        222
+      ],
+      "tag": "Event Bus"
+    },
+    {
+      "id": "carriers",
+      "type": "external",
+      "label": "Shipping Carriers",
+      "sublabel": "GHN / GHTK / FedEx",
+      "pos": [
+        960,
+        560
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Carrier APIs"
+    },
+    {
+      "id": "product",
+      "type": "backend",
+      "label": "product-service",
+      "sublabel": "Catalog & Brands :8081",
+      "brand": "spring",
+      "pos": [
+        1190,
+        80
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Catalog Core"
+    },
+    {
+      "id": "search",
+      "type": "backend",
+      "label": "search-service",
+      "sublabel": "BM25 & Facets :8087",
+      "brand": "spring",
+      "pos": [
+        1190,
+        240
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Search Core"
+    },
+    {
+      "id": "es",
+      "type": "database",
+      "label": "Elasticsearch 8.15",
+      "sublabel": "Search Index :9200",
+      "brand": "elasticsearch",
+      "pos": [
+        1190,
+        400
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Search Engine"
+    },
+    {
+      "id": "shipping",
+      "type": "backend",
+      "label": "shipping-service",
+      "sublabel": "Logistics Dispatch :8085",
+      "brand": "spring",
+      "pos": [
+        1190,
+        560
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Shipment Core"
+    },
+    {
+      "id": "media",
+      "type": "backend",
+      "label": "media-service",
+      "sublabel": "Image Processing :8092",
+      "brand": "spring",
+      "pos": [
+        1420,
+        240
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Asset Service"
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "RustFS / MinIO S3",
+      "sublabel": "Object Storage :9000",
+      "pos": [
+        1420,
+        400
+      ],
+      "size": [
+        150,
+        62
+      ],
+      "tag": "Blob Store"
+    }
   ],
   "boundaries": [
-    { "kind": "security-group", "label": "Edge DMZ & Identity Zone", "wraps": ["gateway", "keycloak", "redis"] },
-    { "kind": "region", "label": "Enterprise Microservices Mesh (Private Network)", "wraps": ["auth", "core", "fulfillment", "cx", "postgres", "kafka", "es"] }
+    {
+      "kind": "security-group",
+      "label": "Edge DMZ & Identity Zone",
+      "wraps": [
+        "gateway",
+        "keycloak",
+        "redis"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Core Commerce & SAGA Orchestration",
+      "wraps": [
+        "auth",
+        "order",
+        "payment",
+        "tax",
+        "promotion",
+        "inventory",
+        "postgres"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Fulfillment, Content & Engagement Services",
+      "wraps": [
+        "notification",
+        "product",
+        "search",
+        "shipping",
+        "media",
+        "favourite",
+        "rating",
+        "es",
+        "s3"
+      ]
+    }
   ],
   "connections": [
-    { "id": "c-client-gw", "from": "clients", "to": "gateway", "label": "HTTPS", "variant": "emphasis" },
-    { "id": "c-gw-kc", "from": "gateway", "to": "keycloak", "label": "JWKS", "variant": "security" },
-    { "id": "c-gw-redis", "from": "gateway", "to": "redis", "label": "rate limit", "labelAt": [330, 400] },
-    { "id": "c-gw-core", "from": "gateway", "to": "core", "label": "orders", "variant": "emphasis" },
-    { "id": "c-auth-kc", "from": "auth", "to": "keycloak", "label": "admin API" },
-    { "id": "c-auth-pg", "from": "auth", "to": "postgres", "label": "users DB" },
-    { "id": "c-core-auth", "from": "core", "to": "auth", "label": "IAM claims" },
-    { "id": "c-core-cx", "from": "core", "to": "cx", "label": "tax & promo", "labelAt": [580, 400] },
-    { "id": "c-core-fulfill", "from": "core", "to": "fulfillment", "label": "dispatch", "variant": "emphasis" },
-    { "id": "c-fulfill-stripe", "from": "fulfillment", "to": "stripe", "label": "payments", "variant": "emphasis" },
-    { "id": "c-fulfill-kafka", "from": "fulfillment", "to": "kafka", "label": "outbox events", "variant": "dashed", "labelAt": [830, 400] },
-    { "id": "c-cx-kafka", "from": "cx", "to": "kafka", "label": "catalog stream", "variant": "dashed" },
-    { "id": "c-kafka-es", "from": "kafka", "to": "es", "label": "CDC sync", "variant": "dashed" }
+    {
+      "id": "c-client-gw",
+      "from": "clients",
+      "to": "gateway",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-gw-kc",
+      "from": "gateway",
+      "to": "keycloak",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "JWKS",
+      "variant": "security",
+      "labelAt": [
+        345,
+        175
+      ]
+    },
+    {
+      "id": "c-gw-redis",
+      "from": "gateway",
+      "to": "redis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "rate limit",
+      "labelAt": [
+        345,
+        350
+      ]
+    },
+    {
+      "id": "c-auth-kc",
+      "from": "auth",
+      "to": "keycloak",
+      "label": "Admin API"
+    },
+    {
+      "id": "c-gw-auth",
+      "from": "gateway",
+      "to": "auth",
+      "fromSide": "top",
+      "toSide": "left",
+      "label": "/auth/**"
+    },
+    {
+      "id": "c-gw-order",
+      "from": "gateway",
+      "to": "order",
+      "label": "/orders/**",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-order-tax",
+      "from": "order",
+      "to": "tax",
+      "fromSide": "top",
+      "toSide": "left",
+      "label": "calc tax"
+    },
+    {
+      "id": "c-order-promo",
+      "from": "order",
+      "to": "promotion",
+      "label": "hold coupon",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-order-inv",
+      "from": "order",
+      "to": "inventory",
+      "label": "2-phase reserve",
+      "variant": "emphasis"
+    },
+    {
+      "id": "c-order-pay",
+      "from": "order",
+      "to": "payment",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "charge intent",
+      "variant": "emphasis",
+      "labelAt": [
+        575,
+        350
+      ]
+    },
+    {
+      "id": "c-pay-stripe",
+      "from": "payment",
+      "to": "stripe",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "Stripe PSP",
+      "variant": "emphasis",
+      "labelAt": [
+        575,
+        510
+      ]
+    },
+    {
+      "id": "c-inv-kafka",
+      "from": "inventory",
+      "to": "kafka",
+      "label": "stock events",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-promo-kafka",
+      "from": "promotion",
+      "to": "kafka",
+      "label": "outbox stream",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-kafka-notif",
+      "from": "kafka",
+      "to": "notification",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "alert event",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-kafka-search",
+      "from": "kafka",
+      "to": "search",
+      "label": "CDC sync",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-kafka-ship",
+      "from": "kafka",
+      "to": "shipping",
+      "label": "order confirmed",
+      "variant": "dashed"
+    },
+    {
+      "id": "c-ship-carriers",
+      "from": "shipping",
+      "to": "carriers",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "dispatch API",
+      "variant": "emphasis",
+      "labelAt": [
+        1075,
+        545
+      ]
+    },
+    {
+      "id": "c-search-es",
+      "from": "search",
+      "to": "es",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "BM25 query",
+      "variant": "emphasis",
+      "labelAt": [
+        1265,
+        350
+      ]
+    },
+    {
+      "id": "c-media-s3",
+      "from": "media",
+      "to": "s3",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "PutObject S3",
+      "labelAt": [
+        1495,
+        350
+      ]
+    },
+    {
+      "id": "c-inv-pg",
+      "from": "inventory",
+      "to": "postgres",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "ACID TX",
+      "labelAt": [
+        805,
+        510
+      ]
+    }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Edge & Bảo mật Cửa ngõ",
+      "title": "1. Ingress & Edge Security Gateway",
       "items": [
-        "Spring Cloud Gateway định tuyến /api/v1/* không cắt tiền tố",
-        "Giới hạn tốc độ 2 tầng Redis Token Bucket (2000 req/s cụm & 100 req/s client)",
-        "Keycloak 26 phát hành JWT và kiểm soát quyền truy cập Zero-Trust"
+        "Spring Cloud Gateway định tuyến toàn bộ /api/v1/* không cắt tiền tố",
+        "Keycloak 26 OIDC Reactive JwtDecoder kiểm thực JWT không cần gọi DB",
+        "Redis Lua Token Bucket giới hạn 2000 req/s cụm và 100 req/s IP/user"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Xử lý Nghiệp vụ & Saga",
+      "title": "2. SAGA Orchestration & 2-Phase Kho",
       "items": [
-        "14 Microservices độc lập theo nguyên tắc Database-per-Service",
-        "Choreography Saga kết hợp 2-Phase Stock Reservation chống bán vượt tồn kho",
-        "Transactional Outbox Pattern bảo đảm tính nhất quán dữ liệu với Kafka"
+        "OrderCreateSaga bóc tách DB transaction khỏi remote HTTP network calls",
+        "Two-Phase Stock Reservation với PESSIMISTIC_WRITE và TTL 15 phút",
+        "Tự động kích hoạt đền bù (Compensations) khi hết hàng hoặc tính giá fail"
       ]
     },
     {
-      "dot": "rose",
-      "title": "Hạ tầng Dữ liệu & Lưu trữ",
+      "dot": "violet",
+      "title": "3. Event-Driven Backbone & Outbox",
       "items": [
-        "PostgreSQL 16 cô lập 12 database chuyên biệt cho từng dịch vụ",
-        "Apache Kafka 3.9 KRaft điều phối sự kiện bất đồng bộ không cần Zookeeper",
-        "Elasticsearch 8.15 BM25 đồng bộ CDC thời gian thực phục vụ tìm kiếm"
+        "Transactional Outbox loại trừ triệt để lỗi Dual-Write trong local ACID TX",
+        "OrderOutboxRelay định kỳ dùng SELECT FOR UPDATE SKIP LOCKED chống đụng độ",
+        "Kafka KRaft cluster bảo toàn thứ tự FIFO theo partition key (aggregateId)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "4. Data Isolation & Caching Strategy",
+      "items": [
+        "Nguyên tắc Database-per-Service: 12 PostgreSQL độc lập hoàn toàn",
+        "Redis Cache-Aside cho Product Catalog tăng throughput đọc gấp 10 lần",
+        "Elasticsearch 8.15 đánh chỉ mục BM25 được đồng bộ gần thời gian thực"
       ]
     }
   ]
