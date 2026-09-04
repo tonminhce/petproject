@@ -51,6 +51,17 @@ Hệ thống được thiết kế theo mô hình **Domain-Driven Architecture**
 
 ![System Landscape Architecture](./docs/images/system-landscape-architecture.png)
 
+> [!TIP]
+> **Bộ sưu tập Sơ đồ Kiến trúc Chuẩn (Architecture Diagrams Directory)**:
+> 
+> | STT | Sơ đồ Kiến trúc / Diagram | Hình ảnh / Preview | File Thiết kế / Source |
+> |:---:|---|---|---|
+> | 1 | **System Landscape Architecture** | [system-landscape-architecture.png](./docs/images/system-landscape-architecture.png) | [.drawio.png](./docs/images/system-landscape-architecture.drawio.png) / [.svg](./docs/images/system-landscape-architecture.svg) |
+> | 2 | **Data Stores & Database-per-Service Topology** | [data-stores-infrastructure-topology.png](./docs/images/data-stores-infrastructure-topology.png) | [.drawio.png](./docs/images/data-stores-infrastructure-topology.drawio.png) / [.svg](./docs/images/data-stores-infrastructure-topology.svg) |
+> | 3 | **E2E Order Fulfillment Saga** | [e2e-order-fulfillment-saga.png](./docs/images/e2e-order-fulfillment-saga.png) | [.drawio.png](./docs/images/e2e-order-fulfillment-saga.drawio.png) / [.svg](./docs/images/e2e-order-fulfillment-saga.svg) |
+> | 4 | **Event-Driven Messaging (Kafka KRaft)** | [event-driven-messaging-architecture.png](./docs/images/event-driven-messaging-architecture.png) | [.drawio.png](./docs/images/event-driven-messaging-architecture.drawio.png) / [.svg](./docs/images/event-driven-messaging-architecture.svg) |
+> | 5 | **Gateway Security & Dual Rate Limiting** | [gateway-security-rate-limit.png](./docs/images/gateway-security-rate-limit.png) | [.drawio.png](./docs/images/gateway-security-rate-limit.drawio.png) / [.svg](./docs/images/gateway-security-rate-limit.svg) |
+
 ```mermaid
 %% System Landscape C4 Context
 flowchart TB
@@ -150,6 +161,8 @@ flowchart TB
 ## 2. Danh mục dịch vụ & Cổng mạng / Microservices Catalog
 
 Toàn bộ nền tảng bao gồm **14 microservices độc lập**, tuân thủ nghiêm ngặt nguyên tắc **Database-per-Service** (không có dịch vụ nào truy cập chéo database của dịch vụ khác):
+
+![Data Stores & Infrastructure Topology](./docs/images/data-stores-infrastructure-topology.png)
 
 | Dịch vụ / Service | Port | Database Name | Chức năng chính / Responsibilities | Công nghệ chính | Healthcheck Endpoint |
 |---|:---:|---|---|---|---|
@@ -313,6 +326,8 @@ flowchart LR
 ### Flow 5: Đặt hàng & Đặt trước Tồn kho 2 Pha (Order Checkout & 2-Phase Reservation)
 
 Quy trình cốt lõi khi khách hàng bấm **Checkout**. Đảm bảo không xảy ra hiện tượng bán vượt tồn kho (overselling) nhờ **2-Phase Stock Reservation**, kiểm tra giá và phân loại thuế đồng bộ, sau đó bắn sự kiện sang Kafka.
+
+![E2E Order Fulfillment Saga](./docs/images/e2e-order-fulfillment-saga.png)
 
 ```mermaid
 sequenceDiagram
