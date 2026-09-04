@@ -13,7 +13,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+
+import java.time.Duration;
 
 /**
  * Auto-configuration for Keycloak clients.
@@ -40,7 +43,10 @@ public class KeycloakAutoConfiguration {
      * stays as the tracing seam for common-keycloak clients.</p>
      */
     private static RestClient.Builder traceAware(RestClient.Builder builder) {
-        return builder.requestInitializer(req -> {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+        return builder.requestFactory(requestFactory).requestInitializer(req -> {
             Context current = Context.current();
             if (Span.fromContext(current).getSpanContext().isValid()) {
                 W3CTraceContextPropagator.getInstance().inject(current, req.getHeaders(), TRACE_HEADERS_SETTER);

@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -84,11 +85,12 @@ class ProductRatingConsumerTest {
     }
 
     @Test
-    void onMessage_handlerThrows_exceptionContainedNeverEscapesListener() throws JsonProcessingException {
+    void onMessage_handlerThrows_propagatesForRetryAndDlt() throws JsonProcessingException {
         doThrow(new RuntimeException("db down")).when(productRatingService).apply(any());
 
-        assertThatCode(() -> consumer.onMessage(SINGLE_ENCODED_JSON, new MessageHeaders(new HashMap<>())))
-            .doesNotThrowAnyException();
+        assertThatThrownBy(() -> consumer.onMessage(SINGLE_ENCODED_JSON, new MessageHeaders(new HashMap<>())))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("db down");
 
         verify(productRatingService).apply(any());
     }

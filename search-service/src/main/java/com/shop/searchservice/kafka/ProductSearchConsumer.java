@@ -40,16 +40,21 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
     // logged and swallowed so the offset still advances. Unknown eventTypes
     // are ack-skipped (spec D1); no DLT (fleet containment rule).
     private void handleContained(String rawValue) {
+        ProductLifecycleEvent event;
         try {
-            ProductLifecycleEvent event = decode(rawValue);
-            switch (event.eventType() == null ? "" : event.eventType()) {
-                case "ProductCreated", "ProductUpdated" -> productSearchService.index(event);
-                case "ProductDeleted" -> productSearchService.delete(event.productId());
-                default -> log.info("Skipping unknown product eventType {} (eventId={})",
-                    event.eventType(), event.eventId());
-            }
+            event = decode(rawValue);
         } catch (Exception ex) {
-            log.error("Failed to process product lifecycle payload", ex);
+            log.error("Failed to decode product lifecycle payload — ack-skipping: {}", rawValue, ex);
+            return;
+        }
+        if (event == null) {
+            return;
+        }
+        switch (event.eventType() == null ? "" : event.eventType()) {
+            case "ProductCreated", "ProductUpdated" -> productSearchService.index(event);
+            case "ProductDeleted" -> productSearchService.delete(event.productId());
+            default -> log.info("Skipping unknown product eventType {} (eventId={})",
+                event.eventType(), event.eventId());
         }
     }
 

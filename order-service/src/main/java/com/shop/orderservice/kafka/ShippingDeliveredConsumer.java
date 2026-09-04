@@ -20,14 +20,6 @@ public class ShippingDeliveredConsumer extends BaseKafkaConsumer<String, Shippin
     public void onMessage(String rawValue, MessageHeaders headers) {
         // H-1 raw-wire entry: the base unwraps-once + binds the typed event;
         // a decode failure is a contained ack-skip inside the base.
-        processMessage(rawValue, headers, ShippingDeliveredEvent.class, this::handleContained);
-    }
-
-    private void handleContained(ShippingDeliveredEvent event) {
-        try {
-            handler.handle(event);
-        } catch (Exception ex) {
-            log.error("Failed to process shipping event {} for order {}", event.getEventId(), event.getOrderId(), ex);
-        }
+        processMessage(rawValue, headers, ShippingDeliveredEvent.class, handler::handle);
     }
 }

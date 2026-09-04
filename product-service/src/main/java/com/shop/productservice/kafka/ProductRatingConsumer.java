@@ -19,17 +19,6 @@ public class ProductRatingConsumer extends BaseKafkaConsumer<String, RatingLifec
     public void onMessage(String rawValue, MessageHeaders headers) {
         // H-1 raw-wire entry: the base unwraps-once + binds the typed event;
         // a decode failure is a contained ack-skip inside the base.
-        processMessage(rawValue, headers, RatingLifecycleEvent.class, this::handleContained);
-    }
-
-    // Ack-always poison posture (order-service ShippingDeliveredConsumer
-    // precedent): the listener method must never throw — a handler failure is
-    // logged and swallowed so the offset still advances.
-    private void handleContained(RatingLifecycleEvent event) {
-        try {
-            productRatingService.apply(event);
-        } catch (Exception ex) {
-            log.error("Failed to process rating event {} for product {}", event.eventId(), event.productId(), ex);
-        }
+        processMessage(rawValue, headers, RatingLifecycleEvent.class, productRatingService::apply);
     }
 }

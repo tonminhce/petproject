@@ -36,7 +36,10 @@ public interface ObjectStorageService {
      * Stream an object directly from {@code bucket} without buffering into heap.
      * The caller is responsible for closing the returned stream to release connection resources.
      */
-    InputStream openStream(String bucket, String key);
+    default InputStream openStream(String bucket, String key) {
+        StorageObject obj = download(bucket, key);
+        return obj == null ? null : obj.content();
+    }
 
     /** True if the key exists in the default bucket. */
     boolean exists(String key);

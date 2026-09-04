@@ -1,7 +1,5 @@
 package com.shop.orderservice.service;
 
-import com.shop.common.core.exception.BusinessException;
-import com.shop.common.core.exception.ErrorCode;
 import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.dto.ShippingDeliveredEvent;
 import com.shop.orderservice.entity.Order;
@@ -30,8 +28,11 @@ public class ShippingDeliveredHandler {
             log.info("Ignoring shipping event type {} for order {}", event.getEventType(), event.getOrderId());
             return;
         }
-        Order order = orderRepository.findById(event.getOrderId())
-            .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, event.getOrderId()));
+        Order order = orderRepository.findById(event.getOrderId()).orElse(null);
+        if (order == null) {
+            log.info("Order {} not found for shipping event {}, ack-skipping", event.getOrderId(), event.getEventId());
+            return;
+        }
         if (order.getStatus() != OrderStatus.SHIPPED) {
             log.info("Shipping delivered event for order {} in status {} — no-op", event.getOrderId(), order.getStatus());
             return;

@@ -5,6 +5,7 @@ import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
 import com.shop.orderservice.security.ServiceTokenProvider;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -56,6 +57,7 @@ public class PaymentServiceClient {
         return props.payment().isEnabled();
     }
 
+    @CircuitBreaker(name = "paymentService")
     public Optional<PaymentStatusSnapshot> findCapturedByOrderId(UUID orderId) {
         try {
             ApiResponse<PageResponse<PaymentStatusSnapshot>> resp = restClient.get()
@@ -77,6 +79,7 @@ public class PaymentServiceClient {
         }
     }
 
+    @CircuitBreaker(name = "paymentService")
     public boolean refundByOrderId(UUID orderId) {
         if (!isEnabled()) {
             return true;

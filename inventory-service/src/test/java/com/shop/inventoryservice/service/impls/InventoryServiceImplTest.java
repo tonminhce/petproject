@@ -282,6 +282,24 @@ class InventoryServiceImplTest {
         verify(inventoryRepository, never()).save(any());
     }
 
+    @Test
+    void update_throwsBadRequest_whenAvailableBelowReserved() {
+        Inventory existing = Inventory.builder()
+            .productId(productId)
+            .availableQuantity(50)
+            .reservedQuantity(30)
+            .safetyStockThreshold(5)
+            .build();
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(existing));
+
+        InventoryUpsertRequest req = new InventoryUpsertRequest(productId, 20);
+
+        assertThatThrownBy(() -> service.update(productId, req))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("ERR-0400"));
+        verify(inventoryRepository, never()).save(any());
+    }
+
     // -----------------------------------------------------------------
     // Cache-invariants: every write path that touches Inventory must drop the
     // cached entry via InventoryCacheService.evictAfterCommit. These tests are

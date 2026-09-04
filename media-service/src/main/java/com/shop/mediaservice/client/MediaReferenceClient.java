@@ -3,6 +3,7 @@ package com.shop.mediaservice.client;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.mediaservice.security.ServiceTokenProvider;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -53,6 +54,7 @@ public class MediaReferenceClient {
      *         failure (fail-closed — the caller must treat unknown as
      *         referenced)
      */
+    @CircuitBreaker(name = "productService")
     public OptionalLong referenceCount(UUID mediaId) {
         try {
             ApiResponse<MediaReferenceCount> resp = restClient.get()

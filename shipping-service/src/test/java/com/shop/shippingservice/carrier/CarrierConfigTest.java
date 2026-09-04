@@ -49,6 +49,10 @@ class CarrierConfigTest {
                     CarrierFactory factory = ctx.getBean(CarrierFactory.class);
                     assertThat(factory.getCarrier(Carrier.MANUAL).carrier()).isEqualTo(Carrier.MANUAL);
                     assertThat(factory.getCarrier(Carrier.GHN).carrier()).isEqualTo(Carrier.GHN);
+                    // Dynamic string resolution (OCP)
+                    assertThat(factory.getCarrier("ghn").carrier()).isEqualTo(Carrier.GHN);
+                    assertThat(factory.getCarrier("manual").carrier()).isEqualTo(Carrier.MANUAL);
+                    assertThat(factory.getCarrier("unknown_carrier")).isSameAs(factory.getDefaultCarrier());
                 });
     }
 

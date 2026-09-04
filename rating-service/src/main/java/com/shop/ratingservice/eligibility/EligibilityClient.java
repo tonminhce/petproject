@@ -4,6 +4,7 @@ import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.ratingservice.config.RatingClientProperties;
 import com.shop.ratingservice.security.ServiceTokenProvider;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -47,6 +48,7 @@ public class EligibilityClient {
      *         item for ({@code userId}, {@code productId}); false on any
      *         failure, empty page, or unparseable body (fail-closed).
      */
+    @CircuitBreaker(name = "orderService")
     public boolean isEligible(UUID userId, UUID productId) {
         try {
             ApiResponse<PageResponse<OrderItemSnapshot>> resp = restClient.get()

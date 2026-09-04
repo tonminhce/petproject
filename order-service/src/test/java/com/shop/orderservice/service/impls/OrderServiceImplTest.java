@@ -34,9 +34,6 @@ class OrderServiceImplTest {
 
     @Mock OrderRepository orderRepository;
     @Mock OrderItemRepository orderItemRepository;
-    @Mock CartRepository cartRepository;
-    @Mock CartItemRepository cartItemRepository;
-    @Mock PricingService pricingService;
     @Mock com.shop.orderservice.client.PromotionServiceClient promotionClient;
     @Mock com.shop.orderservice.client.PaymentServiceClient paymentClient;
     @Mock StockReservationService stockReservationService;
@@ -134,7 +131,7 @@ class OrderServiceImplTest {
         OrderResponse result = service.createOrder(userId, req, "key1");
 
         assertThat(result).isEqualTo(cached);
-        verify(pricingService, never()).calculate(any(), any(), any(), any());  // saga NOT re-run
+        verify(orderCreateSaga, never()).execute(any(), any(), any());  // saga NOT re-run
     }
 
     // ========================================================================
@@ -468,16 +465,6 @@ class OrderServiceImplTest {
     // ========================================================================
     // CREATE — persist-early saga (Task 7 re-attempt ruling)
     // ========================================================================
-
-    private void stubHappyCart() {
-        var cart = com.shop.orderservice.entity.Cart.builder()
-            .userId(userId).subtotal(BigDecimal.ZERO).build();
-        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
-        when(cartItemRepository.findByCartId(cart.getId())).thenReturn(List.of(
-            com.shop.orderservice.entity.CartItem.builder()
-                .cartId(cart.getId()).productId(productId).productTitle("Test Product")
-                .unitPrice(BigDecimal.TEN).quantity(1).build()));
-    }
 
     private void stubIdempotency() throws Exception {
         when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());

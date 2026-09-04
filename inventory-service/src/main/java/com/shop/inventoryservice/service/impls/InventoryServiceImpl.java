@@ -93,6 +93,16 @@ public class InventoryServiceImpl implements InventoryService {
         }
         Inventory existing = inventoryRepository.findByProductId(productId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
+        if (request.availableQuantity() != null) {
+            // A10: refuse to drop available below already-committed/held stock — would let
+            // reservations/orders oversell. Caller must release or commit reservations first.
+            int reserved = existing.getReservedQuantity() == null ? 0 : existing.getReservedQuantity();
+            if (request.availableQuantity() < reserved) {
+                throw BusinessException.badRequest(
+                    "inventory.available.below.reserved",
+                    request.availableQuantity(), reserved);
+            }
+        }
         mapper.partialUpdate(existing, request);
         existing.setLastUpdated(Instant.now());
         Inventory saved = inventoryRepository.save(existing);
