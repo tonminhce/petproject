@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Transactional Outbox Pattern & Event Relay Workflow",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "atomic-write",
+        "label": "Atomic Dual-Write Protection",
+        "focus": ["service_tx", "entity_save", "outbox_save"],
+        "note": "Domain entity and outbox event commit in the exact same ACID database transaction."
+      },
+      {
+        "id": "relay-dispatch",
+        "label": "Relay Polling & Kafka Publish",
+        "focus": ["outbox_save", "relay_poll", "kafka_pub"],
+        "note": "Pessimistic write lock with SKIP LOCKED guarantees no duplicate publishing across instances."
+      },
+      {
+        "id": "consume-and-dlq",
+        "label": "Idempotent Consumption & DLQ",
+        "focus": ["kafka_pub", "consumer_exec", "dlq_trap"],
+        "note": "At-least-once delivery handled with idempotent checks and poison pill routing to DLQ."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "app", "label": "Domain Service Layer" },
+    { "id": "db", "label": "PostgreSQL Database" },
+    { "id": "relay", "label": "Outbox Relay Engine" },
+    { "id": "broker", "label": "Kafka Message Bus" },
+    { "id": "downstream", "label": "Consumer Fleet" },
+    { "id": "dlq", "label": "Dead-Letter & Recovery", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "p_commit", "label": "ACID Commit", "fromCol": 0, "toCol": 2 },
+    { "id": "p_dispatch", "label": "Relay & Publish", "fromCol": 3, "toCol": 4, "variant": "emphasis" },
+    { "id": "p_consume", "label": "Consume & DLQ", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "acid_group", "label": "Local Transaction Boundary", "lane": "db", "fromCol": 1, "toCol": 2, "variant": "emphasis" },
+    { "id": "recovery_group", "label": "Dead-Letter Quarantine", "lane": "dlq", "fromCol": 5, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["service_tx", "entity_save", "outbox_save", "relay_poll", "kafka_pub", "consumer_exec"],
+  "nodes": [
+    { "id": "service_tx", "lane": "app", "col": 0, "type": "backend", "label": "Domain Service", "sublabel": "Spring @Transactional", "width": 132 },
+    { "id": "entity_save", "lane": "db", "col": 1, "type": "database", "label": "Save Entity", "sublabel": "orders / products", "width": 132 },
+    { "id": "outbox_save", "lane": "db", "col": 2, "type": "database", "label": "Save Outbox", "sublabel": "status: PENDING", "tag": "same TX", "width": 132 },
+    { "id": "relay_poll", "lane": "relay", "col": 3, "type": "backend", "label": "Outbox Relay", "sublabel": "SKIP LOCKED", "tag": "Ordered Poll", "width": 132 },
+    { "id": "kafka_pub", "lane": "broker", "col": 4, "type": "messagebus", "label": "Kafka Broker", "sublabel": "KRaft cluster", "tag": "Key: aggregateId", "width": 132 },
+    { "id": "consumer_exec", "lane": "downstream", "col": 5, "type": "backend", "label": "BaseConsumer", "sublabel": "Idempotent read", "tag": "At-least-once", "width": 132 },
+    { "id": "dlq_trap", "lane": "dlq", "col": 5, "type": "security", "label": "DLQ Topic", "sublabel": ".DLT dead letter", "tag": "Max 3 Retries", "width": 132 }
+  ],
+  "edges": [
+    { "id": "e_save_entity", "from": "service_tx", "to": "entity_save", "label": "write state", "variant": "emphasis" },
+    { "id": "e_save_outbox", "from": "entity_save", "to": "outbox_save", "label": "insert event", "variant": "emphasis" },
+    { "id": "e_claim_poll", "from": "outbox_save", "to": "relay_poll", "label": "claim row", "variant": "emphasis" },
+    { "id": "e_publish_kafka", "from": "relay_poll", "to": "kafka_pub", "label": "publish", "variant": "emphasis" },
+    { "id": "e_consume_event", "from": "kafka_pub", "to": "consumer_exec", "label": "consume", "variant": "emphasis" },
+    { "id": "e_route_dlq", "from": "consumer_exec", "to": "dlq_trap", "label": "poison pill", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Dual-Write Elimination",
+      "items": [
+        "Bản ghi nghiệp vụ và bản ghi outbox_events được commit trong cùng 1 Transaction",
+        "Nếu lỗi xảy ra: cả hai cùng rollback, không bao giờ sinh ra sự kiện ma",
+        "Trạng thái ban đầu luôn là PENDING với đầy đủ metadata sự kiện"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Row-Locking & Dispatch",
+      "items": [
+        "Outbox Relay dùng SELECT FOR UPDATE SKIP LOCKED để nhiều instance không đụng độ",
+        "Head-of-line break dừng batch khi lỗi để giữ nguyên thứ tự sự kiện theo aggregate",
+        "Sau khi Kafka ACK, trạng thái được cập nhật sang SENT kèm timestamp sent_at"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Idempotency & Dead Letter Queue",
+      "items": [
+        "Consumer đảm bảo tính lũy thoái (Idempotent) qua khóa nghiệp vụ",
+        "Tự động thử lại với Exponential Backoff khi gặp lỗi tạm thời",
+        "Chuyển tiếp sang Dead-Letter Queue (.DLT) sau 3 lần thất bại để bảo vệ hệ thống"
+      ]
+    }
+  ]
+}

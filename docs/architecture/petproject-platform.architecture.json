@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Petproject Microservices Platform — System Landscape",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "ingress-flow",
+        "label": "Ingress & Edge Security",
+        "focus": ["clients", "gateway", "keycloak", "redis", "auth"],
+        "note": "Traffic enters via Spring Cloud Gateway with dual-layer token bucket rate limiting and Keycloak JWT validation."
+      },
+      {
+        "id": "core-saga",
+        "label": "Core Commerce & Fulfillment",
+        "focus": ["gateway", "core", "fulfillment", "stripe", "postgres"],
+        "note": "End-to-end commerce operations across order, inventory, pricing, and fulfillment domains."
+      },
+      {
+        "id": "async-backbone",
+        "label": "Event-Driven & Search Sync",
+        "focus": ["core", "cx", "fulfillment", "kafka", "es"],
+        "note": "Transactional Outbox relays events to Kafka KRaft for asynchronous fulfillment and Elasticsearch CDC sync."
+      }
+    ]
+  },
+  "components": [
+    { "id": "clients", "type": "external", "label": "Clients & Apps", "sublabel": "Web, Mobile, Admin", "pos": [30, 280], "size": [130, 60] },
+    { "id": "gateway", "type": "security", "label": "gateway-service", "sublabel": "Spring Cloud :8080", "brand": "spring", "pos": [260, 280], "size": [140, 60], "tag": "Edge Gateway" },
+    { "id": "keycloak", "type": "security", "label": "Keycloak IAM", "sublabel": "OAuth2 / OIDC :9090", "pos": [260, 100], "size": [140, 60], "tag": "Identity Provider" },
+    { "id": "auth", "type": "backend", "label": "auth-service", "sublabel": "IAM Facade :8088", "brand": "spring", "pos": [510, 100], "size": [140, 60] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL 16", "sublabel": "12 Isolated DBs :5432", "brand": "postgresql", "pos": [760, 100], "size": [140, 60], "tag": "ACID Data Store" },
+    { "id": "core", "type": "backend", "label": "Core Commerce", "sublabel": "Order / Product / Inv", "brand": "spring", "pos": [510, 280], "size": [140, 60] },
+    { "id": "fulfillment", "type": "backend", "label": "Fulfillment Tier", "sublabel": "Pay / Ship / Notif", "brand": "spring", "pos": [760, 280], "size": [140, 60] },
+    { "id": "stripe", "type": "external", "label": "Stripe & Carriers", "sublabel": "Payments & Webhooks", "brand": "stripe", "pos": [1000, 280], "size": [140, 60] },
+    { "id": "redis", "type": "database", "label": "Redis 7.4", "sublabel": "Rate Limit & Cache :6379", "brand": "redis", "pos": [260, 460], "size": [140, 60] },
+    { "id": "cx", "type": "backend", "label": "CX & Pricing", "sublabel": "Rating / Promo / Tax", "brand": "spring", "pos": [510, 460], "size": [140, 60] },
+    { "id": "kafka", "type": "messagebus", "label": "Kafka KRaft", "sublabel": "Event Bus :9092", "brand": "apache-kafka", "pos": [760, 460], "size": [140, 60], "tag": "Event Backbone" },
+    { "id": "es", "type": "database", "label": "Elasticsearch", "sublabel": "Search BM25 :9200", "brand": "elasticsearch", "pos": [1000, 460], "size": [140, 60] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "Edge DMZ & Identity Zone", "wraps": ["gateway", "keycloak", "redis"] },
+    { "kind": "region", "label": "Enterprise Microservices Mesh (Private Network)", "wraps": ["auth", "core", "fulfillment", "cx", "postgres", "kafka", "es"] }
+  ],
+  "connections": [
+    { "id": "c-client-gw", "from": "clients", "to": "gateway", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "c-gw-kc", "from": "gateway", "to": "keycloak", "label": "JWKS", "variant": "security" },
+    { "id": "c-gw-redis", "from": "gateway", "to": "redis", "label": "rate limit", "labelAt": [330, 400] },
+    { "id": "c-gw-core", "from": "gateway", "to": "core", "label": "orders", "variant": "emphasis" },
+    { "id": "c-auth-kc", "from": "auth", "to": "keycloak", "label": "admin API" },
+    { "id": "c-auth-pg", "from": "auth", "to": "postgres", "label": "users DB" },
+    { "id": "c-core-auth", "from": "core", "to": "auth", "label": "IAM claims" },
+    { "id": "c-core-cx", "from": "core", "to": "cx", "label": "tax & promo", "labelAt": [580, 400] },
+    { "id": "c-core-fulfill", "from": "core", "to": "fulfillment", "label": "dispatch", "variant": "emphasis" },
+    { "id": "c-fulfill-stripe", "from": "fulfillment", "to": "stripe", "label": "payments", "variant": "emphasis" },
+    { "id": "c-fulfill-kafka", "from": "fulfillment", "to": "kafka", "label": "outbox events", "variant": "dashed", "labelAt": [830, 400] },
+    { "id": "c-cx-kafka", "from": "cx", "to": "kafka", "label": "catalog stream", "variant": "dashed" },
+    { "id": "c-kafka-es", "from": "kafka", "to": "es", "label": "CDC sync", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Edge & Bảo mật Cửa ngõ",
+      "items": [
+        "Spring Cloud Gateway định tuyến /api/v1/* không cắt tiền tố",
+        "Giới hạn tốc độ 2 tầng Redis Token Bucket (2000 req/s cụm & 100 req/s client)",
+        "Keycloak 26 phát hành JWT và kiểm soát quyền truy cập Zero-Trust"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Xử lý Nghiệp vụ & Saga",
+      "items": [
+        "14 Microservices độc lập theo nguyên tắc Database-per-Service",
+        "Choreography Saga kết hợp 2-Phase Stock Reservation chống bán vượt tồn kho",
+        "Transactional Outbox Pattern bảo đảm tính nhất quán dữ liệu với Kafka"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Hạ tầng Dữ liệu & Lưu trữ",
+      "items": [
+        "PostgreSQL 16 cô lập 12 database chuyên biệt cho từng dịch vụ",
+        "Apache Kafka 3.9 KRaft điều phối sự kiện bất đồng bộ không cần Zookeeper",
+        "Elasticsearch 8.15 BM25 đồng bộ CDC thời gian thực phục vụ tìm kiếm"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "E2E Order Fulfillment Saga & 2-Phase Stock Reservation",
+    "viewBox": [1080, 940],
+    "column_fit": "spread",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "phase-1-reserve",
+        "label": "Phase 1: Reserve Stock",
+        "focus": ["user", "order", "pricing", "inventory"],
+        "note": "Pre-checks and 2-phase reservation prevent overselling before payment."
+      },
+      {
+        "id": "phase-2-commit",
+        "label": "Phase 2: Payment & Commit",
+        "focus": ["user", "payment", "order", "inventory", "kafka"],
+        "note": "Payment capture triggers physical stock deduction and order confirmation."
+      },
+      {
+        "id": "phase-3-fulfillment",
+        "label": "Phase 3: Delivery & Completion",
+        "focus": ["kafka", "shipping", "order", "user"],
+        "note": "Asynchronous carrier tracking completes the order when delivered."
+      }
+    ]
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "Customer", "sublabel": "Web / Mobile" },
+    { "id": "order", "type": "backend", "label": "Order", "sublabel": "order-service" },
+    { "id": "pricing", "type": "backend", "label": "Pricing", "sublabel": "promo & tax" },
+    { "id": "inventory", "type": "backend", "label": "Inventory", "sublabel": "inventory-service" },
+    { "id": "payment", "type": "backend", "label": "Payment", "sublabel": "payment-service" },
+    { "id": "kafka", "type": "messagebus", "label": "Kafka", "sublabel": "KRaft cluster" },
+    { "id": "shipping", "type": "backend", "label": "Shipping", "sublabel": "shipping-service" }
+  ],
+  "segments": [
+    { "from": 150, "to": 360, "label": "Phase 1: Đặt hàng & Giữ kho (Reserve)" },
+    { "from": 375, "to": 595, "label": "Phase 2: Thanh toán & Commit kho" },
+    { "from": 610, "to": 830, "label": "Phase 3: Giao hàng & Hoàn tất (Fulfillment)" }
+  ],
+  "messages": [
+    { "from": "user", "to": "order", "y": 180, "label": "POST /orders (Idempotency-Key)", "variant": "emphasis" },
+    { "from": "order", "to": "pricing", "y": 220, "label": "validate price, coupon & geo-tax", "variant": "default" },
+    { "from": "pricing", "to": "order", "y": 255, "label": "pricing ok + coupon reserved", "variant": "return" },
+    { "from": "order", "to": "inventory", "y": 290, "label": "POST /reserve (quantity, ttl: 15m)", "variant": "emphasis" },
+    { "from": "inventory", "to": "order", "y": 325, "label": "200 OK (reservationId PENDING)", "variant": "return" },
+    { "from": "order", "to": "user", "y": 355, "label": "201 Created (PENDING_PAYMENT)", "variant": "return" },
+    { "from": "user", "to": "payment", "y": 405, "label": "POST /payments (Stripe Intent)", "variant": "emphasis" },
+    { "from": "payment", "to": "kafka", "y": 450, "label": "publish payment.succeeded.v1", "variant": "dashed" },
+    { "from": "order", "to": "payment", "y": 490, "label": "REST GET verify CAPTURED", "variant": "default" },
+    { "from": "payment", "to": "order", "y": 520, "label": "200 OK (status: CAPTURED)", "variant": "return" },
+    { "from": "order", "to": "inventory", "y": 555, "label": "POST /commit (Phase 2 trừ kho)", "variant": "emphasis" },
+    { "from": "inventory", "to": "order", "y": 585, "label": "200 OK (Stock COMMITTED)", "variant": "return" },
+    { "from": "order", "to": "kafka", "y": 625, "label": "publish order.updated.v1 (CONFIRMED)", "variant": "dashed" },
+    { "from": "kafka", "to": "shipping", "y": 665, "label": "consume order.updated.v1", "variant": "emphasis" },
+    { "from": "shipping", "to": "kafka", "y": 705, "label": "publish shipping.delivered.v1", "variant": "dashed" },
+    { "from": "kafka", "to": "order", "y": 750, "label": "consume delivered -> DELIVERED", "variant": "emphasis" },
+    { "from": "order", "to": "user", "y": 795, "label": "Order completed (Verified Buyer)", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "order", "from": 175, "to": 360, "type": "backend" },
+    { "participant": "pricing", "from": 215, "to": 260, "type": "backend" },
+    { "participant": "inventory", "from": 285, "to": 330, "type": "backend" },
+    { "participant": "payment", "from": 400, "to": 455, "type": "backend" },
+    { "participant": "order", "from": 485, "to": 630, "type": "backend" },
+    { "participant": "inventory", "from": 550, "to": 590, "type": "backend" },
+    { "participant": "shipping", "from": 660, "to": 710, "type": "backend" },
+    { "participant": "order", "from": 745, "to": 800, "type": "backend" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Phase 1: Reserve Tồn Kho",
+      "items": [
+        "order-service điều phối kiểm tra giá, coupon và thuế ngoài DB transaction",
+        "Giữ chỗ tồn kho trong 15 phút với trạng thái PENDING chống bán vượt tồn",
+        "Nếu lỗi bất kỳ item nào: kích hoạt giao dịch đền bù (Compensation Rollback)"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Phase 2: Payment & Commit",
+      "items": [
+        "Khách thanh toán qua Stripe, Webhook xác thực chữ ký số HMAC SHA-256",
+        "Cập nhật trạng thái CAPTURED và kích hoạt commit trừ kho vật lý",
+        "Order chuyển sang CONFIRMED và phát sự kiện sang Kafka"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Phase 3: Delivery & Completion",
+      "items": [
+        "shipping-service tự tạo vận đơn khi nhận sự kiện order.updated.v1",
+        "Carrier Webhook báo giao thành công kích hoạt shipping.delivered.v1",
+        "order-service tự động chuyển trạng thái đơn sang DELIVERED"
+      ]
+    }
+  ]
+}
