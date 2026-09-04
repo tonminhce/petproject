@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0">
+  <diagram id="event-bus" name="Event-Driven-Architecture">
+    <mxGraphModel dx="2200" dy="1600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1600">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="Petproject Microservices — Event-Driven Messaging &amp; Transactional Outbox Pattern" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a365d;" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="1200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="Zero Data Loss At-Least-Once Delivery via outbox_events Table Polling Relay, Partitioned KRaft Topics, and Typed BaseKafkaConsumers" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#4a5568;" vertex="1" parent="1">
+          <mxGeometry x="500" y="60" width="1200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Column 1: Outbox Producers -->
+        <mxCell id="col_pub" value="Microservice Event Producers (Transactional Outbox Pattern)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="110" width="560" height="1350" as="geometry" />
+        </mxCell>
+
+        <!-- Product Outbox -->
+        <mxCell id="p_prd" value="&lt;b&gt;product-service (:8086)&lt;/b&gt;&lt;br/&gt;1. Save Product/Category/Brand to PostgreSQL&lt;br/&gt;2. Insert into outbox_events in SAME transaction&lt;br/&gt;3. OutboxRelay polls PENDING records every 5s&lt;br/&gt;4. KafkaMessagePublisher sends with key=productId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="50" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Order Outbox -->
+        <mxCell id="p_ord" value="&lt;b&gt;order-service (:8084)&lt;/b&gt;&lt;br/&gt;1. Create Order / Transition Order Status&lt;br/&gt;2. Writes outbox_events (order.created.v1 / order.updated.v1)&lt;br/&gt;3. OrderOutboxRelay polls and publishes to Kafka&lt;br/&gt;4. Key = orderId (guarantees per-order FIFO ordering)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="180" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Inventory Outbox -->
+        <mxCell id="p_inv" value="&lt;b&gt;inventory-service (:8082)&lt;/b&gt;&lt;br/&gt;1. Reserve / Commit / Release / Adjust Stock&lt;br/&gt;2. Writes outbox_events with CloudEvents dot-case format&lt;br/&gt;3. InventoryOutboxRelay sends with key=productId&lt;br/&gt;4. Events: inventory.reserved.v1, committed.v1, released.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="310" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Payment Outbox -->
+        <mxCell id="p_pay" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;1. Capture Stripe Payment / Process Refund&lt;br/&gt;2. Writes outbox_events (payment.succeeded.v1)&lt;br/&gt;3. PaymentOutboxRelay sends with key=orderId&lt;br/&gt;4. Idempotency Key guarantees exactly-once processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="440" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Shipping Outbox -->
+        <mxCell id="p_shp" value="&lt;b&gt;shipping-service (:8087)&lt;/b&gt;&lt;br/&gt;1. Carrier Webhook marks parcel DELIVERED&lt;br/&gt;2. Writes outbox_events (shipping.delivered.v1)&lt;br/&gt;3. ShippingOutboxRelay sends with key=orderId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="570" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Rating Outbox -->
+        <mxCell id="p_rtg" value="&lt;b&gt;rating-service (:8089)&lt;/b&gt;&lt;br/&gt;1. Review Approved / Rejected by Backoffice Admin&lt;br/&gt;2. Writes outbox_events (RatingCreated / RatingApproved)&lt;br/&gt;3. RatingOutboxRelay sends with key=productId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="700" width="500" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Outbox Schema Box -->
+        <mxCell id="p_schema" value="&lt;b&gt;Standard outbox_events Table Schema (Postgres)&lt;/b&gt;&lt;br/&gt;&lt;code&gt;• id BIGSERIAL PRIMARY KEY&lt;br/&gt;• event_id UUID NOT NULL UNIQUE&lt;br/&gt;• aggregate_type VARCHAR(50) (e.g. Order, Product)&lt;br/&gt;• aggregate_id VARCHAR(100)&lt;br/&gt;• event_type VARCHAR(100) (e.g. order.created.v1)&lt;br/&gt;• topic VARCHAR(100) NOT NULL&lt;br/&gt;• payload TEXT NOT NULL (JSON)&lt;br/&gt;• status VARCHAR(20) (PENDING, SENT, FAILED)&lt;br/&gt;• retry_count INT DEFAULT 0&lt;br/&gt;• created_at TIMESTAMP NOT NULL&lt;/code&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=15;" vertex="1" parent="col_pub">
+          <mxGeometry x="30" y="840" width="500" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- Column 2: Kafka Bus Topics -->
+        <mxCell id="col_bus" value="Apache Kafka 3.9 KRaft Cluster (:9092)" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="720" y="110" width="520" height="1350" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_prd" value="&lt;b&gt;shop.product.lifecycle.v1&lt;/b&gt;&lt;br/&gt;Key: productId&lt;br/&gt;Payload: ProductCreated, ProductUpdated, ProductDeleted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="50" width="460" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_ord" value="&lt;b&gt;shop.order.lifecycle.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: order.created.v1, order.updated.v1, order.cancelled.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="180" width="460" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_inv" value="&lt;b&gt;shop.inventory.events.v1&lt;/b&gt;&lt;br/&gt;Key: productId&lt;br/&gt;Payload: inventory.reserved.v1, committed.v1, released.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="310" width="460" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_pay" value="&lt;b&gt;shop.payment.events.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: payment.succeeded.v1, payment.failed.v1, payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="440" width="460" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_shp" value="&lt;b&gt;shop.shipping.events.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: shipping.dispatched.v1, shipping.delivered.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="570" width="460" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_rtg" value="&lt;b&gt;shop.rating.events.v1&lt;/b&gt;&lt;br/&gt;Key: productId&lt;br/&gt;Payload: RatingCreated, RatingUpdated, RatingApproved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="700" width="460" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="top_tax" value="&lt;b&gt;shop.category.lifecycle.v1 &amp; shop.brand.lifecycle.v1&lt;/b&gt;&lt;br/&gt;Taxonomy updates for downstream cache invalidators" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+          <mxGeometry x="30" y="830" width="460" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Column 3: Consumers -->
+        <mxCell id="col_sub" value="Subscribed Consumers &amp; Downstream Workflows" style="swimlane;startSize=30;fillColor=#b1ddf0;strokeColor=#10739e;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="110" width="600" height="1350" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_es" value="&lt;b&gt;search-service (:8094) — ProductSearchConsumer&lt;/b&gt;&lt;br/&gt;• Listens to: shop.product.lifecycle.v1&lt;br/&gt;• Upserts / updates / deletes documents in Elasticsearch index products&lt;br/&gt;• Synchronizes taxonomy and updates BM25 scoring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+          <mxGeometry x="30" y="50" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_shp" value="&lt;b&gt;shipping-service (:8087) — OrderEventConsumer&lt;/b&gt;&lt;br/&gt;• Listens to: shop.order.lifecycle.v1&lt;br/&gt;• When order status transitions to CONFIRMED:&lt;br/&gt;  Creates shipment package, generates tracking ID, sets status PENDING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+          <mxGeometry x="30" y="180" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_notif" value="&lt;b&gt;notification-service (:8090) — Order &amp; Payment Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.order.lifecycle.v1 &amp; shop.payment.events.v1&lt;br/&gt;• Sends Order Placed Email, Payment Receipt, Dispatch Tracking Email&lt;br/&gt;• Stores in notifications history &amp; emails retry audit table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+          <mxGeometry x="30" y="310" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_ord" value="&lt;b&gt;order-service (:8084) — ShippingDeliveredConsumer&lt;/b&gt;&lt;br/&gt;• Listens to: shop.shipping.events.v1 (shipping.delivered.v1)&lt;br/&gt;• Auto-transitions order status from SHIPPED to DELIVERED&lt;br/&gt;• Enables Verified Purchase review gate for customer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+          <mxGeometry x="30" y="560" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_prd_rtg" value="&lt;b&gt;product-service (:8086) — ProductRatingConsumer&lt;/b&gt;&lt;br/&gt;• Listens to: shop.rating.events.v1 (RatingApproved)&lt;br/&gt;• Recalculates average star rating and review count in PostgreSQL&lt;br/&gt;• Invalidates Redis product cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+          <mxGeometry x="30" y="700" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_es_rtg" value="&lt;b&gt;search-service (:8094) — RatingSyncListener&lt;/b&gt;&lt;br/&gt;• Listens to: shop.rating.events.v1&lt;br/&gt;• Updates product review score in Elasticsearch products index&lt;br/&gt;• Indexes full review into Elasticsearch ratings index" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+          <mxGeometry x="30" y="820" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Edges from Producers to Topics -->
+        <mxCell id="ep1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="p_prd" target="top_prd">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="p_ord" target="top_ord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="p_inv" target="top_inv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="p_pay" target="top_pay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="p_shp" target="top_shp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="p_rtg" target="top_rtg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges from Topics to Consumers -->
+        <mxCell id="ec1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_prd" target="c_es">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_ord" target="c_shp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_ord" target="c_notif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_pay" target="c_notif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_shp" target="c_ord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_rtg" target="c_prd_rtg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;" edge="1" parent="1" source="top_rtg" target="c_es_rtg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

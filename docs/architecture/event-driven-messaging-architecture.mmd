@@ -1,0 +1,104 @@
+%% Event-Driven Architecture & Transactional Outbox Pattern
+flowchart TB
+    classDef pubClass fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
+    classDef topicClass fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000000;
+    classDef subClass fill:#b1ddf0,stroke:#10739e,stroke-width:2px,color:#000000;
+    classDef outboxClass fill:#fff2cc,stroke:#d6b656,stroke-width:1px,stroke-dasharray: 4 4,color:#000000;
+
+    subgraph PRODUCERS ["Event Producers & Transactional Outbox"]
+        subgraph P1 ["product-service (:8086)"]
+            PRD_TX["Business TX<br/>(Create/Update/Delete)"]
+            PRD_BOX[("outbox_events table")]:::outboxClass
+            PRD_RELAY["OutboxRelay (@Scheduled 5s)"]
+            PRD_TX -->|"Same ACID TX"| PRD_BOX
+            PRD_BOX -->|"Poll PENDING"| PRD_RELAY
+        end
+
+        subgraph P2 ["order-service (:8084)"]
+            ORD_TX["Order TX<br/>(Create/Confirm/Cancel)"]
+            ORD_BOX[("outbox_events table")]:::outboxClass
+            ORD_RELAY["OrderOutboxRelay"]
+            ORD_TX -->|"Same ACID TX"| ORD_BOX
+            ORD_BOX -->|"Poll PENDING"| ORD_RELAY
+        end
+
+        subgraph P3 ["inventory-service (:8082)"]
+            INV_TX["Inventory TX<br/>(Reserve/Commit/Adjust)"]
+            INV_BOX[("outbox_events table")]:::outboxClass
+            INV_RELAY["InventoryOutboxRelay"]
+            INV_TX -->|"Same ACID TX"| INV_BOX
+            INV_BOX -->|"Poll PENDING"| INV_RELAY
+        end
+
+        subgraph P4 ["payment-service (:8085)"]
+            PAY_TX["Payment TX<br/>(Succeeded/Failed/Refund)"]
+            PAY_BOX[("outbox_events table")]:::outboxClass
+            PAY_RELAY["PaymentOutboxRelay"]
+            PAY_TX -->|"Same ACID TX"| PAY_BOX
+            PAY_BOX -->|"Poll PENDING"| PAY_RELAY
+        end
+
+        subgraph P5 ["shipping-service (:8087)"]
+            SHP_TX["Shipping TX<br/>(Dispatched/Delivered)"]
+            SHP_BOX[("outbox_events table")]:::outboxClass
+            SHP_RELAY["ShippingOutboxRelay"]
+            SHP_TX -->|"Same ACID TX"| SHP_BOX
+            SHP_BOX -->|"Poll PENDING"| SHP_RELAY
+        end
+
+        subgraph P6 ["rating-service (:8089)"]
+            RTG_TX["Rating TX<br/>(Created/Approved)"]
+            RTG_BOX[("outbox_events table")]:::outboxClass
+            RTG_RELAY["RatingOutboxRelay"]
+            RTG_TX -->|"Same ACID TX"| RTG_BOX
+            RTG_BOX -->|"Poll PENDING"| RTG_RELAY
+        end
+    end
+
+    subgraph KAFKA_BUS ["Apache Kafka 3.9 KRaft Topics"]
+        T_PRD["shop.product.lifecycle.v1<br/>• ProductCreated<br/>• ProductUpdated<br/>• ProductDeleted"]:::topicClass
+        T_ORD["shop.order.lifecycle.v1<br/>• order.created.v1<br/>• order.updated.v1<br/>• order.cancelled.v1"]:::topicClass
+        T_INV["shop.inventory.events.v1<br/>• inventory.reserved.v1<br/>• inventory.committed.v1<br/>• inventory.released.v1"]:::topicClass
+        T_PAY["shop.payment.events.v1<br/>• payment.succeeded.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
+        T_SHP["shop.shipping.events.v1<br/>• shipping.dispatched.v1<br/>• shipping.delivered.v1"]:::topicClass
+        T_RTG["shop.rating.events.v1<br/>• RatingCreated<br/>• RatingApproved"]:::topicClass
+    end
+
+    subgraph CONSUMERS ["Kafka Consumers & Business Reactions"]
+        subgraph C_SEARCH ["search-service (:8094)"]
+            C_SEARCH_LST["ProductSearchConsumer<br/>Elasticsearch Upsert / Delete ProductDoc"]:::subClass
+        end
+
+        subgraph C_SHIPPING ["shipping-service (:8087)"]
+            C_SHP_LST["OrderEventConsumer<br/>Create Shipment on Order Confirmed"]:::subClass
+        end
+
+        subgraph C_ORDER ["order-service (:8084)"]
+            C_ORD_LST["ShippingDeliveredConsumer<br/>Auto-Transition Order to DELIVERED"]:::subClass
+        end
+
+        subgraph C_NOTIF ["notification-service (:8090)"]
+            C_NOTIF_LST["OrderEventConsumer & PaymentEventConsumer<br/>Dispatch Order Confirmation & Payment Receipts"]:::subClass
+        end
+
+        subgraph C_PRODUCT ["product-service (:8086)"]
+            C_PRD_LST["ProductRatingConsumer<br/>Update Average Rating & Review Count"]:::subClass
+        end
+    end
+
+    %% Publishing
+    PRD_RELAY -->|"Publish (key=productId)"| T_PRD
+    ORD_RELAY -->|"Publish (key=orderId)"| T_ORD
+    INV_RELAY -->|"Publish (key=productId)"| T_INV
+    PAY_RELAY -->|"Publish (key=orderId)"| T_PAY
+    SHP_RELAY -->|"Publish (key=orderId)"| T_SHP
+    RTG_RELAY -->|"Publish (key=productId)"| T_RTG
+
+    %% Consuming
+    T_PRD -->|"BaseKafkaConsumer"| C_SEARCH_LST
+    T_ORD -->|"Consume Order Events"| C_SHP_LST
+    T_ORD -->|"Consume Order Events"| C_NOTIF_LST
+    T_PAY -->|"Consume Payment Events"| C_NOTIF_LST
+    T_SHP -->|"Consume shipping.delivered.v1"| C_ORD_LST
+    T_RTG -->|"Consume Rating Events"| C_PRD_LST
+    T_RTG -->|"Sync Rating to ES"| C_SEARCH_LST

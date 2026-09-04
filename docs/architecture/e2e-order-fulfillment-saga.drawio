@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0">
+  <diagram id="saga" name="Order-Fulfillment-Saga">
+    <mxGraphModel dx="2200" dy="1600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1600">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="End-to-End E-Commerce Order Fulfillment Saga Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a365d;" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="1200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="Hybrid Orchestration &amp; Choreography: Synchronous Two-Phase Stock Reservation, Outbox Event Relay, and Verified Buyer Review Gate" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#4a5568;" vertex="1" parent="1">
+          <mxGeometry x="500" y="60" width="1200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 1: Order Checkout & Validation -->
+        <mxCell id="box_phase1" value="Phase 1: Synchronous Checkout &amp; Two-Phase Inventory Reservation" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="110" width="2040" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="step1_1" value="&lt;b&gt;1. Customer Checkout&lt;/b&gt;&lt;br/&gt;POST /api/v1/orders&lt;br/&gt;Payload: items, address, coupon&lt;br/&gt;Header: Authorization Bearer JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+          <mxGeometry x="30" y="50" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step1_2" value="&lt;b&gt;2. Product Validation&lt;/b&gt;&lt;br/&gt;order-service calls product-service&lt;br/&gt;GET /api/v1/products/{id}&lt;br/&gt;Guards: Status == ACTIVE, SKU match" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+          <mxGeometry x="340" y="50" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step1_3" value="&lt;b&gt;3. Pricing, Tax &amp; Discount&lt;/b&gt;&lt;br/&gt;Calls promotion-service (/apply)&lt;br/&gt;Calls tax-service (/calculate)&lt;br/&gt;Computes subtotal, discount, tax, total" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+          <mxGeometry x="670" y="50" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step1_4" value="&lt;b&gt;4. Two-Phase Stock Reservation&lt;/b&gt;&lt;br/&gt;Calls inventory-service&lt;br/&gt;POST /api/v1/inventory/{id}/reserve&lt;br/&gt;Holds stock (INV-3002 conflict if full)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+          <mxGeometry x="1000" y="50" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step1_5" value="&lt;b&gt;5. Order Created &amp; Outbox&lt;/b&gt;&lt;br/&gt;Order saved with status: PENDING&lt;br/&gt;Writes outbox_events in same TX&lt;br/&gt;Returns 201 Created (OrderDto)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+          <mxGeometry x="1330" y="50" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step1_6" value="&lt;b&gt;6. Kafka Event &amp; Email&lt;/b&gt;&lt;br/&gt;Relay sends order.created.v1&lt;br/&gt;notification-service dispatches&lt;br/&gt;order confirmation email" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase1">
+          <mxGeometry x="1660" y="50" width="340" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Connectors Phase 1 -->
+        <mxCell id="s1e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="box_phase1" source="step1_1" target="step1_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s1e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="box_phase1" source="step1_2" target="step1_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s1e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="box_phase1" source="step1_3" target="step1_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s1e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="box_phase1" source="step1_4" target="step1_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s1e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="box_phase1" source="step1_5" target="step1_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Phase 2: Payment & Order Confirmation -->
+        <mxCell id="box_phase2" value="Phase 2: Payment Processing &amp; Commit Coordinator" style="swimlane;startSize=30;fillColor=#d0cee2;strokeColor=#56517e;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="360" width="2040" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="step2_1" value="&lt;b&gt;7. Initiate Payment&lt;/b&gt;&lt;br/&gt;POST /api/v1/payments&lt;br/&gt;orderId, paymentMethod=STRIPE&lt;br/&gt;Creates payment record PENDING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
+          <mxGeometry x="30" y="50" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step2_2" value="&lt;b&gt;8. Stripe Gateway Capture&lt;/b&gt;&lt;br/&gt;User pays via Stripe Checkout&lt;br/&gt;Stripe Webhook calls payment-service&lt;br/&gt;Status updated to CAPTURED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
+          <mxGeometry x="360" y="50" width="290" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step2_3" value="&lt;b&gt;9. Payment Event Emitted&lt;/b&gt;&lt;br/&gt;Outbox emits payment.succeeded.v1&lt;br/&gt;Key = orderId&lt;br/&gt;notification-service sends receipt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase2">
+          <mxGeometry x="700" y="50" width="290" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step2_4" value="&lt;b&gt;10. Order Confirm Gate&lt;/b&gt;&lt;br/&gt;order-service checks PaymentServiceClient&lt;br/&gt;Verifies CAPTURED (fails closed ORD-4012)&lt;br/&gt;Commits reservation in inventory-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
+          <mxGeometry x="1040" y="50" width="310" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step2_5" value="&lt;b&gt;11. Order Status CONFIRMED&lt;/b&gt;&lt;br/&gt;Status transitions to CONFIRMED&lt;br/&gt;Outbox emits order.updated.v1&lt;br/&gt;shipping-service consumes event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
+          <mxGeometry x="1400" y="50" width="310" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step2_6" value="&lt;b&gt;12. Shipment Created&lt;/b&gt;&lt;br/&gt;shipping-service generates package&lt;br/&gt;Assigns carrier tracking code&lt;br/&gt;Emits shipping.dispatched.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase2">
+          <mxGeometry x="1750" y="50" width="260" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Connectors Phase 2 -->
+        <mxCell id="s2e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#56517e;" edge="1" parent="box_phase2" source="step2_1" target="step2_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s2e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#56517e;" edge="1" parent="box_phase2" source="step2_2" target="step2_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s2e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#56517e;" edge="1" parent="box_phase2" source="step2_3" target="step2_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s2e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#56517e;" edge="1" parent="box_phase2" source="step2_4" target="step2_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s2e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#56517e;" edge="1" parent="box_phase2" source="step2_5" target="step2_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Phase 3: Delivery & Verified Review -->
+        <mxCell id="box_phase3" value="Phase 3: Delivery Completion, Verified Buyer Review Gate &amp; Search Sync" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="610" width="2040" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="step3_1" value="&lt;b&gt;13. Carrier Webhook Delivery&lt;/b&gt;&lt;br/&gt;Carrier calls shipping-service webhook&lt;br/&gt;Parcel marked as DELIVERED&lt;br/&gt;Outbox emits shipping.delivered.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="box_phase3">
+          <mxGeometry x="30" y="50" width="310" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step3_2" value="&lt;b&gt;14. Order DELIVERED Status&lt;/b&gt;&lt;br/&gt;order-service ShippingDeliveredConsumer&lt;br/&gt;auto-transitions order status to DELIVERED&lt;br/&gt;Enables purchase verification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="box_phase3">
+          <mxGeometry x="390" y="50" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step3_3" value="&lt;b&gt;15. Customer Posts Review&lt;/b&gt;&lt;br/&gt;POST /api/v1/storefront/ratings&lt;br/&gt;rating-service EligibilityClient calls&lt;br/&gt;order-service /verify-purchase" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="box_phase3">
+          <mxGeometry x="760" y="50" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step3_4" value="&lt;b&gt;16. Verified Purchase Gate&lt;/b&gt;&lt;br/&gt;Returns true ONLY if DELIVERED order item&lt;br/&gt;Fails closed: throws RTG-11001 if unverified&lt;br/&gt;Review saved and approved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="box_phase3">
+          <mxGeometry x="1130" y="50" width="330" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step3_5" value="&lt;b&gt;17. Product Rating Recalculation&lt;/b&gt;&lt;br/&gt;RatingApproved event published&lt;br/&gt;product-service recalculates average stars&lt;br/&gt;Updates PostgreSQL &amp; evicts Redis cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="box_phase3">
+          <mxGeometry x="1510" y="50" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="step3_6" value="&lt;b&gt;18. Elasticsearch Catalog Sync&lt;/b&gt;&lt;br/&gt;search-service updates products doc&lt;br/&gt;Indexes review into ratings index&lt;br/&gt;Storefront search reflects new rating" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;" vertex="1" parent="box_phase3">
+          <mxGeometry x="1790" y="50" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Connectors Phase 3 -->
+        <mxCell id="s3e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="box_phase3" source="step3_1" target="step3_2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s3e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="box_phase3" source="step3_2" target="step3_3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s3e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="box_phase3" source="step3_3" target="step3_4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s3e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="box_phase3" source="step3_4" target="step3_5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="s3e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="box_phase3" source="step3_5" target="step3_6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

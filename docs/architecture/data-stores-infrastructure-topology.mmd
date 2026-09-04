@@ -1,0 +1,45 @@
+%% Data Stores, Storage Architecture & Deployment Topology
+flowchart TB
+    classDef pgClass fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
+    classDef redisClass fill:#f8cecc,stroke:#b85450,stroke-width:2px,color:#000000;
+    classDef kafkaClass fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000;
+    classDef esClass fill:#b1ddf0,stroke:#10739e,stroke-width:2px,color:#000000;
+    classDef s3Class fill:#fad7ac,stroke:#b46504,stroke-width:2px,color:#000000;
+    classDef svcClass fill:#f5f5f5,stroke:#666666,stroke-width:1px,color:#000000;
+
+    subgraph DOCKER_COMPOSE ["Docker Compose / K8s Deployment Topology"]
+        subgraph PG_CLUSTER ["PostgreSQL 16 Instance (:5432) — max_connections=300"]
+            DB_AUTH[("authservice<br/>users, roles, user_role")]:::pgClass
+            DB_PRD[("productservice<br/>products, categories, brands, variants, outbox")]:::pgClass
+            DB_ORD[("orderservice<br/>orders, carts, cart_items, outbox")]:::pgClass
+            DB_INV[("inventoryservice<br/>inventory, reservations, outbox")]:::pgClass
+            DB_PAY[("paymentservice<br/>payments, refunds, outbox")]:::pgClass
+            DB_SHP[("shippingservice<br/>shippings, outbox")]:::pgClass
+            DB_RTG[("ratingservice<br/>ratings, outbox")]:::pgClass
+            DB_FAV[("favouriteservice<br/>favourites")]:::pgClass
+            DB_TAX[("taxservice<br/>tax_classes, tax_rates")]:::pgClass
+            DB_PRM[("promotionservice<br/>promotions, promotion_usage, outbox")]:::pgClass
+            DB_MED[("mediaservice<br/>medias, outbox")]:::pgClass
+            DB_NTF[("notificationservice<br/>notifications, emails")]:::pgClass
+            DB_KC[("keycloak<br/>Keycloak IAM tables")]:::pgClass
+        end
+
+        subgraph REDIS_CLUSTER ["Redis 7.4 Instance (:6379)"]
+            R_BUCKETS["Token Buckets<br/>request_rate_limiter.system<br/>request_rate_limiter.{route}.{key}"]:::redisClass
+            R_CATALOG["Catalog Cache<br/>product::{id} (10m)<br/>productBySlug::{slug} (10m)<br/>category/brand (30m)"]:::redisClass
+            R_SESSIONS["Sessions & Tokens<br/>sso_session::{ticket} (60s)<br/>cart cache"]:::redisClass
+        end
+
+        subgraph KAFKA_CLUSTER ["Apache Kafka 3.9 KRaft (:9092)"]
+            K_BROKER["KRaft Broker & Controller (node_id=1)<br/>No Zookeeper needed<br/>Internal replication factor=1<br/>Cluster ID: MkU3OEVBNTcwNTJENDM2Qk"]:::kafkaClass
+        end
+
+        subgraph ES_CLUSTER ["Elasticsearch 8.15 (:9200)"]
+            ES_IDX_PRD["Index: products<br/>Mappings: productId, title, description, category, price, score, tags"]:::esClass
+            ES_IDX_RTG["Index: ratings<br/>Mappings: ratingId, productId, userId, score, comment, createdAt"]:::esClass
+        end
+
+        subgraph RUSTFS_CLUSTER ["RustFS S3 Compatible Storage (:9000/:9001)"]
+            S3_BUCKET["Bucket: ecommerce-media<br/>• Original high-res uploads<br/>• 6 Responsive WebP variants (100w..1440w)<br/>• Presigned PUT/GET URLs"]:::s3Class
+        end
+    end

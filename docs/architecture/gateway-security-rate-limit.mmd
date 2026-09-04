@@ -1,0 +1,61 @@
+%% Gateway Security, Filter Chain & Two-Layer Rate Limiting Architecture
+flowchart TD
+    classDef clientClass fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px,color:#000000;
+    classDef filterClass fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000000;
+    classDef redisClass fill:#f8cecc,stroke:#b85450,stroke-width:2px,color:#000000;
+    classDef keycloakClass fill:#e1d5e7,stroke:#9673a6,stroke-width:2px,color:#000000;
+    classDef decisionClass fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000;
+    classDef rejectClass fill:#f8cecc,stroke:#c0392b,stroke-width:2px,color:#ffffff,font-weight:bold;
+    classDef backendClass fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
+
+    CLI["Inbound Client Request<br/>(Browser / Mobile / Webhook)"]:::clientClass
+    GW_ENTRY["Spring Cloud Gateway :8080<br/>Netty Non-Blocking Event Loop"]:::filterClass
+
+    subgraph SEC_CHAIN ["Reactive Security & Tracing Filter Chain"]
+        direction TB
+        CORS_FILTER["1. CorsWebFilter<br/>Validate Origin, Headers, Credentials"]:::filterClass
+        MDC_FILTER["2. Traceparent / MDC Filter<br/>Extract or Generate X-Correlation-Id"]:::filterClass
+        AUTH_FILTER["3. JwtAuthenticationFilter<br/>Decode & Validate Bearer Token against Keycloak JWKS"]:::filterClass
+    end
+
+    KC[("Keycloak 26 JWKS<br/>/realms/ecommerce/protocol/openid-connect/certs")]:::keycloakClass
+
+    subgraph L1 ["Layer 1: Global System Rate Limiter (HIGHEST_PRECEDENCE)"]
+        direction TB
+        G_FILTER["GlobalRateLimitFilter<br/>Guards Total Cluster Capacity (Flash-Sale Guard)"]:::filterClass
+        G_BUCKET["Fixed Key: gateway-system / system<br/>Rate: 2,000 req/s | Burst: 4,000"]:::filterClass
+        G_DEC{"Global Bucket<br/>Has Tokens?"}:::decisionClass
+    end
+
+    subgraph L2 ["Layer 2: Per-Client Per-Route Rate Limiter"]
+        direction TB
+        R_RESOLVER["RateLimitKeyResolver<br/>Principal Authenticated? -> user:<sub><br/>Anonymous? -> ip:<client>"]:::filterClass
+        R_FILTER["RequestRateLimiterGatewayFilterFactory<br/>Compound Key: {routeId, clientKey}"]:::filterClass
+        R_BUCKET["Per-Route Limits<br/>Rate: 100 req/s | Burst: 200"]:::filterClass
+        R_DEC{"Route Bucket<br/>Has Tokens?"}:::decisionClass
+    end
+
+    REDIS[("Redis 7.4 Instance (:6379)<br/>Atomic Lua Script execution<br/>request_rate_limiter.lua")]:::redisClass
+
+    REJECT_429["HTTP 429 Too Many Requests<br/>Set X-RateLimit-Remaining: 0<br/>Drop Connection immediately"]:::rejectClass
+    FORWARD["Forward to Downstream Microservices<br/>Full Path /api/v1/* (No prefix stripping)"]:::backendClass
+
+    CLI -->|"HTTP Request"| GW_ENTRY
+    GW_ENTRY --> CORS_FILTER
+    CORS_FILTER --> MDC_FILTER
+    MDC_FILTER --> AUTH_FILTER
+    AUTH_FILTER -.->|"Verify Token"| KC
+    AUTH_FILTER --> G_FILTER
+
+    G_FILTER --> G_BUCKET
+    G_BUCKET <-->|"Atomic INCR/EXPIRE Lua"| REDIS
+    G_BUCKET --> G_DEC
+    G_DEC -->|"NO (Capacity Exceeded)"| REJECT_429
+    G_DEC -->|"YES (Passed Layer 1)"| R_RESOLVER
+
+    R_RESOLVER --> R_FILTER
+    R_FILTER --> R_BUCKET
+    R_BUCKET <-->|"Atomic INCR/EXPIRE Lua"| REDIS
+    R_BUCKET --> R_DEC
+    R_DEC -->|"NO (Quota Exceeded)"| REJECT_429
+    R_DEC -->|"YES (Passed Layer 2)"| FORWARD

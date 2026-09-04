@@ -1,0 +1,104 @@
+%% System Landscape Architecture — Petproject Microservices Platform
+flowchart TB
+    %% Styling Classes
+    classDef clientClass fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px,color:#000000;
+    classDef gatewayClass fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000000;
+    classDef authClass fill:#e1d5e7,stroke:#9673a6,stroke-width:2px,color:#000000;
+    classDef coreServiceClass fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
+    classDef cxServiceClass fill:#b1ddf0,stroke:#10739e,stroke-width:2px,color:#000000;
+    classDef pricingServiceClass fill:#fad7ac,stroke:#b46504,stroke-width:2px,color:#000000;
+    classDef fulfillServiceClass fill:#d0cee2,stroke:#56517e,stroke-width:2px,color:#000000;
+    classDef busClass fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000;
+    classDef storeClass fill:#f5f5f5,stroke:#666666,stroke-width:2px,color:#000000;
+    classDef extClass fill:#e6e6e6,stroke:#808080,stroke-dasharray: 5 5,color:#000000;
+
+    subgraph CLIENTS ["Client Layer & External Actors"]
+        WEB["Customer Web / Mobile App"]:::clientClass
+        ADMIN_UI["Backoffice Admin UI"]:::clientClass
+        STRIPE_EXT["Stripe Payment Gateway"]:::extClass
+        CARRIER_EXT["Logistics Carrier Webhook (DHL/FedEx)"]:::extClass
+    end
+
+    subgraph EDGE ["Edge & Gateway Tier"]
+        GW["Spring Cloud Gateway :8080<br/>• Dual-Layer Rate Limiting (Redis)<br/>• OAuth2 JWT Validation<br/>• X-Correlation-Id & Traceparent<br/>• Dynamic CORS & Error Enveloping"]:::gatewayClass
+    end
+
+    subgraph IDENTITY ["Identity & Access Tier"]
+        KEYCLOAK["Keycloak 26 (IAM :8080/:8180)<br/>Realm: ecommerce<br/>OAuth2.0 / OIDC / JWKS"]:::authClass
+        AUTH_SVC["auth-service :8088<br/>ROPC Login, Refresh, User & Role Facade"]:::authClass
+    end
+
+    subgraph CORE_COMMERCE ["Core Commerce Domain"]
+        PRODUCT_SVC["product-service :8086<br/>Catalog, Brands, Categories, Variants<br/>Redis Cache + Outbox Relay"]:::coreServiceClass
+        INVENTORY_SVC["inventory-service :8082<br/>Stock Reservations & Commit / Release"]:::coreServiceClass
+        ORDER_SVC["order-service :8084<br/>Carts, Order Checkout Saga & Outbox Relay"]:::coreServiceClass
+    end
+
+    subgraph CUSTOMER_EXP ["Customer Experience Domain"]
+        SEARCH_SVC["search-service :8094<br/>Elasticsearch 8.15 Full-Text & Auto-suggest"]:::cxServiceClass
+        RATING_SVC["rating-service :8089<br/>Storefront Reviews & Verified Purchase Gate"]:::cxServiceClass
+        FAV_SVC["favourite-service :8081<br/>Customer Wishlists & Saved Items"]:::cxServiceClass
+    end
+
+    subgraph PRICING_MEDIA ["Pricing, Tax & Media Domain"]
+        TAX_SVC["tax-service :8091<br/>Tax Classes & Geo-Rates Calculator"]:::pricingServiceClass
+        PROMO_SVC["promotion-service :8093<br/>Coupons, Campaigns & Discount Calculator"]:::pricingServiceClass
+        MEDIA_SVC["media-service :8083<br/>MIME Verification & 6 WebP Variants"]:::pricingServiceClass
+    end
+
+    subgraph FULFILLMENT ["Fulfillment & Communications Domain"]
+        PAYMENT_SVC["payment-service :8085<br/>Payment Capture, Refund, Stripe Client"]:::fulfillServiceClass
+        SHIPPING_SVC["shipping-service :8087<br/>Shipment Tracking, Carrier Webhooks"]:::fulfillServiceClass
+        NOTIF_SVC["notification-service :8090<br/>In-App Alerts & SMTP Email Dispatch"]:::fulfillServiceClass
+    end
+
+    subgraph BUS ["Event Streaming Backbone"]
+        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.events.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
+    end
+
+    subgraph DATA_TIER ["Persistence & Distributed Storage"]
+        PG[("PostgreSQL 16 (:5432)<br/>12 Isolated Service DBs + Keycloak DB")]:::storeClass
+        REDIS[("Redis 7.4 (:6379)<br/>Token Buckets, Product/Taxonomy Cache")]:::storeClass
+        ES[("Elasticsearch 8.15 (:9200)<br/>products & ratings indices")]:::storeClass
+        RUSTFS[("RustFS S3 (:9000/:9001)<br/>ecommerce-media bucket")]:::storeClass
+    end
+
+    %% Client traffic
+    WEB & ADMIN_UI -->|"HTTP /api/v1/*"| GW
+    CARRIER_EXT -->|"Webhook POST"| GW
+    STRIPE_EXT -->|"Webhook POST"| GW
+
+    %% Edge to IAM
+    GW -.->|"JWKS Verification"| KEYCLOAK
+    GW -->|"Forward /api/v1/auth/*"| AUTH_SVC
+    AUTH_SVC <-->|"REST Admin API"| KEYCLOAK
+
+    %% Edge to Services
+    GW --> PRODUCT_SVC & INVENTORY_SVC & ORDER_SVC
+    GW --> SEARCH_SVC & RATING_SVC & FAV_SVC
+    GW --> TAX_SVC & PROMO_SVC & MEDIA_SVC
+    GW --> PAYMENT_SVC & SHIPPING_SVC & NOTIF_SVC
+
+    %% Synchronous Orchestration (REST Feign / RestClient)
+    ORDER_SVC -->|"REST Product Verification"| PRODUCT_SVC
+    ORDER_SVC -->|"REST /reserve & /commit"| INVENTORY_SVC
+    ORDER_SVC -->|"REST /calculate"| TAX_SVC
+    ORDER_SVC -->|"REST /apply"| PROMO_SVC
+    ORDER_SVC -->|"REST Verify Captured"| PAYMENT_SVC
+    RATING_SVC -->|"REST /verify-purchase (RTG-11001)"| ORDER_SVC
+    MEDIA_SVC <-->|"REST Verify Media Reference"| PRODUCT_SVC
+
+    %% Asynchronous Event Flows
+    PRODUCT_SVC & INVENTORY_SVC & ORDER_SVC -->|"Transactional Outbox"| KAFKA
+    PAYMENT_SVC & SHIPPING_SVC & RATING_SVC -->|"Transactional Outbox"| KAFKA
+    KAFKA -->|"Consume Events"| SEARCH_SVC
+    KAFKA -->|"Consume Events"| SHIPPING_SVC
+    KAFKA -->|"Consume Events"| ORDER_SVC
+    KAFKA -->|"Consume Events"| NOTIF_SVC
+    KAFKA -->|"Consume Events"| PRODUCT_SVC
+
+    %% Storage connections
+    AUTH_SVC & PRODUCT_SVC & INVENTORY_SVC & ORDER_SVC & PAYMENT_SVC & SHIPPING_SVC & FAV_SVC & RATING_SVC & TAX_SVC & PROMO_SVC & NOTIF_SVC & MEDIA_SVC --> PG
+    GW & PRODUCT_SVC <--> REDIS
+    SEARCH_SVC <--> ES
+    MEDIA_SVC <--> RUSTFS

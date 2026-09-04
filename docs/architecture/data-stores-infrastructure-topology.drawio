@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0">
+  <diagram id="datatopology" name="Data-Stores-and-Infrastructure">
+    <mxGraphModel dx="2200" dy="1600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1600">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="Petproject Microservices — Data Architecture &amp; Storage Infrastructure Topology" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1a365d;" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="1200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="12 Per-Service PostgreSQL Databases + Keycloak, Redis 7.4 Caching &amp; Limiting, Kafka 3.9 KRaft, Elasticsearch 8.15, RustFS S3" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#4a5568;" vertex="1" parent="1">
+          <mxGeometry x="500" y="60" width="1200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Big Container: PostgreSQL 16 -->
+        <mxCell id="c_pg" value="PostgreSQL 16 Instance (:5432) — max_connections=300 (Database-per-Service Pattern)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="110" width="2040" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="pg1" value="&lt;b&gt;authservice&lt;/b&gt;&lt;br/&gt;users, roles,&lt;br/&gt;user_role" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="40" y="50" width="120" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg2" value="&lt;b&gt;productservice&lt;/b&gt;&lt;br/&gt;products, categories,&lt;br/&gt;brands, outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="190" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg3" value="&lt;b&gt;orderservice&lt;/b&gt;&lt;br/&gt;orders, carts,&lt;br/&gt;cart_items, outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="350" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg4" value="&lt;b&gt;inventoryservice&lt;/b&gt;&lt;br/&gt;inventory, reserves,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="510" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg5" value="&lt;b&gt;paymentservice&lt;/b&gt;&lt;br/&gt;payments, refunds,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="670" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg6" value="&lt;b&gt;shippingservice&lt;/b&gt;&lt;br/&gt;shippings,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="830" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg7" value="&lt;b&gt;ratingservice&lt;/b&gt;&lt;br/&gt;ratings,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="990" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg8" value="&lt;b&gt;favouriteservice&lt;/b&gt;&lt;br/&gt;favourites" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="1150" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg9" value="&lt;b&gt;taxservice&lt;/b&gt;&lt;br/&gt;tax_classes,&lt;br/&gt;tax_rates" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="1310" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg10" value="&lt;b&gt;promotionservice&lt;/b&gt;&lt;br/&gt;promotions, usage,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="1470" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg11" value="&lt;b&gt;mediaservice&lt;/b&gt;&lt;br/&gt;medias,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="1630" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg12" value="&lt;b&gt;notificationservice&lt;/b&gt;&lt;br/&gt;notifications,&lt;br/&gt;emails retry" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="1790" y="50" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg13" value="&lt;b&gt;keycloak&lt;/b&gt;&lt;br/&gt;IAM realm tables,&lt;br/&gt;users, clients" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="c_pg">
+          <mxGeometry x="1940" y="50" width="90" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg_note" value="&lt;b&gt;Persistence Design Rules:&lt;/b&gt; Schema isolation strictly enforced. Cross-database queries / foreign keys are PROHIBITED. Liquibase migrations managed in &lt;code&gt;src/main/resources/db/changelog/&lt;/code&gt; per service. Composite indexes added on frequently queried FKs and partial unique indexes on &lt;code&gt;WHERE deleted = false&lt;/code&gt;." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=15;" vertex="1" parent="c_pg">
+          <mxGeometry x="40" y="170" width="1960" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Redis 7.4 -->
+        <mxCell id="c_redis" value="Redis 7.4 Cluster (:6379) — Memory Caching &amp; Atomic Token Buckets" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="520" width="650" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="red1" value="&lt;b&gt;Rate Limiting Token Buckets&lt;/b&gt;&lt;br/&gt;• request_rate_limiter.system (Global)&lt;br/&gt;• request_rate_limiter.{routeId}.{user|ip} (Per-Client)&lt;br/&gt;• Handled atomically by Redis Lua Script" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_redis">
+          <mxGeometry x="30" y="50" width="590" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="red2" value="&lt;b&gt;Application Caches (@Cacheable)&lt;/b&gt;&lt;br/&gt;• product::{id} (10m TTL) | productBySlug::{slug} (10m TTL)&lt;br/&gt;• category::{id} (30m TTL) | brand::{id} (30m TTL)&lt;br/&gt;• Evicted automatically on product update/delete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_redis">
+          <mxGeometry x="30" y="140" width="590" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Elasticsearch 8.15 -->
+        <mxCell id="c_es" value="Elasticsearch 8.15 (:9200) — Full-Text &amp; Faceted Search Engine" style="swimlane;startSize=30;fillColor=#b1ddf0;strokeColor=#10739e;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="770" y="520" width="650" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="es1" value="&lt;b&gt;Index: products&lt;/b&gt;&lt;br/&gt;• Fields: productId, title, description, category, price, score, tags&lt;br/&gt;• Analyzers: Standard, Edge-NGram for autocomplete suggesters&lt;br/&gt;• Popularity boosting based on sales &amp; rating score" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_es">
+          <mxGeometry x="30" y="50" width="590" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="es2" value="&lt;b&gt;Index: ratings&lt;/b&gt;&lt;br/&gt;• Fields: ratingId, productId, userId, score, comment, createdAt&lt;br/&gt;• Aggregations: Average stars, score distribution histogram&lt;br/&gt;• Powers fast review search and sentiment filters" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_es">
+          <mxGeometry x="30" y="140" width="590" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Container: RustFS S3 -->
+        <mxCell id="c_rustfs" value="RustFS S3 Storage (:9000/:9001) — Object Store" style="swimlane;startSize=30;fillColor=#fad7ac;strokeColor=#b46504;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1460" y="520" width="660" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="s3_1" value="&lt;b&gt;Bucket: ecommerce-media&lt;/b&gt;&lt;br/&gt;• High-throughput Rust-based S3 compatible engine&lt;br/&gt;• S3ClientFactory from common-storage (AWS SDK v2)&lt;br/&gt;• Presigned PUT/GET URLs (5 min TTL) for direct client uploads" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b46504;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_rustfs">
+          <mxGeometry x="30" y="50" width="600" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s3_2" value="&lt;b&gt;Media Variants Storage Structure&lt;/b&gt;&lt;br/&gt;• original/&lt;uuid&gt;.png&lt;br/&gt;• variants/&lt;uuid&gt;_100w.webp .. _1440w.webp (6 responsive sizes)&lt;br/&gt;• Safe deletion cascading with product reference check" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b46504;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_rustfs">
+          <mxGeometry x="30" y="140" width="600" height="70" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,75 @@
+%% End-to-End E-Commerce Order Fulfillment Saga Lifecycle
+sequenceDiagram
+    autonumber
+    actor Customer as Customer (Browser/App)
+    participant GW as API Gateway :8080
+    participant ORD as order-service :8084
+    participant PRD as product-service :8086
+    participant PRM as promotion-service :8093
+    participant TAX as tax-service :8091
+    participant INV as inventory-service :8082
+    participant BUS as Kafka Bus (KRaft)
+    participant PAY as payment-service :8085
+    participant SHP as shipping-service :8087
+    participant NTF as notification-service :8090
+    participant RTG as rating-service :8089
+    participant SRH as search-service :8094
+
+    Note over Customer,GW: Step 1: Cart Checkout & Order Placement
+    Customer->>GW: POST /api/v1/orders {items, address, coupon}
+    GW->>ORD: Forward with JWT & X-Correlation-Id
+    ORD->>PRD: REST GET /api/v1/products/{id} (Validate SKU, price, status)
+    PRD-->>ORD: ProductDetailResponse (ACTIVE)
+    ORD->>PRM: REST POST /api/v1/backoffice/promotions/apply {code, amount}
+    PRM-->>ORD: ApplyResponse {discountAmount, finalAmount}
+    ORD->>TAX: REST POST /api/v1/backoffice/tax-rates/calculate {classId, country, amount}
+    TAX-->>ORD: CalculateResponse {taxAmount, appliedRate}
+    ORD->>INV: REST POST /api/v1/inventory/{id}/reserve {quantity}
+    INV-->>ORD: ReserveResponse {reservationId, expiresAt}
+    ORD->>ORD: Save Order (status: PENDING) + Save Outbox Event
+    ORD-->>Customer: 201 Created (OrderDto)
+
+    Note over ORD,NTF: Step 2: Order Placed Event & Notification
+    ORD->>BUS: Publish shop.order.lifecycle.v1 (order.created.v1)
+    BUS-->>NTF: Consume order.created.v1
+    NTF->>NTF: Send Order Confirmation Email to Customer
+
+    Note over Customer,PAY: Step 3: Payment Capture via Stripe
+    Customer->>GW: POST /api/v1/payments {orderId, method: STRIPE}
+    GW->>PAY: Forward payment initiation
+    PAY->>PAY: Create Payment Record (PENDING)
+    PAY-->>Customer: PaymentResponse {checkoutUrl, clientSecret}
+    Customer->>PAY: Complete Payment / Stripe Webhook callback
+    PAY->>PAY: Capture Payment (status: CAPTURED) + Save Outbox
+    PAY->>BUS: Publish shop.payment.events.v1 (payment.succeeded.v1)
+
+    Note over ORD,SHP: Step 4: Order Confirmation & Fulfillment Dispatch
+    Customer->>ORD: Confirm Order / System Confirm Hook
+    ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
+    PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit
+    INV-->>ORD: Stock Deducted
+    ORD->>PRM: REST Commit Promotion Usage
+    ORD->>ORD: Update Order Status -> CONFIRMED + Save Outbox
+    ORD->>BUS: Publish shop.order.lifecycle.v1 (order.updated.v1 - CONFIRMED)
+    BUS-->>SHP: Consume order.updated.v1 (CONFIRMED)
+    SHP->>SHP: Create Shipment, Assign Tracking Number, Status: PENDING
+    SHP->>BUS: Publish shop.shipping.events.v1 (shipping.dispatched.v1)
+    BUS-->>NTF: Consume shipping.dispatched.v1 -> Send Tracking Email
+
+    Note over SHP,RTG: Step 5: Carrier Delivery & Order Completion
+    SHP->>SHP: Carrier Webhook -> Status updated to DELIVERED
+    SHP->>BUS: Publish shop.shipping.events.v1 (shipping.delivered.v1)
+    BUS-->>ORD: Consume shipping.delivered.v1
+    ORD->>ORD: Auto-transition Order status -> DELIVERED
+
+    Note over Customer,SRH: Step 6: Verified Review & Catalog Reindexing
+    Customer->>GW: POST /api/v1/storefront/ratings {productId, score: 5, comment}
+    GW->>RTG: Forward review submission
+    RTG->>ORD: REST GET /api/v1/orders/verify-purchase?userId=&productId=
+    ORD-->>RTG: 200 OK (Has DELIVERED Order Item)
+    RTG->>RTG: Save Rating (APPROVED) + Save Outbox
+    RTG-->>Customer: 201 Created (RatingDto)
+    RTG->>BUS: Publish shop.rating.events.v1 (RatingApproved)
+    BUS-->>PRD: Consume RatingApproved -> Update Product Avg Rating & Count
+    BUS-->>SRH: Consume RatingApproved -> Update Elasticsearch products & ratings index

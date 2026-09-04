@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" version="26.0.0">
+  <diagram id="landscape" name="System-Landscape">
+    <mxGraphModel dx="2400" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title Banner -->
+        <mxCell id="title" value="Petproject Microservices Platform — System Landscape Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a365d;" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="1200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Production-Grade Spring Boot 4.1.1 + Java 25 | 14 Microservices, Keycloak 26, Redis 7.4, Kafka 3.9 KRaft, Postgres 16, Elasticsearch 8.15, RustFS S3" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#4a5568;" vertex="1" parent="1">
+          <mxGeometry x="600" y="60" width="1200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Client Layer -->
+        <mxCell id="c_clients" value="Client Layer &amp; External Integrations" style="swimlane;startSize=30;fillColor=#f8f9fa;strokeColor=#6c757d;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="2200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_web" value="&lt;b&gt;Storefront Web / Mobile&lt;/b&gt;&lt;br/&gt;Vue / React / Mobile App&lt;br/&gt;(PKCE Authorization Code Flow)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="c_clients">
+          <mxGeometry x="60" y="40" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_admin" value="&lt;b&gt;Backoffice Admin Console&lt;/b&gt;&lt;br/&gt;Catalog &amp; Operations Portal&lt;br/&gt;(Role: ADMIN / MANAGER)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="c_clients">
+          <mxGeometry x="340" y="40" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_swagger" value="&lt;b&gt;Swagger UI / OpenAPI 3.1&lt;/b&gt;&lt;br/&gt;API Developer Portal&lt;br/&gt;(:8080/swagger-ui.html)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="c_clients">
+          <mxGeometry x="620" y="40" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_stripe" value="&lt;b&gt;Stripe Payment Gateway&lt;/b&gt;&lt;br/&gt;Checkout, Webhook, Refunds&lt;br/&gt;(External Vendor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;strokeDasharray=3 3;" vertex="1" parent="c_clients">
+          <mxGeometry x="1380" y="40" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_carrier" value="&lt;b&gt;Logistics Carrier Webhook&lt;/b&gt;&lt;br/&gt;DHL / FedEx / VNPost&lt;br/&gt;(Dispatched, Delivered updates)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11;strokeDasharray=3 3;" vertex="1" parent="c_clients">
+          <mxGeometry x="1660" y="40" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_smtp" value="&lt;b&gt;External SMTP Relay&lt;/b&gt;&lt;br/&gt;Gmail SMTP / AWS SES&lt;br/&gt;(Notification Delivery)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;strokeDasharray=3 3;" vertex="1" parent="c_clients">
+          <mxGeometry x="1940" y="40" width="200" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Edge & Identity Tier -->
+        <mxCell id="c_edge" value="Edge &amp; Identity Tier" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="240" width="2200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="gw" value="&lt;b&gt;Spring Cloud Gateway (:8080)&lt;/b&gt;&lt;br/&gt;• Reactive Netty Reverse Proxy (No-rewrite full path /api/v1/*)&lt;br/&gt;• Security: OAuth2 Resource Server &amp; JWT Verification Filter&lt;br/&gt;• Two-Layer Token Bucket Limiter: Global (2k req/s) &amp; Per-Route (100 req/s)&lt;br/&gt;• MDC Correlation: X-Correlation-Id &amp; W3C Traceparent Header Propagation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=15;" vertex="1" parent="c_edge">
+          <mxGeometry x="40" y="40" width="680" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="redis_gw" value="&lt;b&gt;Redis 7.4 Cluster (:6379)&lt;/b&gt;&lt;br/&gt;• Atomic Lua Token Bucket&lt;br/&gt;• Global System Bucket&lt;br/&gt;• Route × (User | IP) Buckets" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="c_edge">
+          <mxGeometry x="780" y="40" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="keycloak" value="&lt;b&gt;Keycloak 26 IAM (:8080 int / :8180 host)&lt;/b&gt;&lt;br/&gt;• Realm: ecommerce&lt;br/&gt;• Clients: ecommerce-client, swagger-ui, service-accounts&lt;br/&gt;• Roles: ADMIN, USER, SERVICE&lt;br/&gt;• JWKS Endpoint: /protocol/openid-connect/certs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=15;" vertex="1" parent="c_edge">
+          <mxGeometry x="1060" y="40" width="400" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="auth_svc" value="&lt;b&gt;auth-service (:8088)&lt;/b&gt;&lt;br/&gt;• ROPC Login &amp; Token Refresh Facade&lt;br/&gt;• Keycloak Admin REST Client&lt;br/&gt;• User Profile &amp; Role Management&lt;br/&gt;• Shadow DB Mirror (users, roles)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;spacingLeft=15;" vertex="1" parent="c_edge">
+          <mxGeometry x="1520" y="40" width="300" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="common_sec" value="&lt;b&gt;utils / common-security&lt;/b&gt;&lt;br/&gt;common-spring &amp; common-core&lt;br/&gt;Auto-config, JWT Decoder, CORS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e3e5;strokeColor=#6c757d;fontSize=10;" vertex="1" parent="c_edge">
+          <mxGeometry x="1880" y="45" width="260" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Container: 13 Business Microservices -->
+        <mxCell id="c_services" value="Core Microservices Layer (Java 25 + Spring Boot 4.1.1 + Liquibase + Docker Compose)" style="swimlane;startSize=30;fillColor=#f8f9fa;strokeColor=#6c757d;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="420" width="2200" height="520" as="geometry" />
+        </mxCell>
+
+        <!-- Row 1: Core Commerce -->
+        <mxCell id="svc_product" value="&lt;b&gt;product-service (:8086)&lt;/b&gt;&lt;br/&gt;• Catalog, Categories, Brands, Variants&lt;br/&gt;• Redis Cache (@Cacheable)&lt;br/&gt;• Outbox: shop.product.lifecycle.v1&lt;br/&gt;• Consumer: Rating &amp; Media Lifecycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="40" y="50" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_inventory" value="&lt;b&gt;inventory-service (:8082)&lt;/b&gt;&lt;br/&gt;• Stock Management &amp; Reservations&lt;br/&gt;• Reserve / Commit / Release APIs&lt;br/&gt;• Scheduled Auto-Release Sweeper&lt;br/&gt;• Outbox: shop.inventory.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="390" y="50" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_order" value="&lt;b&gt;order-service (:8084)&lt;/b&gt;&lt;br/&gt;• Cart &amp; Order Lifecycle Coordinator&lt;br/&gt;• RestClients: Inventory, Promo, Tax, Pay&lt;br/&gt;• Outbox: shop.order.lifecycle.v1&lt;br/&gt;• Consumer: ShippingDeliveredConsumer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="740" y="50" width="330" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_payment" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;• Payment Creation, Capture, Refund&lt;br/&gt;• Stripe SDK v24 Integration&lt;br/&gt;• Idempotency-Key Enforcement&lt;br/&gt;• Outbox: shop.payment.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="1110" y="50" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_shipping" value="&lt;b&gt;shipping-service (:8087)&lt;/b&gt;&lt;br/&gt;• Shipment Creation &amp; Tracking Codes&lt;br/&gt;• Carrier Webhook Ingestion&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Outbox: shop.shipping.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="1460" y="50" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_notif" value="&lt;b&gt;notification-service (:8090)&lt;/b&gt;&lt;br/&gt;• Notification History &amp; Unread Counts&lt;br/&gt;• SMTP Email Delivery &amp; Retry Table&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Consumer: PaymentSuccess/Failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="1810" y="50" width="330" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Row 2: Customer Experience & Pricing -->
+        <mxCell id="svc_search" value="&lt;b&gt;search-service (:8094)&lt;/b&gt;&lt;br/&gt;• Elasticsearch 8.15 Indexer &amp; Query&lt;br/&gt;• Autocomplete, Suggest &amp; BM25 Full-text&lt;br/&gt;• Consumer: Product &amp; Rating Events&lt;br/&gt;• Backoffice Manual Reindex API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="40" y="190" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_rating" value="&lt;b&gt;rating-service (:8089)&lt;/b&gt;&lt;br/&gt;• Storefront Reviews (1-5 Stars)&lt;br/&gt;• Verified Purchase Gate (RTG-11001)&lt;br/&gt;• Backoffice Review Approval Workflow&lt;br/&gt;• Outbox: shop.rating.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="390" y="190" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_favourite" value="&lt;b&gt;favourite-service (:8081)&lt;/b&gt;&lt;br/&gt;• Customer Wishlists (Add/Remove)&lt;br/&gt;• Per-User Product Favorites List&lt;br/&gt;• Soft-Delete Cleanups" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="740" y="190" width="330" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_tax" value="&lt;b&gt;tax-service (:8091)&lt;/b&gt;&lt;br/&gt;• Tax Classes (Standard, Reduced, Zero)&lt;br/&gt;• Geo-specific Tax Rates (Country, State)&lt;br/&gt;• Real-time Tax Calculation API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="1110" y="190" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_promo" value="&lt;b&gt;promotion-service (:8093)&lt;/b&gt;&lt;br/&gt;• Discount Campaigns &amp; Coupon Codes&lt;br/&gt;• PERCENTAGE &amp; FIXED_AMOUNT rules&lt;br/&gt;• Coupon Reservation &amp; Commit Usage&lt;br/&gt;• Outbox: shop.promotion.lifecycle.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="1460" y="190" width="310" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_media" value="&lt;b&gt;media-service (:8083)&lt;/b&gt;&lt;br/&gt;• Multipart Upload with Magic-Byte MIME&lt;br/&gt;• Auto-Generates 6 WebP Variants&lt;br/&gt;• RustFS S3 SDK Storage &amp; Presigned URLs&lt;br/&gt;• Outbox: shop.media.lifecycle.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+          <mxGeometry x="1810" y="190" width="330" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Sub-box: Shared Platform Libraries (utils/) -->
+        <mxCell id="sub_utils" value="&lt;b&gt;Shared Platform Modules (utils/)&lt;/b&gt; — common-spring (Meta-Starter) transitively provides: common-core (ApiResponse, ErrorCode), common-security (JWT/OAuth2), common-logging (@LogPerformance, MDC), common-keycloak (Admin/Token Client), common-kafka (Transactional Outbox, BaseKafkaConsumer), common-storage (S3 SDK)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e3e5;strokeColor=#495057;fontSize=11;align=center;" vertex="1" parent="c_services">
+          <mxGeometry x="40" y="320" width="2100" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Synchronous REST Links between services -->
+        <mxCell id="e_ord_prd" value="Verify SKU/Price" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_order" target="svc_inventory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ord_inv" value="Reserve / Commit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_inventory" target="svc_product">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ord_pay" value="Verify Captured" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="c_services" source="svc_order" target="svc_payment">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ord_tax" value="Calculate Tax" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0.75;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="c_services" source="svc_order" target="svc_tax">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ord_prm" value="Apply Coupon" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0.9;exitY=1;entryX=0.2;entryY=0;" edge="1" parent="c_services" source="svc_order" target="svc_promo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rtg_ord" value="Verify Purchase (RTG-11001)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#9c4221;strokeColor=#9c4221;strokeWidth=2;exitX=0.75;exitY=0;entryX=0.25;entryY=1;" edge="1" parent="c_services" source="svc_rating" target="svc_order">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_med_prd" value="Verify References" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_media" target="svc_product">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Event Streaming Backbone -->
+        <mxCell id="c_kafka" value="Event Streaming Backbone (Apache Kafka 3.9 KRaft Mode :9092 | Cluster ID: MkU3OEVBNTcwNTJENDM2Qk)" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="970" width="2200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top1" value="&lt;b&gt;shop.order.lifecycle.v1&lt;/b&gt;&lt;br/&gt;order.created.v1&lt;br/&gt;order.updated.v1&lt;br/&gt;order.cancelled.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="40" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top2" value="&lt;b&gt;shop.product.lifecycle.v1&lt;/b&gt;&lt;br/&gt;ProductCreated&lt;br/&gt;ProductUpdated&lt;br/&gt;ProductDeleted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="290" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top3" value="&lt;b&gt;shop.inventory.events.v1&lt;/b&gt;&lt;br/&gt;inventory.reserved.v1&lt;br/&gt;inventory.committed.v1&lt;br/&gt;inventory.released.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="540" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top4" value="&lt;b&gt;shop.payment.events.v1&lt;/b&gt;&lt;br/&gt;payment.succeeded.v1&lt;br/&gt;payment.failed.v1&lt;br/&gt;payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="790" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top5" value="&lt;b&gt;shop.shipping.events.v1&lt;/b&gt;&lt;br/&gt;shipping.dispatched.v1&lt;br/&gt;shipping.delivered.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="1040" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top6" value="&lt;b&gt;shop.rating.events.v1&lt;/b&gt;&lt;br/&gt;RatingCreated / Updated&lt;br/&gt;RatingApproved / Rejected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="1290" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_top7" value="&lt;b&gt;Taxonomy / Media Topics&lt;/b&gt;&lt;br/&gt;shop.category.lifecycle.v1&lt;br/&gt;shop.brand.lifecycle.v1&lt;br/&gt;shop.media.lifecycle.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="1540" y="40" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="k_pat" value="&lt;b&gt;Transactional Outbox Pattern&lt;/b&gt;&lt;br/&gt;• DB writes outbox_events in same TX&lt;br/&gt;• @Scheduled Relay polls every 5s&lt;br/&gt;• CloudEvents Envelope &amp; Partition Key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="c_kafka">
+          <mxGeometry x="1790" y="40" width="370" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Container: Persistence & Infrastructure Tier -->
+        <mxCell id="c_infra" value="Distributed Data &amp; Infrastructure Tier" style="swimlane;startSize=30;fillColor=#e9ecef;strokeColor=#495057;fontStyle=1;fontSize=14;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1130" width="2200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="db_pg" value="&lt;b&gt;PostgreSQL 16 (:5432)&lt;/b&gt;&lt;br/&gt;max_connections=300 | 12 Isolated DBs:&lt;br/&gt;authservice, productservice, orderservice, paymentservice,&lt;br/&gt;shippingservice, inventoryservice, favouriteservice, ratingservice,&lt;br/&gt;mediaservice, taxservice, promotionservice, notificationservice + keycloak" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=15;" vertex="1" parent="c_infra">
+          <mxGeometry x="40" y="40" width="700" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="db_redis" value="&lt;b&gt;Redis 7.4 (:6379)&lt;/b&gt;&lt;br/&gt;• Token Bucket Lua&lt;br/&gt;• product::{id} (10m TTL)&lt;br/&gt;• category/brand (30m)&lt;br/&gt;• Cart &amp; SSO Tickets" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="c_infra">
+          <mxGeometry x="780" y="40" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="db_es" value="&lt;b&gt;Elasticsearch 8.15 (:9200)&lt;/b&gt;&lt;br/&gt;• Index: products (BM25, text, facets)&lt;br/&gt;• Index: ratings (comments, scores)&lt;br/&gt;• Autocomplete completion suggester" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=11;" vertex="1" parent="c_infra">
+          <mxGeometry x="1070" y="40" width="310" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="db_rustfs" value="&lt;b&gt;RustFS S3 (:9000/:9001)&lt;/b&gt;&lt;br/&gt;• Bucket: ecommerce-media&lt;br/&gt;• S3 API v2 Compatible&lt;br/&gt;• WebP 6 Responsive Resolutions" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11;" vertex="1" parent="c_infra">
+          <mxGeometry x="1420" y="40" width="290" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="infra_obs" value="&lt;b&gt;Observability &amp; Metrics&lt;/b&gt;&lt;br/&gt;• Micrometer + Prometheus Actuator&lt;br/&gt;• /actuator/health (Liveness/Readiness)&lt;br/&gt;• @LogPerformance AOP Threshold" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2e3e5;strokeColor=#6c757d;fontSize=11;" vertex="1" parent="c_infra">
+          <mxGeometry x="1750" y="40" width="390" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Inter-tier Edges -->
+        <!-- Clients to Gateway -->
+        <mxCell id="e1" value="HTTPS /api/v1/*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeWidth=2;strokeColor=#4a5568;" edge="1" parent="1" source="cli_web" target="gw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="Admin REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeWidth=2;strokeColor=#4a5568;" edge="1" parent="1" source="cli_admin" target="gw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway to Keycloak & Redis -->
+        <mxCell id="e3" value="JWT JWKS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" parent="1" source="gw" target="keycloak">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="Atomic Rate Limit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#b85450;strokeWidth=2;" edge="1" parent="1" source="gw" target="redis_gw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway to Services (Bus forwarding) -->
+        <mxCell id="e5" value="Reverse Proxy Forward (/api/v1/*)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;fontStyle=1;strokeColor=#d79b00;strokeWidth=3;" edge="1" parent="1" source="gw" target="c_services">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Services to Kafka -->
+        <mxCell id="e6" value="Publish Outbox Events" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;fontStyle=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" parent="1" source="c_services" target="c_kafka">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Services to Persistence -->
+        <mxCell id="e7" value="JPA / JDBC Connection" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="c_services" target="db_pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="Elasticsearch REST Client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#10739e;strokeWidth=2;" edge="1" parent="1" source="svc_search" target="db_es">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="S3 SDK v2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#b46504;strokeWidth=2;" edge="1" parent="1" source="svc_media" target="db_rustfs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
