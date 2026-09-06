@@ -108,26 +108,52 @@
         </mxCell>
 
         <!-- Synchronous REST Links between services -->
-        <mxCell id="e_ord_prd" value="Verify SKU/Price" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_order" target="svc_inventory">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e_ord_prd" value="Verify SKU/Price" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0.2;exitY=0;entryX=0.68;entryY=0;" edge="1" parent="c_services" source="svc_order" target="svc_product">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="806" y="35" />
+              <mxPoint x="251" y="35" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e_ord_inv" value="Reserve / Commit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_inventory" target="svc_product">
+        <mxCell id="e_ord_inv" value="Reserve / Commit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_order" target="svc_inventory">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_ord_pay" value="Verify Captured" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="c_services" source="svc_order" target="svc_payment">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_ord_tax" value="Calculate Tax" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0.75;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="c_services" source="svc_order" target="svc_tax">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="988" y="170" />
+              <mxPoint x="1188" y="170" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="e_ord_prm" value="Apply Coupon" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0.9;exitY=1;entryX=0.2;entryY=0;" edge="1" parent="c_services" source="svc_order" target="svc_promo">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1037" y="175" />
+              <mxPoint x="1522" y="175" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="e_rtg_ord" value="Verify Purchase (RTG-11001)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#9c4221;strokeColor=#9c4221;strokeWidth=2;exitX=0.75;exitY=0;entryX=0.25;entryY=1;" edge="1" parent="c_services" source="svc_rating" target="svc_order">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="623" y="165" />
+              <mxPoint x="823" y="165" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e_med_prd" value="Verify References" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="c_services" source="svc_media" target="svc_product">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e_med_prd" value="Verify References" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#2b6cb0;strokeColor=#2b6cb0;strokeWidth=2;exitX=0.2;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="c_services" source="svc_media" target="svc_product">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1876" y="305" />
+              <mxPoint x="20" y="305" />
+              <mxPoint x="20" y="100" />
+            </Array>
+          </mxGeometry>
         </mxCell>
 
         <!-- Container: Event Streaming Backbone -->
@@ -181,40 +207,57 @@
 
         <!-- Inter-tier Edges -->
         <!-- Clients to Gateway -->
-        <mxCell id="e1" value="HTTPS /api/v1/*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeWidth=2;strokeColor=#4a5568;" edge="1" parent="1" source="cli_web" target="gw">
+        <mxCell id="e1" value="HTTPS /api/v1/*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeWidth=2;strokeColor=#4a5568;exitX=0.5;exitY=1;entryX=0.19;entryY=0;" edge="1" parent="1" source="cli_web" target="gw">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e2" value="Admin REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeWidth=2;strokeColor=#4a5568;" edge="1" parent="1" source="cli_admin" target="gw">
+        <mxCell id="e2" value="Admin REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeWidth=2;strokeColor=#4a5568;exitX=0.5;exitY=1;entryX=0.6;entryY=0;" edge="1" parent="1" source="cli_admin" target="gw">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Gateway to Keycloak & Redis -->
-        <mxCell id="e3" value="JWT JWKS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" parent="1" source="gw" target="keycloak">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e3" value="JWT JWKS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;strokeColor=#9673a6;strokeWidth=2;exitX=0.9;exitY=0;entryX=0.25;entryY=0;" edge="1" parent="1" source="gw" target="keycloak">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="752" y="225" />
+              <mxPoint x="1260" y="225" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e4" value="Atomic Rate Limit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#b85450;strokeWidth=2;" edge="1" parent="1" source="gw" target="redis_gw">
+        <mxCell id="e4" value="Atomic Rate Limit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#b85450;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="gw" target="redis_gw">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Gateway to Services (Bus forwarding) -->
-        <mxCell id="e5" value="Reverse Proxy Forward (/api/v1/*)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;fontStyle=1;strokeColor=#d79b00;strokeWidth=3;" edge="1" parent="1" source="gw" target="c_services">
+        <mxCell id="e5" value="Reverse Proxy Forward (/api/v1/*)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;fontStyle=1;strokeColor=#d79b00;strokeWidth=3;exitX=0.1;exitY=1;entryX=0.05;entryY=0;" edge="1" parent="1" source="gw" target="c_services">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Services to Kafka -->
-        <mxCell id="e6" value="Publish Outbox Events" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;fontStyle=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" parent="1" source="c_services" target="c_kafka">
+        <mxCell id="e6" value="Publish Outbox Events" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;fontStyle=1;strokeColor=#d79b00;strokeWidth=2;exitX=0.88;exitY=1;entryX=0.88;entryY=0;" edge="1" parent="1" source="c_services" target="c_kafka">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Services to Persistence -->
-        <mxCell id="e7" value="JPA / JDBC Connection" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="c_services" target="db_pg">
+        <mxCell id="e7" value="JPA / JDBC Connection" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;strokeColor=#82b366;strokeWidth=2;exitX=0.125;exitY=1;entryX=0.336;entryY=0;" edge="1" parent="1" source="c_services" target="db_pg">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e8" value="Elasticsearch REST Client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#10739e;strokeWidth=2;" edge="1" parent="1" source="svc_search" target="db_es">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e8" value="Elasticsearch REST Client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#10739e;strokeWidth=2;exitX=0;exitY=0.8;entryX=0.2;entryY=0;" edge="1" parent="1" source="svc_search" target="db_es">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="120" y="690" />
+              <mxPoint x="120" y="1115" />
+              <mxPoint x="1232" y="1115" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e9" value="S3 SDK v2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#b46504;strokeWidth=2;" edge="1" parent="1" source="svc_media" target="db_rustfs">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e9" value="S3 SDK v2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;strokeColor=#b46504;strokeWidth=2;exitX=1;exitY=0.8;entryX=0.5;entryY=0;" edge="1" parent="1" source="svc_media" target="db_rustfs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2270" y="690" />
+              <mxPoint x="2270" y="1115" />
+              <mxPoint x="1665" y="1115" />
+            </Array>
+          </mxGeometry>
         </mxCell>
 
       </root>

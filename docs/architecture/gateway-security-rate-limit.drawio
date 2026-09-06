@@ -79,23 +79,52 @@
         </mxCell>
 
         <!-- Connections -->
-        <mxCell id="egw1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="gw_cli" target="sec_cors"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="sec_cors" target="sec_mdc"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="sec_mdc" target="sec_jwt"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;" edge="1" parent="1" source="sec_jwt" target="sec_kc"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="sec_jwt" target="l1_filter"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="gw_cli" target="sec_cors"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="sec_cors" target="sec_mdc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="sec_mdc" target="sec_jwt"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;exitX=0.8;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="sec_jwt" target="sec_kc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=0.25;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="sec_jwt" target="l1_filter"><mxGeometry relative="1" as="geometry" /></mxCell>
 
-        <mxCell id="egw6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="l1_filter" target="l1_knob"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="l1_knob" target="l1_dec"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw8" value="EVAL Lua" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;" edge="1" parent="1" source="l1_knob" target="box_redis"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw9" value="Deny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;" edge="1" parent="1" source="l1_dec" target="gw_429"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw10" value="Allow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="l1_dec" target="l2_resolver"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=0.15;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="l1_filter" target="l1_knob"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="l1_knob" target="l1_dec"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw8" value="EVAL Lua" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;exitX=0.8;exitY=1;entryX=0;entryY=0.53;" edge="1" parent="1" source="l1_knob" target="box_redis">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="510" y="635" />
+              <mxPoint x="1050" y="635" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="egw9" value="Deny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;exitX=1;exitY=0.5;entryX=0;entryY=0.25;" edge="1" parent="1" source="l1_dec" target="gw_429">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="580" />
+              <mxPoint x="1060" y="875" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="egw10" value="Allow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;exitX=0.5;exitY=1;entryX=0.78;entryY=0;" edge="1" parent="1" source="l1_dec" target="l2_resolver"><mxGeometry relative="1" as="geometry" /></mxCell>
 
-        <mxCell id="egw11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="l2_resolver" target="l2_knob"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;" edge="1" parent="1" source="l2_knob" target="l2_dec"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw13" value="EVAL Lua" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;" edge="1" parent="1" source="l2_knob" target="box_redis"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw14" value="Deny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;" edge="1" parent="1" source="l2_dec" target="gw_429"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="egw15" value="Allow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" edge="1" parent="1" source="l2_dec" target="gw_fwd"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=0.15;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="l2_resolver" target="l2_knob"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="l2_knob" target="l2_dec"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="egw13" value="EVAL Lua" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;exitX=0.8;exitY=0;entryX=0;entryY=0.85;" edge="1" parent="1" source="l2_knob" target="box_redis">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="510" y="812" />
+              <mxPoint x="1040" y="812" />
+              <mxPoint x="1040" y="750" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="egw14" value="Deny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="l2_dec" target="gw_429">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="855" />
+              <mxPoint x="1070" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="egw15" value="Allow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="l2_dec" target="gw_fwd"><mxGeometry relative="1" as="geometry" /></mxCell>
 
       </root>
     </mxGraphModel>
