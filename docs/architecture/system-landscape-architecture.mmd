@@ -24,7 +24,7 @@ flowchart TB
     end
 
     subgraph IDENTITY ["Identity & Access Tier"]
-        KEYCLOAK["Keycloak 26 (IAM :8080/:8180)<br/>Realm: ecommerce<br/>OAuth2.0 / OIDC / JWKS"]:::authClass
+        KEYCLOAK["Keycloak 26 (IAM :8080 int / :9090 host)<br/>Realm: ecommerce<br/>OAuth2.0 / OIDC / JWKS"]:::authClass
         AUTH_SVC["auth-service :8088<br/>ROPC Login, Refresh, User & Role Facade"]:::authClass
     end
 

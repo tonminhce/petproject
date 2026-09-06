@@ -315,10 +315,10 @@ flowchart LR
     USER -->|"1. Thêm vào Wishlist"| GW --> FAV
     USER -->|"2. Thêm vào giỏ hàng (Cart)"| GW --> CART
     CART -->|"3. Gửi mã coupon & tổng tiền"| PROMO
-    PROMO -->>|"4. Trả về mức giảm (% hoặc số tiền)"| CART
+    PROMO -.->|"4. Trả về mức giảm (% hoặc số tiền)"| CART
     CART -->|"5. Gửi TaxClass & Quốc gia/Bang"| TAX
-    TAX -->>|"6. Trả về tiền thuế & thuế suất"| CART
-    CART -->>|"7. Tổng hợp: Tạm tính - Giảm giá + Thuế = Tổng tiền"| USER
+    TAX -.->|"6. Trả về tiền thuế & thuế suất"| CART
+    CART -.->|"7. Tổng hợp: Tạm tính - Giảm giá + Thuế = Tổng tiền"| USER
 ```
 
 ---

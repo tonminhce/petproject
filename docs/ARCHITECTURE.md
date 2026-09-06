@@ -278,7 +278,7 @@ shop-microservices/                       # parent aggregator (pom)
 :6379   redis             (host)
 :9092   kafka             (host)
 :9200   elasticsearch     (host)
-:8080   keycloak          (host — collides with gateway locally; expose keycloak on 8180 in workspace)
+:8080   keycloak          (host — collides with gateway locally; expose keycloak on 9090 in workspace)
 :9000   rustfs (S3 API)   (host)
 :9001   rustfs (console)   (host)
 ```

@@ -371,10 +371,10 @@ flowchart LR
     USER -->|"1. POST /api/v1/favourites/{productId}"| GW --> FAV
     USER -->|"2. POST /api/v1/cart/items"| GW --> CART
     CART -->|"3. REST POST /promotions/apply {code, subtotal}"| PROMO
-    PROMO -->>|"4. Trả về mức giảm: -10% (-$50)"| CART
+    PROMO -.->|"4. Trả về mức giảm: -10% (-$50)"| CART
     CART -->|"5. REST POST /tax-rates/calculate {classId, country}"| TAX
-    TAX -->>|"6. Trả về tiền thuế: VAT 10% (+$45)"| CART
-    CART -->>|"7. Pricing Breakdown: Subtotal $500 - Promo $50 + Tax $45 = Total $495"| USER
+    TAX -.->|"6. Trả về tiền thuế: VAT 10% (+$45)"| CART
+    CART -.->|"7. Pricing Breakdown: Subtotal $500 - Promo $50 + Tax $45 = Total $495"| USER
 ```
 
 - **Endpoints**:
