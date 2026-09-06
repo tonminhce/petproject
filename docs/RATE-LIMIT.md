@@ -3,7 +3,7 @@
 > Source of truth: implementation in `gateway-service/src/main/java/com/shop/gateway/ratelimit/*`
 > (read alongside `gateway-service/src/main/java/com/shop/gateway/config/RoutesConfig.java`,
 > `SecurityConfig.java` and `application.yml`). Diagram: [`docs/images/rate-limit-architecture.png`](./images/rate-limit-architecture.png)
-> (editable source: [`docs/rate-limit-architecture.drawio`](./rate-limit-architecture.drawio)).
+> (editable source: [`docs/architecture/gateway-security-rate-limit.drawio`](./architecture/gateway-security-rate-limit.drawio)).
 >
 > Status: implemented and verified locally (gateway `17/17` tests, full reactor
 > `BUILD SUCCESS`, smoke test on Redis thật với two concurrent requests producing

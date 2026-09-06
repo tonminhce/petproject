@@ -82,7 +82,7 @@
       "id": "favourite",
       "type": "backend",
       "label": "favourite-service",
-      "sublabel": "Wishlists :8091",
+      "sublabel": "Wishlists :8081",
       "brand": "spring",
       "pos": [
         40,
@@ -98,7 +98,7 @@
       "id": "rating",
       "type": "backend",
       "label": "rating-service",
-      "sublabel": "Reviews & Scores :8086",
+      "sublabel": "Reviews & Scores :8089",
       "brand": "spring",
       "pos": [
         40,
@@ -177,7 +177,7 @@
       "id": "order",
       "type": "backend",
       "label": "order-service",
-      "sublabel": "SAGA Orchestrator :8083",
+      "sublabel": "SAGA Orchestrator :8084",
       "brand": "spring",
       "pos": [
         500,
@@ -193,7 +193,7 @@
       "id": "payment",
       "type": "backend",
       "label": "payment-service",
-      "sublabel": "Stripe & Webhook :8084",
+      "sublabel": "Stripe & Webhook :8085",
       "brand": "spring",
       "pos": [
         500,
@@ -225,7 +225,7 @@
       "id": "tax",
       "type": "backend",
       "label": "tax-service",
-      "sublabel": "Postal & VAT :8090",
+      "sublabel": "Postal & VAT :8091",
       "brand": "spring",
       "pos": [
         730,
@@ -241,7 +241,7 @@
       "id": "promotion",
       "type": "backend",
       "label": "promotion-service",
-      "sublabel": "Voucher Engine :8089",
+      "sublabel": "Voucher Engine :8093",
       "brand": "spring",
       "pos": [
         730,
@@ -289,7 +289,7 @@
       "id": "notification",
       "type": "backend",
       "label": "notification-service",
-      "sublabel": "Email & Push SMS :8093",
+      "sublabel": "Email & Push SMS :8090",
       "brand": "spring",
       "pos": [
         960,
@@ -336,7 +336,7 @@
       "id": "product",
       "type": "backend",
       "label": "product-service",
-      "sublabel": "Catalog & Brands :8081",
+      "sublabel": "Catalog & Brands :8086",
       "brand": "spring",
       "pos": [
         1190,
@@ -352,7 +352,7 @@
       "id": "search",
       "type": "backend",
       "label": "search-service",
-      "sublabel": "BM25 & Facets :8087",
+      "sublabel": "BM25 & Facets :8094",
       "brand": "spring",
       "pos": [
         1190,
@@ -384,7 +384,7 @@
       "id": "shipping",
       "type": "backend",
       "label": "shipping-service",
-      "sublabel": "Logistics Dispatch :8085",
+      "sublabel": "Logistics Dispatch :8087",
       "brand": "spring",
       "pos": [
         1190,
@@ -400,7 +400,7 @@
       "id": "media",
       "type": "backend",
       "label": "media-service",
-      "sublabel": "Image Processing :8092",
+      "sublabel": "Image Processing :8083",
       "brand": "spring",
       "pos": [
         1420,

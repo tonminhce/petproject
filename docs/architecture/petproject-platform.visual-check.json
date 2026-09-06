@@ -6,9 +6,9 @@
   "status": "skipped",
   "visualReview": "pending",
   "artifact": {
-    "path": "/home/tonminh/Documents/petproject/docs/architecture/petproject-platform.html",
-    "sha256": "dc1896c29b811f14d7995ec4d7521fdad7d48001f431a23f1c66bf3a06866bf2",
-    "bytes": 742449
+    "path": "docs/architecture/petproject-platform.html",
+    "sha256": "4b31d3ef6981b5f5858f2f2fb188c3442cf0ec69fb3ed36f77e20cfe9deadfbd",
+    "bytes": 778052
   },
   "state": {
     "detail": "read",
@@ -24,7 +24,7 @@
       "severity": "warning",
       "message": "Chrome or Chromium is unavailable. Set ARCHIFY_CHROME to its executable path.",
       "subject": {
-        "artifact": "/home/tonminh/Documents/petproject/docs/architecture/petproject-platform.html"
+        "artifact": "docs/architecture/petproject-platform.html"
       },
       "evidence": {
         "executable": null

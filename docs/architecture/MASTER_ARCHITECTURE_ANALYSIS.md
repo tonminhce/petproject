@@ -25,6 +25,7 @@
 4. [Hạ tầng Bắn Sự kiện & Bảng Ma trận Kafka Topics (Event-Driven Backbone)](#4-hạ-tầng-bắn-sự-kiện--bảng-ma-trận-kafka-topics-event-driven-backbone)
 5. [Hạ tầng Lưu trữ Database-per-Service & Chiến lược Đảm bảo Chịu lỗi (Resilience)](#5-hạ-tầng-lưu-trữ-database-per-service--chiến-lược-đảm-bảo-chịu-lỗi-resilience)
 6. [Báo cáo Kiểm định Archify Interactive Diagram](#6-báo-cáo-kiểm-định-archify-interactive-diagram)
+7. [Bộ Sưu Tập Sơ Đồ Tương Tác Archify (Interactive Showcase Diagrams)](#7-bộ-sưu-tập-sơ-đồ-tương-tác-archify-interactive-showcase-diagrams)
 
 ---
 
@@ -819,31 +820,21 @@ Hệ thống loại bỏ hoàn toàn việc join bảng xuyên dịch vụ:
 ---
 
 
-## 7. Bộ Sưu Tập Sơ Đồ Tương Tác Archify (Interactive Showcase Diagrams)
-
-Hệ thống đã biên dịch và bàn giao trọn bộ 3 sơ đồ tương tác độc lập (Standalone HTML với SVG nhúng, Dark/Light Theme, Pan/Zoom và Export) theo tiêu chuẩn chất lượng cao nhất **Showcase Quality Profile (9/9 checks passed, 0 errors, 0 warnings)**:
-
-| Tên Sơ Đồ Archify | Loại Sơ Đồ | File Đặc Tả JSON | File HTML Độc Lập | Điểm Nổi Bật |
-|---|:---:|---|---|---|
-| **1. System Landscape Architecture** | `architecture` | [petproject-platform.architecture.json](file:///home/tonminh/Documents/petproject/docs/architecture/petproject-platform.architecture.json) | [petproject-platform.html](file:///home/tonminh/Documents/petproject/docs/architecture/petproject-platform.html) | Toàn cảnh phân tầng Client, Gateway, Core, Fulfillment, DBs, Kafka |
-| **2. E2E Order SAGA & 2-Phase Stock** | `sequence` | [order-fulfillment-saga.sequence.json](file:///home/tonminh/Documents/petproject/docs/architecture/order-fulfillment-saga.sequence.json) | [order-fulfillment-saga.html](file:///home/tonminh/Documents/petproject/docs/architecture/order-fulfillment-saga.html) | Chi tiết 17 bước SAGA: Pre-checks, Reserve 15m, Stripe HMAC, Commit kho song song |
-| **3. Transactional Outbox & Event Relay** | `workflow` (v2) | [transactional-outbox.workflow.json](file:///home/tonminh/Documents/petproject/docs/architecture/transactional-outbox.workflow.json) | [transactional-outbox.html](file:///home/tonminh/Documents/petproject/docs/architecture/transactional-outbox.html) | Quy trình kép ACID TX, SKIP LOCKED, Kafka Publish, Consumer Idempotency & DLQ |
-
 ## 6. Báo cáo Kiểm định Archify Interactive Diagram
 
 Dựa trên yêu cầu của bạn về việc ứng dụng kỹ năng **Archify**, hệ thống đã biên dịch đặc tả kiến trúc chuẩn vào tệp tương tác:
 
-- **Tệp nguồn đặc tả (Architecture Specification)**: [`docs/architecture/petproject-platform.architecture.json`](file:///home/tonminh/Documents/petproject/docs/architecture/petproject-platform.architecture.json)
-- **Tệp HTML trực quan hóa tương tác (Delivered Interactive HTML)**: [`docs/architecture/petproject-platform.html`](file:///home/tonminh/Documents/petproject/docs/architecture/petproject-platform.html)
-- **Kích thước tệp xuất bản**: **742.4 KB** (Standalone HTML chứa mã SVG vector nhúng, bộ chuyển đổi Light/Dark theme, tìm kiếm component, lọc luồng views, và công cụ xuất file PNG/SVG).
+- **Tệp nguồn đặc tả (Architecture Specification)**: [`petproject-platform.architecture.json`](./petproject-platform.architecture.json)
+- **Tệp HTML trực quan hóa tương tác (Delivered Interactive HTML)**: [`petproject-platform.html`](./petproject-platform.html)
+- **Kích thước tệp xuất bản**: **777.6 KB** (Standalone HTML chứa mã SVG vector nhúng, bộ chuyển đổi Light/Dark theme, tìm kiếm component, lọc luồng views, và công cụ xuất file PNG/SVG).
 
 ### Kết quả Kiểm định Chất lượng (Showcase Quality Profile Receipt):
 ```json
 {
   "command": "deliver",
   "type": "architecture",
-  "specificationSha256": "054d5827fd8c8310462a91a7cad1bc0ec693bd80e162b014d47d2f06da968607",
-  "artifactSha256": "dc1896c29b811f14d7995ec4d7521fdad7d48001f431a23f1c66bf3a06866bf2",
+  "specificationSha256": "037284d9afa57b868e8ea110c4546d50a0c663c60b0cd3f22d67b2101f54800d",
+  "artifactSha256": "4b31d3ef6981b5f5858f2f2fb188c3442cf0ec69fb3ed36f77e20cfe9deadfbd",
   "validation": {
     "checksPassed": 9,
     "checkCount": 9,
@@ -858,6 +849,18 @@ Dựa trên yêu cầu của bạn về việc ứng dụng kỹ năng **Archify
 > [!NOTE]
 > **Minh bạch về Môi trường (Visual Check Status)**:
 > Trên môi trường máy chủ Linux hiện tại, trình duyệt Chrome/Chromium không được cài đặt (`ARCHIFY_CHROME` chưa cấu hình), do đó bước chụp ảnh màn hình tự động (`visual-check`) được ghi nhận trạng thái `skipped` một cách trung thực theo hợp đồng của Archify. Giao diện Viewer UI và các nút chức năng mặc định hiển thị tiếng Anh (fallback chuẩn của Archify cho ngôn ngữ ngoài `en`/`zh-CN`), trong khi toàn bộ tiêu đề, nhãn khối, thẻ ghi chú, ranh giới và luồng quan hệ đều được Việt hóa 100%.
+
+---
+
+## 7. Bộ Sưu Tập Sơ Đồ Tương Tác Archify (Interactive Showcase Diagrams)
+
+Hệ thống đã biên dịch và bàn giao trọn bộ 3 sơ đồ tương tác độc lập (Standalone HTML với SVG nhúng, Dark/Light Theme, Pan/Zoom và Export) theo tiêu chuẩn chất lượng cao nhất **Showcase Quality Profile (9/9 checks passed, 0 errors, 0 warnings)**:
+
+| Tên Sơ Đồ Archify | Loại Sơ Đồ | File Đặc Tả JSON | File HTML Độc Lập | Điểm Nổi Bật |
+|---|:---:|---|---|---|
+| **1. System Landscape Architecture** | `architecture` | [petproject-platform.architecture.json](./petproject-platform.architecture.json) | [petproject-platform.html](./petproject-platform.html) | Toàn cảnh phân tầng Client, Gateway, Core, Fulfillment, DBs, Kafka |
+| **2. E2E Order SAGA & 2-Phase Stock** | `sequence` | [order-fulfillment-saga.sequence.json](./order-fulfillment-saga.sequence.json) | [order-fulfillment-saga.html](./order-fulfillment-saga.html) | Chi tiết 17 bước SAGA: Pre-checks, Reserve 15m, Stripe HMAC, Commit kho song song |
+| **3. Transactional Outbox & Event Relay** | `workflow` (v2) | [transactional-outbox.workflow.json](./transactional-outbox.workflow.json) | [transactional-outbox.html](./transactional-outbox.html) | Quy trình kép ACID TX, SKIP LOCKED, Kafka Publish, Consumer Idempotency & DLQ |
 
 ---
 <p align="center">
