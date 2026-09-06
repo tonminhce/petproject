@@ -1,4 +1,4 @@
-# Production Readiness — Ops Runbook
+# Production Readiness: Ops Runbook
 
 - Date: 2026-09-01
 - Status: Living ops document (epic: 2026-09-01-production-readiness, spec §4)
@@ -18,13 +18,13 @@
 Deploy:
 
 ```bash
-cp .env.prod.example .env.prod   # fill real values — see §4.1–§4.5
+cp .env.prod.example .env.prod   # fill real values: see §4.1-§4.5
 docker compose --env-file .env.prod \
   -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 Both files must pass `docker compose config -q` (spec §4(3)). The overlay
-uses `ports: !override []` (compose v2.24+) to REPLACE base port lists —
+uses `ports: !override []` (compose v2.24+) to REPLACE base port lists: 
 a plain overlay merge would append, not remove.
 
 ## §4.1 Deployment topology (BINDING)
@@ -42,15 +42,15 @@ gateway edge (spec D1 ingress-only rule).
 
 | Host port | Base (dev) | Prod overlay |
 |-----------|------------|--------------|
-| 8080 (gateway ingress) | published | published via `${GATEWAY_INGRESS_PORT}` — only ingress |
-| 9090 (keycloak admin) | published | REMOVED — manage via admin API in-network |
+| 8080 (gateway ingress) | published | published via `${GATEWAY_INGRESS_PORT}`: only ingress |
+| 9090 (keycloak admin) | published | REMOVED: manage via admin API in-network |
 | 5432 / 6379 / 9092 / 9200 / 9000-9001 (infra) | published | REMOVED |
-| 8081–8094 (services) | published | REMOVED |
+| 8081-8094 (services) | published | REMOVED |
 
 `mock-payment-provider` has no published port; disable it for real prod runs
 with `--scale mock-payment-provider=0`.
 
-### XFF trust — trusted reverse proxy is REQUIRED (T5 finding, Important)
+### XFF trust: trusted reverse proxy is REQUIRED (T5 finding, Important)
 
 The gateway's client-IP resolution (backoffice IP allowlist D5 AND the Redis
 per-route rate-limit key) trusts the **first `X-Forwarded-For` entry**. Under
@@ -64,11 +64,11 @@ both defeats the allowlist and forges rate-limit buckets. Therefore:
 
 The overlay sets `GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS=1` (SCG
 `XForwardedRemoteAddressResolver.maxTrustedIndex(1)`) to match the one-hop
-topology above — only change it if the proxy count changes. (Known open item
+topology above: only change it if the proxy count changes. (Known open item
 from the T5 review: gating XFF trust behind an explicit trusted-proxy config
 for the allowlist filter is future hardening; the role gates
 (edge ADMIN + service `@PreAuthorize`) remain the real authorization
-controls — the allowlist is defense-in-depth.)
+controls: the allowlist is defense-in-depth.)
 
 ### ADMIN_IP_ALLOWLIST wiring (D5)
 
@@ -78,14 +78,14 @@ controls — the allowlist is defense-in-depth.)
   safe default.** The overlay wires `ADMIN_IP_ALLOWLIST: ${ADMIN_IP_ALLOWLIST:-}`,
   so an unset `.env.prod` var silently yields the empty string = INACTIVE.
   **Deployment gate: the value must be a non-empty CIDR list in `.env.prod`.**
-- Invalid CIDR entries fail gateway startup (fail-fast — the control never
+- Invalid CIDR entries fail gateway startup (fail-fast: the control never
   silently degrades).
 - Always-bypassed paths: `/api/v1/webhooks/**` (payment + shipping webhooks)
   and `/actuator/health`.
 
-### Secret rotation (D2) — 3 service clients + keycloak admin
+### Secret rotation (D2): 3 service clients + keycloak admin
 
-Dev secrets (`changeme`) ship in the realm import file and base compose —
+Dev secrets (`changeme`) ship in the realm import file and base compose: 
 bootstrap truth only. Prod rotation is one-time per rotation cycle:
 
 1. For `order-service`, `rating-service`, `search-service`: generate strong
@@ -94,7 +94,7 @@ bootstrap truth only. Prod rotation is one-time per rotation cycle:
    are client_credentials.
 2. Set the rotated values in `.env.prod`:
    `ORDER_SERVICE_CLIENT_SECRET`, `RATING_SERVICE_CLIENT_SECRET`,
-   `SEARCH_SERVICE_CLIENT_SECRET` — the overlay injects them over the dev
+   `SEARCH_SERVICE_CLIENT_SECRET`: the overlay injects them over the dev
    defaults. An EMPTY value FAILS CLOSED (Keycloak rejects the
    client_credentials grant); it never silently reuses `changeme`.
 3. Set a strong `KEYCLOAK_ADMIN_PASSWORD` (and `KEYCLOAK_ADMIN`) in
@@ -114,7 +114,7 @@ working end-to-end (HTTP + Kafka headers).
 - The overlay carries the entry as a COMMENTED EXAMPLE on `gateway-service`;
   to export a service's spans, copy the same line into that service's block
   (every fleet service ships the common-spring tracing auto-config).
-- Do NOT wire an empty value — `@ConditionalOnProperty` treats empty-string
+- Do NOT wire an empty value: `@ConditionalOnProperty` treats empty-string
   as present and would create the exporter with a blank endpoint.
 
 ### AUDIT_LOG_PATH volume (D6)
@@ -126,7 +126,7 @@ media, inventory) and mounts the named volume `audit_logs` at
 `/var/log/audit` (parent dirs are created by the sink; appends are crash-safe,
 transient IO failures recover on the next event). If the var were unset,
 events fall back to the stdout `AUDIT` logger. Ship `audit.jsonl` off-box
-with filebeat/vector — the file sink is the seam (spec §6 open item: audit
+with filebeat/vector: the file sink is the seam (spec §6 open item: audit
 sink shippers).
 
 ## 2. Known open items carried (spec §6)
@@ -136,13 +136,13 @@ sink shippers).
 - Redis-backed distributed rate-limit buckets when the gateway scales beyond
   one instance (also closes the in-process bucket-map growth note).
 - XFF trust gating for the allowlist filter (mirroring
-  `GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS`) — see §4.1.
+  `GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS`): see §4.1.
 - **Media purge FAIL-SAFE policy (F-3, H-4):** the production
   `MediaReferenceChecker` asks product-service's internal reference-count
   endpoint (`/internal/products/media-references/{id}`, SERVICE-token gated)
   how many live products still reference the media. When the check cannot
-  PROVE zero references — product outage, non-2xx, timeout, malformed body,
-  rejected service token — the answer is REFERENCED: the purge job skips the
+  PROVE zero references: product outage, non-2xx, timeout, malformed body,
+  rejected service token: the answer is REFERENCED: the purge job skips the
   candidate with a WARN and retries next cycle. Purge never hard-deletes on
   doubt; soft-deleted objects accumulating during an outage is the accepted
   cost, bounded by delete volume. A successful count of 0 is the only
@@ -154,7 +154,7 @@ sink shippers).
 
 ## Future hardening (ratified follow-ups, non-blocking)
 
-1. **Actor resolution Keycloak-shape coupling (runbook item — STAYS):** audit
+1. **Actor resolution Keycloak-shape coupling (runbook item: STAYS):** audit
    actor AND the confirm() idempotency actor both resolve through
    `AuditActorResolver`'s azp-present-without-session-marker ⇒ service rule
    (degradation path is sub-first). Re-verify on Keycloak upgrades
@@ -162,22 +162,22 @@ sink shippers).
    in fleet-hardening H-6 so there is exactly ONE coupling point.
 2. **Kafka wire-shape contract (BINDING, restated post-R1):** producers
    publish JSON-as-String via `KafkaMessagePublisher` →
-   `stringKafkaTemplate` (StringSerializer ×2) — SINGLE-ENCODED UTF-8 JSON
+   `stringKafkaTemplate` (StringSerializer ×2): SINGLE-ENCODED UTF-8 JSON
    on the wire (R1). Consumers use `StringDeserializer` + the
    `BaseKafkaConsumer` unwrap-once boundary and MUST tolerate single- AND
    legacy double-encoded values (H-1 defense-in-depth for in-flight/retained
    records from pre-R1 producers). IT helpers MUST publish through the same
    production path (`KafkaMessagePublisher`); one legacy double-encoded pin
    per service is kept as in-flight-tolerance proof. New typed consumers
-   inherit the tolerant base by construction — do not reintroduce typed
+   inherit the tolerant base by construction: do not reintroduce typed
    `JsonDeserializer` bindings.
 
 Closed items (kept for traceability, resolved by fleet-hardening):
 
-- ~~Central OTel wiring~~ — CLOSED (R1/T5): the common-spring tracing
+- ~~Central OTel wiring~~: CLOSED (R1/T5): the common-spring tracing
   `BeanPostProcessor` auto-injects the traceparent interceptor into EVERY
   `RestClient.Builder` bean; the 4 per-service manual sites were removed.
-- ~~`confirm()` semantic~~ — CLOSED (H-6/T6): the controller resolves the
+- ~~`confirm()` semantic~~: CLOSED (H-6/T6): the controller resolves the
   actor by token shape (ADMIN → sub, SERVICE → `service:<azp>`); idempotency
   rows store the string actor label, so machine callers are no longer
   misattributed to a service-account UUID.
@@ -185,7 +185,7 @@ Closed items (kept for traceability, resolved by fleet-hardening):
 ## Elasticsearch security (H34)
 
 The dev compose flips `xpack.security.enabled=true` and keeps
-`xpack.security.http.ssl.enabled=false` — a deliberate dev trade-off:
+`xpack.security.http.ssl.enabled=false`: a deliberate dev trade-off:
 
 - **Why HTTP for dev:** the fleet's reverse proxy / LB is the only place TLS
   belongs; cert provisioning inside `docker-compose.yml` would require
@@ -209,7 +209,7 @@ The dev compose flips `xpack.security.enabled=true` and keeps
   privileges (read + write on `search-*` indices) and remove the
   `elastic` superuser from the rotation set.
 
-## Battery (stability gate — BINDING)
+## Battery (stability gate: BINDING)
 
 The battery is the fleet's full-suite stability gate, run from the repo root
 before and after every hardening pass:
@@ -221,7 +221,7 @@ docker compose config -q                    # when compose/overlay was touched
 ```
 
 **Scope (BINDING since fleet-hardening H-11):** the battery permanently
-includes the seven shared modules — their suites must never be masked again.
+includes the seven shared modules: their suites must never be masked again.
 
 ```bash
 ./mvnw -pl utils/common-core,utils/common-spring,utils/common-kafka,\
@@ -231,9 +231,9 @@ utils/common-storage test \
 ```
 
 Contract notes (H-9): ITs execute under `mvn test` via the per-module
-surefire `**/*IT.java` includes — `mvn test`, not `failsafe`, is the
+surefire `**/*IT.java` includes: `mvn test`, not `failsafe`, is the
 battery's integration gate; `install -DskipTests` is the fleet compile gate,
 not a quality gate. `common-spring` intentionally ships a no-datasource
 boot proof (`CommonLibraryStarterTests`) that opts JPA auditing out via
-`shop.jpa.auditing.enabled=false` — JPA services keep the default
+`shop.jpa.auditing.enabled=false`: JPA services keep the default
 `matchIfMissing=true` behavior and are covered by their own suites.

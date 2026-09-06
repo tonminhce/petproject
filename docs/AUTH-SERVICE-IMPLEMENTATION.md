@@ -1,15 +1,15 @@
 # Auth Service Implementation Plan
 
-> Scope: Build `auth-service` from scratch, porting patterns from `hoangtien2k3/ecommerce-microservices` reference. User identity is delegated to Keycloak — auth-service only stores a shadow copy (username, email, phone, role mapping) for fast lookups.
+> Scope: Build `auth-service` from scratch, porting patterns from `hoangtien2k3/ecommerce-microservices` reference. User identity is delegated to Keycloak: auth-service only stores a shadow copy (username, email, phone, role mapping) for fast lookups.
 
 **Total: ~28 files** across 9 packages + Liquibase changelog + tests.
 
-> **STATUS (2026-08-25)** — core implemented: `AuthController` (sign-up / login /
+> **STATUS (2026-08-25)**: core implemented: `AuthController` (sign-up / login /
 > refresh / logout), `UserController` (me / profile / soft-delete / restore),
 > entities `User`+`Role` (UUID, soft-delete via `SoftDeletable`), repositories,
 > DTOs, ModelMapper, `AuthServiceImpl` / `UserServiceImpl` / `RoleServiceImpl`,
 > Liquibase (master + 2 changesets + seed). **Deviations from this plan**:
-> login is **ROPC** (`POST /api/v1/auth/login`) — the SSO flow
+> login is **ROPC** (`POST /api/v1/auth/login`): the SSO flow
 > (`GET /login`→302, `/callback`, `/session`), `RoleController`,
 > `SecurityConfig`, `SsoProperties`, `SsoSessionStore`, per-service
 > `application.yml` and tests are **not yet done**. `KeycloakAuthClient` was
@@ -19,7 +19,7 @@
 
 ---
 
-## Phase 0 — Pre-flight checklist
+## Phase 0: Pre-flight checklist
 
 Before writing code, confirm these from the common-lib port:
 
@@ -31,7 +31,7 @@ Before writing code, confirm these from the common-lib port:
 
 ---
 
-## Phase 1 — POM + Application class (2 files)
+## Phase 1: POM + Application class (2 files)
 
 ### 1.1 `auth-service/pom.xml`
 
@@ -78,18 +78,18 @@ Add these dependencies to your existing POM (which already has `common-spring`):
 
 ### 1.2 `auth-service/src/main/java/com/shop/authservice/AuthServiceApplication.java`
 
-Already exists — just verify it has:
+Already exists: just verify it has:
 - `@SpringBootApplication`
 - `@EnableJpaAuditing` (if you plan to use auditing)
 - `main(String[] args)` running `SpringApplication.run(...)`
 
 ---
 
-## Phase 2 — Configuration (3 files)
+## Phase 2: Configuration (3 files)
 
 ### 2.1 `auth-service/src/main/resources/application.yml`
 
-Copy from reference — sets port 8088, datasource, Liquibase, Keycloak, i18n, CORS. Your existing `common-spring/application.yml` already provides defaults via inheritance.
+Copy from reference: sets port 8088, datasource, Liquibase, Keycloak, i18n, CORS. Your existing `common-spring/application.yml` already provides defaults via inheritance.
 
 ### 2.2 `src/main/java/.../config/SecurityConfig.java`
 
@@ -123,7 +123,7 @@ public class SsoProperties {
 
 ---
 
-## Phase 3 — Entities (3 files)
+## Phase 3: Entities (3 files)
 
 ### 3.1 `entity/RoleName.java`
 
@@ -154,7 +154,7 @@ public enum RoleName { USER, PM, ADMIN }
 
 ---
 
-## Phase 4 — Repositories (2 files)
+## Phase 4: Repositories (2 files)
 
 ### 4.1 `repository/RoleRepository.java`
 
@@ -181,7 +181,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 ---
 
-## Phase 5 — Liquibase changelog (2 files)
+## Phase 5: Liquibase changelog (2 files)
 
 ### 5.1 `src/main/resources/db/changelog/db.changelog-master.yaml`
 
@@ -199,7 +199,7 @@ Creates:
 
 ---
 
-## Phase 6 — Constants (1 file)
+## Phase 6: Constants (1 file)
 
 ### 6.1 `constant/RoleConstant.java`
 
@@ -217,7 +217,7 @@ public final class RoleConstant {
 
 ---
 
-## Phase 7 — DTOs (6 files)
+## Phase 7: DTOs (6 files)
 
 ### 7.1 `dto/request/RegisterRequest.java`
 
@@ -229,7 +229,7 @@ Lombok `@Getter @Setter`. Fields with Bean Validation:
 - `gender` (not blank)
 - `phone` (Vietnam phone regex)
 - `avatar` (URL regex, optional)
-- `Set<String> roles` (optional — defaults to USER)
+- `Set<String> roles` (optional: defaults to USER)
 
 ### 7.2 `dto/request/LoginRequest.java`
 
@@ -240,7 +240,7 @@ Lombok `@Getter @Setter`. Fields with Bean Validation:
 
 - `oldPassword`, `newPassword`, `confirmPassword`
 
-(Note: reference throws `auth.password.managed.by.keycloak` — Keycloak handles password changes.)
+(Note: reference throws `auth.password.managed.by.keycloak`: Keycloak handles password changes.)
 
 ### 7.4 `dto/request/UpdateUserRequest.java`
 
@@ -267,7 +267,7 @@ public class UserResponse {
 
 ---
 
-## Phase 8 — Mappers (2 files)
+## Phase 8: Mappers (2 files)
 
 ### 8.1 `mapper/UserMapper.java`
 
@@ -309,7 +309,7 @@ public final class RoleMapper {
 
 ---
 
-## Phase 9 — Services (4 files)
+## Phase 9: Services (4 files)
 
 ### 9.1 `service/UserService.java` (interface)
 
@@ -335,18 +335,18 @@ Key implementation details:
 ### 9.4 `service/SsoSessionStore.java`
 
 In-memory `ConcurrentHashMap`-based store for SSO handshake secrets:
-- `loginStates` — CSRF guard for `/login → /callback` flow (TTL: 300s)
-- `tickets` — single-use handle for `/callback → /session` flow (TTL: 60s)
+- `loginStates`: CSRF guard for `/login → /callback` flow (TTL: 300s)
+- `tickets`: single-use handle for `/callback → /session` flow (TTL: 60s)
 
-Methods: `createLoginState`, `consumeLoginState`, `storeTokens`, `consumeTokens`. **Single-replica only** — comment that scale-out would need Redis.
+Methods: `createLoginState`, `consumeLoginState`, `storeTokens`, `consumeTokens`. **Single-replica only**: comment that scale-out would need Redis.
 
 ---
 
-## Phase 10 — Controllers (3 files)
+## Phase 10: Controllers (3 files)
 
 ### 10.1 `controller/AuthController.java`
 
-`@RequestMapping("/api/v1/auth")` — public endpoints (no `@PreAuthorize`).
+`@RequestMapping("/api/v1/auth")`: public endpoints (no `@PreAuthorize`).
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -377,7 +377,7 @@ Frontend → GET /api/v1/auth/session?ticket=DEF456
 
 ### 10.2 `controller/UserController.java`
 
-`@RequestMapping(ApiPaths.USERS)` — protected with `@PreAuthorize`.
+`@RequestMapping(ApiPaths.USERS)`: protected with `@PreAuthorize`.
 
 | Method | Path | Auth |
 |--------|------|------|
@@ -391,7 +391,7 @@ Frontend → GET /api/v1/auth/session?ticket=DEF456
 
 ### 10.3 `controller/RoleController.java`
 
-`@RequestMapping(ApiPaths.ROLES)` — all ADMIN only.
+`@RequestMapping(ApiPaths.ROLES)`: all ADMIN only.
 
 | Method | Path |
 |--------|------|
@@ -401,21 +401,21 @@ Frontend → GET /api/v1/auth/session?ticket=DEF456
 
 ---
 
-## Phase 11 — Tests (5 files, optional but recommended)
+## Phase 11: Tests (5 files, optional but recommended)
 
 | Test class | Coverage |
 |-----------|----------|
-| `AuthControllerTest` | @WebMvcTest — signup, SSO redirect, token endpoints |
+| `AuthControllerTest` | @WebMvcTest: signup, SSO redirect, token endpoints |
 | `UserControllerTest` | @WebMvcTest with `@MockBean UserService` |
 | `RoleControllerTest` | @WebMvcTest with `@MockBean RoleService` |
-| `UserServiceImplTest` | Mockito — uniqueness checks, Keycloak rollback |
-| `RoleServiceImplTest` | Mockito — assign/revoke edge cases |
+| `UserServiceImplTest` | Mockito: uniqueness checks, Keycloak rollback |
+| `RoleServiceImplTest` | Mockito: assign/revoke edge cases |
 
 Reference has them in `src/test/java/.../controller/` and `src/test/java/.../service/`.
 
 ---
 
-## Phase 12 — Message bundle (optional override)
+## Phase 12: Message bundle (optional override)
 
 If auth-service needs auth-specific messages, override at:
 `auth-service/src/main/resources/messages/messages_vi.properties`
@@ -440,7 +440,7 @@ Phase 6 → 8 → 9.3 → 10.3
    ↓ smoke test: assign role
 Phase 9.2 (update/delete) → 10.2
    ↓ smoke test: CRUD user
-Phase 11 — tests
+Phase 11: tests
 ```
 
 ---

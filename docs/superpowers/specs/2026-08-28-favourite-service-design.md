@@ -4,15 +4,15 @@
 > **Path:** `docs/superpowers/specs/2026-08-28-favourite-service-design.md`
 > **Author:** OpenCode (MiniMax-M3) + user
 > **Reference:** [`hoangtien2k3/ecommerce-microservices`](https://github.com/hoangtien2k3/ecommerce-microservices) (favourite-service module)
-> **Pattern source:** [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./2026-08-26-product-service-design.md) — favourite-service is a deliberate slim-down of that pattern.
+> **Pattern source:** [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./2026-08-26-product-service-design.md) - favourite-service is a deliberate slim-down of that pattern.
 
 ---
 
 ## 1. Overview
 
-Favourite-service là microservice quản lý wishlist/favourites của user — relationship N-N giữa user và product, user-scoped ownership (a user's favourites are never visible to other users).
+Favourite-service is the microservice managing user wishlists and favourites: N-N relationship between users and products with user-scoped ownership (a user's favourites are never visible to other users).
 
-**Bounded context:** User engagement — private per-user CRUD on a (userId, productId) tuple.
+**Bounded context:** User engagement - private per-user CRUD on a (userId, productId) tuple.
 
 **Tech stack (Spring Boot 4.1.1, Java 25, package `com.shop.favouriteservice`):**
 
@@ -25,11 +25,11 @@ Favourite-service là microservice quản lý wishlist/favourites của user —
 | Common | `common-spring`, `common-core`, `common-security`, `common-logging` | Same fleet baseline |
 
 **Out of scope (deliberate):**
-- Cross-service validation of `productId` against product-service — see §6.1
-- Redis caching — see §6.2
-- Kafka events — see §6.3
-- Keycloak admin operations — favourite-service is read-only on JWT subject, never mutates Keycloak
-- Admin endpoints — favourites are private to the user; no ADMIN role checks needed
+- Cross-service validation of `productId` against product-service - see §6.1
+- Redis caching - see §6.2
+- Kafka events - see §6.3
+- Keycloak admin operations - favourite-service is read-only on JWT subject, never mutates Keycloak
+- Admin endpoints - favourites are private to the user; no ADMIN role checks needed
 
 ---
 
@@ -39,21 +39,21 @@ Favourite-service là microservice quản lý wishlist/favourites của user —
 
 ```
 favourite-service/
-├── FavouriteServiceApplication.java                # @SpringBootApplication entrypoint
-├── controller/FavouriteController.java             # REST endpoints under ApiPaths.FAVOURITES
+├── FavouriteServiceApplication.java # @SpringBootApplication entrypoint
+├── controller/FavouriteController.java # REST endpoints under ApiPaths.FAVOURITES
 ├── dto/
-│   ├── request/FavouriteCreateRequest.java         # record: { productId }
-│   └── response/FavouriteResponse.java             # record: { id, userId, productId, createdAt }
-├── entity/Favourite.java                           # extends AbstractMappedEntity + @SQLRestriction
-├── repository/FavouriteRepository.java             # JpaRepository<Favourite, UUID>
-├── mapper/FavouriteMapper.java                     # @Component inject ModelMapper
+│ ├── request/FavouriteCreateRequest.java # record: { productId }
+│ └── response/FavouriteResponse.java # record: { id, userId, productId, createdAt }
+├── entity/Favourite.java # extends AbstractMappedEntity + @SQLRestriction
+├── repository/FavouriteRepository.java # JpaRepository<Favourite, UUID>
+├── mapper/FavouriteMapper.java # @Component inject ModelMapper
 └── service/
-    ├── FavouriteService.java                       # interface
-    └── impls/FavouriteServiceImpl.java             # @Service + @Transactional
+ ├── FavouriteService.java # interface
+ └── impls/FavouriteServiceImpl.java # @Service + @Transactional
 ```
 
-No `config/` package — no cache config, no security override (common-security is sufficient).
-No `exception/` — uses `BusinessException` from common-core.
+No `config/` package - no cache config, no security override (common-security is sufficient).
+No `exception/` - uses `BusinessException` from common-core.
 
 ### 2.2 Integrations map
 
@@ -68,13 +68,13 @@ No `exception/` — uses `BusinessException` from common-core.
 
 ### 2.3 Decisions & rationale
 
-- **Single entity, single controller, no DTO splitting** — favourite is a single tuple, no relations to load.
-- **`AbstractMappedEntity` over `SoftDeletable` direct** — match product-service pattern; gives audit (createdAt/updatedAt/createdBy/updatedBy) for free alongside soft-delete.
-- **`@SQLRestriction("deleted = false")`** — auto-filter every query; no `*AndDeletedFalse` repository method suffix (consistent with auth-service User + product-service Product).
-- **Partial unique index** on (userId, productId) WHERE deleted = false — duplicate prevention that allows soft-deleted resurrection of same (user, product).
-- **`AuthenticatedUser.requireCurrent()` static call** — pulls the verified JWT subject from `SecurityContextHolder` via common-security helper. The `id` field is `String` (JWT `sub` claim, which is Keycloak-formatted as a UUID string); service layer parses to `UUID` once at the controller boundary.
-  - **Why not `@AuthenticationPrincipal AuthenticatedUser me`** — Spring Security's `AuthenticationPrincipalArgumentResolver` matches on principal type. Our principal is `Jwt` (set by `JwtAuthenticationConverter`), not `AuthenticatedUser`. There is no built-in converter for the custom record. Static `requireCurrent()` is the documented idiom in `common-security` and is the cleanest path.
-  - `UUID.fromString(me.id())` — Keycloak issues `sub` as a UUID v4 string; throw `BusinessException.unauthorized("favourite.user.subject.malformed")` (new i18n key in §7.2) if parse fails (defensive — a valid Keycloak JWT will never produce this exception).
+- **Single entity, single controller, no DTO splitting** - favourite is a single tuple, no relations to load.
+- **`AbstractMappedEntity` over `SoftDeletable` direct** - match product-service pattern; gives audit (createdAt/updatedAt/createdBy/updatedBy) for free alongside soft-delete.
+- **`@SQLRestriction("deleted = false")`** - auto-filter every query; no `*AndDeletedFalse` repository method suffix (consistent with auth-service User + product-service Product).
+- **Partial unique index** on (userId, productId) WHERE deleted = false - duplicate prevention that allows soft-deleted resurrection of same (user, product).
+- **`AuthenticatedUser.requireCurrent()` static call** - pulls the verified JWT subject from `SecurityContextHolder` via common-security helper. The `id` field is `String` (JWT `sub` claim, which is Keycloak-formatted as a UUID string); service layer parses to `UUID` once at the controller boundary.
+ - **Why not `@AuthenticationPrincipal AuthenticatedUser me`** - Spring Security's `AuthenticationPrincipalArgumentResolver` matches on principal type. Our principal is `Jwt` (set by `JwtAuthenticationConverter`), not `AuthenticatedUser`. There is no built-in converter for the custom record. Static `requireCurrent()` is the documented idiom in `common-security` and is the cleanest path.
+ - `UUID.fromString(me.id())` - Keycloak issues `sub` as a UUID v4 string; throw `BusinessException.unauthorized("favourite.user.subject.malformed")` (new i18n key in §7.2) if parse fails (defensive - a valid Keycloak JWT will never produce this exception).
 
 ---
 
@@ -85,14 +85,14 @@ No `exception/` — uses `BusinessException` from common-core.
 | Field | Type | Constraint |
 |---|---|---|
 | `id` | `UUID` | PK, identity (`@GeneratedValue(UUID)`) |
-| `userId` | `UUID` | not null — sourced from `AuthenticatedUser.id()` at create time |
-| `productId` | `UUID` | not null — accepted from request, no validation |
+| `userId` | `UUID` | not null - sourced from `AuthenticatedUser.id()` at create time |
+| `productId` | `UUID` | not null - accepted from request, no validation |
 | `createdAt` / `updatedAt` / `createdBy` / `updatedBy` | (from `AbstractMappedEntity`) | auto-populated by `AuditorAware` |
 | `deleted` / `deletedAt` / `deletedBy` | (from `SoftDeletable`) | `markDeleted(actor)` API |
 
 **Indexes:**
-- `UNIQUE INDEX (user_id, product_id) WHERE deleted = false` — duplicate prevention, allows re-favourite after soft-delete
-- `INDEX (user_id)` — list-by-user query path
+- `UNIQUE INDEX (user_id, product_id) WHERE deleted = false` - duplicate prevention, allows re-favourite after soft-delete
+- `INDEX (user_id)` - list-by-user query path
 
 **No FK** to product-service's `products` table (cross-schema coupling avoided per §6.1).
 
@@ -104,15 +104,15 @@ No `exception/` — uses `BusinessException` from common-core.
 @SQLRestriction("deleted = false")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Favourite extends AbstractMappedEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+ @Id
+ @GeneratedValue(strategy = GenerationType.UUID)
+ private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+ @Column(name = "user_id", nullable = false)
+ private UUID userId;
 
-    @Column(name = "product_id", nullable = false)
-    private UUID productId;
+ @Column(name = "product_id", nullable = false)
+ private UUID productId;
 }
 ```
 
@@ -120,7 +120,7 @@ public class Favourite extends AbstractMappedEntity {
 
 ```
 favourite-service/src/main/resources/db/changelog/
-├── db.changelog-master.yaml       (include changelog-001)
+├── db.changelog-master.yaml (include changelog-001)
 └── changelog-001-initial-schema.yaml
 ```
 
@@ -133,51 +133,51 @@ Single changeset creates `favourites` table with all 11 columns (4 audit + 3 sof
 ```java
 public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
 
-    // Auto-filtered via @SQLRestriction — no *AndDeletedFalse suffix needed
+ // Auto-filtered via @SQLRestriction - no *AndDeletedFalse suffix needed
 
-    List<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId);
+ List<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-    Optional<Favourite> findByIdAndUserId(UUID id, UUID userId);
+ Optional<Favourite> findByIdAndUserId(UUID id, UUID userId);
 
-    Optional<Favourite> findByUserIdAndProductId(UUID userId, UUID productId);
+ Optional<Favourite> findByUserIdAndProductId(UUID userId, UUID productId);
 
-    boolean existsByUserIdAndProductId(UUID userId, UUID productId);
+ boolean existsByUserIdAndProductId(UUID userId, UUID productId);
 
-    /**
-     * Soft-delete by (userId, favouriteId) pair — guards against cross-user deletion.
-     * Bypasses @SQLRestriction via native UPDATE; row stays in DB for audit.
-     */
-    @Modifying
-    @Query("""
-            UPDATE Favourite f
-               SET f.deleted = true,
-                   f.deletedAt = CURRENT_TIMESTAMP,
-                   f.deletedBy = :deletedBy
-             WHERE f.id = :id
-               AND f.userId = :userId
-               AND f.deleted = false
-            """)
-    int softDeleteByIdAndUserId(@Param("id") UUID id,
-                                 @Param("userId") UUID userId,
-                                 @Param("deletedBy") String deletedBy);
+ /**
+ * Soft-delete by (userId, favouriteId) pair - guards against cross-user deletion.
+ * Bypasses @SQLRestriction via native UPDATE; row stays in DB for audit.
+ */
+ @Modifying
+ @Query("""
+ UPDATE Favourite f
+ SET f.deleted = true,
+ f.deletedAt = CURRENT_TIMESTAMP,
+ f.deletedBy = :deletedBy
+ WHERE f.id = :id
+ AND f.userId = :userId
+ AND f.deleted = false
+ """)
+ int softDeleteByIdAndUserId(@Param("id") UUID id,
+ @Param("userId") UUID userId,
+ @Param("deletedBy") String deletedBy);
 
-    @Modifying
-    @Query("""
-            UPDATE Favourite f
-               SET f.deleted = true,
-                   f.deletedAt = CURRENT_TIMESTAMP,
-                   f.deletedBy = :deletedBy
-             WHERE f.userId = :userId
-               AND f.productId = :productId
-               AND f.deleted = false
-            """)
-    int softDeleteByUserIdAndProductId(@Param("userId") UUID userId,
-                                        @Param("productId") UUID productId,
-                                        @Param("deletedBy") String deletedBy);
+ @Modifying
+ @Query("""
+ UPDATE Favourite f
+ SET f.deleted = true,
+ f.deletedAt = CURRENT_TIMESTAMP,
+ f.deletedBy = :deletedBy
+ WHERE f.userId = :userId
+ AND f.productId = :productId
+ AND f.deleted = false
+ """)
+ int softDeleteByUserIdAndProductId(@Param("userId") UUID userId,
+ @Param("productId") UUID productId,
+ @Param("deletedBy") String deletedBy);
 }
 ```
 
-**N+1 / batch:** Single-entity with no relations — no N+1 risk. List endpoint uses single query with index on `user_id`.
+**N+1 / batch:** Single-entity with no relations - no N+1 risk. List endpoint uses single query with index on `user_id`.
 
 ---
 
@@ -187,15 +187,15 @@ public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
 
 ```java
 public interface FavouriteService {
-    List<FavouriteResponse> findAllByCurrentUser(UUID userId);
-    FavouriteResponse findById(UUID id, UUID userId);
-    FavouriteResponse create(UUID userId, FavouriteCreateRequest request);
-    void deleteById(UUID id, UUID userId);
-    void deleteByProductId(UUID userId, UUID productId);
+ List<FavouriteResponse> findAllByCurrentUser(UUID userId);
+ FavouriteResponse findById(UUID id, UUID userId);
+ FavouriteResponse create(UUID userId, FavouriteCreateRequest request);
+ void deleteById(UUID id, UUID userId);
+ void deleteByProductId(UUID userId, UUID productId);
 }
 ```
 
-Service methods take `UUID userId` directly — the controller is responsible for resolving and parsing the JWT subject before calling (see §8). This keeps the service testable without any Spring Security context in unit tests.
+Service methods take `UUID userId` directly - the controller is responsible for resolving and parsing the JWT subject before calling (see §8). This keeps the service testable without any Spring Security context in unit tests.
 
 ### 5.2 Implementation highlights
 
@@ -204,70 +204,70 @@ Service methods take `UUID userId` directly — the controller is responsible fo
 @RequiredArgsConstructor
 public class FavouriteServiceImpl implements FavouriteService {
 
-    private final FavouriteRepository repo;
-    private final FavouriteMapper mapper;
-    private final AuditorAware<String> auditorAware;
+ private final FavouriteRepository repo;
+ private final FavouriteMapper mapper;
+ private final AuditorAware<String> auditorAware;
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<FavouriteResponse> findAllByCurrentUser(UUID userId) {
-        return repo.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
-    }
+ @Override
+ @Transactional(readOnly = true)
+ public List<FavouriteResponse> findAllByCurrentUser(UUID userId) {
+ return repo.findByUserIdOrderByCreatedAtDesc(userId)
+ .stream()
+ .map(mapper::toResponse)
+ .toList();
+ }
 
-    @Override
-    @Transactional(readOnly = true)
-    public FavouriteResponse findById(UUID id, UUID userId) {
-        return mapper.toResponse(findOwnedOrThrow(id, userId));
-    }
+ @Override
+ @Transactional(readOnly = true)
+ public FavouriteResponse findById(UUID id, UUID userId) {
+ return mapper.toResponse(findOwnedOrThrow(id, userId));
+ }
 
-    @Override
-    @Transactional
-    public FavouriteResponse create(UUID userId, FavouriteCreateRequest request) {
-        if (repo.existsByUserIdAndProductId(userId, request.productId())) {
-            throw BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS);
-        }
-        Favourite favourite = Favourite.builder()
-                .userId(userId)
-                .productId(request.productId())
-                .build();
-        return mapper.toResponse(repo.save(favourite));
-    }
+ @Override
+ @Transactional
+ public FavouriteResponse create(UUID userId, FavouriteCreateRequest request) {
+ if (repo.existsByUserIdAndProductId(userId, request.productId())) {
+ throw BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS);
+ }
+ Favourite favourite = Favourite.builder()
+ .userId(userId)
+ .productId(request.productId())
+ .build();
+ return mapper.toResponse(repo.save(favourite));
+ }
 
-    @Override
-    @Transactional
-    public void deleteById(UUID id, UUID userId) {
-        int affected = repo.softDeleteByIdAndUserId(
-                id, userId, auditorAware.getCurrentAuditor().orElse("system"));
-        if (affected == 0) {
-            throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id);
-        }
-    }
+ @Override
+ @Transactional
+ public void deleteById(UUID id, UUID userId) {
+ int affected = repo.softDeleteByIdAndUserId(
+ id, userId, auditorAware.getCurrentAuditor().orElse("system"));
+ if (affected == 0) {
+ throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id);
+ }
+ }
 
-    @Override
-    @Transactional
-    public void deleteByProductId(UUID userId, UUID productId) {
-        int affected = repo.softDeleteByUserIdAndProductId(
-                userId, productId, auditorAware.getCurrentAuditor().orElse("system"));
-        if (affected == 0) {
-            // Code riêng cho by-product: message "Favourite {0} not found" với UUID
-            // sản phẩm đọc sai ngữ cảnh. Xem §7.2 (FAV-6003).
-            throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
-        }
-    }
+ @Override
+ @Transactional
+ public void deleteByProductId(UUID userId, UUID productId) {
+ int affected = repo.softDeleteByUserIdAndProductId(
+ userId, productId, auditorAware.getCurrentAuditor().orElse("system"));
+ if (affected == 0) {
+ // Dedicated code for by-product: message "Favourite {0} not found" with UUID
+ // reads out of context. See §7.2 (FAV-6003).
+ throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
+ }
+ }
 
-    private Favourite findOwnedOrThrow(UUID id, UUID userId) {
-        return repo.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id));
-    }
+ private Favourite findOwnedOrThrow(UUID id, UUID userId) {
+ return repo.findByIdAndUserId(id, userId)
+ .orElseThrow(() -> BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id));
+ }
 }
 ```
 
-**Concurrency / idempotency:** Concurrent double-add race tolerated — `@SQLRestriction` + partial unique index means second save throws `DataIntegrityViolationException` (translated to `CONFLICT` by `ApiExceptionHandler`). Acceptable; user retries see "already exists".
+**Concurrency / idempotency:** Concurrent double-add race tolerated - `@SQLRestriction` + partial unique index means second save throws `DataIntegrityViolationException` (translated to `CONFLICT` by `ApiExceptionHandler`). Acceptable; user retries see "already exists".
 
-**Soft-delete actor:** `auditorAware.getCurrentAuditor().orElse("system")` — same pattern as `ProductServiceImpl.delete`. For async paths (none here) the actor would be "system".
+**Soft-delete actor:** `auditorAware.getCurrentAuditor().orElse("system")` - same pattern as `ProductServiceImpl.delete`. For async paths (none here) the actor would be "system".
 
 ---
 
@@ -275,8 +275,8 @@ public class FavouriteServiceImpl implements FavouriteService {
 
 ### 6.1 No cross-service `productId` validation
 Per user choice during brainstorm (2026-08-28). Trade-off:
-- **Pro:** Removes dependency on product-service availability; service stays at S = 1–2 days.
-- **Pro:** Simpler error model — never depends on cross-service latency.
+- **Pro:** Removes dependency on product-service availability; service stays at S = 1-2 days.
+- **Pro:** Simpler error model - never depends on cross-service latency.
 - **Con:** Orphan FK possible if a product is deleted in product-service but the favourite row remains.
 - **Mitigation (future, not in this spec):** GET `/api/v1/favourites` could optionally join product-service for display; we keep raw IDs and let the UI/future BFF enrich. No code change required.
 
@@ -285,10 +285,10 @@ Per user choice during brainstorm (2026-08-28). Detailed justification:
 
 | Factor | product-service (Redis OK) | favourite-service (Redis skip) |
 |---|---|---|
-| Read pattern | Public catalog — many readers, few writers | Per-user dashboard — only the user reads their own |
+| Read pattern | Public catalog - many readers, few writers | Per-user dashboard - only the user reads their own |
 | Content stability | Product rarely changes | User adds/removes frequently |
-| Per-key benefit | One cache entry serves many users | One entry per (user) — invalidation per write |
-| Realistic TTL | 10 minutes | ≤ 30 seconds — minimal benefit |
+| Per-key benefit | One cache entry serves many users | One entry per (user) - invalidation per write |
+| Realistic TTL | 10 minutes | ≤ 30 seconds - minimal benefit |
 | Data size | Large table + joins | Tiny table + index lookup |
 | Stampede risk | Real during flash sales | Negligible |
 
@@ -315,15 +315,15 @@ Unlike product-service (which required `AbstractMappedEntity`, `JpaAuditingAutoC
 `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java`:
 
 ```java
-// In a new // ---- Favourite domain ---- section (range 6xxx — PAY already owns 5xxx):
+// In a new // ---- Favourite domain ---- section (range 6xxx - PAY already owns 5xxx):
 FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
 FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
 FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
 ```
 
-> **FAV-6003 (rev 2):** `DELETE /by-product/{productId}` miss cần message đúng ngữ cảnh
-> ("no favourite found for product {0}") — tái dùng FAV-6001 sẽ in ra
-> `Favourite <product-uuid> not found`, gây nhầm đó là favourite id.
+> **FAV-6003 (rev 2):** `DELETE /by-product/{productId}` miss requires context-aware message
+> ("no favourite found for product {0}"). Reusing FAV-6001 prints
+> `Favourite <product-uuid> not found`, causing confusion with favourite ID.
 
 `utils/common-spring/src/main/resources/messages/messages_en.properties` (and `messages_vi.properties`):
 ```properties
@@ -335,52 +335,52 @@ favourite.user.subject.malformed=Authentication token subject is not a valid use
 
 Vietnamese (`messages_vi.properties`):
 ```properties
-favourite.not.found=Không tìm thấy mục yêu thích {0}
-favourite.already.exists=Mục yêu thích đã tồn tại
-favourite.product.not.found=Không tìm thấy mục yêu thích cho sản phẩm {0}
-favourite.user.subject.malformed=Token xác thực không chứa user id hợp lệ
+favourite.not.found=Favourite {0} not found (VI translation)
+favourite.already.exists=Favourite already exists (VI translation)
+favourite.product.not.found=No favourite found for product {0} (VI translation)
+favourite.user.subject.malformed=Authentication token does not contain a valid user ID (VI translation)
 ```
 
 ### 7.3 favourite-service `application.yml`
 
 ```yaml
 # =============================================================================
-#  favourite-service — User wishlist (favourites).
-#  Pure user-scoped CRUD. No Kafka, no Redis, no external service calls.
+# favourite-service : User wishlist (favourites).
+# Pure user-scoped CRUD. No Kafka, no Redis, no external service calls.
 #
-#  Platform-wide defaults live in `common-spring/application.yml` (inherited).
-#  Only service-specific overrides belong here.
+# Platform-wide defaults live in `common-spring/application.yml` (inherited).
+# Only service-specific overrides belong here.
 # =============================================================================
 spring:
-  application:
-    name: favourite-service
+ application:
+ name: favourite-service
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/favouriteservice}
-    username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:admin}
-    driver-class-name: org.postgresql.Driver
+ datasource:
+ url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/favouriteservice}
+ username: ${POSTGRES_USER:admin}
+ password: ${POSTGRES_PASSWORD:admin}
+ driver-class-name: org.postgresql.Driver
 
-  jpa:
-    hibernate:
-      # Schema is owned by Liquibase — never let Hibernate mutate it.
-      ddl-auto: validate
-    open-in-view: false
+ jpa:
+ hibernate:
+ # Schema is owned by Liquibase : never let Hibernate mutate it.
+ ddl-auto: validate
+ open-in-view: false
 
-  liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.yaml
+ liquibase:
+ change-log: classpath:db/changelog/db.changelog-master.yaml
 
 server:
-  # Override the common-spring default 8080 (compose maps 8081:8081).
-  port: ${SERVER_PORT:8081}
-  shutdown: graceful
+ # Override the common-spring default 8080 (compose maps 8081:8081).
+ port: ${SERVER_PORT:8081}
+ shutdown: graceful
 
 shop:
-  application:
-    name: favourite-service
-  security:
-    # No public paths — every endpoint requires a valid JWT.
-    public-paths: []
+ application:
+ name: favourite-service
+ security:
+ # No public paths : every endpoint requires a valid JWT.
+ public-paths: []
 ```
 
 (`/actuator/*` health/prometheus endpoints already exposed by `common-spring/application.yml` baseline.)
@@ -388,12 +388,12 @@ shop:
 ### 7.4 No per-service `SecurityConfig`
 `common-security` auto-configures JWT chain via `BaseSecurityConfig.securityFilterChain` (`@ConditionalOnMissingBean`). The empty `public-paths` list means everything goes through `anyRequest().authenticated()` plus platform defaults (actuator/swagger/api-docs always public).
 
-> **CSRF (rev 2):** đã tắt sẵn — `SecurityProperties.csrfDisabled` default `true`
-> (`SecurityProperties.java:54`) và `common-spring/application.yml:122` set
-> `shop.security.csrf-disabled: true`. Service không cần làm gì thêm (stateless JWT).
+> **CSRF (rev 2):** Disabled by default: `SecurityProperties.csrfDisabled` defaults to `true`
+> (`SecurityProperties.java:54`) and `common-spring/application.yml:122` sets
+> `shop.security.csrf-disabled: true`. Stateless JWT security requires no additional configuration.
 
 ### 7.5 docker-compose.yml delta
-Add `favourite-service` block (env vars + depends_on postgres). Mirror the pattern used by `product-service` block — but WITHOUT Redis/Kafka dependencies.
+Add `favourite-service` block (env vars + depends_on postgres). Mirror the pattern used by `product-service` block - but WITHOUT Redis/Kafka dependencies.
 
 ---
 
@@ -405,61 +405,60 @@ Add `favourite-service` block (env vars + depends_on postgres). Mirror the patte
 @RequiredArgsConstructor
 public class FavouriteController {
 
-    private final FavouriteService service;
+ private final FavouriteService service;
 
-    @GetMapping
-    public ApiResponse<List<FavouriteResponse>> findAll() {
-        return ApiResponse.ok(service.findAllByCurrentUser(currentUserId()));
-    }
+ @GetMapping
+ public ApiResponse<List<FavouriteResponse>> findAll() {
+ return ApiResponse.ok(service.findAllByCurrentUser(currentUserId()));
+ }
 
-    @GetMapping("/{favouriteId}")
-    public ApiResponse<FavouriteResponse> findById(@PathVariable UUID favouriteId) {
-        return ApiResponse.ok(service.findById(favouriteId, currentUserId()));
-    }
+ @GetMapping("/{favouriteId}")
+ public ApiResponse<FavouriteResponse> findById(@PathVariable UUID favouriteId) {
+ return ApiResponse.ok(service.findById(favouriteId, currentUserId()));
+ }
 
-    @PostMapping
-    public ApiResponse<FavouriteResponse> create(@Valid @RequestBody FavouriteCreateRequest request) {
-        return ApiResponse.ok(service.create(currentUserId(), request), "Favourite added successfully");
-    }
+ @PostMapping
+ public ApiResponse<FavouriteResponse> create(@Valid @RequestBody FavouriteCreateRequest request) {
+ return ApiResponse.ok(service.create(currentUserId(), request), "Favourite added successfully");
+ }
 
-    @DeleteMapping("/{favouriteId}")
-    public ApiResponse<Void> deleteById(@PathVariable UUID favouriteId) {
-        service.deleteById(favouriteId, currentUserId());
-        return ApiResponse.message("Favourite removed successfully");
-    }
+ @DeleteMapping("/{favouriteId}")
+ public ApiResponse<Void> deleteById(@PathVariable UUID favouriteId) {
+ service.deleteById(favouriteId, currentUserId());
+ return ApiResponse.message("Favourite removed successfully");
+ }
 
-    @DeleteMapping("/by-product/{productId}")
-    public ApiResponse<Void> deleteByProduct(@PathVariable UUID productId) {
-        service.deleteByProductId(currentUserId(), productId);
-        return ApiResponse.message("Favourite removed successfully");
-    }
+ @DeleteMapping("/by-product/{productId}")
+ public ApiResponse<Void> deleteByProduct(@PathVariable UUID productId) {
+ service.deleteByProductId(currentUserId(), productId);
+ return ApiResponse.message("Favourite removed successfully");
+ }
 
-    private static UUID currentUserId() {
-        String sub = AuthenticatedUser.requireCurrent().id();
-        try {
-            return UUID.fromString(sub);
-        } catch (IllegalArgumentException ex) {
-            // Defensive — a valid Keycloak JWT `sub` is always a UUID. This branch
-            // exists only to prevent 500 if a non-UUID subject is ever introduced.
-            throw BusinessException.unauthorized("favourite.user.subject.malformed");
-        }
-    }
+ private static UUID currentUserId() {
+ String sub = AuthenticatedUser.requireCurrent().id();
+ try {
+ return UUID.fromString(sub);
+ } catch (IllegalArgumentException ex) {
+ // Defensive - a valid Keycloak JWT `sub` is always a UUID. This branch
+ // exists only to prevent 500 if a non-UUID subject is ever introduced.
+ throw BusinessException.unauthorized("favourite.user.subject.malformed");
+ }
+ }
 }
 ```
 
-**KHÔNG có class-level `@PreAuthorize` (rev 2):** auth đã được enforce ở tầng filter chain
-bởi `BaseSecurityConfig` (`anyRequest().authenticated()` — do `public-paths: []`), nên
-annotation class-level là redundant. Bỏ nó còn giúp `@WebMvcTest` slice không rơi vào
-vùng xám method-security (xem §12.2 — test vẫn phải seed `SecurityContext` vì
-`requireCurrent()` chạy trong body method). Khớp pattern `ProductController` (chỉ dùng
+**NO class-level `@PreAuthorize` (rev 2):** Authentication is already enforced at the filter chain
+layer by `BaseSecurityConfig` (`anyRequest().authenticated()` via `public-paths: []`). Class-level
+annotations are redundant. Omitting them prevents `@WebMvcTest` slices from encountering
+method-security ambiguities (see §12.2: tests must seed `SecurityContext` because
+`requireCurrent()` executes in method bodies). Aligns with `ProductController` (only using
 method-level `@PreAuthorize` cho admin ops).
 
-**REST convention note (rev 2):** `DELETE /by-product/{productId}` là deviation có chủ ý
-khỏi resource-as-collection (`/products/{id}/favourite`) — giữ URL phẳng dưới cùng 1
-resource `/favourites`, dễ map gateway route + permission theo prefix. ĐÃ CHẤP NHẬN,
-không debate lại khi review.
+**REST convention note (rev 2):** `DELETE /by-product/{productId}` is an intentional deviation
+from resource-as-collection paths (`/products/{id}/favourite`), keeping URLs flat under the single
+`/favourites` resource to simplify gateway routing and prefix-based permissions. Accepted design.
 
-**Why `AuthenticatedUser.requireCurrent()` static rather than `@AuthenticationPrincipal`:** see §2.3 — Spring Security's resolver matches on principal type (`Jwt`), not on the custom `AuthenticatedUser` record. Static call goes through `SecurityContextHolder` which is the documented `common-security` idiom.
+**Why `AuthenticatedUser.requireCurrent()` static rather than `@AuthenticationPrincipal`:** see §2.3 - Spring Security's resolver matches on principal type (`Jwt`), not on the custom `AuthenticatedUser` record. Static call goes through `SecurityContextHolder` which is the documented `common-security` idiom.
 
 ---
 
@@ -468,20 +467,20 @@ không debate lại khi review.
 ```java
 // FavouriteCreateRequest.java
 public record FavouriteCreateRequest(
-        @NotNull(message = "productId must not be null")
-        UUID productId
+ @NotNull(message = "productId must not be null")
+ UUID productId
 ) {}
 
 // FavouriteResponse.java
 public record FavouriteResponse(
-        UUID id,
-        UUID userId,
-        UUID productId,
-        Instant createdAt
+ UUID id,
+ UUID userId,
+ UUID productId,
+ Instant createdAt
 ) {}
 ```
 
-Records match product-service convention. Response includes `createdAt` (from AbstractMappedEntity) for ordering display. Excludes `updatedAt`/`createdBy`/etc. — minimal surface matches use case (UI shows item + when favourited).
+Records match product-service convention. Response includes `createdAt` (from AbstractMappedEntity) for ordering display. Excludes `updatedAt`/`createdBy`/etc. - minimal surface matches use case (UI shows item + when favourited).
 
 ---
 
@@ -491,23 +490,23 @@ Records match product-service convention. Response includes `createdAt` (from Ab
 @Component
 public class FavouriteMapper {
 
-    private final ModelMapper modelMapper;
+ private final ModelMapper modelMapper;
 
-    public FavouriteMapper(ModelMapper modelMapper) {
-        this.modelMapper = modelMapper;
-    }
+ public FavouriteMapper(ModelMapper modelMapper) {
+ this.modelMapper = modelMapper;
+ }
 
-    public FavouriteResponse toResponse(Favourite favourite) {
-        return new FavouriteResponse(
-                favourite.getId(),
-                favourite.getUserId(),
-                favourite.getProductId(),
-                favourite.getCreatedAt()
-        );
-    }
+ public FavouriteResponse toResponse(Favourite favourite) {
+ return new FavouriteResponse(
+ favourite.getId(),
+ favourite.getUserId(),
+ favourite.getProductId(),
+ favourite.getCreatedAt()
+ );
+ }
 
-    // No toEntity(CreateRequest) — service builds entity directly with .builder()
-    // (only 2 fields, mapper overhead exceeds its value)
+ // No toEntity(CreateRequest) - service builds entity directly with .builder()
+ // (only 2 fields, mapper overhead exceeds its value)
 }
 ```
 
@@ -518,7 +517,7 @@ public class FavouriteMapper {
 - **No favourite found** (by id) → `BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id)` → HTTP 404, code `FAV-6001`.
 - **No favourite for product** (delete-by-product miss) → `BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId)` → HTTP 404, code `FAV-6003`.
 - **Duplicate (user, product)** → `BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS)` → HTTP 409, code `FAV-6002`.
-- **Owner mismatch** (someone else's favouriteId) → treat as `FAVOURITE_NOT_FOUND` (do NOT throw FORBIDDEN — don't leak existence).
+- **Owner mismatch** (someone else's favouriteId) → treat as `FAVOURITE_NOT_FOUND` (do NOT throw FORBIDDEN - don't leak existence).
 - **Bean Validation fail** on `FavouriteCreateRequest` → `ApiExceptionHandler` → 400 + validation errors array.
 - **DataIntegrityViolation** on concurrent double-add race → `ApiExceptionHandler` → 409 CONFLICT (handled centrally, no per-service code).
 
@@ -538,7 +537,7 @@ No per-service `@ExceptionHandler`. Centralized in `common-spring/web/exception/
 
 ### 12.2 Test classes (~19 tests target)
 
-**`FavouriteServiceImplTest`** — 10 tests (pure unit, mock repo + mapper + auditor):
+**`FavouriteServiceImplTest`** - 10 tests (pure unit, mock repo + mapper + auditor):
 1. `findAllByCurrentUser_returnsMappedList`
 2. `findById_returnsFavourite_whenOwnedByCurrentUser`
 3. `findById_throwsNotFound_whenMissing`
@@ -550,12 +549,12 @@ No per-service `@ExceptionHandler`. Centralized in `common-spring/web/exception/
 9. `deleteByProductId_softDeletes_whenFound`
 10. `deleteByProductId_throwsNotFound_whenMissing`
 
-**`FavouriteRepositoryTest`** — 3 tests (`@DataJpaTest` + `@Import(LiquibaseAutoConfiguration.class)` + Testcontainers Postgres):
+**`FavouriteRepositoryTest`** - 3 tests (`@DataJpaTest` + `@Import(LiquibaseAutoConfiguration.class)` + Testcontainers Postgres):
 1. `findByUserId_filtersSoftDeleted`
 2. `softDeleteByUserIdAndProductId_keepsRowAndSetsFlags`
 3. `partialUniqueConstraint_allowsReAddingAfterSoftDelete`
 
-**`FavouriteControllerTest`** — 6 tests (`@WebMvcTest(FavouriteController.class)` + `@AutoConfigureMockMvc(addFilters=false)` + `@MockitoBean(FavouriteService)` + `@Import(ApiExceptionHandler.class)`):
+**`FavouriteControllerTest`** - 6 tests (`@WebMvcTest(FavouriteController.class)` + `@AutoConfigureMockMvc(addFilters=false)` + `@MockitoBean(FavouriteService)` + `@Import(ApiExceptionHandler.class)`):
 1. `findAll_returns200WithEnvelope`
 2. `findById_returns200WithEnvelope`
 3. `create_returns200WithCreatedEnvelope`
@@ -563,17 +562,15 @@ No per-service `@ExceptionHandler`. Centralized in `common-spring/web/exception/
 5. `deleteById_returns200WithMessageEnvelope`
 6. `deleteByProduct_returns200WithMessageEnvelope`
 
-> ⚠️ **REV 2 — SecurityContext seeding là BẮT BUỘC:** `currentUserId()` gọi
-> `AuthenticatedUser.requireCurrent()` ngay trong body method — với `addFilters=false`
-> và SecurityContext rỗng, nó throw `IllegalStateException` → **cả 6 tests fail 500**.
-> Phải seed trong `@BeforeEach` một `JwtAuthenticationToken` bọc `Jwt` có claim `sub` =
-> UUID string (⚠️ `AuthenticatedUser.current()` CHỈ nhận `JwtAuthenticationToken` —
-> `TestingAuthenticationToken`/`@WithMockUser` KHÔNG chạy, sẽ rơi vào nhánh
-> `Optional.empty()`), rồi `SecurityContextHolder.clearContext()` trong `@AfterEach`.
-> Lưu ý `@PreAuthorize` không phải vấn đề ở slice: `@EnableMethodSecurity` nằm trong
-> common-security `SecurityAutoConfiguration`, không thuộc WebMvcTest slice imports
-> → method security không kích hoạt trong slice; và controller (rev 2) không còn
-> class-level `@PreAuthorize` nữa. Xem code hoàn chỉnh ở Plan Task 8.
+> ⚠️ **REV 2: SecurityContext seeding is MANDATORY:** `currentUserId()` invokes
+> `AuthenticatedUser.requireCurrent()` inside the method body. With `addFilters=false`
+> and an empty SecurityContext, it throws `IllegalStateException`, failing all 6 tests with 500 errors.
+> Tests must seed a `JwtAuthenticationToken` wrapping a `Jwt` with claim `sub` set to a
+> UUID string in `@BeforeEach` (note: `AuthenticatedUser.current()` strictly matches `JwtAuthenticationToken`;
+> `TestingAuthenticationToken` and `@WithMockUser` fall into `Optional.empty()`), followed by
+> `SecurityContextHolder.clearContext()` in `@AfterEach`.
+> Method security is inactive in slices because `@EnableMethodSecurity` resides in
+> `SecurityAutoConfiguration` outside `@WebMvcTest` imports. See Plan Task 8 for complete fixture code.
 
 Total **~19 tests** across 3 classes.
 
@@ -585,16 +582,16 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 - `@MockitoBean` (NOT `@MockBean`).
 - `@WebMvcTest` from `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`).
 - `@DataJpaTest` from `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`).
-- `TestEntityManager` from `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`), injected via `@Autowired` field (NOT method param — Boot 4 doesn't resolve method param for `TestEntityManager`).
+- `TestEntityManager` from `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`), injected via `@Autowired` field (NOT method param - Boot 4 doesn't resolve method param for `TestEntityManager`).
 - `@DataJpaTest` slice does NOT run Liquibase by default → test classes must `@Import(LiquibaseAutoConfiguration.class)`.
 
 ---
 
 ## 13. Observability
 
-- **Logging** — `CorrelationIdFilter` → MDC `traceId` automatic; `HttpLoggingFilter` → access log; SLF4J via `@Slf4j` if needed.
-- **Metrics** — rely on platform defaults (`/actuator/prometheus` exposes JVM + HTTP metrics). Custom product-level metrics OUT OF SCOPE — favourite has no high-rate business operation worth a custom counter.
-- **Health** — `/actuator/health` + liveness/readiness probes (platform default 9000 port override not relevant here).
+- **Logging** - `CorrelationIdFilter` → MDC `traceId` automatic; `HttpLoggingFilter` → access log; SLF4J via `@Slf4j` if needed.
+- **Metrics** - rely on platform defaults (`/actuator/prometheus` exposes JVM + HTTP metrics). Custom product-level metrics OUT OF SCOPE - favourite has no high-rate business operation worth a custom counter.
+- **Health** - `/actuator/health` + liveness/readiness probes (platform default 9000 port override not relevant here).
 
 ---
 
@@ -629,24 +626,24 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 | `favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java` | 10 unit tests |
 | `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java` | 3 JPA slice tests |
 | `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` | 6 MVC slice tests |
-| `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java` | Test-only `SpringLiquibase` bean + `@EnableJpaAuditing` — mirror `product-service` repo-slice pattern (§12.2) |
+| `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java` | Test-only `SpringLiquibase` bean + `@EnableJpaAuditing` - mirror `product-service` repo-slice pattern (§12.2) |
 
 ### Modified parent / docker
 | File | Change |
 |---|---|
-| `pom.xml` (parent) | Add `<module>favourite-service</module>` (already present per AGENTS.md — verify) |
-| `docker-compose.yml` | **Verify** `favourite-service` container block (already exists at line 372) — align env/ports/depends_on/networks with spec §7.5; no Redis/Kafka deps |
+| `pom.xml` (parent) | Add `<module>favourite-service</module>` (already present per AGENTS.md - verify) |
+| `docker-compose.yml` | **Verify** `favourite-service` container block (already exists at line 372) - align env/ports/depends_on/networks with spec §7.5; no Redis/Kafka deps |
 
 ---
 
 ## 15. Implementation order
 
-**Step 1 — Common additions (~15 min)**
+**Step 1 - Common additions (~15 min)**
 1. Add `FAVOURITE_NOT_FOUND` + `FAVOURITE_ALREADY_EXISTS` to `ErrorCode.java`
 2. Add `favourite.not.found` + `favourite.already.exists` to both `messages_*.properties`
 3. Run `./mvnw -pl utils/common-core,utils/common-spring test` to verify nothing breaks
 
-**Step 2 — favourite-service skeleton + persistence (~2–3 hrs)**
+**Step 2 - favourite-service skeleton + persistence (~2-3 hrs)**
 4. Update `favourite-service/pom.xml` (deps: common-spring, JPA, Liquibase, Postgres, ModelMapper, Lombok, test stack)
 5. `FavouriteServiceApplication.java`
 6. `application.yml` (port 8081)
@@ -655,25 +652,25 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 9. Liquibase changelog (master + 001)
 10. Verify: `docker compose up postgres favourite-service` boots, Liquibase creates table, JPA validates schema
 
-**Step 3 — Service + DTOs + Mapper (~2 hrs)**
+**Step 3 - Service + DTOs + Mapper (~2 hrs)**
 11. `FavouriteCreateRequest` + `FavouriteResponse` records
 12. `FavouriteMapper`
 13. `FavouriteService` interface + `FavouriteServiceImpl`
 14. Tests: `FavouriteServiceImplTest` (10 tests)
 
-**Step 4 — Controller + tests (~2 hrs)**
+**Step 4 - Controller + tests (~2 hrs)**
 15. `FavouriteController`
 16. Tests: `FavouriteControllerTest` (6 tests)
 17. `FavouriteRepositoryTest` (3 tests)
 18. Verify: `./mvnw test -pl favourite-service -am` green
 
-**Step 5 — Docker + smoke (~30 min)**
+**Step 5 - Docker + smoke (~30 min)**
 19. **Verify** `docker-compose.yml` favourite-service block matches schema (already exists; fix only if drift)
 20. `./mvnw clean package -DskipTests`
 21. `docker compose up -d postgres favourite-service`
 22. Smoke: `curl localhost:8081/actuator/health` → UP
 
-**Total estimated time:** 6–8 hours (1 day) for senior engineer.
+**Total estimated time:** 6-8 hours (1 day) for senior engineer.
 
 ---
 
@@ -683,25 +680,25 @@ For `@DataJpaTest` repository slices, the fleet pattern is `@AutoConfigureTestDa
 |---|---|---|
 | Cross-service product validation | YAGNI for MVP | When analytics/search service consumes favourite events |
 | Redis cache | Per-user cache invalidation dominates benefit | When traffic justifies it (see §6.2) |
-| Kafka events | No consumers identified | When notification (e.g. "X favourited your product" — admin feature) requires it |
+| Kafka events | No consumers identified | When notification (e.g. "X favourited your product" - admin feature) requires it |
 | Admin endpoints (list any user's favourites) | Out of scope for private data | If compliance/audit requires it |
 | Bulk favourite/import | Convenience, defer | Phase 8+ |
-| Pagination on `findAllByCurrentUser` | Page size implicit — assumption is small per-user list (~tens, not thousands) | If measured user has > 100 favourites |
+| Pagination on `findAllByCurrentUser` | Page size implicit - assumption is small per-user list (~tens, not thousands) | If measured user has > 100 favourites |
 
 ---
 
 ## 17. Cross-references
 
-- [`docs/SERVICE-CATALOG.md §7`](./../SERVICE-CATALOG.md) — endpoint surface, domain model reference
-- [`docs/COMMON-LIB-REFERENCE.md §3.3`](./../COMMON-LIB-REFERENCE.md) — `AuthenticatedUser` helper from common-security
-- [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./2026-08-26-product-service-design.md) — pattern template (favourite = product-service − Kafka − Redis − extras)
-- [`utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java`](./../../../utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java) — audit + soft-delete base
-- [`utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java`](./../../../utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java) — exception factories used in service layer
-- `auth-service/src/main/java/com/shop/authservice/controller/UserController.java` — older `@AuthenticationPrincipal Jwt` pattern (for reference; favourite uses the cleaner `AuthenticatedUser`)
+- [`docs/SERVICE-CATALOG.md §7`](./../SERVICE-CATALOG.md) - endpoint surface, domain model reference
+- [`docs/COMMON-LIB-REFERENCE.md §3.3`](./../COMMON-LIB-REFERENCE.md) - `AuthenticatedUser` helper from common-security
+- [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./2026-08-26-product-service-design.md) - pattern template (favourite = product-service − Kafka − Redis − extras)
+- [`utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java`](./../../../utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java) - audit + soft-delete base
+- [`utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java`](./../../../utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java) - exception factories used in service layer
+- `auth-service/src/main/java/com/shop/authservice/controller/UserController.java` - older `@AuthenticationPrincipal Jwt` pattern (for reference; favourite uses the cleaner `AuthenticatedUser`)
 
 ---
 
 ## 18. Changelog
 
 - 2026-08-28: Initial design (this document). Drafted from brainstorm: scope = favourite-service, no cross-service validation, soft-delete, no Redis cache, no Kafka events.
-- 2026-08-28 (rev 2): Deep review fixes — (1) thêm `FAVOURITE_PRODUCT_NOT_FOUND` (FAV-6003) + i18n key cho delete-by-product miss (message sai ngữ cảnh khi tái dùng FAV-6001); (2) bỏ class-level `@PreAuthorize` khỏi FavouriteController (redundant với `anyRequest().authenticated()`, khớp ProductController); (3) §12.2: bắt buộc seed `JwtAuthenticationToken` trong controller test (`requireCurrent()` throw ISE nếu SecurityContext rỗng — cả 6 tests sẽ fail 500; TestingAuthenticationToken KHÔNG hoạt động vì `AuthenticatedUser.current()` chỉ nhận JWT token type); (4) §7.4: ghi rõ CSRF đã tắt sẵn qua defaults; (5) ghi rõ `/by-product/` là REST deviation có chủ ý.
+- 2026-08-28 (rev 2): Deep review fixes: (1) Added `FAVOURITE_PRODUCT_NOT_FOUND` (FAV-6003) with localized error keys for delete-by-product misses; (2) Removed class-level `@PreAuthorize` from FavouriteController (redundant with `anyRequest().authenticated()`, matching ProductController); (3) §12.2: Mandatory `JwtAuthenticationToken` seeding in controller tests; (4) §7.4: Clarified that CSRF protection is disabled by default; (5) Documented `/by-product/` as an intentional REST routing design.

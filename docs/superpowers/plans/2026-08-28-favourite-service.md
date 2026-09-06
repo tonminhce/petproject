@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `favourite-service` microservice with user-scoped favourites CRUD, soft-delete with audit, Keycloak JWT auth — no Kafka, no Redis, no cross-service calls.
+**Goal:** Build `favourite-service` microservice with user-scoped favourites CRUD, soft-delete with audit, Keycloak JWT auth - no Kafka, no Redis, no cross-service calls.
 
 **Architecture:** Spring Boot 4.1.1 microservice (`com.shop.favouriteservice`) → PostgreSQL via Spring Data JPA + Liquibase. Auth via Keycloak JWT (every endpoint requires authentication; current user resolved via `AuthenticatedUser.requireCurrent()` from `common-security`). Soft-delete via `AbstractMappedEntity` (extends `SoftDeletable`); `AuthedUser.id()` parsed from JWT `sub` to `UUID` at the controller boundary.
 
-**Tech Stack:** Spring Boot 4.1.1, Java 25, Spring Data JPA + Liquibase + Postgres 16, Apache Kafka — **NOT USED**, Redis — **NOT USED**, Spring Security Resource Server (JWT, no Keycloak admin SDK), ModelMapper 3.2.6, Lombok, JUnit 5 + Mockito + AssertJ, Testcontainers.
+**Tech Stack:** Spring Boot 4.1.1, Java 25, Spring Data JPA + Liquibase + Postgres 16, Apache Kafka - **NOT USED**, Redis - **NOT USED**, Spring Security Resource Server (JWT, no Keycloak admin SDK), ModelMapper 3.2.6, Lombok, JUnit 5 + Mockito + AssertJ, Testcontainers.
 
-**Spec:** [`docs/superpowers/specs/2026-08-28-favourite-service-design.md`](../specs/2026-08-28-favourite-service-design.md) — read alongside this plan; the plan argues from the spec.
+**Spec:** [`docs/superpowers/specs/2026-08-28-favourite-service-design.md`](../specs/2026-08-28-favourite-service-design.md) - read alongside this plan; the plan argues from the spec.
 
 ---
 
@@ -17,18 +17,18 @@
 - **Java 25** (per project `.java-version` / parent pom)
 - **Spring Boot 4.1.1** (parent pom `spring-boot-starter-parent.version`)
 - **Package root:** `com.shop.*`
-- **Group:** `com.shop.microservices` — version `${revision}` (1.0-SNAPSHOT)
-- **No per-service `SecurityConfig`** — `common-security` auto-configures `SecurityFilterChain` (`@ConditionalOnMissingBean`). Configure via `shop.security.public-paths` (EndpointRule list — favourite-service declares empty list).
+- **Group:** `com.shop.microservices` - version `${revision}` (1.0-SNAPSHOT)
+- **No per-service `SecurityConfig`** - `common-security` auto-configures `SecurityFilterChain` (`@ConditionalOnMissingBean`). Configure via `shop.security.public-paths` (EndpointRule list - favourite-service declares empty list).
 - **`open-in-view: false`** in all `application.yml` (no transaction-in-view).
-- **ModelMapper** (sync theo auth-service + product-service — `@Component` inject `ModelMapper`). MapStruct đã bị reject toàn fleet.
+- **ModelMapper** (aligned with auth-service and product-service: `@Component` injecting `ModelMapper`). MapStruct was rejected fleet-wide.
 - **Liquibase** (not Flyway), changelogs in `src/main/resources/db/changelog/`
 - **All endpoints** wrap responses in `ApiResponse<T>` (from `common-core/viewmodel`).
-- **No new common modules** — only modify `common-core`, `common-spring` for the 2 ErrorCodes + 3 i18n keys.
-- **Favourite-service dependency baseline** (mirror product-service/pom.xml minus Kafka/Redis and without `spring-security-test` — controller slice uses `addFilters=false` so security isn't on the path; JPA slices don't need it either): `common-spring`, `spring-boot-starter-data-jpa`, `spring-boot-starter-liquibase`, `liquibase-core`, `postgresql`, `modelmapper`, `lombok`. Test: `spring-boot-starter-test`, `spring-boot-starter-webmvc-test` (Boot 4), `spring-boot-data-jpa-test`, `spring-boot-jpa-test`, `testcontainers-junit-jupiter`, `spring-boot-testcontainers`, `testcontainers-postgresql`, `awaitility`.
+- **No new common modules** - only modify `common-core`, `common-spring` for the 2 ErrorCodes + 3 i18n keys.
+- **Favourite-service dependency baseline** (mirror product-service/pom.xml minus Kafka/Redis and without `spring-security-test` - controller slice uses `addFilters=false` so security isn't on the path; JPA slices don't need it either): `common-spring`, `spring-boot-starter-data-jpa`, `spring-boot-starter-liquibase`, `liquibase-core`, `postgresql`, `modelmapper`, `lombok`. Test: `spring-boot-starter-test`, `spring-boot-starter-webmvc-test` (Boot 4), `spring-boot-data-jpa-test`, `spring-boot-jpa-test`, `testcontainers-junit-jupiter`, `spring-boot-testcontainers`, `testcontainers-postgresql`, `awaitility`.
 - **Schema rules:** entity `extends AbstractMappedEntity` (auto `created_at`/`updated_at`/`created_by`/`updated_by` + `deleted`/`deleted_at`/`deleted_by`) + `@SQLRestriction("deleted = false")`. UUID primary key. Partial unique indexes `WHERE deleted = false`. FK `onDelete: RESTRICT` (but favourite-service declares **no FK** to product-service per §6.1).
-- **Auth pattern:** KHÔNG gắn `@PreAuthorize` (class hay method) — auth được enforce bởi `BaseSecurityConfig` filter chain (`anyRequest().authenticated()`, do `public-paths: []`); current user via `AuthenticatedUser.requireCurrent().id()` (parsed to `UUID` at controller boundary). NOT `@AuthenticationPrincipal AuthenticatedUser` — Spring's resolver matches on `Jwt` principal type, not the custom record. See spec §2.3 for full rationale.
-- **Exceptions** dùng `BusinessException.of(ErrorCode.X, args...)` factories — constructor private, KHÔNG `new BusinessException(...)`; message là i18n keys.
-- **Test stack Boot 4:** `@MockitoBean` (không `@MockBean`); controller slice uses new package `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`); controller tests `@AutoConfigureMockMvc(addFilters = false)` (không test 403 ở slice — common-security chain test ở integration). JPA slice ở Boot 4 đã tách artifacts riêng: `@DataJpaTest` ở `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`); `TestEntityManager` ở `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`). Boot 4 cũng KHÔNG cho phép `TestEntityManager` inject qua method param — phải `@Autowired` field. `@DataJpaTest` cần `@Import(LiquibaseAutoConfiguration.class)` (slice không tự chạy Liquibase).
+- **Auth pattern:** Do NOT apply `@PreAuthorize` (class or method level). Authentication is enforced by the `BaseSecurityConfig` filter chain (`anyRequest().authenticated()` via `public-paths: []`); resolve current user via `AuthenticatedUser.requireCurrent().id()` (parsed to `UUID` at the controller boundary). Do not use `@AuthenticationPrincipal AuthenticatedUser` because Spring resolver matches the `Jwt` principal type rather than custom records. See spec §2.3 for details.
+- **Exceptions:** Instantiate via `BusinessException.of(ErrorCode.X, args...)` factories with private constructors (do not use `new BusinessException(...)`); messages reference localization keys.
+- **Boot 4 test stack:** Use `@MockitoBean` (not `@MockBean`); controller slices use the package `org.springframework.boot.webmvc.test.autoconfigure.*` (artifact `spring-boot-starter-webmvc-test`); controller tests use `@AutoConfigureMockMvc(addFilters = false)` (authorization is verified in integration tests rather than slice tests). JPA slices in Boot 4 split artifacts: `@DataJpaTest` resides in `org.springframework.boot.data.jpa.test.autoconfigure.*` (artifact `spring-boot-data-jpa-test`); `TestEntityManager` resides in `org.springframework.boot.jpa.test.autoconfigure.*` (artifact `spring-boot-jpa-test`). Boot 4 also disallows injecting `TestEntityManager` via method parameters; autowire it as a field instead. `@DataJpaTest` requires `@Import(LiquibaseAutoConfiguration.class)` because the slice does not run Liquibase automatically.
 - **No Kafka.** No Redis. No `@EnableCaching`. No `@Scheduled`. No cross-service HTTP. No Resilence4j. No common-keycloak dep. No common-storage dep. No common-kafka dep.
 
 ---
@@ -38,23 +38,23 @@
 ### Modified common modules
 | File | Change |
 |---|---|
-| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | Add `FAVOURITE_NOT_FOUND ("FAV-6001")`, `FAVOURITE_ALREADY_EXISTS ("FAV-6002")`, `FAVOURITE_PRODUCT_NOT_FOUND ("FAV-6003")` in a new "// ---- Favourite domain ----" section (range 6xxx — PAY already owns 5xxx) |
+| `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java` | Add `FAVOURITE_NOT_FOUND ("FAV-6001")`, `FAVOURITE_ALREADY_EXISTS ("FAV-6002")`, `FAVOURITE_PRODUCT_NOT_FOUND ("FAV-6003")` in a new "// ---- Favourite domain ----" section (range 6xxx - PAY already owns 5xxx) |
 | `utils/common-spring/src/main/resources/messages/messages_en.properties` | Add `favourite.not.found`, `favourite.already.exists`, `favourite.product.not.found`, `favourite.user.subject.malformed` |
 | `utils/common-spring/src/main/resources/messages/messages_vi.properties` | Add Vietnamese variants of the same 4 keys |
 
 ### New favourite-service files (main)
 | File | Responsibility |
 |---|---|
-| `favourite-service/pom.xml` | Maven module — Boot 4 deps + test jars per Global Constraints |
+| `favourite-service/pom.xml` | Maven module - Boot 4 deps + test jars per Global Constraints |
 | `favourite-service/src/main/java/com/shop/favouriteservice/FavouriteServiceApplication.java` | `@SpringBootApplication` entrypoint |
 | `favourite-service/src/main/java/com/shop/favouriteservice/entity/Favourite.java` | JPA entity, extends `AbstractMappedEntity`, `@SQLRestriction("deleted = false")` |
 | `favourite-service/src/main/java/com/shop/favouriteservice/repository/FavouriteRepository.java` | `JpaRepository<Favourite, UUID>` + derived queries + 2 `@Modifying` soft-delete JPQL queries |
 | `favourite-service/src/main/java/com/shop/favouriteservice/dto/request/FavouriteCreateRequest.java` | record: `UUID productId` @NotNull |
 | `favourite-service/src/main/java/com/shop/favouriteservice/dto/response/FavouriteResponse.java` | record: `id`, `userId`, `productId`, `createdAt` |
-| `favourite-service/src/main/java/com/shop/favouriteservice/mapper/FavouriteMapper.java` | `@Component` `ModelMapper` injected; only `toResponse()` — entity is built directly with `.builder()` in service (simpler than a record→entity round-trip) |
+| `favourite-service/src/main/java/com/shop/favouriteservice/mapper/FavouriteMapper.java` | `@Component` `ModelMapper` injected; only `toResponse()` - entity is built directly with `.builder()` in service (simpler than a record→entity round-trip) |
 | `favourite-service/src/main/java/com/shop/favouriteservice/service/FavouriteService.java` | interface: 5 methods |
-| `favourite-service/src/main/java/com/shop/favouriteservice/service/impls/FavouriteServiceImpl.java` | `@Service` + `@RequiredArgsConstructor` (no `@LogPerformance` — annotation exists in `common-logging` but product-service fleet doesn't use it; ponytail-lite keeps the service minimal) |
-| `favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java` | `@RequestMapping(ApiPaths.FAVOURITES)`, KHÔNG `@PreAuthorize` (filter chain enforce), 5 endpoints, static `currentUserId()` helper |
+| `favourite-service/src/main/java/com/shop/favouriteservice/service/impls/FavouriteServiceImpl.java` | `@Service` + `@RequiredArgsConstructor` (no `@LogPerformance` - annotation exists in `common-logging` but product-service fleet doesn't use it; ponytail-lite keeps the service minimal) |
+| `favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java` | `@RequestMapping(ApiPaths.FAVOURITES)`, no `@PreAuthorize` (filter chain enforcement), 5 endpoints, static `currentUserId()` helper |
 | `favourite-service/src/main/resources/application.yml` | port 8081, datasource, JPA validate, Liquibase, empty `shop.security.public-paths` |
 | `favourite-service/src/main/resources/db/changelog/db.changelog-master.yaml` | include 001 |
 | `favourite-service/src/main/resources/db/changelog/changelog-001-initial-schema.yaml` | 1 table + 2 indexes (partial unique + user_id) |
@@ -64,18 +64,18 @@
 |---|---|
 | `favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java` | 10 unit tests (Mockito `@Mock` repo + mapper + `AuditorAware`, `@InjectMocks` service) |
 | `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java` | 3 JPA slice tests (`@DataJpaTest` + `@Import({JpaAuditingAutoConfiguration, LiquibaseAutoConfiguration, TestLiquibaseConfig})` + `@Autowired TestEntityManager` field + Testcontainers Postgres) |
-| `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` | 6 MVC slice tests (`@WebMvcTest(FavouriteController.class)` + `@AutoConfigureMockMvc(addFilters=false)` + `@MockitoBean(FavouriteService)` + `@Import(ApiExceptionHandler.class)` + seed `JwtAuthenticationToken` vào SecurityContext) |
-| `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java` | Test-only `SpringLiquibase` bean + `@EnableJpaAuditing` — mirror `product-service/src/test/.../config/TestLiquibaseConfig.java` (repo slice cần nó để Liquibase chạy trong `@DataJpaTest`) |
+| `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` | 6 MVC slice tests (`@WebMvcTest(FavouriteController.class)` + `@AutoConfigureMockMvc(addFilters=false)` + `@MockitoBean(FavouriteService)` + `@Import(ApiExceptionHandler.class)` + seed `JwtAuthenticationToken` into SecurityContext) |
+| `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java` | Test-only `SpringLiquibase` bean + `@EnableJpaAuditing` - mirror `product-service/src/test/.../config/TestLiquibaseConfig.java` (repository slice requires this configuration for Liquibase execution within `@DataJpaTest`) |
 
 ### Modified infra
 | File | Change |
 |---|---|
-| `docker-compose.yml` | Add `favourite-service` block (SPRING_DATASOURCE_URL env, depends_on postgres) — NO Redis/Kafka deps |
-| `pom.xml` (parent) | **VERIFY** `<module>favourite-service</module>` already present (line 29 per existing parent) — no edit expected |
+| `docker-compose.yml` | Add `favourite-service` block (SPRING_DATASOURCE_URL env, depends_on postgres) - NO Redis/Kafka deps |
+| `pom.xml` (parent) | **VERIFY** `<module>favourite-service</module>` already present (line 29 per existing parent) - no edit expected |
 
 ---
 
-## Task 1: Common additions — Favourite ErrorCodes + i18n keys
+## Task 1: Common additions : Favourite ErrorCodes + i18n keys
 
 **Files:**
 - Modify: `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java`
@@ -90,25 +90,25 @@
 Open `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java`. Add a new section block at the end of the enum (before the closing brace), after the `PAYMENT_*` block:
 
 ```java
-    // ---- Favourite domain ---- (range 6xxx — PAY already owns 5xxx)
-    FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
-    FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
-    FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
+ // ---- Favourite domain ---- (range 6xxx - PAY already owns 5xxx)
+ FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
+ FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
+ FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND);
 ```
 
-> **FAV-6003** dành cho `DELETE /by-product/{productId}` miss — tái dùng FAV-6001 sẽ in
-> `Favourite <product-uuid> not found`, sai ngữ cảnh (uuid đó là productId). Message key
-> riêng: `favourite.product.not.found` = "No favourite found for product {0}".
+> **FAV-6003:** Dedicated error for `DELETE /by-product/{productId}` misses. Reusing FAV-6001
+> prints `Favourite <product-uuid> not found` out of context. Dedicated key:
+> `favourite.product.not.found` = "No favourite found for product {0}".
 
-Note the **semicolon** at the end of `FAVOURITE_PRODUCT_NOT_FOUND(...);` — that becomes the last entry, so the existing semicolon on the prior line (`PAYMENT_NOT_FOUND(...);`) must be removed first.
+Note the **semicolon** at the end of `FAVOURITE_PRODUCT_NOT_FOUND(...);` - that becomes the last entry, so the existing semicolon on the prior line (`PAYMENT_NOT_FOUND(...);`) must be removed first.
 
 Find the line:
 ```java
-    PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND);
+ PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND);
 ```
 Replace it with:
 ```java
-    PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND),
+ PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND),
 ```
 (remove the trailing `;`, replace with `,`).
 
@@ -128,10 +128,10 @@ favourite.user.subject.malformed=Authentication token subject is not a valid use
 Open `utils/common-spring/src/main/resources/messages/messages_vi.properties`. Append:
 
 ```properties
-favourite.not.found=Không tìm thấy mục yêu thích {0}
-favourite.already.exists=Mục yêu thích đã tồn tại
-favourite.product.not.found=Không tìm thấy mục yêu thích cho sản phẩm {0}
-favourite.user.subject.malformed=Token xác thực không chứa user id hợp lệ
+favourite.not.found=Favourite {0} not found (VI translation)
+favourite.already.exists=Favourite already exists (VI translation)
+favourite.product.not.found=No favourite found for product {0} (VI translation)
+favourite.user.subject.malformed=Authentication token does not contain a valid user ID (VI translation)
 ```
 
 - [ ] **Step 4: Verify common modules still compile and tests pass**
@@ -140,25 +140,25 @@ Run from project root:
 ```bash
 ./mvnw -pl utils/common-core,utils/common-spring -am test -q
 ```
-Expected: `BUILD SUCCESS` for both modules. No new tests added — only additive changes to existing files; existing tests must remain green.
+Expected: `BUILD SUCCESS` for both modules. No new tests added - only additive changes to existing files; existing tests must remain green.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java \
-        utils/common-spring/src/main/resources/messages/messages_en.properties \
-        utils/common-spring/src/main/resources/messages/messages_vi.properties
+ utils/common-spring/src/main/resources/messages/messages_en.properties \
+ utils/common-spring/src/main/resources/messages/messages_vi.properties
 git commit -m "feat(common): FAVOURITE ErrorCodes (FAV-6001..6003) + i18n keys"
 ```
 
 ---
 
-## Task 2: favourite-service module — pom.xml (extend existing) + Application class
+## Task 2: favourite-service module : pom.xml (extend existing) + Application class
 
 **Files:**
 - Modify: `favourite-service/pom.xml` (scaffold exists; add 7 missing deps + spring-boot-starter-liquibase)
 - Create: `favourite-service/src/main/java/com/shop/favouriteservice/FavouriteServiceApplication.java`
-- Verify (no edit): `pom.xml` (parent) — `<module>favourite-service</module>` is already declared at line 29
+- Verify (no edit): `pom.xml` (parent) - `<module>favourite-service</module>` is already declared at line 29
 
 **Interfaces:**
 - Consumes: parent reactor build (parent pom already has `favourite-service` module)
@@ -168,62 +168,62 @@ git commit -m "feat(common): FAVOURITE ErrorCodes (FAV-6001..6003) + i18n keys"
 - Has: `common-spring`, `spring-boot-starter-data-jpa`, `liquibase-core`, `postgresql`, `modelmapper`, `lombok`, `spring-boot-starter-test`, `spring-boot-maven-plugin`
 - Missing: `spring-boot-starter-liquibase` (without it, Spring Boot can't auto-configure Liquibase even though `liquibase-core` is on the classpath), `spring-boot-starter-webmvc-test` (Boot 4 webmvc test artifact), `spring-boot-data-jpa-test` (Boot 4 data JPA test artifact), `spring-boot-jpa-test` (Boot 4 jpa test artifact for `TestEntityManager`), `testcontainers-junit-jupiter`, `spring-boot-testcontainers`, `testcontainers-postgresql`, `awaitility`
 
-NO `common-kafka`, `spring-boot-starter-data-redis`, `spring-boot-starter-cache`, `spring-kafka`, `spring-security-test` — keep that absence.
+NO `common-kafka`, `spring-boot-starter-data-redis`, `spring-boot-starter-cache`, `spring-kafka`, `spring-security-test` - keep that absence.
 
-- [ ] **Step 1: Modify `favourite-service/pom.xml` — add missing dependencies**
+- [ ] **Step 1: Modify `favourite-service/pom.xml` - add missing dependencies**
 
 Open `favourite-service/pom.xml` and make these targeted additions. Use your editor's "add new dependency block after…" UX to avoid touching existing lines.
 
 **1a.** After the existing `spring-boot-starter-data-jpa` block (or after `liquibase-core`; consistency doesn't matter), insert:
 
 ```xml
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-liquibase</artifactId>
-        </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-liquibase</artifactId>
+ </dependency>
 ```
 
 **1b.** Inside the existing `<!-- Tests -->` comment block, append these test dependencies after the existing `spring-boot-starter-test`:
 
 ```xml
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-data-jpa-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-jpa-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers-junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers-postgresql</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <scope>test</scope>
-        </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-webmvc-test</artifactId>
+ <scope>test</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-data-jpa-test</artifactId>
+ <scope>test</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-jpa-test</artifactId>
+ <scope>test</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.testcontainers</groupId>
+ <artifactId>testcontainers-junit-jupiter</artifactId>
+ <scope>test</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-testcontainers</artifactId>
+ <scope>test</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.testcontainers</groupId>
+ <artifactId>testcontainers-postgresql</artifactId>
+ <scope>test</scope>
+ </dependency>
+ <dependency>
+ <groupId>org.awaitility</groupId>
+ <artifactId>awaitility</artifactId>
+ <scope>test</scope>
+ </dependency>
 ```
 
-(7 test deps total — `spring-security-test` deliberately omitted; controller slice uses `addFilters=false` so security isn't on the path. JPA slices don't need it either — matches product-service pom.)
+(7 test deps total - `spring-security-test` deliberately omitted; controller slice uses `addFilters=false` so security isn't on the path. JPA slices don't need it either - matches product-service pom.)
 
 - [ ] **Step 2: Verify parent pom.xml declares favourite-service**
 
@@ -242,9 +242,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class FavouriteServiceApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(FavouriteServiceApplication.class, args);
-    }
+ public static void main(String[] args) {
+ SpringApplication.run(FavouriteServiceApplication.class, args);
+ }
 }
 ```
 
@@ -260,7 +260,7 @@ Expected: `BUILD SUCCESS`. No `application.yml` yet, but Application class still
 
 ```bash
 git add favourite-service/pom.xml \
-        favourite-service/src/main/java/com/shop/favouriteservice/FavouriteServiceApplication.java
+ favourite-service/src/main/java/com/shop/favouriteservice/FavouriteServiceApplication.java
 git commit -m "feat(favourite-service): module skeleton (extended pom + SpringBootApplication)"
 ```
 
@@ -282,46 +282,46 @@ Create `favourite-service/src/main/resources/application.yml`:
 
 ```yaml
 # =============================================================================
-#  favourite-service — User wishlist (favourites).
-#  Pure user-scoped CRUD. No Kafka, no Redis, no external service calls.
+# favourite-service : User wishlist (favourites).
+# Pure user-scoped CRUD. No Kafka, no Redis, no external service calls.
 #
-#  Platform-wide defaults live in `common-spring/application.yml` (inherited).
-#  Only service-specific overrides belong here.
+# Platform-wide defaults live in `common-spring/application.yml` (inherited).
+# Only service-specific overrides belong here.
 # =============================================================================
 spring:
-  application:
-    name: favourite-service
+ application:
+ name: favourite-service
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/favouriteservice}
-    username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:admin}
-    driver-class-name: org.postgresql.Driver
+ datasource:
+ url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/favouriteservice}
+ username: ${POSTGRES_USER:admin}
+ password: ${POSTGRES_PASSWORD:admin}
+ driver-class-name: org.postgresql.Driver
 
-  jpa:
-    hibernate:
-      # Schema is owned by Liquibase — never let Hibernate mutate it.
-      ddl-auto: validate
-    open-in-view: false
+ jpa:
+ hibernate:
+ # Schema is owned by Liquibase : never let Hibernate mutate it.
+ ddl-auto: validate
+ open-in-view: false
 
-  liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.yaml
+ liquibase:
+ change-log: classpath:db/changelog/db.changelog-master.yaml
 
 server:
-  # Override the common-spring default 8080 (compose maps 8081:8081).
-  port: ${SERVER_PORT:8081}
-  shutdown: graceful
+ # Override the common-spring default 8080 (compose maps 8081:8081).
+ port: ${SERVER_PORT:8081}
+ shutdown: graceful
 
 shop:
-  application:
-    name: favourite-service
-  security:
-    # Every endpoint requires a valid JWT — favourite data is private to its owner.
-    # Platform defaults (actuator/swagger/api-docs) stay public via common-security.
-    public-paths: []
+ application:
+ name: favourite-service
+ security:
+ # Every endpoint requires a valid JWT : favourite data is private to its owner.
+ # Platform defaults (actuator/swagger/api-docs) stay public via common-security.
+ public-paths: []
 ```
 
-(`/actuator/*` health/prometheus endpoints already exposed by `common-spring/application.yml` baseline — no override needed here.)
+(`/actuator/*` health/prometheus endpoints already exposed by `common-spring/application.yml` baseline - no override needed here.)
 
 - [ ] **Step 2: Create Liquibase master changelog**
 
@@ -329,8 +329,8 @@ Create `favourite-service/src/main/resources/db/changelog/db.changelog-master.ya
 
 ```yaml
 databaseChangeLog:
-  - include:
-      file: changelog-001-initial-schema.yaml
+ - include:
+ file: changelog-001-initial-schema.yaml
 ```
 
 - [ ] **Step 3: Create initial schema changelog**
@@ -339,86 +339,86 @@ Create `favourite-service/src/main/resources/db/changelog/changelog-001-initial-
 
 ```yaml
 databaseChangeLog:
-  # ===============================================================================
-  # favourites table
-  #   11 columns: id + 2 domain (user_id, product_id) + 4 audit (AbstractMappedEntity)
-  #               + 3 soft-delete (SoftDeletable: deleted, deleted_at, deleted_by)
-  #   2 indexes: partial unique on (user_id, product_id) WHERE deleted=false
-  #              + lookup index on (user_id)
-  #   No FK to product-service.products (cross-schema coupling avoided per spec §6.1)
-  # ===============================================================================
-  - createTable:
-      tableName: favourites
-      columns:
-        - column:
-            name: id
-            type: UUID
-            constraints:
-              primaryKey: true
-              nullable: false
-        - column:
-            name: user_id
-            type: UUID
-            constraints:
-              nullable: false
-        - column:
-            name: product_id
-            type: UUID
-            constraints:
-              nullable: false
-        - column:
-            name: created_at
-            type: TIMESTAMP
-            constraints:
-              nullable: false
-        - column:
-            name: updated_at
-            type: TIMESTAMP
-            constraints:
-              nullable: false
-        - column:
-            name: created_by
-            type: VARCHAR(100)
-        - column:
-            name: updated_by
-            type: VARCHAR(100)
-        - column:
-            name: deleted
-            type: BOOLEAN
-            constraints:
-              nullable: false
-              defaultValueBoolean: false
-        - column:
-            name: deleted_at
-            type: TIMESTAMP
-        - column:
-            name: deleted_by
-            type: VARCHAR(255)
+ # ===============================================================================
+ # favourites table
+ # 11 columns: id + 2 domain (user_id, product_id) + 4 audit (AbstractMappedEntity)
+ # + 3 soft-delete (SoftDeletable: deleted, deleted_at, deleted_by)
+ # 2 indexes: partial unique on (user_id, product_id) WHERE deleted=false
+ # + lookup index on (user_id)
+ # No FK to product-service.products (cross-schema coupling avoided per spec §6.1)
+ # ===============================================================================
+ - createTable:
+ tableName: favourites
+ columns:
+ - column:
+ name: id
+ type: UUID
+ constraints:
+ primaryKey: true
+ nullable: false
+ - column:
+ name: user_id
+ type: UUID
+ constraints:
+ nullable: false
+ - column:
+ name: product_id
+ type: UUID
+ constraints:
+ nullable: false
+ - column:
+ name: created_at
+ type: TIMESTAMP
+ constraints:
+ nullable: false
+ - column:
+ name: updated_at
+ type: TIMESTAMP
+ constraints:
+ nullable: false
+ - column:
+ name: created_by
+ type: VARCHAR(100)
+ - column:
+ name: updated_by
+ type: VARCHAR(100)
+ - column:
+ name: deleted
+ type: BOOLEAN
+ constraints:
+ nullable: false
+ defaultValueBoolean: false
+ - column:
+ name: deleted_at
+ type: TIMESTAMP
+ - column:
+ name: deleted_by
+ type: VARCHAR(255)
 
-  - createIndex:
-      tableName: favourites
-      indexName: idx_favourites_user_product_unique_active
-      unique: true
-      columns:
-        - column:
-            name: user_id
-        - column:
-            name: product_id
-      # Partial unique — only enforced for active (non-deleted) rows.
-      # Allows the same (user, product) to be re-favourited after a soft-delete.
-      where: deleted = false
+ - createIndex:
+ tableName: favourites
+ indexName: idx_favourites_user_product_unique_active
+ unique: true
+ columns:
+ - column:
+ name: user_id
+ - column:
+ name: product_id
+ # Partial unique : only enforced for active (non-deleted) rows.
+ # Allows the same (user, product) to be re-favourited after a soft-delete.
+ where: deleted = false
 
-  - createIndex:
-      tableName: favourites
-      indexName: idx_favourites_user_id
-      columns:
-        - column:
-            name: user_id
+ - createIndex:
+ tableName: favourites
+ indexName: idx_favourites_user_id
+ columns:
+ - column:
+ name: user_id
 ```
 
 - [ ] **Step 4: Verify Liquibase YAML is parseable + Application loads**
 
-Run from project root (compiles + loads context minus DB connection — this catches YAML syntax errors):
+Run from project root (compiles + loads context minus DB connection - this catches YAML syntax errors):
 ```bash
 ./mvnw -pl favourite-service -am test-compile
 ```
@@ -430,7 +430,7 @@ Expected: `BUILD SUCCESS`.
 
 ```bash
 git add favourite-service/src/main/resources/application.yml \
-        favourite-service/src/main/resources/db/changelog/
+ favourite-service/src/main/resources/db/changelog/
 git commit -m "feat(favourite-service): application.yml + Liquibase initial schema"
 ```
 
@@ -442,7 +442,7 @@ git commit -m "feat(favourite-service): application.yml + Liquibase initial sche
 - Create: `favourite-service/src/main/java/com/shop/favouriteservice/entity/Favourite.java`
 
 **Interfaces:**
-- Consumes: `AbstractMappedEntity` (common-core) — provides 4 audit cols + soft-delete cols + `markDeleted` / `markRestored`
+- Consumes: `AbstractMappedEntity` (common-core) - provides 4 audit cols + soft-delete cols + `markDeleted` / `markRestored`
 - Produces: `Favourite` entity mappable to `favourites` table (matches Task 3 Liquibase DDL exactly)
 
 - [ ] **Step 1: Create entity file**
@@ -477,20 +477,20 @@ import java.util.UUID;
 @Builder
 public class Favourite extends AbstractMappedEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", nullable = false, updatable = false)
-    private UUID id;
+ @Id
+ @GeneratedValue(strategy = GenerationType.UUID)
+ @Column(name = "id", nullable = false, updatable = false)
+ private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+ @Column(name = "user_id", nullable = false)
+ private UUID userId;
 
-    @Column(name = "product_id", nullable = false)
-    private UUID productId;
+ @Column(name = "product_id", nullable = false)
+ private UUID productId;
 }
 ```
 
-Note: `@GeneratedValue(strategy = GenerationType.UUID)` matches the actual fleet convention — confirmed in `product-service/src/main/java/com/shop/productservice/entity/Product.java:22`, `Category.java:24`, `Brand.java:23`. Bare `@GeneratedValue` is unsafe for UUID columns in Hibernate 6 (may fall back to `IDENTITY` strategy which expects an integer column).
+Note: `@GeneratedValue(strategy = GenerationType.UUID)` matches the actual fleet convention - confirmed in `product-service/src/main/java/com/shop/productservice/entity/Product.java:22`, `Category.java:24`, `Brand.java:23`. Bare `@GeneratedValue` is unsafe for UUID columns in Hibernate 6 (may fall back to `IDENTITY` strategy which expects an integer column).
 
 - [ ] **Step 2: Verify entity compiles and JPA schema validation passes**
 
@@ -500,7 +500,7 @@ Run from project root:
 ```
 Expected: `BUILD SUCCESS`.
 
-(JPA schema validation `ddl-auto: validate` only triggers at app boot — that's a future Task 11 verification with Postgres running.)
+(JPA schema validation `ddl-auto: validate` only triggers at app boot - that's a future Task 11 verification with Postgres running.)
 
 - [ ] **Step 3: Commit**
 
@@ -511,7 +511,7 @@ git commit -m "feat(favourite-service): Favourite entity (extends AbstractMapped
 
 ---
 
-## Task 5: FavouriteRepository — interface with derived queries + soft-delete JPQL
+## Task 5: FavouriteRepository : interface with derived queries + soft-delete JPQL
 
 **Files:**
 - Create: `favourite-service/src/main/java/com/shop/favouriteservice/repository/FavouriteRepository.java`
@@ -539,60 +539,60 @@ import java.util.UUID;
 
 public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
 
-    /**
-     * Returns the current user's favourites, newest first. {@code @SQLRestriction}
-     * on the entity auto-filters soft-deleted rows — no {@code AndDeletedFalse} suffix needed.
-     */
-    List<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId);
+ /**
+ * Returns the current user's favourites, newest first. {@code @SQLRestriction}
+ * on the entity auto-filters soft-deleted rows - no {@code AndDeletedFalse} suffix needed.
+ */
+ List<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-    /**
-     * Finds a favourite by id scoped to its owning user. Returns empty when the row
-     * exists but belongs to a different user — lets the service throw NOT_FOUND
-     * without leaking cross-user existence.
-     */
-    Optional<Favourite> findByIdAndUserId(UUID id, UUID userId);
+ /**
+ * Finds a favourite by id scoped to its owning user. Returns empty when the row
+ * exists but belongs to a different user - lets the service throw NOT_FOUND
+ * without leaking cross-user existence.
+ */
+ Optional<Favourite> findByIdAndUserId(UUID id, UUID userId);
 
-    Optional<Favourite> findByUserIdAndProductId(UUID userId, UUID productId);
+ Optional<Favourite> findByUserIdAndProductId(UUID userId, UUID productId);
 
-    boolean existsByUserIdAndProductId(UUID userId, UUID productId);
+ boolean existsByUserIdAndProductId(UUID userId, UUID productId);
 
-    /**
-     * Soft-deletes a single favourite when it belongs to the given user.
-     *
-     * @return number of rows updated (0 if id missing or owner mismatch — both
-     *         intentionally treated as "not found" by the service layer)
-     */
-    @Modifying
-    @Query("""
-            UPDATE Favourite f
-               SET f.deleted = true,
-                   f.deletedAt = CURRENT_TIMESTAMP,
-                   f.deletedBy = :deletedBy
-             WHERE f.id = :id
-               AND f.userId = :userId
-               AND f.deleted = false
-            """)
-    int softDeleteByIdAndUserId(@Param("id") UUID id,
-                                 @Param("userId") UUID userId,
-                                 @Param("deletedBy") String deletedBy);
+ /**
+ * Soft-deletes a single favourite when it belongs to the given user.
+ *
+ * @return number of rows updated (0 if id missing or owner mismatch - both
+ * intentionally treated as "not found" by the service layer)
+ */
+ @Modifying
+ @Query("""
+ UPDATE Favourite f
+ SET f.deleted = true,
+ f.deletedAt = CURRENT_TIMESTAMP,
+ f.deletedBy = :deletedBy
+ WHERE f.id = :id
+ AND f.userId = :userId
+ AND f.deleted = false
+ """)
+ int softDeleteByIdAndUserId(@Param("id") UUID id,
+ @Param("userId") UUID userId,
+ @Param("deletedBy") String deletedBy);
 
-    /**
-     * Soft-deletes by (userId, productId) pair. Used by the
-     * {@code DELETE /api/v1/favourites/by-product/{productId}} endpoint.
-     */
-    @Modifying
-    @Query("""
-            UPDATE Favourite f
-               SET f.deleted = true,
-                   f.deletedAt = CURRENT_TIMESTAMP,
-                   f.deletedBy = :deletedBy
-             WHERE f.userId = :userId
-               AND f.productId = :productId
-               AND f.deleted = false
-            """)
-    int softDeleteByUserIdAndProductId(@Param("userId") UUID userId,
-                                        @Param("productId") UUID productId,
-                                        @Param("deletedBy") String deletedBy);
+ /**
+ * Soft-deletes by (userId, productId) pair. Used by the
+ * {@code DELETE /api/v1/favourites/by-product/{productId}} endpoint.
+ */
+ @Modifying
+ @Query("""
+ UPDATE Favourite f
+ SET f.deleted = true,
+ f.deletedAt = CURRENT_TIMESTAMP,
+ f.deletedBy = :deletedBy
+ WHERE f.userId = :userId
+ AND f.productId = :productId
+ AND f.deleted = false
+ """)
+ int softDeleteByUserIdAndProductId(@Param("userId") UUID userId,
+ @Param("productId") UUID productId,
+ @Param("deletedBy") String deletedBy);
 }
 ```
 
@@ -635,8 +635,8 @@ import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record FavouriteCreateRequest(
-        @NotNull(message = "productId must not be null")
-        UUID productId
+ @NotNull(message = "productId must not be null")
+ UUID productId
 ) {}
 ```
 
@@ -651,16 +651,16 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record FavouriteResponse(
-        UUID id,
-        UUID userId,
-        UUID productId,
-        Instant createdAt
+ UUID id,
+ UUID userId,
+ UUID productId,
+ Instant createdAt
 ) {}
 ```
 
-> **Không `@Builder` (rev 2):** mapper dùng `new FavouriteResponse(...)` thủ công
-> (4 fields) — annotation chỉ tạo 2 code paths cho cùng 1 việc. Nhất quán với
-> spec §9 và `InventoryResponse` của inventory plan.
+> **No `@Builder` (rev 2):** Mappers construct `new FavouriteResponse(...)` directly
+> across its 4 fields, avoiding duplicate construction mechanisms. Aligns with
+> spec §9 and inventory-service response conventions.
 
 - [ ] **Step 3: Create FavouriteMapper**
 
@@ -677,25 +677,25 @@ import org.springframework.stereotype.Component;
 @Component
 public class FavouriteMapper {
 
-    private final ModelMapper modelMapper;
+ private final ModelMapper modelMapper;
 
-    public FavouriteMapper(ModelMapper modelMapper) {
-        this.modelMapper = modelMapper;
-    }
+ public FavouriteMapper(ModelMapper modelMapper) {
+ this.modelMapper = modelMapper;
+ }
 
-    public FavouriteResponse toResponse(Favourite favourite) {
-        // Manual mapping — only 4 fields, ModelMapper overhead exceeds benefit.
-        // Same approach as auth-service UserMapper.toResponse.
-        return new FavouriteResponse(
-                favourite.getId(),
-                favourite.getUserId(),
-                favourite.getProductId(),
-                favourite.getCreatedAt()
-        );
-    }
+ public FavouriteResponse toResponse(Favourite favourite) {
+ // Manual mapping - only 4 fields, ModelMapper overhead exceeds benefit.
+ // Same approach as auth-service UserMapper.toResponse.
+ return new FavouriteResponse(
+ favourite.getId(),
+ favourite.getUserId(),
+ favourite.getProductId(),
+ favourite.getCreatedAt()
+ );
+ }
 
-    // No toEntity() — FavouriteServiceImpl.create() builds the entity via
-    // .builder() directly (only 2 user-supplied fields + generated id).
+ // No toEntity() - FavouriteServiceImpl.create() builds the entity via
+ // .builder() directly (only 2 user-supplied fields + generated id).
 }
 ```
 
@@ -711,17 +711,17 @@ Expected: `BUILD SUCCESS`.
 
 ```bash
 git add favourite-service/src/main/java/com/shop/favouriteservice/dto/ \
-        favourite-service/src/main/java/com/shop/favouriteservice/mapper/
+ favourite-service/src/main/java/com/shop/favouriteservice/mapper/
 git commit -m "feat(favourite-service): DTOs (records) + FavouriteMapper"
 ```
 
 ---
 
-## Task 7: FavouriteService interface + impl (TDD — tests first)
+## Task 7: FavouriteService interface + impl (TDD : tests first)
 
 **Files:**
 - Create: `favourite-service/src/main/java/com/shop/favouriteservice/service/FavouriteService.java` (interface)
-- Create: `favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java` (tests — write FIRST)
+- Create: `favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java` (tests - write FIRST)
 - Create: `favourite-service/src/main/java/com/shop/favouriteservice/service/impls/FavouriteServiceImpl.java` (impl)
 
 **Interfaces:**
@@ -764,145 +764,145 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FavouriteServiceImplTest {
 
-    @Mock private FavouriteRepository repo;
-    @Mock private FavouriteMapper mapper;
-    @Mock private AuditorAware<String> auditorAware;
+ @Mock private FavouriteRepository repo;
+ @Mock private FavouriteMapper mapper;
+ @Mock private AuditorAware<String> auditorAware;
 
-    @InjectMocks private FavouriteServiceImpl service;
+ @InjectMocks private FavouriteServiceImpl service;
 
-    private final UUID userId = UUID.randomUUID();
-    private final UUID favouriteId = UUID.randomUUID();
-    private final UUID productId = UUID.randomUUID();
+ private final UUID userId = UUID.randomUUID();
+ private final UUID favouriteId = UUID.randomUUID();
+ private final UUID productId = UUID.randomUUID();
 
-    private Favourite sampleFavourite() {
-        // Note: no `.createdAt(...)` here — createdAt lives on AbstractMappedEntity
-        // (superclass) which is NOT @SuperBuilder. Subclass @Builder only exposes
-        // subclass fields. Auditing auto-fills createdAt via JpaAuditingEntityListener.
-        return Favourite.builder()
-                .id(favouriteId)
-                .userId(userId)
-                .productId(productId)
-                .build();
-    }
+ private Favourite sampleFavourite() {
+ // Note: no `.createdAt(...)` here - createdAt lives on AbstractMappedEntity
+ // (superclass) which is NOT @SuperBuilder. Subclass @Builder only exposes
+ // subclass fields. Auditing auto-fills createdAt via JpaAuditingEntityListener.
+ return Favourite.builder()
+ .id(favouriteId)
+ .userId(userId)
+ .productId(productId)
+ .build();
+ }
 
-    private FavouriteResponse sampleResponse() {
-        return new FavouriteResponse(favouriteId, userId, productId, Instant.now());
-    }
+ private FavouriteResponse sampleResponse() {
+ return new FavouriteResponse(favouriteId, userId, productId, Instant.now());
+ }
 
-    @Test
-    void findAllByCurrentUser_returnsMappedList() {
-        Favourite fav = sampleFavourite();
-        when(repo.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(fav));
-        when(mapper.toResponse(fav)).thenReturn(sampleResponse());
+ @Test
+ void findAllByCurrentUser_returnsMappedList() {
+ Favourite fav = sampleFavourite();
+ when(repo.findByUserIdOrderByCreatedAtDesc(userId)).thenReturn(List.of(fav));
+ when(mapper.toResponse(fav)).thenReturn(sampleResponse());
 
-        List<FavouriteResponse> result = service.findAllByCurrentUser(userId);
+ List<FavouriteResponse> result = service.findAllByCurrentUser(userId);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).id()).isEqualTo(favouriteId);
-    }
+ assertThat(result).hasSize(1);
+ assertThat(result.get(0).id()).isEqualTo(favouriteId);
+ }
 
-    @Test
-    void findById_returnsFavourite_whenOwnedByCurrentUser() {
-        Favourite fav = sampleFavourite();
-        when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.of(fav));
-        when(mapper.toResponse(fav)).thenReturn(sampleResponse());
+ @Test
+ void findById_returnsFavourite_whenOwnedByCurrentUser() {
+ Favourite fav = sampleFavourite();
+ when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.of(fav));
+ when(mapper.toResponse(fav)).thenReturn(sampleResponse());
 
-        FavouriteResponse result = service.findById(favouriteId, userId);
+ FavouriteResponse result = service.findById(favouriteId, userId);
 
-        assertThat(result.id()).isEqualTo(favouriteId);
-    }
+ assertThat(result.id()).isEqualTo(favouriteId);
+ }
 
-    @Test
-    void findById_throwsNotFound_whenMissing() {
-        when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.empty());
+ @Test
+ void findById_throwsNotFound_whenMissing() {
+ when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.findById(favouriteId, userId))
-                .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6001"));
-    }
+ assertThatThrownBy(() -> service.findById(favouriteId, userId))
+ .isInstanceOfSatisfying(BusinessException.class, ex ->
+ assertThat(ex.getErrorCode()).isEqualTo("FAV-6001"));
+ }
 
-    @Test
-    void findById_throwsNotFound_whenOwnedByOtherUser() {
-        when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.empty());
+ @Test
+ void findById_throwsNotFound_whenOwnedByOtherUser() {
+ when(repo.findByIdAndUserId(favouriteId, userId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.findById(favouriteId, userId))
-                .isInstanceOf(BusinessException.class);
-    }
+ assertThatThrownBy(() -> service.findById(favouriteId, userId))
+ .isInstanceOf(BusinessException.class);
+ }
 
-    @Test
-    void create_persistsAndReturnsResponse() {
-        when(repo.existsByUserIdAndProductId(userId, productId)).thenReturn(false);
-        ArgumentCaptor<Favourite> captor = ArgumentCaptor.forClass(Favourite.class);
-        Favourite saved = sampleFavourite();
-        when(repo.save(any(Favourite.class))).thenReturn(saved);
-        when(mapper.toResponse(saved)).thenReturn(sampleResponse());
+ @Test
+ void create_persistsAndReturnsResponse() {
+ when(repo.existsByUserIdAndProductId(userId, productId)).thenReturn(false);
+ ArgumentCaptor<Favourite> captor = ArgumentCaptor.forClass(Favourite.class);
+ Favourite saved = sampleFavourite();
+ when(repo.save(any(Favourite.class))).thenReturn(saved);
+ when(mapper.toResponse(saved)).thenReturn(sampleResponse());
 
-        FavouriteResponse result = service.create(userId,
-                new FavouriteCreateRequest(productId));
+ FavouriteResponse result = service.create(userId,
+ new FavouriteCreateRequest(productId));
 
-        verify(repo).save(captor.capture());
-        Favourite persisted = captor.getValue();
-        assertThat(persisted.getUserId()).isEqualTo(userId);
-        assertThat(persisted.getProductId()).isEqualTo(productId);
-        assertThat(result.id()).isEqualTo(favouriteId);
-    }
+ verify(repo).save(captor.capture());
+ Favourite persisted = captor.getValue();
+ assertThat(persisted.getUserId()).isEqualTo(userId);
+ assertThat(persisted.getProductId()).isEqualTo(productId);
+ assertThat(result.id()).isEqualTo(favouriteId);
+ }
 
-    @Test
-    void create_throwsConflict_whenDuplicate() {
-        when(repo.existsByUserIdAndProductId(userId, productId)).thenReturn(true);
+ @Test
+ void create_throwsConflict_whenDuplicate() {
+ when(repo.existsByUserIdAndProductId(userId, productId)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(userId,
-                new FavouriteCreateRequest(productId)))
-                .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6002"));
-    }
+ assertThatThrownBy(() -> service.create(userId,
+ new FavouriteCreateRequest(productId)))
+ .isInstanceOfSatisfying(BusinessException.class, ex ->
+ assertThat(ex.getErrorCode()).isEqualTo("FAV-6002"));
+ }
 
-    @Test
-    void deleteById_softDeletes_whenFound() {
-        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
-        when(repo.softDeleteByIdAndUserId(eq(favouriteId), eq(userId), eq("alice"))).thenReturn(1);
+ @Test
+ void deleteById_softDeletes_whenFound() {
+ when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
+ when(repo.softDeleteByIdAndUserId(eq(favouriteId), eq(userId), eq("alice"))).thenReturn(1);
 
-        service.deleteById(favouriteId, userId);
+ service.deleteById(favouriteId, userId);
 
-        verify(repo).softDeleteByIdAndUserId(favouriteId, userId, "alice");
-    }
+ verify(repo).softDeleteByIdAndUserId(favouriteId, userId, "alice");
+ }
 
-    @Test
-    void deleteById_throwsNotFound_whenNotOwned() {
-        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
-        when(repo.softDeleteByIdAndUserId(eq(favouriteId), eq(userId), eq("alice"))).thenReturn(0);
+ @Test
+ void deleteById_throwsNotFound_whenNotOwned() {
+ when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
+ when(repo.softDeleteByIdAndUserId(eq(favouriteId), eq(userId), eq("alice"))).thenReturn(0);
 
-        assertThatThrownBy(() -> service.deleteById(favouriteId, userId))
-                .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6001"));
-    }
+ assertThatThrownBy(() -> service.deleteById(favouriteId, userId))
+ .isInstanceOfSatisfying(BusinessException.class, ex ->
+ assertThat(ex.getErrorCode()).isEqualTo("FAV-6001"));
+ }
 
-    @Test
-    void deleteByProductId_softDeletes_whenFound() {
-        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
-        when(repo.softDeleteByUserIdAndProductId(userId, productId, "alice")).thenReturn(1);
+ @Test
+ void deleteByProductId_softDeletes_whenFound() {
+ when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
+ when(repo.softDeleteByUserIdAndProductId(userId, productId, "alice")).thenReturn(1);
 
-        service.deleteByProductId(userId, productId);
+ service.deleteByProductId(userId, productId);
 
-        verify(repo).softDeleteByUserIdAndProductId(userId, productId, "alice");
-    }
+ verify(repo).softDeleteByUserIdAndProductId(userId, productId, "alice");
+ }
 
-    @Test
-    void deleteByProductId_throwsNotFound_whenMissing() {
-        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
-        when(repo.softDeleteByUserIdAndProductId(userId, productId, "alice")).thenReturn(0);
+ @Test
+ void deleteByProductId_throwsNotFound_whenMissing() {
+ when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
+ when(repo.softDeleteByUserIdAndProductId(userId, productId, "alice")).thenReturn(0);
 
-        assertThatThrownBy(() -> service.deleteByProductId(userId, productId))
-                .isInstanceOfSatisfying(BusinessException.class, ex ->
-                        assertThat(ex.getErrorCode()).isEqualTo("FAV-6003"));
-    }
+ assertThatThrownBy(() -> service.deleteByProductId(userId, productId))
+ .isInstanceOfSatisfying(BusinessException.class, ex ->
+ assertThat(ex.getErrorCode()).isEqualTo("FAV-6003"));
+ }
 }
 ```
 
-> **REV 2 — vì sao assert `getErrorCode()` thay vì message text:** `BusinessException.of()`
-> resolve message qua `Messages.get()` → fallback `ResourceBundle.getBundle(..., LocaleContextHolder.getLocale())`.
-> Trên máy locale vi_VN, message trả về tiếng Việt → `.hasMessageContaining("not found")`
-> FAIL. `getErrorCode()` (vd `"FAV-6001"`) là locale-independent contract.
+> **REV 2 - Why assert `getErrorCode()` instead of message text:** `BusinessException.of()`
+> resolves messages via `Messages.get()`, falling back to `ResourceBundle.getBundle(..., LocaleContextHolder.getLocale())`.
+> On non-English locales, localized error messages cause assertions like `.hasMessageContaining("not found")`
+> to fail. `getErrorCode()` (e.g., `"FAV-6001"`) provides a locale-independent contract.
 
 - [ ] **Step 2: Run test to verify it fails to compile (interface not yet defined)**
 
@@ -910,7 +910,7 @@ Run from project root:
 ```bash
 ./mvnw -pl favourite-service -am test -Dtest=FavouriteServiceImplTest
 ```
-Expected: `COMPILATION FAILURE` — `cannot find symbol: FavouriteServiceImpl` (and `FavouriteService` interface). This is the failing-test gate.
+Expected: `COMPILATION FAILURE` - `cannot find symbol: FavouriteServiceImpl` (and `FavouriteService` interface). This is the failing-test gate.
 
 - [ ] **Step 3: Write the interface**
 
@@ -927,15 +927,15 @@ import java.util.UUID;
 
 public interface FavouriteService {
 
-    List<FavouriteResponse> findAllByCurrentUser(UUID userId);
+ List<FavouriteResponse> findAllByCurrentUser(UUID userId);
 
-    FavouriteResponse findById(UUID id, UUID userId);
+ FavouriteResponse findById(UUID id, UUID userId);
 
-    FavouriteResponse create(UUID userId, FavouriteCreateRequest request);
+ FavouriteResponse create(UUID userId, FavouriteCreateRequest request);
 
-    void deleteById(UUID id, UUID userId);
+ void deleteById(UUID id, UUID userId);
 
-    void deleteByProductId(UUID userId, UUID productId);
+ void deleteByProductId(UUID userId, UUID productId);
 }
 ```
 
@@ -966,64 +966,64 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FavouriteServiceImpl implements FavouriteService {
 
-    private final FavouriteRepository repo;
-    private final FavouriteMapper mapper;
-    private final AuditorAware<String> auditorAware;
+ private final FavouriteRepository repo;
+ private final FavouriteMapper mapper;
+ private final AuditorAware<String> auditorAware;
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<FavouriteResponse> findAllByCurrentUser(UUID userId) {
-        return repo.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
-    }
+ @Override
+ @Transactional(readOnly = true)
+ public List<FavouriteResponse> findAllByCurrentUser(UUID userId) {
+ return repo.findByUserIdOrderByCreatedAtDesc(userId)
+ .stream()
+ .map(mapper::toResponse)
+ .toList();
+ }
 
-    @Override
-    @Transactional(readOnly = true)
-    public FavouriteResponse findById(UUID id, UUID userId) {
-        return mapper.toResponse(findOwnedOrThrow(id, userId));
-    }
+ @Override
+ @Transactional(readOnly = true)
+ public FavouriteResponse findById(UUID id, UUID userId) {
+ return mapper.toResponse(findOwnedOrThrow(id, userId));
+ }
 
-    @Override
-    @Transactional
-    public FavouriteResponse create(UUID userId, FavouriteCreateRequest request) {
-        if (repo.existsByUserIdAndProductId(userId, request.productId())) {
-            throw BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS);
-        }
-        Favourite favourite = Favourite.builder()
-                .userId(userId)
-                .productId(request.productId())
-                .build();
-        Favourite saved = repo.save(favourite);
-        return mapper.toResponse(saved);
-    }
+ @Override
+ @Transactional
+ public FavouriteResponse create(UUID userId, FavouriteCreateRequest request) {
+ if (repo.existsByUserIdAndProductId(userId, request.productId())) {
+ throw BusinessException.of(ErrorCode.FAVOURITE_ALREADY_EXISTS);
+ }
+ Favourite favourite = Favourite.builder()
+ .userId(userId)
+ .productId(request.productId())
+ .build();
+ Favourite saved = repo.save(favourite);
+ return mapper.toResponse(saved);
+ }
 
-    @Override
-    @Transactional
-    public void deleteById(UUID id, UUID userId) {
-        String actor = auditorAware.getCurrentAuditor().orElse("system");
-        int affected = repo.softDeleteByIdAndUserId(id, userId, actor);
-        if (affected == 0) {
-            throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id);
-        }
-    }
+ @Override
+ @Transactional
+ public void deleteById(UUID id, UUID userId) {
+ String actor = auditorAware.getCurrentAuditor().orElse("system");
+ int affected = repo.softDeleteByIdAndUserId(id, userId, actor);
+ if (affected == 0) {
+ throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id);
+ }
+ }
 
-    @Override
-    @Transactional
-    public void deleteByProductId(UUID userId, UUID productId) {
-        String actor = auditorAware.getCurrentAuditor().orElse("system");
-        int affected = repo.softDeleteByUserIdAndProductId(userId, productId, actor);
-        if (affected == 0) {
-            // FAV-6003 — message đúng ngữ cảnh product (không tái dùng FAV-6001)
-            throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
-        }
-    }
+ @Override
+ @Transactional
+ public void deleteByProductId(UUID userId, UUID productId) {
+ String actor = auditorAware.getCurrentAuditor().orElse("system");
+ int affected = repo.softDeleteByUserIdAndProductId(userId, productId, actor);
+ if (affected == 0) {
+ // FAV-6003: Context-aware product message without reusing FAV-6001
+ throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
+ }
+ }
 
-    private Favourite findOwnedOrThrow(UUID id, UUID userId) {
-        return repo.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id));
-    }
+ private Favourite findOwnedOrThrow(UUID id, UUID userId) {
+ return repo.findByIdAndUserId(id, userId)
+ .orElseThrow(() -> BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id));
+ }
 }
 ```
 
@@ -1033,27 +1033,27 @@ Run from project root:
 ```bash
 ./mvnw -pl favourite-service -am test -Dtest=FavouriteServiceImplTest
 ```
-Expected: `BUILD SUCCESS` — 10 tests passed.
+Expected: `BUILD SUCCESS` - 10 tests passed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add favourite-service/src/main/java/com/shop/favouriteservice/service/ \
-        favourite-service/src/test/java/com/shop/favouriteservice/service/
+ favourite-service/src/test/java/com/shop/favouriteservice/service/
 git commit -m "feat(favourite-service): FavouriteService interface + impl + 10 unit tests"
 ```
 
 ---
 
-## Task 8: FavouriteController (TDD — tests first)
+## Task 8: FavouriteController (TDD : tests first)
 
 **Files:**
-- Create: `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` (tests — write FIRST)
+- Create: `favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java` (tests - write FIRST)
 - Create: `favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java` (controller)
 
 **Interfaces:**
 - Consumes: `FavouriteService` interface (Task 7), `ApiPaths.FAVOURITES` constant (common-core), `AuthenticatedUser.requireCurrent()` static helper (common-security)
-- Produces: REST endpoints — 5 endpoints under `/api/v1/favourites`. Used by clients via API gateway.
+- Produces: REST endpoints - 5 endpoints under `/api/v1/favourites`. Used by clients via API gateway.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1100,104 +1100,104 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(ApiExceptionHandler.class)
 class FavouriteControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+ @Autowired
+ private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+ private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @MockitoBean
-    private FavouriteService favouriteService;
+ @MockitoBean
+ private FavouriteService favouriteService;
 
-    private final UUID userId = UUID.randomUUID();
-    private final UUID favouriteId = UUID.randomUUID();
-    private final UUID productId = UUID.randomUUID();
+ private final UUID userId = UUID.randomUUID();
+ private final UUID favouriteId = UUID.randomUUID();
+ private final UUID productId = UUID.randomUUID();
 
-    // ⚠️ BẮT BUỘC (rev 2): currentUserId() gọi AuthenticatedUser.requireCurrent() trong
-    // body method — nếu SecurityContext rỗng thì throw IllegalStateException → mọi test 500.
-    // ⚠️ AuthenticatedUser.current() CHỈ nhận JwtAuthenticationToken — TestingAuthenticationToken
-    // hay @WithMockUser đều rơi vào nhánh Optional.empty() → KHÔNG dùng được.
-    @BeforeEach
-    void seedSecurityContext() {
-        Jwt jwt = Jwt.withTokenValue("test-token")
-                .header("alg", "none")
-                .subject(userId.toString())                              // sub = UUID string
-                .claim("preferred_username", "alice")
-                .build();
-        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
-    }
+    // Required (rev 2): currentUserId() invokes AuthenticatedUser.requireCurrent() within
+    // the method body. If SecurityContext is empty, an IllegalStateException fails the test.
+    // AuthenticatedUser.current() only recognizes JwtAuthenticationToken; TestingAuthenticationToken
+    // or @WithMockUser resolve to Optional.empty() and will not work.
+ @BeforeEach
+ void seedSecurityContext() {
+ Jwt jwt = Jwt.withTokenValue("test-token")
+ .header("alg", "none")
+ .subject(userId.toString()) // sub = UUID string
+ .claim("preferred_username", "alice")
+ .build();
+ SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
+ }
 
-    @AfterEach
-    void clearSecurityContext() {
-        SecurityContextHolder.clearContext();   // không leak sang test khác
-    }
+ @AfterEach
+ void clearSecurityContext() {
+ SecurityContextHolder.clearContext(); // prevents context leaks across tests
+ }
 
-    private FavouriteResponse sampleResponse() {
-        return new FavouriteResponse(favouriteId, userId, productId, Instant.now());
-    }
+ private FavouriteResponse sampleResponse() {
+ return new FavouriteResponse(favouriteId, userId, productId, Instant.now());
+ }
 
-    @Test
-    void findAll_returns200WithEnvelope() throws Exception {
-        when(favouriteService.findAllByCurrentUser(any(UUID.class))).thenReturn(List.of(sampleResponse()));
+ @Test
+ void findAll_returns200WithEnvelope() throws Exception {
+ when(favouriteService.findAllByCurrentUser(any(UUID.class))).thenReturn(List.of(sampleResponse()));
 
-        mockMvc.perform(get("/api/v1/favourites"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].id").value(favouriteId.toString()))
-                .andExpect(jsonPath("$.data[0].productId").value(productId.toString()));
-    }
+ mockMvc.perform(get("/api/v1/favourites"))
+ .andExpect(status().isOk())
+ .andExpect(jsonPath("$.success").value(true))
+ .andExpect(jsonPath("$.data[0].id").value(favouriteId.toString()))
+ .andExpect(jsonPath("$.data[0].productId").value(productId.toString()));
+ }
 
-    @Test
-    void findById_returns200WithEnvelope() throws Exception {
-        when(favouriteService.findById(eq(favouriteId), any(UUID.class))).thenReturn(sampleResponse());
+ @Test
+ void findById_returns200WithEnvelope() throws Exception {
+ when(favouriteService.findById(eq(favouriteId), any(UUID.class))).thenReturn(sampleResponse());
 
-        mockMvc.perform(get("/api/v1/favourites/" + favouriteId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(favouriteId.toString()));
-    }
+ mockMvc.perform(get("/api/v1/favourites/" + favouriteId))
+ .andExpect(status().isOk())
+ .andExpect(jsonPath("$.data.id").value(favouriteId.toString()));
+ }
 
-    @Test
-    void create_returns200WithCreatedEnvelope() throws Exception {
-        when(favouriteService.create(any(UUID.class), any(FavouriteCreateRequest.class)))
-                .thenReturn(sampleResponse());
+ @Test
+ void create_returns200WithCreatedEnvelope() throws Exception {
+ when(favouriteService.create(any(UUID.class), any(FavouriteCreateRequest.class)))
+ .thenReturn(sampleResponse());
 
-        FavouriteCreateRequest req = new FavouriteCreateRequest(productId);
-        mockMvc.perform(post("/api/v1/favourites")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Favourite added successfully"))
-                .andExpect(jsonPath("$.data.id").value(favouriteId.toString()));
-    }
+ FavouriteCreateRequest req = new FavouriteCreateRequest(productId);
+ mockMvc.perform(post("/api/v1/favourites")
+ .contentType(MediaType.APPLICATION_JSON)
+ .content(objectMapper.writeValueAsString(req)))
+ .andExpect(status().isOk())
+ .andExpect(jsonPath("$.success").value(true))
+ .andExpect(jsonPath("$.message").value("Favourite added successfully"))
+ .andExpect(jsonPath("$.data.id").value(favouriteId.toString()));
+ }
 
-    @Test
-    void create_returns400_whenProductIdMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/favourites")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.errors[0]").value(org.hamcrest.Matchers.containsString("productId")));
-    }
+ @Test
+ void create_returns400_whenProductIdMissing() throws Exception {
+ mockMvc.perform(post("/api/v1/favourites")
+ .contentType(MediaType.APPLICATION_JSON)
+ .content("{}"))
+ .andExpect(status().isBadRequest())
+ .andExpect(jsonPath("$.success").value(false))
+ .andExpect(jsonPath("$.errors[0]").value(org.hamcrest.Matchers.containsString("productId")));
+ }
 
-    @Test
-    void deleteById_returns200WithMessageEnvelope() throws Exception {
-        mockMvc.perform(delete("/api/v1/favourites/" + favouriteId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Favourite removed successfully"));
+ @Test
+ void deleteById_returns200WithMessageEnvelope() throws Exception {
+ mockMvc.perform(delete("/api/v1/favourites/" + favouriteId))
+ .andExpect(status().isOk())
+ .andExpect(jsonPath("$.success").value(true))
+ .andExpect(jsonPath("$.message").value("Favourite removed successfully"));
 
-        verify(favouriteService).deleteById(eq(favouriteId), any(UUID.class));
-    }
+ verify(favouriteService).deleteById(eq(favouriteId), any(UUID.class));
+ }
 
-    @Test
-    void deleteByProduct_returns200WithMessageEnvelope() throws Exception {
-        mockMvc.perform(delete("/api/v1/favourites/by-product/" + productId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Favourite removed successfully"));
+ @Test
+ void deleteByProduct_returns200WithMessageEnvelope() throws Exception {
+ mockMvc.perform(delete("/api/v1/favourites/by-product/" + productId))
+ .andExpect(status().isOk())
+ .andExpect(jsonPath("$.message").value("Favourite removed successfully"));
 
-        verify(favouriteService).deleteByProductId(any(UUID.class), eq(productId));
-    }
+ verify(favouriteService).deleteByProductId(any(UUID.class), eq(productId));
+ }
 }
 ```
 
@@ -1207,7 +1207,7 @@ Run from project root:
 ```bash
 ./mvnw -pl favourite-service -am test -Dtest=FavouriteControllerTest
 ```
-Expected: `COMPILATION FAILURE` — `cannot find symbol: class FavouriteController`.
+Expected: `COMPILATION FAILURE` - `cannot find symbol: class FavouriteController`.
 
 - [ ] **Step 3: Write the controller**
 
@@ -1236,54 +1236,54 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-// KHÔNG @PreAuthorize (rev 2): auth enforce bởi BaseSecurityConfig filter chain
-// (anyRequest().authenticated() — public-paths rỗng). Class-level annotation redundant
-// và gây vùng xám method-security trong @WebMvcTest slice. Khớp ProductController pattern.
+// No @PreAuthorize (rev 2): Authentication is enforced by the BaseSecurityConfig filter chain
+// (anyRequest().authenticated() with empty public-paths). Class-level annotations are redundant
+// and create method-security ambiguity in @WebMvcTest slices. Matches ProductController conventions.
 @RestController
 @RequestMapping(ApiPaths.FAVOURITES)
 @RequiredArgsConstructor
 public class FavouriteController {
 
-    private final FavouriteService service;
+ private final FavouriteService service;
 
-    @GetMapping
-    public ApiResponse<List<FavouriteResponse>> findAll() {
-        return ApiResponse.ok(service.findAllByCurrentUser(currentUserId()));
-    }
+ @GetMapping
+ public ApiResponse<List<FavouriteResponse>> findAll() {
+ return ApiResponse.ok(service.findAllByCurrentUser(currentUserId()));
+ }
 
-    @GetMapping("/{favouriteId}")
-    public ApiResponse<FavouriteResponse> findById(@PathVariable UUID favouriteId) {
-        return ApiResponse.ok(service.findById(favouriteId, currentUserId()));
-    }
+ @GetMapping("/{favouriteId}")
+ public ApiResponse<FavouriteResponse> findById(@PathVariable UUID favouriteId) {
+ return ApiResponse.ok(service.findById(favouriteId, currentUserId()));
+ }
 
-    @PostMapping
-    public ApiResponse<FavouriteResponse> create(@Valid @RequestBody FavouriteCreateRequest request) {
-        return ApiResponse.ok(service.create(currentUserId(), request),
-                "Favourite added successfully");
-    }
+ @PostMapping
+ public ApiResponse<FavouriteResponse> create(@Valid @RequestBody FavouriteCreateRequest request) {
+ return ApiResponse.ok(service.create(currentUserId(), request),
+ "Favourite added successfully");
+ }
 
-    @DeleteMapping("/{favouriteId}")
-    public ApiResponse<Void> deleteById(@PathVariable UUID favouriteId) {
-        service.deleteById(favouriteId, currentUserId());
-        return ApiResponse.message("Favourite removed successfully");
-    }
+ @DeleteMapping("/{favouriteId}")
+ public ApiResponse<Void> deleteById(@PathVariable UUID favouriteId) {
+ service.deleteById(favouriteId, currentUserId());
+ return ApiResponse.message("Favourite removed successfully");
+ }
 
-    @DeleteMapping("/by-product/{productId}")
-    public ApiResponse<Void> deleteByProduct(@PathVariable UUID productId) {
-        service.deleteByProductId(currentUserId(), productId);
-        return ApiResponse.message("Favourite removed successfully");
-    }
+ @DeleteMapping("/by-product/{productId}")
+ public ApiResponse<Void> deleteByProduct(@PathVariable UUID productId) {
+ service.deleteByProductId(currentUserId(), productId);
+ return ApiResponse.message("Favourite removed successfully");
+ }
 
-    private static UUID currentUserId() {
-        String sub = AuthenticatedUser.requireCurrent().id();
-        try {
-            return UUID.fromString(sub);
-        } catch (IllegalArgumentException ex) {
-            // Defensive — valid Keycloak JWT subjects are always UUIDs. Prevents 500
-            // only if a non-UUID subject is ever introduced.
-            throw BusinessException.unauthorized("favourite.user.subject.malformed");
-        }
-    }
+ private static UUID currentUserId() {
+ String sub = AuthenticatedUser.requireCurrent().id();
+ try {
+ return UUID.fromString(sub);
+ } catch (IllegalArgumentException ex) {
+ // Defensive - valid Keycloak JWT subjects are always UUIDs. Prevents 500
+ // only if a non-UUID subject is ever introduced.
+ throw BusinessException.unauthorized("favourite.user.subject.malformed");
+ }
+ }
 }
 ```
 
@@ -1293,19 +1293,19 @@ Run from project root:
 ```bash
 ./mvnw -pl favourite-service -am test -Dtest=FavouriteControllerTest
 ```
-Expected: `BUILD SUCCESS` — 6 tests passed.
+Expected: `BUILD SUCCESS` - 6 tests passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add favourite-service/src/main/java/com/shop/favouriteservice/controller/ \
-        favourite-service/src/test/java/com/shop/favouriteservice/controller/
+ favourite-service/src/test/java/com/shop/favouriteservice/controller/
 git commit -m "feat(favourite-service): FavouriteController + 6 MVC slice tests"
 ```
 
 ---
 
-## Task 9: FavouriteRepositoryTest — JPA slice with Testcontainers Postgres
+## Task 9: FavouriteRepositoryTest : JPA slice with Testcontainers Postgres
 
 **Files:**
 - Create: `favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java`
@@ -1314,16 +1314,16 @@ git commit -m "feat(favourite-service): FavouriteController + 6 MVC slice tests"
 - Consumes: `FavouriteRepository` (Task 5), `Favourite` entity (Task 4), Liquibase schema (Task 3)
 - Produces: 3 integration assertions on `@SQLRestriction`, soft-delete UPDATE, and partial unique constraint behavior
 
-> ⚠️ **REV 2:** mirror ĐẦY ĐỦ pattern của `ProductRepositoryTest` — gồm cả
+> **REV 2:** Mirror the full pattern from `ProductRepositoryTest`, including
 > `TestLiquibaseConfig` (test-only `SpringLiquibase` bean + `@EnableJpaAuditing`).
-> Thiếu class này, Liquibase có thể không chạy trong slice →
-> `relation "favourites" does not exist` → cả 3 tests fail. Image cũng đồng bộ
-> `postgres:16` (không `-alpine`) để khớp fleet.
+> Without this configuration, Liquibase may not execute during the slice, leading to
+> `relation "favourites" does not exist` errors across tests. The container image
+> aligns with `postgres:16` across the fleet.
 
 - [ ] **Step 0: Create TestLiquibaseConfig (test-only)**
 
 Create `favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java`
-(copy nguyên văn từ `product-service/src/test/java/com/shop/productservice/config/TestLiquibaseConfig.java`):
+(mirrored directly from `product-service/src/test/java/com/shop/productservice/config/TestLiquibaseConfig.java`):
 
 ```java
 package com.shop.favouriteservice.config;
@@ -1341,15 +1341,15 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableJpaAuditing(auditorAwareRef = "auditorAware")
 public class TestLiquibaseConfig {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public SpringLiquibase springLiquibase(DataSource dataSource,
-                                           @Value("${spring.liquibase.change-log:classpath:db/changelog/db.changelog-master.yaml}") String changeLog) {
-        SpringLiquibase liquibase = new SpringLiquibase();
-        liquibase.setDataSource(dataSource);
-        liquibase.setChangeLog(changeLog);
-        return liquibase;
-    }
+ @Bean
+ @ConditionalOnMissingBean
+ public SpringLiquibase springLiquibase(DataSource dataSource,
+ @Value("${spring.liquibase.change-log:classpath:db/changelog/db.changelog-master.yaml}") String changeLog) {
+ SpringLiquibase liquibase = new SpringLiquibase();
+ liquibase.setDataSource(dataSource);
+ liquibase.setChangeLog(changeLog);
+ return liquibase;
+ }
 }
 ```
 
@@ -1392,111 +1392,111 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
-    JpaAuditingAutoConfiguration.class,
-    LiquibaseAutoConfiguration.class,
-    TestLiquibaseConfig.class
+ JpaAuditingAutoConfiguration.class,
+ LiquibaseAutoConfiguration.class,
+ TestLiquibaseConfig.class
 })
 class FavouriteRepositoryTest {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
-        .withDatabaseName("favourite_test")
-        .withUsername("test")
-        .withPassword("test");
+ @Container
+ static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+ .withDatabaseName("favourite_test")
+ .withUsername("test")
+ .withPassword("test");
 
-    @DynamicPropertySource
-    static void registerProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.liquibase.change-log",
-                () -> "classpath:db/changelog/db.changelog-master.yaml");
-        // Liquibase owns the schema; Hibernate must NOT validate before Liquibase runs.
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-    }
+ @DynamicPropertySource
+ static void registerProps(DynamicPropertyRegistry registry) {
+ registry.add("spring.datasource.url", postgres::getJdbcUrl);
+ registry.add("spring.datasource.username", postgres::getUsername);
+ registry.add("spring.datasource.password", postgres::getPassword);
+ registry.add("spring.liquibase.change-log",
+ () -> "classpath:db/changelog/db.changelog-master.yaml");
+ // Liquibase owns the schema; Hibernate must NOT validate before Liquibase runs.
+ registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+ }
 
-    @Autowired
-    private TestEntityManager em;
+ @Autowired
+ private TestEntityManager em;
 
-    @Autowired
-    private FavouriteRepository repo;
+ @Autowired
+ private FavouriteRepository repo;
 
-    private static final UUID alice = UUID.randomUUID();
+ private static final UUID alice = UUID.randomUUID();
 
-    private Favourite persistFavourite(UUID userId, UUID productId) {
-        Favourite fav = Favourite.builder().userId(userId).productId(productId).build();
-        return em.persistAndFlush(fav);
-    }
+ private Favourite persistFavourite(UUID userId, UUID productId) {
+ Favourite fav = Favourite.builder().userId(userId).productId(productId).build();
+ return em.persistAndFlush(fav);
+ }
 
-    @Test
-    void findByUserId_filtersSoftDeleted() {
-        Favourite active = persistFavourite(alice, UUID.randomUUID());
-        Favourite tombstoned = persistFavourite(alice, UUID.randomUUID());
-        em.getEntityManager()
-                .createQuery("UPDATE Favourite f SET f.deleted = true, f.deletedAt = CURRENT_TIMESTAMP WHERE f.id = :id")
-                .setParameter("id", tombstoned.getId())
-                .executeUpdate();
+ @Test
+ void findByUserId_filtersSoftDeleted() {
+ Favourite active = persistFavourite(alice, UUID.randomUUID());
+ Favourite tombstoned = persistFavourite(alice, UUID.randomUUID());
+ em.getEntityManager()
+ .createQuery("UPDATE Favourite f SET f.deleted = true, f.deletedAt = CURRENT_TIMESTAMP WHERE f.id = :id")
+ .setParameter("id", tombstoned.getId())
+ .executeUpdate();
 
-        List<Favourite> result = repo.findByUserIdOrderByCreatedAtDesc(alice);
+ List<Favourite> result = repo.findByUserIdOrderByCreatedAtDesc(alice);
 
-        assertThat(result).extracting(Favourite::getId).containsExactly(active.getId());
-    }
+ assertThat(result).extracting(Favourite::getId).containsExactly(active.getId());
+ }
 
-    @Test
-    void softDeleteByUserIdAndProductId_keepsRowAndSetsFlags() {
-        Favourite fav = persistFavourite(alice, UUID.randomUUID());
-        UUID productId = fav.getProductId();
+ @Test
+ void softDeleteByUserIdAndProductId_keepsRowAndSetsFlags() {
+ Favourite fav = persistFavourite(alice, UUID.randomUUID());
+ UUID productId = fav.getProductId();
 
-        int affected = repo.softDeleteByUserIdAndProductId(alice, productId, "alice");
+ int affected = repo.softDeleteByUserIdAndProductId(alice, productId, "alice");
 
-        assertThat(affected).isEqualTo(1);
-        em.clear();
-        Favourite raw = em.getEntityManager()
-                .createQuery("SELECT f FROM Favourite f WHERE f.id = :id", Favourite.class)
-                .setParameter("id", fav.getId())
-                .getSingleResult();
-        assertThat(raw.isDeleted()).isTrue();
-        assertThat(raw.getDeletedAt()).isNotNull();
-        assertThat(raw.getDeletedBy()).isEqualTo("alice");
-        // Repository finder still skips soft-deleted rows.
-        assertThat(repo.findByUserIdOrderByCreatedAtDesc(alice)).isEmpty();
-    }
+ assertThat(affected).isEqualTo(1);
+ em.clear();
+ Favourite raw = em.getEntityManager()
+ .createQuery("SELECT f FROM Favourite f WHERE f.id = :id", Favourite.class)
+ .setParameter("id", fav.getId())
+ .getSingleResult();
+ assertThat(raw.isDeleted()).isTrue();
+ assertThat(raw.getDeletedAt()).isNotNull();
+ assertThat(raw.getDeletedBy()).isEqualTo("alice");
+ // Repository finder still skips soft-deleted rows.
+ assertThat(repo.findByUserIdOrderByCreatedAtDesc(alice)).isEmpty();
+ }
 
-    @Test
-    void partialUniqueConstraint_allowsReAddingAfterSoftDelete() {
-        UUID productId = UUID.randomUUID();
-        persistFavourite(alice, productId);
-        int deleted = repo.softDeleteByUserIdAndProductId(alice, productId, "alice");
-        assertThat(deleted).isEqualTo(1);
-        em.clear();
+ @Test
+ void partialUniqueConstraint_allowsReAddingAfterSoftDelete() {
+ UUID productId = UUID.randomUUID();
+ persistFavourite(alice, productId);
+ int deleted = repo.softDeleteByUserIdAndProductId(alice, productId, "alice");
+ assertThat(deleted).isEqualTo(1);
+ em.clear();
 
-        // After soft-delete, the partial unique index releases (user, product), so the
-        // same pair can be re-inserted.
-        Favourite re = persistFavourite(alice, productId);
-        assertThat(re.getId()).isNotNull();
-    }
+ // After soft-delete, the partial unique index releases (user, product), so the
+ // same pair can be re-inserted.
+ Favourite re = persistFavourite(alice, productId);
+ assertThat(re.getId()).isNotNull();
+ }
 }
 ```
 
-- [ ] **Step 2: Run test to verify it passes (will pass — verifies behaviour, not implementation)**
+- [ ] **Step 2: Run test to verify it passes (will pass - verifies behaviour, not implementation)**
 
 Run from project root (downloads Postgres image on first run, ~30 seconds; subsequent runs reuse):
 ```bash
 ./mvnw -pl favourite-service -am test -Dtest=FavouriteRepositoryTest
 ```
-Expected: `BUILD SUCCESS` — 3 tests passed. (This task establishes the contract that the repo meets the spec's soft-delete + partial unique guarantees.)
+Expected: `BUILD SUCCESS` - 3 tests passed. (This task establishes the contract that the repo meets the spec's soft-delete + partial unique guarantees.)
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java \
-        favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java
-git commit -m "test(favourite-service): FavouriteRepositoryTest — soft-delete filter + UPDATE + partial unique"
+ favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java
+git commit -m "test(favourite-service): FavouriteRepositoryTest - soft-delete filter + UPDATE + partial unique"
 ```
 
 ---
 
-## Task 10: docker-compose.yml — verify + extend favourite-service container
+## Task 10: docker-compose.yml : verify + extend favourite-service container
 
 **Files:**
 - Verify (no edit expected): `docker-compose.yml` already has a `favourite-service:` block at line 372 (verified at planning time)
@@ -1510,28 +1510,28 @@ git commit -m "test(favourite-service): FavouriteRepositoryTest — soft-delete 
 
 - [ ] **Step 1: Compare existing `favourite-service` block against the required schema**
 
-Open `docker-compose.yml` around line 372. Verify the existing block matches this required shape (only `build` directives may legitimately differ — verify only env, ports, depends_on, networks):
+Open `docker-compose.yml` around line 372. Verify the existing block matches this required shape (only `build` directives may legitimately differ - verify only env, ports, depends_on, networks):
 
 ```yaml
-  favourite-service:
-    image: favourite-service:latest
-    container_name: favourite-service
-    restart: unless-stopped
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/favouriteservice
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-      SERVER_PORT: 8081
-    ports:
-      - "8081:8081"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - shop-network
+ favourite-service:
+ image: favourite-service:latest
+ container_name: favourite-service
+ restart: unless-stopped
+ environment:
+ SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/favouriteservice
+ POSTGRES_USER: ${POSTGRES_USER:-admin}
+ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+ SERVER_PORT: 8081
+ ports:
+ - "8081:8081"
+ depends_on:
+ postgres:
+ condition: service_healthy
+ networks:
+ - shop-network
 ```
 
-If anything diverges, fix it inline. If the existing block uses `image:` (pre-built) rather than `build:`, that's fine — Jib builds happen at `mvn package`, not at compose time.
+If anything diverges, fix it inline. If the existing block uses `image:` (pre-built) rather than `build:`, that's fine - Jib builds happen at `mvn package`, not at compose time.
 
 - [ ] **Step 2: Validate docker-compose syntax**
 
@@ -1563,7 +1563,7 @@ If you modified `docker-compose.yml`:
 git add docker-compose.yml
 git commit -m "chore(docker): align favourite-service compose block with spec"
 ```
-If no edit was needed, skip this step — no commit necessary.
+If no edit was needed, skip this step - no commit necessary.
 
 ---
 
@@ -1578,7 +1578,7 @@ Run from project root:
 ./mvnw clean test
 ```
 Expected: `BUILD SUCCESS`. All modules green:
-- `utils/common-core` (existing tests still pass — additive ErrorCode + i18n change)
+- `utils/common-core` (existing tests still pass - additive ErrorCode + i18n change)
 - `utils/common-spring`
 - `auth-service` (37 existing tests still pass)
 - `product-service` (existing tests still pass)
@@ -1619,12 +1619,12 @@ git commit -m "chore(favourite-service): regenerated flattened pom"
 
 - [ ] Each task's commit message follows `feat(...)` / `test(...)` / `chore(...)` convention
 - [ ] No `TBD` / `TODO` / "implement later" anywhere in the plan
-- [ ] Each code block is self-contained — no references to "similar to Task N" without repeating
+- [ ] Each code block is self-contained - no references to "similar to Task N" without repeating
 - [ ] Method signatures match across tasks (e.g. `softDeleteByIdAndUserId(UUID, UUID, String)` in Task 5 repo ≡ same call in Task 7 service ≡ matched by `eq()` in Task 7 test)
 - [ ] Test counts match the spec §12.2 plan (10 + 3 + 6 = 19)
 - [ ] Boot 4 test stack conventions applied (`@MockitoBean`, `@DataJpaTest` from new package, `TestEntityManager @Autowired` field)
-- [ ] All run commands use `./mvnw` (project wrapper) — not system `mvn`
-- [ ] Spec section coverage: every spec section (§1–§18) maps to at least one task
+- [ ] All run commands use `./mvnw` (project wrapper) - not system `mvn`
+- [ ] Spec section coverage: every spec section (§1-§18) maps to at least one task
 
 ---
 

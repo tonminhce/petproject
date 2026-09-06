@@ -1,97 +1,88 @@
-# Review Hạ tầng & Cấu hình — petproject (Infra/Config)
+# Infrastructure and Configuration Review: Petproject Platform
 
-- Người review: senior reviewer (DevOps/Java), READ-ONLY
-- Ngày: 2026-09-02
-- Phạm vi: root `pom.xml`, `docker-compose.yml`, `docker-compose.prod.yml`, `start-docker.sh`, `stop-docker.sh`, `mock-services/mock-payment-provider/*`, `docker/**`, `.env*` , `.gitignore`, `.dockerignore`, `lombok.config`, `README.md`, `docker-README.md`, `docs/scripts/*`. Đã đọc ~21 file đầy đủ + liếc qua `.mvn/`, `.run/`, các service `pom.xml` và 1 vài `application.yml` để đối chiếu consistency (không review sâu code Java, không đọc `media-service/`).
+- Reviewer: Senior Reviewer (DevOps / Java, Read-Only Audit)
+- Date: 2026-09-02
+- Scope: Root `pom.xml`, `docker-compose.yml`, `docker-compose.prod.yml`, `start-docker.sh`, `stop-docker.sh`, `mock-services/mock-payment-provider/*`, `docker/**`, `.env*`, `.gitignore`, `.dockerignore`, `lombok.config`, `README.md`, `docker-README.md`, `docs/scripts/*`. Inspected approximately 21 configuration and manifest files plus service POMs and application configurations for consistency checks.
 
-## Kết quả kiểm tra nhanh (checks nền)
+## Baseline Verification Checks
 
-- `.env` **không** bị git track (`git ls-files` chỉ có `.env.example`, `.env.prod.example`); `git log --all -- .env` trống — chưa từng bị commit. `.gitignore:22-26` ignore đúng (`*.env.*` + re-include các example). → không có Critical về lộ secret trong git.
-- `docs/PRODUCTION-READINESS.md` tồn tại và mô tả đúng overlay prod (chạy cả 2 file, `--scale mock-payment-provider=0`, allowlist...).
+- `.env` is **not** tracked by git (`git ls-files` only shows `.env.example` and `.env.prod.example`); `git log --all -- .env` is empty, confirming it was never committed. `.gitignore` correctly ignores `*.env.*` with exceptions for example files. No secrets were leaked into git history.
+- `docs/PRODUCTION-READINESS.md` exists and accurately describes the production overlay setup (running both compose files, `--scale mock-payment-provider=0`, and IP allowlists).
 
-## Findings theo file
+## Findings by File
 
 ### pom.xml (root)
 
-- [Medium][pattern] `pom.xml:73,187-190` — `spring-boot-starter-aop` bị pin `4.0.0-M2` (bản milestone) trong `dependencyManagement` của repo, ghi đè bản quản lý `4.1.1` của parent Spring Boot → mọi service dùng starter-aop đều chạy phiên bản milestone cũ hơn Boot. Đề xuất: gỡ pin này để kế thừa từ parent.
-- [Medium][performance] `pom.xml:347-366` — Jib chỉ đặt 1 jvmFlag (`/dev/./urandom`), không `-XX:MaxRAMPercentage`/`-Xmx`; kết hợp compose không giới hạn `mem_limit` → JVM mặc định lấy 25% RAM host (container không cgroup limit), 15 container Java có thể OOM máy dev; ES được pin heap 512m (tuning dev) lại bị overlay prod kế thừa nguyên xi. Đề xuất: thêm `-XX:MaxRAMPercentage=75` vào jib; đặt `mem_limit`/`cpus` trong compose (bản prod nâng heap ES).
-- [Medium][security] `pom.xml:349-366` — không khai báo `<user>` trong jib container → toàn bộ 14 ảnh service chạy **root** trong container; path tấn công: RCE trong 1 service → root trong container → đọc env secret, pivot toàn mạng nội bộ (Kafka/Postgres không auth mạnh). Đề xuất: `<user>` non-root (vd `65532:65532`) hoặc `runAsNonRoot`.
-- [Low][clean-code] `pom.xml:40` + `pom.xml:86-118` — property `<revision>1.0-SNAPSHOT</revision>` khai báo nhưng **không nơi nào dùng** (mọi chỗ ghi cứng `1.0-SNAPSHOT`); flatten plugin cấu hình `resolveCiFriendliesOnly` nên vô tác dụng; README.md:119 lại tuyên bố "flatten-maven-plugin resolves ${revision}". Đề xuất: dùng thật `${revision}` hoặc xóa property + sửa doc.
-- [Low][clean-code] `pom.xml:196-201` — BOM testcontainers import ghi cứng `2.0.5` thay vì `${testcontainers.version}` (property 2.0.5 ở dòng 72) — hai nơi phải đồng bộ tay. Đề xuất: dùng property.
-- [Low][pattern] `pom.xml:294-301` — checkstyle chỉ nằm trong `pluginManagement` với `failsOnError=false`, `failOnViolation=false`, không có checkstyle.xml, không module nào bind → checkstyle thực chất **không chạy bao giờ** (dead config, không có style gate). Đề xuất: hoặc bind + có config file + failOnViolation=true, hoặc xóa.
-- [Low][performance] `pom.xml:362` — `creationTime: USE_CURRENT_TIMESTAMP` làm image không tái-lập (mỗi build sinh layer mới, khó audit image digest). Đề xuất: timestamps từ SOURCE_DATE_EPOCH/pin thời gian khi cần reproducibility.
+- [Medium][pattern] `pom.xml:73,187-190`: `spring-boot-starter-aop` is pinned to `4.0.0-M2` (a milestone release) in repository `dependencyManagement`, overriding the parent Spring Boot managed version `4.1.1`. Any service depending on starter-aop runs an older milestone than Boot itself. Recommendation: Remove the pin to inherit the parent version.
+- [Medium][performance] `pom.xml:347-366`: Jib configures only one jvmFlag (`/dev/./urandom`) without `-XX:MaxRAMPercentage` or `-Xmx`. Combined with Docker Compose missing `mem_limit`, the JVM defaults to 25% of host memory per container. 15 Java containers running concurrently can trigger host out-of-memory errors. Additionally, Elasticsearch is pinned to 512m heap in development and inherited directly by the production overlay. Recommendation: Add `-XX:MaxRAMPercentage=75` in Jib and specify `mem_limit` and `cpus` in compose definitions.
+- [Medium][security] `pom.xml:349-366`: Jib container configuration omits `<user>`, so all 14 service containers run as **root**. If an attacker achieves remote code execution in one service, they gain root access inside the container, potentially reading environment secrets and moving laterally across internal services. Recommendation: Specify a non-root user (e.g., `65532:65532`) or set `runAsNonRoot`.
+- [Low][clean-code] `pom.xml:40,86-118`: The property `<revision>1.0-SNAPSHOT</revision>` is declared but never referenced, while versions are hardcoded as `1.0-SNAPSHOT`. The flatten plugin specifies `resolveCiFriendliesOnly`, rendering it inert. Recommendation: Reference `${revision}` consistently or drop the property.
+- [Low][clean-code] `pom.xml:196-201`: Testcontainers BOM import hardcodes `2.0.5` instead of referencing `${testcontainers.version}` from properties. Recommendation: Reference the property.
+- [Low][pattern] `pom.xml:294-301`: Checkstyle plugin is only defined in `pluginManagement` with `failsOnError=false` and `failOnViolation=false`, lacks a rule configuration file, and is not bound to module builds. Recommendation: Bind checkstyle with enforceable rules and `failOnViolation=true`, or remove the definition.
+- [Low][performance] `pom.xml:362`: Setting `creationTime: USE_CURRENT_TIMESTAMP` prevents reproducible container builds because every build generates new layer digests. Recommendation: Pin timestamps using `SOURCE_DATE_EPOCH` for reproducible builds.
 
 ### docker-compose.yml
 
-- [High][pattern] `docker-compose.yml:628` + `notification-service/src/main/resources/application.yml:7-8` — service notification-service thiếu anchor `*pg-creds` (`<<: *jwt` duy nhất), trong khi tất cả service dùng DB khác đều nhận `POSTGRES_USER/POSTGRES_PASSWORD`; application.yml fallback `${POSTGRES_USER:admin}`. Đường lỗi cụ thể: môi trường dev hoạt động tình cờ (vì `.env` dev cũng là admin/admin), nhưng khi prod xoay mật khẩu mạnh (như overlay và `.env.prod.example` yêu cầu) notification-service âm thầm dùng `admin/admin` → fail xác thực Postgres, service chết trong prod. Đề xuất: thêm `*pg-creds` vào stanza notification-service; đồng thời bỏ fallback `:admin` khỏi application.yml.
-- [Medium][security] `docker-compose.yml:52-53,71-72,90-91,126-127,150-152` — port infra publish lên `0.0.0.0` của host: postgres (superuser admin/admin), redis (password `admin`), kafka PLAINTEXT không auth, elasticsearch `xpack.security.enabled=false`, rustfs console admin/admin. Đường tấn công cụ thể: bất kỳ máy nào cùng LAN/VPN (quán cà phê, campus) kết nối host:5432 với admin/admin → superuser Postgres → đọc/đổi mọi DB + mượn `COPY ... PROGRAM` đọc file trong container; ES không auth cho phép xóa index. Đề xuất: bind `127.0.0.1:${PORT}` mặc định (hoặc để default creds dev nhưng chỉ loopback); cân nhắc enable `xpack.security` có username/password từ `.env`.
-- [Medium][security] `docker-compose.yml:25-28,45-63` + `docker/postgres/init/create-all-databases.sql` — 12 service DB + keycloak dùng chung MỘT superuser (`POSTGRES_USER`) không có phân quyền per-service; hệ quả: SQLi hoặc lộ env-var ở 1 service bất kỳ = đọc/ghi toàn bộ data khách hàng ở 11 database khác + cả realm Keycloak. Đề xuất: init script tạo role/user riêng cho từng DB (least privilege).
-- [Medium][security] `docker-compose.yml:174` — Keycloak chạy `start-dev` (dev mode) và overlay prod (`docker-compose.prod.yml`) chỉ override admin creds, không đổi command → production chạy Keycloak dev-mode (kém optimized, bật dev artifacts). Đề xuất: trong prod overlay chạy `start --optimized` với biến dành riêng hoặc ảnh dựng riêng.
-- [Medium][security] `docker-compose.yml:392-401` + `docker-compose.prod.yml:30-31` — mock PSP nằm trong compose gốc (được prod overlay kế thừa) và `PAYMENT_PROVIDER` default `mock`; nếu vận hành prod không nhớ `--scale mock-payment-provider=0` (chỉ ghi trong comment header), payment thật đi vào simulator → rủi ro tài chính khi `PAYMENT_SERVICE_ENABLED=true`. Đề xuất: đưa mock vào `profiles: ["dev"]` hoặc prod overlay set `PAYMENT_PROVIDER` từ env bắt buộc, không default mock.
-- [Medium][pattern] `docker-compose.prod.yml:34-39,73,121,127,142,148,154,162,170,181` — 8 service ghi JSONL vào **cùng một file** `/var/log/audit/audit.jsonl` trên volume `audit_logs` dùng chung → các dòng audit bị interleave/hỏng khi 8 JVM append đồng thời; không có rotation on-box. Đề xuất: mỗi service ghi sub-directory riêng (filebeat/vector tail pattern glob), thêm rotation.
-- [Low][security] `docker-compose.yml:70,76` — password Redis truyền qua `command: redis-server --requirepass "${REDIS_PASSWORD}"` và healthcheck `redis-cli -a '${REDIS_PASSWORD}'` → hiện trên argv, thấy được qua `docker inspect`/`ps`/`docker compose config`. Đề xuất: dùng redis config file trong volume hoặc disable healthcheck arg.
-- [Low][dry] `docker-compose.yml:216-224` + `.env.example:27-35` — bộ 9 biến gateway rate-limit khai báo default ở cả hai nơi, phải đồng bộ thủ công. Đề xuất: chỉ giữ default ở compose (hoặc chỉ ở .env.example).
+- [High][pattern] `docker-compose.yml:628` and `notification-service/src/main/resources/application.yml:7-8`: `notification-service` is missing the `*pg-creds` anchor (it specifies only `<<: *jwt`), whereas every other database-backed service receives `POSTGRES_USER` and `POSTGRES_PASSWORD`. In development, this works coincidentally because defaults match `admin/admin`. In production with rotated credentials, `notification-service` falls back to `admin/admin`, fails PostgreSQL authentication, and crashes silently. Recommendation: Add `*pg-creds` to the notification service stanza and remove the `:admin` fallback in `application.yml`.
+- [Medium][security] `docker-compose.yml:52-53,71-72,90-91,126-127,150-152`: Infrastructure ports are bound to host `0.0.0.0`: PostgreSQL (`admin/admin`), Redis (password `admin`), Kafka PLAINTEXT without authentication, Elasticsearch with security disabled, and RustFS console (`admin/admin`). On shared networks or VPNs, callers can connect directly to port 5432 with default credentials. Recommendation: Bind to `127.0.0.1:${PORT}` by default and require strong credentials via `.env`.
+- [Medium][security] `docker-compose.yml:25-28,45-63` and `docker/postgres/init/create-all-databases.sql`: All 12 service databases share a single superuser account (`POSTGRES_USER`) without role isolation. A SQL injection vulnerability in any one service allows full access to the other 11 databases and the Keycloak realm. Recommendation: Update the initialization script to create isolated roles per database following least privilege principles.
+- [Medium][security] `docker-compose.yml:174`: Keycloak runs `start-dev` in development, and `docker-compose.prod.yml` overrides only admin credentials rather than the startup command. Running Keycloak in development mode in production introduces performance degradation and dev artifacts. Recommendation: Use `start --optimized` in the production overlay with dedicated configuration.
+- [Medium][security] `docker-compose.yml:392-401` and `docker-compose.prod.yml:30-31`: Mock payment provider is defined in the base compose file and inherited by production, where `PAYMENT_PROVIDER` defaults to `mock`. If operators forget `--scale mock-payment-provider=0`, real payment calls route to the mock simulator. Recommendation: Assign mock services to `profiles: ["dev"]` and require explicit payment provider configuration in production.
+- [Medium][pattern] `docker-compose.prod.yml:34-39,73,121,127,142,148,154,162,170,181`: 8 services append JSONL output into a single shared file (`/var/log/audit/audit.jsonl`) on a common volume, risking interleaved log entries and corrupted lines during concurrent writes. Recommendation: Have each service write to a dedicated sub-directory with automated log rotation.
+- [Low][security] `docker-compose.yml:70,76`: Redis credentials pass through command line flags (`--requirepass "${REDIS_PASSWORD}"`) and healthchecks, remaining visible in process tables and `docker inspect`. Recommendation: Mount a Redis configuration file or suppress CLI password flags.
+- [Low][dry] `docker-compose.yml:216-224` and `.env.example:27-35`: Gateway rate limiting variables declare duplicate default values in both files, requiring manual synchronization. Recommendation: Define defaults in one place.
 
 ### docker/keycloak/import/ecommerce-realm.json
 
-- [High][security] `docker/keycloak/import/ecommerce-realm.json:64,77,90,103,127,136` — realm import (dùng chung cho dev VÀ prod qua `--import-realm`, overlay prod không thay import) chứa credential cố định công khai trong git: 4 client secret `changeme` (order/rating/search/product), user `adminuser/adminpass` có ADMIN+MANAGER, `testuser/testpass`; `.env.prod.example` chỉ hướng dẫn xoay 4 client secret, KHÔNG đề cập xoay mật khẩu user người. Đường tấn công cụ thể: ở prod `KEYCLOAK_PUBLIC_SERVER_URL` bắt buộc phải public (khách cần đăng nhập) → kẻ tấn công đăng nhập trang login thường bằng `adminuser/adminpass` (không temporary, không hết hạn) → token ADMIN → nếu `ADMIN_IP_ALLOWLIST` bị bỏ trống (chính overlay phải cảnh báo "empty = allow-all"), full quyền backoffice. Đề xuất: (a) export realm không chứa mật khẩu người dùng, (b) prod xoay mọi mật khẩu + client secret qua admin API hoặc dùng realm khác, (c) thêm bước verify bắt buộc (startup probe) từ chối khởi động nếu default credential còn tồn tại.
-- [Medium][security] `docker/keycloak/import/ecommerce-realm.json:35-48` — client `ecommerce-client` là publicClient nhưng `directAccessGrantsEnabled: true`, `fullScopeAllowed: true`, `redirectUris: http://localhost:*`, `webOrigins: *` — cấu hình dev được import thẳng vào prod, mở password-grant và redirect wildcard localhost. Đề xuất: tách client/redirect theo môi trường; prod chỉ whitelist domain thật.
+- [High][security] `docker/keycloak/import/ecommerce-realm.json:64,77,90,103,127,136`: The realm import file contains static credentials tracked in git: 4 client secrets (`changeme`), user `adminuser/adminpass` (ADMIN and MANAGER roles), and `testuser/testpass`. If public access is enabled and `ADMIN_IP_ALLOWLIST` is left empty, attackers can use default accounts to obtain admin tokens. Recommendation: Do not track default user passwords in realm files; rotate credentials on startup and fail-fast if default passwords remain active.
+- [Medium][security] `docker/keycloak/import/ecommerce-realm.json:35-48`: The `ecommerce-client` definition enables direct access grants, full scope permissions, localhost redirect URIs, and wildcard web origins (`*`). Recommendation: Separate dev and production client definitions, restricting production origins to verified domains.
 
 ### docker-compose.prod.yml
 
-- (Tín dụng) Thiết kế overlay ingress-only (`ports: !override []` với cảnh báo yêu cầu compose ≥ 2.24), comment fail-closed cho secret rỗng, tài liệu hóa XFF proxy — tốt, hiếm thấy ở dự án tầm này.
-- [Medium][security] `docker-compose.prod.yml:56` + `.env.prod.example:31` — `ADMIN_IP_ALLOWLIST` default rỗng = "filter INACTIVE (allow-all)"; template ghi `<operator-cidrs-comma-separated>` — nếu operator copy template mà quên thay placeholder, gateway fail-fast (may mắn), nhưng nếu set rỗng chủ động là allow-all toàn bộ backoffice. Đã có document, chỉ thiếu một guard kỹ thuật. Đề xuất: fail-fast khi env rỗng trong prod (không chỉ khi sai CIDR).
-- [Low][documentation] `docker-compose.prod.yml:65` — comment nhắc "Copy this same line into any service block to export that service's spans" cho OTLP là sai (OTLP endpoint nên set global theo host `/etc/hosts` hoặc env, không copy tay); promote OTEL_SDK_DISABLED global thay vì hướng dẫn copy-paste.
+- [Positive]: Ingress-only architecture (`ports: !override []`), fail-closed validation for empty secrets, and documented reverse proxy forwarding headers are properly structured.
+- [Medium][security] `docker-compose.prod.yml:56` and `.env.prod.example:31`: `ADMIN_IP_ALLOWLIST` defaults to empty (which leaves the filter inactive). Recommendation: Fail-fast if the allowlist variable is empty in production rather than allowing all incoming traffic.
+- [Low][documentation] `docker-compose.prod.yml:65`: The comment instructs operators to copy the OTLP export line into every service block. Recommendation: Configure OpenTelemetry endpoints globally via host environment variables rather than duplicate block definitions.
 
 ### start-docker.sh / stop-docker.sh
 
-- [Medium][documentation] `start-docker.sh:211,221-226` — bảng summary in: "Keycloak Admin `http://localhost:8080`" — **sai port** (gateway chiếm 8080; Keycloak publish 9090 theo compose:187); đồng thời in cứng "(admin / admin)" cho Keycloak/PostgreSQL, "password: admin" cho Redis, "admin/admin" cho RustFS thay vì đọc từ `.env` → vừa gây nhầm hướng operator vừa in credential ra màn hình không cần thiết. Đề xuất: in URL đúng (9090), bỏ phần credential hoặc in động từ `.env`.
-- [Low][error-handling] `stop-docker.sh:149` — `down` truyền `--env-file ${ENV_FILE}`; nếu operator xóa `.env` khi stack đang chạy, lệnh down fail → không stop được stack. Đề xuất: down/ps/logs không cần env-file (volume mặc định đủ để resolve project name), bỏ flag này.
-- (Tín dụng) `stop-docker.sh:112-127` — chặn hành động destructive ở chế độ non-interactive (CI) trừ `FORCE=1`, confirm rõ ràng trước khi xóa volume — fail-safe tốt.
-- [Low][performance] `start-docker.sh:128` — luôn chạy lại `mvn -q -DskipTests jib:dockerBuild` mỗi lần start (mất phút), mâu thuẫn với docker-README.md:16 ("will skip the rebuild step when images exist"). Đề xuất: sửa doc hoặc thêm flag `--no-build`.
+- [Medium][documentation] `start-docker.sh:211,221-226`: The summary table reports Keycloak Admin on `http://localhost:8080`, which conflicts with the gateway port (Keycloak publishes on port 9090). Recommendation: Correct the summary output to reflect port 9090 and read connection secrets dynamically from `.env`.
+- [Low][error-handling] `stop-docker.sh:149`: The `down` command specifies `--env-file ${ENV_FILE}`. If an operator removes `.env` while the stack is active, the stop command fails. Recommendation: Remove the env-file requirement from teardown commands.
+- [Positive]: `stop-docker.sh:112-127` blocks destructive volume deletion in non-interactive CI environments unless `FORCE=1` is provided.
+- [Low][performance] `start-docker.sh:128`: Always triggers `mvn -q -DskipTests jib:dockerBuild`, taking extra build time even when container images already exist. Recommendation: Add a `--no-build` flag.
 
 ### mock-services/mock-payment-provider/
 
-- [Medium][error-handling] `server.js:22-44,58` — webhook gửi một lần duy nhất (fire-and-forget, delay ngẫu nhiên 200–800ms), không retry, không timeout → payment-service restart/rolling deploy đúng thời điểm hoặc network chớp = CAPTURED/REFUNDED bị mất vĩnh viễn, payment treo limbo. Đề xuất: retry đơn giản (vd 3 lần exponential, 5s) + `req.setTimeout`.
-- [Low][security] `server.js:86-89` — body POST tích lũy không giới hạn (`raw += chunk`), thân thiện với môi trường dev nhưng có thể làm cạn bộ nhớ nếu gọi nhầm từ mạng khác; container không publish port (điểm cộng). Đề xuất: giới hạn body (1MB) bằng `req.destroy()` khi quá.
-- [Low][security] `Dockerfile:1` — `node:20-alpine` chạy root; không `USER node`; nội bộ-only nên nguy cơ thấp. Đề xuất: thêm `USER node` cho đồng bộ hardening.
-- (Tín dụng) Không có dependency, `package.json` gọn, HMAC ký webhook đúng như payment-service kỳ vọng, endpoint `/reset` có ích cho test — KISS tốt.
+- [Medium][error-handling] `server.js:22-44,58`: Webhooks fire once with a random delay (200-800ms) without retry policies or timeouts. If payment-service restarts during deployment, the event is permanently dropped. Recommendation: Implement basic retry logic with backoff.
+- [Low][security] `server.js:86-89`: Incoming POST request bodies accumulate in memory without bounds checking. Recommendation: Enforce a 1 MB payload size limit using `req.destroy()`.
+- [Low][security] `Dockerfile:1`: The container runs as root. Recommendation: Switch to `USER node`.
 
 ### .env / .env.example / .env.prod.example / .gitignore / .dockerignore
 
-- [Critical — đã loại trừ] `.env` không bị commit, `.gitignore:22-26` đúng. Không có secret thật lộ trong git.
-- [Low][security] `.env:57-58` — `MAIL_PASSWORD="ecommerce@!@#"` cho địa chỉ yopmail; giá trị trông như placeholder fixture nhưng nằm trong file thật — xác nhận đây **không** phải Gmail App Password thật trước khi dùng; không bao giờ đưa `.env` vào git/chat CI.
-- [Low][documentation] `.env.example:11-115` — thiếu nhiều biến compose thực tế dùng (`GATEWAY_*` có nhưng thiếu `KAFKA_SERVERS`, `PAYMENT_*`, `SHIPMENT_*`, `SMTP_*`, `SEARCH_SERVICE_CLIENT_*`...), nên copy template ra `.env` mới không thể chạy được stack như `.env` hiện tại. Đề xuất: tái sinh `.env.example` từ `.env` (ẩn secret).
-- [Low][documentation] `.env:45` — `STORAGE_BUCKET=ecommerce-media` lệch với thiết kế D1 (bucket private tên `media`, mặc định trong compose:496) và với `.env.example:66` (`media`) → gây nhầm lẫn khi debug presign/ACL. Đề xuất: thống nhất một tên bucket.
-- [Low][clean-code] `.env:31` + `.env.prod.example:66` — set `KEYCLOAK_CLIENT_SECRET` cho client `ecommerce-client` vốn là public client (không có secret trong realm import) → giá trị vô dụng, cho cảm giác sai về hardening. Đề xuất: xóa khỏi template.
-- (Tín dụng) `.env.prod.example` hướng dẫn rõ rotation 4 client secret với semant fail-closed (rỗng = từ chối ở Keycloak), header overlay mô tả đúng hành vi merge của compose.
+- [Low][documentation] `.env.example`: Missing several environment variables utilized by compose definitions (`KAFKA_SERVERS`, `PAYMENT_*`, `SHIPMENT_*`, `SMTP_*`, `SEARCH_SERVICE_CLIENT_*`). Recommendation: Keep `.env.example` in sync with all supported configuration keys.
+- [Low][documentation] `.env:45`: `STORAGE_BUCKET=ecommerce-media` differs from the `media` default used in compose definitions. Recommendation: Standardize bucket naming across files.
+- [Low][clean-code] `.env:31` and `.env.prod.example:66`: Configures `KEYCLOAK_CLIENT_SECRET` for `ecommerce-client`, which is a public client without a secret. Recommendation: Remove this redundant variable from templates.
 
 ### README.md / docker-README.md
 
-- [Medium][documentation] `docker-README.md:29,78` — Keycloak Admin chỉ là `http://localhost:8080` (admin/admin) — sai port (9090), lặp lại lỗi của start-docker.sh; người mới chạy sẽ mở nhầm gateway. Đề xuất: sửa thành `http://localhost:9090`, đánh dấu gateway là 8080.
-- [Medium][documentation] `README.md:12` — tech stack khai "Apache Kafka 4.x" nhưng compose dùng `apache/kafka:3.9.0` (`docker-compose.yml:87`) → doc lệch thực tế, dễ khiến dùng Kafka client/API sai version. Đề xuất: sửa thành 3.9 (KRaft) hoặc nâng image nếu chủ đích 4.x.
-- [Low][documentation] `docker-README.md:71` — "Total: 20 containers" trong khi compose định nghĩa 21 (thiếu mock-payment-provider). Đề xuất: cập nhật số đếm hoặc ghi "(+1 mock PSP)".
-- [Low][documentation] `docker-README.md:15-16` — "start-docker.sh will skip the rebuild step when images exist" không đúng (script luôn build, xem finding start-docker.sh). Đề xuất: sửa miêu tả.
-- [Low][documentation] `docker-README.md` — không nhắc gì đến `docker-compose.prod.yml`/`.env.prod` và không link tới `docs/PRODUCTION-READINESS.md`; người chỉ đọc docker-README không biết đường deploy prod. Đề xuất: thêm mục "Production" ngắn + link runbook.
+- [Medium][documentation] `docker-README.md:29,78`: Mentions Keycloak Admin at `http://localhost:8080` instead of port 9090. Recommendation: Update port reference to 9090.
+- [Medium][documentation] `README.md:12`: Lists Kafka 4.x whereas the compose setup runs `apache/kafka:3.9.0`. Recommendation: Standardize the version note to Kafka 3.9 (KRaft).
+- [Low][documentation] `docker-README.md:71`: States 20 containers total, while compose defines 21 including the mock payment provider. Recommendation: Update the container count.
 
 ### docs/scripts/
 
-- [Low][error-handling] `docs/scripts/e2e-test.sh:80-88` — parse JSON bằng `python3 -c` không có guard; nếu service chết/body không phải JSON, traceback Python thô; kết hợp `set -e` + `curl` fail (connection refused) khiến script thoát giữa chừng, không in summary. Đề xuất: parse qua hàm có kiểm tra lỗi, dùng `curl --fail --retry`.
-- [Low][dry] `docs/scripts/e2e-test.sh` vs `e2e-favourite-inventory.sh:24-72` — bộ helper (assert_http, assert_contains, curl_code...) copy-paste gần như nguyên khối giữa 2 script; dùng chung file thư viện `lib/e2e-common.sh` khi có script thứ 3. Cả hai dùng global `/tmp/last_body` → không chạy song song được.
-- (Tín dụng) Cả 2 script có `set -e`, PASS/FAIL counter, exit code tường minh khi có failure — tốt hơn trung bình các script e2e ad-hoc.
+- [Low][error-handling] `docs/scripts/e2e-test.sh:80-88`: JSON parsing with `python3 -c` lacks error handling guards. If a service returns non-JSON or fails, the script exits abruptly without a summary. Recommendation: Add response validation guards.
+- [Low][dry] `docs/scripts/e2e-test.sh` and `e2e-favourite-inventory.sh`: Helper functions (`assert_http`, `assert_contains`, `curl_code`) are duplicated across scripts. Recommendation: Consolidate shared testing helpers into a common shell library.
 
-## Bảng tổng kết findings
+## Findings Summary Matrix
 
-| Severity \ Category | pattern | security | performance | documentation | clean-code | dry | error-handling | Tổng |
+| Severity \ Category | pattern | security | performance | documentation | clean-code | dry | error-handling | Total |
 |---|---|---|---|---|---|---|---|---|
 | Critical | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
 | High | 1 | 1 | 0 | 0 | 0 | 0 | 0 | **2** |
 | Medium | 2 | 6 | 1 | 3 | 0 | 0 | 1 | **13** |
 | Low | 1 | 4 | 1 | 4 | 3 | 2 | 1 | **17** |
-| **Tổng** | **4** | **11** | **2** | **7** | **3** | **2** | **2** | **32** |
+| **Total** | **4** | **11** | **2** | **7** | **3** | **2** | **2** | **32** |
 
-(Gộp: High gồm notification-service thiếu `*pg-creds` và realm import chứa credential mặc định dùng cho prod.)
+## General Maturity Assessment
 
-## Đánh giá chung mức độ trưởng thành
-
-Phần hạ tầng đạt mức **khá cho giai đoạn dev → tiền-prod** (khoảng 6/10): dùng YAML anchors DRY đúng chỗ, healthcheck đầy đủ cho 21 container, `depends_on: condition: service_healthy` nhất quán, overlay prod được thiết kế có chủ đích (ingress-only, rotation fail-closed, audit volume, tài liệu XFF), script shell có fail-fast/confirm-giữ-dữ-liệu tốt, `.env` được quản lý git đúng chuẩn. Điểm hụt lớn nhất nằm ở **boundary dev↔prod**: toàn bộ credential dev (realm import, `changeme`, Keycloak `start-dev`) trôi sang production nếu chỉ chạy overlay mà không thực hiện rotation thủ công — mô hình "an toàn nếu operator nhớ" (documented footgun) thay vì "an toàn mặc định". Việc thiếu resource limits/JVM flags và một số inconsistency (notification-service thiếu pg-creds, port Keycloak sai trong doc/script) là các vết dầu mỡ cần dọn trước khi coi stack này production-ready. Khuyến nghị ưu tiên: (1) tách realm import dev/prod, (2) fix notification-service env, (3) per-service DB role, (4) mem/CPU limits + non-root image.
+The infrastructure setup demonstrates solid foundational engineering for development and pre-production environments: YAML anchors minimize duplication, all 21 containers configure proper healthchecks and dependency orders, the production overlay implements an ingress-only model, and operational scripts incorporate confirmation prompts before data deletion. Primary improvement areas include credential rotation between development and production, enforcing memory and CPU limits, and resolving configuration discrepancies between documentation and compose definitions.

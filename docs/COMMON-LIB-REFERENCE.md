@@ -4,7 +4,7 @@
 > is already adapted to `com.shop.*`; reference repo source is
 > [`com.ecommerce.*`](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib).
 >
-> **TL;DR** — every backend service adds ONE Maven dep (`common-spring`) and
+> **TL;DR**, every backend service adds ONE Maven dep (`common-spring`) and
 > gets the rest transitively. There is no need to depend on the other 6
 > directly; `common-spring` re-exports the auto-configurations.
 
@@ -79,7 +79,7 @@ utils/
 ```xml
 <!-- <service>/pom.xml -->
 <dependencies>
-    <!-- one dependency is enough — transitively pulls the other 6 -->
+    <!-- one dependency is enough, transitively pulls the other 6 -->
     <dependency>
         <groupId>com.shop.microservices</groupId>
         <artifactId>common-spring</artifactId>
@@ -125,11 +125,11 @@ public class AuthServiceApplication {
 }
 ```
 
-No `@ComponentScan` on the parent — component scan picks up everything below
+No `@ComponentScan` on the parent, component scan picks up everything below
 `com.shop.authservice` automatically. The common lib auto-configurations are
 loaded from `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`.
 
-## 2. common-core — the must-know API
+## 2. common-core, the must-know API
 
 ### 2.1 `ApiResponse<T>` envelope
 
@@ -213,17 +213,17 @@ Pin every `@RequestMapping` to one of these constants. No string literals.
 [Workspace source](../utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java) ·
 [ErrorCode.java](../utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java)
 
-Throw sites — pick the smallest API that fits:
+Throw sites, pick the smallest API that fits:
 
 ```java
 import static com.shop.common.core.exception.BusinessException.*;
 import com.shop.common.core.exception.ErrorCode;
 
-// Canonical — preferred for NEW services (machine-readable code + i18n message)
+// Canonical, preferred for NEW services (machine-readable code + i18n message)
 throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND);
 throw BusinessException.of(ErrorCode.AUTH_USERNAME_EXISTS, username);
 
-// Convenience shortcuts — all map to an ErrorCode under the hood, message from i18n key
+// Convenience shortcuts, all map to an ErrorCode under the hood, message from i18n key
 throw BusinessException.badRequest("auth.password.too.short");   // BAD_REQUEST code
 throw BusinessException.unauthorized("auth.token.expired");       // UNAUTHORIZED code
 throw BusinessException.forbidden("auth.role.missing");            // FORBIDDEN code
@@ -232,14 +232,14 @@ throw BusinessException.conflict("auth.email.exists", email);     // CONFLICT co
 throw BusinessException.internalServerError("payment.stripe.timeout");
 ```
 
-> **Canonical pattern (for new services):** `BusinessException.of(ErrorCode.X, args...)`. This emits a stable `code` field (e.g. `PRD-2001`, `AUTH-1003`) in `ApiResponse.error(...)` for dashboards. The convenience shortcuts (`notFound("key")`, `conflict("key")`) are acceptable for ad-hoc messages but produce only the i18n message — no machine-readable code. **auth-service** currently uses string keys (`notFound("auth.user.not.found.for.update", id)`); migration to enum is a tracked Phase-9 follow-up — see [`ROADMAP §8.1`](./ROADMAP.md).
+> **Canonical pattern (for new services):** `BusinessException.of(ErrorCode.X, args...)`. This emits a stable `code` field (e.g. `PRD-2001`, `AUTH-1003`) in `ApiResponse.error(...)` for dashboards. The convenience shortcuts (`notFound("key")`, `conflict("key")`) are acceptable for ad-hoc messages but produce only the i18n message, no machine-readable code. **auth-service** currently uses string keys (`notFound("auth.user.not.found.for.update", id)`); migration to enum is a tracked Phase-9 follow-up, see [`ROADMAP §8.1`](./ROADMAP.md).
 
 `ErrorCode` is an enum that pins `code + httpStatus + messageKey`. New
 error codes are added here so dashboards stay canonical. The
 `Messages.get(messageKey, args)` call resolves the localized string from
 `i18n/messages*.properties`.
 
-### 2.4 `MdcKey` — correlation ID propagation
+### 2.4 `MdcKey`, correlation ID propagation
 
 [Workspace source](../utils/common-core/src/main/java/com/shop/common/core/constants/MdcKey.java)
 
@@ -256,7 +256,7 @@ try {
 }
 ```
 
-### 2.5 `HeaderConstants` — removed
+### 2.5 `HeaderConstants`, removed
 
 `HeaderConstants`, `CollectionUtils`, `StringUtils`, `ErrorResponse` and
 `ResourceNotFoundException` from the reference were **not ported** to the
@@ -264,7 +264,7 @@ workspace `common-core`. Use `MdcKey` for the correlation header,
 `ApiResponse.error(...)` for the error shape, and `BusinessException`
 (`badRequest/unauthorized/notFound/...`) for typed errors.
 
-### 2.6 `PageableConstant` — pagination defaults
+### 2.6 `PageableConstant`, pagination defaults
 
 ```java
 PageableConstant.DEFAULT_PAGE  = 0;
@@ -275,7 +275,7 @@ PageableConstant.DEFAULT_SORT_BY = "id";
 
 Use these in your controllers to avoid magic numbers.
 
-## 3. common-security — JWT + CORS
+## 3. common-security, JWT + CORS
 
 ### 3.1 What it auto-configures
 
@@ -336,7 +336,7 @@ shop:
       - /api/v1/notifications/health
 ```
 
-`SecurityProperties` is a record with `List<String> publicPaths` and `resolvedPublicPaths()` that merges service paths with `PlatformDefaults.PUBLIC_PATHS` (actuator/swagger/api-docs — always public).
+`SecurityProperties` is a record with `List<String> publicPaths` and `resolvedPublicPaths()` that merges service paths with `PlatformDefaults.PUBLIC_PATHS` (actuator/swagger/api-docs, always public).
 
 > **Method-aware variant (planned for product-service, see spec §7.1.1):** for services that need GET-only public endpoints (e.g. catalog browse), `publicPaths` will be upgraded to `List<EndpointRule>` with `{ method: HttpMethod.GET, path: /api/v1/products/** }` format. `auth-service` keeps the simple list form. Migration tracked in [`ROADMAP §8.1`](./ROADMAP.md).
 
@@ -346,15 +346,15 @@ Reference: [SecurityProperties.java](../utils/common-security/src/main/java/com/
 
 [common-lib/common-security](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-security)
 
-### 3.6 ModelMapper — single canonical mapping pattern
+### 3.6 ModelMapper, single canonical mapping pattern
 
 [Workspace source](../utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/ModelMapperAutoConfiguration.java) ·
 [Reference](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/common-lib/common-spring/src/main/java/com/ecommerce/commonlib/mapper)
 
-> **Single pattern for the whole fleet — KHÔNG dùng MapStruct / BaseMapper / EntityCreateUpdateMapper.** [Workspace decision 2026-08-26] chốt ModelMapper, sync theo auth-service (`UserMapper`/`RoleMapper` là `@Component` inject `ModelMapper`). Nếu MapStruct trong file mới → review fail.
+> **Single pattern for the whole fleet: do not use MapStruct, BaseMapper, or EntityCreateUpdateMapper.** [Workspace decision 2026-08-26] Standardize on ModelMapper, synchronized with auth-service (`UserMapper` and `RoleMapper` are `@Component` classes injecting `ModelMapper`). If MapStruct appears in new files, review fails.
 
 ```java
-// common-spring/ModelMapperAutoConfiguration — wired automatically
+// common-spring/ModelMapperAutoConfiguration, wired automatically
 @Bean @ConditionalOnMissingBean(ModelMapper.class)
 public ModelMapper modelMapper() {
     ModelMapper mapper = new ModelMapper();
@@ -375,7 +375,7 @@ public class XxxMapper {
     public XxxMapper(ModelMapper modelMapper) { this.modelMapper = modelMapper; }
 
     public XxxResponse toResponse(Xxx entity) {
-        // modelMapper.map(...) cho field cùng tên + STRICT match
+        // modelMapper.map(...) for matching field names with STRICT matching
         // manual setter cho relations / computed fields
     }
 
@@ -386,19 +386,19 @@ public class XxxMapper {
     }
 
     public void partialUpdate(Xxx target, XxxUpdateRequest request) {
-        // DTO là record → null check từng field thủ công
+        // DTO is a record: perform null-checks on fields manually
         if (request.foo() != null) target.setFoo(request.foo());
     }
 }
 ```
 
-**DTO convention**: dùng `record` (compile-time check, immutability), hoặc `@Builder @Getter @Setter @AllArgsConstructor` class (giống auth-service `UserResponse`) — nếu record thì mapper dùng constructor trực tiếp `new XxxResponse(id, ...)`; nếu class thì `XxxResponse.builder()...build()`. Common-spring không ép kiểu.
+**DTO convention**: use `record` (compile-time safety, immutability) or `@Builder @Getter @Setter @AllArgsConstructor` classes (like auth-service `UserResponse`). If record, the mapper uses the constructor directly (`new XxxResponse(id, ...)`); if class, use `XxxResponse.builder()...build()`. Common-spring does not force a single style.
 
-Exceptions: relationship fields với tên không khớp (vd `Product.category` → DTO `categoryId`/`categoryTitle`) — xử lý thủ công trong mapper, KHÔNG dùng custom ModelConverter trừ khi tái sử dụng nhiều nơi.
+Exceptions: relationship fields with mismatched names (e.g. `Product.category` to DTO `categoryId`/`categoryTitle`): map manually in mapper methods without custom ModelConverter unless reused widely.
 
-## 4. common-logging — `@LogPerformance` + `@Loggable`
+## 4. common-logging, `@LogPerformance` + `@Loggable`
 
-### 4.1 `@LogPerformance` — time a service method
+### 4.1 `@LogPerformance`, time a service method
 
 [Workspace source](../utils/common-logging/src/main/java/com/shop/common/logging/LogPerformance.java) ·
 [Reference](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/common-lib/common-logging/src/main/java/com/ecommerce/commonlib/logging/LogPerformance.java)
@@ -424,7 +424,7 @@ When the method returns, the aspect emits a JSON log entry like:
  "title":"list products","duration_ms":3.21,"correlationId":"..."}
 ```
 
-### 4.2 `@Loggable` — request/response body log
+### 4.2 `@Loggable`, request/response body log
 
 [Workspace source](../utils/common-logging/src/main/java/com/shop/common/logging/Loggable.java)
 
@@ -454,7 +454,7 @@ shop:
         threshold-ms: 50
 ```
 
-### 4.3 `LogField` — structured fields
+### 4.3 `LogField`, structured fields
 
 [Workspace source](../utils/common-logging/src/main/java/com/shop/common/logging/LogField.java)
 
@@ -465,7 +465,7 @@ public OrderDto checkout(@LogField("userId") String userId, CartDto cart) { ... 
 
 The aspect will add `"userId":"alice"` to the log JSON.
 
-## 5. common-keycloak — admin client
+## 5. common-keycloak, admin client
 
 ### 5.1 When to use it
 
@@ -533,15 +533,15 @@ public class UserServiceImpl implements UserService {
 Reference user creation flow:
 [UserServiceImpl.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/service/UserServiceImpl.java).
 
-### 5.5 SSO (auth-service only — not yet wired)
+### 5.5 SSO (auth-service only, not yet wired)
 
 The reference auth-service uses `KeycloakAuthClient` for a backend-mediated SSO
 flow. Workspace auth-service currently uses `KeycloakTokenClient.login(...)`
-(ROPC, `POST /api/v1/auth/login`) instead — the redirect-based SSO flow is
+(ROPC, `POST /api/v1/auth/login`) instead, the redirect-based SSO flow is
 deferred. If later needed, the full flow is in the reference
 [AuthController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/controller/AuthController.java).
 
-## 6. common-kafka — publish + consume
+## 6. common-kafka, publish + consume
 
 ### 6.1 Beans
 
@@ -616,7 +616,7 @@ shop:
       value-serializer: com.shop.common.kafka.serialization.JsonKafkaSerializer
 ```
 
-## 7. common-storage — S3-compatible object storage
+## 7. common-storage, S3-compatible object storage
 
 ### 7.1 Beans
 
@@ -666,7 +666,7 @@ public class MediaService {
 }
 ```
 
-## 8. common-spring — the umbrella starter
+## 8. common-spring, the umbrella starter
 
 ### 8.1 What it provides
 
@@ -718,7 +718,7 @@ springdoc:
 
 Services can override anything they need in their own `application.yml`.
 
-### 8.3 `CommonProperties` — `shop.*` config root
+### 8.3 `CommonProperties`, `shop.*` config root
 
 [Workspace source](../utils/common-spring/src/main/java/com/shop/common/spring/config/CommonProperties.java)
 
@@ -741,12 +741,12 @@ shop:
     version: v1
 ```
 
-### 8.4 JPA auditing — `JpaAuditingAutoConfiguration`
+### 8.4 JPA auditing, `JpaAuditingAutoConfiguration`
 
 [Workspace source](../utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/JpaAuditingAutoConfiguration.java)
 
 Every context that runs JPA entities gets `@EnableJpaAuditing` + the fleet
-`AuditorAware` (authenticated principal, else `system`) for free — no
+`AuditorAware` (authenticated principal, else `system`) for free, no
 service declares its own `@EnableJpaAuditing`; entities simply extend
 `AbstractMappedEntity` (common-core), which carries
 `@EntityListeners(AuditingEntityListener.class)`.
@@ -758,7 +758,7 @@ shop:
       enabled: true   # default: true (matchIfMissing)
 ```
 
-A context that consumes this starter **without a datasource** must opt out —
+A context that consumes this starter **without a datasource** must opt out, 
 otherwise `@EnableJpaAuditing` registers a `jpaMappingContext` that throws
 `JPA metamodel must not be empty` at boot (no `EntityManagerFactory` exists):
 
@@ -773,8 +773,8 @@ Why a property instead of `@ConditionalOnBean(EntityManagerFactory)`:
 bean-condition evaluation differs by how the class reaches a context, and only
 the property is deterministic in both. On the **`@Import` path** (fleet
 slices/tests import `JpaAuditingAutoConfiguration` as a plain configuration),
-conditions are evaluated while configuration classes are *parsed* — before any
-`@Bean` method registers its definition — so the `EntityManagerFactory` is
+conditions are evaluated while configuration classes are *parsed*, before any
+`@Bean` method registers its definition, so the `EntityManagerFactory` is
 never visible at evaluation time (verified empirically during fleet-hardening
 H-11: a class-level `@ConditionalOnBean` silently disabled auditing across
 fleet integration tests, leaving `created_at` NULL). On the **auto-configuration
@@ -785,7 +785,7 @@ test (`CommonLibraryStarterTests`) is the reference opt-out example.
 
 ---
 
-## 9. Cheat sheet — "I want to…"
+## 9. Cheat sheet, "I want to…"
 
 | I want to… | Import this | Code |
 |-----------|-------------|------|
@@ -796,7 +796,7 @@ test (`CommonLibraryStarterTests`) is the reference opt-out example.
 | Read the current user | `AuthenticatedUser` | `@AuthenticationPrincipal AuthenticatedUser me;` |
 | Restrict to ADMIN | spring-security | `@PreAuthorize("hasAuthority('ADMIN')")` |
 | Add a public endpoint | `SecurityProperties` | `shop.security.public-paths: [/api/v1/...]` |
-| Map entity ↔ DTO | `ModelMapper` | `@Component xxxMapper(ModelMapper mm)` — xem [`§3.6`](#36-modelmapper--single-canonical-mapping-pattern) |
+| Map entity ↔ DTO | `ModelMapper` | `@Component xxxMapper(ModelMapper mm)`, xem [`§3.6`](#36-modelmapper--single-canonical-mapping-pattern) |
 | Time a service method | `@LogPerformance` | `@LogPerformance(title="...")` |
 | Log a request body | `@Loggable` | `@Loggable(in=true, out=true)` |
 | Publish to Kafka | `KafkaMessagePublisher` | `publisher.publish(topic, key, payload)` |
@@ -814,7 +814,7 @@ test (`CommonLibraryStarterTests`) is the reference opt-out example.
 
 | Workspace | Reference repo | Adapt? |
 |-----------|---------------|--------|
-| `utils/common-core/src/main/java/com/shop/common/core/...` | [common-lib/common-core/src/main/java/com/ecommerce/commonlib/...](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-core/src/main/java/com/ecommerce/commonlib) | already adapted — keep updating from reference |
+| `utils/common-core/src/main/java/com/shop/common/core/...` | [common-lib/common-core/src/main/java/com/ecommerce/commonlib/...](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-core/src/main/java/com/ecommerce/commonlib) | already adapted, keep updating from reference |
 | `utils/common-spring/src/main/java/com/shop/common/spring/...` | [common-lib/common-spring/src/main/java/com/ecommerce/commonlib/...](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-spring/src/main/java/com/ecommerce/commonlib) | workspace adds the umbrella starter |
 | `utils/common-security/src/main/java/com/shop/common/security/...` | [common-lib/common-security/src/main/java/com/ecommerce/commonlib/security/...](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-security) | already adapted |
 | `utils/common-logging/src/main/java/com/shop/common/logging/...` | [common-lib/common-logging/src/main/java/com/ecommerce/commonlib/logging/...](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/common-lib/common-logging) | already adapted |
@@ -827,4 +827,4 @@ When porting new patterns from the reference, copy the Java file then run
 
 ---
 
-See also — [`ROADMAP.md`](./ROADMAP.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`SERVICE-CATALOG.md`](./SERVICE-CATALOG.md)
+See also, [`ROADMAP.md`](./ROADMAP.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`SERVICE-CATALOG.md`](./SERVICE-CATALOG.md)

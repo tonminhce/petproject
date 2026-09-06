@@ -1,4 +1,4 @@
-# Refund Flow — Design (Phase 8)
+# Refund Flow - Design (Phase 8)
 
 - Date: 2026-09-01
 - Status: Draft (pending user ratification of 4 scope decisions)
@@ -7,33 +7,33 @@
 ## Verified ground truths
 
 - payment-service already exposes POST /api/v1/payments/{id}/refund (ADMIN-only, CAPTURED only, returns 409 REFUND_INVALID_STATE otherwise). Emits payment.refunded.v1 via outbox. Idempotent: re-call on REFUNDED → no-op 200 (Stripe semantics).
-- order-service OrderStatus enum currently: PENDING → CONFIRMED → SHIPPED → DELIVERED (terminal); CANCELLED-from-PENDING (refund n/a) and CANCELLED-from-CONFIRMED (admin-only, no stock release by design — order spec §3.5 note). DELIVERED is terminal today (order spec §3.5, recording that return/refund would be Phase 8).
-- inventory-service has release() endpoint (POST /api/v1/reservations/{id}/release), idempotent on RELEASED/EXPIRED (inventory impl §3). For refund, the order's `reservation_id` (per-item via reservation commit in confirm flow — order spec §4) must be released.
+- order-service OrderStatus enum currently: PENDING → CONFIRMED → SHIPPED → DELIVERED (terminal); CANCELLED-from-PENDING (refund n/a) and CANCELLED-from-CONFIRMED (admin-only, no stock release by design - order spec §3.5 note). DELIVERED is terminal today (order spec §3.5, recording that return/refund would be Phase 8).
+- inventory-service has release() endpoint (POST /api/v1/reservations/{id}/release), idempotent on RELEASED/EXPIRED (inventory impl §3). For refund, the order's `reservation_id` (per-item via reservation commit in confirm flow - order spec §4) must be released.
 - notification-service already subscribes to shop.order.lifecycle.v1 (notification spec §3). Adding refund events = same topic, new eventType, same template harness.
 - shop.kafka topic convention: shop.{service}.lifecycle.v1 for state events, shop.{service}.process.v1 for work queues. Refund uses lifecycle.
 - §1 rated Code-base constraint: order's outbox-emits shop.order.lifecycle.v1 (status transitions) AND shop.order.cancellation.v1 (cancel-specific). Refund adds shop.order.refund.v1 as a SUB-LIFECYCLE topic for finer-grained consumers (notification can subscribe to refund without parsing the lifecycle envelope).
 
 ## §1 Binding decisions
 
-### D1 — Order state machine: REFUND_REQUESTED → REFUNDED (decision Q1)
+### D1 - Order state machine: REFUND_REQUESTED → REFUNDED (decision Q1)
 
 Two new states, not one:
 
-- `REFUND_REQUESTED` — order accepted refund; payment refund call in flight (or failed).
-- `REFUNDED` — payment.refunded.v1 received and verified; inventory released; terminal.
+- `REFUND_REQUESTED` - order accepted refund; payment refund call in flight (or failed).
+- `REFUNDED` - payment.refunded.v1 received and verified; inventory released; terminal.
 
-Why split: a refund API call is synchronous, but the payment provider's webhook is async (mock: 200-800 ms; Stripe: seconds to minutes). Without an intermediate state, an order is stuck between admin-click and webhook for an arbitrary window — observers (UI polling, customer-facing queries) can't distinguish in-flight refund from confirmed. Splitting matches payment's `PENDING → CAPTURED | FAILED` precedent.
+Why split: a refund API call is synchronous, but the payment provider's webhook is async (mock: 200-800 ms; Stripe: seconds to minutes). Without an intermediate state, an order is stuck between admin-click and webhook for an arbitrary window - observers (UI polling, customer-facing queries) can't distinguish in-flight refund from confirmed. Splitting matches payment's `PENDING → CAPTURED | FAILED` precedent.
 
 Allowed transitions:
 - `CONFIRMED → REFUND_REQUESTED` (admin /refund endpoint; CAPTURED payment required)
-- `DELIVERED → REFUND_REQUESTED` (post-delivery return — NEW path; this is the Phase 8 unlock for DELIVERED no-longer-terminal)
+- `DELIVERED → REFUND_REQUESTED` (post-delivery return - NEW path; this is the Phase 8 unlock for DELIVERED no-longer-terminal)
 - `REFUND_REQUESTED → REFUNDED` (payment.refunded.v1 consumer)
 - `REFUND_REQUESTED → CONFIRMED` (refund call failed → revert; records in audit column)
 - `CANCELLED` → NO refund path (cancel-before-CONFIRMED is pre-payment; nothing to refund)
 
 REFUND_REQUESTED is admin-actionable from CONFIRMED or DELIVERED. Other states reject with ORD-4013.
 
-### D2 — Refund endpoint lives in order-service, calls payment-service (decision Q2)
+### D2 - Refund endpoint lives in order-service, calls payment-service (decision Q2)
 
 POST /api/v1/orders/{id}/refund (ADMIN-only) on OrderController. Flow:
 1. Load order (ORD-5001 not found).
@@ -46,10 +46,10 @@ The refund's actual success/failure comes back via Kafka `payment.refunded.v1` e
 
 Why order-service owns the endpoint and not payment-service: order is the aggregate root for the user's refund intent; payment is the gateway. Symmetry with confirm-flow (order → payment check).
 
-### D3 — Inventory release on REFUNDED (decision Q3)
+### D3 - Inventory release on REFUNDED (decision Q3)
 
 When order transitions REFUND_REQUESTED → REFUNDED (driven by payment.refunded.v1), inventory is released automatically:
-1. order-service consumer of payment.refunded.v1 (NOT order-lifecycle self-consumer — different envelope):
+1. order-service consumer of payment.refunded.v1 (NOT order-lifecycle self-consumer - different envelope):
    - Maps `paymentId` → `orderId` via the payment metadata in the event payload (payment D5 envelope already carries `orderId`).
    - Verifies the order is currently REFUND_REQUESTED (idempotent: if already REFUNDED, ack no-op).
    - Transitions order to REFUNDED.
@@ -59,13 +59,13 @@ When order transitions REFUND_REQUESTED → REFUNDED (driven by payment.refunded
    - Idempotent: release() returns 200 on RELEASED/EXPIRED (inventory impl §3).
    - Failures: log + retry (outbox + relay pattern; failed release → outbox event status=FAILED, ops alert).
 
-Why a NEW inventory consumer group (separate from order.lifecycle.v1 inventory consumer — if any exists; verify) and not a synchronous order→inventory call: same reasons as shipping (rating T3 nit #1): keep the refund handler async + dumb; inventory release is best-effort with ops escalation.
+Why a NEW inventory consumer group (separate from order.lifecycle.v1 inventory consumer - if any exists; verify) and not a synchronous order→inventory call: same reasons as shipping (rating T3 nit #1): keep the refund handler async + dumb; inventory release is best-effort with ops escalation.
 
-### D4 — Notification triggers (decision Q4)
+### D4 - Notification triggers (decision Q4)
 
 notification-service extends its order.lifecycle.v1 consumer to handle TWO new event types:
 - `order.refund.requested.v1` → email template REFUND_REQUESTED (subject: "Your refund is being processed").
-- `order.refunded.v1` → email template REFUNDED (subject: "Refund completed — {amount}").
+- `order.refunded.v1` → email template REFUNDED (subject: "Refund completed - {amount}").
 
 Templates follow existing notification precedent (i18n EN+VI). New i18n keys: `notification.refund_requested.subject/body`, `notification.refunded.subject/body`.
 
@@ -92,9 +92,9 @@ PENDING ──confirm──> CONFIRMED ──ship──> SHIPPED ──deliver�
 
 ## §5 Kafka topics (new)
 
-shop.order.refund.v1 — single topic carrying order.refund.requested.v1 + order.refunded.v1 + order.refund.failed.v1 (sub-lifecycle; mirrors the spec split). Consumers:
+shop.order.refund.v1 - single topic carrying order.refund.requested.v1 + order.refunded.v1 + order.refund.failed.v1 (sub-lifecycle; mirrors the spec split). Consumers:
 - inventory-service: shop.order.refund.v1 (group inventory-service-refunds) → release.
-- notification-service: shop.order.refund.v1 (group notification-service-refunds) → email. (Or extend existing notification consumer to handle sub-topics — verify which pattern fits. Default: SEPARATE topic, new consumer config.)
+- notification-service: shop.order.refund.v1 (group notification-service-refunds) → email. (Or extend existing notification consumer to handle sub-topics - verify which pattern fits. Default: SEPARATE topic, new consumer config.)
 
 ## §6 Testing strategy
 
@@ -108,9 +108,9 @@ shop.order.refund.v1 — single topic carrying order.refund.requested.v1 + order
 
 - **order-service = W1** on order changes (RefundService, OrderStatus enum +2, OrderController +1 endpoint, OrderRefundConsumer, PaymentServiceClient.findByOrderId, outbox shop.order.refund.v1, ErrorCode ORD-4013..4015).
 - **payment-service = verify-only.** Existing refund endpoint is already correct (D6 + spec §3 + outbox). No payment changes needed.
-- **inventory-service = NEW consumer** for shop.order.refund.v1. InventoryReleaseConsumer config (mirror ShippingListenerConfig). NO domain changes — release() endpoint already idempotent.
+- **inventory-service = NEW consumer** for shop.order.refund.v1. InventoryReleaseConsumer config (mirror ShippingListenerConfig). NO domain changes - release() endpoint already idempotent.
 - **notification-service = NEW consumer** for shop.order.refund.v1. New templates. NO domain changes.
-- **shared-file tails**: ErrorCode ORD-4013..4015 + i18n keys (`order.refund_invalid_state`, `order.refund_no_payment`, `order.refund_gateway_error`) — order-service owns, single PR.
+- **shared-file tails**: ErrorCode ORD-4013..4015 + i18n keys (`order.refund_invalid_state`, `order.refund_no_payment`, `order.refund_gateway_error`) - order-service owns, single PR.
 - Init SQL: no new DBs. Outbox lives in order DB; consumers are stateless.
 
 ## §8 Non-goals (binding)
@@ -122,7 +122,7 @@ Partial refunds (only full-refund V1); customer-initiated refund (ADMIN-only V1,
 - DELIVERED → REFUND_REQUESTED transition: should this require a RETURNED state in between (RMA flow)? Default V1: skip RETURNED, direct DELIVERED → REFUND_REQUESTED via admin click; RETURNED added in a separate RMA epic.
 - Refund window: any time-bound (e.g., 30 days post-delivery)? Default V1: unbounded, ADMIN decides.
 - Refund notification channel: email only, or also SMS/push? Default V1: email only (notification precedent).
-- order-service→payment-service findByOrderId: pagination. payment already exposes GET /api/v1/payments?orderId= (paged). Default size 20, take first CAPTURED — note order-wiring F2 (payment-service pagination default 10) — verify the relevant page-size constant; ensure we use max page size or filter properly.
+- order-service→payment-service findByOrderId: pagination. payment already exposes GET /api/v1/payments?orderId= (paged). Default size 20, take first CAPTURED - note order-wiring F2 (payment-service pagination default 10) - verify the relevant page-size constant; ensure we use max page size or filter properly.
 
 ## §10 Changelog
 

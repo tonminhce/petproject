@@ -1,15 +1,15 @@
-# Payment Service — Design
+# Payment Service - Design
 
 ## 1. Purpose
 
 First money-touching service: capture and refund order payments through a
-pluggable provider, driven by signed webhooks. Ships standalone — the
+pluggable provider, driven by signed webhooks. Ships standalone - the
 order-service wiring (confirm-time PAID guard) is a single post-merge task
 owned by neither epic (see Fleet impact).
 
 ## 2. Binding decisions
 
-- **D1 — Provider port (user decision Q1).** `payment-service` knows ZERO
+- **D1 - Provider port (user decision Q1).** `payment-service` knows ZERO
   about any concrete gateway. All gateway access goes through one interface:
   `PaymentProvider { PaymentAttempt capture(PaymentPaymentRef ref, Money amount,
   String idempotencyKey); RefundResult refund(...); }`. Exactly three
@@ -18,33 +18,33 @@ owned by neither epic (see Fleet impact).
   exercised until keys exist), and nothing else. Provider selection =
   `@ConditionalOnProperty("shop.payment.provider")`, default `mock`.
 
-- **D2 — Mock provider is a compose service, not an in-process stub.** A
+- **D2 - Mock provider is a compose service, not an in-process stub.** A
   ~50-line Node/Express container (`mock-payment-provider`) exposing
-  `POST /mock-payments/{id}/capture` (delays 200–800 ms, then POSTs a signed
+  `POST /mock-payments/{id}/capture` (delays 200-800 ms, then POSTs a signed
   webhook to payment-service), `POST /mock-payments/{id}/refund`,
   `POST /mock-payments/reset` (IT hygiene), `GET /mock-payments/_health`.
   Webhooks are HMAC-SHA256 signed with `PAYMENT_WEBHOOK_SECRET` shared via
   compose. This makes signature verification, delayed-confirmation and retry
   behavior testable end-to-end in the same topology production will have.
 
-- **D3 — Payment state machine with previousStatus (promotion precedent).**
+- **D3 - Payment state machine with previousStatus (promotion precedent).**
   `PENDING → CAPTURED | FAILED`; `CAPTURED → REFUNDED` (single-step refund in
   this epic; `REFUNDING` reserved). Every transition stores
-  `previous_status` — payment.captured.v1 vs payment.refunded.v1 vs
+  `previous_status` - payment.captured.v1 vs payment.refunded.v1 vs
   payment.failed.v1 consumers can distinguish fresh vs transitional states.
   Idempotency: `idempotency_key` (client-supplied, unique live constraint on
   `payments`); duplicate create → returns existing payment (Stripe semantics),
   not an error.
 
-- **D4 — Webhook receiver is the only write path to CAPTURED/FAILED/REFUNDED.**
+- **D4 - Webhook receiver is the only write path to CAPTURED/FAILED/REFUNDED.**
   `POST /api/v1/webhooks/payments/{provider}`: (1) HMAC-SHA256 verify
   fail-closed (bad signature → 401, no state change); (2) persist-first /
   ack-always (notification D5 precedent): webhook event row committed in its
-  own tx, then state transition; handler exceptions never fail the HTTP 200 —
+  own tx, then state transition; handler exceptions never fail the HTTP 200 - 
   they mark the event `FAILED` for reconciliation. Dedupe: `event_id` unique
   live constraint on `payment_events`; duplicate delivery → ack + no-op.
 
-- **D5 — Events via outbox + relay (order-service reference port).**
+- **D5 - Events via outbox + relay (order-service reference port).**
   Status-changing transitions write `OutboxEvent` rows in the same tx as the
   payment update; `PaymentOutboxRelay` (port of `OrderOutboxRelay`) publishes
   `shop.payment.lifecycle.v1` topics:
@@ -52,39 +52,39 @@ owned by neither epic (see Fleet impact).
   Payload wrapper identical to order events:
   `{eventId, eventType, occurredAt, orderId, paymentId, amount, currency, status, previousStatus}`.
 
-- **D6 — Error codes: extend the existing PAY-5xxx block.** `PAY-5001`
+- **D6 - Error codes: extend the existing PAY-5xxx block.** `PAY-5001`
   `PAYMENT_FAILED` and `PAY-5002` `PAYMENT_NOT_FOUND` pre-exist (order's stub
-  era) — they stay. New: `PAY-5003 PAYMENT_DUPLICATE_REQUEST` (409),
+  era) - they stay. New: `PAY-5003 PAYMENT_DUPLICATE_REQUEST` (409),
   `PAY-5004 PAYMENT_INVALID_STATE` (409), `PAY-5005 WEBHOOK_SIGNATURE_INVALID`
   (401), `PAY-5006 REFUND_INVALID_STATE` (409), `PAY-5007 AMOUNT_MISMATCH`
   (400). i18n keys EN+VI for all.
 
-- **D7 — Security: fail-closed with one signature carve-out.** No public
+- **D7 - Security: fail-closed with one signature carve-out.** No public
   paths except the webhook endpoint, which is authenticated by HMAC
   verification, not JWT. The webhook path needs a new public-paths key
-  (`/api/v1/webhooks/**`) with a dedicated HMAC filter — JWT anchor must NOT
+  (`/api/v1/webhooks/**`) with a dedicated HMAC filter - JWT anchor must NOT
   cover it. Backoffice read API (list + get by id, paged newest-first) is
   `hasRole('ADMIN')` only. No customer-facing endpoints this epic.
 
-- **D8 — Schema (TIMESTAMPTZ audit columns).** `payments(id, order_id,
+- **D8 - Schema (TIMESTAMPTZ audit columns).** `payments(id, order_id,
   amount numeric(19,2), currency char(3), status, previous_status, provider,
-  idempotency_key, created_at, updated_at, version, deleted)` — unique live
+  idempotency_key, created_at, updated_at, version, deleted)` - unique live
   PARTIAL index on `idempotency_key` (`WHERE idempotency_key IS NOT NULL`;
-  raw SQL, campaign.code precedent — makes NULL-tolerance intent explicit),
+  raw SQL, campaign.code precedent - makes NULL-tolerance intent explicit),
   index on `order_id`.
   `payment_events(id, payment_id, provider_event_id, type, payload jsonb,
-  status, created_at, ...)` — unique live index on `(provider, provider_event_id)`.
+  status, created_at, ...)` - unique live index on `(provider, provider_event_id)`.
   Entity mirrors Campaign precedent (`@Version Long`, soft-delete).
 
-- **D9 — Receipts to object storage (common-storage, free win).** On CAPTURED,
+- **D9 - Receipts to object storage (common-storage, free win).** On CAPTURED,
   render a receipt JSON and store via `ObjectStorageService` (RustFS/S3) under
   `receipts/{paymentId}.json`; store the object key on the payment row
   (`receipt_key`). Failure to store → log + continue (receipt is auxiliary,
   never blocks the payment state). Activation note: payment-service must pull
   `common-storage` and satisfy its autoconfigure properties (endpoint/bucket)
-  — the plan wires `shop.storage.*` envs in the compose stanza.
+  - the plan wires `shop.storage.*` envs in the compose stanza.
 
-- **D10 — Deployment.** Port **8085** — compose stanza + gateway
+- **D10 - Deployment.** Port **8085** - compose stanza + gateway
   `ServiceRoute.PAYMENT` pre-exist from the v0 skeleton (verified), so compose
   work = env modernization only (`KAFKA_SERVERS` →
   `SHOP_KAFKA_BOOTSTRAP_SERVERS`, add webhook-secret env) and gateway routes
@@ -92,7 +92,7 @@ owned by neither epic (see Fleet impact).
   `CREATE DATABASE` line). Config flags fail-closed:
   `shop.payment.provider: mock`, `shop.payment.webhook.secret` required.
   `StripeProvider` is a skeleton: `shop.payment.provider=stripe` without
-  credentials must fail fast at startup with a clear message — the plan's
+  credentials must fail fast at startup with a clear message - the plan's
   final task documents this explicitly.
 
 ## 3. API
@@ -108,7 +108,7 @@ owned by neither epic (see Fleet impact).
 
 ## 4. Capture flow
 
-create → PENDING → `capture` → provider (mock: 200–800 ms delay) → signed
+create → PENDING → `capture` → provider (mock: 200-800 ms delay) → signed
 webhook → HMAC verify → `payment_events` insert (idempotent) → payments row
 CAPTURED + previous_status → outbox row → relay → `payment.captured.v1`.
 Refund mirrors it with `payment.refunded.v1`.
@@ -131,7 +131,7 @@ Refund mirrors it with `payment.refunded.v1`.
 - **payment lane = W1 shared-file owner** (ErrorCode PAY-5xxx tail, i18n,
   ApiPaths `BACKOFFICE_PAYMENTS` + webhook path constant) until merge;
   shipping lane waits for the branch-to-branch unlock merge before touching
-  tails. Init SQL `paymentservice` line pre-exists — verify-only.
+  tails. Init SQL `paymentservice` line pre-exists - verify-only.
 - **order-service: untouched in this epic.** The confirm-time payment guard
   and any order↔payment client are the post-merge wiring task.
 - notification-service template additions (receipt/payment subjects) =

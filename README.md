@@ -1,4 +1,4 @@
-# 🛒 Petproject Microservices Platform — Enterprise E-Commerce
+# Petproject Microservices Platform: Distributed E-Commerce Architecture
 
 [![Java](https://img.shields.io/badge/Java-25%20(LTS)-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/25/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -11,50 +11,50 @@
 [![Storage](https://img.shields.io/badge/Object%20Storage-RustFS%20(S3)-blue)](https://rustfs.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Tóm tắt dự án / Project Overview**:  
-> **Petproject Microservices Platform** là giải pháp thương mại điện tử phân tán (cloud-native distributed e-commerce) cấp doanh nghiệp được xây dựng trên nền tảng **Java 25 (LTS)** và **Spring Boot 4.1.1**. Hệ thống được quản lý dưới dạng **Maven multi-module reactor gồm 23 modules** (14 microservices độc lập + 8 shared platform libraries + parent aggregator).  
-> 
-> Nền tảng áp dụng các kiến trúc và mẫu thiết kế tiên tiến nhất: **Domain-Driven Design (DDD)**, **Database-per-Service** (12 PostgreSQL databases riêng biệt), **Choreography Saga với 2-Phase Stock Reservation**, **Transactional Outbox Pattern** (CDC streaming qua Kafka KRaft), **Two-Layer Token Bucket Rate Limiting** (Redis Lua script tại Edge Gateway), **CQRS với Full-Text Search Engine** (Elasticsearch BM25), và **Zero-Trust Identity Access Management** (Keycloak 26 OAuth2/OIDC).
+> **Project overview**:
+> Petproject Microservices Platform is a cloud-native distributed e-commerce backend built on Java 25 (LTS) and Spring Boot 4.1.1. The repository is organized as a Maven multi-module reactor with 23 modules, comprising 14 backend microservices, 8 shared platform libraries, and a parent aggregator.
+>
+> The system implements domain-driven design, isolated PostgreSQL databases per service, choreography sagas with two-phase inventory reservation, transactional outbox publishing over Apache Kafka (KRaft mode), two-layer token-bucket rate limiting in Redis at the edge gateway, full-text search with Elasticsearch BM25, and OAuth2/OIDC identity management backed by Keycloak 26.
 
 ---
 
-## 📑 Mục lục / Table of Contents
+## Table of contents
 
-- [1. Kiến trúc tổng thể hệ thống / System Landscape](#1-kiến-trúc-tổng-thể-hệ-thống--system-landscape)
-- [2. Danh mục dịch vụ & Cổng mạng / Microservices Catalog](#2-danh-mục-dịch-vụ--cổng-mạng--microservices-catalog)
-- [3. Quy trình luồng nghiệp vụ chi tiết / Business & Functional Flows](#3-quy-trình-luồng-nghiệp-vụ-chi-tiết--business--functional-flows)
-  - [Flow 1: Xác thực & Điều hướng Gateway (IAM & Edge Routing)](#flow-1-xác-thực--điều-hướng-gateway-iam--edge-routing)
-  - [Flow 2: Quản lý Danh mục & Đồng bộ CDC Tìm kiếm (Catalog & Search Sync)](#flow-2-quản-lý-danh-mục--đồng-bộ-cdc-tìm-kiếm-catalog--search-sync)
-  - [Flow 3: Xử lý Đa phương tiện & Tạo ảnh Responsive (Media Processing Pipeline)](#flow-3-xử-lý-đa-phương-tiện--tạo-ảnh-responsive-media-processing-pipeline)
-  - [Flow 4: Trải nghiệm Khách hàng: Yêu thích, Giỏ hàng & Giá động (Wishlist, Cart & Pricing)](#flow-4-trải-nghiệm-khách-hàng-yêu-thích-giỏ-hàng--giá-động-wishlist-cart--pricing)
-  - [Flow 5: Đặt hàng & Đặt trước Tồn kho 2 Pha (Order Checkout & 2-Phase Reservation)](#flow-5-đặt-hàng--đặt-trước-tồn-kho-2-pha-order-checkout--2-phase-reservation)
-  - [Flow 6: Xử lý Thanh toán Stripe & Xác nhận Đơn hàng (Payment & Order Confirmation)](#flow-6-xử-lý-thanh-toán-stripe--xác-nhận-đơn-hàng-payment--order-confirmation)
-  - [Flow 7: Vận chuyển Đơn hàng & Tự động Giao hàng (Logistics & Auto-Delivery)](#flow-7-vận-chuyển-đơn-hàng--tự-động-giao-hàng-logistics--auto-delivery)
-  - [Flow 8: Đánh giá Người mua Xác thực (Verified Buyer Review & Rating)](#flow-8-đánh-giá-người-mua-xác-thực-verified-buyer-review--rating)
-  - [Flow 9: Xử lý Sự cố, Quét Tồn kho Hết hạn & Hoàn tác (Sweeper & Compensations)](#flow-9-xử-lý-sự-cố-quét-tồn-kho-hết-hạn--hoàn-tác-sweeper--compensations)
-- [4. Hạ tầng Bắn Sự kiện & Bảng Mapping Kafka (Event-Driven Backbone)](#4-hạ-tầng-bắn-sự-kiện--bảng-mapping-kafka-event-driven-backbone)
-- [5. Bảo mật Cửa ngõ & Giới hạn Tốc độ 2 Lớp (Edge Security & Dual Rate Limit)](#5-bảo-mật-cửa-ngõ--giới-hạn-tốc-độ-2-lớp-edge-security--dual-rate-limit)
-- [6. Thư viện Dùng chung Nền tảng (`utils/`)](#6-thư-viện-dùng-chung-nền-tảng-utils)
-- [7. Hướng dẫn Cài đặt & Khởi chạy (Local Development Guide)](#7-hướng-dẫn-cài-đặt--khởi-chạy-local-development-guide)
-  - [Yêu cầu tiên quyết (Prerequisites)](#yêu-cầu-tiên-quyết-prerequisites)
-  - [Bước 1: Khởi động Hạ tầng Docker](#bước-1-khởi-động-hạ-tầng-docker)
-  - [Bước 2: Cấu hình Môi trường & Build Java 25](#bước-2-cấu-hình-môi-trường--build-java-25)
-  - [Bước 3: Khởi chạy Microservices](#bước-3-khởi-chạy-microservices)
-- [8. Kiểm thử Tự động & Giám sát Hệ thống (Testing & Observability)](#8-kiểm-thử-tự-động--giám-sát-hệ-thống-testing--observability)
-- [9. Tài liệu Kỹ thuật Chi tiết (Architecture Blueprint Links)](#9-tài-liệu-kỹ-thuật-chi-tiết-architecture-blueprint-links)
+- [1. System landscape architecture](#1-system-landscape-architecture)
+- [2. Microservices catalog](#2-microservices-catalog)
+- [3. Business and functional flows](#3-business-and-functional-flows)
+  - [Flow 1: Authentication and edge routing](#flow-1-authentication-and-edge-routing)
+  - [Flow 2: Product catalog and search synchronization](#flow-2-product-catalog-and-search-synchronization)
+  - [Flow 3: Media processing pipeline](#flow-3-media-processing-pipeline)
+  - [Flow 4: Wishlist, shopping cart, and pricing](#flow-4-wishlist-shopping-cart-and-pricing)
+  - [Flow 5: Checkout and two-phase inventory reservation](#flow-5-checkout-and-two-phase-inventory-reservation)
+  - [Flow 6: Stripe payments and order confirmation](#flow-6-stripe-payments-and-order-confirmation)
+  - [Flow 7: Shipment fulfillment and delivery updates](#flow-7-shipment-fulfillment-and-delivery-updates)
+  - [Flow 8: Verified buyer ratings and reviews](#flow-8-verified-buyer-ratings-and-reviews)
+  - [Flow 9: Expired stock sweepers and compensations](#flow-9-expired-stock-sweepers-and-compensations)
+- [4. Event-driven messaging backbone](#4-event-driven-messaging-backbone)
+- [5. Edge security and rate limiting](#5-edge-security-and-rate-limiting)
+- [6. Shared platform libraries (`utils/`)](#6-shared-platform-libraries-utils)
+- [7. Local development guide](#7-local-development-guide)
+  - [Prerequisites](#prerequisites)
+  - [Step 1: Start infrastructure containers](#step-1-start-infrastructure-containers)
+  - [Step 2: Toolchain setup and compilation](#step-2-toolchain-setup-and-compilation)
+  - [Step 3: Launch microservices](#step-3-launch-microservices)
+- [8. Testing and observability](#8-testing-and-observability)
+- [9. Technical architecture blueprints](#9-technical-architecture-blueprints)
 
 ---
 
-## 1. Kiến trúc tổng thể hệ thống / System Landscape
+## 1. System landscape architecture
 
-Hệ thống được thiết kế theo mô hình **Domain-Driven Architecture** phân lớp nghiêm ngặt. Mọi tương tác từ Client (Web, Mobile App, Backoffice Admin UI, Webhooks của đối tác) đều đi qua **Spring Cloud Gateway (:8080)** để thực hiện giải mã token, gán mã vết phân tán, áp dụng giới hạn tốc độ và phân phối yêu cầu đến các microservices chuyên trách.
+The platform follows a layered domain-driven architecture. All external traffic from web clients, mobile apps, admin dashboards, and partner webhooks enters through `gateway-service` on port 8080. The gateway decodes JWT tokens, checks client and system rate limits in Redis, stamps distributed correlation IDs, and forwards requests to internal microservices over Docker network DNS.
 
 ![System Landscape Architecture](./docs/images/system-landscape-architecture.png)
 
 > [!TIP]
-> **Bộ sưu tập Sơ đồ Kiến trúc Chuẩn (Architecture Diagrams Directory)**:
-> 
-> | STT | Sơ đồ Kiến trúc / Diagram | Hình ảnh / Preview | File Thiết kế / Source |
+> **Architecture diagrams directory**:
+>
+> | Index | Diagram | Image preview | Source files |
 > |:---:|---|---|---|
 > | 1 | **System Landscape Architecture** | [system-landscape-architecture.png](./docs/images/system-landscape-architecture.png) | [.drawio.png](./docs/images/system-landscape-architecture.drawio.png) / [.svg](./docs/images/system-landscape-architecture.svg) |
 > | 2 | **Data Stores & Database-per-Service Topology** | [data-stores-infrastructure-topology.png](./docs/images/data-stores-infrastructure-topology.png) | [.drawio.png](./docs/images/data-stores-infrastructure-topology.drawio.png) / [.svg](./docs/images/data-stores-infrastructure-topology.svg) |
@@ -63,7 +63,6 @@ Hệ thống được thiết kế theo mô hình **Domain-Driven Architecture**
 > | 5 | **Gateway Security & Dual Rate Limiting** | [gateway-security-rate-limit.png](./docs/images/gateway-security-rate-limit.png) | [.drawio.png](./docs/images/gateway-security-rate-limit.drawio.png) / [.svg](./docs/images/gateway-security-rate-limit.svg) |
 
 ```mermaid
-%% System Landscape C4 Context
 flowchart TB
     classDef clientClass fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px,color:#000000;
     classDef gatewayClass fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000000;
@@ -75,81 +74,82 @@ flowchart TB
     classDef busClass fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000;
     classDef storeClass fill:#f5f5f5,stroke:#666666,stroke-width:2px,color:#000000;
 
-    subgraph CLIENTS ["Client Layer & External Actors"]
-        WEB["Customer Web / Mobile App"]:::clientClass
+    subgraph CLIENTS ["Client Layer and External Callers"]
+        WEB["Customer Web / Mobile Client"]:::clientClass
         ADMIN["Backoffice Admin UI"]:::clientClass
-        EXT_PAY["Stripe Payment Webhook"]:::clientClass
-        EXT_SHIP["Logistics Carrier Webhook"]:::clientClass
+        EXT_PAY["Stripe Payment Webhooks"]:::clientClass
+        EXT_SHIP["Carrier Logistics Webhooks"]:::clientClass
     end
 
     subgraph EDGE ["Edge Tier"]
-        GW["gateway-service :8080<br/>• Dual Token Bucket Rate Limiting<br/>• OAuth2 JWT Validation & JWKS<br/>• Correlation ID / MDC Tracing"]:::gatewayClass
+        GW["gateway-service :8080<br/>Two-tier Redis rate limiting<br/>OAuth2 JWT validation via JWKS<br/>Traceparent and correlation headers"]:::gatewayClass
     end
 
-    subgraph IAM ["Identity & Access Tier"]
+    subgraph IAM ["Identity and Access Tier"]
         KEYCLOAK["Keycloak 26 IAM (:8080 int / :9090 host)<br/>Realm: ecommerce"]:::authClass
-        AUTH_SVC["auth-service :8088<br/>ROPC Login, Token Refresh, User Mirror"]:::authClass
+        AUTH_SVC["auth-service :8088<br/>ROPC login, token refresh, local user mirror"]:::authClass
     end
 
     subgraph CORE_COMMERCE ["Core Commerce Domain"]
-        PRODUCT_SVC["product-service :8086<br/>Catalog, Brands, Categories, Variants"]:::coreServiceClass
-        INV_SVC["inventory-service :8082<br/>2-Phase Stock Reservation & Commit"]:::coreServiceClass
-        ORDER_SVC["order-service :8084<br/>Cart Management & Checkout Saga"]:::coreServiceClass
+        PRODUCT_SVC["product-service :8086<br/>Catalog, brands, categories, variants"]:::coreServiceClass
+        INV_SVC["inventory-service :8082<br/>Two-phase stock reservation and commits"]:::coreServiceClass
+        ORDER_SVC["order-service :8084<br/>Cart management and checkout saga"]:::coreServiceClass
     end
 
     subgraph CUSTOMER_EXP ["Customer Experience Domain"]
-        SEARCH_SVC["search-service :8094<br/>Elasticsearch 8.15 BM25 & Autocomplete"]:::cxServiceClass
-        RATING_SVC["rating-service :8089<br/>Product Reviews & Verified Buyer Gate"]:::cxServiceClass
-        FAV_SVC["favourite-service :8081<br/>Customer Wishlists & Saved Items"]:::cxServiceClass
+        SEARCH_SVC["search-service :8094<br/>Elasticsearch 8.15 BM25 and suggestions"]:::cxServiceClass
+        RATING_SVC["rating-service :8089<br/>Reviews and verified buyer validation"]:::cxServiceClass
+        FAV_SVC["favourite-service :8081<br/>Customer wishlists and saved items"]:::cxServiceClass
     end
 
-    subgraph PRICING_MEDIA ["Pricing, Tax & Media Domain"]
-        TAX_SVC["tax-service :8091<br/>Tax Classes & Geo-Rates Engine"]:::pricingServiceClass
-        PROMO_SVC["promotion-service :8093<br/>Coupons, Campaigns & Discounts"]:::pricingServiceClass
-        MEDIA_SVC["media-service :8083<br/>MIME Validation & 6 WebP Variants"]:::pricingServiceClass
+    subgraph PRICING_MEDIA ["Pricing, Tax, and Media Domain"]
+        TAX_SVC["tax-service :8091<br/>Tax classes and jurisdiction rates"]:::pricingServiceClass
+        PROMO_SVC["promotion-service :8093<br/>Coupons, campaigns, and discounts"]:::pricingServiceClass
+        MEDIA_SVC["media-service :8083<br/>MIME validation and WebP variants"]:::pricingServiceClass
     end
 
-    subgraph FULFILLMENT ["Fulfillment & Notification Domain"]
-        PAY_SVC["payment-service :8085<br/>Payment Capture, Refunds & Stripe"]:::fulfillServiceClass
-        SHIP_SVC["shipping-service :8087<br/>Shipment Tracking & Carrier Hooks"]:::fulfillServiceClass
-        NOTIF_SVC["notification-service :8090<br/>In-App Alerts & SMTP Emails"]:::fulfillServiceClass
+    subgraph FULFILLMENT ["Fulfillment and Notification Domain"]
+        PAY_SVC["payment-service :8085<br/>Payment capture, refunds, and Stripe SDK"]:::fulfillServiceClass
+        SHIP_SVC["shipping-service :8087<br/>Shipment tracking and carrier callbacks"]:::fulfillServiceClass
+        NOTIF_SVC["notification-service :8090<br/>Customer alerts and SMTP email delivery"]:::fulfillServiceClass
     end
 
     subgraph EVENT_BUS ["Event Streaming Backbone"]
-        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: order, product, inventory, payment, shipping, rating"]:::busClass
+        KAFKA["Apache Kafka 3.9 (KRaft mode :9092)<br/>Topics: order, product, category, brand, inventory, payment, shipping, rating, media"]:::busClass
     end
 
     subgraph STORAGE ["Data Tier (Isolated Databases)"]
-        PG[("PostgreSQL 16 (:5432)<br/>12 Isolated Service DBs + Keycloak DB")]:::storeClass
-        REDIS[("Redis 7.4 (:6379)<br/>Rate Limiting & Catalog Cache")]:::storeClass
-        ES[("Elasticsearch 8.15 (:9200)<br/>Full-text Search Indices")]:::storeClass
-        RUSTFS[("RustFS S3 (:9000/:9001)<br/>ecommerce-media Object Store")]:::storeClass
+        PG[("PostgreSQL 16 (:5432)<br/>12 isolated service DBs + Keycloak DB")]:::storeClass
+        REDIS[("Redis 7.4 (:6379)<br/>Token bucket rate limits and catalog cache")]:::storeClass
+        ES[("Elasticsearch 8.15 (:9200)<br/>Product search index")]:::storeClass
+        RUSTFS[("RustFS S3 (:9000/:9001)<br/>Media object store")]:::storeClass
     end
 
-    %% Wiring
+    %% Edge wiring
     CLIENTS -->|"HTTP REST /api/v1/*"| GW
-    GW -.->|"JWKS Verify"| KEYCLOAK
+    GW -.->|"JWKS verify"| KEYCLOAK
     GW --> AUTH_SVC & PRODUCT_SVC & INV_SVC & ORDER_SVC & SEARCH_SVC & RATING_SVC & FAV_SVC & TAX_SVC & PROMO_SVC & MEDIA_SVC & PAY_SVC & SHIP_SVC & NOTIF_SVC
-    AUTH_SVC <-->|"REST Admin API"| KEYCLOAK
+    AUTH_SVC <-->|"Keycloak Admin REST API"| KEYCLOAK
 
-    %% Synchronous Feign / RestClient Calls
-    ORDER_SVC -->|"REST Verify Product"| PRODUCT_SVC
-    ORDER_SVC -->|"REST 2PC Reserve/Commit"| INV_SVC
-    ORDER_SVC -->|"REST Apply Coupon"| PROMO_SVC
-    ORDER_SVC -->|"REST Calc Geo-Tax"| TAX_SVC
-    ORDER_SVC -->|"REST Verify Captured"| PAY_SVC
+    %% Synchronous Feign / RestClient inter-service calls
+    ORDER_SVC -->|"REST verify product active"| PRODUCT_SVC
+    ORDER_SVC -->|"REST two-phase reserve/commit"| INV_SVC
+    ORDER_SVC -->|"REST apply coupon"| PROMO_SVC
+    ORDER_SVC -->|"REST calculate tax"| TAX_SVC
+    ORDER_SVC -->|"REST verify payment status"| PAY_SVC
     RATING_SVC -->|"REST /verify-purchase"| ORDER_SVC
-    MEDIA_SVC <-->|"REST Verify Ref"| PRODUCT_SVC
+    MEDIA_SVC <-->|"REST check media reference"| PRODUCT_SVC
 
-    %% Outbox & Event Streaming
-    PRODUCT_SVC & INV_SVC & ORDER_SVC & PAY_SVC & SHIP_SVC & RATING_SVC -->|"Transactional Outbox"| KAFKA
-    KAFKA -->|"CDC Sync"| SEARCH_SVC
-    KAFKA -->|"Order Confirmed"| SHIP_SVC
-    KAFKA -->|"Delivery Event"| ORDER_SVC
-    KAFKA -->|"Rating Approved"| PRODUCT_SVC
-    KAFKA -->|"Dispatched / Paid / Created"| NOTIF_SVC
+    %% Outbox and Kafka streaming
+    PRODUCT_SVC & INV_SVC & ORDER_SVC & PAY_SVC & SHIP_SVC & RATING_SVC & PROMO_SVC & MEDIA_SVC -->|"Transactional outbox"| KAFKA
+    KAFKA -->|"Product lifecycle events"| SEARCH_SVC
+    KAFKA -->|"Order confirmed events"| SHIP_SVC
+    KAFKA -->|"Shipping delivered events"| ORDER_SVC
+    KAFKA -->|"Rating approved events"| PRODUCT_SVC
+    KAFKA -->|"Order and payment events"| NOTIF_SVC
+    KAFKA -->|"Media deleted events"| PRODUCT_SVC
 
-    %% Storage Backends
+    %% Storage backends
     AUTH_SVC & PRODUCT_SVC & INV_SVC & ORDER_SVC & PAY_SVC & SHIP_SVC & FAV_SVC & RATING_SVC & TAX_SVC & PROMO_SVC & MEDIA_SVC & NOTIF_SVC --> PG
     GW & PRODUCT_SVC <--> REDIS
     SEARCH_SVC <--> ES
@@ -158,80 +158,80 @@ flowchart TB
 
 ---
 
-## 2. Danh mục dịch vụ & Cổng mạng / Microservices Catalog
+## 2. Microservices catalog
 
-Toàn bộ nền tảng bao gồm **14 microservices độc lập**, tuân thủ nghiêm ngặt nguyên tắc **Database-per-Service** (không có dịch vụ nào truy cập chéo database của dịch vụ khác):
+The system runs 14 microservices. Each service maintains its own isolated datastore, avoiding cross-database joins:
 
 ![Data Stores & Infrastructure Topology](./docs/images/data-stores-infrastructure-topology.png)
 
-| Dịch vụ / Service | Port | Database Name | Chức năng chính / Responsibilities | Công nghệ chính | Healthcheck Endpoint |
+| Service | Port | Database | Primary responsibilities | Core technologies | Healthcheck endpoint |
 |---|:---:|---|---|---|---|
-| **`gateway-service`** | `8080` | *Không dùng* (Redis) | Cửa ngõ duy nhất, định tuyến không cắt tiền tố `/api/v1/*`, xác thực JWT Keycloak, giới hạn tần suất 2 lớp, gán `X-Correlation-Id`. | Spring Cloud Gateway, Netty, Redis Lua, Resilience4j | `http://localhost:8080/actuator/health` |
-| **`auth-service`** | `8088` | `authservice` | Đăng nhập ROPC, Refresh token, Đăng xuất, Quản lý tài khoản người dùng, Đồng bộ Keycloak Admin REST API, Sổ địa chỉ giao hàng. | Spring Boot 4, Keycloak Admin, Spring Data JPA | `http://localhost:8088/actuator/health` |
-| **`product-service`** | `8086` | `productservice` | Quản lý danh mục đa cấp (tree), thương hiệu, sản phẩm biến thể (SKU, thuộc tính), Redis Cache, Outbox relay. | Spring Boot 4, Redis Cache, PostgreSQL, Kafka Outbox | `http://localhost:8086/actuator/health` |
-| **`inventory-service`** | `8082` | `inventoryservice` | Quản lý kho hàng, Đặt trước tồn kho 2 pha (`/reserve`, `/commit`, `/release`), Sweeper tự động nhả tồn kho hết hạn. | Spring Boot 4, Scheduled Sweeper, Kafka Outbox | `http://localhost:8082/actuator/health` |
-| **`order-service`** | `8084` | `orderservice` | Quản lý giỏ hàng khách hàng, Điều phối Saga đặt hàng, RestClient bọc Resilience4j gọi Product/Promo/Tax/Inventory/Payment. | Spring Boot 4, Resilience4j, Kafka Outbox & Consumer | `http://localhost:8084/actuator/health` |
-| **`payment-service`** | `8085` | `paymentservice` | Tích hợp Stripe PaymentIntent & Checkout, Xử lý webhook chữ ký số Stripe, Hoàn tiền (refund), Outbox relay. | Spring Boot 4, Stripe Java SDK, Kafka Outbox | `http://localhost:8085/actuator/health` |
-| **`shipping-service`** | `8087` | `shippingservice` | Tiếp nhận đơn xác nhận, Tạo vận đơn & mã tracking, Tiếp nhận webhook đối tác vận chuyển (DHL/FedEx), Cập nhật trạng thái giao. | Spring Boot 4, Kafka Consumer & Outbox Relay | `http://localhost:8087/actuator/health` |
-| **`rating-service`** | `8089` | `ratingservice` | Đánh giá 1-5 sao kèm bình luận, Kiểm tra điều kiện người mua xác thực (Verified Buyer Gate `RTG-11001` qua `order-service`). | Spring Boot 4, Feign/RestClient, Kafka Outbox | `http://localhost:8089/actuator/health` |
-| **`search-service`** | `8094` | *Elasticsearch* | Động cơ tìm kiếm toàn văn BM25, Gợi ý tự động (Autocomplete prefix suggester), Đồng bộ CDC thời gian thực từ Kafka. | Spring Boot 4, Elasticsearch 8.15 Java Client | `http://localhost:8094/actuator/health` |
-| **`tax-service`** | `8091` | `taxservice` | Danh mục thuế suất, Tính thuế dựa trên phân loại sản phẩm và địa lý (quốc gia, bang, mã bưu chính). | Spring Boot 4, Spring Data JPA, PostgreSQL | `http://localhost:8091/actuator/health` |
-| **`promotion-service`** | `8093` | `promotionservice` | Quản lý chiến dịch khuyến mãi, mã giảm giá (% hoặc số tiền cố định), điều kiện giá trị đơn tối thiểu, giữ và trừ lượt dùng mã. | Spring Boot 4, Spring Data JPA, PostgreSQL | `http://localhost:8093/actuator/health` |
-| **`favourite-service`** | `8081` | `favouriteservice` | Danh sách sản phẩm yêu thích (Wishlist) của từng khách hàng, thêm/xóa/kiểm tra trạng thái sản phẩm yêu thích. | Spring Boot 4, Spring Data JPA, PostgreSQL | `http://localhost:8081/actuator/health` |
-| **`media-service`** | `8083` | `mediaservice` | Tải lên đa phương tiện, Kiểm tra mã định danh file (MIME sniffing), Tạo tự động 6 phiên bản WebP responsive, Presigned S3 URLs. | Spring Boot 4, RustFS/S3 SDK, ImageIO/WebP | `http://localhost:8083/actuator/health` |
-| **`notification-service`**| `8090` | `notificationservice` | Trung tâm thông báo đa kênh, Gửi email SMTP tự động khi đặt hàng thành công, thanh toán xác nhận, cập nhật hành trình vận chuyển. | Spring Boot 4, JavaMailSender, Kafka Consumers | `http://localhost:8090/actuator/health` |
+| **`gateway-service`** | `8080` | *None* (Redis) | Edge router, OAuth2 JWT validation, two-tier Redis token bucket rate limiting, admin IP allowlisting, correlation ID injection | Spring Cloud Gateway, Netty, Redis, Bucket4j | `http://localhost:8080/actuator/health` |
+| **`auth-service`** | `8088` | `authservice` | ROPC authentication, token refresh, user registration, Keycloak admin synchronization, user address book management | Spring Boot 4, Keycloak Admin Client, PostgreSQL, Liquibase | `http://localhost:8088/actuator/health` |
+| **`product-service`** | `8086` | `productservice` | Product catalog, multi-level category trees, brand management, SPU/SKU variants, Redis caching, transactional outbox publishing | Spring Boot 4, Redis, PostgreSQL, Kafka, Liquibase | `http://localhost:8086/actuator/health` |
+| **`inventory-service`** | `8082` | `inventoryservice` | Stock allocations, two-phase reservations (`/reserve`, `/commit`, `/release`), scheduled expiration sweeper | Spring Boot 4, PostgreSQL, Kafka, Liquibase | `http://localhost:8082/actuator/health` |
+| **`order-service`** | `8084` | `orderservice` | Customer carts, checkout choreography saga, order state transitions, RMA returns, Resilience4j circuits | Spring Boot 4, Resilience4j, PostgreSQL, Kafka, Liquibase | `http://localhost:8084/actuator/health` |
+| **`payment-service`** | `8085` | `paymentservice` | Payment creation, Stripe PaymentIntent integration, webhook verification, refunds, provider abstraction (Stripe, COD) | Spring Boot 4, Stripe Java SDK, PostgreSQL, Kafka | `http://localhost:8085/actuator/health` |
+| **`shipping-service`** | `8087` | `shippingservice` | Shipment records, tracking number generation, carrier webhook ingestion, delivery state machine | Spring Boot 4, PostgreSQL, Kafka, Liquibase | `http://localhost:8087/actuator/health` |
+| **`rating-service`** | `8089` | `ratingservice` | 1-5 star reviews, verified purchaser check via `order-service`, review moderation (hide/unhide) | Spring Boot 4, PostgreSQL, Kafka, Liquibase | `http://localhost:8089/actuator/health` |
+| **`search-service`** | `8094` | *Elasticsearch* | BM25 full-text search, prefix autocomplete suggestions, real-time index synchronization from Kafka events | Spring Boot 4, Elasticsearch 8.15 Java Client | `http://localhost:8094/actuator/health` |
+| **`tax-service`** | `8091` | `taxservice` | Tax classes, jurisdiction tax rates by country, state, and postal code, tax calculation endpoint | Spring Boot 4, PostgreSQL, Liquibase | `http://localhost:8091/actuator/health` |
+| **`promotion-service`** | `8093` | `promotionservice` | Marketing campaigns, percentage and fixed coupons, minimum order constraints, two-phase coupon usage reservation | Spring Boot 4, PostgreSQL, Kafka, Liquibase | `http://localhost:8093/actuator/health` |
+| **`favourite-service`** | `8081` | `favouriteservice` | Customer wishlist management, item add/remove operations, customer-product relationship checks | Spring Boot 4, PostgreSQL, Liquibase | `http://localhost:8081/actuator/health` |
+| **`media-service`** | `8083` | `mediaservice` | Media uploads, magic-byte MIME type validation, generation of 6 WebP responsive variants, RustFS S3 storage | Spring Boot 4, RustFS/S3 SDK, ImageIO/WebP, PostgreSQL | `http://localhost:8083/actuator/health` |
+| **`notification-service`** | `8090` | `notificationservice` | Event-driven customer notifications, in-app notification records, HTML email dispatch via SMTP | Spring Boot 4, JavaMailSender, PostgreSQL, Kafka | `http://localhost:8090/actuator/health` |
 
 ---
 
-## 3. Quy trình luồng nghiệp vụ chi tiết / Business & Functional Flows
+## 3. Business and functional flows
 
-Dưới đây là sơ đồ chi tiết và cơ chế vận hành của tất cả 9 luồng nghiệp vụ chính trong toàn bộ hệ thống mã nguồn:
+The system architecture coordinates 9 primary business workflows across services.
 
-### Flow 1: Xác thực & Điều hướng Gateway (IAM & Edge Routing)
+### Flow 1: Authentication and edge routing
 
-Quy trình đăng nhập ROPC (Resource Owner Password Credentials), phát hành JWT từ Keycloak, đồng bộ thông tin người dùng cục bộ và quy trình kiểm soát an ninh tại API Gateway.
+Clients obtain tokens through `auth-service` via Resource Owner Password Credentials (ROPC) or refresh tokens. The service proxies credentials to Keycloak, synchronizes profile data to the local PostgreSQL shadow table, and returns JWT tokens to the client. Subsequent business requests pass through `gateway-service`, where the reactive pipeline validates the token signature against Keycloak JWKS, checks Redis rate limits, and routes the call downstream.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Khách hàng / Quản trị viên
+    actor User as Customer or Administrator
     participant GW as gateway-service :8080
     participant AUTH as auth-service :8088
     participant KC as Keycloak 26 (:9090)
     participant DB as Postgres (authservice)
     participant REDIS as Redis 7.4 (:6379)
-    participant SVC as Microservices Đích
+    participant SVC as Target Microservice
 
-    Note over User,AUTH: Bước 1: Đăng nhập & Cấp phát JWT Token
+    Note over User,AUTH: Authentication and token acquisition
     User->>GW: POST /api/v1/auth/login {username, password, clientId}
-    GW->>AUTH: Chuyển tiếp yêu cầu (Traceparent gắn kèm)
+    GW->>AUTH: Forward request with Traceparent header
     AUTH->>KC: POST /realms/ecommerce/protocol/openid-connect/token
     KC-->>AUTH: 200 OK {access_token, refresh_token, expires_in}
-    AUTH->>DB: Đồng bộ / Cập nhật hồ sơ người dùng (users, roles)
-    AUTH-->>User: 200 OK (ApiResponse bọc JWT Token)
+    AUTH->>DB: Synchronize user profile and roles
+    AUTH-->>User: 200 OK (ApiResponse with JWT tokens)
 
-    Note over User,SVC: Bước 2: Gọi API Nghiệp vụ với Bearer Token
-    User->>GW: GET /api/v1/products/1 (Header: Authorization: Bearer <JWT>)
-    GW->>GW: 1. CorsWebFilter: Kiểm tra Origin & Allowed Headers
-    GW->>GW: 2. TraceparentFilter: Trích xuất / Tạo mới X-Correlation-Id
-    GW->>KC: 3. JwtAuthenticationFilter: Xác thực chữ ký RS256 qua JWKS cache
+    Note over User,SVC: Authenticated API call
+    User->>GW: GET /api/v1/products/1 (Authorization: Bearer <JWT>)
+    GW->>GW: 1. Validate CORS policy and allowed origin headers
+    GW->>GW: 2. Extract or generate traceparent and X-Correlation-Id
+    GW->>KC: 3. Verify RS256 signature using cached Keycloak JWKS keys
     
-    Note over GW,REDIS: Bước 3: Kiểm soát Giới hạn Tốc độ 2 Lớp (Dual Rate Limit)
-    GW->>REDIS: Layer 1: Chạy Lua script với key 'gateway-system' (2,000 req/s)
-    REDIS-->>GW: Token khả dụng (Chấp thuận)
-    GW->>REDIS: Layer 2: Chạy Lua script với key 'user:<uuid>' hoặc 'ip:<remote>' (100 req/s)
-    REDIS-->>GW: Token khả dụng (Chấp thuận)
+    Note over GW,REDIS: Two-tier rate limiting check
+    GW->>REDIS: Tier 1: Run Lua script for key 'gateway-system' (2,000 req/s limit)
+    REDIS-->>GW: Tokens available (Allow)
+    GW->>REDIS: Tier 2: Run Lua script for key 'user:<id>' or 'ip:<address>' (100 req/s limit)
+    REDIS-->>GW: Tokens available (Allow)
     
-    GW->>SVC: Chuyển tiếp Request nguyên bản /api/v1/products/1
+    GW->>SVC: Forward request to target service
     SVC-->>GW: 200 OK {ApiResponse}
-    GW-->>User: 200 OK (Kèm Header X-Correlation-Id)
+    GW-->>User: 200 OK (with correlation headers)
 ```
 
 ---
 
-### Flow 2: Quản lý Danh mục & Đồng bộ CDC Tìm kiếm (Catalog & Search Sync)
+### Flow 2: Product catalog and search synchronization
 
-Khi Quản trị viên thêm, sửa hoặc xóa sản phẩm, hệ thống sử dụng **Transactional Outbox Pattern** để đảm bảo dữ liệu ghi vào PostgreSQL và sự kiện Kafka hoàn toàn nhất quán, từ đó `search-service` tự động cập nhật chỉ mục tìm kiếm Elasticsearch và làm mới cache Redis.
+When catalog managers create, update, or remove products, `product-service` writes the changes and records an event in the `outbox_events` table within a single ACID transaction. A background scheduler reads pending outbox entries, publishes them to Kafka topic `shop.product.lifecycle.v1`, and marks the entries processed. `search-service` consumes the events to keep Elasticsearch indices in sync.
 
 ```mermaid
 flowchart TD
@@ -241,98 +241,98 @@ flowchart TD
     classDef kafkaClass fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000000;
     classDef esClass fill:#b1ddf0,stroke:#10739e,stroke-width:2px,color:#000000;
 
-    ADMIN["Quản trị viên (Backoffice UI)"]:::adminClass
+    ADMIN["Catalog Administrator (Backoffice)"]:::adminClass
     PRD["product-service :8086"]:::serviceClass
-    PG_PRD[("Postgres: productservice<br/>• Bảng products & variants<br/>• Bảng outbox_events")]:::dbClass
-    RELAY["ProductOutboxRelay (@Scheduled 5s)"]:::serviceClass
-    KAFKA["Kafka Topic: shop.product.lifecycle.v1<br/>• ProductCreated<br/>• ProductUpdated<br/>• ProductDeleted"]:::kafkaClass
-    SEARCH["search-service :8094<br/>(ProductSearchConsumer)"]:::serviceClass
-    ES[("Elasticsearch 8.15<br/>Index: products (BM25 + Autocomplete)")]:::esClass
-    REDIS[("Redis 7.4<br/>Cache Danh mục & Chi tiết")]:::dbClass
+    PG_PRD[("PostgreSQL: productservice<br/>products and variants tables<br/>outbox_events table")]:::dbClass
+    RELAY["ProductOutboxRelay (@Scheduled every 5s)"]:::serviceClass
+    KAFKA["Kafka Topic: shop.product.lifecycle.v1<br/>ProductCreated, ProductUpdated, ProductDeleted"]:::kafkaClass
+    SEARCH["search-service :8094<br/>ProductSearchConsumer"]:::serviceClass
+    ES[("Elasticsearch 8.15<br/>Index: products (BM25 and autocomplete)")]:::esClass
+    REDIS[("Redis 7.4<br/>Catalog and category cache")]:::dbClass
 
     ADMIN -->|"1. POST /api/v1/backoffice/products"| PRD
-    PRD -->|"2. Mở Transaction ACID"| PG_PRD
-    PRD -->|"3. Ghi sản phẩm & Ghi outbox_events (PENDING)"| PG_PRD
-    PRD -->|"4. Xóa Cache Redis (@CacheEvict)"| REDIS
-    PG_PRD -->|"5. Quét bản ghi PENDING"| RELAY
-    RELAY -->|"6. Publish PartitionKey=productId"| KAFKA
-    RELAY -->|"7. Cập nhật outbox status=PROCESSED"| PG_PRD
-    KAFKA -->|"8. BaseKafkaConsumer tiêu thụ sự kiện"| SEARCH
-    SEARCH -->|"9. Upsert / Delete ProductSearchDocument"| ES
+    PRD -->|"2. Open ACID transaction"| PG_PRD
+    PRD -->|"3. Insert product record and outbox entry (PENDING)"| PG_PRD
+    PRD -->|"4. Evict cached category trees (@CacheEvict)"| REDIS
+    PG_PRD -->|"5. Poll pending outbox records"| RELAY
+    RELAY -->|"6. Publish event (key = productId)"| KAFKA
+    RELAY -->|"7. Update outbox status to PROCESSED"| PG_PRD
+    KAFKA -->|"8. Consume event"| SEARCH
+    SEARCH -->|"9. Index or delete document"| ES
 ```
 
 ---
 
-### Flow 3: Xử lý Đa phương tiện & Tạo ảnh Responsive (Media Processing Pipeline)
+### Flow 3: Media processing pipeline
 
-Hệ thống lưu trữ ảnh sản phẩm an toàn với cơ chế **MIME Type Sniffing** (đọc magic bytes để ngăn chặn tấn công giả mạo đuôi file), tự động sản sinh 6 kích thước ảnh WebP phục vụ giao diện Responsive và cấp phát Presigned URL từ RustFS S3.
+`media-service` handles file uploads with magic-byte validation to detect the true MIME type, preventing extension spoofing. It uploads original images to RustFS (S3-compatible object storage), generates 6 responsive WebP variants, stores metadata in PostgreSQL, and issues presigned download URLs.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Khách hàng / Admin
+    actor Client as Customer or Administrator
     participant GW as gateway-service :8080
     participant MED as media-service :8083
     participant RUSTFS as RustFS S3 (:9000)
     participant DB as Postgres (mediaservice)
     participant PRD as product-service :8086
 
-    Client->>GW: POST /api/v1/medias/upload (Multipart file)
-    GW->>MED: Chuyển tiếp file nhị phân
-    MED->>MED: 1. MIME Sniffing: Đọc Magic Bytes (Xác thực JPEG/PNG/WebP thực)
-    MED->>RUSTFS: 2. Tải ảnh gốc lên bucket 'ecommerce-media/originals/'
-    MED->>MED: 3. Sinh 6 phiên bản Responsive WebP:
+    Client->>GW: POST /api/v1/backoffice/medias (Multipart file)
+    GW->>MED: Forward multipart binary stream
+    MED->>MED: 1. Validate file magic bytes (verify JPEG, PNG, or WebP)
+    MED->>RUSTFS: 2. Store original file in 'ecommerce-media/originals/'
+    MED->>MED: 3. Render 6 responsive WebP variants:
     Note over MED: thumbnail (150px), small (320px), medium (640px),<br/>large (1024px), xlarge (1920px), compressed original
-    MED->>RUSTFS: 4. Lưu 6 file WebP lên S3
-    MED->>DB: 5. Lưu thông tin metadata & ánh xạ variants vào DB
-    MED-->>Client: 201 Created {mediaId, urls, variants}
+    MED->>RUSTFS: 4. Upload WebP variant files to S3 bucket
+    MED->>DB: 5. Persist media metadata and variant records
+    MED-->>Client: 201 Created {mediaId, originalUrl, variants}
     
-    Note over Client,PRD: Gán ảnh cho sản phẩm
-    Client->>PRD: PUT /api/v1/backoffice/products/1 {imageIds: [mediaId]}
-    PRD->>MED: REST GET /api/v1/medias/{mediaId}/validate
-    MED-->>PRD: 200 OK (Ảnh tồn tại và hợp lệ)
-    PRD->>PRD: Lưu URL vào bộ sưu tập ảnh sản phẩm
+    Note over Client,PRD: Attach media to product
+    Client->>PRD: PUT /api/v1/backoffice/products/{id} {imageIds: [mediaId]}
+    PRD->>MED: REST GET /api/v1/medias/{mediaId}
+    MED-->>PRD: 200 OK (Media verified)
+    PRD->>PRD: Link image identifier in product record
 ```
 
 ---
 
-### Flow 4: Trải nghiệm Khách hàng: Yêu thích, Giỏ hàng & Giá động (Wishlist, Cart & Pricing)
+### Flow 4: Wishlist, shopping cart, and pricing
 
-Quá trình khách hàng tương tác với danh sách yêu thích, thêm sản phẩm vào giỏ hàng và hệ thống tự động tính toán chiết khấu khuyến mãi cùng mức thuế địa lý theo thời gian thực.
+Shoppers browse items, save items to their wishlist in `favourite-service`, and build a persistent shopping cart in `order-service`. During cart reviews, `order-service` calls `promotion-service` to validate promotional discounts and calls `tax-service` to compute regional sales taxes.
 
 ```mermaid
 flowchart LR
     classDef client fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px,color:#000000;
     classDef service fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
 
-    USER["Khách hàng"]:::client
+    USER["Customer Client"]:::client
     GW["gateway-service :8080"]:::service
-    FAV["favourite-service :8081<br/>Wishlist & Sản phẩm lưu"]:::service
-    CART["order-service :8084<br/>Giỏ hàng (Carts & CartItems)"]:::service
-    PROMO["promotion-service :8093<br/>Mã giảm giá & Điều kiện áp dụng"]:::service
-    TAX["tax-service :8091<br/>Tính thuế theo vị trí địa lý"]:::service
+    FAV["favourite-service :8081<br/>Wishlist items"]:::service
+    CART["order-service :8084<br/>Carts and line items"]:::service
+    PROMO["promotion-service :8093<br/>Coupons and discounts"]:::service
+    TAX["tax-service :8091<br/>Jurisdiction tax calculation"]:::service
 
-    USER -->|"1. Thêm vào Wishlist"| GW --> FAV
-    USER -->|"2. Thêm vào giỏ hàng (Cart)"| GW --> CART
-    CART -->|"3. Gửi mã coupon & tổng tiền"| PROMO
-    PROMO -.->|"4. Trả về mức giảm (% hoặc số tiền)"| CART
-    CART -->|"5. Gửi TaxClass & Quốc gia/Bang"| TAX
-    TAX -.->|"6. Trả về tiền thuế & thuế suất"| CART
-    CART -.->|"7. Tổng hợp: Tạm tính - Giảm giá + Thuế = Tổng tiền"| USER
+    USER -->|"1. Add to wishlist"| GW --> FAV
+    USER -->|"2. Add line items to cart"| GW --> CART
+    CART -->|"3. Check coupon validity and discount"| PROMO
+    PROMO -.->|"4. Return percentage or fixed discount"| CART
+    CART -->|"5. Send tax class and delivery address"| TAX
+    TAX -.->|"6. Return calculated tax amount and rate"| CART
+    CART -.->|"7. Total = subtotal minus discount plus tax"| USER
 ```
 
 ---
 
-### Flow 5: Đặt hàng & Đặt trước Tồn kho 2 Pha (Order Checkout & 2-Phase Reservation)
+### Flow 5: Checkout and two-phase inventory reservation
 
-Quy trình cốt lõi khi khách hàng bấm **Checkout**. Đảm bảo không xảy ra hiện tượng bán vượt tồn kho (overselling) nhờ **2-Phase Stock Reservation**, kiểm tra giá và phân loại thuế đồng bộ, sau đó bắn sự kiện sang Kafka.
+When a shopper checks out, `order-service` orchestrates pre-order checks against product status, promotions, and taxes. It then reserves the required stock in `inventory-service` using a 15-minute expiring hold. Once the order is saved as `PENDING_PAYMENT`, an event is emitted via the transactional outbox to notify downstream systems.
 
 ![E2E Order Fulfillment Saga](./docs/images/e2e-order-fulfillment-saga.png)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Customer as Khách hàng
+    actor Customer as Customer
     participant GW as gateway-service :8080
     participant ORD as order-service :8084
     participant PRD as product-service :8086
@@ -343,49 +343,49 @@ sequenceDiagram
     participant NTF as notification-service :8090
 
     Customer->>GW: POST /api/v1/orders {items, shippingAddress, couponCode}
-    GW->>ORD: Chuyển tiếp Request kèm User Principal & Trace ID
+    GW->>ORD: Forward request with user credentials and trace ID
     
     rect rgb(240, 248, 255)
-        Note over ORD,TAX: Giai đoạn Xác thực Đồng bộ (Synchronous Pre-Checks)
-        ORD->>PRD: REST GET /api/v1/products/{id} (Kiểm tra trạng thái & giá SKU)
-        PRD-->>ORD: ProductDetailResponse (Trạng thái ACTIVE)
-        ORD->>PRM: REST POST /api/v1/backoffice/promotions/apply {code, amount}
-        PRM-->>ORD: ApplyResponse {discountAmount, promotionId}
-        ORD->>TAX: REST POST /api/v1/backoffice/tax-rates/calculate {classId, country, amount}
-        TAX-->>ORD: CalculateResponse {taxAmount, appliedRate}
+        Note over ORD,TAX: Synchronous validation checks
+        ORD->>PRD: REST GET /api/v1/products/{id} (Check status and price)
+        PRD-->>ORD: ProductDetailResponse (status: ACTIVE)
+        ORD->>PRM: REST POST /api/v1/promotions/{code}/reserve
+        PRM-->>ORD: Coupon reservation confirmed
+        ORD->>TAX: REST POST /api/v1/tax/calculate
+        TAX-->>ORD: TaxCalculationResponse {taxAmount}
     end
 
     rect rgb(255, 250, 240)
-        Note over ORD,INV: Giai đoạn 1: Đặt trước tồn kho (Phase 1: Reserve Stock)
+        Note over ORD,INV: Phase 1: Stock reservation
         ORD->>INV: REST POST /api/v1/inventory/{productId}/reserve {quantity, orderId, ttlMinutes: 15}
-        INV->>INV: Kiểm tra: (quantity - reserved_quantity) >= requested
-        INV->>INV: Tăng reserved_quantity, Tạo bản ghi Reservation (Trạng thái PENDING)
+        INV->>INV: Check available balance: (quantity - reserved_quantity) >= requested
+        INV->>INV: Increment reserved_quantity, create Reservation record (status: PENDING)
         INV-->>ORD: 200 OK {reservationId, expiresAt}
     end
 
     rect rgb(240, 255, 240)
-        Note over ORD,NTF: Giai đoạn Lưu đơn & Phát sự kiện (Outbox Pattern)
-        ORD->>ORD: Ghi Đơn hàng (status: PENDING_PAYMENT) + Ghi outbox_events (order.created.v1)
-        ORD-->>Customer: 201 Created (OrderDto kèm tổng tiền thanh toán)
-        ORD->>BUS: OrderOutboxRelay bắn sự kiện sang topic shop.order.lifecycle.v1
-        BUS-->>NTF: Notification Consumer nhận order.created.v1
-        NTF->>NTF: Gửi email xác nhận đặt hàng cho khách hàng qua SMTP
+        Note over ORD,NTF: Order creation and outbox event publishing
+        ORD->>ORD: Insert Order (status: PENDING_PAYMENT) and outbox event (order.created.v1)
+        ORD-->>Customer: 201 Created (OrderResponse with payment summary)
+        ORD->>BUS: Relay publishes to topic shop.order.lifecycle.v1
+        BUS-->>NTF: OrderEventConsumer consumes order.created.v1
+        NTF->>NTF: Send order placement confirmation email via SMTP
     end
 ```
 
 ---
 
-### Flow 6: Xử lý Thanh toán Stripe & Xác nhận Đơn hàng (Payment & Order Confirmation)
+### Flow 6: Stripe payments and order confirmation
 
-Khách hàng tiến hành thanh toán qua Stripe. Hệ thống đón Webhook với chữ ký số bảo mật, sau đó kích hoạt **Phase 2 Commit** để chính thức trừ kho vật lý và xác nhận đơn hàng.
+The customer initiates payment through `payment-service`, which opens a Stripe PaymentIntent. After payment completion on the client or via Stripe Checkout, Stripe calls the payment webhook. `payment-service` validates the HMAC signature, updates the record to `CAPTURED`, and emits `payment.succeeded.v1`. `order-service` then commits the reserved inventory in Phase 2 and marks the order `CONFIRMED`.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Customer as Khách hàng
+    actor Customer as Customer
     participant GW as gateway-service :8080
     participant PAY as payment-service :8085
-    participant STRIPE as Stripe Gateway API
+    participant STRIPE as Stripe API
     participant ORD as order-service :8084
     participant INV as inventory-service :8082
     participant PRM as promotion-service :8093
@@ -394,41 +394,41 @@ sequenceDiagram
     participant NTF as notification-service :8090
 
     Customer->>GW: POST /api/v1/payments {orderId, paymentMethod: STRIPE}
-    GW->>PAY: Chuyển tiếp yêu cầu thanh toán
-    PAY->>STRIPE: Khởi tạo Stripe PaymentIntent / Checkout Session
-    STRIPE-->>PAY: Trả về {clientSecret, checkoutUrl}
-    PAY->>PAY: Lưu bản ghi thanh toán (Trạng thái PENDING)
+    GW->>PAY: Forward payment initiation request
+    PAY->>STRIPE: Create PaymentIntent or Checkout Session
+    STRIPE-->>PAY: Return {clientSecret, checkoutUrl}
+    PAY->>PAY: Save payment record (status: PENDING)
     PAY-->>Customer: PaymentResponse {clientSecret, checkoutUrl}
 
-    Customer->>STRIPE: Nhập thẻ & Hoàn tất thanh toán trên Stripe
-    STRIPE->>GW: POST /api/v1/payments/webhook (Header: stripe-signature)
-    GW->>PAY: Chuyển tiếp Webhook
-    PAY->>PAY: Kiểm tra tính hợp lệ chữ ký số (Stripe Webhook Signature)
-    PAY->>PAY: Cập nhật Payment status -> CAPTURED + Ghi outbox_events
-    PAY->>BUS: Publish topic shop.payment.events.v1 (payment.succeeded.v1)
+    Customer->>STRIPE: Submit card payment on Stripe
+    STRIPE->>GW: POST /api/v1/webhooks/payments (Stripe-Signature header)
+    GW->>PAY: Forward webhook payload
+    PAY->>PAY: Verify HMAC cryptographic signature
+    PAY->>PAY: Set status to CAPTURED, record outbox event
+    PAY->>BUS: Publish to shop.payment.lifecycle.v1 (payment.succeeded.v1)
 
-    Note over ORD,INV: Cổng Xác nhận Đơn hàng & Commit Tồn kho 2 Pha
-    Customer->>ORD: Gọi Callback xác nhận / Hệ thống tự kích hoạt
-    ORD->>PAY: REST GET /api/v1/payments/order/{orderId}
-    PAY-->>ORD: PaymentSnapshot {status: CAPTURED}
+    Note over ORD,INV: Order confirmation and Phase 2 inventory commit
+    Customer->>ORD: Confirm order or trigger automated confirmation callback
+    ORD->>PAY: REST GET /api/v1/payments/{id}
+    PAY-->>ORD: Payment record (status: CAPTURED)
     
-    ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit (Phase 2 Commit)
-    INV->>INV: Trừ tồn kho vật lý: quantity = quantity - count, reservation=COMMITTED
-    INV-->>ORD: 200 OK (Kho đã trừ chính thức)
+    ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit (Phase 2 commit)
+    INV->>INV: Deduct physical stock: quantity -= count, set reservation COMMITTED
+    INV-->>ORD: 200 OK (Physical inventory committed)
     
-    ORD->>PRM: REST POST Trừ lượt dùng coupon thực tế
-    ORD->>ORD: Chuyển trạng thái đơn: PENDING_PAYMENT -> CONFIRMED + Ghi Outbox
-    ORD->>BUS: Publish shop.order.lifecycle.v1 (order.updated.v1 - status: CONFIRMED)
+    ORD->>PRM: REST POST /api/v1/promotions/reservations/{id}/commit
+    ORD->>ORD: Update order status to CONFIRMED, record outbox event
+    ORD->>BUS: Publish shop.order.lifecycle.v1 (order.updated.v1 with status: CONFIRMED)
     
-    BUS-->>SHP: shipping-service tiêu thụ order.updated.v1 (CONFIRMED) -> Tự tạo vận đơn
-    BUS-->>NTF: notification-service tiêu thụ -> Gửi biên lai thanh toán & thông báo xác nhận
+    BUS-->>SHP: shipping-service consumes order.updated.v1, generates shipment record
+    BUS-->>NTF: notification-service sends payment receipt and order confirmation email
 ```
 
 ---
 
-### Flow 7: Vận chuyển Đơn hàng & Tự động Giao hàng (Logistics & Auto-Delivery)
+### Flow 7: Shipment fulfillment and delivery updates
 
-Quy trình giao hàng khép kín từ khi đơn hàng được xác nhận, tự động đóng gói, liên kết đối tác vận chuyển, xử lý webhook hành trình và tự động hoàn thành đơn khi khách nhận hàng thành công.
+When `order-service` publishes a `CONFIRMED` order event, `shipping-service` automatically generates a shipment entry and assigns a carrier tracking number. As the package moves through transit, carrier webhooks update the status to `DELIVERED`. `order-service` consumes this event to finalize the order.
 
 ```mermaid
 flowchart TD
@@ -436,39 +436,39 @@ flowchart TD
     classDef serviceClass fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
     classDef extClass fill:#e1d5e7,stroke:#9673a6,stroke-width:2px,color:#000000;
 
-    ORD_EVT["Kafka Event: order.updated.v1<br/>(status: CONFIRMED)"]:::eventClass
+    ORD_EVT["Kafka Event: order.updated.v1<br/>status: CONFIRMED"]:::eventClass
     SHP["shipping-service :8087"]:::serviceClass
-    CARRIER["Đối tác vận chuyển (DHL / FedEx / GHTK)"]:::extClass
-    WEBHOOK["Carrier Webhook POST /api/v1/shipping/webhook"]:::extClass
+    CARRIER["Logistics Carrier (DHL, FedEx, GHTK)"]:::extClass
+    WEBHOOK["Carrier Webhook POST /api/v1/webhooks/shipping"]:::extClass
     SHP_EVT_DISP["Kafka Event: shipping.dispatched.v1"]:::eventClass
     SHP_EVT_DELV["Kafka Event: shipping.delivered.v1"]:::eventClass
-    ORD["order-service :8084<br/>(ShippingDeliveredConsumer)"]:::serviceClass
+    ORD["order-service :8084<br/>ShippingDeliveredConsumer"]:::serviceClass
     NTF["notification-service :8090"]:::serviceClass
 
-    ORD_EVT -->|"1. Tiêu thụ sự kiện"| SHP
-    SHP -->|"2. Tạo kiện hàng, sinh mã vận đơn tracking"| SHP
-    SHP -->|"3. Giao hàng cho đối tác vận chuyển (DISPATCHED)"| CARRIER
-    SHP -->|"4. Bắn sự kiện dispatched"| SHP_EVT_DISP --> NTF
-    NTF -->|"Gửi email kèm mã tracking cho khách"| NTF
+    ORD_EVT -->|"1. Consume event"| SHP
+    SHP -->|"2. Create shipment record and tracking number"| SHP
+    SHP -->|"3. Package handed to carrier (DISPATCHED)"| CARRIER
+    SHP -->|"4. Publish dispatched event"| SHP_EVT_DISP --> NTF
+    NTF -->|"Email tracking link to customer"| NTF
 
-    CARRIER -->|"5. Cập nhật hành trình: Đang giao -> Đã giao thành công"| WEBHOOK
-    WEBHOOK -->|"6. Webhook chuyển tiếp"| SHP
-    SHP -->|"7. Cập nhật trạng thái kiện hàng: DELIVERED"| SHP
-    SHP -->|"8. Bắn sự kiện delivered"| SHP_EVT_DELV
-    SHP_EVT_DELV -->|"9. Tự động chuyển trạng thái đơn hàng sang DELIVERED"| ORD
-    SHP_EVT_DELV -->|"10. Gửi thông báo giao hàng thành công & mời đánh giá"| NTF
+    CARRIER -->|"5. Carrier status webhook: Delivered"| WEBHOOK
+    WEBHOOK -->|"6. Forward callback"| SHP
+    SHP -->|"7. Update shipment status to DELIVERED"| SHP
+    SHP -->|"8. Publish delivered event"| SHP_EVT_DELV
+    SHP_EVT_DELV -->|"9. Automatically transition order status to DELIVERED"| ORD
+    SHP_EVT_DELV -->|"10. Send delivery notification with review invitation"| NTF
 ```
 
 ---
 
-### Flow 8: Đánh giá Người mua Xác thực (Verified Buyer Review & Rating)
+### Flow 8: Verified buyer ratings and reviews
 
-Chỉ những khách hàng đã thực sự mua sản phẩm và đơn hàng ở trạng thái `DELIVERED` mới được phép gửi đánh giá (chặn triệt để đánh giá ảo/spam thông qua **Eligibility Gate `RTG-11001`**). Sau khi đánh giá được duyệt, điểm xếp hạng trung bình sẽ tự động cập nhật vào Catalog và đẩy độ ưu tiên tìm kiếm trên Elasticsearch.
+Customers can rate and review items they have purchased. To prevent spam and fake reviews, `rating-service` checks purchase history with `order-service` via the verified buyer gate. Once validated and approved, average rating metrics update in the product catalog and feed into Elasticsearch search rankings.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Customer as Khách hàng
+    actor Customer as Customer
     participant GW as gateway-service :8080
     participant RTG as rating-service :8089
     participant ORD as order-service :8084
@@ -477,41 +477,41 @@ sequenceDiagram
     participant SRH as search-service :8094
     participant ES as Elasticsearch 8.15
 
-    Customer->>GW: POST /api/v1/storefront/ratings {productId, score: 5, comment: "Tuyệt vời!"}
-    GW->>RTG: Chuyển tiếp Request kèm User Principal
+    Customer->>GW: POST /api/v1/ratings {productId, score: 5, comment: "Excellent build quality"}
+    GW->>RTG: Forward request with authenticated user context
     
     rect rgb(255, 240, 245)
-        Note over RTG,ORD: Cổng Kiểm Tra Điều Kiện Người Mua (Verified Buyer Gate)
-        RTG->>ORD: REST GET /api/v1/orders/verify-purchase?userId={userId}&productId={productId}
-        alt Đơn hàng chưa giao hoặc người dùng chưa từng mua sản phẩm
-            ORD-->>RTG: 400 / 404 False
-            RTG-->>Customer: 400 Bad Request (Lỗi RTG-11001: Chỉ người đã mua và nhận hàng mới được đánh giá)
-        else Đơn hàng chứa sản phẩm đã ở trạng thái DELIVERED
-            ORD-->>RTG: 200 OK {verified: true, orderId: "ORD-123"}
+        Note over RTG,ORD: Verified buyer eligibility check
+        RTG->>ORD: REST GET /api/v1/orders/verify-purchase?userId={id}&productId={id}
+        alt User has not purchased product or order not delivered
+            ORD-->>RTG: 200 OK {purchased: false}
+            RTG-->>Customer: 400 Bad Request (RTG-11001: Verified purchase required)
+        else User has a delivered order for this product
+            ORD-->>RTG: 200 OK {purchased: true, orderId: "ORD-123"}
         end
     end
 
     rect rgb(240, 255, 240)
-        Note over RTG,ES: Ghi nhận Đánh giá & Tái tính toán Điểm Tìm kiếm
-        RTG->>RTG: Lưu bản ghi Rating (APPROVED) + Ghi outbox_events
-        RTG-->>Customer: 201 Created (RatingDto)
-        RTG->>BUS: RatingOutboxRelay bắn sự kiện RatingApproved sang shop.rating.events.v1
+        Note over RTG,ES: Review recording and catalog metric recalculation
+        RTG->>RTG: Persist rating entry and save outbox event
+        RTG-->>Customer: 201 Created (RatingResponse)
+        RTG->>BUS: RatingOutboxRelay publishes to shop.rating.lifecycle.v1
         
-        par Cập nhật điểm sản phẩm
-            BUS-->>PRD: ProductRatingConsumer tiêu thụ
-            PRD->>PRD: Tính toán lại averageRating & reviewCount trong DB và Redis
-        and Cập nhật độ ưu tiên tìm kiếm Elasticsearch
-            BUS-->>SRH: SearchRatingConsumer tiêu thụ
-            SRH->>ES: Update ratingScore trên ProductSearchDocument (Tăng BM25 relevance score)
+        par Update product catalog metrics
+            BUS-->>PRD: ProductRatingConsumer processes rating update
+            PRD->>PRD: Recalculate averageRating and reviewCount in database and Redis
+        and Update Elasticsearch ranking
+            BUS-->>SRH: ProductSearchConsumer updates search document
+            SRH->>ES: Update rating metrics on product document
         end
     end
 ```
 
 ---
 
-### Flow 9: Xử lý Sự cố, Quét Tồn kho Hết hạn & Hoàn tác (Sweeper & Compensations)
+### Flow 9: Expired stock sweepers and compensations
 
-Cơ chế tự bảo vệ và đảm bảo tính nhất quán cuối cùng (Eventual Consistency) khi gặp sự cố mạng, hủy đơn hoặc người dùng từ bỏ thanh toán:
+The system handles network failures, order cancellations, and abandoned checkouts through automated background sweepers and compensation flows.
 
 ```mermaid
 flowchart TD
@@ -519,30 +519,30 @@ flowchart TD
     classDef serviceClass fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000000;
     classDef dbClass fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000000;
 
-    subgraph SWEEPER_FLOW ["Tự động nhả tồn kho giữ chỗ hết hạn (Reservation Sweeper)"]
-        TIMER["@Scheduled(fixedDelay = 60000)<br/>Quét định kỳ mỗi phút"]:::timerClass
+    subgraph SWEEPER_FLOW ["Automated Reservation Expiration Sweeper"]
+        TIMER["@Scheduled(fixedDelay = 60000)<br/>Runs every 60 seconds"]:::timerClass
         SWEEPER["ReservationExpirationSweeper"]:::serviceClass
-        INV_DB[("inventoryservice<br/>Bảng reservations")]:::dbClass
-        STOCK[("Khôi phục số lượng khả dụng:<br/>reserved_quantity -= quantity")]:::dbClass
-        INV_EVT["Bắn sự kiện Kafka: inventory.released.v1"]:::timerClass
+        INV_DB[("inventoryservice<br/>reservations table")]:::dbClass
+        STOCK[("Restore available stock:<br/>reserved_quantity -= quantity")]:::dbClass
+        INV_EVT["Publish event: inventory.released.v1"]:::timerClass
 
         TIMER --> SWEEPER
-        SWEEPER -->|"Truy vấn status=PENDING AND expires_at < NOW()"| INV_DB
-        INV_DB -->|"Tìm thấy các phiên giữ chỗ quá 15 phút chưa thanh toán"| SWEEPER
-        SWEEPER -->|"Cập nhật status = EXPIRED"| INV_DB
+        SWEEPER -->|"Query status=PENDING and expires_at < now()"| INV_DB
+        INV_DB -->|"Return expired reservations older than 15 minutes"| SWEEPER
+        SWEEPER -->|"Set status = EXPIRED"| INV_DB
         SWEEPER --> STOCK
         SWEEPER --> INV_EVT
     end
 
-    subgraph CANCEL_FLOW ["Quy trình Hủy đơn & Đền bù Saga (Compensation Flow)"]
-        CANCEL_REQ["Khách hàng bấm hủy / Thanh toán thất bại"]:::timerClass
+    subgraph CANCEL_FLOW ["Order Cancellation and Saga Compensations"]
+        CANCEL_REQ["Customer cancellation or checkout timeout"]:::timerClass
         ORD_SVC["order-service :8084"]:::serviceClass
-        REL_INV["Gọi REST /release tồn kho"]:::serviceClass
-        REL_PROMO["Gọi REST Hoàn lại mã coupon"]:::serviceClass
-        ORD_EVT["Bắn sự kiện Kafka: order.cancelled.v1"]:::timerClass
+        REL_INV["REST /reservations/{id}/release (Inventory)"]:::serviceClass
+        REL_PROMO["REST /reservations/{id}/release (Promotions)"]:::serviceClass
+        ORD_EVT["Publish event: order.cancelled.v1"]:::timerClass
 
         CANCEL_REQ --> ORD_SVC
-        ORD_SVC -->|"Chuyển trạng thái đơn: CANCELLED"| ORD_SVC
+        ORD_SVC -->|"Set order status to CANCELLED"| ORD_SVC
         ORD_SVC --> REL_INV
         ORD_SVC --> REL_PROMO
         ORD_SVC --> ORD_EVT
@@ -551,93 +551,94 @@ flowchart TD
 
 ---
 
-## 4. Hạ tầng Bắn Sự kiện & Bảng Mapping Kafka (Event-Driven Backbone)
+## 4. Event-driven messaging backbone
 
-Nền tảng sử dụng cụm **Apache Kafka 3.9 vận hành ở chế độ KRaft** (không phụ thuộc Zookeeper), với cam kết phân vùng rõ ràng đảm bảo thứ tự sự kiện theo ID nghiệp vụ:
+The messaging platform uses an Apache Kafka 3.9 cluster in KRaft mode. Event producers write events to an outbox table in their local database, and background workers publish them using business entity IDs as partition keys to guarantee in-order delivery per aggregate.
 
 ![Event-Driven Architecture](./docs/images/event-driven-messaging-architecture.png)
 
-| Kafka Topic | Dịch vụ Sản sinh (Producer) | Partition Key | Tên sự kiện / Event Types | Dịch vụ Tiêu thụ & Hành động (Consumers) |
+| Kafka topic | Producer | Partition key | Event types | Consumers and actions |
 |---|---|---|---|---|
-| **`shop.order.lifecycle.v1`** | `order-service` | `orderId` | `order.created.v1`<br/>`order.updated.v1`<br/>`order.cancelled.v1` | • **`shipping-service`**: Tạo vận đơn khi đơn đạt `CONFIRMED`.<br/>• **`notification-service`**: Gửi email xác nhận đặt hàng & cập nhật tiến độ. |
-| **`shop.product.lifecycle.v1`** | `product-service` | `productId` | `ProductCreated`<br/>`ProductUpdated`<br/>`ProductDeleted` | • **`search-service`**: Thêm mới, cập nhật hoặc xóa chỉ mục Elasticsearch `products`. |
-| **`shop.inventory.events.v1`** | `inventory-service` | `productId` | `inventory.reserved.v1`<br/>`inventory.committed.v1`<br/>`inventory.released.v1`<br/>`inventory.adjusted.v1` | • **`order-service`**: Giám sát tồn kho phân tán theo thời gian thực.<br/>• **Kiểm toán & Báo cáo kho**: Audit log biến động kho. |
-| **`shop.payment.events.v1`** | `payment-service` | `orderId` | `payment.succeeded.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` | • **`notification-service`**: Gửi biên lai thanh toán hoặc cảnh báo lỗi.<br/>• **`order-service`**: Bật cờ cho phép xác nhận đơn hàng. |
-| **`shop.shipping.events.v1`** | `shipping-service` | `orderId` | `shipping.dispatched.v1`<br/>`shipping.delivered.v1` | • **`order-service`**: Tự động chuyển đơn sang `DELIVERED` khi nhận sự kiện giao thành công.<br/>• **`notification-service`**: Gửi mã vận đơn tracking URL đến email khách hàng. |
-| **`shop.rating.events.v1`** | `rating-service` | `productId` | `RatingCreated`<br/>`RatingApproved`<br/>`RatingRejected` | • **`product-service`**: Tính lại điểm trung bình sao và tổng số đánh giá.<br/>• **`search-service`**: Cập nhật điểm uy tín sản phẩm vào chỉ mục tìm kiếm ES. |
-| **`shop.media.lifecycle.v1`** | `media-service` | `mediaId` | `MediaDeleted` | • **`product-service`**: Xóa liên kết ảnh trong gallery sản phẩm. |
+| **`shop.order.lifecycle.v1`** | `order-service` | `orderId` | `order.created.v1`<br/>`order.updated.v1`<br/>`order.cancelled.v1` | **`shipping-service`**: Generates shipment when order reaches `CONFIRMED`.<br/>**`notification-service`**: Sends order placement and status update emails. |
+| **`shop.product.lifecycle.v1`** | `product-service` | `productId` | `ProductCreated`<br/>`ProductUpdated`<br/>`ProductDeleted` | **`search-service`**: Indexes, modifies, or removes Elasticsearch product documents. |
+| **`shop.category.lifecycle.v1`** | `product-service` | `categoryId` | `CategoryCreated`<br/>`CategoryUpdated`<br/>`CategoryDeleted` | **Catalog subscribers**: Internal cache invalidation. |
+| **`shop.brand.lifecycle.v1`** | `product-service` | `brandId` | `BrandCreated`<br/>`BrandUpdated`<br/>`BrandDeleted` | **Catalog subscribers**: Internal cache invalidation. |
+| **`shop.inventory.events.v1`** | `inventory-service` | `productId` | `inventory.reserved.v1`<br/>`inventory.committed.v1`<br/>`inventory.released.v1` | **Audit consumers**: Track inventory movements and stock levels. |
+| **`shop.payment.lifecycle.v1`** | `payment-service` | `orderId` | `payment.succeeded.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` | **`notification-service`**: Dispatches payment receipts or failure alerts. |
+| **`shop.shipping.lifecycle.v1`** | `shipping-service` | `orderId` | `shipping.dispatched.v1`<br/>`shipping.delivered.v1` | **`order-service`**: Advances order status to `DELIVERED` on delivery confirmation.<br/>**`notification-service`**: Sends tracking numbers and shipment alerts. |
+| **`shop.rating.lifecycle.v1`** | `rating-service` | `productId` | `RatingCreated`<br/>`RatingApproved`<br/>`RatingRejected` | **`product-service`**: Recalculates average star rating and review count.<br/>**`search-service`**: Updates search ranking scores in Elasticsearch. |
+| **`shop.promotion.lifecycle.v1`** | `promotion-service` | `campaignId` | `PromotionCreated`<br/>`PromotionUpdated` | **Promotion subscribers**: Updates marketing campaigns. |
+| **`media.lifecycle.v1`** | `media-service` | `mediaId` | `MediaDeleted` | **`product-service`**: Removes deleted image references from product galleries. |
 
 ---
 
-## 5. Bảo mật Cửa ngõ & Giới hạn Tốc độ 2 Lớp (Edge Security & Dual Rate Limit)
+## 5. Edge security and rate limiting
 
-Tại lớp cửa ngõ (`gateway-service`), một đường ống lọc phi phong tỏa (non-blocking reactive filter pipeline) được thiết lập để phòng thủ trước các đợt tấn công từ chối dịch vụ (DDoS) và lưu lượng truy cập đột biến (Flash Sales):
+The edge tier (`gateway-service`) runs a non-blocking reactive filter pipeline to protect backend microservices against traffic spikes and abusive traffic patterns:
 
 ![Gateway Security & Rate Limit](./docs/images/gateway-security-rate-limit.png)
 
-### Cơ chế 2 tầng Token Bucket:
-1. **Tầng 1 - Global System Rate Limiter (Bảo vệ toàn cụm)**:
-   - **Filter**: `GlobalRateLimitFilter` (`Order: HIGHEST_PRECEDENCE + 1`)
-   - **Key**: Cố định `gateway-system`
-   - **Hạn mức**: **2.000 req/giây** (Burst: **4.000 requests**)
-   - **Mục đích**: Bảo vệ tổng năng lực xử lý của hạ tầng backend, ngăn chặn sập server khi toàn bộ người dùng đổ dồn vào giờ săn sale.
-2. **Tầng 2 - Per-Client Per-Route Rate Limiter (Chia sẻ công bằng & Chống spam)**:
-   - **Filter**: `RequestRateLimiterGatewayFilterFactory`
-   - **Key Resolver**: Nếu đã đăng nhập $\rightarrow$ `user:<uuid>`, nếu ẩn danh $\rightarrow$ `ip:<client-ip>` ghép cùng `routeId`.
-   - **Hạn mức**: **100 req/giây** (Burst: **200 requests**)
-   - **Mục đích**: Cách ly người dùng gửi request bất thường, chống cào dữ liệu (scraping) và đảm bảo chất lượng dịch vụ (QoS) cho mọi khách hàng khác.
+### Two-tier token bucket rate limiting:
+1. **Tier 1: Global system limiter (cluster protection)**:
+   - **Filter**: `GlobalRateLimitFilter` with order `Ordered.HIGHEST_PRECEDENCE`
+   - **Key**: Static identifier `gateway-system`
+   - **Limits**: 2,000 requests per second, burst capacity of 4,000 requests
+   - **Purpose**: Protects total backend capacity against extreme traffic surges.
+2. **Tier 2: Per-client and per-route limiter (fairness and scraping prevention)**:
+   - **Filter**: `RequestRateLimiterGatewayFilterFactory` configured per route
+   - **Key resolver**: `user:<uuid>` for authenticated clients, `ip:<remote-ip>` for anonymous visitors
+   - **Limits**: 100 requests per second, burst capacity of 200 requests
+   - **Purpose**: Restricts aggressive individual callers without degrading service for other clients.
 
-Nếu vượt ngưỡng ở bất kỳ tầng nào, Gateway lập tức phản hồi **HTTP 429 Too Many Requests** mà không chuyển tiếp yêu cầu vào các dịch vụ phía sau.
-
----
-
-## 6. Thư viện Dùng chung Nền tảng (`utils/`)
-
-Mã nguồn được tổ chức theo triết lý tái sử dụng tối đa, các quy chuẩn về bảo mật, định dạng dữ liệu, ngoại lệ và ghi log được đóng gói trong thư mục `utils/`:
-
-- **`common-core`**: Định nghĩa khuôn mẫu phản hồi chuẩn `ApiResponse<T>`, danh mục mã lỗi toàn hệ thống `ErrorCode`, phân trang `PageResponse<T>`, và các ngoại lệ cơ sở `AppException`.
-- **`common-spring`**: Spring Boot Starter đóng gói sẵn cấu hình Validation, Exception Handler toàn cục, Swagger OpenAPI, Jackson Datetime format, ModelMapper, Dotenv loader và Micrometer Metrics.
-- **`common-security`**: Cấu hình Spring Security 6 Resource Server, bộ chuyển đổi vai trò Keycloak Realm Roles (`ROLE_CUSTOMER`, `ROLE_ADMIN`), và tiện ích `SecurityUtils`.
-- **`common-logging`**: Aspect lập hồ sơ hiệu năng `@LogExecutionTime`, gắn và lan truyền vết phân tán W3C `traceparent` và `X-Correlation-Id` qua MDC.
-- **`common-keycloak`**: Keycloak Admin Client abstraction, phục vụ đăng ký tài khoản, phân quyền và quản lý realm từ code Java.
-- **`common-kafka`**: Cấu hình Producer/Consumer chuẩn hóa, bọc `BaseKafkaConsumer` với cơ chế Dead-Letter Queue (DLQ), retry backoff và bảo vệ tính lũy thoái (idempotency).
-- **`common-storage`**: SDK trừu tượng hóa thao tác với RustFS/S3 (Upload, Delete, kiểm tra tồn tại, tạo Presigned URL có thời hạn).
+When a client exceeds token availability at either layer, the gateway responds with HTTP 429 Too Many Requests without forwarding the call downstream.
 
 ---
 
-## 7. Hướng dẫn Cài đặt & Khởi chạy (Local Development Guide)
+## 6. Shared platform libraries (`utils/`)
 
-### Yêu cầu tiên quyết (Prerequisites)
+Common standards for security, data contracts, error handling, logging, and infrastructure integrations are maintained across 8 modules in the `utils/` directory:
 
-- **Hệ điều hành**: Linux (Ubuntu 22.04+ khuyên dùng), macOS (Apple Silicon / Intel), hoặc Windows 11 WSL2.
-- **Java**: **JDK 25 (Temurin LTS / OpenJDK 25)**.
-- **Maven**: 3.9+ (hoặc dùng trực tiếp `./mvnw` đi kèm repository).
-- **Docker**: 24+ & **Docker Compose** v2+.
-- **RAM tối thiểu**: 16 GB (khuyến nghị 32 GB để chạy toàn bộ 14 dịch vụ cùng hạ tầng).
+- **`common-core`**: Base contracts including `ApiResponse<T>`, system-wide `ErrorCode` enum, `PageResponse<T>`, and base exceptions.
+- **`common-spring`**: Shared Spring Boot configuration, global `@RestControllerAdvice` error handlers, Swagger OpenAPI beans, Jackson serialization settings, and Micrometer metrics.
+- **`common-security`**: Spring Security 6 resource server configuration, Keycloak JWT role converters (`ROLE_CUSTOMER`, `ROLE_ADMIN`), and security utility helpers.
+- **`common-logging`**: Performance logging aspect (`@LogPerformance`), MDC context management, and W3C `traceparent` distributed trace propagation.
+- **`common-keycloak`**: Keycloak REST client wrappers for user authentication, session revocation, and administrative user provisioning.
+- **`common-kafka`**: Central Kafka producer and consumer configurations, base consumer templates, dead-letter queue policies, and retry backoff.
+- **`common-storage`**: S3-compatible storage client abstraction for uploads, deletes, and presigned URL generation with RustFS and AWS S3.
+- **`common-patterns`**: Architectural verification suites for fleet pattern compliance.
 
-### Bước 1: Khởi động Hạ tầng Docker
+---
 
-Repository cung cấp cấu hình Docker Compose đã được tối ưu hóa sẵn, khởi tạo toàn bộ 12 cơ sở dữ liệu PostgreSQL độc lập, Redis, KRaft Kafka, Elasticsearch có bảo mật và Keycloak tự động import Realm:
+## 7. Local development guide
+
+### Prerequisites
+
+- **Operating system**: macOS (Apple Silicon or Intel), Linux (Ubuntu 22.04+), or Windows 11 with WSL2.
+- **Java runtime**: JDK 25 (Temurin LTS or OpenJDK 25).
+- **Build tool**: Apache Maven 3.9+ or the included `./mvnw` wrapper.
+- **Container engine**: Docker 24+ and Docker Compose v2+.
+- **Memory**: 16 GB minimum, 32 GB recommended to run all 14 services alongside full infrastructure.
+
+### Step 1: Start infrastructure containers
+
+The repository includes a tuned Docker Compose configuration that starts 12 PostgreSQL databases, Redis, Kafka KRaft, Elasticsearch with basic credentials, Keycloak with realm auto-import, and RustFS S3 storage:
 
 ```bash
-# 1. Sao chép file cấu hình môi trường
+# 1. Create your local environment configuration file
 cp .env.example .env
 
-# 2. Khởi động các container hạ tầng cốt lõi ở chế độ nền
+# 2. Launch core infrastructure in the background
 docker compose up -d postgres redis kafka elasticsearch keycloak rustfs
 
-# 3. Kiểm tra trạng thái hoạt động của hạ tầng (chờ đến khi tất cả chuyển sang healthy)
+# 3. Verify container health status
 docker compose ps
 ```
 
-> [!TIP]
-> Script tiện ích: Bạn có thể chạy `./start-docker.sh` để tự động kiểm tra và khởi động toàn bộ hạ tầng kèm healthcheck.
+### Step 2: Toolchain setup and compilation
 
-### Bước 2: Cấu hình Môi trường & Build Java 25
+The build relies on Maven JDK toolchains to enforce compilation against Java 25.
 
-Dự án sử dụng cơ chế **Maven JDK Toolchains** để đảm bảo luôn biên dịch chính xác bằng Java 25.
-
-1. **Cấu hình toolchain (Tạo file `~/.m2/toolchains.xml`)**:
+1. **Configure toolchain (create or verify `~/.m2/toolchains.xml`)**:
    ```xml
    <?xml version="1.0" encoding="UTF-8"?>
    <toolchains xmlns="http://maven.apache.org/TOOLCHAINS/1.1.0"
@@ -650,68 +651,66 @@ Dự án sử dụng cơ chế **Maven JDK Toolchains** để đảm bảo luôn
                <vendor>temurin</vendor>
            </provides>
            <configuration>
-               <!-- Đường dẫn JDK 25 trên máy của bạn -->
-               <jdkHome>/usr/lib/jvm/java-25-openjdk</jdkHome>
+               <jdkHome>/path/to/your/java-25</jdkHome>
            </configuration>
        </toolchain>
    </toolchains>
    ```
 
-2. **Biên dịch và kiểm tra chất lượng code (Checkstyle validation)**:
+2. **Compile and validate source formatting**:
    ```bash
-   # Thiết lập biến JAVA_HOME và tiến hành biên dịch toàn bộ 23 modules
-   export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+   # Compile all 23 modules
    ./mvnw clean compile
 
-   # Chạy kiểm tra quy chuẩn Checkstyle (Bắt buộc 0 lỗi vi phạm)
+   # Verify source formatting against Checkstyle rules
    ./mvnw -T1C validate
    ```
 
-### Bước 3: Khởi chạy Microservices
+### Step 3: Launch microservices
 
-Bạn có thể chạy thử từng dịch vụ trên máy cục bộ hoặc đóng gói container:
+Services can be run locally via Maven or packaged into container images:
 
-- **Chạy một dịch vụ đơn lẻ trong môi trường phát triển**:
-  ```bash
-  # Chạy Gateway Service
-  ./mvnw -pl gateway-service spring-boot:run
+- **Run an individual service for local development**:
+   ```bash
+   # Run Gateway Service on :8080
+   ./mvnw -pl gateway-service spring-boot:run
 
-  # Chạy Auth Service
-  ./mvnw -pl auth-service spring-boot:run
+   # Run Auth Service on :8088
+   ./mvnw -pl auth-service spring-boot:run
 
-  # Chạy Product Service
-  ./mvnw -pl product-service spring-boot:run
-  ```
+   # Run Product Service on :8086
+   ./mvnw -pl product-service spring-boot:run
+   ```
 
-- **Đóng gói Docker Image nội bộ và chạy toàn bộ cụm qua Docker**:
-  ```bash
-  # Build Docker images bằng Google Jib (không cần Dockerfile riêng)
-  ./mvnw clean package jib:dockerBuild -DskipTests
+- **Build images with Jib and start the entire fleet via Docker**:
+   ```bash
+   # Build container images directly to the local Docker daemon
+   ./mvnw clean package jib:dockerBuild -DskipTests
 
-  # Khởi chạy toàn bộ hệ sinh thái (Hạ tầng + 14 Services)
-  docker compose up -d
-  ```
+   # Start all 14 services and infrastructure containers
+   docker compose up -d
+   ```
 
 ---
 
-## 8. Kiểm thử Tự động & Giám sát Hệ thống (Testing & Observability)
+## 8. Testing and observability
 
-### Bộ Test Postman & Newman E2E
-Hệ thống cung cấp **01 Bộ Test Postman Master duy nhất** (`petproject-comprehensive.postman_collection.json`) gồm **190 requests** được phân chia rõ ràng thành 3 tầng:
-1. **PART 1: E2E Business Lifecycle (41 requests)**: Luồng nghiệp vụ liên hoàn từ Auth -> Catalog -> Inventory 2PC -> Cart -> Public Guest Tracking -> Thanh toán đa cổng (Stripe, VNPay, MoMo, COD) -> Vận chuyển 3 trạng thái -> Đánh giá verified-purchaser -> Quy trình RMA hoàn hàng (Customer Request & Backoffice Approval) -> Search Elasticsearch & Thông báo.
-2. **PART 2: Edge Cases & Security Audits (23 requests)**: Kiểm thử biên & bảo mật toàn diện: 401 Unauthorized (sai mật khẩu, token dị dạng), 403 Forbidden (RBAC chặn regular user vào admin API, buyer verification chặn đánh giá ảo), 400/422 Validation (giá âm, số lượng giỏ hàng bằng 0, mã quốc gia sai), 409 Conflict (đặt trước vượt tồn kho `INV-3002`), 401 Webhook HMAC signature giả mạo (`PAY-5005`, `SHP-10004`), 400 Non-multipart media upload.
-3. **PART 3: Fleet Service Catalog (126 requests)**: Danh mục toàn bộ API endpoints của đầy đủ 14 microservices phục vụ tra cứu và gọi ad-hoc.
+### Postman and Newman test collections
+The repository includes a comprehensive Postman test suite (`docs/postman/petproject-comprehensive.postman_collection.json`) containing 190 automated test cases organized into 3 sections:
+1. **End-to-end business lifecycle (41 requests)**: Full checkout flow from authentication, catalog search, inventory hold, cart checkout, multi-gateway payments (Stripe, COD), shipping tracking, verified reviews, and RMA returns.
+2. **Edge cases and security audits (23 requests)**: Tests for 401 Unauthorized handling, 403 Forbidden role restrictions, validation errors (negative prices, missing fields), 409 reservation conflicts, and HMAC webhook signature checks.
+3. **Fleet service catalog (126 requests)**: Endpoint verification across all 14 microservices.
 
 ```bash
-# 1. Chạy toàn bộ Master Suite (190 requests - tỷ lệ đỗ 100%)
+# Execute the full 190-request test suite
 npx --yes newman run docs/postman/petproject-comprehensive.postman_collection.json
 
-# 2. Chạy nhanh bộ E2E Flow & Edge Cases cho CI/CD (<2s)
+# Execute the core business flow test suite
 npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collection.json --bail
 ```
 
-### Tài liệu API Trực quan (Swagger OpenAPI 3.1)
-Khi các dịch vụ đang chạy, bạn có thể truy cập giao diện tương tác Swagger UI tại cổng của từng dịch vụ:
+### Swagger OpenAPI documentation
+When services are running, interactive OpenAPI documentation is available directly on each service port:
 - Gateway Service: `http://localhost:8080/swagger-ui.html`
 - Auth Service: `http://localhost:8088/swagger-ui.html`
 - Product Service: `http://localhost:8086/swagger-ui.html`
@@ -727,31 +726,32 @@ Khi các dịch vụ đang chạy, bạn có thể truy cập giao diện tươn
 - Favourite Service: `http://localhost:8081/swagger-ui.html`
 - Notification Service: `http://localhost:8090/swagger-ui.html`
 
-### Giám sát Sức khỏe & Chỉ số Đo lường (Actuator & Prometheus)
-Tất cả microservices đều tích hợp **Spring Boot Actuator** và **Micrometer**:
-- Kiểm tra trạng thái dịch vụ: `GET http://localhost:<port>/actuator/health`
-- Xem metrics phục vụ Prometheus thu thập: `GET http://localhost:<port>/actuator/prometheus`
-- Thông tin phiên bản & git commit: `GET http://localhost:<port>/actuator/info`
+### Health checks and metrics
+All microservices expose standard Spring Boot Actuator endpoints:
+- Health checks: `GET http://localhost:<port>/actuator/health`
+- Prometheus metrics: `GET http://localhost:<port>/actuator/prometheus`
+- Application details: `GET http://localhost:<port>/actuator/info`
 
 ---
 
-## 9. Tài liệu Kỹ thuật Chi tiết (Architecture Blueprint Links)
+## 9. Technical architecture blueprints
 
-Để tìm hiểu sâu hơn về từng thành phần kiến trúc, sơ đồ Draw.io gốc có thể chỉnh sửa và các bài phân tích kỹ thuật, mời bạn tham khảo tài liệu trong thư mục `docs/`:
+For detailed documentation, architecture decision records, and editable Draw.io source diagrams, see the `docs/` directory:
 
-- 📘 [**Master Architecture Blueprint (`docs/FULL-ARCHITECTURE.md`)**](./docs/FULL-ARCHITECTURE.md) — Tài liệu kiến trúc toàn diện 500+ dòng phân tích chuyên sâu.
-- 📐 [**Sơ đồ Draw.io & HTML tương tác (`docs/architecture/`)**](./docs/architecture/)
-  - [System Landscape Architecture (Draw.io)](./docs/architecture/system-landscape-architecture.drawio) | [HTML Viewer](./docs/architecture/system-landscape-architecture.html)
-  - [Event-Driven Messaging & Outbox (Draw.io)](./docs/architecture/event-driven-messaging-architecture.drawio) | [HTML Viewer](./docs/architecture/event-driven-messaging-architecture.html)
-  - [E2E Order Fulfillment Saga (Draw.io)](./docs/architecture/e2e-order-fulfillment-saga.drawio) | [HTML Viewer](./docs/architecture/e2e-order-fulfillment-saga.html)
-  - [Gateway Security & Dual Rate Limit (Draw.io)](./docs/architecture/gateway-security-rate-limit.drawio) | [HTML Viewer](./docs/architecture/gateway-security-rate-limit.html)
-  - [Data Stores & Infrastructure Topology (Draw.io)](./docs/architecture/data-stores-infrastructure-topology.drawio) | [HTML Viewer](./docs/architecture/data-stores-infrastructure-topology.html)
-- 🛡️ [**Chiến lược Giới hạn Tốc độ Gateway (`docs/RATE-LIMIT.md`)**](./docs/RATE-LIMIT.md)
-- 🧩 [**Khuôn mẫu Thiết kế Hệ thống (`docs/PATTERNS.md`)**](./docs/PATTERNS.md)
-- 🚀 [**Sẵn sàng cho Môi trường Production (`docs/PRODUCTION-READINESS.md`)**](./docs/PRODUCTION-READINESS.md)
+- [Master architecture analysis (`docs/architecture/MASTER_ARCHITECTURE_ANALYSIS.md`)](./docs/architecture/MASTER_ARCHITECTURE_ANALYSIS.md)
+- [System landscape blueprint (`docs/FULL-ARCHITECTURE.md`)](./docs/FULL-ARCHITECTURE.md)
+- [Draw.io and SVG architecture diagrams (`docs/architecture/`)](./docs/architecture/)
+  - [System landscape architecture (Draw.io)](./docs/architecture/system-landscape-architecture.drawio)
+  - [Event-driven messaging and outbox (Draw.io)](./docs/architecture/event-driven-messaging-architecture.drawio)
+  - [End-to-end order fulfillment saga (Draw.io)](./docs/architecture/e2e-order-fulfillment-saga.drawio)
+  - [Gateway security and rate limiting (Draw.io)](./docs/architecture/gateway-security-rate-limit.drawio)
+  - [Data stores and infrastructure topology (Draw.io)](./docs/architecture/data-stores-infrastructure-topology.drawio)
+- [Gateway rate limiting guide (`docs/RATE-LIMIT.md`)](./docs/RATE-LIMIT.md)
+- [Architecture design patterns (`docs/PATTERNS.md`)](./docs/PATTERNS.md)
+- [Production readiness checklist (`docs/PRODUCTION-READINESS.md`)](./docs/PRODUCTION-READINESS.md)
 
 ---
 
 <p align="center">
-  <b>Petproject Microservices Platform</b> • Built with modern Java 25 & Spring Boot 4.1.1
+  <b>Petproject Microservices Platform</b>: Built with Java 25 and Spring Boot 4.1.1
 </p>

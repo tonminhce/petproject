@@ -1,7 +1,7 @@
-# Stripe Provider — Manual Smoke Checklist (C5 Task 6)
+# Stripe Provider: Manual Smoke Checklist (C5 Task 6)
 
 - Date: 2026-09-02
-- Status: **skipped-awaiting-keys** — the automated suites (StripeProviderTest,
+- Status: **skipped-awaiting-keys**: the automated suites (StripeProviderTest,
   WebhookEventServiceStripeTest, StripeWebhookIT) run with locally-signed
   payloads and mocked SDK entry points; NO real Stripe keys were used in this
   epic. The steps below need ops-provisioned TEST-mode keys and a real Stripe
@@ -20,7 +20,7 @@
 
 ## Smoke steps
 
-1. Set the activation env (local `.env` — never committed):
+1. Set the activation env (local `.env`: never committed):
 
    ```bash
    SHOP_PAYMENT_PROVIDER=stripe
@@ -28,13 +28,13 @@
    SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET=whsec_xxx
    ```
 
-2. `docker compose up -d payment-service` — the container must start
+2. `docker compose up -d payment-service`: the container must start
    (fail-fast would refuse to boot with `provider=stripe` and a blank
    secret-key, D10).
 
 3. `curl -s http://localhost:8085/actuator/health/payment-stripe` →
    `{"status":"UP", details with "stripeAccountId":"acct_..." , "livemode":false}`
-   (30s probe cache — repeated calls within 30s are served from cache).
+   (30s probe cache: repeated calls within 30s are served from cache).
 
 4. `POST /api/v1/payments` with an amount/currency pair, then
    `POST /api/v1/payments/{id}/capture` → Stripe Dashboard (TEST mode) shows a
@@ -58,7 +58,7 @@
 
 ## V1 limitations (binding, spec §7)
 
-- 3DS/SCA completes via Stripe.js on the client — storefront Phase 9 epic.
+- 3DS/SCA completes via Stripe.js on the client: storefront Phase 9 epic.
   Server creates UNCONFIRMED intents; without a client confirmation the
   payment stays PENDING until the webhook arrives.
 - Cards only; no SEPA/ACH, Connect, disputes, Radar, Tax.

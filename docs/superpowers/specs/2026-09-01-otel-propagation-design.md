@@ -1,27 +1,27 @@
-# OpenTelemetry Propagation — Design (cross-cutting infra)
+# OpenTelemetry Propagation - Design (cross-cutting infra)
 
 - Date: 2026-09-01
 - Status: Draft (pending user ratification of 4 scope decisions)
-- Scope: W3C `traceparent` + `tracestate` propagation through every service's outbound HTTP client AND every Kafka producer/consumer header. NO agent, NO collector, NO OTLP exporter in this epic — instrumentation hooks only. Operator wires the backend (Jaeger / Tempo / OTLP collector) later via Spring Boot's standard management.tracing endpoint.
+- Scope: W3C `traceparent` + `tracestate` propagation through every service's outbound HTTP client AND every Kafka producer/consumer header. NO agent, NO collector, NO OTLP exporter in this epic - instrumentation hooks only. Operator wires the backend (Jaeger / Tempo / OTLP collector) later via Spring Boot's standard management.tracing endpoint.
 
 ## Verified ground truths
 
 - common-logging already populates `MDC` with `MdcKey.CORRELATION_ID` from `X-Correlation-Id` header (CorrelationIdFilter.java:29, confirmed by confirm-hardening spec D9 §9). Forwarding X-Correlation-Id outbound is one `requestInitializer` line in `RestClientConfig` (order's existing pattern).
 - Spring Boot 4 includes spring-boot-starter-actuator + io.micrometer:micrometer-tracing-bridge-otel by default when `management.tracing.sampling.probability` is set (fleet already pulls actuator via common-spring). No new pom dependency needed in core code, but verify each service.
-- common-kafka BaseKafkaConsumer / BaseKafkaProducer currently do NOT propagate any headers outbound. Inbound headers are exposed via `ConsumerRecord.headers()` — consumer subclasses can read but not write. This epic adds outbound propagation in the producer path and reading in the consumer path.
+- common-kafka BaseKafkaConsumer / BaseKafkaProducer currently do NOT propagate any headers outbound. Inbound headers are exposed via `ConsumerRecord.headers()` - consumer subclasses can read but not write. This epic adds outbound propagation in the producer path and reading in the consumer path.
 - No service currently instruments its own @KafkaListener with Micrometer Observation API. This epic introduces the pattern via common-kafka, all services inherit.
 
 ## §1 Binding decisions
 
-### D1 — Micrometer Tracing bridge (NOT OTel SDK directly) (decision Q1)
+### D1 - Micrometer Tracing bridge (NOT OTel SDK directly) (decision Q1)
 
-Use `spring-boot-starter-actuator` + `io.micrometer:micrometer-tracing-bridge-otel` (already pulled transitively by fleet BOM). Spring Boot auto-configures the OTel SDK behind Micrometer's Observation API. Service code uses `Observation` / `ObservedAspect` (or `@Observed` annotation) — NOT the raw OTel `Tracer`. Rationale:
+Use `spring-boot-starter-actuator` + `io.micrometer:micrometer-tracing-bridge-otel` (already pulled transitively by fleet BOM). Spring Boot auto-configures the OTel SDK behind Micrometer's Observation API. Service code uses `Observation` / `ObservedAspect` (or `@Observed` annotation) - NOT the raw OTel `Tracer`. Rationale:
 
 - Fleet uses Micrometer for metrics (D9/D10 of every spec already has Micrometer counters). Tracing in the same model = one mental model.
-- @Observed annotation is AOP-based; doesn't pollute service code (rating T3 nit #1 style — keep instrumentation non-invasive).
+- @Observed annotation is AOP-based; doesn't pollute service code (rating T3 nit #1 style - keep instrumentation non-invasive).
 - Operators get OTel-format spans automatically (Micrometer Tracing OTel bridge).
 
-### D2 — Scope: HTTP outbound + Kafka producer + Kafka consumer + inbound HTTP (decision Q2)
+### D2 - Scope: HTTP outbound + Kafka producer + Kafka consumer + inbound HTTP (decision Q2)
 
 FOUR propagation paths, all required:
 
@@ -32,13 +32,13 @@ FOUR propagation paths, all required:
 
 V1 excludes: outbound DB query instrumentation (micrometer-jdbc exists but adds noise), gRPC (no gRPC in fleet), manual OTel Span creation in services (only via Observation API or @Observed).
 
-### D3 — W3C traceparent + tracestate (decision Q3)
+### D3 - W3C traceparent + tracestate (decision Q3)
 
 Header names: `traceparent` (W3C Trace Context, version 00) and `tracestate` (vendor-specific). Spring Boot auto-generates `traceparent` format `00-{traceId}-{spanId}-{flags}`. `tracestate` is empty in V1 (no vendor state).
 
-Sampling: `management.tracing.sampling.probability: 1.0` in dev/compose (always-on), `0.1` in prod (10% — recommended starter, ops can override via env). Per-request sampling decisions propagate via traceparent flags.
+Sampling: `management.tracing.sampling.probability: 1.0` in dev/compose (always-on), `0.1` in prod (10% - recommended starter, ops can override via env). Per-request sampling decisions propagate via traceparent flags.
 
-### D4 — Correlation-Id stays; traceparent is orthogonal (decision Q4)
+### D4 - Correlation-Id stays; traceparent is orthogonal (decision Q4)
 
 DO NOT replace X-Correlation-Id with traceparent. They serve different purposes:
 
@@ -75,13 +75,13 @@ No new endpoints. Pure infra plumbing. /actuator/tracing (or /actuator/info if t
 ## §5 Fleet impact (lane rules)
 
 - **common-logging + common-kafka + common-spring = W1 lane** (single owner, single PR, all consumers pick up the change).
-- **per-service changes: MINIMAL** — only yml config additions (management.tracing.sampling.probability if overriding default; service-name env if not already set).
+- **per-service changes: MINIMAL** - only yml config additions (management.tracing.sampling.probability if overriding default; service-name env if not already set).
 - **out-of-scope touch points**: service code does NOT need to change to benefit. Forwarding is auto.
 - Init SQL: no change.
 
 ## §6 Non-goals (binding)
 
-OTLP exporter (Jaeger / Tempo / Datadog backend wiring — operator-side); span enrichment via @Observed on every service method (encourage but not enforced); span error recording (auto via observation API); DB query spans; baggage propagation (W3C baggage header); resource attributes auto-population (Spring Boot defaults to service.name, deployment.environment).
+OTLP exporter (Jaeger / Tempo / Datadog backend wiring - operator-side); span enrichment via @Observed on every service method (encourage but not enforced); span error recording (auto via observation API); DB query spans; baggage propagation (W3C baggage header); resource attributes auto-population (Spring Boot defaults to service.name, deployment.environment).
 
 ## §7 Open items
 

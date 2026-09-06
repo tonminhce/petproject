@@ -1,32 +1,32 @@
-# Order Service — Confirm Hardening & Promotion 2-Phase Integration — Design
+# Order Service - Confirm Hardening & Promotion 2-Phase Integration - Design
 
-> **Status:** rev 1 — draft for review
+> **Status:** rev 1 - draft for review
 > **Date:** 2026-08-29
-> **Depends on:** promotion-service design (`2026-08-29-promotion-service-design.md`) — one shared contract. This doc is an **amendment to the shipped order-service and inventory-service**; it must be implemented (or consciously skipped) before promotion-service can be flagged `enabled: true`.
+> **Depends on:** promotion-service design (`2026-08-29-promotion-service-design.md`) - one shared contract. This doc is an **amendment to the shipped order-service and inventory-service**; it must be implemented (or consciously skipped) before promotion-service can be flagged `enabled: true`.
 
 ## 1. Overview
 
 Shipped order-service has two production gaps this design closes:
 
-1. **Orphan commit:** inventory exposes `POST /reservations/{id}/commit`, but **nothing calls it** — `confirmOrder` does not, there is no Kafka consumer, payment is Phase 8. Inventory reservations are `PENDING` with a 900s TTL; the sweep **releases the stock of any order left `PENDING` longer than 15 minutes** — the order still exists and can be confirmed later, against stock that was returned.
-2. **Non-idempotent lifecycle calls:** `InventoryServiceImpl.commit()` / `release()` accept `PENDING` only (`InventoryServiceImpl.java:150-157, 174-181`) — a network-timeout retry after a successful call gets `RESERVATION_INVALID_STATE` (409), which the confirm flow would (wrongly) treat as failure.
+1. **Orphan commit:** inventory exposes `POST /reservations/{id}/commit`, but **nothing calls it** - `confirmOrder` does not, there is no Kafka consumer, payment is Phase 8. Inventory reservations are `PENDING` with a 900s TTL; the sweep **releases the stock of any order left `PENDING` longer than 15 minutes** - the order still exists and can be confirmed later, against stock that was returned.
+2. **Non-idempotent lifecycle calls:** `InventoryServiceImpl.commit()` / `release()` accept `PENDING` only (`InventoryServiceImpl.java:150-157, 174-181`) - a network-timeout retry after a successful call gets `RESERVATION_INVALID_STATE` (409), which the confirm flow would (wrongly) treat as failure.
 
-Closing these enables design **A**: `confirmOrder` becomes a commit orchestrator — promotion first (cheapest rollback: 1 HTTP), then inventory items (deterministic order) — with half-commit compensation via `release-committed`, idempotent confirm (Idempotency-Key), reconciliation as the safety net, and metrics on every phase.
+Closing these enables design **A**: `confirmOrder` becomes a commit orchestrator - promotion first (cheapest rollback: 1 HTTP), then inventory items (deterministic order) - with half-commit compensation via `release-committed`, idempotent confirm (Idempotency-Key), reconciliation as the safety net, and metrics on every phase.
 
 ### 1.1 Decisions log
 
 | # | Decision | Rationale |
 |---|----------|-----------|
 | D1 | Commit trigger = explicit HTTP from `confirmOrder` (not Kafka consumer) | Fleet pattern; one orchestrator; promotion doc D2 mirrors |
-| D2 | Promotion commits first, inventory second | Cheapest rollback — 1 compensating HTTP vs N |
+| D2 | Promotion commits first, inventory second | Cheapest rollback - 1 compensating HTTP vs N |
 | D3 | Any commit failure → order stays `PENDING`, compensate committed reservations in reverse via `release-committed`, rethrow | All-or-nothing at order level; sweep + reconciliation are belt-and-suspenders |
-| D4 | `RESERVATION_NOT_FOUND` during commit is a **failure**, not a silent skip | Retention purge only removes terminal rows — a `PENDING` order whose reservation row is missing is a real inconsistency; fail + let reconciliation investigate. (Explicit rejection of "treat as resolved" from the original proposal.) |
+| D4 | `RESERVATION_NOT_FOUND` during commit is a **failure**, not a silent skip | Retention purge only removes terminal rows - a `PENDING` order whose reservation row is missing is a real inconsistency; fail + let reconciliation investigate. (Explicit rejection of "treat as resolved" from the original proposal.) |
 | D5 | `reservationId == null` on an order item (legacy/pre-inventory data) → skip commit, `log.info` | Cheap compatibility; such items simply have nothing to commit |
-| D6 | Confirm accepts optional `Idempotency-Key`; reuse `IdempotencyServiceImpl`. **Recommended, not required** — clients (admin UI/gateway) SHOULD send it | Retried confirm after timeout must not double-commit (idempotent branches make it safe anyway, but replay must also return the same 200 body, not re-run orchestration). Keyless concurrent confirms are still **safe**: `Order` carries `@Version` (`Order.java:68-71`) — the loser's `setStatus(CONFIRMED)` hits `OptimisticLockingFailureException`, its local TX rolls back while the external commits stay COMMITTED (coherent); the retry then replays cleanly. The cost of keyless is only a wasted orchestration round + a spurious rollback, i.e. avoidable noise, not a correctness hole |
-| D7 | Idempotency scope for confirm: `userId` = the **admin's** id from the JWT; `requestHash = SHA-256(orderId.toString())` | `IdempotencyKey.user_id` is `NOT NULL` with unique `(user_id, key)` — do NOT stuff orderId into the userId column; two admins using the same key is a client bug and yields two rows, which is fine |
+| D6 | Confirm accepts optional `Idempotency-Key`; reuse `IdempotencyServiceImpl`. **Recommended, not required** - clients (admin UI/gateway) SHOULD send it | Retried confirm after timeout must not double-commit (idempotent branches make it safe anyway, but replay must also return the same 200 body, not re-run orchestration). Keyless concurrent confirms are still **safe**: `Order` carries `@Version` (`Order.java:68-71`) - the loser's `setStatus(CONFIRMED)` hits `OptimisticLockingFailureException`, its local TX rolls back while the external commits stay COMMITTED (coherent); the retry then replays cleanly. The cost of keyless is only a wasted orchestration round + a spurious rollback, i.e. avoidable noise, not a correctness hole |
+| D7 | Idempotency scope for confirm: `userId` = the **admin's** id from the JWT; `requestHash = SHA-256(orderId.toString())` | `IdempotencyKey.user_id` is `NOT NULL` with unique `(user_id, key)` - do NOT stuff orderId into the userId column; two admins using the same key is a client bug and yields two rows, which is fine |
 | D8 | Reconciliation owns stuck `PENDING` orders (> 30 min): all-committed → auto-confirm; all-terminal → auto-cancel; mixed → alert | Bounded automatic recovery; mixed state needs human eyes |
-| D9 | W3C `traceparent`/OTel **deferred**; but `X-Correlation-Id` outbound propagation **included now** | `CorrelationIdFilter` already populates `MDC` (`MdcKey.CORRELATION_ID`, header constant at `CorrelationIdFilter.java:29`) — forwarding it is one `requestInitializer` line in `RestClientConfig`, no agent, no new infra. Full tracing stays a common-logging follow-up |
-| D10 | Coordinator tracks compensation targets as `(type, id)` pairs, never bare UUIDs | Promotion and inventory reservation ids are both UUIDs — indistinguishable after the fact |
+| D9 | W3C `traceparent`/OTel **deferred**; but `X-Correlation-Id` outbound propagation **included now** | `CorrelationIdFilter` already populates `MDC` (`MdcKey.CORRELATION_ID`, header constant at `CorrelationIdFilter.java:29`) - forwarding it is one `requestInitializer` line in `RestClientConfig`, no agent, no new infra. Full tracing stays a common-logging follow-up |
+| D10 | Coordinator tracks compensation targets as `(type, id)` pairs, never bare UUIDs | Promotion and inventory reservation ids are both UUIDs - indistinguishable after the fact |
 
 ## 2. Promotion contract change (order side)
 
@@ -35,7 +35,7 @@ Replace the apply-style call with the reserve/commit triple. DTOs in `com.shop.o
 ```java
 // replaces PromotionApplyRequest
 public record PromotionReserveRequest(String code, BigDecimal orderAmount, UUID userId, UUID orderId) {}
-// replaces PromotionApplyResponse — adds reservationId
+// replaces PromotionApplyResponse - adds reservationId
 public record PromotionReserveResponse(UUID reservationId, BigDecimal discountAmount, BigDecimal finalAmount) {}
 ```
 
@@ -43,12 +43,12 @@ public record PromotionReserveResponse(UUID reservationId, BigDecimal discountAm
 
 | Old | New |
 |-----|-----|
-| `POST /api/v1/backoffice/promotions/apply` | `POST /api/v1/promotions/{code}/reserve` (`ApiPaths.PROMOTIONS` — new constant in common-core) |
-| no `Authorization` header | `.header("Authorization", "Bearer " + serviceTokenProvider.getToken())` — SERVICE role, identical to `InventoryServiceClient` (inject the existing `ServiceTokenProvider`) |
+| `POST /api/v1/backoffice/promotions/apply` | `POST /api/v1/promotions/{code}/reserve` (`ApiPaths.PROMOTIONS` - new constant in common-core) |
+| no `Authorization` header | `.header("Authorization", "Bearer " + serviceTokenProvider.getToken())` - SERVICE role, identical to `InventoryServiceClient` (inject the existing `ServiceTokenProvider`) |
 | `apply(req)` | `reserve(req)` + `commit(UUID)` + `release(UUID)` + `releaseCommitted(UUID)` + `getReservationState(UUID)` |
 | 4xx → `ORDER_PROMOTION_INVALID` | unchanged semantics (any promotion 4xx at reserve = invalid coupon from the user's perspective) |
 
-Keep `isEnabled()` and its defensive zero-discount fallback unchanged — `PricingServiceImpl`'s upfront P1-5 check (`PricingServiceImpl:33-39`) remains the first gate; the client guard is a cheap second net.
+Keep `isEnabled()` and its defensive zero-discount fallback unchanged - `PricingServiceImpl`'s upfront P1-5 check (`PricingServiceImpl:33-39`) remains the first gate; the client guard is a cheap second net.
 
 **Correlation propagation (D9):** while touching `RestClientConfig`, add one initializer so every outbound call (inventory + promotion + tax) carries the inbound correlation id:
 
@@ -59,14 +59,14 @@ Keep `isEnabled()` and its defensive zero-discount fallback unchanged — `Prici
 })
 ```
 
-(W3C `traceparent` remains deferred — see D9. Note the mirror rule: when promotion-service and future services grow outbound clients, they inherit the same initializer.)
+(W3C `traceparent` remains deferred - see D9. Note the mirror rule: when promotion-service and future services grow outbound clients, they inherit the same initializer.)
 
 ## 3. Order entity + Liquibase
 
-- `Order` gains `promotion_reservation_id UUID NULL` (one reservation per order — promotion usage is order-scoped, unlike per-item inventory reservations).
-- New Liquibase changeset: `addColumn order.promotion_reservation_id`, nullable, **no backfill** (existing rows simply have no promotion reservation — D5/D6 compatibility).
-- **No new index needed for reconciliation:** `idx_orders_status_created` on `(status, created_at)` already exists (`changelog-001-initial-schema.yaml:116-118`) and serves `findByStatusAndCreatedAtBefore(PENDING, cutoff)` — do not create a duplicate.
-- **OrderId known before pricing — persist-early (rev 3):** `PromotionReserveRequest` needs `orderId`, so the saga inserts the `Order` row inside its transaction **before** pricing — `PENDING` with zero amounts (`OrderServiceImpl.doCreateOrder` :123-130) — then feeds the Hibernate-generated id to `pricingService.calculate(order.getId(), …)` and updates the same row in the same transaction with totals + `promotionReservationId` + `couponCode`. Rationale (ruled after the task-7 sandbox): **Hibernate ORM 7.4.5.Final rejects assigned ids** on generated-identifier entities (`EntityExistsException`/`PropertyValueException` from entity-state classification, before any generator runs), and the originally spec'd `@UuidGenerator` fallback does not implement assigned-when-present either — persist-early keeps `GenerationType.UUID` untouched at the cost of a longer write transaction; the PENDING row only becomes visible if the saga commits.
+- `Order` gains `promotion_reservation_id UUID NULL` (one reservation per order - promotion usage is order-scoped, unlike per-item inventory reservations).
+- New Liquibase changeset: `addColumn order.promotion_reservation_id`, nullable, **no backfill** (existing rows simply have no promotion reservation - D5/D6 compatibility).
+- **No new index needed for reconciliation:** `idx_orders_status_created` on `(status, created_at)` already exists (`changelog-001-initial-schema.yaml:116-118`) and serves `findByStatusAndCreatedAtBefore(PENDING, cutoff)` - do not create a duplicate.
+- **OrderId known before pricing - persist-early (rev 3):** `PromotionReserveRequest` needs `orderId`, so the saga inserts the `Order` row inside its transaction **before** pricing - `PENDING` with zero amounts (`OrderServiceImpl.doCreateOrder` :123-130) - then feeds the Hibernate-generated id to `pricingService.calculate(order.getId(), …)` and updates the same row in the same transaction with totals + `promotionReservationId` + `couponCode`. Rationale (ruled after the task-7 sandbox): **Hibernate ORM 7.4.5.Final rejects assigned ids** on generated-identifier entities (`EntityExistsException`/`PropertyValueException` from entity-state classification, before any generator runs), and the originally spec'd `@UuidGenerator` fallback does not implement assigned-when-present either - persist-early keeps `GenerationType.UUID` untouched at the cost of a longer write transaction; the PENDING row only becomes visible if the saga commits.
 
 ## 4. Saga changes (`doCreateOrder`)
 
@@ -78,7 +78,7 @@ Keep `isEnabled()` and its defensive zero-discount fallback unchanged — `Prici
         promotionReserve = promotionClient.reserve(
             new PromotionReserveRequest(code, subtotal, userId, orderId))
 4. Persist Order (+ promotionReservationId = promotionReserve.reservationId()) + items
-5. Reserve inventory per item (unchanged) — FAIL:
+5. Reserve inventory per item (unchanged) - FAIL:
      releaseAllReservations(reserved)              (unchanged)
      if promotionReservationId != null:
          promotionClient.release(promotionReservationId)   best-effort, log failures
@@ -89,7 +89,7 @@ Keep `isEnabled()` and its defensive zero-discount fallback unchanged — `Prici
 Notes:
 
 - Crash between steps 3 and 5 → the idempotency row stays `IN_FLIGHT`, `abort()` runs on the rethrow path; a client retry re-runs the saga and creates a **new** promotion reservation; the orphaned one expires via TTL sweep. Documented, bounded (≤ 15 min exposure), no order-side action.
-- Replay (`begin()` returns cached) skips the saga entirely — no double reserve.
+- Replay (`begin()` returns cached) skips the saga entirely - no double reserve.
 - Cancel flow (existing, `cancelOrder`): `PENDING` → release stock **and** release promotion reservation (add alongside `releaseAllReservationsById`); `CONFIRMED`+ → nothing (already committed; Phase 8 refund).
 
 ## 5. Confirm orchestration
@@ -110,7 +110,7 @@ public ApiResponse<OrderResponse> confirm(@PathVariable UUID orderId,
 
 ```java
 public CommitOutcome commitForConfirm(Order order, List<OrderItem> items) {
-    List<CompensationTarget> committed = new ArrayList<>();   // (type, id) pairs — D10
+    List<CompensationTarget> committed = new ArrayList<>();   // (type, id) pairs - D10
     try {
         if (order.getPromotionReservationId() != null) {
             promotionClient.commit(order.getPromotionReservationId());
@@ -122,7 +122,7 @@ public CommitOutcome commitForConfirm(Order order, List<OrderItem> items) {
                 inventoryClient.commit(item.getReservationId());
                 committed.add(CompensationTarget.of(INVENTORY, item.getReservationId()));
             } catch (BusinessException ex) {
-                if (ex.getErrorCode() == ErrorCode.RESERVATION_NOT_FOUND) throw ex;   // D4 — fail, do NOT skip
+                if (ex.getErrorCode() == ErrorCode.RESERVATION_NOT_FOUND) throw ex;   // D4 - fail, do NOT skip
                 throw ex;
             }
         }
@@ -134,8 +134,8 @@ public CommitOutcome commitForConfirm(Order order, List<OrderItem> items) {
 }
 ```
 
-- `compensateInReverse`: iterate the list backwards, call `releaseCommitted` (promotion) / `releaseCommitted` (inventory); failures logged + `order.commit.rollback.failed` counter — **never throw** (would mask the original error). Plain reverse loop — no Guava (`Lists.reverse` is not on the classpath).
-- Caller (`confirmOrder`) wraps: coordinator success → set `CONFIRMED`/`confirmedAt`, save, `publishStatusChanged(order)` (existing single-arg signature — no "COMMIT_OK" param), complete idempotency. Coordinator throw → idempotency `abort()`, rethrow as `CONFIRM_COMMIT_FAILED` (**new** `ORD-4011`, key `order.confirm.commit.failed`, 409).
+- `compensateInReverse`: iterate the list backwards, call `releaseCommitted` (promotion) / `releaseCommitted` (inventory); failures logged + `order.commit.rollback.failed` counter - **never throw** (would mask the original error). Plain reverse loop - no Guava (`Lists.reverse` is not on the classpath).
+- Caller (`confirmOrder`) wraps: coordinator success → set `CONFIRMED`/`confirmedAt`, save, `publishStatusChanged(order)` (existing single-arg signature - no "COMMIT_OK" param), complete idempotency. Coordinator throw → idempotency `abort()`, rethrow as `CONFIRM_COMMIT_FAILED` (**new** `ORD-4011`, key `order.confirm.commit.failed`, 409).
 
 ### 5.3 Why this is safe (failure model)
 
@@ -151,24 +151,24 @@ public CommitOutcome commitForConfirm(Order order, List<OrderItem> items) {
 `OrderReconciliationScheduler`, `@Scheduled(fixedDelay = order.reconciliation.interval-ms, default 300000)`:
 
 - Candidates: `PENDING` orders with `created_at < now - 30min` (`order.reconciliation.stuck-minutes`).
-- For each: poll `promotionClient.getReservationState(promotionReservationId)` (when present) + `inventoryClient.getReservationState(reservationId)` per item. A `404 PRO-7008`/`INV-3003` on a stuck order's reservation is **inconsistent data** (TTL expiry marks EXPIRED, purge is 30 days — within the 30-min window nothing deletes rows) → route to the mixed/alert path, never auto-decide.
+- For each: poll `promotionClient.getReservationState(promotionReservationId)` (when present) + `inventoryClient.getReservationState(reservationId)` per item. A `404 PRO-7008`/`INV-3003` on a stuck order's reservation is **inconsistent data** (TTL expiry marks EXPIRED, purge is 30 days - within the 30-min window nothing deletes rows) → route to the mixed/alert path, never auto-decide.
 - Decide:
   - all COMMITTED → set `CONFIRMED`, `publishStatusChanged`, log `AUTO_CONFIRMED_BY_RECON`;
   - all terminal (RELEASED/EXPIRED) and no committed leftovers → set `CANCELLED`, release nothing (already terminal), publish cancelled;
   - mixed → emit metric `order.reconciliation.mixed` + structured log for alerting; **no automatic action** (D8).
 - All state polling is read-only; every mutation goes through the normal service methods so events stay truthful.
-- Note: this scheduler does **not** replace inventory's own PENDING sweep — they compose: sweep terminalizes expired reservations; reconciliation finalizes orders whose reservations went terminal without a cancel call.
+- Note: this scheduler does **not** replace inventory's own PENDING sweep - they compose: sweep terminalizes expired reservations; reconciliation finalizes orders whose reservations went terminal without a cancel call.
 
 ## 7. Inventory-service amendments (preconditions)
 
 Small, surgical, all **verified against current code**:
 
-### 7.1 Idempotent lifecycle branches — `InventoryServiceImpl.commit()` (line 150) / `release()` (line 174)
+### 7.1 Idempotent lifecycle branches - `InventoryServiceImpl.commit()` (line 150) / `release()` (line 174)
 
-- `commit()`: `if (status == COMMITTED) return;` (idempotent retry) before the `PENDING` check; expired-PENDING still → `RESERVATION_EXPIRED` (INV-3004); `RELEASED`/`EXPIRED` → `RESERVATION_INVALID_STATE` (INV-3005) — caller must reconcile, mirroring promotion §5.3.
-- `release()`: `if (status == RELEASED || status == EXPIRED) return;` before the `PENDING` check (quota already returned — safe no-op).
-- Error codes already exist: INV-3003/3004/3005 — **no enum changes**.
-- Blast radius (GitNexus, measured): `commit` upstream = LOW, 2 symbols (`InventoryController.commit` path) — the earlier "CRITICAL / 20 symbols" estimate was wrong.
+- `commit()`: `if (status == COMMITTED) return;` (idempotent retry) before the `PENDING` check; expired-PENDING still → `RESERVATION_EXPIRED` (INV-3004); `RELEASED`/`EXPIRED` → `RESERVATION_INVALID_STATE` (INV-3005) - caller must reconcile, mirroring promotion §5.3.
+- `release()`: `if (status == RELEASED || status == EXPIRED) return;` before the `PENDING` check (quota already returned - safe no-op).
+- Error codes already exist: INV-3003/3004/3005 - **no enum changes**.
+- Blast radius (GitNexus, measured): `commit` upstream = LOW, 2 symbols (`InventoryController.commit` path) - the earlier "CRITICAL / 20 symbols" estimate was wrong.
 
 ### 7.2 New endpoint `POST /api/v1/inventory/reservations/{id}/release-committed`
 
@@ -176,7 +176,7 @@ Small, surgical, all **verified against current code**:
 
 ### 7.3 New endpoint `GET /api/v1/inventory/reservations/{id}/state`
 
-Returns the existing `ReservationResponse` (add `previousStatus`-free — just status/timestamps), `hasRole('SERVICE') or hasRole('ADMIN')`. Read-only, used by reconciliation.
+Returns the existing `ReservationResponse` (add `previousStatus`-free - just status/timestamps), `hasRole('SERVICE') or hasRole('ADMIN')`. Read-only, used by reconciliation.
 
 ## 8. Observability
 
@@ -186,20 +186,20 @@ New `OrderConfirmMetrics` (Mirror `ProductMetrics` if present; else plain `Meter
 |--------|------|------|-------|
 | `order.confirm.duration` | Timer | `phase=commit_promotion\|commit_inventory\|publish\|rollback` | p99 > 500ms warn |
 | `order.confirm.commit.outcome` | Counter | `result=success\|compensated\|rollback_failed` | `rollback_failed > 0` page |
-| `order.confirm.attempts` | Counter | — | — |
-| `order.commit.stuck` | Gauge | — | PENDING older than 30 min; > 5 page |
-| `order.reconciliation.mixed` | Counter | — | > 0 page |
+| `order.confirm.attempts` | Counter | - | - |
+| `order.commit.stuck` | Gauge | - | PENDING older than 30 min; > 5 page |
+| `order.reconciliation.mixed` | Counter | - | > 0 page |
 
 ## 9. Compatibility & migration
 
 - Existing `PENDING` orders: `promotion_reservation_id` is null → promotion step skipped (D5 analog); `reservationId == null` items skipped; null-id orders confirm fine once 7.1 lands (retry after timeout no longer 409s).
 - No backfill, no data migration beyond the additive column (§3).
-- Feature flags: inventory/promotion commit orchestration is **not** flag-gated — `promotionClient.commit` is skipped when `promotionReservationId == null`, and promotion calls only happen when the flag-enabled saga created one. Inventory commit orchestration activates unconditionally with this release (that is the point: closing the orphan-commit gap).
-- Deploy order: **inventory 7.1–7.3 first** (backward compatible additions), then order-service, then promotion-service (which requires none of order's changes at runtime until `enabled: true`).
+- Feature flags: inventory/promotion commit orchestration is **not** flag-gated - `promotionClient.commit` is skipped when `promotionReservationId == null`, and promotion calls only happen when the flag-enabled saga created one. Inventory commit orchestration activates unconditionally with this release (that is the point: closing the orphan-commit gap).
+- Deploy order: **inventory 7.1-7.3 first** (backward compatible additions), then order-service, then promotion-service (which requires none of order's changes at runtime until `enabled: true`).
 
 ## 10. Configuration additions (order-service `application.yml`)
 
-Rev 3: reconciliation knobs live under the **top-level `order:` namespace** (`order.reconciliation.*`), matching the repo convention — not nested under `shop.`:
+Rev 3: reconciliation knobs live under the **top-level `order:` namespace** (`order.reconciliation.*`), matching the repo convention - not nested under `shop.`:
 
 ```yaml
 order:
@@ -208,38 +208,38 @@ order:
     stuck-minutes: ${ORDER_RECONCILIATION_STUCK_MINUTES:30}
 ```
 
-No new Keycloak/URL config — promotion reuses `shop.services.promotion.{url,timeout-ms,enabled}` (already present, `application.yml:50-53`).
+No new Keycloak/URL config - promotion reuses `shop.services.promotion.{url,timeout-ms,enabled}` (already present, `application.yml:50-53`).
 
 ## 11. Testing strategy
 
 | Category | Tool | Coverage |
 |----------|------|----------|
 | Unit | JUnit + Mockito + AssertJ | `OrderCommitCoordinator`: success path, promotion-fail, item-k-fail → reverse compensation order asserted via InOrder, rollback-failure swallowed + metric; `isPromotionReservation`-style magic **absent by construction** (type-tagged targets) |
-| Unit | — | Idempotent-branch matrix for inventory `commit`/`release` (7.1): double-commit, commit-after-release, commit-after-expire, double-release |
+| Unit | - | Idempotent-branch matrix for inventory `commit`/`release` (7.1): double-commit, commit-after-release, commit-after-expire, double-release |
 | `@WebMvcTest` | seed `JwtAuthenticationToken` | confirm endpoint: Idempotency-Key optional/replayed (same body), 409 `ORD-4011` on commit failure |
-| Integration | Testcontainers Postgres | confirm end-to-end with WireMock **standalone** stubs for inventory/promotion: happy path; promotion OK + item-2 fail → release-committed called for promotion + item-1; stub WireMock fault injection (`withStatus(500)` / `SocketDisconnect`) for timeout-then-retry idempotency — no Resilience4j test decorators needed |
+| Integration | Testcontainers Postgres | confirm end-to-end with WireMock **standalone** stubs for inventory/promotion: happy path; promotion OK + item-2 fail → release-committed called for promotion + item-1; stub WireMock fault injection (`withStatus(500)` / `SocketDisconnect`) for timeout-then-retry idempotency - no Resilience4j test decorators needed |
 | Concurrency | ExecutorService + barrier | 2 confirms same order: second replays cached 200 (same key) or 409s (no key) without double-commit |
 | Reconciliation | Testcontainers fixtures | all-committed → auto-confirm; all-terminal → auto-cancel; mixed → untouched + metric |
 | Compat | Testcontainers fixtures | legacy order with null reservationIds confirms cleanly (D5) |
 
 ## 12. Open items / Deferred
 
-- W3C `traceparent` propagation via OTel agent — common-logging follow-up (D9). (`X-Correlation-Id` outbound propagation IS in scope — §2.)
-- **Tracking — silent-swallow compensation (pre-existing):** `releaseAllReservations` / `releaseAllReservationsById` (`OrderServiceImpl:168-180, 240-248`) swallow all exceptions; the new promotion release in the saga and in cancel follows the same pattern for consistency. Follow-up refactor (separate task, not this epic): both callers → 3-state outcome (success / NOT_FOUND-resolved / real-error) + `order.compensation.release.failed` metric, so compensation debt is observable instead of log-only.
+- W3C `traceparent` propagation via OTel agent - common-logging follow-up (D9). (`X-Correlation-Id` outbound propagation IS in scope - §2.)
+- **Tracking - silent-swallow compensation (pre-existing):** `releaseAllReservations` / `releaseAllReservationsById` (`OrderServiceImpl:168-180, 240-248`) swallow all exceptions; the new promotion release in the saga and in cancel follows the same pattern for consistency. Follow-up refactor (separate task, not this epic): both callers → 3-state outcome (success / NOT_FOUND-resolved / real-error) + `order.compensation.release.failed` metric, so compensation debt is observable instead of log-only.
 - Payment-service (Phase 8) will replace/supersede parts of confirm orchestration (payment-driven confirm); this design deliberately keeps the coordinator swappable.
-- Refund flow for CONFIRMED cancels — Phase 8, unchanged.
-- `order.commit.stuck` gauge needs a small scheduled counter query — implementation detail for the plan (avoid per-scrape full scans: cache gauge value from the reconciliation tick).
+- Refund flow for CONFIRMED cancels - Phase 8, unchanged.
+- `order.commit.stuck` gauge needs a small scheduled counter query - implementation detail for the plan (avoid per-scrape full scans: cache gauge value from the reconciliation tick).
 
 ## 13. Cross-references
 
-- `docs/superpowers/specs/2026-08-29-promotion-service-design.md` — the promotion side of the contract (reserve/commit/release/release-committed/state, idempotency contract §5.3).
-- `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java` — saga (lines 71-195), cancel (200-248), transitions (250-291).
-- `inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java` — commit/release patch points (lines 150-193).
-- `order-service/.../IdempotencyServiceImpl.java` — begin/complete/abort reuse for confirm.
+- `docs/superpowers/specs/2026-08-29-promotion-service-design.md` - the promotion side of the contract (reserve/commit/release/release-committed/state, idempotency contract §5.3).
+- `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java` - saga (lines 71-195), cancel (200-248), transitions (250-291).
+- `inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java` - commit/release patch points (lines 150-193).
+- `order-service/.../IdempotencyServiceImpl.java` - begin/complete/abort reuse for confirm.
 
 ## 14. Changelog
 
-- 2026-08-29 (rev 3): Final whole-branch review amendments. §3 — order-id-before-pricing shipped as **persist-early** (row inserted `PENDING`/zero amounts inside the saga TX before pricing; generated id feeds the promotion reserve; same-TX update) after the sandbox proved Hibernate ORM 7.4.5.Final rejects assigned ids — including the `@UuidGenerator` fallback (task-7 BLOCKED report + re-attempt ruling, commit `ae381d1`). §10 — reconciliation config namespace corrected to top-level `order:` → `order.reconciliation.*`, matching repo convention (shipped `application.yml:59-80`). §8 contract unchanged: `order.confirm.commit.outcome{result=success|compensated|rollback_failed}` (the untagged `order.commit.rollback.failed` variant was never shipped as contractual); publish/rollback phase timers remain deferred (§12).
+- 2026-08-29 (rev 3): Final whole-branch review amendments. §3 - order-id-before-pricing shipped as **persist-early** (row inserted `PENDING`/zero amounts inside the saga TX before pricing; generated id feeds the promotion reserve; same-TX update) after the sandbox proved Hibernate ORM 7.4.5.Final rejects assigned ids - including the `@UuidGenerator` fallback (task-7 BLOCKED report + re-attempt ruling, commit `ae381d1`). §10 - reconciliation config namespace corrected to top-level `order:` → `order.reconciliation.*`, matching repo convention (shipped `application.yml:59-80`). §8 contract unchanged: `order.confirm.commit.outcome{result=success|compensated|rollback_failed}` (the untagged `order.commit.rollback.failed` variant was never shipped as contractual); publish/rollback phase timers remain deferred (§12).
 
-- 2026-08-29 (rev 2): Review round 1 (concerns O1–O4): D6 — keyless concurrent confirm proven safe via `Order @Version` (O1); Idempotency-Key now "recommended" for clients. D9 split — `X-Correlation-Id` outbound propagation included via `requestInitializer` (O2, filter/MDC verified pre-existing), OTel stays deferred. O3 moot — `idx_orders_status_created` already exists, spec references it instead of adding a duplicate changeset. O4 — silent-swallow compensation refactor recorded as a tracked follow-up (§12).
+- 2026-08-29 (rev 2): Review round 1 (concerns O1-O4): D6 - keyless concurrent confirm proven safe via `Order @Version` (O1); Idempotency-Key now "recommended" for clients. D9 split - `X-Correlation-Id` outbound propagation included via `requestInitializer` (O2, filter/MDC verified pre-existing), OTel stays deferred. O3 moot - `idx_orders_status_created` already exists, spec references it instead of adding a duplicate changeset. O4 - silent-swallow compensation refactor recorded as a tracked follow-up (§12).
 - 2026-08-29 (rev 1): Initial design from brainstorming: design A (confirm-driven commit) + production hardening. Corrections applied to the reviewed proposal: compensation targets as (type,id) pairs (Guava `Lists.reverse` dropped), confirm idempotency scoped by admin userId (not orderId-in-userId-column), `RESERVATION_NOT_FOUND` fails instead of silently succeeding (D4), OTel deferred after verifying `RestClientConfig` propagates nothing today, Resilience4j already present in promotion pom but WireMock fault injection chosen for tests, impact re-measured as LOW/2-symbols.

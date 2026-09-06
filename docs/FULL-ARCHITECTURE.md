@@ -1,4 +1,4 @@
-# Petproject Microservices Platform — Master Architecture Blueprint
+# Petproject Microservices Platform: Master Architecture Blueprint
 
 > **System Overview**: Production-grade e-commerce microservices platform built with **Java 25 (OpenJDK / Temurin)** and **Spring Boot 4.1.1**, managed as a Maven reactor of 23 modules (14 microservices + 8 common shared libraries + parent aggregator).  
 > **Key Infrastructure**: Keycloak 26 (OAuth2/OIDC), PostgreSQL 16 (12 isolated service DBs + Keycloak DB), Redis 7.4 (Caching & Token Bucket Rate Limiting), Apache Kafka 3.9 (KRaft mode, no Zookeeper), Elasticsearch 8.15 (Catalog search & autocomplete), RustFS (High-performance S3-compatible media storage).
@@ -24,7 +24,7 @@ All diagrams have been produced in both **Mermaid (.mmd)** and native **Draw.io 
 The system is architected around **Domain-Driven Design (DDD)** and the **Database-per-Service** pattern. Traffic enters through a reactive Spring Cloud Gateway which enforces authentication, tracing, and rate limiting before routing to the backend services.
 
 ```mermaid
-%% System Landscape Architecture — Petproject Microservices Platform
+%% System Landscape Architecture: Petproject Microservices Platform
 flowchart TB
     classDef clientClass fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px,color:#000000;
     classDef gatewayClass fill:#ffe6cc,stroke:#d79b00,stroke-width:2px,color:#000000;
@@ -434,7 +434,7 @@ flowchart TB
     classDef s3Class fill:#fad7ac,stroke:#b46504,stroke-width:2px,color:#000000;
 
     subgraph DOCKER_COMPOSE ["Docker Compose / K8s Deployment Topology"]
-        subgraph PG_CLUSTER ["PostgreSQL 16 Instance (:5432) — max_connections=300"]
+        subgraph PG_CLUSTER ["PostgreSQL 16 Instance (:5432): max_connections=300"]
             DB_AUTH[("authservice<br/>users, roles, user_role")]:::pgClass
             DB_PRD[("productservice<br/>products, categories, brands, variants, outbox")]:::pgClass
             DB_ORD[("orderservice<br/>orders, carts, cart_items, outbox")]:::pgClass
@@ -490,14 +490,14 @@ flowchart TB
 | **gateway-service** | 8080 | Edge reverse proxy, rate limiting, JWT validation, correlation | Redis 7.4 | All microservices (forwarding) |
 | **auth-service** | 8088 | Keycloak facade, ROPC login, refresh, logout, shadow user mirror | Postgres `authservice` | Keycloak Admin REST API |
 | **product-service** | 8086 | Products, categories, brands, variants, Redis caching | Postgres `productservice` + Redis | `media-service` (:8083) |
-| **inventory-service** | 8082 | Stock levels, two-phase reservations, auto-release sweep | Postgres `inventoryservice` | — |
+| **inventory-service** | 8082 | Stock levels, two-phase reservations, auto-release sweep | Postgres `inventoryservice` |: |
 | **order-service** | 8084 | Cart, order saga coordinator, checkout status machine | Postgres `orderservice` | `product-service`, `inventory-service`, `tax-service`, `promotion-service`, `payment-service` |
 | **payment-service** | 8085 | Stripe checkout, capture, webhook verification, refunds | Postgres `paymentservice` | Stripe API |
 | **shipping-service** | 8087 | Shipment tracking, carrier webhook ingestion | Postgres `shippingservice` | External Carriers |
 | **notification-service** | 8090 | In-app notification inbox, SMTP email dispatcher | Postgres `notificationservice` | External SMTP (Gmail / SES) |
 | **rating-service** | 8089 | Storefront reviews, Backoffice approval, verified purchase gate | Postgres `ratingservice` | `order-service` (:8084 `/verify-purchase`) |
 | **search-service** | 8094 | Elasticsearch 8.15 indexing, autocomplete, catalog queries | Elasticsearch 8.15 | `product-service` (:8086 reindex) |
-| **tax-service** | 8091 | Tax classes, country/state rates, real-time tax calculation | Postgres `taxservice` | — |
-| **promotion-service** | 8093 | Marketing campaigns, coupons, discount reservation & commit | Postgres `promotionservice` | — |
-| **favourite-service** | 8081 | Customer wishlists & saved product bookmarks | Postgres `favouriteservice` | — |
+| **tax-service** | 8091 | Tax classes, country/state rates, real-time tax calculation | Postgres `taxservice` |: |
+| **promotion-service** | 8093 | Marketing campaigns, coupons, discount reservation & commit | Postgres `promotionservice` |: |
+| **favourite-service** | 8081 | Customer wishlists & saved product bookmarks | Postgres `favouriteservice` |: |
 | **media-service** | 8083 | Multipart upload, magic-byte MIME sniff, 6 WebP variants | Postgres `mediaservice` + RustFS | `product-service` (reference validation) |

@@ -24,10 +24,10 @@
 ### Task 1: Carrier enum + adapter registry + properties
 
 **Files:**
-- Modify: shipping-service/.../carrier/Carrier.java (existing enum) — add GHN, GHTK constants after MANUAL, NOOP.
+- Modify: shipping-service/.../carrier/Carrier.java (existing enum) - add GHN, GHTK constants after MANUAL, NOOP.
 - Create: shipping-service/.../config/ShippingCarriersProperties.java (@ConfigurationProperties shop.shipping.carriers: Map<String, CarrierConfig> where CarrierConfig = (enabled, token, endpoint)).
 - Create: shipping-service/.../carrier/CarrierAdapterRegistry.java (auto-injects List<CarrierAdapter>, builds Map<Carrier, CarrierAdapter> by carrier()).
-- Modify: shipping-service/.../service/ShipmentService.java (or wherever carrier dispatch happens) — change from `if/else` on carrier to `registry.get(carrier).orElseThrow(() -> new BusinessException(SHP-10006))`.
+- Modify: shipping-service/.../service/ShipmentService.java (or wherever carrier dispatch happens) - change from `if/else` on carrier to `registry.get(carrier).orElseThrow(() -> new BusinessException(SHP-10006))`.
 - Test: CarrierAdapterRegistryTest (Mockito): two adapters registered, get(GHN) returns GhnAdapter, get(UNKNOWN) returns empty.
 
 - [ ] **Step 1: failing test** for registry.
@@ -43,7 +43,7 @@
   - createShipment(): POST {endpoint}/v2/shipping-order/create with body {order details, district_id} + header Token={token}; parse response for tracking_code; if carrier returns error code, throw BusinessException SHP-CARRIER_REJECTED (new error code).
   - cancelShipment(): POST {endpoint}/v2/shipping-order/cancel.
 - Create: shipping-service/.../carrier/ghn/GhnClient.java (RestClient wrapper, timeouts 5000ms; bearer auth via Token header).
-- Modify: shipping-service/.../config/RestClientConfig.java — add ghnRestClient bean conditional on GhnAdapter enabled.
+- Modify: shipping-service/.../config/RestClientConfig.java - add ghnRestClient bean conditional on GhnAdapter enabled.
 - Test: GhnAdapterTest (MockRestServiceServer): createShipment 200 → returns ShipmentDraft with tracking GHN-XXX; createShipment 401 → SHP-CARRIER_REJECTED; cancelShipment happy; constructor fail-fast on empty token.
 
 - [ ] **Step 1: failing tests** (4+ cases).
@@ -69,10 +69,10 @@
 ### Task 4: webhook handlers for GHN + GHTK
 
 **Files:**
-- Modify: shipping-service/.../controller/WebhookController.java (or existing webhook handler) — branch on carrier=ghn vs ghtk to parse per-carrier payload (GhnWebhookEvent, GhtkWebhookEvent). Existing webhook handler logic (HMAC verify, dedupe, state transition) re-uses per-carrier secret lookup.
+- Modify: shipping-service/.../controller/WebhookController.java (or existing webhook handler) - branch on carrier=ghn vs ghtk to parse per-carrier payload (GhnWebhookEvent, GhtkWebhookEvent). Existing webhook handler logic (HMAC verify, dedupe, state transition) re-uses per-carrier secret lookup.
 - Create: shipping-service/.../dto/ghn/GhnWebhookEvent.java (record: carrier, code, status, order_code, etc.).
 - Create: shipping-service/.../dto/ghtk/GhtkWebhookEvent.java (record: similar fields).
-- Modify: shipping-service/.../service/ShipmentWebhookService.java — add carrier-specific payload parsers.
+- Modify: shipping-service/.../service/ShipmentWebhookService.java - add carrier-specific payload parsers.
 - Test: WebhookHandlerTest: GHN payload with status=DELIVERED → shipment DELIVERED + outbox shipping.delivered.v1; GHTK similar; HMAC signature failure → 401 SHP-10004.
 
 - [ ] **Step 1: failing tests** (3 cases).
@@ -83,14 +83,14 @@
 ### Task 5: error code for carrier rejection
 
 **Files:**
-- Modify: utils/common-core/.../exception/ErrorCode.java — flip SRC-13004 ; → , append SHP-10007 CARRIER_REJECTED (502, carrier API rejected the request) with ; terminator. Verify by grep first.
-- Modify: utils/common-spring/src/main/resources/messages/messages_{en,vi}.properties — add shipping.carrier_rejected.
+- Modify: utils/common-core/.../exception/ErrorCode.java - flip SRC-13004 ; → , append SHP-10007 CARRIER_REJECTED (502, carrier API rejected the request) with ; terminator. Verify by grep first.
+- Modify: utils/common-spring/src/main/resources/messages/messages_{en,vi}.properties - add shipping.carrier_rejected.
 
 - [ ] **Step 1: implement** code + i18n key.
 - [ ] **Step 2: run** compile PASS.
 - [ ] **Step 3: commit** feat(shipping): SHP-10007 CARRIER_REJECTED error code
 
-### Task 6: IT — full GHN sandbox flow
+### Task 6: IT - full GHN sandbox flow
 
 **Files:**
 - Create: shipping-service/.../GhnAdapterIT.java (Testcontainers + WireMock): stub GHN API at WireMock; full createShipment round-trip → tracking persisted → webhook with signed payload → shipment DELIVERED → outbox event asserted.
@@ -101,7 +101,7 @@
 ### Task 7: compose + manual smoke checklist
 
 **Files:**
-- Modify: docker-compose.yml — shipping-service stanza: ADD commented env block for SHOP_SHIPPING_CARRIERS_GHN_* and SHOP_SHIPPING_CARRIERS_GHTK_*:
+- Modify: docker-compose.yml - shipping-service stanza: ADD commented env block for SHOP_SHIPPING_CARRIERS_GHN_* and SHOP_SHIPPING_CARRIERS_GHTK_*:
 
 ```yaml
   # To activate GHN (sandbox):

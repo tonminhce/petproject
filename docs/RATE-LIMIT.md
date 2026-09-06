@@ -1,103 +1,80 @@
-# Rate Limiting
+# Edge Gateway Rate Limiting Architecture
 
-> Source of truth: implementation in `gateway-service/src/main/java/com/shop/gateway/ratelimit/*`
-> (read alongside `gateway-service/src/main/java/com/shop/gateway/config/RoutesConfig.java`,
-> `SecurityConfig.java` and `application.yml`). Diagram: [`docs/images/rate-limit-architecture.png`](./images/rate-limit-architecture.png)
-> (editable source: [`docs/architecture/gateway-security-rate-limit.drawio`](./architecture/gateway-security-rate-limit.drawio)).
->
-> Status: implemented and verified locally (gateway `17/17` tests, full reactor
-> `BUILD SUCCESS`, smoke test on Redis thật với two concurrent requests producing
-> `429` + `500`). See [`ROADMAP.md §7 (Phase 7 – Core Services)`](./ROADMAP.md)
-> for production hardening checklist.
+> **Implementation source of truth**: `gateway-service/src/main/java/com/shop/gateway/ratelimit/*`
+> Supporting references: `gateway-service/src/main/java/com/shop/gateway/config/RoutesConfig.java`, `SecurityConfig.java`, and `application.yml`.
+> Architecture diagram: [`docs/images/rate-limit-architecture.png`](./images/rate-limit-architecture.png)
+> Editable diagram source: [`docs/architecture/gateway-security-rate-limit.drawio`](./architecture/gateway-security-rate-limit.drawio).
 
 ---
 
-## 1. Vì sao rate limiter ở Gateway
+## 1. Rationale for edge-tier rate limiting
 
-- **Bảo vệ backend trước khi request đến**: backend ports của 13 service vẫn đang
-  được `docker-compose.yml` `ports:` expose (xem §6). Nếu chỉ để mỗi service tự
-  rate-limit, attacker có thể bypass bằng cách gọi thẳng `localhost:8086` cho
-  product-service, không qua gateway. Đặt limiter ở gateway là điểm chặn duy nhất
-  hiện tại.
-- **Phạm vi đơn nhất**: chỉ cần một cấu hình rate-limit áp dụng cho toàn hệ thống, không
-  phải sync giữa 13 service.
-- **Không parse body ở edge**: gateway chỉ giới hạn theo IP / JWT subject, không phải
-  theo username / password. Username-based lockout là trách nhiệm của auth-service hoặc
-  Keycloak.
-- **Giữ KISS / SRP**: mỗi filter có một trách nhiệm — không lẫn business rule vào
-  gateway.
+- **Direct backend protection**: While all microservice ports are reachable within the container network, edge limiting prevents excessive traffic from consuming backend resources. Placing the limiter at the edge gateway establishes a single admission control barrier before requests reach downstream services.
+- **Unified policy scope**: A single rate-limiting configuration applies across the fleet instead of managing disparate rate-limiting filters across 14 services.
+- **Header-only processing**: The gateway limits requests by client IP address or JWT principal subject without buffering or inspecting request payloads. User-specific credential lockouts remain the responsibility of `auth-service` and Keycloak.
+- **Separation of concerns**: Rate limiting operates purely as a network admission control filter, decoupled from internal business logic.
 
 ---
 
-## 2. Hai tầng limiter (hai Redis bucket tách biệt)
+## 2. Two-tier token bucket architecture
 
-Thiết kế gồm **hai token-bucket độc lập**, mỗi tầng có Redis bucket riêng. Tầng dưới
-chặn trước, tầng trên chặn sau. Một request phải vượt qua cả hai mới được forward.
+The rate limiter employs two independent token buckets backed by Redis. Requests pass sequentially through both tiers before the gateway forwards them downstream.
 
-| Tầng | Bean (RateLimiter) | Order | Key | Mục đích | Default |
+| Tier | Bean qualifier | Filter precedence | Redis key structure | Operational objective | Default settings |
 |---|---|---|---|---|---|
-| **Global system** | `globalRateLimiter` (`@Qualifier`) | `Ordered.HIGHEST_PRECEDENCE` (`Integer.MIN_VALUE`) | cố định `gateway-system` / `system` | Capacity guard cho toàn cluster gateway, đặc biệt cho flash-sale | `2000 req/s`, burst `4000` |
-| **Per-client + per-route** | `gatewayRateLimiter` (`@Primary`) | gắn vào từng route qua `requestRateLimiter()` DSL | `user:<sub>` (authenticated) hoặc `ip:<client>` (anonymous) × `routeId` | Fairness per-client per-route | `100 req/s`, burst `200` |
+| **Global system** | `globalRateLimiter` (`@Qualifier`) | `Ordered.HIGHEST_PRECEDENCE` (`Integer.MIN_VALUE`) | Static key `gateway-system` / `system` | Protects cluster capacity during high-concurrency traffic surges | 2,000 req/s, burst 4,000 |
+| **Per-client per-route** | `gatewayRateLimiter` (`@Primary`) | Route filter via `requestRateLimiter()` DSL | `user:<sub>` (authenticated) or `ip:<remote>` (anonymous) combined with `routeId` | Ensures per-client and per-route fairness | 100 req/s, burst 200 |
 
-### 2.1 Tại sao hai tầng
+### 2.1 Rationale for two layers
 
-- Chỉ per-client + per-route: 10 000 user × 100 req/s × 15 route = 1.5M req/s đổ vào
-  backend, vượt tổng capacity. Global layer cắt ở Gateway để backend không chạm ngưỡng.
-- Chỉ global: một user spam `/products` vẫn ăn trọn quota tới khi bucket chung hết — không
-  công bằng với user khác.
-- Hai tầng = cùng mô hình Byte đ (system + descriptor): system bucket cộng dồn tất cả
-  request vào một key cố định; route bucket chia theo `routeId × user|ip`.
+- **Per-client alone is insufficient**: With 10,000 concurrent clients each allowed 100 req/s across 15 routes, total downstream traffic could reach 1.5M req/s, exceeding backend datastore limits. The global layer drops excess requests at the edge before backend capacity saturates.
+- **Global alone is insufficient**: A single aggressive client calling `/products` could consume the entire shared pool, starving legitimate users.
+- **Combined model**: The global bucket counts all incoming cluster traffic against a fixed key, while the route bucket isolates traffic per route and client identifier.
 
-### 2.2 Tại sao `@Primary` ở `gatewayRateLimiter`
+### 2.2 Primary bean designation
 
-Spring Cloud Gateway auto-config `RequestRateLimiterGatewayFilterFactory` inject
-`RateLimiter<?>` **không kèm qualifier**. Khi có hai bean `RedisRateLimiter`,
-context fail với `NoUniqueBeanDefinitionException` (đã gặp khi smoke test). `@Primary`
-chọn bean mặc định cho route filter; `GlobalRateLimitFilter` inject qua
-`@Qualifier("globalRateLimiter")` rõ ràng nên không trúng nhầm. Hai bean tách biệt, mỗi
-filter biết mình dùng cái nào.
+Spring Cloud Gateway autoconfiguration for `RequestRateLimiterGatewayFilterFactory` injects `RateLimiter<?>` without a bean qualifier. When registering two `RedisRateLimiter` beans, the Spring context fails with a `NoUniqueBeanDefinitionException`. Marking `gatewayRateLimiter` as `@Primary` resolves this for route-level filters, while `GlobalRateLimitFilter` injects `globalRateLimiter` explicitly using `@Qualifier("globalRateLimiter")`.
 
 ---
 
-## 3. Filter chain — request flow
+## 3. Filter execution pipeline
 
 ```text
-Client
+Client request
   │
   ▼  HTTPS
 Spring Cloud Gateway :8080
   │
   ▼
-Reactive SecurityWebFilterChain        (CORS → JWT (Keycloak) → RateLimit → Route)
+Reactive SecurityWebFilterChain (CORS -> JWT signature validation -> Rate limiting -> Routing)
   │
   ▼
-[GlobalFilter] GlobalRateLimitFilter     order = HIGHEST_PRECEDENCE
-  │   bucket key = gateway-system / system
-  │   EVAL request_rate_limiter.lua (atomic INCR+EXPIRE)
+[GlobalFilter] GlobalRateLimitFilter (Order: HIGHEST_PRECEDENCE)
+  │   Key: gateway-system / system
+  │   Evaluates request_rate_limiter.lua atomically in Redis
   │
-  ├── denied → 429 + copy rate-limit headers (X-RateLimit-*) → response.setComplete
+  ├── Denied -> Return HTTP 429 and copy X-RateLimit-* headers -> response.setComplete
   │
-  ▼  if allowed
-[RouteFilter] RequestRateLimiterGatewayFilterFactory (one per route)
+  ▼ Allowed
+[RouteFilter] RequestRateLimiterGatewayFilterFactory (Configured per route)
   │
-  ▼  if key resolves
+  ▼
 RateLimitKeyResolver.resolve(exchange)
-  │   principal.isAuthenticated() == true   → "user:<sub>"
-  │   else                                   → "ip:<client>" (XForwardedRemoteAddressResolver if hops > 0)
+  │   If authenticated -> "user:<sub>"
+  │   If anonymous     -> "ip:<remote-ip>" (evaluates trusted proxy hops if configured)
   │
-  ▼  bucket key = {routeId, key}
-EVAL Lua
+  ▼ Evaluates Redis bucket {routeId, key}
+Evaluates Lua script
   │
-  ├── denied (empty key hoặc bucket empty) → 429
+  ├── Denied (bucket exhausted or empty key) -> Return HTTP 429
   │
-  ▼  if allowed
-forward đến auth-service / product-service / order-service / ...
+  ▼ Allowed
+Forward request to backend microservice
 ```
 
-Đọc chính xác từ code:
+### Key implementation details:
 
-- `gateway-service/src/main/java/com/shop/gateway/config/RoutesConfig.java:14-46` — gắn
-  filter vào từng route qua DSL:
+- **Route filter registration (`RoutesConfig.java:14-46`)**:
   ```java
   routesBuilder.route(route.id(), spec -> {
       final var routeSpec = spec.path(route.path());
@@ -111,242 +88,130 @@ forward đến auth-service / product-service / order-service / ...
       return routeSpec.uri(route.uri());
   });
   ```
-  `denyEmptyKey(true)` quan trọng: nếu resolver trả về `Mono.empty()` (không có JWT, không có
-  remote-address), filter từ chối luôn thay vì bỏ qua — chống bypass.
+  Setting `denyEmptyKey(true)` guarantees that if the key resolver returns `Mono.empty()` (missing JWT and missing remote address), the request is rejected immediately with HTTP 429 rather than bypassing the rate limiter.
 
-- `gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java:33-43` —
-  Global filter chạy trước (xem `Ordered.HIGHEST_PRECEDENCE` ở line 47), gọi
-  `rateLimiter.isAllowed("gateway-system", "system")`. Allowed → `chain.filter(exchange)`
-  (chuyển tiếp cho route filter); denied → `reject(...)` (copy headers + `setComplete`).
+- **Global filter execution (`GlobalRateLimitFilter.java:33-43`)**:
+  Executes at `Ordered.HIGHEST_PRECEDENCE`, calling `rateLimiter.isAllowed("gateway-system", "system")`. Allowed requests proceed down the filter chain; rejected requests exit immediately with HTTP 429 and rate-limit headers.
 
-- `gateway-service/src/main/java/com/shop/gateway/ratelimit/RateLimitKeyResolver.java:36-44` —
-  Resolver chain: principal.isAuthenticated → `user:<sub>`; else `Mono.defer(resolveIpKey)` →
-  `ip:<host>`. Trả `Mono.empty()` nếu không có cả hai (bypass-safe).
+- **Key resolution (`RateLimitKeyResolver.java:36-44`)**:
+  Checks whether the user principal is authenticated. If valid, resolves to `user:<userId>`. Otherwise, falls back to remote IP resolution (`ip:<client-ip>`). Returns `Mono.empty()` if neither identifier is available.
 
 ---
 
-## 4. Algorithm — token bucket qua Lua atomic script
+## 4. Token bucket algorithm via Redis Lua script
 
-Dùng `org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter` của Spring Cloud
-Gateway — đã inspect bytecode, không tự viết Lua. Lý do:
+The gateway relies on the default Redis Lua script provided by Spring Cloud Gateway (`META-INF/scripts/request_rate_limiter.lua`). This script executes atomic token decrement and expiration updates in Redis, preventing race conditions during concurrent requests.
 
-- Script `META-INF/scripts/request_rate_limiter.lua` được Spring Cloud Gateway maintain,
-  atomic `GET tokens, DECR if >0, EXPIRE 60s` — race-condition free.
-- `RedisRateLimiter.Response.getHeaders()` trả về headers cho allowed và denied:
-  - `X-RateLimit-Remaining`
-  - `X-RateLimit-Replenish-Rate`
-  - `X-RateLimit-Burst-Capacity`
-  - `X-RateLimit-Requested-Tokens`
-- Global filter copy nguyên headers này vào response khi reject (`reject` ở
-  `GlobalRateLimitFilter.java:50-54`).
-
-**Công thức bucket**:
+### Bucket mechanics:
 
 ```text
-key = request_rate_limiter.{routeId}.{key}.tokens  (counter, EXPIRE 60s)
-key = request_rate_limiter.{routeId}.{key}.timestamp (last refill timestamp)
+Redis key 1: request_rate_limiter.{routeId}.{key}.tokens    (Token counter, 60s TTL)
+Redis key 2: request_rate_limiter.{routeId}.{key}.timestamp (Last refill timestamp)
 
-allowed when tokens >= requestedTokens
-  refill every (1s / replenishRate) up to burstCapacity
-  on allow: tokens -= requestedTokens
-  on deny : tokens unchanged
+Conditions:
+  Allowed when tokens >= requestedTokens
+  Tokens refill at (replenishRate / second) up to burstCapacity
+  When allowed: tokens = tokens - requestedTokens
+  When denied: tokens remain unchanged
 ```
 
-Trong code:
+### Configuration properties (`RateLimitProperties.java`):
 
 ```java
-// RateLimitProperties.java:17-20
 @DefaultValue("100") @Positive int replenishRate,
 @DefaultValue("200") @Positive long burstCapacity,
 @DefaultValue("1") @Positive int requestedTokens,
 ```
 
-Mặc định nghĩa: `replenishRate` token được cộng mỗi giây, tối đa `burstCapacity` token, mỗi
-request tiêu `requestedTokens` token.
+- `replenishRate`: Tokens added per second.
+- `burstCapacity`: Maximum token capacity of the bucket.
+- `requestedTokens`: Tokens consumed per request (defaults to 1).
 
 ---
 
-## 5. Headers trong response
+## 5. HTTP response headers
 
-Spring Cloud Gateway's `RedisRateLimiter` thêm headers cho mọi response:
+When enabled, response headers communicate remaining quota to clients:
 
-| Header | Ý nghĩa | Khi nào xuất hiện |
+| Header | Meaning | Present on |
 |---|---|---|
-| `X-RateLimit-Remaining` | token còn lại sau request này | allowed + denied |
-| `X-RateLimit-Replenish-Rate` | token/giây | allowed + denied |
-| `X-RateLimit-Burst-Capacity` | bucket tối đa | allowed + denied |
-| `X-RateLimit-Requested-Tokens` | token/request | allowed + denied |
+| `X-RateLimit-Remaining` | Remaining available tokens in the bucket | HTTP 200 and 429 |
+| `X-RateLimit-Replenish-Rate` | Configured replenishment rate (tokens/sec) | HTTP 200 and 429 |
+| `X-RateLimit-Burst-Capacity` | Maximum capacity of the token bucket | HTTP 200 and 429 |
+| `X-RateLimit-Requested-Tokens` | Tokens consumed by the current request | HTTP 200 and 429 |
 
-Route filter tự gắn headers trên response 200. Global filter copy headers từ
-`RateLimiter.Response.getHeaders()` trên response 429 (`GlobalRateLimitFilter.java:50-54`,
-test `deniedRequestReturns429WithLimiterHeaders` ở
-`GlobalRateLimitFilterTest.java:52-68`).
-
-Chưa có `Retry-After` header. Client tính thời gian retry từ `X-RateLimit-Replenish-Rate`
-hoặc đơn giản back-off vài giây. Nếu cần thêm, có thể inject một
-`ResponseHeaderFilter` ngay sau Global filter.
+Route filters append these headers on successful responses. `GlobalRateLimitFilter` copies them from the Redis response on HTTP 429 rejections. Clients can calculate backoff delays using `X-RateLimit-Replenish-Rate`.
 
 ---
 
-## 6. Cấu hình
+## 6. Configuration reference
 
-### 6.1 application.yml (workspace hiện tại)
+### 6.1 `application.yml` definition
 
 ```yaml
 shop:
   security:
-    public-paths:                                       # public cho SecurityFilterChain (path-only; đã đổi tên từ public-endpoints + sẽ lên EndpointRule cho method-aware)
+    public-paths:
       - /actuator/health
       - /actuator/health/**
       - /actuator/info
-      - /actuator/prometheus
       - /v3/api-docs/**
       - /swagger-ui/**
       - /webjars/**
       - /api/v1/auth/**
-  rate-limit:                                         # per-client + per-route (route bucket)
+  rate-limit:
     enabled: ${GATEWAY_RATE_LIMIT_ENABLED:true}
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:100}
     burst-capacity: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:200}
     requested-tokens: ${GATEWAY_RATE_LIMIT_REQUESTED_TOKENS:1}
-    # Set only when a trusted reverse proxy is in front of the gateway.
     trusted-proxy-hops: ${GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS:0}
-    global:                                            # global system (flash-sale guard)
+    global:
       enabled: ${GATEWAY_GLOBAL_RATE_LIMIT_ENABLED:true}
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}
       burst-capacity: ${GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY:4000}
       requested-tokens: ${GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS:1}
 ```
 
-### 6.2 Env vars (docker-compose đã forward cho gateway container)
+### 6.2 Environment variables
 
 ```text
-GATEWAY_RATE_LIMIT_ENABLED                 default true
-GATEWAY_RATE_LIMIT_REPLENISH_RATE          default 100   # tokens/giây/client/route
-GATEWAY_RATE_LIMIT_BURST_CAPACITY          default 200   # bucket size
-GATEWAY_RATE_LIMIT_REQUESTED_TOKENS        default 1     # cost per request
-GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS      default 0     # 0 = dùng remote address trực tiếp
-GATEWAY_GLOBAL_RATE_LIMIT_ENABLED          default true
-GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE   default 2000  # tokens/giây toàn cluster
-GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY   default 4000
-GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS default 1
+GATEWAY_RATE_LIMIT_ENABLED                 Default: true
+GATEWAY_RATE_LIMIT_REPLENISH_RATE          Default: 100   (tokens/sec per client/route)
+GATEWAY_RATE_LIMIT_BURST_CAPACITY          Default: 200   (bucket size)
+GATEWAY_RATE_LIMIT_REQUESTED_TOKENS        Default: 1     (cost per request)
+GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS      Default: 0     (0 = use direct remote address)
+GATEWAY_GLOBAL_RATE_LIMIT_ENABLED          Default: true
+GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE   Default: 2000  (tokens/sec across gateway cluster)
+GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY   Default: 4000
+GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS Default: 1
 ```
-
-`docker-compose.yml:201-220` đã pass các biến này vào `gateway-service` container, mặc
-định `${VAR:-default}`. Trong production, set đúng theo capacity cluster và profile.
-
-### 6.3 Tune cho flash-sale
-
-Giả sử cluster chịu được peak `R_total req/s` (đo qua `actuator/prometheus` và load test):
-
-```text
-GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE = R_total × 0.8           # headroom 20%
-GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY = R_total × 2             # 2s burst
-GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS = 1
-
-GATEWAY_RATE_LIMIT_REPLENISH_RATE = 100                             # per-user, unchanged
-GATEWAY_RATE_LIMIT_BURST_CAPACITY = 200                             # per-user, unchanged
-```
-
-Global bucket chặn tổng lưu lượng khi flash sale làm cluster quá tải; per-user bucket chặn
-một user spam. Có thể hạ `GATEWAY_RATE_LIMIT_REPLENISH_RATE` xuống `20` trong flash-sale window
-để các user có nhiều "burst room" hơn nhưng tổng không vượt capacity. Reset sau khi flash-sale
-kết thúc bằng config rollout hoặc dynamic refresh qua Spring Cloud Config (Phase 6 của
-ROADMAP).
 
 ---
 
-## 7. Test coverage
+## 7. Automated test verification
 
-| Test class | Số test | Coverage |
-|---|---|---|
-| `RateLimitPropertiesTest` | 3 | constructor validation: `trustedProxyHops >= 0`, `burstCapacity >= requestedTokens`, defaults |
-| `GlobalRateLimitPropertiesTest` | 2 | constructor validation, defaults (2000/4000/1) |
-| `RateLimitKeyResolverTest` | 5 | `user:<sub>` cho authenticated, `ip:<remote>` cho anonymous, `AnonymousAuthenticationToken` → `ip:<remote>`, `ip:<XFF>` cho trusted-forwarded, empty key khi không có principal lẫn remote |
-| `SecurityConfigTest` | 1 | CORS expose đủ các header rate-limit cho browser client |
-| `GlobalRateLimitFilterTest` | 4 | allowed → chain filter; denied → 429 + copy headers + chain không gọi; disabled → bypass Redis; `Order = HIGHEST_PRECEDENCE` |
-| `RoutesConfigTest` | 2 | 15 routes + 1 filter mỗi route khi enabled; 15 routes + 0 filter khi disabled |
-| `GatewayRateLimitContextTest` | 2 | Bean wiring: 2 `RedisRateLimiter`, `KeyResolver`, `GlobalRateLimitFilter`; routes có đúng 1 filter |
+| Test class | Count | Covered scenarios |
+|---|:---:|---|
+| `RateLimitPropertiesTest` | 3 | Validates constructor rules: `trustedProxyHops >= 0`, `burstCapacity >= requestedTokens`, and defaults |
+| `GlobalRateLimitPropertiesTest` | 2 | Validates global limits and property defaults (2000/4000/1) |
+| `RateLimitKeyResolverTest` | 5 | Validates `user:<sub>` resolution, anonymous `ip:<remote>` fallback, `AnonymousAuthenticationToken` mapping, trusted proxy extraction, and empty key handling |
+| `SecurityConfigTest` | 1 | Ensures CORS configuration exposes rate-limit headers to browser clients |
+| `GlobalRateLimitFilterTest` | 4 | Verifies chain execution on allowed requests, 429 response with headers on rejection, bypass when disabled, and filter order |
+| `RoutesConfigTest` | 2 | Confirms filter attachment across all routes when enabled, and clean pass-through when disabled |
+| `GatewayRateLimitContextTest` | 2 | Spring context validation: verifies bean wiring for both limiters, key resolver, and global filter |
 
-Chạy:
-
+Test command:
 ```bash
-./mvn -pl gateway-service -am test
+./mvnw -pl gateway-service -am test
 ```
 
-Smoke test thật trên Redis container (đã chạy): 2 request song song khi global bucket
-`1 req/s` cho kết quả `429` (limiter chặn) + `500` (request được pass tới upstream, upstream
-DNS fail vì backend chưa chạy). Xác nhận Lua atomic chặn ngay tại tầng global.
-
 ---
 
-## 8. Edge cases & behavior đã cover
+## 8. Failure modes and mitigations
 
-- **Anonymous + không có remote address** (`requestWithoutIdentityOrRemoteAddressHasNoKey`):
-  resolver trả `Mono.empty()` → route filter `denyEmptyKey=true` trả `429` ngay. Không có
-  request nào bypass vì thiếu cả JWT lẫn IP.
-- **Trusted proxy** (`trustedForwardedRequestUsesClientIp`): khi `trustedProxyHops >= 1`,
-  dùng `XForwardedRemoteAddressResolver.maxTrustedIndex(...)` thay vì
-  `getRemoteAddress()`. Nếu set `trustedProxyHops` mà proxy không thực sự là trusted, attacker
-  có thể fake `X-Forwarded-For` để bypass → chỉ set khi đã verify chain proxy.
-- **Anonymous user chưa authenticated**: `Principal` không null nhưng là
-  `AnonymousAuthenticationToken` → `isUsableAuthentication` trả false → rơi vào IP fallback.
-  Test `anonymousAuthenticationTokenUsesRemoteIpKey` bao phủ nhánh này.
-- **Disabled cả hai tầng** (`enabled=false`): global filter bypass, route filter bypass.
-  Routes vẫn hoạt động, không có filter. Test `canDisableRateLimiterWithoutRemovingRoutes`.
-- **Bucket đầy nhưng tokens = 0**: route bucket trống → `429` ngay, không retry.
-
----
-
-## 9. Failure modes
-
-| Failure | Detection | Impact | Mitigation |
+| Failure scenario | Detection | Impact | Mitigation strategy |
 |---|---|---|---|
-| Redis down | `RedisRateLimiter.isAllowed` trả `[1, -1]` (fail-open trong Lua), request vẫn pass | gateway pass mọi request, mất admission control | Redis Sentinel / Cluster; alert khi `redisRateLimiter` lỗi; document cho ops |
-| Redis cache stale khi failover | Sentinel promote replica, một vài giây bucket stale → user có thể vượt bucket | burst nhỏ có thể pass | set `min-replicas-to-write=1` trên Sentinel; kiểm tra `connected-slaves` |
-| Lua script fail (Redis fail trả lỗi khác) | `RedisRateLimiter.lambda$isAllowed$0` log error, return allowed | tương tự Redis down | monitor log `rate-limit` keyword; circuit breaker tùy chọn |
-| `X-Forwarded-For` spoofing | attacker giả IP để bypass IP bucket | quota cao hơn bình thường | chỉ set `trustedProxyHops` khi proxy chain được verify; hoặc dùng `X-Real-IP` từ proxy đáng tin |
-| Limiter fail trên request quá lớn | rate-limit bị đầy → `429` tăng | UX khó chịu cho user | expose headers đủ cho client retry; cân nhắc Retry-After |
-| Global filter tắt (`enabled=false`) | request đến route filter thẳng, có thể vượt cluster capacity | mất flash-sale guard | monitor log `gateway.rate-limit.global.enabled` qua actuator |
-| Backend port bypass | gọi thẳng `localhost:8086` không qua gateway | limiter vô hiệu | đổi `docker-compose.yml` để backend ports chỉ internal (`expose:` thay vì `ports:`); k8s `ClusterIP` Service |
-
----
-
-## 10. Cải tiến có thể làm sau
-
-1. **Per-route limit override**: hiện tại tất cả 15 route dùng cùng
-   `RateLimitProperties`. Endpoint đắt (`/api/v1/orders`, `/api/v1/payments`) có thể
-   cần quota thấp hơn. Có thể thêm `RateLimitProperties` per-route map keyed by
-   `ServiceRoute.id`.
-2. **Atomic dual-bucket check**: global và route check tuần tự, có thể vượt cả hai
-   trong một khoảnh khắc nếu request song song. Có thể viết Lua riêng để check
-   atomic, nhưng độ phức tạp tăng. Chấp nhận được ở quy mô hiện tại.
-3. **`Retry-After` header**: thêm vào global filter khi reject, dựa trên
-   `X-RateLimit-Replenish-Rate`.
-4. **Metrics**: export `redis_rate_limiter_*` từ Spring Cloud Gateway qua
-   Micrometer. Hiện chỉ có access log.
-5. **Dynamic config**: hiện set qua env vars, phải rollout để thay đổi. Phase 6
-   (`spring-cloud-config`) sẽ hỗ trợ refresh runtime.
-6. **Anonymous token test**: thêm test cho `AnonymousAuthenticationToken` → IP fallback
-   (hiện chỉ test với `Mono.empty()` và `TestingAuthenticationToken`).
-
----
-
-## 11. Cross-references
-
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — §1 component map (Gateway filters), §5
-  data stores (Redis), §6 cross-cutting concerns (rate-limit trong table).
-- [`ROADMAP.md`](./ROADMAP.md) — §7 Phase 7 status, §8 risk register R5 (Liquibase
-  master).
-- [`SERVICE-CATALOG.md`](./SERVICE-CATALOG.md) — gateway section (sẽ cross-ref
-  rate-limit khi section được thêm).
-- [`COMMON-LIB-REFERENCE.md`](./COMMON-LIB-REFERENCE.md) — `common-spring`
-  correlation-id, i18n, exception handler.
-- [`AUTH-SERVICE-IMPLEMENTATION.md`](./AUTH-SERVICE-IMPLEMENTATION.md) — cách auth-service
-  dùng `common-keycloak` cho token, không phụ thuộc vào gateway limiter.
-- Diagram: [`docs/images/rate-limit-architecture.png`](./images/rate-limit-architecture.png)
-  — editable source ở [`docs/rate-limit-architecture.drawio`](./rate-limit-architecture.drawio).
-  Validate: `0 error(s), 0 warning(s)` (v3 swimlane layout). Mở file `.drawio`
-  trong draw.io desktop hoặc nhúng link browser-fallback
-  (`scripts/encode_drawio_url.py docs/rate-limit-architecture.drawio`) để xem
-  trực tiếp.
+| Redis connectivity failure | `RedisRateLimiter.isAllowed` returns `[1, -1]`, logging a warning | Gateway fails open, allowing traffic without rate enforcement | Deploy Redis Sentinel or Redis Cluster in production, configure alerting on connection pool failures |
+| Redis failover lag | Sentinel promotes replica; brief cache lag on token counts | Small burst of requests may exceed quota during promotion | Configure `min-replicas-to-write=1` and monitor replication lag |
+| Proxy IP spoofing | Client supplies fabricated `X-Forwarded-For` header | Client circumvents IP-based bucket restrictions | Keep `trustedProxyHops=0` unless behind a verified edge proxy that overwrites incoming forwarding headers |
+| Backend port bypass | Caller sends requests directly to port 8086, bypassing port 8080 | Gateway rate limiting is bypassed | In production, restrict container port mappings using internal Docker networks or Kubernetes `ClusterIP` services |

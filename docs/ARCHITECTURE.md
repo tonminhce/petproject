@@ -20,9 +20,9 @@
          │  Filters  • Spring Security OAuth2 Resource Server           │
          │           • Correlation-Id (X-Correlation-Id, MDC)           │
          │           • Global rate-limit (Redis, system bucket,         │
-         │             HIGHEST_PRECEDENCE — flash-sale guard)           │
+         │             HIGHEST_PRECEDENCE: flash-sale guard)           │
          │           • Per-route rate-limit (Redis, user|ip × route)    │
-         │             — see docs/RATE-LIMIT.md                         │
+         │            : see docs/RATE-LIMIT.md                         │
          │           • Circuit breaker (Resilience4j, future)           │
          │           • Logging filter (request/response)                │
          │  Health  :8080/actuator/health (liveness + readiness)        │
@@ -60,7 +60,7 @@
         └─────────────────────────────────────────┘    └──────────────┘
 ```
 
-## 2. Request flow — login
+## 2. Request flow: login
 
 > ⚠️ **Current workspace status (2026-08-25)**: auth-service implements
 > **ROPC** (`POST /api/v1/auth/login` via `KeycloakTokenClient.login(...)`),
@@ -171,7 +171,7 @@ product-service                  Kafka                search-service            
 ```
 
 This is the simplest "index on write" pattern. For high-volume catalogs, switch
-to Debezium + Kafka Connect — see [ROADMAP §8 risk R6](./ROADMAP.md).
+to Debezium + Kafka Connect: see [ROADMAP §8 risk R6](./ROADMAP.md).
 
 ## 4. Module / package layout (target state)
 
@@ -228,7 +228,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Store | Used by | Database / index | Notes |
 |-------|---------|------------------|-------|
 | Postgres 16 | every backend service | one DB per service (`authservice`, `productservice`, `orderservice`, `paymentservice`, `shippingservice`, `inventoryservice`, `favouriteservice`, `ratingservice`, `mediaservice`, `taxservice`, `promotionservice`, `notificationservice`) + `keycloak` | Created by `docker/postgres/init/create-all-databases.sql` |
-| Redis 7 | gateway (rate limit — global system bucket + per-route bucket, see [`docs/RATE-LIMIT.md`](./RATE-LIMIT.md)), auth (SSO session store), order (cart cache) | DB 0–15 logical | `spring.session.store-type=redis` (when wired); key schema `request_rate_limiter.{routeId}.{key}.tokens` |
+| Redis 7 | gateway (rate limit: global system bucket + per-route bucket, see [`docs/RATE-LIMIT.md`](./RATE-LIMIT.md)), auth (SSO session store), order (cart cache) | DB 0-15 logical | `spring.session.store-type=redis` (when wired); key schema `request_rate_limiter.{routeId}.{key}.tokens` |
 | Kafka 3.9 | order → payment/notification/search; product → search | topics above | KRaft mode (no Zookeeper), one broker is fine for dev |
 | Elasticsearch 8.15 | search-service (products, ratings), optional logs | `products`, `ratings`, `logs-*` | Single-node, security off in dev |
 | Keycloak 26 | all services (JWT issuer) | `keycloak` DB on the same Postgres | Realm `ecommerce`, clients `ecommerce-client`, `swagger-ui`, service clients `order-service`/`rating-service`/`search-service` (confidential, client_credentials only) |
@@ -247,7 +247,7 @@ shop-microservices/                       # parent aggregator (pom)
 | Correlation ID | `X-Correlation-Id` header → MDC (`MdcKey.TRACE_ID`) → response header | `common-spring/web` |
 | i18n | ResourceBundle `messages/messages*.properties`, default locale `vi` | `common-core/i18n` |
 | Validation | `jakarta.validation.constraints.*` + `@Valid` on DTOs | Spring Boot starter-validation |
-| Mapping | `ModelMapper` (`@Component` mapper class + STRICT matching + skip-null) — single pattern for all services | `common-spring/mapper` |
+| Mapping | `ModelMapper` (`@Component` mapper class + STRICT matching + skip-null): single pattern for all services | `common-spring/mapper` |
 | Auth | OAuth2 Resource Server (JWT) | `common-security` |
 | Keycloak admin | `KeycloakTokenClient` (login/refresh) + `KeycloakAdminClient` (user mgmt) | `common-keycloak` |
 | Kafka | `KafkaMessagePublisher`, `BaseKafkaConsumer`, JSON serdes | `common-kafka` |
@@ -278,17 +278,17 @@ shop-microservices/                       # parent aggregator (pom)
 :6379   redis             (host)
 :9092   kafka             (host)
 :9200   elasticsearch     (host)
-:8080   keycloak          (host — collides with gateway locally; expose keycloak on 9090 in workspace)
+:8080   keycloak          (host: collides with gateway locally; expose keycloak on 9090 in workspace)
 :9000   rustfs (S3 API)   (host)
 :9001   rustfs (console)   (host)
 ```
 
-> Note — in the workspace the gateway listens on `:8080` and Keycloak also on
+> Note: in the workspace the gateway listens on `:8080` and Keycloak also on
 > `:8080` is fine **inside Docker**, but locally you must either run Keycloak
 > on a different port or use `k3d`. The reference k3d manifest uses
 > `keycloak.ecommerce.local` so the ports do not collide.
 
-## 8. Sequence — inter-service request (synchronous)
+## 8. Sequence: inter-service request (synchronous)
 
 ```
 order-service                          product-service              inventory-service
@@ -344,10 +344,10 @@ auto-config. The `fallbackMethod` should throw `BusinessException.of(ErrorCode.S
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-Reference manifests — [k8s/backend/](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/k8s/backend),
+Reference manifests: [k8s/backend/](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/k8s/backend),
 [k8s/infra/](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/k8s/infra),
 [k8s/ingress/](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/k8s/ingress).
 
 ---
 
-See also — [`SERVICE-CATALOG.md`](./SERVICE-CATALOG.md) · [`COMMON-LIB-REFERENCE.md`](./COMMON-LIB-REFERENCE.md)
+See also: [`SERVICE-CATALOG.md`](./SERVICE-CATALOG.md) · [`COMMON-LIB-REFERENCE.md`](./COMMON-LIB-REFERENCE.md)

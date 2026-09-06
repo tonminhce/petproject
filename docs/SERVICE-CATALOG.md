@@ -6,7 +6,7 @@
 > the workspace should reproduce them 1:1, with `com.ecommerce.*` renamed to
 > `com.shop.*`.
 >
-> Convention: **M** = method · **Path** = full path served by the service —
+> Convention: **M** = method · **Path** = full path served by the service: 
 > every service maps `/api/v1/...` (the gateway forwards the full path with no
 > rewrite; see [ROADMAP §3.3](./ROADMAP.md)) · **Auth** = required JWT
 > scope/role · **Body** = request DTO · **Resp** = response envelope
@@ -37,13 +37,13 @@
 |--------|-------|------------|
 | `User` | `users` | `user_id`, `user_name` (unique), `email` (unique, NaturalId), `phone_number` (unique), `full_name`, `gender`, `image_url`, `keycloak_user_id` (unique) |
 | `Role` | `roles` | `role_id`, `role_name` (enum `USER`/`ADMIN`) |
-| `RoleName` (enum) | — | `USER`, `ADMIN` |
+| `RoleName` (enum) |: | `USER`, `ADMIN` |
 | Join table | `user_role` | `user_id`, `role_id` |
 
 Source: [User.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/entity/User.java),
 [Role.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/auth-service/src/main/java/com/ecommerce/authservice/entity/Role.java).
 
-### 1.2 Endpoints — `/api/v1/auth` (AuthController) ✅ implemented
+### 1.2 Endpoints: `/api/v1/auth` (AuthController) ✅ implemented
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
@@ -53,31 +53,31 @@ Source: [User.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob
 | `POST` | `/api/v1/auth/logout` | public | `RefreshTokenRequest { refreshToken }` | `ApiResponse<Void>` | Revoke refresh token |
 
 **Deferred (reference SSO)**: `GET /api/v1/auth/login` (302), `GET /callback`,
-`GET /session` — not implemented; workspace uses ROPC instead.
+`GET /session`: not implemented; workspace uses ROPC instead.
 
 Source: [AuthController.java](../auth-service/src/main/java/com/shop/authservice/controller/AuthController.java).
 
-### 1.3 Endpoints — `/api/v1/users` (UserController) ✅ implemented
+### 1.3 Endpoints: `/api/v1/users` (UserController) ✅ implemented
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/v1/users/me` | authenticated | — | `ApiResponse<UserResponse>` | Current user from JWT subject |
+| `GET` | `/api/v1/users/me` | authenticated |: | `ApiResponse<UserResponse>` | Current user from JWT subject |
 | `PUT` | `/api/v1/users/me` | authenticated | `UpdateUserRequest { fullName?, email?, gender?, phone?, avatar? }` | `ApiResponse<UserResponse>` | |
 | `PUT` | `/api/v1/users/me/password` | authenticated | `ChangePasswordRequest { oldPassword, newPassword, confirmPassword }` | `ApiResponse<Void>` | Verifies old password via Keycloak before reset |
-| `DELETE` | `/api/v1/users/me` | authenticated | — | `ApiResponse<Void>` | Soft delete current user |
-| `GET` | `/api/v1/users/{id}` | ADMIN | — | `ApiResponse<UserResponse>` | Lookup by id |
-| `GET` | `/api/v1/users?page=&size=&sortBy=&sortOrder=` | ADMIN | — | `ApiResponse<Page<UserResponse>>` | Paginated list |
-| `PUT` | `/api/v1/users/{id}/restore` | ADMIN | — | `ApiResponse<Void>` | Restore soft-deleted user |
+| `DELETE` | `/api/v1/users/me` | authenticated |: | `ApiResponse<Void>` | Soft delete current user |
+| `GET` | `/api/v1/users/{id}` | ADMIN |: | `ApiResponse<UserResponse>` | Lookup by id |
+| `GET` | `/api/v1/users?page=&size=&sortBy=&sortOrder=` | ADMIN |: | `ApiResponse<Page<UserResponse>>` | Paginated list |
+| `PUT` | `/api/v1/users/{id}/restore` | ADMIN |: | `ApiResponse<Void>` | Restore soft-deleted user |
 
 Source: [UserController.java](../auth-service/src/main/java/com/shop/authservice/controller/UserController.java).
 
-### 1.4 Endpoints — `/api/v1/roles` (RoleController) ✅ implemented (ADMIN only)
+### 1.4 Endpoints: `/api/v1/roles` (RoleController) ✅ implemented (ADMIN only)
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
 | `POST` | `/api/v1/roles/users/{userId}/assign` | ADMIN | `RoleRequest { roleName }` | `ApiResponse<Boolean>` | `true` = assigned, `false` = already had |
 | `POST` | `/api/v1/roles/users/{userId}/revoke` | ADMIN | `RoleRequest { roleName }` | `ApiResponse<Boolean>` | `true` = revoked, `false` = didn't have |
-| `GET` | `/api/v1/roles/users/{userId}` | ADMIN | — | `ApiResponse<List<String>>` | User's role names |
+| `GET` | `/api/v1/roles/users/{userId}` | ADMIN |: | `ApiResponse<List<String>>` | User's role names |
 
 Source: [RoleController.java](../auth-service/src/main/java/com/shop/authservice/controller/RoleController.java).
 
@@ -134,7 +134,7 @@ CREATE INDEX idx_users_keycloak ON users(keycloak_user_id);
 
 ## 2. product-service `:8086`
 
-> **Workspace divergence** — workspace adds 3rd domain entity `Brand` (e-commerce brands are first-class catalog data) + Redis cache + Transactional Outbox pattern for Kafka. Endpoint surface is broader than reference. See spec: [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./superpowers/specs/2026-08-26-product-service-design.md).
+> **Workspace divergence**: workspace adds 3rd domain entity `Brand` (e-commerce brands are first-class catalog data) + Redis cache + Transactional Outbox pattern for Kafka. Endpoint surface is broader than reference. See spec: [`docs/superpowers/specs/2026-08-26-product-service-design.md`](./superpowers/specs/2026-08-26-product-service-design.md).
 
 ### 2.1 Domain model
 
@@ -151,48 +151,48 @@ Source: [`product-service/entity/Product.java`](../product-service/src/main/java
 [`OutboxEvent.java`](../product-service/src/main/java/com/shop/productservice/entity/OutboxEvent.java).
 All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-core) + `@SQLRestriction("deleted = false")` for auto-filtered queries.
 
-### 2.2 Endpoints — `/api/v1/products`
+### 2.2 Endpoints: `/api/v1/products`
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/v1/products` | public (gateway: USER/ADMIN) | — `?categoryId=&brandId=&status=&page=&size=` | `ApiResponse<PageResponse<ProductSummaryResponse>>` | Filter (categoryId, brandId, status) + paging; returns summary (no relations) |
-| `GET` | `/api/v1/products/{id}` | public | — | `ApiResponse<ProductDetailResponse>` | Detail with `categoryTitle`/`brandName` denormalized; Redis cached `@Cacheable("product")` |
-| `GET` | `/api/v1/products/slug/{slug}` | public | — | `ApiResponse<ProductDetailResponse>` | Slug lookup; Redis cached `@Cacheable("productBySlug")` |
+| `GET` | `/api/v1/products` | public (gateway: USER/ADMIN) |: `?categoryId=&brandId=&status=&page=&size=` | `ApiResponse<PageResponse<ProductSummaryResponse>>` | Filter (categoryId, brandId, status) + paging; returns summary (no relations) |
+| `GET` | `/api/v1/products/{id}` | public |: | `ApiResponse<ProductDetailResponse>` | Detail with `categoryTitle`/`brandName` denormalized; Redis cached `@Cacheable("product")` |
+| `GET` | `/api/v1/products/slug/{slug}` | public |: | `ApiResponse<ProductDetailResponse>` | Slug lookup; Redis cached `@Cacheable("productBySlug")` |
 | `POST` | `/api/v1/products` | ADMIN | `ProductCreateRequest { title, slug, description?, sku, priceUnit, quantity, status, imageUrl?, weight?, dimensions?, categoryId?, brandId? }` | `ApiResponse<ProductDetailResponse>` | Persists + emits `ProductCreated` outbox event in same TX |
 | `PUT` | `/api/v1/products/{id}` | ADMIN | `ProductUpdateRequest { ... all optional ... }` | `ApiResponse<ProductDetailResponse>` | Partial update; cache put+evict; emits `ProductUpdated` |
-| `DELETE` | `/api/v1/products/{id}` | ADMIN | — | `ApiResponse<Void>` | Soft-delete; cache evict all; emits `ProductDeleted` |
+| `DELETE` | `/api/v1/products/{id}` | ADMIN |: | `ApiResponse<Void>` | Soft-delete; cache evict all; emits `ProductDeleted` |
 
-### 2.3 Endpoints — `/api/v1/categories`
+### 2.3 Endpoints: `/api/v1/categories`
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/v1/categories` | public | — | `ApiResponse<List<CategoryResponse>>` | Flat list ordered by title |
-| `GET` | `/api/v1/categories/tree` | public | — | `ApiResponse<List<CategoryTreeResponse>>` | Self-referencing tree; guards orphan children (parent soft-deleted) |
-| `GET` | `/api/v1/categories/{id}` | public | — | `ApiResponse<CategoryResponse>` | Single |
+| `GET` | `/api/v1/categories` | public |: | `ApiResponse<List<CategoryResponse>>` | Flat list ordered by title |
+| `GET` | `/api/v1/categories/tree` | public |: | `ApiResponse<List<CategoryTreeResponse>>` | Self-referencing tree; guards orphan children (parent soft-deleted) |
+| `GET` | `/api/v1/categories/{id}` | public |: | `ApiResponse<CategoryResponse>` | Single |
 | `POST` | `/api/v1/categories` | ADMIN | `CategoryCreateRequest { title, slug, imageUrl?, parentId? }` | `ApiResponse<CategoryResponse>` | |
 | `PUT` | `/api/v1/categories/{id}` | ADMIN | `CategoryUpdateRequest { ... all optional ... }` | `ApiResponse<CategoryResponse>` | |
-| `DELETE` | `/api/v1/categories/{id}` | ADMIN | — | `ApiResponse<Void>` | Soft-delete; ON DELETE RESTRICT for products FK → currently 500 (open item) |
+| `DELETE` | `/api/v1/categories/{id}` | ADMIN |: | `ApiResponse<Void>` | Soft-delete; ON DELETE RESTRICT for products FK → currently 500 (open item) |
 
-### 2.4 Endpoints — `/api/v1/brands` (workspace addition)
+### 2.4 Endpoints: `/api/v1/brands` (workspace addition)
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/v1/brands` | public | — `?page=&size=` | `ApiResponse<PageResponse<BrandResponse>>` | Paginated |
-| `GET` | `/api/v1/brands/{id}` | public | — | `ApiResponse<BrandResponse>` | |
+| `GET` | `/api/v1/brands` | public |: `?page=&size=` | `ApiResponse<PageResponse<BrandResponse>>` | Paginated |
+| `GET` | `/api/v1/brands/{id}` | public |: | `ApiResponse<BrandResponse>` | |
 | `POST` | `/api/v1/brands` | ADMIN | `BrandCreateRequest { name, slug, logoUrl?, description? }` | `ApiResponse<BrandResponse>` | |
 | `PUT` | `/api/v1/brands/{id}` | ADMIN | `BrandUpdateRequest { ... all optional ... }` | `ApiResponse<BrandResponse>` | |
-| `DELETE` | `/api/v1/brands/{id}` | ADMIN | — | `ApiResponse<Void>` | Soft-delete |
+| `DELETE` | `/api/v1/brands/{id}` | ADMIN |: | `ApiResponse<Void>` | Soft-delete |
 
 ### 2.5 Kafka events
 
 | Topic | Event | Payload |
 |-------|-------|---------|
-| `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }` — sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed |
-| `shop.inventory.events.v1` | `inventory.reserved.v1` / `inventory.committed.v1` / `inventory.released.v1` / `inventory.adjusted.v1` / `inventory.deleted.v1` | `{ eventId, eventType, occurredAt, productId, … }` — via Transactional Outbox (`InventoryOutboxRelay`, break-on-error to preserve per-aggregate ordering). Naming note: inventory uses CloudEvents-style dot.case event types (like `notification.send.v1`), deliberately NOT product's PascalCase — consumers handle exactly one style. Partition key = productId |
-| `shop.category.lifecycle.v1` | `CategoryCreated` / `CategoryUpdated` / `CategoryDeleted` | `{ eventId, eventType, occurredAt, categoryId, slug }` — via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
-| `shop.brand.lifecycle.v1` | `BrandCreated` / `BrandUpdated` / `BrandDeleted` | `{ eventId, eventType, occurredAt, brandId, slug }` — via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
+| `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }`: sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed |
+| `shop.inventory.events.v1` | `inventory.reserved.v1` / `inventory.committed.v1` / `inventory.released.v1` / `inventory.adjusted.v1` / `inventory.deleted.v1` | `{ eventId, eventType, occurredAt, productId, … }`: via Transactional Outbox (`InventoryOutboxRelay`, break-on-error to preserve per-aggregate ordering). Naming note: inventory uses CloudEvents-style dot.case event types (like `notification.send.v1`), deliberately NOT product's PascalCase: consumers handle exactly one style. Partition key = productId |
+| `shop.category.lifecycle.v1` | `CategoryCreated` / `CategoryUpdated` / `CategoryDeleted` | `{ eventId, eventType, occurredAt, categoryId, slug }`: via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
+| `shop.brand.lifecycle.v1` | `BrandCreated` / `BrandUpdated` / `BrandDeleted` | `{ eventId, eventType, occurredAt, brandId, slug }`: via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
 
-> **Reference uses different topic** (`product.indexed.v1`) — workspace follows the outbox + Kafka envelope pattern from common-kafka. Search-service consumers are decoupled from this event format.
+> **Reference uses different topic** (`product.indexed.v1`): workspace follows the outbox + Kafka envelope pattern from common-kafka. Search-service consumers are decoupled from this event format.
 
 ### 2.6 Cache
 
@@ -203,7 +203,7 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 | `category` | `category::{id}` | 30 min | `@Cacheable` on `CategoryServiceImpl.findById`; `@CachePut` on `update`; `@CacheEvict(allEntries=true)` on `delete` |
 | `brand` | `brand::{id}` | 30 min | `@Cacheable` on `BrandServiceImpl.findById`; `@CachePut` on `update`; `@CacheEvict(allEntries=true)` on `delete` |
 
-> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName` — cache stale up to 10 min if those are renamed. The `shop.category.lifecycle.v1` / `shop.brand.lifecycle.v1` outbox events now give downstream invalidators the signal; in-service product-cache eviction is deliberately not wired (avoids taxonomy → product coupling inside one service).
+> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName`: cache stale up to 10 min if those are renamed. The `shop.category.lifecycle.v1` / `shop.brand.lifecycle.v1` outbox events now give downstream invalidators the signal; in-service product-cache eviction is deliberately not wired (avoids taxonomy → product coupling inside one service).
 
 ### 2.7 Service dependencies
 
@@ -228,34 +228,34 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 Source: [Order.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/entity/Order.java),
 [Cart.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/entity/Cart.java).
 
-### 3.2 Endpoints — `/api/v1/orders` (workspace path; reference uses `/api/orders`)
+### 3.2 Endpoints: `/api/v1/orders` (workspace path; reference uses `/api/orders`)
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/v1/orders` | USER/ADMIN | — | `List<OrderDto>` | All orders (filter on userId in body in real impl) |
-| `GET` | `/api/v1/orders/all?page=&size=&sortBy=&sortOrder=` | USER/ADMIN | — | `Page<OrderDto>` | Paginated |
-| `GET` | `/api/v1/orders/{orderId}` | USER/ADMIN | — | `OrderDto` | |
+| `GET` | `/api/v1/orders` | USER/ADMIN |: | `List<OrderDto>` | All orders (filter on userId in body in real impl) |
+| `GET` | `/api/v1/orders/all?page=&size=&sortBy=&sortOrder=` | USER/ADMIN |: | `Page<OrderDto>` | Paginated |
+| `GET` | `/api/v1/orders/{orderId}` | USER/ADMIN |: | `OrderDto` | |
 | `POST` | `/api/v1/orders` | USER | `OrderDto` | `OrderDto` | Reserve stock + publish `OrderCreated` |
 | `PUT` | `/api/v1/orders` | ADMIN | `OrderDto` | `OrderDto` | Force update |
 | `PUT` | `/api/v1/orders/{orderId}` | USER | `OrderDto` | `OrderDto` | Update with id |
-| `DELETE` | `/api/v1/orders/{orderId}` | USER/ADMIN | — | `Boolean` | |
-| `GET` | `/api/v1/orders/existOrderId?orderId=` | any | — | `Boolean` | Existence check |
+| `DELETE` | `/api/v1/orders/{orderId}` | USER/ADMIN |: | `Boolean` | |
+| `GET` | `/api/v1/orders/existOrderId?orderId=` | any |: | `Boolean` | Existence check |
 
 Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/controller/OrderController.java).
 
-### 3.3 Endpoints — `/api/v1/carts` (workspace path; reference uses `/api/carts`)
+### 3.3 Endpoints: `/api/v1/carts` (workspace path; reference uses `/api/carts`)
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/carts` | USER | — | `List<CartDto>` |
-| `GET` | `/api/v1/carts/{cartId}` | USER | — | `CartDto` |
+| `GET` | `/api/v1/carts` | USER |: | `List<CartDto>` |
+| `GET` | `/api/v1/carts/{cartId}` | USER |: | `CartDto` |
 | `POST` | `/api/v1/carts` | USER | `CartDto` | `CartDto` |
 | `PUT` | `/api/v1/carts` | USER | `CartDto` | `CartDto` |
-| `DELETE` | `/api/v1/carts/{cartId}` | USER | — | `Boolean` |
+| `DELETE` | `/api/v1/carts/{cartId}` | USER |: | `Boolean` |
 
 ### 3.4 Kafka events
 
-> **Workspace divergence** — the workspace order-service publishes topic
+> **Workspace divergence**: the workspace order-service publishes topic
 > `shop.order.lifecycle.v1` (Transactional Outbox + `OrderOutboxRelay`, Kafka key =
 > orderId) with three dot-case event types: `order.created.v1` (orderId, userId, status,
 > items[], subtotal, taxAmount, discountAmount, total, couponCode, createdAt),
@@ -291,16 +291,16 @@ Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microse
 | `Payment` | `payments` | `payment_id`, `order_id` (FK), `user_id`, `amount` (decimal), `currency`, `status` (PENDING/SUCCESS/FAILED/REFUNDED), `payment_method` (CARD/PAYPAL/STRIPE), `transaction_id`, `created_at`, `paid_at` |
 | `Refund` | `refunds` | `refund_id`, `payment_id`, `amount`, `reason`, `status` |
 
-### 4.2 Endpoints — `/api/v1/payments`
+### 4.2 Endpoints: `/api/v1/payments`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
 | `POST` | `/api/v1/payments` | USER | `PaymentRequest { orderId, paymentMethod, returnUrl? }` | `ApiResponse<PaymentResponse>` |
-| `GET` | `/api/v1/payments/{paymentId}` | USER/ADMIN | — | `ApiResponse<PaymentDto>` |
-| `GET` | `/api/v1/payments/order/{orderId}` | USER/ADMIN | — | `ApiResponse<List<PaymentDto>>` |
+| `GET` | `/api/v1/payments/{paymentId}` | USER/ADMIN |: | `ApiResponse<PaymentDto>` |
+| `GET` | `/api/v1/payments/order/{orderId}` | USER/ADMIN |: | `ApiResponse<List<PaymentDto>>` |
 | `POST` | `/api/v1/payments/{paymentId}/refund` | ADMIN | `RefundRequest { amount, reason }` | `ApiResponse<RefundDto>` |
 | `POST` | `/api/v1/payments/webhook/stripe` | public (signature verify) | Stripe event | `ApiResponse<Void>` |
-| `GET` | `/api/v1/payments/admin/all?page=&size=` | ADMIN | — | `ApiResponse<Page<PaymentDto>>` |
+| `GET` | `/api/v1/payments/admin/all?page=&size=` | ADMIN |: | `ApiResponse<Page<PaymentDto>>` |
 
 ### 4.3 Kafka events
 
@@ -327,20 +327,20 @@ Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microse
 |--------|-------|------------|
 | `Inventory` | `inventory` | `inventory_id`, `product_id` (unique), `available_quantity`, `reserved_quantity`, `last_updated` |
 
-Note: ref uses `model/` not `entity/` — workspace should keep `entity/` for consistency.
+Note: ref uses `model/` not `entity/`: workspace should keep `entity/` for consistency.
 
-### 5.2 Endpoints — `/api/v1/inventory`
+### 5.2 Endpoints: `/api/v1/inventory`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/inventory` | USER/ADMIN | — `?page=&size=` (size capped at 200, `PageableConstant.MAX_PAGE_SIZE`) | `ApiResponse<PageResponse<InventoryResponse>>` |
-| `GET` | `/api/v1/inventory/{productId}` | USER/ADMIN | — | `InventoryDto` |
+| `GET` | `/api/v1/inventory` | USER/ADMIN |: `?page=&size=` (size capped at 200, `PageableConstant.MAX_PAGE_SIZE`) | `ApiResponse<PageResponse<InventoryResponse>>` |
+| `GET` | `/api/v1/inventory/{productId}` | USER/ADMIN |: | `InventoryDto` |
 | `POST` | `/api/v1/inventory` | ADMIN | `InventoryDto { productId, availableQuantity }` | `InventoryDto` |
 | `PUT` | `/api/v1/inventory/{productId}` | ADMIN | `InventoryDto` | `InventoryDto` |
-| `POST` | `/api/v1/inventory/{productId}/reserve` | internal (order-service) — requires `SERVICE` or `ADMIN` realm role | `ReserveRequest { quantity }` | `ReserveResponse { reservationId, expiresAt }` |
-| `POST` | `/api/v1/inventory/reservations/{reservationId}/commit` | internal | — | `Void` |
-| `POST` | `/api/v1/inventory/reservations/{reservationId}/release` | internal | — | `Void` |
-| `DELETE` | `/api/v1/inventory/{productId}` | ADMIN | — | `ApiResponse<Void>` (409 `INV-3009` when active reservations exist) |
+| `POST` | `/api/v1/inventory/{productId}/reserve` | internal (order-service): requires `SERVICE` or `ADMIN` realm role | `ReserveRequest { quantity }` | `ReserveResponse { reservationId, expiresAt }` |
+| `POST` | `/api/v1/inventory/reservations/{reservationId}/commit` | internal |: | `Void` |
+| `POST` | `/api/v1/inventory/reservations/{reservationId}/release` | internal |: | `Void` |
+| `DELETE` | `/api/v1/inventory/{productId}` | ADMIN |: | `ApiResponse<Void>` (409 `INV-3009` when active reservations exist) |
 
 ---
 
@@ -352,17 +352,17 @@ Note: ref uses `model/` not `entity/` — workspace should keep `entity/` for co
 |--------|-------|------------|
 | `Shipping` | `shippings` | `shipping_id`, `order_id`, `user_id`, `address`, `city`, `country`, `zip_code`, `phone`, `carrier` (DHL/FEDEX/…), `tracking_number`, `status` (PENDING/SHIPPED/IN_TRANSIT/DELIVERED), `estimated_delivery` |
 
-### 6.2 Endpoints — `/api/v1/shippings`
+### 6.2 Endpoints: `/api/v1/shippings`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/shippings` | USER/ADMIN | — | `List<ShippingDto>` |
-| `GET` | `/api/v1/shippings/{shippingId}` | USER/ADMIN | — | `ShippingDto` |
-| `GET` | `/api/v1/shippings/order/{orderId}` | USER/ADMIN | — | `ShippingDto` |
+| `GET` | `/api/v1/shippings` | USER/ADMIN |: | `List<ShippingDto>` |
+| `GET` | `/api/v1/shippings/{shippingId}` | USER/ADMIN |: | `ShippingDto` |
+| `GET` | `/api/v1/shippings/order/{orderId}` | USER/ADMIN |: | `ShippingDto` |
 | `POST` | `/api/v1/shippings` | USER | `ShippingDto` | `ShippingDto` |
 | `PUT` | `/api/v1/shippings/{shippingId}` | ADMIN | `ShippingDto` | `ShippingDto` |
-| `POST` | `/api/v1/shippings/{shippingId}/track` | USER/ADMIN | — | `TrackingDto { status, lastEvent, history[] }` |
-| `DELETE` | `/api/v1/shippings/{shippingId}` | ADMIN | — | `Boolean` |
+| `POST` | `/api/v1/shippings/{shippingId}/track` | USER/ADMIN |: | `TrackingDto { status, lastEvent, history[] }` |
+| `DELETE` | `/api/v1/shippings/{shippingId}` | ADMIN |: | `Boolean` |
 
 ---
 
@@ -374,15 +374,15 @@ Note: ref uses `model/` not `entity/` — workspace should keep `entity/` for co
 |--------|-------|------------|
 | `Favourite` | `favourites` | `favourite_id`, `user_id`, `product_id`, `created_at` |
 
-### 7.2 Endpoints — `/api/v1/favourites`
+### 7.2 Endpoints: `/api/v1/favourites`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/favourites` | USER | — `?page=&size=` (size capped at 200, `PageableConstant.MAX_PAGE_SIZE`) | `ApiResponse<PageResponse<FavouriteResponse>>` (current user's favourites, newest first) |
-| `GET` | `/api/v1/favourites/{favouriteId}` | USER | — | `FavouriteDto` |
+| `GET` | `/api/v1/favourites` | USER |: `?page=&size=` (size capped at 200, `PageableConstant.MAX_PAGE_SIZE`) | `ApiResponse<PageResponse<FavouriteResponse>>` (current user's favourites, newest first) |
+| `GET` | `/api/v1/favourites/{favouriteId}` | USER |: | `FavouriteDto` |
 | `POST` | `/api/v1/favourites` | USER | `FavouriteCreateRequest { productId }` | `FavouriteDto` |
-| `DELETE` | `/api/v1/favourites/{favouriteId}` | USER | — | `ApiResponse<Void>` (soft-delete) |
-| `DELETE` | `/api/v1/favourites/by-product/{productId}` | USER | — | `ApiResponse<Void>` (soft-delete) |
+| `DELETE` | `/api/v1/favourites/{favouriteId}` | USER |: | `ApiResponse<Void>` (soft-delete) |
+| `DELETE` | `/api/v1/favourites/by-product/{productId}` | USER |: | `ApiResponse<Void>` (soft-delete) |
 
 Source: [favourite-service tree](https://github.com/hoangtien2k3/ecommerce-microservices/tree/main/favourite-service/src/main/java/com/ecommerce/favouriteservice).
 
@@ -390,32 +390,32 @@ Source: [favourite-service tree](https://github.com/hoangtien2k3/ecommerce-micro
 
 ## 8. rating-service `:8089`
 
-Split base paths — storefront is for end users, backoffice is for admins.
+Split base paths: storefront is for end users, backoffice is for admins.
 
 ### 8.1 Domain model
 
 | Entity | Table | Key fields |
 |--------|-------|------------|
-| `Rating` | `ratings` | `rating_id`, `user_id`, `product_id`, `score` (1–5), `comment`, `created_at`, `status` (PENDING/APPROVED/REJECTED) |
+| `Rating` | `ratings` | `rating_id`, `user_id`, `product_id`, `score` (1-5), `comment`, `created_at`, `status` (PENDING/APPROVED/REJECTED) |
 
-### 8.2 Endpoints — `/api/v1/storefront/ratings`
+### 8.2 Endpoints: `/api/v1/storefront/ratings`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/storefront/ratings/product/{productId}?page=&size=` | USER | — | `Page<RatingDto>` |
-| `GET` | `/api/v1/storefront/ratings/me` | USER | — | `List<RatingDto>` |
+| `GET` | `/api/v1/storefront/ratings/product/{productId}?page=&size=` | USER |: | `Page<RatingDto>` |
+| `GET` | `/api/v1/storefront/ratings/me` | USER |: | `List<RatingDto>` |
 | `POST` | `/api/v1/storefront/ratings` | USER | `RatingCreateRequest { productId, score, comment }` | `RatingDto` |
 | `PUT` | `/api/v1/storefront/ratings/{ratingId}` | USER (owner) | `RatingUpdateRequest { score?, comment? }` | `RatingDto` |
-| `DELETE` | `/api/v1/storefront/ratings/{ratingId}` | USER (owner) | — | `Boolean` |
+| `DELETE` | `/api/v1/storefront/ratings/{ratingId}` | USER (owner) |: | `Boolean` |
 
-### 8.3 Endpoints — `/api/v1/backoffice/ratings`
+### 8.3 Endpoints: `/api/v1/backoffice/ratings`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/backoffice/ratings?status=&page=&size=` | ADMIN | — | `Page<RatingDto>` |
-| `POST` | `/api/v1/backoffice/ratings/{ratingId}/approve` | ADMIN | — | `RatingDto` |
+| `GET` | `/api/v1/backoffice/ratings?status=&page=&size=` | ADMIN |: | `Page<RatingDto>` |
+| `POST` | `/api/v1/backoffice/ratings/{ratingId}/approve` | ADMIN |: | `RatingDto` |
 | `POST` | `/api/v1/backoffice/ratings/{ratingId}/reject` | ADMIN | `RejectRequest { reason }` | `RatingDto` |
-| `DELETE` | `/api/v1/backoffice/ratings/{ratingId}` | ADMIN | — | `Boolean` |
+| `DELETE` | `/api/v1/backoffice/ratings/{ratingId}` | ADMIN |: | `Boolean` |
 
 ---
 
@@ -427,20 +427,20 @@ Split base paths — storefront is for end users, backoffice is for admins.
 |--------|-------|------------|
 | `Media` | `medias` | `media_id`, `object_key` (S3 key in RustFS), `content_type`, `size_bytes`, `uploaded_by`, `created_at` |
 
-### 9.2 Endpoints — `/api/v1/medias`
+### 9.2 Endpoints: `/api/v1/medias`
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
 | `POST` | `/api/v1/medias/upload` | USER/ADMIN | `multipart/form-data` file | `MediaDto { mediaId, objectKey, presignedUrl }` | Streams to RustFS via `common-storage` |
-| `POST` | `/api/v1/medias/upload/presigned` | USER/ADMIN | `PresignRequest { filename, contentType }` | `PresignResponse { uploadUrl, objectKey }` | Returns presigned PUT URL — frontend uploads directly |
-| `GET` | `/api/v1/medias/{mediaId}` | USER/ADMIN | — | `302` → presigned GET URL (TTL 5 min) | |
-| `GET` | `/api/v1/medias/{mediaId}/metadata` | USER/ADMIN | — | `MediaDto` | |
-| `DELETE` | `/api/v1/medias/{mediaId}` | ADMIN | — | `Boolean` | Deletes from RustFS + DB |
+| `POST` | `/api/v1/medias/upload/presigned` | USER/ADMIN | `PresignRequest { filename, contentType }` | `PresignResponse { uploadUrl, objectKey }` | Returns presigned PUT URL: frontend uploads directly |
+| `GET` | `/api/v1/medias/{mediaId}` | USER/ADMIN |: | `302` → presigned GET URL (TTL 5 min) | |
+| `GET` | `/api/v1/medias/{mediaId}/metadata` | USER/ADMIN |: | `MediaDto` | |
+| `DELETE` | `/api/v1/medias/{mediaId}` | ADMIN |: | `Boolean` | Deletes from RustFS + DB |
 
 ### 9.3 Storage stack
 
-- `common-storage/ObjectStorageService` — interface
-- `S3ObjectStorageService` — `software.amazon.awssdk:s3:2.31.x` impl
+- `common-storage/ObjectStorageService`: interface
+- `S3ObjectStorageService`: `software.amazon.awssdk:s3:2.31.x` impl
 - Endpoint: `http://rustfs:9000` (dev) / `https://s3.amazonaws.com` (prod)
 
 ---
@@ -454,26 +454,26 @@ Split base paths — storefront is for end users, backoffice is for admins.
 | `TaxClass` | `tax_classes` | `tax_class_id`, `name`, `description` |
 | `TaxRate` | `tax_rates` | `tax_rate_id`, `tax_class_id` (FK), `country`, `state`, `postal_code`, `rate` (decimal), `priority` |
 
-### 10.2 Endpoints — `/api/v1/backoffice/tax-classes`
+### 10.2 Endpoints: `/api/v1/backoffice/tax-classes`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/backoffice/tax-classes` | ADMIN | — | `List<TaxClassDto>` |
-| `GET` | `/api/v1/backoffice/tax-classes/{id}` | ADMIN | — | `TaxClassDto` |
+| `GET` | `/api/v1/backoffice/tax-classes` | ADMIN |: | `List<TaxClassDto>` |
+| `GET` | `/api/v1/backoffice/tax-classes/{id}` | ADMIN |: | `TaxClassDto` |
 | `POST` | `/api/v1/backoffice/tax-classes` | ADMIN | `TaxClassDto` | `TaxClassDto` |
 | `PUT` | `/api/v1/backoffice/tax-classes/{id}` | ADMIN | `TaxClassDto` | `TaxClassDto` |
-| `DELETE` | `/api/v1/backoffice/tax-classes/{id}` | ADMIN | — | `Boolean` |
+| `DELETE` | `/api/v1/backoffice/tax-classes/{id}` | ADMIN |: | `Boolean` |
 
-### 10.3 Endpoints — `/api/v1/backoffice/tax-rates`
+### 10.3 Endpoints: `/api/v1/backoffice/tax-rates`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/backoffice/tax-rates` | ADMIN | — | `List<TaxRateDto>` |
-| `GET` | `/api/v1/backoffice/tax-rates/{id}` | ADMIN | — | `TaxRateDto` |
+| `GET` | `/api/v1/backoffice/tax-rates` | ADMIN |: | `List<TaxRateDto>` |
+| `GET` | `/api/v1/backoffice/tax-rates/{id}` | ADMIN |: | `TaxRateDto` |
 | `POST` | `/api/v1/backoffice/tax-rates/calculate` | internal (order-service) | `CalculateRequest { taxClassId, country, postalCode, amount }` | `CalculateResponse { taxAmount, appliedRate }` |
 | `POST` | `/api/v1/backoffice/tax-rates` | ADMIN | `TaxRateDto` | `TaxRateDto` |
 | `PUT` | `/api/v1/backoffice/tax-rates/{id}` | ADMIN | `TaxRateDto` | `TaxRateDto` |
-| `DELETE` | `/api/v1/backoffice/tax-rates/{id}` | ADMIN | — | `Boolean` |
+| `DELETE` | `/api/v1/backoffice/tax-rates/{id}` | ADMIN |: | `Boolean` |
 
 ---
 
@@ -486,36 +486,36 @@ Split base paths — storefront is for end users, backoffice is for admins.
 | `Promotion` | `promotions` | `promotion_id`, `code` (unique), `name`, `type` (PERCENTAGE/FIXED_AMOUNT), `value` (decimal), `min_order_amount`, `max_discount_amount`, `start_date`, `end_date`, `usage_limit`, `usage_count`, `status` (ACTIVE/INACTIVE/EXPIRED) |
 | `PromotionUsage` | `promotion_usage` | `usage_id`, `promotion_id` (FK), `user_id`, `order_id`, `used_at` |
 
-### 11.2 Endpoints — `/api/v1/backoffice/promotions`
+### 11.2 Endpoints: `/api/v1/backoffice/promotions`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/backoffice/promotions` | ADMIN | — | `List<PromotionDto>` |
-| `GET` | `/api/v1/backoffice/promotions/{id}` | ADMIN | — | `PromotionDto` |
-| `GET` | `/api/v1/backoffice/promotions/by-code/{code}` | USER | — | `PromotionDto` |
+| `GET` | `/api/v1/backoffice/promotions` | ADMIN |: | `List<PromotionDto>` |
+| `GET` | `/api/v1/backoffice/promotions/{id}` | ADMIN |: | `PromotionDto` |
+| `GET` | `/api/v1/backoffice/promotions/by-code/{code}` | USER |: | `PromotionDto` |
 | `POST` | `/api/v1/backoffice/promotions` | ADMIN | `PromotionDto` | `PromotionDto` |
 | `PUT` | `/api/v1/backoffice/promotions/{id}` | ADMIN | `PromotionDto` | `PromotionDto` |
-| `DELETE` | `/api/v1/backoffice/promotions/{id}` | ADMIN | — | `Boolean` |
+| `DELETE` | `/api/v1/backoffice/promotions/{id}` | ADMIN |: | `Boolean` |
 | `POST` | `/api/v1/backoffice/promotions/apply` | internal (order-service) | `ApplyRequest { code, orderAmount, userId }` | `ApplyResponse { discountAmount, finalAmount }` |
 
 ---
 
 ## 12. search-service `:8094`
 
-### 12.1 Domain (no SQL — ES only)
+### 12.1 Domain (no SQL: ES only)
 
 | Document | ES index | Fields |
 |----------|---------|--------|
 | `ProductDoc` | `products` | `productId (keyword)`, `title (text + keyword)`, `description (text)`, `category (keyword)`, `price (double)`, `imageUrl (keyword)`, `score (float, BM25)`, `createdAt (date)` |
 | `RatingDoc` | `ratings` | `ratingId`, `productId`, `userId`, `score`, `comment`, `createdAt`, `status` |
 
-### 12.2 Endpoints — `/api/v1/storefront/search`
+### 12.2 Endpoints: `/api/v1/storefront/search`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/storefront/search/products?q=&page=&size=&category=` | USER/ADMIN | — | `SearchResponse<ProductDoc> { total, hits[] }` |
-| `GET` | `/api/v1/storefront/search/products/suggest?prefix=` | USER | — | `List<String>` (autocomplete) |
-| `GET` | `/api/v1/storefront/search/ratings/product/{productId}` | USER | — | `List<RatingDoc>` |
+| `GET` | `/api/v1/storefront/search/products?q=&page=&size=&category=` | USER/ADMIN |: | `SearchResponse<ProductDoc> { total, hits[] }` |
+| `GET` | `/api/v1/storefront/search/products/suggest?prefix=` | USER |: | `List<String>` (autocomplete) |
+| `GET` | `/api/v1/storefront/search/ratings/product/{productId}` | USER |: | `List<RatingDoc>` |
 
 ### 12.3 Kafka consumers
 
@@ -540,21 +540,21 @@ Split base paths — storefront is for end users, backoffice is for admins.
 | `Notification` | `notifications` | `notification_id`, `user_id`, `type` (ORDER/PAYMENT/SYSTEM), `title`, `body`, `read`, `created_at` |
 | `Email` | `emails` | `email_id`, `to_address`, `subject`, `body`, `status` (QUEUED/SENT/FAILED), `sent_at`, `retry_count` |
 
-### 13.2 Endpoints — `/api/v1/notifications`
+### 13.2 Endpoints: `/api/v1/notifications`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/notifications/me?page=` | USER | — | `Page<NotificationDto>` |
-| `GET` | `/api/v1/notifications/me/unread-count` | USER | — | `long` |
-| `POST` | `/api/v1/notifications/me/{id}/read` | USER | — | `Void` |
-| `POST` | `/api/v1/notifications/me/read-all` | USER | — | `Void` |
+| `GET` | `/api/v1/notifications/me?page=` | USER |: | `Page<NotificationDto>` |
+| `GET` | `/api/v1/notifications/me/unread-count` | USER |: | `long` |
+| `POST` | `/api/v1/notifications/me/{id}/read` | USER |: | `Void` |
+| `POST` | `/api/v1/notifications/me/read-all` | USER |: | `Void` |
 
-### 13.3 Endpoints — `/api/v1/emails` (backoffice / debug)
+### 13.3 Endpoints: `/api/v1/emails` (backoffice / debug)
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/emails?status=&page=` | ADMIN | — | `Page<EmailDto>` |
-| `POST` | `/api/v1/emails/{id}/retry` | ADMIN | — | `EmailDto` |
+| `GET` | `/api/v1/emails?status=&page=` | ADMIN |: | `Page<EmailDto>` |
+| `POST` | `/api/v1/emails/{id}/retry` | ADMIN |: | `EmailDto` |
 
 ### 13.4 Kafka consumers
 
@@ -572,7 +572,7 @@ Split base paths — storefront is for end users, backoffice is for admins.
 
 ---
 
-## 14. Quick reference — all routes through the gateway
+## 14. Quick reference: all routes through the gateway
 
 ```
 POST   /api/v1/auth/sign-up
@@ -712,4 +712,4 @@ POST   /api/v1/emails/{id}/retry
 
 ---
 
-See also — [`ROADMAP.md`](./ROADMAP.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`COMMON-LIB-REFERENCE.md`](./COMMON-LIB-REFERENCE.md)
+See also: [`ROADMAP.md`](./ROADMAP.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md) · [`COMMON-LIB-REFERENCE.md`](./COMMON-LIB-REFERENCE.md)

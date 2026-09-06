@@ -14,8 +14,8 @@
 
 - Provider activation is env-driven: SHOP_PAYMENT_PROVIDER=stripe + SHOP_PAYMENT_STRIPE_SECRET_KEY=sk_test_* + SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET=whsec_*.
 - Mock provider remains default in compose; stripe is opt-in.
-- Idempotency-key reuse from payments.idempotency_key column — already exists (payment D3).
-- Webhook signature via stripe-java Webhook.constructEvent — do NOT hand-roll HMAC.
+- Idempotency-key reuse from payments.idempotency_key column - already exists (payment D3).
+- Webhook signature via stripe-java Webhook.constructEvent - do NOT hand-roll HMAC.
 - No new endpoints. Stripe flows use existing payment API surface.
 - i18n: no new keys (Stripe-specific messages already covered by payment's PAY-5xxx block).
 
@@ -24,10 +24,10 @@
 ### Task 1: pom + Stripe SDK wiring + config properties
 
 **Files:**
-- Modify: payment-service/pom.xml — add com.stripe:stripe-java:24.x (latest stable; verify version on mvnrepository).
-- Modify: payment-service/src/main/resources/application.yml — add shop.payment.stripe.{secret-key, webhook-secret, api-version, connect} block per spec §3.
+- Modify: payment-service/pom.xml - add com.stripe:stripe-java:24.x (latest stable; verify version on mvnrepository).
+- Modify: payment-service/src/main/resources/application.yml - add shop.payment.stripe.{secret-key, webhook-secret, api-version, connect} block per spec §3.
 - Create: payment-service/.../config/PaymentStripeProperties.java (@ConfigurationProperties shop.payment.stripe: String secretKey, String webhookSecret, String apiVersion, boolean connect).
-- Modify: PaymentProviderProperties (existing) — add nested Stripe nested record OR separate config class.
+- Modify: PaymentProviderProperties (existing) - add nested Stripe nested record OR separate config class.
 - Test: PaymentStripePropertiesTest (@ConfigurationProperties binding).
 
 - [ ] **Step 1: failing test** for properties binding.
@@ -43,7 +43,7 @@
   - capture(): PaymentIntent.create with idempotency key from payments.idempotency_key; map to PaymentAttempt (status PENDING/REQUIRES_ACTION/CAPTURED per stripe intent status).
   - refund(): Refund.create with idempotency key `refund-{originalKey}-{amount}`; map to RefundResult.
   - Constructor validates secret-key non-empty → fail-fast per D10.
-- Test: StripeAdapterTest (mock Stripe SDK via Mockito — static mocking PaymentIntent.create via mockito-inline):
+- Test: StripeAdapterTest (mock Stripe SDK via Mockito - static mocking PaymentIntent.create via mockito-inline):
   - capture success (status=succeeded) → CAPTURED attempt.
   - capture requires_action (status=requires_action) → REQUIRES_ACTION attempt with client_secret.
   - capture IdempotencyException → return cached intent (mock returns same PaymentIntent).
@@ -54,13 +54,13 @@
 - [ ] **Step 1: failing tests** (6+ cases).
 - [ ] **Step 2: implement.**
 - [ ] **Step 3: run** GREEN.
-- [ ] **Step 4: commit** feat(payment): StripeAdapter — PaymentIntent + Refund via stripe-java
+- [ ] **Step 4: commit** feat(payment): StripeAdapter - PaymentIntent + Refund via stripe-java
 
-### Task 3: WebhookEventService — Stripe signature verification + event mapping
+### Task 3: WebhookEventService - Stripe signature verification + event mapping
 
 **Files:**
-- Modify: payment-service/.../service/WebhookEventService.java — add branch for `provider=stripe`:
-  - Read raw body (use cached body from filter — verify webhook filter caches raw body before JSON parsing).
+- Modify: payment-service/.../service/WebhookEventService.java - add branch for `provider=stripe`:
+  - Read raw body (use cached body from filter - verify webhook filter caches raw body before JSON parsing).
   - Read `Stripe-Signature` header.
   - Call `Webhook.constructEvent(rawBody, sigHeader, webhookSecret)`. Throws SignatureVerificationException → 401 PAY-5005.
   - Map event.type to payment lifecycle: payment_intent.succeeded → CAPTURED; payment_intent.payment_failed → FAILED; charge.refunded → REFUNDED.
@@ -74,21 +74,21 @@
 - [ ] **Step 1: failing tests** (4 cases).
 - [ ] **Step 2: implement.**
 - [ ] **Step 3: run** GREEN.
-- [ ] **Step 4: commit** feat(payment): WebhookEventService — Stripe signature + event mapping
+- [ ] **Step 4: commit** feat(payment): WebhookEventService - Stripe signature + event mapping
 
 ### Task 4: fail-fast + health check
 
 **Files:**
-- Modify: payment-service/.../config/PaymentProviderConfig.java (existing) — fail-fast: if shop.payment.provider=stripe AND stripe.secret-key is empty → throw at @PostConstruct ("StripeProvider requires shop.payment.stripe.secret-key env").
-- Add: GET /actuator/health/payment-stripe (custom health indicator) — pings Stripe API via `Balance.retrieve()` when provider=stripe; reports UP/DOWN with Stripe account id. Mock provider has no equivalent.
-- Test: PaymentProviderConfigTest — empty secret-key + provider=stripe → IllegalStateException at startup.
+- Modify: payment-service/.../config/PaymentProviderConfig.java (existing) - fail-fast: if shop.payment.provider=stripe AND stripe.secret-key is empty → throw at @PostConstruct ("StripeProvider requires shop.payment.stripe.secret-key env").
+- Add: GET /actuator/health/payment-stripe (custom health indicator) - pings Stripe API via `Balance.retrieve()` when provider=stripe; reports UP/DOWN with Stripe account id. Mock provider has no equivalent.
+- Test: PaymentProviderConfigTest - empty secret-key + provider=stripe → IllegalStateException at startup.
 
 - [ ] **Step 1: failing test.**
 - [ ] **Step 2: implement.**
 - [ ] **Step 3: run** GREEN.
 - [ ] **Step 4: commit** feat(payment): StripeProvider fail-fast + health indicator
 
-### Task 5: IT — Stripe webhook signature + idempotency
+### Task 5: IT - Stripe webhook signature + idempotency
 
 **Files:**
 - Create: payment-service/.../StripeWebhookIT.java (Testcontainers PG; uses stripe-java's own `Webhook.sign(payload, secret)` to generate valid signatures; mockito-inline for static mocking):
@@ -105,7 +105,7 @@
 ### Task 6: compose + manual smoke checklist
 
 **Files:**
-- Modify: docker-compose.yml — payment-service stanza: ADD commented env block for SHOP_PAYMENT_STRIPE_* (commented because compose default is mock):
+- Modify: docker-compose.yml - payment-service stanza: ADD commented env block for SHOP_PAYMENT_STRIPE_* (commented because compose default is mock):
 
 ```yaml
   # To activate Stripe:

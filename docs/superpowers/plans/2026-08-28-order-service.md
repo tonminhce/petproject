@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `order-service` microservice — cart + order CRUD, multi-service saga (product + inventory + tax + promotion), transactional outbox → Kafka events, `Idempotency-Key` header for POST /orders, explicit state machine with transition validation.
+**Goal:** Build `order-service` microservice  -  cart + order CRUD, multi-service saga (product + inventory + tax + promotion), transactional outbox → Kafka events, `Idempotency-Key` header for POST /orders, explicit state machine with transition validation.
 
 **Architecture:** Spring Boot 4.1.1 microservice (`com.shop.orderservice`) → PostgreSQL via Spring Data JPA + Liquibase, Redis 7 via Spring Cache (productPrice TTL 10 min), Kafka producer via Transactional Outbox + `@Scheduled` relay (single-thread, order-preserving). Saga orchestration in `OrderServiceImpl.createOrder()` with explicit compensation (release stock on failure). `Idempotency-Key` via `begin/complete/abort` pattern (pre-insert in-flight row, REQUIRES_NEW, blocks double-saga).
 
 **Tech Stack:** Spring Boot 4.1.1, Java 25, JPA + Liquibase + Postgres 16, Redis 7, Apache Kafka, Spring `RestClient` (Boot 4 native, NOT Feign), WireMock (saga integration tests), ModelMapper 3.2.6, Lombok, JUnit 5 + Mockito + AssertJ, Testcontainers.
 
-**Spec:** [`docs/superpowers/specs/2026-08-28-order-service-design.md`](../specs/2026-08-28-order-service-design.md) — read alongside this plan; the plan argues from the spec.
+**Spec:** [`docs/superpowers/specs/2026-08-28-order-service-design.md`](../specs/2026-08-28-order-service-design.md)  -  read alongside this plan; the plan argues from the spec.
 
 ---
 
@@ -17,19 +17,19 @@
 - **Java 25** (parent pom toolchain)
 - **Spring Boot 4.1.1** (parent pom)
 - **Package root:** `com.shop.*`
-- **No per-service `SecurityConfig`** — `common-security` auto-configures `SecurityFilterChain` (`@ConditionalOnMissingBean`). Configure via `shop.security.public-paths`.
+- **No per-service `SecurityConfig`**  -  `common-security` auto-configures `SecurityFilterChain` (`@ConditionalOnMissingBean`). Configure via `shop.security.public-paths`.
 - **`open-in-view: false`** in `application.yml`
-- **ModelMapper** — `@Component` inject `ModelMapper` (NOT MapStruct)
+- **ModelMapper**  -  `@Component` inject `ModelMapper` (NOT MapStruct)
 - **Liquibase** (not Flyway), changelogs in `src/main/resources/db/changelog/`
 - **All endpoints** wrap in `ApiResponse<T>` (from `common-core/viewmodel`)
-- **Spring `RestClient`** for inter-service calls — `@Bean RestClient` per downstream in `RestClientConfig`
-- **`@EnableScheduling`** on `OrderServiceApplication` — bắt buộc (OutboxRelay + OutboxRetentionScheduler + cleanup jobs)
+- **Spring `RestClient`** for inter-service calls  -  `@Bean RestClient` per downstream in `RestClientConfig`
+- **`@EnableScheduling`** on `OrderServiceApplication`: required for OutboxRelay, OutboxRetentionScheduler, and cleanup jobs
 - **Outbox pattern:** single-thread, ORDER BY id ASC, break-on-error to preserve ordering
 - **Saga compensation:** on any failure after `begin()` → `abort()` idempotency row → release reservations by `reservationId` → throw
-- **Idempotency-Key:** composite PK `(user_id, key)` — blocks collision across users (rev 2 fix O-N5)
-- **Self-invocation note:** `doCreateOrder()` extracted method is NOT `@Transactional` — runs in `createOrder()`'s TX (called via proxy). Inline comment prevents re-review confusion.
-- **State machine:** table-driven validation in `OrderStatusService` — prevents SHIPPED → PENDING bugs
-- **Exceptions:** `BusinessException.of(ErrorCode.X, args...)` factories — constructor private
+- **Idempotency-Key:** composite PK `(user_id, key)`  -  blocks collision across users (rev 2 fix O-N5)
+- **Self-invocation note:** `doCreateOrder()` extracted method is NOT `@Transactional`  -  runs in `createOrder()`'s TX (called via proxy). Inline comment prevents re-review confusion.
+- **State machine:** table-driven validation in `OrderStatusService`  -  prevents SHIPPED → PENDING bugs
+- **Exceptions:** `BusinessException.of(ErrorCode.X, args...)` factories  -  constructor private
 - **Test stack Boot 4:** `@MockitoBean`, `@WebMvcTest` from `webmvc.test.autoconfigure`, `@DataJpaTest` from `data.jpa.test.autoconfigure`, `TestEntityManager` from `jpa.test.autoconfigure`, `@Import(LiquibaseAutoConfiguration.class)` (package `boot.liquibase.autoconfigure`)
 - **Saga integration test:** `@SpringBootTest` + Testcontainers (Postgres + Kafka) + WireMock (stub inventory-service reserve/release + tax + promotion)
 
@@ -45,15 +45,13 @@
 | `utils/common-spring/src/main/resources/messages/messages_en.properties` | **VERIFY** `order.not.found` + `cart.not.found` exist (update template to include `{0}`); **ADD** 8 new keys |
 | `utils/common-spring/src/main/resources/messages/messages_vi.properties` | **VERIFY** VI versions; **ADD** 8 new keys |
 
-> ⚠️ **P0-7 — `ServiceTokenProvider` implement LOCAL trong order-service (rev 4 — un-deferred).**
-> Deferral trước đây SAI: inventory `/reserve` + `/release` yêu cầu `hasRole('SERVICE') or
-> hasRole('ADMIN')` (inventory spec §4.2, không public-paths) → không có Authorization header
-> = 401 = **saga chết 100% ở production**. Task 25 không bắt được vì WireMock stub bỏ qua header.
+> ⚠️ **P0-7  -  `ServiceTokenProvider` implement LOCAL trong order-service (rev 4  -  un-deferred).**
+> Previous deferral rationale was incorrect: inventory `/reserve` and `/release` require `hasRole('SERVICE') or hasRole('ADMIN')` (inventory spec section 4.2, not public paths). Missing an Authorization header results in 401 errors, causing saga failures in production. Task 25 tests missed this because the WireMock stub ignored headers.
 > Reasons for deferring:
 > 1. Plan had broken `@Bean` syntax that doesn't bind `shop.keycloak.*` properties
 > 2. `shop.keycloak.*` prefix already used by `KeycloakProperties` in common-keycloak → silent null bindings
 > 3. File path in plan was wrong (`autoconfigure/` vs `config/`)
-> 4. Risk: auth-service currently uses common-keycloak — touching it widens blast radius
+> 4. Risk: auth-service currently uses common-keycloak  -  touching it widens blast radius
 >
 > **MVP workaround:** order-service uses NO service-to-service auth headers. `/confirm` `/ship` `/deliver` accept ADMIN role only (no SERVICE role check yet).
 
@@ -61,19 +59,19 @@
 
 | File | Responsibility |
 |---|---|
-| `order-service/pom.xml` | Maven module — Boot 4 deps + test jars + RestClient (no new dep — built-in) |
+| `order-service/pom.xml` | Maven module  -  Boot 4 deps + test jars + RestClient (no new dep  -  built-in) |
 | `order-service/src/main/java/com/shop/orderservice/OrderServiceApplication.java` | `@SpringBootApplication` + `@EnableScheduling` |
 | `order-service/src/main/java/com/shop/orderservice/config/CacheConfig.java` | `@EnableCaching` + Redis cache customizer for `productPrice` (TTL 10 min, transactionAware no-arg) |
 | `order-service/src/main/java/com/shop/orderservice/config/RestClientConfig.java` | `@Bean RestClient` × 4: product, inventory, tax, promotion |
-| `order-service/src/main/java/com/shop/orderservice/config/ShopServicesProperties.java` | `@ConfigurationProperties("shop.services")` record — base URLs + timeouts + enabled flags |
+| `order-service/src/main/java/com/shop/orderservice/config/ShopServicesProperties.java` | `@ConfigurationProperties("shop.services")` record  -  base URLs + timeouts + enabled flags |
 | `order-service/src/main/java/com/shop/orderservice/entity/Order.java` | JPA entity extends `AbstractMappedEntity` + `@SQLRestriction("deleted = false")` |
-| `order-service/src/main/java/com/shop/orderservice/entity/OrderItem.java` | JPA entity extends `AbstractMappedEntity` (NO @SQLRestriction — hard-delete via CASCADE) + `reservationId` |
+| `order-service/src/main/java/com/shop/orderservice/entity/OrderItem.java` | JPA entity extends `AbstractMappedEntity` (NO @SQLRestriction  -  hard-delete via CASCADE) + `reservationId` |
 | `order-service/src/main/java/com/shop/orderservice/entity/Cart.java` | JPA entity extends `AbstractMappedEntity` + `@SQLRestriction` |
-| `order-service/src/main/java/com/shop/orderservice/entity/CartItem.java` | JPA entity extends `AbstractMappedEntity` (NO @SQLRestriction — CASCADE) + `productTitle` + `unitPrice` snapshot |
+| `order-service/src/main/java/com/shop/orderservice/entity/CartItem.java` | JPA entity extends `AbstractMappedEntity` (NO @SQLRestriction  -  CASCADE) + `productTitle` + `unitPrice` snapshot |
 | `order-service/src/main/java/com/shop/orderservice/entity/OrderStatus.java` | enum PENDING/CONFIRMED/SHIPPED/DELIVERED/CANCELLED |
 | `order-service/src/main/java/com/shop/orderservice/entity/OutboxEvent.java` | JPA entity (hard-delete, aggregateId = orderId) |
 | `order-service/src/main/java/com/shop/orderservice/entity/OutboxStatus.java` | enum PENDING/SENT/FAILED |
-| `order-service/src/main/java/com/shop/orderservice/entity/IdempotencyKey.java` | JPA entity, composite PK (user_id, key) — rev 2 fix O-N5 |
+| `order-service/src/main/java/com/shop/orderservice/entity/IdempotencyKey.java` | JPA entity, composite PK (user_id, key)  -  rev 2 fix O-N5 |
 | `order-service/src/main/java/com/shop/orderservice/repository/OrderRepository.java` | JpaRepository<Order, UUID> + findByUserId + findByIdAndUserId + findByStatusOrderByCreatedAtDesc |
 | `order-service/src/main/java/com/shop/orderservice/repository/OrderItemRepository.java` | JpaRepository<OrderItem, UUID> + findByOrderId + bulk save |
 | `order-service/src/main/java/com/shop/orderservice/repository/CartRepository.java` | JpaRepository<Cart, UUID> + findByUserIdAndDeletedFalse (UNIQUE partial index) |
@@ -83,21 +81,21 @@
 | `order-service/src/main/java/com/shop/orderservice/dto/request/CartItemAddRequest.java` | record: { productId, quantity } @NotNull @Min(1) @Max(99) |
 | `order-service/src/main/java/com/shop/orderservice/dto/request/CartItemUpdateRequest.java` | record: { quantity } @NotNull @Min(0) @Max(99) |
 | `order-service/src/main/java/com/shop/orderservice/dto/request/OrderCreateRequest.java` | record: { cartId?, couponCode? } |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/ProductSnapshot.java` | record: { productId, title, unitPrice } — internal |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/PricingBreakdown.java` | record: { subtotal, taxAmount, discountAmount, total, snapshots Map<UUID, ProductSnapshot> } — internal |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/ReserveRequest.java` | record: { quantity, orderId } — sent to inventory |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/ReservationResponse.java` | record: { reservationId, productId, quantity, expiresAt } — from inventory |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/TaxCalculateRequest.java` | record: { taxClassId, country, postalCode, amount } — sent to tax |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/TaxCalculateResponse.java` | record: { taxAmount, appliedRate } — from tax |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/PromotionApplyRequest.java` | record: { code, orderAmount, userId } — sent to promotion |
-| `order-service/src/main/java/com/shop/orderservice/dto/internal/PromotionApplyResponse.java` | record: { discountAmount, finalAmount } — from promotion |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/ProductSnapshot.java` | record: { productId, title, unitPrice }  -  internal |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/PricingBreakdown.java` | record: { subtotal, taxAmount, discountAmount, total, snapshots Map<UUID, ProductSnapshot> }  -  internal |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/ReserveRequest.java` | record: { quantity, orderId }  -  sent to inventory |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/ReservationResponse.java` | record: { reservationId, productId, quantity, expiresAt }  -  from inventory |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/TaxCalculateRequest.java` | record: { taxClassId, country, postalCode, amount }  -  sent to tax |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/TaxCalculateResponse.java` | record: { taxAmount, appliedRate }  -  from tax |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/PromotionApplyRequest.java` | record: { code, orderAmount, userId }  -  sent to promotion |
+| `order-service/src/main/java/com/shop/orderservice/dto/internal/PromotionApplyResponse.java` | record: { discountAmount, finalAmount }  -  from promotion |
 | `order-service/src/main/java/com/shop/orderservice/dto/response/CartItemResponse.java` | record: { id, productId, productTitle, quantity, unitPrice, lineTotal } |
 | `order-service/src/main/java/com/shop/orderservice/dto/response/CartResponse.java` | record: { id, userId, items[], subtotal, createdAt, updatedAt } |
 | `order-service/src/main/java/com/shop/orderservice/dto/response/OrderItemResponse.java` | record: { productId, productTitle, quantity, unitPrice, lineTotal } |
 | `order-service/src/main/java/com/shop/orderservice/dto/response/OrderResponse.java` | record: { id, userId, status, items[], subtotal, taxAmount, discountAmount, total, couponCode, createdAt, confirmedAt, shippedAt, deliveredAt, cancelledAt } |
 | `order-service/src/main/java/com/shop/orderservice/mapper/CartMapper.java` | `@Component` ModelMapper, manual 4-field toResponse |
 | `order-service/src/main/java/com/shop/orderservice/mapper/OrderMapper.java` | `@Component` ModelMapper, manual toResponse with items |
-| `order-service/src/main/java/com/shop/orderservice/security/ServiceTokenProvider.java` | **NEW** — client_credentials token cache, bind `shop.services.keycloak.*` (rev 4 — un-deferred, XEM Task 2) |
+| `order-service/src/main/java/com/shop/orderservice/security/ServiceTokenProvider.java` | **NEW**  -  client_credentials token cache, bind `shop.services.keycloak.*` (rev 4  -  un-deferred, XEM Task 2) |
 | `order-service/src/main/java/com/shop/orderservice/client/ProductServiceClient.java` | RestClient wrapper for product-service GET |
 | `order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java` | RestClient wrapper for inventory reserve/release |
 | `order-service/src/main/java/com/shop/orderservice/client/TaxServiceClient.java` | RestClient wrapper for tax calculate |
@@ -109,12 +107,12 @@
 | `order-service/src/main/java/com/shop/orderservice/service/OrderEventPublisher.java` | interface (publishCreated, publishUpdated, publishCancelled) |
 | `order-service/src/main/java/com/shop/orderservice/service/IdempotencyService.java` | begin/complete/abort (rev 2 fix O-N1, O-N2) |
 | `order-service/src/main/java/com/shop/orderservice/service/OrderStatusService.java` | table-driven state transition validation |
-| `order-service/src/main/java/com/shop/orderservice/service/impls/CartServiceImpl.java` | @Service @RequiredArgsConstructor — auto-create + merge + snapshot refresh |
-| `order-service/src/main/java/com/shop/orderservice/service/impls/PricingServiceImpl.java` | @Service — fetch product prices (cached 10 min) + tax + promotion |
-| `order-service/src/main/java/com/shop/orderservice/service/impls/StockReservationServiceImpl.java` | @Service — RestClient wrappers |
-| `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java` | @Service — saga orchestration (createOrder + doCreateOrder split) |
-| `order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyServiceImpl.java` | @Service — begin (REQUIRES_NEW) + complete + abort (REQUIRES_NEW) |
-| `order-service/src/main/java/com/shop/orderservice/service/impls/OrderStatusServiceImpl.java` | @Service — Map<OrderStatus, Set<OrderStatus>> validation |
+| `order-service/src/main/java/com/shop/orderservice/service/impls/CartServiceImpl.java` | @Service @RequiredArgsConstructor  -  auto-create + merge + snapshot refresh |
+| `order-service/src/main/java/com/shop/orderservice/service/impls/PricingServiceImpl.java` | @Service  -  fetch product prices (cached 10 min) + tax + promotion |
+| `order-service/src/main/java/com/shop/orderservice/service/impls/StockReservationServiceImpl.java` | @Service  -  RestClient wrappers |
+| `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java` | @Service  -  saga orchestration (createOrder + doCreateOrder split) |
+| `order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyServiceImpl.java` | @Service  -  begin (REQUIRES_NEW) + complete + abort (REQUIRES_NEW) |
+| `order-service/src/main/java/com/shop/orderservice/service/impls/OrderStatusServiceImpl.java` | @Service  -  Map<OrderStatus, Set<OrderStatus>> validation |
 | `order-service/src/main/java/com/shop/orderservice/service/impls/OrderEventPublisherImpl.java` | writes OutboxEvent in same @Transactional |
 | `order-service/src/main/java/com/shop/orderservice/service/impls/OrderOutboxRelay.java` | @Scheduled single-thread relay (5s interval) |
 | `order-service/src/main/java/com/shop/orderservice/service/impls/OutboxRetentionScheduler.java` | @Scheduled cron purge SENT > 7 days |
@@ -133,16 +131,16 @@
 |---|---|
 | `order-service/src/test/java/com/shop/orderservice/config/TestLiquibaseConfig.java` | copy from product-service (test-only SpringLiquibase bean) |
 | `order-service/src/test/java/com/shop/orderservice/service/impls/CartServiceImplTest.java` | 10 unit tests (Mockito) |
-| `order-service/src/test/java/com/shop/orderservice/service/impls/OrderServiceImplTest.java` | 12 unit tests — cancel + state machine + saga happy path + abort on failure |
+| `order-service/src/test/java/com/shop/orderservice/service/impls/OrderServiceImplTest.java` | 12 unit tests  -  cancel + state machine + saga happy path + abort on failure |
 | `order-service/src/test/java/com/shop/orderservice/service/impls/OrderStatusServiceImplTest.java` | 25 parameterized tests (5×5 transition matrix) |
 | `order-service/src/test/java/com/shop/orderservice/service/impls/IdempotencyServiceImplTest.java` | 4 unit tests (begin hit/miss/collision, abort) |
 | `order-service/src/test/java/com/shop/orderservice/service/impls/OrderStatusServiceImplTest.java` | table-driven validation |
 | `order-service/src/test/java/com/shop/orderservice/repository/OrderRepositoryTest.java` | @DataJpaTest + Testcontainers |
-| `order-service/src/test/java/com/shop/orderservice/repository/CartRepositoryTest.java` | @DataJpaTest — UNIQUE constraint, soft-delete filter |
-| `order-service/src/test/java/com/shop/orderservice/controller/CartControllerTest.java` | @WebMvcTest — auth, validation, 5 endpoints |
-| `order-service/src/test/java/com/shop/orderservice/controller/OrderControllerTest.java` | @WebMvcTest — auth, idempotency, validation, error envelope |
+| `order-service/src/test/java/com/shop/orderservice/repository/CartRepositoryTest.java` | @DataJpaTest  -  UNIQUE constraint, soft-delete filter |
+| `order-service/src/test/java/com/shop/orderservice/controller/CartControllerTest.java` | @WebMvcTest  -  auth, validation, 5 endpoints |
+| `order-service/src/test/java/com/shop/orderservice/controller/OrderControllerTest.java` | @WebMvcTest  -  auth, idempotency, validation, error envelope |
 | `order-service/src/test/java/com/shop/orderservice/service/OrderOutboxRelayIntegrationTest.java` | @SpringBootTest + Testcontainers Kafka |
-| `order-service/src/test/java/com/shop/orderservice/service/OrderCreationSagaIntegrationTest.java` | @SpringBootTest + Testcontainers + WireMock — happy path + compensation + idempotency replay |
+| `order-service/src/test/java/com/shop/orderservice/service/OrderCreationSagaIntegrationTest.java` | @SpringBootTest + Testcontainers + WireMock  -  happy path + compensation + idempotency replay |
 
 ### Modified infrastructure
 
@@ -154,11 +152,11 @@
 
 ---
 
-## Phase 0 — Common upgrades
+## Phase 0  -  Common upgrades
 
 ### Task 1: Verify existing order ErrorCodes + add ORD-4003..4010
 
-> ⚠️ **Rev 2 fix (ver 1 fixed in commit pre-185fd8cc):** `ORDER_NOT_FOUND (ORD-4001)` + `CART_NOT_FOUND (ORD-4002)` **đã tồn tại** (`ErrorCode.java:63-64`). Verify + update i18n templates to include `{0}`. Add 8 new codes ORD-4003..4010.
+> **Rev 2 fix (ver 1 fixed in commit pre-185fd8cc):** `ORDER_NOT_FOUND (ORD-4001)` and `CART_NOT_FOUND (ORD-4002)` already exist (`ErrorCode.java:63-64`). Verify and update i18n templates to include `{0}`. Add 8 new codes ORD-4003..4010.
 
 **Files:**
 - Modify: `utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java`
@@ -185,11 +183,9 @@ cart.not.found=Cart {0} not found
 
 - [ ] **Step 2: Add ORD-4003..4010 to ErrorCode.java**
 
-> ⚠️ P1-6 — Instruction was wrong. `CART_NOT_FOUND (ORD-4002)` already ends with `,` (NOT `;`).
+> ⚠️ P1-6  -  Instruction was wrong. `CART_NOT_FOUND (ORD-4002)` already ends with `,` (NOT `;`).
 > The enum's last entry is `PAYMENT_NOT_FOUND` with `;`. Insert the 8 entries **after**
-> `CART_NOT_FOUND(...)` — entry cuối của khối mới (`ORDER_DUPLICATE_REQUEST`) kết bằng `,`,
-> để `PAYMENT_NOT_FOUND(...);` vẫn là entry cuối cùng chấm dứt enum. **KHÔNG** kết khối
-> mới bằng `;` — sẽ tạo enum constant đứng sau `;` → compile error.
+> `CART_NOT_FOUND(...)`: the final entry of the new block (`ORDER_DUPLICATE_REQUEST`) must end with a comma `,`, ensuring `PAYMENT_NOT_FOUND(...);` remains the final terminating enum entry. Do not terminate the new block with a semicolon `;`, which would cause compilation errors.
 
 Insert **after** the `CART_NOT_FOUND (ORD-4002)` line in `ErrorCode.java` (keep the existing `,` after `CART_NOT_FOUND`):
 
@@ -201,11 +197,10 @@ Insert **after** the `CART_NOT_FOUND (ORD-4002)` line in `ErrorCode.java` (keep 
     ORDER_RESERVATION_FAILED("ORD-4007", "order.reservation.failed", HttpStatus.CONFLICT),
     ORDER_PROMOTION_INVALID("ORD-4008", "order.promotion.invalid", HttpStatus.BAD_REQUEST),
     ORDER_TAX_CALCULATION_FAILED("ORD-4009", "order.tax.calculation.failed", HttpStatus.BAD_REQUEST),
-    ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT),  // ← kết bằng dấu PHẨY
+    ORDER_DUPLICATE_REQUEST("ORD-4010", "order.duplicate.request", HttpStatus.CONFLICT),  // Ends with comma
 ```
 
-> Verify: sau edit, thứ tự là `... CART_NOT_FOUND(...), [8 entries mới], PAYMENT_NOT_FOUND(...);`
-> — `PAYMENT_NOT_FOUND` giữ nguyên và vẫn là entry duy nhất kết bằng `;` (chấm dứt enum).
+> Verification: after editing, the sequence is `... CART_NOT_FOUND(...), [8 new entries], PAYMENT_NOT_FOUND(...);`. `PAYMENT_NOT_FOUND` remains the sole entry terminating with a semicolon `;`.
 
 - [ ] **Step 3: Add 8 new i18n keys (EN + VI)**
 
@@ -223,14 +218,14 @@ order.duplicate.request=Idempotency-Key {0} reused with different request body
 
 `messages_vi.properties`:
 ```properties
-order.invalid.state=Đơn hàng {0} không thể chuyển trạng thái hiện tại
-order.invalid.transition=Đơn hàng không thể chuyển từ {0} sang {1}
-cart.empty=Giỏ hàng trống
-cart.item.not.found=Không tìm thấy mục giỏ hàng {0}
-order.reservation.failed=Không thể đặt trước tồn kho cho sản phẩm {0}
-order.promotion.invalid=Mã khuyến mãi {0} không hợp lệ hoặc đã hết hạn
-order.tax.calculation.failed=Không thể tính thuế
-order.duplicate.request=Idempotency-Key {0} đã được sử dụng với payload khác
+order.invalid.state=Order {0} cannot transition from its current state
+order.invalid.transition=Order cannot transition from {0} to {1}
+cart.empty=Shopping cart is empty
+cart.item.not.found=Cart item {0} not found
+order.reservation.failed=Cannot reserve inventory for product {0}
+order.promotion.invalid=Promotion coupon {0} is invalid or expired
+order.tax.calculation.failed=Tax calculation failed
+order.duplicate.request=Idempotency-Key {0} has already been used with a different payload
 ```
 
 - [ ] **Step 4: Verify**
@@ -242,7 +237,7 @@ order.duplicate.request=Idempotency-Key {0} đã được sử dụng với payl
 - [ ] **Step 5: Commit**
 
 ```bash
-# ⚠️ P2-1 — paths include messages/ subdirectory (full path)
+# ⚠️ P2-1  -  paths include messages/ subdirectory (full path)
 git add utils/common-core/src/main/java/com/shop/common/core/exception/ErrorCode.java \
         utils/common-spring/src/main/resources/messages/messages_en.properties \
         utils/common-spring/src/main/resources/messages/messages_vi.properties
@@ -251,26 +246,26 @@ git commit -m "feat(common): order ErrorCodes (ORD-4003..4010) + i18n keys + {0}
 
 ---
 
-### Task 2: ServiceTokenProvider — order-service local (client_credentials + token cache)
+### Task 2: ServiceTokenProvider  -  order-service local (client_credentials + token cache)
 
-> ⚠️ **P0-7 — rev 4 (un-deferred).** Deferral trước đây sai ở một điểm then chốt: nó chỉ
-> cover các endpoint *inbound* (`/confirm /ship /deliver` — đúng là ADMIN-only trong MVP),
-> nhưng **outbound call tới inventory `/reserve` + `/release` cần SERVICE-role JWT**
-> (inventory spec §4.2: `@PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")`,
-> không public-paths). Không có header → 401 → mọi POST /orders fail ở production.
+> **P0-7 - rev 4 (un-deferred):** The earlier deferral overlooked a critical requirement: while
+> inbound endpoints (, , ) are ADMIN-only in MVP,
+> **outbound calls to inventory  and  require a SERVICE-role JWT**
+> (inventory spec section 4.2: ,
+> not public paths). Missing an Authorization header results in 401, failing POST /orders in production.
 >
-> **Triển khai LOCAL trong order-service** — KHÔNG đụng common-keycloak (auth-service đang
-> dùng, tránh blast radius P0-7d), KHÔNG dùng prefix `shop.keycloak` (đã bị
-> `KeycloakProperties` chiếm — P0-7b): bind thẳng từ `ShopServicesProperties.Keycloak`
-> (`shop.services.keycloak.*` — đã có sẵn ở Task 4 yml).
+> **Implement locally in order-service** without altering common-keycloak (retained for
+> auth-service to prevent cross-service impact) and avoiding the  prefix (already
+> occupied by ). Bind directly from 
+> (, configured in Task 4 yml).
 
 **Files:**
 - Create: `order-service/src/main/java/com/shop/orderservice/security/ServiceTokenProvider.java`
-- Modify: `order-service/src/main/java/com/shop/orderservice/config/RestClientConfig.java` (inject provider — Task 6 note)
+- Modify: `order-service/src/main/java/com/shop/orderservice/config/RestClientConfig.java` (inject provider  -  Task 6 note)
 
 **Interfaces:**
 - Consumes: `ShopServicesProperties.Keycloak` (token-url, client-id, client-secret)
-- Produces: `getToken(): String` — cached token, refresh 30s trước expiry; used by `InventoryServiceClient` (Task 11)
+- Produces: `getToken(): String` - cached token refreshed 30 seconds before expiry; used by `InventoryServiceClient` (Task 11)
 
 - [ ] **Step 1: Create ServiceTokenProvider**
 
@@ -295,7 +290,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * (inventory reserve/release). Refreshes 30s before expiry.
  *
  * <p>Local to order-service deliberately: binding comes from
- * {@code ShopServicesProperties.Keycloak} (prefix {@code shop.services.keycloak}) —
+ * {@code ShopServicesProperties.Keycloak} (prefix {@code shop.services.keycloak})  - 
  * NOT {@code shop.keycloak} (owned by common-keycloak {@code KeycloakProperties}).
  * Benign race on concurrent refresh: worst case two token fetches, last write wins.</p>
  */
@@ -357,8 +352,7 @@ public class ServiceTokenProvider {
 }
 ```
 
-> Config mặc định trong yml Task 4 (`ORDER_SERVICE_CLIENT_ID/SECRET`, `KEYCLOAK_TOKEN_URL`)
-> + WireMock stub ở Task 25 (`shop.services.keycloak.token-url` → keycloakServer) cho test.
+> Default configuration in Task 4 yml (`ORDER_SERVICE_CLIENT_ID/SECRET`, `KEYCLOAK_TOKEN_URL`) along with WireMock stubbing in Task 25 (`shop.services.keycloak.token-url` -> keycloakServer) for test coverage.
 
 - [ ] **Step 2: Verify compile**
 
@@ -375,11 +369,11 @@ git commit -m "feat(order-service): ServiceTokenProvider (client_credentials, or
 
 ---
 
-## Phase 1 — Skeleton + persistence
+## Phase 1  -  Skeleton + persistence
 
-### Task 3: order-service pom.xml — ADD deps (NOT verify-only)
+### Task 3: order-service pom.xml  -  ADD deps (NOT verify-only)
 
-> ⚠️ **P0-6 — `verify-only` assumption was wrong.** Current pom only has:
+> ⚠️ **P0-6  -  `verify-only` assumption was wrong.** Current pom only has:
 > `common-spring`, `spring-boot-starter-data-jpa`, `liquibase-core`, `postgresql`,
 > `modelmapper`, `lombok`, `spring-boot-starter-test`, `spring-boot-maven-plugin`.
 > **Missing:** `common-kafka`, `spring-boot-starter-liquibase`, `spring-boot-starter-data-redis`,
@@ -388,23 +382,20 @@ git commit -m "feat(order-service): ServiceTokenProvider (client_credentials, or
 > `spring-boot-testcontainers`, `awaitility`, `wiremock-standalone` for saga IT).
 
 **Files:**
-- Modify: `order-service/pom.xml` — append missing deps after existing block (don't replace whole block; scaffold exists)
+- Modify: `order-service/pom.xml`  -  append missing deps after existing block (don't replace whole block; scaffold exists)
 
 **Interfaces:**
 - Produces: compile-able module with all deps for spec compliance
 
-- [ ] **Step 1b: Create lombok.config (P0-4 — clients dùng @Qualifier trên field + @RequiredArgsConstructor)**
+- [ ] **Step 1b: Create lombok.config (clients using @Qualifier on fields with @RequiredArgsConstructor)**
 
-Create `lombok.config` ở **project root** (nếu chưa có):
+Create `lombok.config` at **project root** if not already present:
 
 ```properties
 lombok.copyableAnnotations += org.springframework.beans.factory.annotation.Qualifier
 ```
 
-> ⚠️ Không có dòng này, Lombok KHÔNG copy `@Qualifier("inventoryRestClient")` từ field
-> xuống constructor param sinh ra bởi `@RequiredArgsConstructor` → Spring inject by-type
-> → 4 bean `RestClient` cùng type → `NoUniqueBeanDefinitionException` at startup.
-> Copyable chỉ THÊM hành vi — các class không dùng `@Qualifier` không bị ảnh hưởng.
+> Without this setting, Lombok does not copy `@Qualifier("inventoryRestClient")` from fields onto constructor parameters generated by `@RequiredArgsConstructor`. Spring then injects by type across multiple `RestClient` beans, resulting in `NoUniqueBeanDefinitionException` during startup. Marking qualifier as copyable adds constructor annotations without affecting classes that omit `@Qualifier`.
 
 - [ ] **Step 1: Add missing main deps**
 
@@ -484,7 +475,7 @@ Inside the existing test scope, append:
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- ⚠️ P1-4 — use wiremock-standalone (NOT wiremock-spring-boot which
+            <!-- ⚠️ P1-4  -  use wiremock-standalone (NOT wiremock-spring-boot which
                  has wrong artifact coords and Boot 4 BOM doesn't manage version). -->
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
@@ -536,7 +527,7 @@ public class OrderServiceApplication {
 }
 ```
 
-> ⚠️ `@EnableScheduling` is mandatory — `@Scheduled` jobs (OutboxRelay, OutboxRetentionScheduler, IdempotencyKeyCleanupScheduler) silently NO-OP without it.
+> ⚠️ `@EnableScheduling` is mandatory  -  `@Scheduled` jobs (OutboxRelay, OutboxRetentionScheduler, IdempotencyKeyCleanupScheduler) silently NO-OP without it.
 
 - [ ] **Step 2: Create application.yml**
 
@@ -631,7 +622,7 @@ git commit -m "feat(order-service): application entrypoint + application.yml"
 
 ---
 
-### Task 5: Liquibase changelog — 6 tables
+### Task 5: Liquibase changelog  -  6 tables
 
 **Files:**
 - Create: `order-service/src/main/resources/db/changelog/db.changelog-master.yaml`
@@ -651,7 +642,7 @@ databaseChangeLog:
 ```yaml
 databaseChangeLog:
   # ===========================================================================
-  # carts — 1 active cart per user (UNIQUE partial index WHERE deleted = false)
+  # carts  -  1 active cart per user (UNIQUE partial index WHERE deleted = false)
   # ===========================================================================
   - createTable:
       tableName: carts
@@ -674,14 +665,14 @@ databaseChangeLog:
       columns:
         - column: { name: user_id }
       where: deleted = false
-  # ⚠️ P0-2 — PARTIAL unique index (NOT hard addUniqueConstraint).
+  # ⚠️ P0-2  -  PARTIAL unique index (NOT hard addUniqueConstraint).
   # Original plan had `addUniqueConstraint` on user_id unconditionally.
   # That breaks re-cart after soft-delete: clearCart sets deleted=true on the row,
   # then next GET /carts/me tries to INSERT new row with same user_id → 500 duplicate key.
   # Partial index `WHERE deleted = false` allows new INSERT after soft-delete (matching favourite-service pattern).
 
   # ===========================================================================
-  # cart_items — productTitle + unitPrice snapshot for display
+  # cart_items  -  productTitle + unitPrice snapshot for display
   # ===========================================================================
   - createTable:
       tableName: cart_items
@@ -702,7 +693,7 @@ databaseChangeLog:
         - column: { name: product_id }
 
   # ===========================================================================
-  # orders — soft-delete only via admin/GDPR (cancel does NOT mark deleted — §5.3)
+  # orders  -  soft-delete only via admin/GDPR (cancel does NOT mark deleted  -  §5.3)
   # ===========================================================================
   - createTable:
       tableName: orders
@@ -746,7 +737,7 @@ databaseChangeLog:
       where: deleted = false
 
   # ===========================================================================
-  # order_items — hard-delete with parent Order CASCADE; reservationId for cancel
+  # order_items  -  hard-delete with parent Order CASCADE; reservationId for cancel
   # ===========================================================================
   - createTable:
       tableName: order_items
@@ -767,7 +758,7 @@ databaseChangeLog:
         - column: { name: order_id }
 
   # ===========================================================================
-  # outbox_events — hard-delete, aggregateId = orderId
+  # outbox_events  -  hard-delete, aggregateId = orderId
   # ===========================================================================
   - createTable:
       tableName: outbox_events
@@ -796,7 +787,7 @@ databaseChangeLog:
         - column: { name: aggregate_id }
 
   # ===========================================================================
-  # idempotency_keys — composite PK (user_id, key) — rev 2 fix O-N5
+  # idempotency_keys  -  composite PK (user_id, key)  -  rev 2 fix O-N5
   # ===========================================================================
   - createTable:
       tableName: idempotency_keys
@@ -838,7 +829,7 @@ git commit -m "feat(order-service): initial Liquibase schema (carts, cart_items,
 
 ---
 
-### Task 6: Configuration classes — CacheConfig, RestClientConfig, ShopServicesProperties
+### Task 6: Configuration classes  -  CacheConfig, RestClientConfig, ShopServicesProperties
 
 **Files:**
 - Create: `order-service/src/main/java/com/shop/orderservice/config/ShopServicesProperties.java`
@@ -893,7 +884,7 @@ public class CacheConfig {
         return builder -> builder
             .cacheDefaults(defaultConfig())
             .withCacheConfiguration("productPrice", defaultConfig().entryTtl(PRODUCT_PRICE_TTL))
-            .transactionAware();  // ⚠️ no-arg — defense-in-depth
+            .transactionAware();  // ⚠️ no-arg  -  defense-in-depth
     }
 
     private RedisCacheConfiguration defaultConfig() {
@@ -917,16 +908,16 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 
 /**
- * ⚠️ P0-4 — NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
+ * ⚠️ P0-4  -  NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
  * {@code @Qualifier} from fields to constructor params. Defining beans as method
  * signatures here works because Spring wires by parameter NAME ({@code productRestClient},
- * {@code inventoryRestClient}, etc.) — clients inject by name with
+ * {@code inventoryRestClient}, etc.)  -  clients inject by name with
  * {@code @Qualifier("productRestClient")}.
  *
- * <p>⚠️ P1-3 — NO auth header set HERE (shared builder). Authorization được set
- * PER-CALL trong từng client method (Task 11) — chỉ {@code InventoryServiceClient}
- * cần token (product GET là public-path; tax/promotion disabled trong MVP).
- * Header lấy từ {@code ServiceTokenProvider.getToken()} (Task 2).</p>
+ * <p>P1-3: No auth header configured here on the shared builder. Authorization is configured
+ * per-call within individual client methods (Task 11). Only {@code InventoryServiceClient}
+ * requires a token (product GET is a public path; tax/promotion are disabled in MVP).
+ * The header is retrieved from {@code ServiceTokenProvider.getToken()} (Task 2).</p>
  */
 @Configuration
 public class RestClientConfig {
@@ -966,7 +957,7 @@ public class RestClientConfig {
 ```
 
 > Phase 8 note: when `ServiceTokenProvider` is implemented, add `ClientHttpRequestInterceptor`
-> to inject `Authorization: Bearer <token>` per-request — see Task 11 client method stubs
+> to inject `Authorization: Bearer <token>` per-request  -  see Task 11 client method stubs
 > that already show `.header("Authorization", "Bearer " + token)` per-call.
 
 - [ ] **Step 4: Verify compile**
@@ -1090,7 +1081,7 @@ public class Order extends AbstractMappedEntity {
 }
 ```
 
-> No `markDeleted` on cancel — cancelled orders must remain in user/admin history (soft-delete reserved for admin/GDPR purge — spec §5.3).
+> No `markDeleted` on cancel  -  cancelled orders must remain in user/admin history (soft-delete reserved for admin/GDPR purge  -  spec §5.3).
 
 - [ ] **Step 2: Create OrderItem.java**
 
@@ -1104,7 +1095,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-1 — Does NOT extend {@code AbstractMappedEntity} (which extends
+ * ⚠️ P0-1  -  Does NOT extend {@code AbstractMappedEntity} (which extends
  * {@code SoftDeletable} requiring `deleted` column). Order items are hard-deleted
  * with their parent Order via {@code ON DELETE CASCADE} on the FK.
  *
@@ -1139,11 +1130,11 @@ public class OrderItem {
     private BigDecimal lineTotal;
 
     @Column(name = "reservation_id")
-    private UUID reservationId;  // nullable — populated after stock reservation
+    private UUID reservationId;  // nullable  -  populated after stock reservation
 }
 ```
 
-> No `@SQLRestriction` — items hard-delete with parent Order via CASCADE.
+> No `@SQLRestriction`  -  items hard-delete with parent Order via CASCADE.
 
 - [ ] **Step 3: Create Cart.java**
 
@@ -1189,7 +1180,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-1 — Does NOT extend {@code AbstractMappedEntity}. Cart items are hard-deleted
+ * ⚠️ P0-1  -  Does NOT extend {@code AbstractMappedEntity}. Cart items are hard-deleted
  * with their parent Cart via {@code ON DELETE CASCADE} on the FK.
  *
  * <p>If we extended AbstractMappedEntity, {@code ddl-auto: validate} would fail at
@@ -1221,7 +1212,7 @@ public class CartItem {
 }
 ```
 
-> productTitle + unitPrice are SNAPSHOTS (lúc add-to-cart) — display only, NOT used for checkout (fresh price fetched from product-service — spec §5.2).
+> productTitle and unitPrice are snapshots captured at cart-addition time for display purposes only, not used during checkout (fresh pricing is retrieved from product-service per spec section 5.2).
 
 - [ ] **Step 5: Create OutboxEvent.java**
 
@@ -1506,13 +1497,13 @@ git commit -m "feat(order-service): 5 repositories (Order, OrderItem, Cart, Cart
 
 ---
 
-(Phase 1 done. Continue in Part 2 — DTOs, mappers, clients, services, controllers, tests.)
+(Phase 1 done. Continue in Part 2  -  DTOs, mappers, clients, services, controllers, tests.)
 
 ---
 
 ---
 
-## Phase 2 — DTOs + mappers + services
+## Phase 2  -  DTOs + mappers + services
 
 ### Task 10: Internal DTOs (records)
 
@@ -1560,12 +1551,12 @@ import jakarta.validation.constraints.Positive;
 import java.util.UUID;
 
 /**
- * Plain record (NOT @Builder — records have canonical constructor).
+ * Plain record (NOT @Builder  -  records have canonical constructor).
  * Construct via {@code new ReserveRequest(quantity, orderId)}.
  */
 public record ReserveRequest(
     @NotNull @Positive Integer quantity,
-    UUID orderId  // populated by OrderServiceImpl — null when called from other paths
+    UUID orderId  // populated by OrderServiceImpl  -  null when called from other paths
 ) {}
 ```
 
@@ -1683,8 +1674,8 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-5 — Unwraps {@code ApiResponse<ProductSnapshot>} envelope. Product-service
- * returns ALL endpoints wrapped in {@code ApiResponse<T>} — calling
+ * ⚠️ P0-5  -  Unwraps {@code ApiResponse<ProductSnapshot>} envelope. Product-service
+ * returns ALL endpoints wrapped in {@code ApiResponse<T>}  -  calling
  * {@code .body(ProductSnapshot.class)} would deserialize {@code {success, code, message, data, ...}}
  * directly into {@code ProductSnapshot} → all fields null → NPE on {@code .unitPrice()}.
  *
@@ -1715,7 +1706,7 @@ public class ProductServiceClient {
 > Phase 8: replace `data()` with map to `ProductDetailResponse` if fields diverge
 > (current spec §5.2 uses `ProductSnapshot{productId, title, unitPrice}` subset of
 > `ProductDetailResponse{productId, title, description, sku, priceUnit, quantity, ...}`
-> — `priceUnit` field name mismatch tracked in Task 11 follow-up).
+>  -  `priceUnit` field name mismatch tracked in Task 11 follow-up).
 
 - [ ] **Step 3: Create InventoryServiceClient**
 
@@ -1741,9 +1732,9 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 /**
- * ⚠️ P0-5 — Unwraps ApiResponse envelope.
- * ⚠️ P1-3 — Per-call Authorization header từ `ServiceTokenProvider` (Task 2). Chỉ client
- * này cần token (product GET public; tax/promotion disabled MVP).
+ * ⚠️ P0-5  -  Unwraps ApiResponse envelope.
+ * P1-3: Per-call Authorization header obtained from `ServiceTokenProvider` (Task 2). Only
+ * this client requires a token (product GET is public; tax and promotion are disabled in MVP).
  */
 @Component
 @RequiredArgsConstructor
@@ -1752,7 +1743,7 @@ public class InventoryServiceClient {
 
     @Qualifier("inventoryRestClient")
     private final RestClient restClient;
-    private final ServiceTokenProvider serviceTokenProvider;   // P0-7 — SERVICE-role token
+    private final ServiceTokenProvider serviceTokenProvider;   // P0-7  -  SERVICE-role token
 
     private static final ParameterizedTypeReference<ApiResponse<ReservationResponse>> RESERVE_RESPONSE =
         new ParameterizedTypeReference<>() {};
@@ -1761,7 +1752,7 @@ public class InventoryServiceClient {
         try {
             ApiResponse<ReservationResponse> resp = restClient.post()
                 .uri("/api/v1/inventory/{productId}/reserve", productId)
-                // ⚠️ P0-7 — reserve yêu cầu SERVICE role (inventory §4.2). Không có header = 401.
+                // P0-7: reserve endpoint requires SERVICE role (inventory spec section 4.2). Missing header returns 401.
                 .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
                 .body(request)
                 .retrieve()
@@ -1785,7 +1776,7 @@ public class InventoryServiceClient {
                 .toBodilessEntity();
         } catch (Exception ex) {
             log.error("Failed to release reservation {}", reservationId, ex);
-            // DO NOT throw — compensation failures are best-effort, logged for ops review
+            // DO NOT throw  -  compensation failures are best-effort, logged for ops review
         }
     }
 }
@@ -1839,7 +1830,7 @@ public class TaxServiceClient {
                 .body(RESPONSE_TYPE);
             return resp.data();
         } catch (HttpServerErrorException ex) {
-            log.error("Tax service 5xx — failing closed", ex);
+            log.error("Tax service 5xx  -  failing closed", ex);
             throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "tax");
         } catch (HttpClientErrorException ex) {
             log.warn("Tax calculation rejected: {}", ex.getMessage());
@@ -1884,7 +1875,7 @@ public class PromotionServiceClient {
         new ParameterizedTypeReference<>() {};
 
     /**
-     * Called by {@link PricingServiceImpl} BEFORE invoking {@code apply()} — if false
+     * Called by {@link PricingServiceImpl} BEFORE invoking {@code apply()}  -  if false
      * and user provided a couponCode, we reject with 400 (P1-5 fix).
      */
     public boolean isEnabled() {
@@ -1894,7 +1885,7 @@ public class PromotionServiceClient {
     public PromotionApplyResponse apply(PromotionApplyRequest request) {
         if (!props.promotion().isEnabled()) {
             // Caller (PricingService) should have already rejected user-supplied coupon when
-            // promotion is disabled — see PricingServiceImpl.calculate for the check.
+            // promotion is disabled  -  see PricingServiceImpl.calculate for the check.
             // Defensive fallback: no discount.
             return new PromotionApplyResponse(java.math.BigDecimal.ZERO, request.orderAmount());
         }
@@ -1909,7 +1900,7 @@ public class PromotionServiceClient {
             log.warn("Promotion apply rejected: {}", ex.getMessage());
             throw BusinessException.of(ErrorCode.ORDER_PROMOTION_INVALID, request.code());
         } catch (HttpServerErrorException ex) {
-            log.error("Promotion service 5xx — failing closed", ex);
+            log.error("Promotion service 5xx  -  failing closed", ex);
             throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "promotion");
         }
     }
@@ -1967,15 +1958,15 @@ public class PricingServiceImpl implements PricingService {
 
     @Override
     public PricingBreakdown calculate(UUID userId, List<CartItem> items, String couponCode) {
-        // ⚠️ P1-5 — Reject couponCode upfront if promotion service is disabled.
-        // Spec §5.2: "Có couponCode mà promotion disabled → 400 ORDER_PROMOTION_INVALID
-        // (không âm thầm bỏ qua discount user nhập)". Silent ZERO discount would be
-        // a UI lie — user sees a coupon field that doesn't work.
+        // ⚠️ P1-5  -  Reject couponCode upfront if promotion service is disabled.
+        // Spec section 5.2: Providing couponCode when promotion is disabled yields 400 ORDER_PROMOTION_INVALID
+        // rather than silently ignoring the customer discount code. Silent zero discount would be
+        // a UI lie  -  user sees a coupon field that doesn't work.
         if (couponCode != null && !couponCode.isBlank() && !promotionClient.isEnabled()) {
             throw BusinessException.of(ErrorCode.ORDER_PROMOTION_INVALID, couponCode);
         }
 
-        // 1. Fetch product snapshots (cached 10 min — see RestClient config + @Cacheable on productClient)
+        // 1. Fetch product snapshots (cached 10 min  -  see RestClient config + @Cacheable on productClient)
         Map<UUID, ProductSnapshot> snapshots = new HashMap<>();
         BigDecimal subtotal = BigDecimal.ZERO;
         for (CartItem item : items) {
@@ -2009,7 +2000,7 @@ public class PricingServiceImpl implements PricingService {
 }
 ```
 
-> TODO: TaxClassId — for MVP, pass `null` (tax service applies default). Phase 8+: fetch from product-service.
+> TODO: TaxClassId  -  for MVP, pass `null` (tax service applies default). Phase 8+: fetch from product-service.
 
 - [ ] **Step 6: Create StockReservationService interface + impl**
 
@@ -2175,7 +2166,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
         Map<String, Object> data = new HashMap<>();
         data.put("orderId", order.getId());
         data.put("cancelledAt", order.getCancelledAt() != null ? order.getCancelledAt().toString() : Instant.now().toString());
-        // ⚠️ P2-4 — MVP cannot determine refund status (no payment-service integration yet).
+        // ⚠️ P2-4  -  MVP cannot determine refund status (no payment-service integration yet).
         // Hardcode false + TODO for Phase 8 (payment-service) to wire real refund state.
         // Original condition `status == CANCELLED && total != null` was ALWAYS true.
         data.put("refunded", false);
@@ -2219,7 +2210,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
 }
 ```
 
-> ⚠️ Need to import `OrderStatus` — add `import com.shop.orderservice.entity.OrderStatus;`
+> ⚠️ Need to import `OrderStatus`  -  add `import com.shop.orderservice.entity.OrderStatus;`
 
 - [ ] **Step 3: Create OrderOutboxRelay**
 
@@ -2425,16 +2416,16 @@ public class IdempotencyServiceImpl implements IdempotencyService {
 
         try {
             repository.saveAndFlush(ik);
-            return Optional.empty();  // owner — proceed with saga
+            return Optional.empty();  // owner  -  proceed with saga
         } catch (DataIntegrityViolationException ex) {
-            // PK collision — re-lookup by composite key (user_id, key)
+            // PK collision  -  re-lookup by composite key (user_id, key)
             IdempotencyKey existing = repository.findByUserIdAndKey(userId, key)
                 .orElseThrow(() -> new IllegalStateException("PK collision but row not found", ex));
             if (existing.getResponseStatus() != 0) {
-                // Complete — replay cached response
+                // Complete  -  replay cached response
                 return Optional.of(deserialize(existing.getResponseBody()));
             }
-            // In-flight — reject
+            // In-flight  -  reject
             throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
         }
     }
@@ -2712,7 +2703,7 @@ public class CartServiceImpl implements CartService {
     private final CartMapper cartMapper;
 
     @Override
-    // ⚠️ P0-3 — NOT @Transactional(readOnly=true). getOrCreateCart may INSERT for new users;
+    // ⚠️ P0-3  -  NOT @Transactional(readOnly=true). getOrCreateCart may INSERT for new users;
     // readOnly connection would reject INSERT → 500 on first GET. This is a write (auto-create).
     @Transactional
     public CartResponse getMyCart(UUID userId) {
@@ -2938,7 +2929,7 @@ git commit -m "feat(order-service): OrderService interface + OrderMapper"
 
 ---
 
-### Task 17: OrderServiceImpl — saga + cancel + status transitions
+### Task 17: OrderServiceImpl  -  saga + cancel + status transitions
 
 **Files:**
 - Create: `service/impls/OrderServiceImpl.java`
@@ -3011,17 +3002,17 @@ public class OrderServiceImpl implements OrderService {
     private final ObjectMapper objectMapper;
 
     // ========================================================================
-    // CREATE ORDER — SAGA with explicit compensation
+    // CREATE ORDER  -  SAGA with explicit compensation
     // ========================================================================
 
     @Override
     @Transactional
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // 1. Idempotency pre-insert (REQUIRES_NEW — commits in-flight row before saga)
+        // 1. Idempotency pre-insert (REQUIRES_NEW  -  commits in-flight row before saga)
         Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId, hash(request));
-        if (cached.isPresent()) return cached.get();  // ← rev 2 fix O-N1 (REPLAY — DO NOT re-run saga)
+        if (cached.isPresent()) return cached.get();  // ← rev 2 fix O-N1 (REPLAY  -  DO NOT re-run saga)
 
-        // 2. Delegate to doCreateOrder — all-or-nothing failure wrapped in single catch
+        // 2. Delegate to doCreateOrder  -  all-or-nothing failure wrapped in single catch
         try {
             return doCreateOrder(userId, request, idempotencyKey);
         } catch (RuntimeException ex) {
@@ -3032,9 +3023,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Saga body — NOT annotated {@code @Transactional}. Runs in the TX opened by
+     * Saga body  -  NOT annotated {@code @Transactional}. Runs in the TX opened by
      * {@link #createOrder(UUID, OrderCreateRequest, String)} (proxy-invoked). Self-invocation
-     * would bypass the proxy — do not call this method from inside the same class.
+     * would bypass the proxy  -  do not call this method from inside the same class.
      */
     private OrderResponse doCreateOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
         // 1. Load cart + validate
@@ -3072,7 +3063,7 @@ public class OrderServiceImpl implements OrderService {
         }
         orderItemRepository.saveAll(orderItems);
 
-        // 4. Reserve stock per item — reservationId stored on OrderItem for cancel/compensation
+        // 4. Reserve stock per item  -  reservationId stored on OrderItem for cancel/compensation
         List<OrderItem> reserved = new ArrayList<>();
         try {
             for (OrderItem orderItem : orderItems) {
@@ -3094,7 +3085,7 @@ public class OrderServiceImpl implements OrderService {
         cart.markDeleted("system");
         cartRepository.save(cart);
 
-        // 6. Publish OrderCreated event (same TX — atomic with order insert)
+        // 6. Publish OrderCreated event (same TX  -  atomic with order insert)
         orderEventPublisher.publishCreated(order, orderItems);
 
         // 7. Build response + complete idempotency (same TX)
@@ -3112,7 +3103,7 @@ public class OrderServiceImpl implements OrderService {
             } catch (Exception ex) {
                 log.error("Failed to release reservation {} for product {} during compensation",
                     item.getReservationId(), item.getProductId(), ex);
-                // DO NOT throw — would mask original error
+                // DO NOT throw  -  would mask original error
             }
         }
     }
@@ -3146,8 +3137,8 @@ public class OrderServiceImpl implements OrderService {
             throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
         }
 
-        // Policy: USER chỉ cancel PENDING (chưa charge); ADMIN cancel PENDING + CONFIRMED.
-        // SHIPPED/DELIVERED/CANCELLED: không ai cancel được.
+        // Policy: USER can only cancel PENDING orders (prior to capture); ADMIN can cancel PENDING and CONFIRMED orders.
+        // SHIPPED, DELIVERED, and CANCELLED orders cannot be cancelled.
         if (!isAdmin && order.getStatus() != OrderStatus.PENDING) {
             throw BusinessException.of(ErrorCode.ORDER_INVALID_STATE, orderId);
         }
@@ -3156,9 +3147,9 @@ public class OrderServiceImpl implements OrderService {
             throw BusinessException.of(ErrorCode.ORDER_INVALID_STATE, orderId);
         }
 
-        // Release stock CHỈ khi PENDING (reservations còn PENDING trong inventory).
-        // CONFIRMED: reservations đã COMMITTED — release endpoint sẽ throw RESERVATION_INVALID_STATE.
-        // Restock cho CONFIRMED: refund flow (Phase 8) hoặc admin adjust thủ công.
+        // Release stock only while PENDING (reservations remain PENDING in inventory).
+        // For CONFIRMED orders, reservations are already COMMITTED; the release endpoint would throw RESERVATION_INVALID_STATE.
+        // Restocking for CONFIRMED orders is handled in the refund flow (Phase 8) or via manual admin adjustments.
         if (order.getStatus() == OrderStatus.PENDING) {
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
@@ -3169,7 +3160,7 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancelledAt(Instant.now());
-        // NO markDeleted — cancelled orders must remain in user/admin history (rev 2 fix)
+        // NO markDeleted  -  cancelled orders must remain in user/admin history (rev 2 fix)
         orderRepository.save(order);
 
         orderEventPublisher.publishCancelled(order);
@@ -3218,7 +3209,7 @@ public class OrderServiceImpl implements OrderService {
             case CONFIRMED -> order.setConfirmedAt(now);
             case SHIPPED -> order.setShippedAt(now);
             case DELIVERED -> order.setDeliveredAt(now);
-            case CANCELLED -> order.setCancelledAt(now);  // not used here — cancelOrder uses different flow
+            case CANCELLED -> order.setCancelledAt(now);  // not used here  -  cancelOrder uses different flow
             default -> { /* unreachable */ }
         }
         order.setStatus(to);
@@ -3270,14 +3261,14 @@ public class OrderServiceImpl implements OrderService {
 
 ```bash
 git add order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java
-git commit -m "feat(order-service): OrderServiceImpl — saga (createOrder + doCreateOrder split) + cancel + status transitions"
+git commit -m "feat(order-service): OrderServiceImpl  -  saga (createOrder + doCreateOrder split) + cancel + status transitions"
 ```
 
 ---
 
 ---
 
-## Phase 3 — Controllers + tests
+## Phase 3  -  Controllers + tests
 
 ### Task 18: Request/Response DTOs for controllers
 
@@ -3325,7 +3316,7 @@ import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public record OrderCreateRequest(
-    UUID cartId,                 // optional — defaults to current user's cart
+    UUID cartId,                 // optional  -  defaults to current user's cart
     @Size(max = 50) String couponCode
 ) {}
 ```
@@ -3588,7 +3579,7 @@ class CartControllerTest {
 }
 ```
 
-> ⚠️ Verify `ApiPaths.CARTS` constant exists in `common-core` constants — may need to add `CARTS = "/api/v1/carts"` if missing.
+> ⚠️ Verify `ApiPaths.CARTS` constant exists in `common-core` constants  -  may need to add `CARTS = "/api/v1/carts"` if missing.
 
 - [ ] **Step 3: Run test**
 
@@ -3644,7 +3635,7 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    // ⚠️ P2-6 — DO NOT use @PreAuthorize("hasRole('USER')"): Keycloak users may not have
+    // ⚠️ P2-6  -  DO NOT use @PreAuthorize("hasRole('USER')"): Keycloak users may not have
     // explicit realm role "USER" → 403 oan. Filter chain already authenticated (isAuthenticated()
     // at class level); service-layer owner check ensures users can only access their own orders.
     public ApiResponse<OrderResponse> createOrder(
@@ -3894,7 +3885,7 @@ git commit -m "feat(order-service): OrderStatusController (admin/SERVICE role-ga
 
 ---
 
-## Phase 4 — Advanced tests + integration + smoke
+## Phase 4  -  Advanced tests + integration + smoke
 
 ### Task 22: TestLiquibaseConfig (copy from product-service)
 
@@ -4153,8 +4144,8 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * ⚠️ P2-7 — Plain UNIT test (no Spring, no Testcontainers). Pure state-machine
- * logic — table-driven Map + set lookup. No need to spin up a DB container (~30s
+ * ⚠️ P2-7  -  Plain UNIT test (no Spring, no Testcontainers). Pure state-machine
+ * logic  -  table-driven Map + set lookup. No need to spin up a DB container (~30s
  * saved per run).
  */
 class OrderStatusServiceImplTest {
@@ -4376,9 +4367,9 @@ git commit -m "test(order-service): OrderRepositoryTest + CartRepositoryTest (UN
 
 - [ ] **Step 1: Verify WireMock dependency (already added in Task 3)**
 
-> ⚠️ **Rev 5 — Task 3 đã add `org.wiremock:wiremock-standalone:3.13.1` (P1-4). KHÔNG thêm
-> `org.wiremock.integrations:wiremock-spring-boot` — artifact đó cần `@EnableWireMock`
-> annotation API, mâu thuẫn với code dưới đây dùng classic API
+> Rev 5: Task 3 added `org.wiremock:wiremock-standalone:3.13.1` (P1-4). Do not add
+> `org.wiremock.integrations:wiremock-spring-boot`, as that artifact requires the `@EnableWireMock`
+> annotation API and conflicts with the classic API used below
 > (`new WireMockServer()` + `com.github.tomakehurst.wiremock.*`).**
 
 Verify trong `order-service/pom.xml`:
@@ -4454,10 +4445,10 @@ class OrderCreationSagaIntegrationTest {
         r.add("shop.services.inventory.url", () -> "http://localhost:" + inventoryServer.port());
         r.add("shop.services.tax.enabled", () -> "false");
         r.add("shop.services.promotion.enabled", () -> "false");
-        // ⚠️ P0-8 — point Keycloak issuer to WireMock to avoid connection refused at boot
+        // ⚠️ P0-8  -  point Keycloak issuer to WireMock to avoid connection refused at boot
         r.add("shop.security.issuer-uri", () -> "http://localhost:" + keycloakServer.port() + "/realms/test");
         r.add("shop.security.csrf-disabled", () -> "true");
-        // P0-7 — ServiceTokenProvider lấy token từ WireMock (stub trả dummy-jwt ở @BeforeAll)
+        // P0-7: ServiceTokenProvider retrieves token from WireMock (stub returns dummy-jwt in @BeforeAll)
         r.add("shop.services.keycloak.token-url",
             () -> "http://localhost:" + keycloakServer.port() + "/realms/test/protocol/openid-connect/token");
     }
@@ -4468,9 +4459,9 @@ class OrderCreationSagaIntegrationTest {
         productServer.start();
         inventoryServer = new WireMockServer(0);
         inventoryServer.start();
-        // ⚠️ P0-8 — Stub Keycloak OIDC endpoints so Boot's JwtDecoder doesn't
-        // connection-refuse at startup. Đồng thời cấp token cho ServiceTokenProvider
-        // (Task 2): shop.services.keycloak.token-url trỏ về keycloakServer (props bên dưới).
+        // ⚠️ P0-8  -  Stub Keycloak OIDC endpoints so Boot's JwtDecoder doesn't
+        // preventing connection refusal at startup while providing tokens for ServiceTokenProvider
+        // (Task 2): shop.services.keycloak.token-url points to keycloakServer via properties below.
         // but BaseSecurityConfig still tries to resolve issuer at boot.
         keycloakServer = new WireMockServer(0);
         keycloakServer.stubFor(get(urlMatching("/realms/.*/.well-known/openid-configuration"))
@@ -4543,7 +4534,7 @@ class OrderCreationSagaIntegrationTest {
 
     @Test
     void reservationFailure_releasesNothingAndThrows() {
-        // 2 cart items, only 1 reserves successfully — second fails
+        // 2 cart items, only 1 reserves successfully  -  second fails
         UUID productId2 = UUID.randomUUID();
         var cart = cartRepository.findByUserIdAndDeletedFalse(userId).orElseThrow();
         cartItemRepository.save(com.shop.orderservice.entity.CartItem.builder()
@@ -4580,7 +4571,7 @@ class OrderCreationSagaIntegrationTest {
         OrderResponse first = orderService.createOrder(userId,
             new OrderCreateRequest(null, null), "idem-key-1");
 
-        // Second call with same key — should return cached, NOT re-run saga
+        // Second call with same key  -  should return cached, NOT re-run saga
         OrderResponse second = orderService.createOrder(userId,
             new OrderCreateRequest(null, null), "idem-key-1");
 
@@ -4602,7 +4593,7 @@ class OrderCreationSagaIntegrationTest {
 ```bash
 git add order-service/pom.xml \
         order-service/src/test/java/com/shop/orderservice/service/OrderCreationSagaIntegrationTest.java
-git commit -m "test(order-service): saga integration test (WireMock — happy + reservation failure + idempotency replay)"
+git commit -m "test(order-service): saga integration test (WireMock  -  happy + reservation failure + idempotency replay)"
 ```
 
 ---
@@ -4725,7 +4716,7 @@ docker compose exec kafka kafka-console-consumer.sh --bootstrap-server localhost
 | §7.1 application.yml | Task 4 |
 | §7.2 RestClient config | Task 6 |
 | §8 ErrorCodes (ORD-4003..4010) | Task 1 |
-| §9 Testing strategy | Tasks 19–25 |
+| §9 Testing strategy | Tasks 19-25 |
 | §10 Open items | Applied: composite PK O-N5, reference-only O-N4, refund flow O-N6 deferred |
 
 ### 2. Placeholder scan
@@ -4734,26 +4725,26 @@ No TBD/TODO in task code. ✓
 
 ### 3. Type consistency
 
-- `OrderResponse` 14 fields — consistent across mapper, controller, idempotency ✓
-- `CartResponse` 6 fields — consistent ✓
-- `OrderCreateRequest` 2 fields — consistent ✓
-- `OrderItem.reservationId` UUID — consistent across reserve + cancel ✓
-- `IdempotencyKey.idempotencyKeyId` composite PK (user_id, key) — consistent across repository, service, controller ✓
+- `OrderResponse` 14 fields  -  consistent across mapper, controller, idempotency ✓
+- `CartResponse` 6 fields  -  consistent ✓
+- `OrderCreateRequest` 2 fields  -  consistent ✓
+- `OrderItem.reservationId` UUID  -  consistent across reserve + cancel ✓
+- `IdempotencyKey.idempotencyKeyId` composite PK (user_id, key)  -  consistent across repository, service, controller ✓
 
 ### 4. Rev 2 fixes reflected
 
-- ✅ O-N1: `createOrder` checks `cached.isPresent()` → return cached — caller bug fixed
-- ✅ O-N2: `doCreateOrder()` extracted + single `RuntimeException` catch + `abort()` — covers all failures
-- ✅ O-N3: `hash()` defined in OrderServiceImpl — SHA-256 hex (64 chars)
-- ✅ O-N4: `reservationId` documented as reference-only — no status column
-- ✅ O-N5: IdempotencyKey composite PK `(user_id, key)` — all queries `findByUserIdAndKey`
-- ✅ O-N6: DELIVERED terminal — refund flow deferred to Phase 8
+- ✅ O-N1: `createOrder` checks `cached.isPresent()` → return cached  -  caller bug fixed
+- ✅ O-N2: `doCreateOrder()` extracted + single `RuntimeException` catch + `abort()`  -  covers all failures
+- ✅ O-N3: `hash()` defined in OrderServiceImpl  -  SHA-256 hex (64 chars)
+- ✅ O-N4: `reservationId` documented as reference-only  -  no status column
+- ✅ O-N5: IdempotencyKey composite PK `(user_id, key)`  -  all queries `findByUserIdAndKey`
+- ✅ O-N6: DELIVERED terminal  -  refund flow deferred to Phase 8
 - ✅ O-N7: `order.outbox.retention-days: 7`
-- ✅ O-N8: Changelog at §12 (end) — inventory/favourite convention
+- ✅ O-N8: Changelog at §12 (end)  -  inventory/favourite convention
 
 ### 5. Prerequisite fixes reflected
 
-- ✅ ServiceTokenProvider order-service local, bind `shop.services.keycloak.*` (Task 2 — rev 4 un-deferred)
+- ✅ ServiceTokenProvider order-service local, bind `shop.services.keycloak.*` (Task 2  -  rev 4 un-deferred)
 - ✅ `tax.enabled` / `promotion.enabled` flags default false (Task 4 yml)
 - ✅ docker-compose delta SHOP_KAFKA_BOOTSTRAP_SERVERS + Redis env (Task 26)
 
@@ -4761,10 +4752,10 @@ No TBD/TODO in task code. ✓
 
 ## Execution Handoff
 
-Plan complete and saved. 27 tasks across 4 phases (~3–4 weeks implementation effort for senior engineer). Two execution options:
+Plan complete and saved. 27 tasks across 4 phases (~3-4 weeks implementation effort for senior engineer). Two execution options:
 
-**1. Subagent-Driven (recommended)** — dispatch fresh subagent per task, review between tasks.
+**1. Subagent-Driven (recommended)**  -  dispatch fresh subagent per task, review between tasks.
 
-**2. Inline Execution** — execute tasks in this session with `executing-plans`.
+**2. Inline Execution**  -  execute tasks in this session with `executing-plans`.
 
 (All rev 2 fixes + 3 prerequisites + O-N1..N8 issues + 22 deep-review fixes (P0-1..P0-8, P1-1..P1-6, P2-1..P2-7) + rev 4 regression fix (P0-7 un-deferred with LOCAL ServiceTokenProvider) incorporated. Plan is consistent with spec rev 3 final.)

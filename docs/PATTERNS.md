@@ -1,4 +1,4 @@
-# Fleet Patterns — Authoritative Reference
+# Fleet Patterns: Authoritative Reference
 
 > **Every Wave B/C/D agent AND every maintainer MUST read this before touching a
 > service.** When you change a pattern, prove it with research; update the
@@ -24,7 +24,7 @@ This document is the single source of truth for fleet conventions. Whenever the
 hashCode, and toString. Adding Lombok on top generates a second builder class
 with no benefit and creates a foot-gun: Jackson + records uses
 `@JsonCreator`-discovered canonical-ctor binding, not the Lombok-generated
-builder — so the `@Builder` API actively mis-encourages callers to construct
+builder: so the `@Builder` API actively mis-encourages callers to construct
 records piecemeal in tests while the runtime expects full canonical-ctor
 serialisation.
 
@@ -34,8 +34,8 @@ document it as a best practice; the Spring/Java community consensus in 2026 is
 to prefer the canonical constructor or a small hand-written factory.
 
 **Citation:**
-- https://projectlombok.org/features/Builder — Lombok official `@Builder` page.
-- JEP 395 (Java 16 records) — canonical constructor is the canonical
+- https://projectlombok.org/features/Builder: Lombok official `@Builder` page.
+- JEP 395 (Java 16 records): canonical constructor is the canonical
   construction API; no builder required.
 
 **Failure mode caught:** `TokenResponse.builder()...build()` in domain code or
@@ -50,11 +50,11 @@ tests; `@Getter` on a record component (redundant).
   `ErrorCode` (see `utils/common-core/.../exception/ErrorCode.java`) and the
   global `ApiExceptionHandler` returns the matching `HttpStatus` + i18n message.
 - `DataIntegrityViolationException` (DB constraint violations: unique, check,
-  FK) ALWAYS maps to **409 CONFLICT** with `ErrorCode.CONFLICT` —
+  FK) ALWAYS maps to **409 CONFLICT** with `ErrorCode.CONFLICT`: 
   NOT 500.
 - The raw `exception.getMostSpecificCause().getMessage()` is NEVER echoed to
   the client (it carries the constraint name, table name, column name, SQL
-  state — a free schema map to any caller).
+  state: a free schema map to any caller).
 
 **Why:** A client that retried an idempotency key with the same payload needs
 the 409 + domain code to know it was a duplicate; the operator (and the logs)
@@ -69,7 +69,7 @@ privileged content. The fix MUST keep the 409 + use a generic i18n key
 
 **Citation:**
 - Spring @ExceptionHandler docs (HTTP status mapping).
-- OWASP "Improper Error Handling" guidance — never echo internal exception
+- OWASP "Improper Error Handling" guidance: never echo internal exception
   text in user-facing responses.
 
 **Failure mode caught:** Any `@ExceptionHandler(DataIntegrityViolationException)`
@@ -78,14 +78,14 @@ returning `HttpStatus.INTERNAL_SERVER_ERROR`; any handler that interpolates
 
 ---
 
-## R3. Kafka producer keys are Kafka-native names — no `properties.` prefix
+## R3. Kafka producer keys are Kafka-native names: no `properties.` prefix
 
 **Rule:**
 - Properties passed to `DefaultKafkaProducerFactory` use the canonical Kafka
   client key names: `bootstrap.servers`, `acks`, `enable.idempotence`,
   `compression.type`, `batch.size`, `linger.ms`,
   `max.in.flight.requests.per.connection`, `key.serializer`, `value.serializer`.
-- Do NOT prefix any of these with `properties.` — that is a Kafka client
+- Do NOT prefix any of these with `properties.`: that is a Kafka client
   config *key*, not a path. The broker silently ignores it.
 
 **Why:** A key like `properties.max.in.flight.requests.per.connection=1` looks
@@ -95,7 +95,7 @@ breaks the exactly-once-per-attempt recipe pinned at the build site.
 
 **Reasoning:** The pre-existing line in our `KafkaProperties.build*` method
 had this key wrong for months. H41 (Wave A) preserved the original behaviour
-verbatim — proving that even carefully-reviewed work inherits this foot-gun if
+verbatim: proving that even carefully-reviewed work inherits this foot-gun if
 not tested with an assertion.
 
 **Citation:**
@@ -110,7 +110,7 @@ or `buildConsumerProperties()` whose key starts with `properties.`.
 
 ---
 
-## R4. No `addTrustedPackages("*")` — deserialization trusts the wire contract, not classpath
+## R4. No `addTrustedPackages("*")`: deserialization trusts the wire contract, not classpath
 
 **Rule:**
 - Kafka consumer trusted packages are enumerated
@@ -120,7 +120,7 @@ or `buildConsumerProperties()` whose key starts with `properties.`.
   controlled by the producer fleet.
 
 **Why:** `addTrustedPackages("*")` is a deserialization gadget
-amplifier — any class on the classpath reachable from a no-arg / setter entry
+amplifier: any class on the classpath reachable from a no-arg / setter entry
 point becomes instantiable from a malicious payload (CVE-2017-7525 style
 chains; newer Spring Security advisories keep the pattern warm).
 
@@ -134,14 +134,14 @@ chains; newer Spring Security advisories keep the pattern warm).
 
 ---
 
-## R5. Containers run non-root — both Dockerfiles AND Jib config
+## R5. Containers run non-root: both Dockerfiles AND Jib config
 
 **Rule:**
 - Every service Dockerfile ends with `USER appuser` after `addgroup -S appuser
   && adduser -S appuser -G appuser` and `COPY --chown=appuser:appuser …`.
 - The root `pom.xml` Jib plugin config sets
-  `<container><user>100:101</user></container>` — same UID/GID as the Docker
-  approach — so Jib-built images (the path the production `docker-compose.yml`
+  `<container><user>100:101</user></container>`: same UID/GID as the Docker
+  approach: so Jib-built images (the path the production `docker-compose.yml`
   uses) match the Dockerfile path.
 
 **Why:** A container escape (JRE CVE / Spring app dependency / supply-chain
@@ -150,7 +150,7 @@ container process runs as UID 0. Linux best practice since Docker's "rootless"
 push is "drop privileges as early as possible".
 
 **Citation:**
-- eclipse-temurin Dockerfiles (Alpine/JRE) — no unprivileged user out of the
+- eclipse-temurin Dockerfiles (Alpine/JRE): no unprivileged user out of the
   box; convention `RUN addgroup -S appuser && adduser -S appuser …`.
 - Jib `container.user` plugin documentation
   (https://github.com/GoogleContainerTools/jib).
@@ -235,12 +235,12 @@ Liquibase changeset.
 
 ---
 
-## R10. `AuthenticatedUser.requireCurrent()` — never `jwt.getSubject()` for users
+## R10. `AuthenticatedUser.requireCurrent()`: never `jwt.getSubject()` for users
 
 **Rule:** Authenticated services read the current user via
 `AuthenticatedUser.requireCurrent()` (helper in `common-security`). The JWT
 `subject` is the user's UUID; the username lives in a custom claim or in the
-DB look-up — calling `userService.findByUsername(jwt.getSubject())` returns
+DB look-up: calling `userService.findByUsername(jwt.getSubject())` returns
 404 because the subject is not the username.
 
 **Failure mode caught:** `userService.findByUsername(jwt.getSubject())`,
@@ -251,12 +251,12 @@ DB look-up — calling `userService.findByUsername(jwt.getSubject())` returns
 ## R11. ES xpack security posture
 
 **Rule:**
-- `xpack.security.enabled=true` even in dev — the cluster is never anonymous.
+- `xpack.security.enabled=true` even in dev: the cluster is never anonymous.
 - Dev keeps `xpack.security.http.ssl.enabled=false` (HTTP + BASIC) with a
   `CHANGE IN PROD` marker in `.env.example`; production overlay enables HTTPS
   with a real cert.
 - All `search-service` ES clients use the same credential env vars
-  (`ES_ADMIN_USERNAME`, `ES_ADMIN_PASSWORD`) — not the older
+  (`ES_ADMIN_USERNAME`, `ES_ADMIN_PASSWORD`): not the older
   `ELASTICSEARCH_USERNAME/PASSWORD` names.
 
 **Citation:** Elastic Stack security hardening checklist.
@@ -272,7 +272,7 @@ mismatched between compose and per-service yml.
 - Every `OutboxEventRepository.claimOnePending(...)` uses `PESSIMISTIC_WRITE
   + SKIP LOCKED` and runs the publish inside the claim transaction.
 - A scheduler reclaims rows still in `SENDING` past a heartbeat horizon
-  (crash-mid-send recovery — without it the row strands in `SENDING`, same
+  (crash-mid-send recovery: without it the row strands in `SENDING`, same
   loss class as the original notification C12).
 
 **Failure mode caught:** An `OutboxEventRelay` selecting pending rows

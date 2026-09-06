@@ -1,4 +1,4 @@
-# Real Carrier Adapters (GHN/GHTK) — Design
+# Real Carrier Adapters (GHN/GHTK) - Design
 
 - Date: 2026-09-01
 - Status: Draft (pending user ratification of 3 scope decisions)
@@ -9,12 +9,12 @@
 - shipping-service D1 defines `CarrierAdapter { Carrier carrier(); ShipmentDraft createShipment(...); void cancelShipment(...); }`.
 - shipping-service D4 webhook path is `/api/v1/webhooks/shipping/{carrier}` with HMAC-SHA256 fail-closed verify (existing pattern).
 - shipping-service D10 specifies webhook secrets are PER CARRIER (SHOP_SHIPPING_WEBHOOK_SECRET_GHN, SHOP_SHIPPING_WEBHOOK_SECRET_GHTK). Verification looks up secret by `{carrier}` path variable.
-- ManualCarrierAdapter and NoopCarrierAdapter exist; this epic does NOT touch them — purely additive.
+- ManualCarrierAdapter and NoopCarrierAdapter exist; this epic does NOT touch them - purely additive.
 - Carrier enum in shipping-service has at minimum MANUAL + NOOP; needs +2 values (GHN, GHTK). Verify by reading shipping carrier enum.
 
 ## §1 Binding decisions
 
-### D1 — Raw HTTP via RestClient (NOT third-party SDK) (decision Q1)
+### D1 - Raw HTTP via RestClient (NOT third-party SDK) (decision Q1)
 
 Both GHN and GHTK have undocumented REST APIs (reverse-engineered; no official Java SDK). The fleet pattern for vendor integrations (search D1: elasticsearch-java; payment D1: stripe-java; storage: aws-sdk) is "use the official client where it exists, otherwise wrap in our own thin RestClient". Since neither carrier has an official SDK, use raw HTTP via the fleet's common RestClient pattern.
 
@@ -24,7 +24,7 @@ API endpoint URLs (V1):
 
 V1 only supports TEST/SANDBOX endpoints of both carriers. Live keys are ops-only epic (separate).
 
-### D2 — Adapter selection is runtime-env per-carrier (decision Q2)
+### D2 - Adapter selection is runtime-env per-carrier (decision Q2)
 
 Each carrier adapter is `@ConditionalOnProperty("shop.shipping.carriers.{name}.enabled")`:
 
@@ -35,10 +35,10 @@ Each carrier adapter is `@ConditionalOnProperty("shop.shipping.carriers.{name}.e
 
 Adapter auto-registration via Spring: a `CarrierAdapterRegistry` (NEW) holds all enabled adapters, exposes `byCarrier(Carrier)` lookup. Used by ShipmentService on CONFIRMED order event to dispatch to the right adapter.
 
-### D3 — Webhook verification per carrier (decision Q3)
+### D3 - Webhook verification per carrier (decision Q3)
 
 Per-carrier webhook secret (existing shipping D10):
-- GHN: `SHOP_SHIPPING_WEBHOOK_SECRET_GHN` (HMAC-SHA256, signature header `X-GHN-Signature` — verify GHN's actual scheme at quickstart).
+- GHN: `SHOP_SHIPPING_WEBHOOK_SECRET_GHN` (HMAC-SHA256, signature header `X-GHN-Signature` - verify GHN's actual scheme at quickstart).
 - GHTK: `SHOP_SHIPPING_WEBHOOK_SECRET_GHTK` (HMAC-SHA256, header `X-GHTK-Signature`).
 
 V1 webhook payload mapping (per carrier's actual schema):
@@ -119,12 +119,12 @@ No new endpoints. Carrier selection happens at shipment creation (order CONFIRME
 
 - shipping-service = W1 lane.
 - Carrier enum gains GHN + GHTK constants. Verify pre-existing values before extending (NOOP, MANUAL pre-exist).
-- Compose: shipping-service stanza gains optional envs (commented by default — both carriers disabled in compose).
+- Compose: shipping-service stanza gains optional envs (commented by default - both carriers disabled in compose).
 - Outbox/webhook: no new topics; re-use existing shop.shipping.lifecycle.v1.
 
 ## §8 Non-goals (binding)
 
-Foreign addresses (non-VN — would need country-specific district code tables; default V1 = VN-only); real/live carrier credentials (V1 sandbox only — ops-only epic for live); address validation per carrier (use whatever address the order has); label PDF generation + storage to common-storage (separate epic); insurance / COD (cash-on-delivery); multi-warehouse / origin-shop selection; rate-shopping (comparing GHN vs GHTK for cheapest); pickup scheduling; bulk-create shipments.
+Foreign addresses (non-VN - would need country-specific district code tables; default V1 = VN-only); real/live carrier credentials (V1 sandbox only - ops-only epic for live); address validation per carrier (use whatever address the order has); label PDF generation + storage to common-storage (separate epic); insurance / COD (cash-on-delivery); multi-warehouse / origin-shop selection; rate-shopping (comparing GHN vs GHTK for cheapest); pickup scheduling; bulk-create shipments.
 
 ## §9 Open items
 
@@ -132,7 +132,7 @@ Foreign addresses (non-VN — would need country-specific district code tables; 
 - Carrier-side district ID mapping: VN has 700+ districts. V1 ships with hardcoded subset (~50 major districts); full mapping deferred.
 - Address validation: V1 passes the address as-is; if carrier rejects, SHP-CARRIER_REJECTED new error → admin notified → admin re-submits via MANUAL.
 - Webhook signature schemes: verify with carrier docs at quickstart. GHN historically used MD5, now HMAC-SHA256. Implementation deferred to T2 verification step.
-- Sandbox credentials: ops must apply for GHN/GHTK sandbox tokens. Epic does NOT ship with sandbox creds — they're ops-set envs.
+- Sandbox credentials: ops must apply for GHN/GHTK sandbox tokens. Epic does NOT ship with sandbox creds - they're ops-set envs.
 
 ## §10 Changelog
 

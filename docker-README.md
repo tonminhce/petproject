@@ -1,4 +1,4 @@
-# Docker Stack — E-commerce Microservices
+# Docker Stack : E-commerce Microservices
 
 > Two scripts to build, start, and stop the full 20-service Docker stack defined in
 > [`docker-compose.yml`](docker-compose.yml).
@@ -9,24 +9,24 @@
 |---|---|---|
 | Docker Desktop | 4.13+ (Compose v2) | Allocates **at least 4 GB RAM** in Settings → Resources |
 | Java JDK | 25 | Only required if you want to (re)build service images |
-| Maven | wrapper (`./mvnw`) | Ships with the repo — no global install needed |
+| Maven | wrapper (`./mvnw`) | Ships with the repo - no global install needed |
 | Bash | 4+ | macOS ships bash 3.2; the scripts also work on zsh |
 
 > Tip: macOS users can just use the project without installing Java if they already have
-> built images cached — `./start-docker.sh` will skip the rebuild step when images exist.
+> built images cached - `./start-docker.sh` will skip the rebuild step when images exist.
 
 ## Quick Start
 
 ```bash
 # 1. One-time: copy env template (already present in this repo as .env)
-#    Adjust passwords if needed.
+# Adjust passwords if needed.
 
 # 2. Build images + start the full stack
 ./start-docker.sh
 
 # 3. Browse
-#    Gateway   http://localhost:8080
-#    Keycloak  http://localhost:8080  (admin / admin)
+# Gateway http://localhost:8080
+# Keycloak http://localhost:8080 (admin / admin)
 
 # 4. Stop (keeps data)
 ./stop-docker.sh
@@ -39,46 +39,46 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          Docker host                             │
-│                                                                  │
-│  ┌──────────────┐         ┌────────────────────────────────┐     │
-│  │  Browser /   │────────▶│      gateway-service  :8080     │     │
-│  │  curl / apps │         │   (Spring Cloud Gateway)       │     │
-│  └──────────────┘         └────────┬───────────────────────┘     │
-│                                    │                              │
-│                ┌───────────────────┼───────────────────────┐      │
-│                ▼                   ▼                       ▼      │
-│       ┌─────────────┐      ┌─────────────┐         ┌─────────────┐│
-│       │ auth-service│      │product-svc  │  … 12 more backends    │
-│       │   :8088     │      │   :8086     │                        │
-│       └─────────────┘      └─────────────┘                        │
-│                │                   │                              │
-│                └────────┬──────────┘                              │
-│                         ▼                                         │
-│  ┌────────────┐ ┌─────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐ │
-│  │ PostgreSQL │ │  Redis  │ │  Kafka │ │  Elastic │ │  RustFS  │ │
-│  │   :5432    │ │  :6379  │ │  :9092 │ │   :9200  │ │  :9000   │ │
-│  └────────────┘ └─────────┘ └────────┘ └──────────┘ └──────────┘ │
-│                                                                  │
-│                       ecommerce-network (bridge)                 │
+│ Docker host │
+│ │
+│ ┌──────────────┐ ┌────────────────────────────────┐ │
+│ │ Browser / │────────▶│ gateway-service :8080 │ │
+│ │ curl / apps │ │ (Spring Cloud Gateway) │ │
+│ └──────────────┘ └────────┬───────────────────────┘ │
+│ │ │
+│ ┌───────────────────┼───────────────────────┐ │
+│ ▼ ▼ ▼ │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐│
+│ │ auth-service│ │product-svc │ … 12 more backends │
+│ │ :8088 │ │ :8086 │ │
+│ └─────────────┘ └─────────────┘ │
+│ │ │ │
+│ └────────┬──────────┘ │
+│ ▼ │
+│ ┌────────────┐ ┌─────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐ │
+│ │ PostgreSQL │ │ Redis │ │ Kafka │ │ Elastic │ │ RustFS │ │
+│ │ :5432 │ │ :6379 │ │ :9092 │ │ :9200 │ │ :9000 │ │
+│ └────────────┘ └─────────┘ └────────┘ └──────────┘ └──────────┘ │
+│ │
+│ ecommerce-network (bridge) │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 * 6 infrastructure containers (Postgres, Redis, Kafka KRaft, Elasticsearch, Keycloak, RustFS)
-* 1 gateway (Spring Cloud Gateway — entry point on :8080)
+* 1 gateway (Spring Cloud Gateway - entry point on :8080)
 * 13 backend microservices (auth, product, order, payment, shipping, inventory,
-  favourite, rating, media, tax, promotion, search, notification)
+ favourite, rating, media, tax, promotion, search, notification)
 * **Total: 20 containers**
 
 ## Service URLs
 
 | Service | URL | Credentials |
 |---|---|---|
-| **Gateway** | http://localhost:8080 | — |
+| **Gateway** | http://localhost:8080 | - |
 | **Keycloak Admin** | http://localhost:8080 | `admin` / `admin` |
 | PostgreSQL | `localhost:5432` | `admin` / `admin`, db `ecommerce` |
 | Redis | `localhost:6379` | password `admin` |
-| Kafka | `localhost:9092` | — |
+| Kafka | `localhost:9092` | - |
 | Elasticsearch | `localhost:9200` | (no auth in dev) |
 | RustFS S3 API | `localhost:9000` | `admin` / `admin` |
 | RustFS Console | `localhost:9001` | `admin` / `admin` |
@@ -94,7 +94,7 @@
 | tax-service | 8091 | | promotion-service | 8093 |
 | search-service | 8094 | | notification-service | 8090 |
 
-*media-service publishes no host port (dev or prod) — it is reached through
+*media-service publishes no host port (dev or prod) - it is reached through
 the gateway (:8080, ServiceRoute MEDIA).*
 
 ## Useful Commands
@@ -158,7 +158,7 @@ Elasticsearch, Kafka, and the Spring services need real RAM.
 
 * Docker Desktop → Settings → Resources → **Memory → 4 GB or more**.
 * If a single service is the culprit, raise `ES_JAVA_OPTS` in `docker-compose.yml`
-  (current dev value: `-Xms512m -Xmx512m`).
+ (current dev value: `-Xms512m -Xmx512m`).
 
 ### `Keycloak` never becomes healthy
 
@@ -191,7 +191,7 @@ Start Docker Desktop and wait for the whale icon to stop animating, then re-run
 
 ### Clean slate
 
-If the stack is wedged and you want to start over from scratch (DESTRUCTIVE —
+If the stack is wedged and you want to start over from scratch (DESTRUCTIVE - 
 deletes all DB data):
 
 ```bash
@@ -231,7 +231,7 @@ docker volume inspect untitled5_postgres_data
 3. Runs `./mvnw jib:dockerBuild` to build 14 local images (`<service>:latest`)
 4. Starts 6 infrastructure containers
 5. Polls `docker inspect …State.Health.Status` until all infra are healthy
-   (or 180 s timeout)
+ (or 180 s timeout)
 6. Starts 14 application services
 7. Waits for `gateway-service` to become healthy
 8. Prints the URL summary
@@ -242,7 +242,7 @@ docker volume inspect untitled5_postgres_data
 2. Prompts for confirmation before destructive actions
 3. Runs `docker compose down` (with `--volumes` and `--rmi all` if requested)
 
-Both scripts are idempotent — `./start-docker.sh` after a partial start picks up
+Both scripts are idempotent - `./start-docker.sh` after a partial start picks up
 where it left off (Compose recreates existing containers in place).
 
 ## Exit codes
