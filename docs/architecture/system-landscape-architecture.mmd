@@ -53,7 +53,7 @@ flowchart TB
     end
 
     subgraph BUS ["Event Streaming Backbone"]
-        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.events.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
+        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.lifecycle.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
     end
 
     subgraph DATA_TIER ["Persistence & Distributed Storage"]

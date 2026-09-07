@@ -78,7 +78,7 @@ flowchart TB
     end
 
     subgraph BUS ["Event Streaming Backbone"]
-        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.events.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
+        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.lifecycle.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
     end
 
     subgraph DATA_TIER ["Persistence & Distributed Storage"]
@@ -202,7 +202,7 @@ flowchart TB
         T_PRD["shop.product.lifecycle.v1<br/>• ProductCreated<br/>• ProductUpdated<br/>• ProductDeleted"]:::topicClass
         T_ORD["shop.order.lifecycle.v1<br/>• order.created.v1<br/>• order.updated.v1<br/>• order.cancelled.v1"]:::topicClass
         T_INV["shop.inventory.events.v1<br/>• inventory.reserved.v1<br/>• inventory.committed.v1<br/>• inventory.released.v1"]:::topicClass
-        T_PAY["shop.payment.events.v1<br/>• payment.succeeded.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
+        T_PAY["shop.payment.lifecycle.v1<br/>• payment.captured.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
         T_SHP["shop.shipping.events.v1<br/>• shipping.dispatched.v1<br/>• shipping.delivered.v1"]:::topicClass
         T_RTG["shop.rating.events.v1<br/>• RatingCreated<br/>• RatingApproved"]:::topicClass
     end
@@ -218,6 +218,7 @@ flowchart TB
 
         subgraph C_ORDER ["order-service (:8084)"]
             C_ORD_LST["ShippingDeliveredConsumer<br/>Auto-Transition Order to DELIVERED"]:::subClass
+            C_ORD_PAY["PaymentLifecycleConsumer<br/>Auto-Confirm Order on payment.captured.v1"]:::subClass
         end
 
         subgraph C_NOTIF ["notification-service (:8090)"]
@@ -242,6 +243,7 @@ flowchart TB
     T_ORD -->|"Consume Order Events"| C_SHP_LST
     T_ORD -->|"Consume Order Events"| C_NOTIF_LST
     T_PAY -->|"Consume Payment Events"| C_NOTIF_LST
+    T_PAY -->|"Consume payment.captured.v1"| C_ORD_PAY
     T_SHP -->|"Consume shipping.delivered.v1"| C_ORD_LST
     T_RTG -->|"Consume Rating Events"| C_PRD_LST
     T_RTG -->|"Sync Rating to ES"| C_SEARCH_LST
@@ -254,7 +256,7 @@ flowchart TB
 | `shop.order.lifecycle.v1` | `order-service` | `orderId` | `order.created.v1`, `order.updated.v1`, `order.cancelled.v1` | **shipping-service**: Creates shipment package on `CONFIRMED`.<br/>**notification-service**: Sends order confirmation email. |
 | `shop.product.lifecycle.v1` | `product-service` | `productId` | `ProductCreated`, `ProductUpdated`, `ProductDeleted` | **search-service**: Upserts or deletes document in Elasticsearch `products` index. |
 | `shop.inventory.events.v1` | `inventory-service` | `productId` | `inventory.reserved.v1`, `committed.v1`, `released.v1`, `adjusted.v1` | **order-service / audit**: Real-time stock visibility. |
-| `shop.payment.events.v1` | `payment-service` | `orderId` | `payment.succeeded.v1`, `payment.failed.v1`, `payment.refunded.v1` | **notification-service**: Sends payment receipt / alert.<br/>**order-service**: Signals readiness for order confirmation. |
+| `shop.payment.lifecycle.v1` | `payment-service` | `orderId` | `payment.captured.v1`, `payment.failed.v1`, `payment.refunded.v1` | **notification-service**: Sends payment receipt / alert.<br/>**order-service**: PaymentLifecycleConsumer auto-confirms order on `payment.captured.v1`. |
 | `shop.shipping.events.v1` | `shipping-service` | `orderId` | `shipping.dispatched.v1`, `shipping.delivered.v1` | **order-service**: Auto-transitions order status to `DELIVERED`.<br/>**notification-service**: Sends tracking code to customer. |
 | `shop.rating.events.v1` | `rating-service` | `productId` | `RatingCreated`, `RatingUpdated`, `RatingApproved`, `RatingRejected` | **product-service**: Recomputes avg score & review count.<br/>**search-service**: Updates BM25 search score & indexes review. |
 | `shop.media.lifecycle.v1` | `media-service` | `mediaId` | `MediaDeleted` | **product-service**: Cleans up referenced image URLs. |
@@ -284,8 +286,9 @@ sequenceDiagram
     participant SRH as search-service :8094
 
     Note over Customer,GW: Step 1: Cart Checkout & Order Placement
-    Customer->>GW: POST /api/v1/orders {items, address, coupon}
-    GW->>ORD: Forward with JWT & X-Correlation-Id
+    Customer->>GW: POST /api/v1/orders {items, address, coupon} [Idempotency-Key]
+    GW->>ORD: Forward with JWT, Idempotency-Key & X-Correlation-Id
+    ORD->>ORD: Acquire Cart Lock (SELECT FOR UPDATE) & Check Idempotency
     ORD->>PRD: REST GET /api/v1/products/{id} (Validate SKU, price, status)
     PRD-->>ORD: ProductDetailResponse (ACTIVE)
     ORD->>PRM: REST POST /api/v1/backoffice/promotions/apply {code, amount}
@@ -309,12 +312,16 @@ sequenceDiagram
     PAY-->>Customer: PaymentResponse {checkoutUrl, clientSecret}
     Customer->>PAY: Complete Payment / Stripe Webhook callback
     PAY->>PAY: Capture Payment (status: CAPTURED) + Save Outbox
-    PAY->>BUS: Publish shop.payment.events.v1 (payment.succeeded.v1)
+    PAY->>BUS: Publish shop.payment.lifecycle.v1 (payment.captured.v1)
 
     Note over ORD,SHP: Step 4: Order Confirmation & Fulfillment Dispatch
-    Customer->>ORD: Confirm Order / System Confirm Hook
-    ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
-    PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    alt Asynchronous Auto-Confirm via Kafka
+        BUS-->>ORD: PaymentLifecycleConsumer consumes payment.captured.v1
+    else Synchronous Client / Admin Confirm Hook
+        Customer->>ORD: POST /api/v1/orders/{id}/confirm [Idempotency-Key]
+        ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
+        PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    end
     ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit
     INV-->>ORD: Stock Deducted
     ORD->>PRM: REST Commit Promotion Usage
@@ -437,9 +444,9 @@ flowchart TB
         subgraph PG_CLUSTER ["PostgreSQL 16 Instance (:5432): max_connections=300"]
             DB_AUTH[("authservice<br/>users, roles, user_role")]:::pgClass
             DB_PRD[("productservice<br/>products, categories, brands, variants, outbox")]:::pgClass
-            DB_ORD[("orderservice<br/>orders, carts, cart_items, outbox")]:::pgClass
+            DB_ORD[("orderservice<br/>orders, carts, cart_items, order_returns, idempotency_keys, outbox")]:::pgClass
             DB_INV[("inventoryservice<br/>inventory, reservations, outbox")]:::pgClass
-            DB_PAY[("paymentservice<br/>payments, refunds, outbox")]:::pgClass
+            DB_PAY[("paymentservice<br/>payments, refunds, webhook_events, outbox")]:::pgClass
             DB_SHP[("shippingservice<br/>shippings, outbox")]:::pgClass
             DB_RTG[("ratingservice<br/>ratings, outbox")]:::pgClass
             DB_FAV[("favouriteservice<br/>favourites")]:::pgClass

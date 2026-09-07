@@ -65,7 +65,7 @@ All services follow the **Database-per-Service pattern**. They do not share phys
 |---|---|:---:|---|---|
 | **Relational Database** | PostgreSQL 16 Alpine | `5432` | 12 Service DBs: `authservice`, `productservice`, `orderservice`, `inventoryservice`, `paymentservice`, `shippingservice`, `ratingservice`, `favouriteservice`, `taxservice`, `promotionservice`, `mediaservice`, `notificationservice` + `keycloak` | ACID relational storage per microservice. Configured with `max_connections=300`. |
 | **In-Memory Cache & Limiter** | Redis 7.4 Alpine | `6379` | `db: 0` (Key patterns: `request_rate_limiter.*`, `product::*`, `category::*`) | Atomic Lua script execution for two-tier rate limiting at the gateway; catalog and category caching; SSO session storage. |
-| **Distributed Event Bus** | Apache Kafka 3.9 | `9092` | Topics: `shop.order.lifecycle.v1`, `shop.product.lifecycle.v1`, `shop.inventory.events.v1`, `shop.payment.events.v1`, `shop.shipping.events.v1`, `shop.rating.events.v1`, `shop.media.lifecycle.v1` | Operates in **KRaft mode** without Zookeeper (`node_id=1`). Delivers asynchronous events and outbox CDC records with in-order partition key delivery. |
+| **Distributed Event Bus** | Apache Kafka 3.9 | `9092` | Topics: `shop.order.lifecycle.v1`, `shop.product.lifecycle.v1`, `shop.inventory.events.v1`, `shop.payment.lifecycle.v1`, `shop.shipping.events.v1`, `shop.rating.events.v1`, `shop.media.lifecycle.v1` | Operates in **KRaft mode** without Zookeeper (`node_id=1`). Delivers asynchronous events and outbox CDC records with in-order partition key delivery. |
 | **Full-Text Search Engine** | Elasticsearch 8.15 | `9200` | Indices: `products`, `ratings` | BM25 search queries, prefix autocomplete suggestions, multi-attribute catalog filtering. |
 | **Identity & Access Management** | Keycloak 26 | `8080` (internal) / `9090` (host) | Realm: `ecommerce` (Clients: `shop-client`, `gateway-client`, `admin-cli`) | Centralized OAuth2/OIDC identity provider, issues RS256-signed JWT tokens, manages realm roles (`ROLE_CUSTOMER`, `ROLE_ADMIN`). |
 | **Object Storage** | RustFS (S3 compatible) | `9000` (API) / `9001` (Console) | Bucket: `ecommerce-media` (Prefixes: `originals/`, `variants/`) | High-throughput object storage for original media and responsive WebP image variants with presigned access URLs. |
@@ -479,7 +479,7 @@ sequenceDiagram
     GW->>PAY: Forward webhook call
     PAY->>PAY: Validate HMAC signature against Stripe webhook secret
     PAY->>PAY: Update status to CAPTURED, insert outbox event
-    PAY->>BUS: Publish payment.succeeded.v1 to shop.payment.lifecycle.v1
+    PAY->>BUS: Publish payment.captured.v1 to shop.payment.lifecycle.v1
 
     Note over ORD,INV: Order confirmation and Phase 2 inventory commit
     Customer->>ORD: Trigger confirmation callback
@@ -703,7 +703,7 @@ The messaging infrastructure runs on Apache Kafka 3.9 in KRaft mode. Event produ
 | **`shop.order.lifecycle.v1`** | `order-service` | `orderId` | `order.created.v1`<br/>`order.updated.v1`<br/>`order.cancelled.v1`<br/>`order.returned.v1` | **`shipping-service`**: Consumes `order.updated.v1` (CONFIRMED) to create shipment records.<br/>**`notification-service`**: Dispatches order confirmation, cancellation, and return emails. |
 | **`shop.product.lifecycle.v1`** | `product-service` | `productId` | `ProductCreated`<br/>`ProductUpdated`<br/>`ProductDeleted` | **`search-service`**: Upserts or deletes documents in Elasticsearch index `products`. |
 | **`shop.inventory.events.v1`** | `inventory-service` | `productId` | `inventory.reserved.v1`<br/>`inventory.committed.v1`<br/>`inventory.released.v1` | **Audit consumers**: Records inventory adjustments. |
-| **`shop.payment.events.v1`** | `payment-service` | `orderId` | `payment.succeeded.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` | **`order-service`**: Signals readiness for order confirmation.<br/>**`notification-service`**: Dispatches receipts or payment failure notifications. |
+| **`shop.payment.lifecycle.v1`** | `payment-service` | `orderId` | `payment.captured.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` | **`order-service`**: `PaymentLifecycleConsumer` auto-confirms order on `payment.captured.v1`.<br/>**`notification-service`**: Dispatches receipts or payment failure notifications. |
 | **`shop.shipping.events.v1`** | `shipping-service` | `orderId` | `shipping.dispatched.v1`<br/>`shipping.delivered.v1` | **`order-service`**: Advances order status to `DELIVERED` on delivery confirmation.<br/>**`notification-service`**: Sends tracking information or review invitations. |
 | **`shop.rating.events.v1`** | `rating-service` | `productId` | `RatingCreated`<br/>`RatingApproved`<br/>`RatingRejected` | **`product-service`**: Recalculates average ratings and review counts in PostgreSQL and Redis.<br/>**`search-service`**: Updates product search ranking score. |
 | **`shop.media.lifecycle.v1`** | `media-service` | `mediaId` | `MediaDeleted` | **`product-service`**: Removes deleted image references from product galleries. |

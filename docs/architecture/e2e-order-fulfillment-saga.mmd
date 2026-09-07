@@ -16,8 +16,9 @@ sequenceDiagram
     participant SRH as search-service :8094
 
     Note over Customer,GW: Step 1: Cart Checkout & Order Placement
-    Customer->>GW: POST /api/v1/orders {items, address, coupon}
-    GW->>ORD: Forward with JWT & X-Correlation-Id
+    Customer->>GW: POST /api/v1/orders {items, address, coupon} [Idempotency-Key]
+    GW->>ORD: Forward with JWT, Idempotency-Key & X-Correlation-Id
+    ORD->>ORD: Acquire Cart Lock (SELECT FOR UPDATE) & Check Idempotency
     ORD->>PRD: REST GET /api/v1/products/{id} (Validate SKU, price, status)
     PRD-->>ORD: ProductDetailResponse (ACTIVE)
     ORD->>PRM: REST POST /api/v1/backoffice/promotions/apply {code, amount}
@@ -41,12 +42,16 @@ sequenceDiagram
     PAY-->>Customer: PaymentResponse {checkoutUrl, clientSecret}
     Customer->>PAY: Complete Payment / Stripe Webhook callback
     PAY->>PAY: Capture Payment (status: CAPTURED) + Save Outbox
-    PAY->>BUS: Publish shop.payment.events.v1 (payment.succeeded.v1)
+    PAY->>BUS: Publish shop.payment.lifecycle.v1 (payment.captured.v1)
 
     Note over ORD,SHP: Step 4: Order Confirmation & Fulfillment Dispatch
-    Customer->>ORD: Confirm Order / System Confirm Hook
-    ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
-    PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    alt Asynchronous Auto-Confirm via Kafka
+        BUS-->>ORD: PaymentLifecycleConsumer consumes payment.captured.v1
+    else Synchronous Client / Admin Confirm Hook
+        Customer->>ORD: POST /api/v1/orders/{id}/confirm [Idempotency-Key]
+        ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
+        PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    end
     ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit
     INV-->>ORD: Stock Deducted
     ORD->>PRM: REST Commit Promotion Usage

@@ -377,7 +377,7 @@ sequenceDiagram
 
 ### Flow 6: Stripe payments and order confirmation
 
-The customer initiates payment through `payment-service`, which opens a Stripe PaymentIntent. After payment completion on the client or via Stripe Checkout, Stripe calls the payment webhook. `payment-service` validates the HMAC signature, updates the record to `CAPTURED`, and emits `payment.succeeded.v1`. `order-service` then commits the reserved inventory in Phase 2 and marks the order `CONFIRMED`.
+The customer initiates payment through `payment-service`, which opens a Stripe PaymentIntent. After payment completion on the client or via Stripe Checkout, Stripe calls the payment webhook. `payment-service` validates the HMAC signature, updates the record to `CAPTURED`, and emits `payment.captured.v1`. `order-service` (via `PaymentLifecycleConsumer` or REST confirmation hook) commits the reserved inventory in Phase 2 and marks the order `CONFIRMED`.
 
 ```mermaid
 sequenceDiagram
@@ -405,12 +405,16 @@ sequenceDiagram
     GW->>PAY: Forward webhook payload
     PAY->>PAY: Verify HMAC cryptographic signature
     PAY->>PAY: Set status to CAPTURED, record outbox event
-    PAY->>BUS: Publish to shop.payment.lifecycle.v1 (payment.succeeded.v1)
+    PAY->>BUS: Publish to shop.payment.lifecycle.v1 (payment.captured.v1)
 
     Note over ORD,INV: Order confirmation and Phase 2 inventory commit
-    Customer->>ORD: Confirm order or trigger automated confirmation callback
-    ORD->>PAY: REST GET /api/v1/payments/{id}
-    PAY-->>ORD: Payment record (status: CAPTURED)
+    alt Asynchronous Auto-Confirm via Kafka
+        BUS-->>ORD: PaymentLifecycleConsumer consumes payment.captured.v1
+    else Synchronous Client / Admin Confirm Hook
+        Customer->>ORD: POST /api/v1/orders/{orderId}/confirm
+        ORD->>PAY: REST GET /api/v1/payments?orderId={orderId}
+        PAY-->>ORD: Payment record (status: CAPTURED)
+    end
     
     ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit (Phase 2 commit)
     INV->>INV: Deduct physical stock: quantity -= count, set reservation COMMITTED
@@ -564,7 +568,7 @@ The messaging platform uses an Apache Kafka 3.9 cluster in KRaft mode. Event pro
 | **`shop.category.lifecycle.v1`** | `product-service` | `categoryId` | `CategoryCreated`<br/>`CategoryUpdated`<br/>`CategoryDeleted` | **Catalog subscribers**: Internal cache invalidation. |
 | **`shop.brand.lifecycle.v1`** | `product-service` | `brandId` | `BrandCreated`<br/>`BrandUpdated`<br/>`BrandDeleted` | **Catalog subscribers**: Internal cache invalidation. |
 | **`shop.inventory.events.v1`** | `inventory-service` | `productId` | `inventory.reserved.v1`<br/>`inventory.committed.v1`<br/>`inventory.released.v1` | **Audit consumers**: Track inventory movements and stock levels. |
-| **`shop.payment.lifecycle.v1`** | `payment-service` | `orderId` | `payment.succeeded.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` | **`notification-service`**: Dispatches payment receipts or failure alerts. |
+| **`shop.payment.lifecycle.v1`** | `payment-service` | `orderId` | `payment.captured.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` | **`notification-service`**: Dispatches payment receipts or failure alerts.<br/>**`order-service`**: `PaymentLifecycleConsumer` auto-confirms order on `payment.captured.v1`. |
 | **`shop.shipping.lifecycle.v1`** | `shipping-service` | `orderId` | `shipping.dispatched.v1`<br/>`shipping.delivered.v1` | **`order-service`**: Advances order status to `DELIVERED` on delivery confirmation.<br/>**`notification-service`**: Sends tracking numbers and shipment alerts. |
 | **`shop.rating.lifecycle.v1`** | `rating-service` | `productId` | `RatingCreated`<br/>`RatingApproved`<br/>`RatingRejected` | **`product-service`**: Recalculates average star rating and review count.<br/>**`search-service`**: Updates search ranking scores in Elasticsearch. |
 | **`shop.promotion.lifecycle.v1`** | `promotion-service` | `campaignId` | `PromotionCreated`<br/>`PromotionUpdated` | **Promotion subscribers**: Updates marketing campaigns. |

@@ -34,7 +34,7 @@
         </mxCell>
 
         <!-- Payment Outbox -->
-        <mxCell id="p_pay" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;1. Capture Stripe Payment / Process Refund&lt;br/&gt;2. Writes outbox_events (payment.succeeded.v1)&lt;br/&gt;3. PaymentOutboxRelay sends with key=orderId&lt;br/&gt;4. Idempotency Key guarantees exactly-once processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+        <mxCell id="p_pay" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;1. Capture Stripe Payment / Process Refund&lt;br/&gt;2. Writes outbox_events (payment.captured.v1)&lt;br/&gt;3. PaymentOutboxRelay sends with key=orderId&lt;br/&gt;4. Idempotency Key guarantees exactly-once processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
           <mxGeometry x="30" y="440" width="500" height="100" as="geometry" />
         </mxCell>
 
@@ -70,7 +70,7 @@
           <mxGeometry x="30" y="310" width="460" height="80" as="geometry" />
         </mxCell>
 
-        <mxCell id="top_pay" value="&lt;b&gt;shop.payment.events.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: payment.succeeded.v1, payment.failed.v1, payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+        <mxCell id="top_pay" value="&lt;b&gt;shop.payment.lifecycle.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: payment.captured.v1, payment.failed.v1, payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
           <mxGeometry x="30" y="440" width="460" height="80" as="geometry" />
         </mxCell>
 
@@ -99,11 +99,11 @@
           <mxGeometry x="30" y="180" width="540" height="90" as="geometry" />
         </mxCell>
 
-        <mxCell id="c_notif" value="&lt;b&gt;notification-service (:8090) — Order &amp; Payment Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.order.lifecycle.v1 &amp; shop.payment.events.v1&lt;br/&gt;• Sends Order Placed Email, Payment Receipt, Dispatch Tracking Email&lt;br/&gt;• Stores in notifications history &amp; emails retry audit table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+        <mxCell id="c_notif" value="&lt;b&gt;notification-service (:8090) — Order &amp; Payment Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.order.lifecycle.v1 &amp; shop.payment.lifecycle.v1&lt;br/&gt;• Sends Order Placed Email, Payment Receipt, Dispatch Tracking Email&lt;br/&gt;• Stores in notifications history &amp; emails retry audit table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
           <mxGeometry x="30" y="310" width="540" height="90" as="geometry" />
         </mxCell>
 
-        <mxCell id="c_ord" value="&lt;b&gt;order-service (:8084) — ShippingDeliveredConsumer&lt;/b&gt;&lt;br/&gt;• Listens to: shop.shipping.events.v1 (shipping.delivered.v1)&lt;br/&gt;• Auto-transitions order status from SHIPPED to DELIVERED&lt;br/&gt;• Enables Verified Purchase review gate for customer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+        <mxCell id="c_ord" value="&lt;b&gt;order-service (:8084) — Payment &amp; Shipping Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.payment.lifecycle.v1 (PaymentLifecycleConsumer)&lt;br/&gt;• Listens to: shop.shipping.events.v1 (ShippingDeliveredConsumer)&lt;br/&gt;• Auto-confirms order on payment.captured.v1 &amp; advances to DELIVERED on carrier delivery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
           <mxGeometry x="30" y="560" width="540" height="90" as="geometry" />
         </mxCell>
 
@@ -155,6 +155,14 @@
             <Array as="points">
               <mxPoint x="1290" y="580" />
               <mxPoint x="1290" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ec4_ord" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;exitX=1;exitY=0.7;entryX=0;entryY=0.3;" edge="1" parent="1" source="top_pay" target="c_ord">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1270" y="500" />
+              <mxPoint x="1270" y="590" />
             </Array>
           </mxGeometry>
         </mxCell>

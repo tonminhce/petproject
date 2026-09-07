@@ -69,16 +69,16 @@
         <mxCell id="svc_inventory" value="&lt;b&gt;inventory-service (:8082)&lt;/b&gt;&lt;br/&gt;• Stock Management &amp; Reservations&lt;br/&gt;• Reserve / Commit / Release APIs&lt;br/&gt;• Scheduled Auto-Release Sweeper&lt;br/&gt;• Outbox: shop.inventory.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="390" y="50" width="310" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="svc_order" value="&lt;b&gt;order-service (:8084)&lt;/b&gt;&lt;br/&gt;• Cart &amp; Order Lifecycle Coordinator&lt;br/&gt;• RestClients: Inventory, Promo, Tax, Pay&lt;br/&gt;• Outbox: shop.order.lifecycle.v1&lt;br/&gt;• Consumer: ShippingDeliveredConsumer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+        <mxCell id="svc_order" value="&lt;b&gt;order-service (:8084)&lt;/b&gt;&lt;br/&gt;• Cart &amp; Order Lifecycle Coordinator&lt;br/&gt;• RestClients: Inventory, Promo, Tax, Pay&lt;br/&gt;• Outbox: shop.order.lifecycle.v1&lt;br/&gt;• Consumers: ShippingDelivered, PaymentLifecycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="740" y="50" width="330" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="svc_payment" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;• Payment Creation, Capture, Refund&lt;br/&gt;• Stripe SDK v24 Integration&lt;br/&gt;• Idempotency-Key Enforcement&lt;br/&gt;• Outbox: shop.payment.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+        <mxCell id="svc_payment" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;• Payment Creation, Capture, Refund&lt;br/&gt;• Stripe SDK v24 Integration&lt;br/&gt;• Idempotency-Key Enforcement&lt;br/&gt;• Outbox: shop.payment.lifecycle.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="1110" y="50" width="310" height="100" as="geometry" />
         </mxCell>
         <mxCell id="svc_shipping" value="&lt;b&gt;shipping-service (:8087)&lt;/b&gt;&lt;br/&gt;• Shipment Creation &amp; Tracking Codes&lt;br/&gt;• Carrier Webhook Ingestion&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Outbox: shop.shipping.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="1460" y="50" width="310" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="svc_notif" value="&lt;b&gt;notification-service (:8090)&lt;/b&gt;&lt;br/&gt;• Notification History &amp; Unread Counts&lt;br/&gt;• SMTP Email Delivery &amp; Retry Table&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Consumer: PaymentSuccess/Failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+        <mxCell id="svc_notif" value="&lt;b&gt;notification-service (:8090)&lt;/b&gt;&lt;br/&gt;• Notification History &amp; Unread Counts&lt;br/&gt;• SMTP Email Delivery &amp; Retry Table&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Consumer: PaymentCaptured/Failed/Refunded" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="1810" y="50" width="330" height="100" as="geometry" />
         </mxCell>
 
@@ -169,7 +169,7 @@
         <mxCell id="k_top3" value="&lt;b&gt;shop.inventory.events.v1&lt;/b&gt;&lt;br/&gt;inventory.reserved.v1&lt;br/&gt;inventory.committed.v1&lt;br/&gt;inventory.released.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
           <mxGeometry x="540" y="40" width="220" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="k_top4" value="&lt;b&gt;shop.payment.events.v1&lt;/b&gt;&lt;br/&gt;payment.succeeded.v1&lt;br/&gt;payment.failed.v1&lt;br/&gt;payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+        <mxCell id="k_top4" value="&lt;b&gt;shop.payment.lifecycle.v1&lt;/b&gt;&lt;br/&gt;payment.captured.v1&lt;br/&gt;payment.failed.v1&lt;br/&gt;payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
           <mxGeometry x="790" y="40" width="220" height="70" as="geometry" />
         </mxCell>
         <mxCell id="k_top5" value="&lt;b&gt;shop.shipping.events.v1&lt;/b&gt;&lt;br/&gt;shipping.dispatched.v1&lt;br/&gt;shipping.delivered.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">

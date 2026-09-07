@@ -81,7 +81,7 @@ flowchart TB
     end
 
     subgraph BUS ["Event Streaming Backbone"]
-        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.events.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
+        KAFKA["Apache Kafka 3.9 (KRaft Cluster :9092)<br/>Topics: shop.order.lifecycle.v1, shop.product.lifecycle.v1, shop.inventory.events.v1,<br/>shop.payment.lifecycle.v1, shop.shipping.events.v1, shop.rating.events.v1"]:::busClass
     end
 
     subgraph DATA_TIER ["Persistence & Distributed Storage"]
@@ -207,16 +207,16 @@ def generate_landscape_drawio():
         <mxCell id="svc_inventory" value="&lt;b&gt;inventory-service (:8082)&lt;/b&gt;&lt;br/&gt;• Stock Management &amp; Reservations&lt;br/&gt;• Reserve / Commit / Release APIs&lt;br/&gt;• Scheduled Auto-Release Sweeper&lt;br/&gt;• Outbox: shop.inventory.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="390" y="50" width="310" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="svc_order" value="&lt;b&gt;order-service (:8084)&lt;/b&gt;&lt;br/&gt;• Cart &amp; Order Lifecycle Coordinator&lt;br/&gt;• RestClients: Inventory, Promo, Tax, Pay&lt;br/&gt;• Outbox: shop.order.lifecycle.v1&lt;br/&gt;• Consumer: ShippingDeliveredConsumer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+        <mxCell id="svc_order" value="&lt;b&gt;order-service (:8084)&lt;/b&gt;&lt;br/&gt;• Cart &amp; Order Lifecycle Coordinator&lt;br/&gt;• RestClients: Inventory, Promo, Tax, Pay&lt;br/&gt;• Outbox: shop.order.lifecycle.v1&lt;br/&gt;• Consumers: ShippingDelivered, PaymentLifecycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="740" y="50" width="330" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="svc_payment" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;• Payment Creation, Capture, Refund&lt;br/&gt;• Stripe SDK v24 Integration&lt;br/&gt;• Idempotency-Key Enforcement&lt;br/&gt;• Outbox: shop.payment.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+        <mxCell id="svc_payment" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;• Payment Creation, Capture, Refund&lt;br/&gt;• Stripe SDK v24 Integration&lt;br/&gt;• Idempotency-Key Enforcement&lt;br/&gt;• Outbox: shop.payment.lifecycle.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="1110" y="50" width="310" height="100" as="geometry" />
         </mxCell>
         <mxCell id="svc_shipping" value="&lt;b&gt;shipping-service (:8087)&lt;/b&gt;&lt;br/&gt;• Shipment Creation &amp; Tracking Codes&lt;br/&gt;• Carrier Webhook Ingestion&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Outbox: shop.shipping.events.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="1460" y="50" width="310" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="svc_notif" value="&lt;b&gt;notification-service (:8090)&lt;/b&gt;&lt;br/&gt;• Notification History &amp; Unread Counts&lt;br/&gt;• SMTP Email Delivery &amp; Retry Table&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Consumer: PaymentSuccess/Failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
+        <mxCell id="svc_notif" value="&lt;b&gt;notification-service (:8090)&lt;/b&gt;&lt;br/&gt;• Notification History &amp; Unread Counts&lt;br/&gt;• SMTP Email Delivery &amp; Retry Table&lt;br/&gt;• Consumer: OrderEventConsumer&lt;br/&gt;• Consumer: PaymentCaptured/Failed/Refunded" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d0cee2;strokeColor=#56517e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="c_services">
           <mxGeometry x="1810" y="50" width="330" height="100" as="geometry" />
         </mxCell>
 
@@ -307,7 +307,7 @@ def generate_landscape_drawio():
         <mxCell id="k_top3" value="&lt;b&gt;shop.inventory.events.v1&lt;/b&gt;&lt;br/&gt;inventory.reserved.v1&lt;br/&gt;inventory.committed.v1&lt;br/&gt;inventory.released.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
           <mxGeometry x="540" y="40" width="220" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="k_top4" value="&lt;b&gt;shop.payment.events.v1&lt;/b&gt;&lt;br/&gt;payment.succeeded.v1&lt;br/&gt;payment.failed.v1&lt;br/&gt;payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
+        <mxCell id="k_top4" value="&lt;b&gt;shop.payment.lifecycle.v1&lt;/b&gt;&lt;br/&gt;payment.captured.v1&lt;br/&gt;payment.failed.v1&lt;br/&gt;payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
           <mxGeometry x="790" y="40" width="220" height="70" as="geometry" />
         </mxCell>
         <mxCell id="k_top5" value="&lt;b&gt;shop.shipping.events.v1&lt;/b&gt;&lt;br/&gt;shipping.dispatched.v1&lt;br/&gt;shipping.delivered.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="c_kafka">
@@ -473,7 +473,7 @@ flowchart TB
         T_PRD["shop.product.lifecycle.v1<br/>• ProductCreated<br/>• ProductUpdated<br/>• ProductDeleted"]:::topicClass
         T_ORD["shop.order.lifecycle.v1<br/>• order.created.v1<br/>• order.updated.v1<br/>• order.cancelled.v1"]:::topicClass
         T_INV["shop.inventory.events.v1<br/>• inventory.reserved.v1<br/>• inventory.committed.v1<br/>• inventory.released.v1"]:::topicClass
-        T_PAY["shop.payment.events.v1<br/>• payment.succeeded.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
+        T_PAY["shop.payment.lifecycle.v1<br/>• payment.captured.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
         T_SHP["shop.shipping.events.v1<br/>• shipping.dispatched.v1<br/>• shipping.delivered.v1"]:::topicClass
         T_RTG["shop.rating.events.v1<br/>• RatingCreated<br/>• RatingApproved"]:::topicClass
     end
@@ -489,6 +489,7 @@ flowchart TB
 
         subgraph C_ORDER ["order-service (:8084)"]
             C_ORD_LST["ShippingDeliveredConsumer<br/>Auto-Transition Order to DELIVERED"]:::subClass
+            C_ORD_PAY["PaymentLifecycleConsumer<br/>Auto-Confirm Order on payment.captured.v1"]:::subClass
         end
 
         subgraph C_NOTIF ["notification-service (:8090)"]
@@ -513,6 +514,7 @@ flowchart TB
     T_ORD -->|"Consume Order Events"| C_SHP_LST
     T_ORD -->|"Consume Order Events"| C_NOTIF_LST
     T_PAY -->|"Consume Payment Events"| C_NOTIF_LST
+    T_PAY -->|"Consume payment.captured.v1"| C_ORD_PAY
     T_SHP -->|"Consume shipping.delivered.v1"| C_ORD_LST
     T_RTG -->|"Consume Rating Events"| C_PRD_LST
     T_RTG -->|"Sync Rating to ES"| C_SEARCH_LST
@@ -558,7 +560,7 @@ def generate_event_driven_drawio():
         </mxCell>
 
         <!-- Payment Outbox -->
-        <mxCell id="p_pay" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;1. Capture Stripe Payment / Process Refund&lt;br/&gt;2. Writes outbox_events (payment.succeeded.v1)&lt;br/&gt;3. PaymentOutboxRelay sends with key=orderId&lt;br/&gt;4. Idempotency Key guarantees exactly-once processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
+        <mxCell id="p_pay" value="&lt;b&gt;payment-service (:8085)&lt;/b&gt;&lt;br/&gt;1. Capture Stripe Payment / Process Refund&lt;br/&gt;2. Writes outbox_events (payment.captured.v1)&lt;br/&gt;3. PaymentOutboxRelay sends with key=orderId&lt;br/&gt;4. Idempotency Key guarantees exactly-once processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_pub">
           <mxGeometry x="30" y="440" width="500" height="100" as="geometry" />
         </mxCell>
 
@@ -594,7 +596,7 @@ def generate_event_driven_drawio():
           <mxGeometry x="30" y="310" width="460" height="80" as="geometry" />
         </mxCell>
 
-        <mxCell id="top_pay" value="&lt;b&gt;shop.payment.events.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: payment.succeeded.v1, payment.failed.v1, payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
+        <mxCell id="top_pay" value="&lt;b&gt;shop.payment.lifecycle.v1&lt;/b&gt;&lt;br/&gt;Key: orderId&lt;br/&gt;Payload: payment.captured.v1, payment.failed.v1, payment.refunded.v1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="col_bus">
           <mxGeometry x="30" y="440" width="460" height="80" as="geometry" />
         </mxCell>
 
@@ -623,11 +625,11 @@ def generate_event_driven_drawio():
           <mxGeometry x="30" y="180" width="540" height="90" as="geometry" />
         </mxCell>
 
-        <mxCell id="c_notif" value="&lt;b&gt;notification-service (:8090) — Order &amp; Payment Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.order.lifecycle.v1 &amp; shop.payment.events.v1&lt;br/&gt;• Sends Order Placed Email, Payment Receipt, Dispatch Tracking Email&lt;br/&gt;• Stores in notifications history &amp; emails retry audit table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+        <mxCell id="c_notif" value="&lt;b&gt;notification-service (:8090) — Order &amp; Payment Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.order.lifecycle.v1 &amp; shop.payment.lifecycle.v1&lt;br/&gt;• Sends Order Placed Email, Payment Receipt, Dispatch Tracking Email&lt;br/&gt;• Stores in notifications history &amp; emails retry audit table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
           <mxGeometry x="30" y="310" width="540" height="90" as="geometry" />
         </mxCell>
 
-        <mxCell id="c_ord" value="&lt;b&gt;order-service (:8084) — ShippingDeliveredConsumer&lt;/b&gt;&lt;br/&gt;• Listens to: shop.shipping.events.v1 (shipping.delivered.v1)&lt;br/&gt;• Auto-transitions order status from SHIPPED to DELIVERED&lt;br/&gt;• Enables Verified Purchase review gate for customer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
+        <mxCell id="c_ord" value="&lt;b&gt;order-service (:8084) — Payment &amp; Shipping Consumers&lt;/b&gt;&lt;br/&gt;• Listens to: shop.payment.lifecycle.v1 (PaymentLifecycleConsumer)&lt;br/&gt;• Listens to: shop.shipping.events.v1 (ShippingDeliveredConsumer)&lt;br/&gt;• Auto-confirms order on payment.captured.v1 &amp; advances to DELIVERED on carrier delivery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#10739e;fontSize=11;align=left;spacingLeft=10;" vertex="1" parent="col_sub">
           <mxGeometry x="30" y="560" width="540" height="90" as="geometry" />
         </mxCell>
 
@@ -682,6 +684,14 @@ def generate_event_driven_drawio():
             </Array>
           </mxGeometry>
         </mxCell>
+        <mxCell id="ec4_ord" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;exitX=1;exitY=0.7;entryX=0;entryY=0.3;" edge="1" parent="1" source="top_pay" target="c_ord">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1270" y="500" />
+              <mxPoint x="1270" y="590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="ec5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#10739e;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="top_shp" target="c_ord">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -729,8 +739,9 @@ sequenceDiagram
     participant SRH as search-service :8094
 
     Note over Customer,GW: Step 1: Cart Checkout & Order Placement
-    Customer->>GW: POST /api/v1/orders {items, address, coupon}
-    GW->>ORD: Forward with JWT & X-Correlation-Id
+    Customer->>GW: POST /api/v1/orders {items, address, coupon} [Idempotency-Key]
+    GW->>ORD: Forward with JWT, Idempotency-Key & X-Correlation-Id
+    ORD->>ORD: Acquire Cart Lock (SELECT FOR UPDATE) & Check Idempotency
     ORD->>PRD: REST GET /api/v1/products/{id} (Validate SKU, price, status)
     PRD-->>ORD: ProductDetailResponse (ACTIVE)
     ORD->>PRM: REST POST /api/v1/backoffice/promotions/apply {code, amount}
@@ -754,12 +765,16 @@ sequenceDiagram
     PAY-->>Customer: PaymentResponse {checkoutUrl, clientSecret}
     Customer->>PAY: Complete Payment / Stripe Webhook callback
     PAY->>PAY: Capture Payment (status: CAPTURED) + Save Outbox
-    PAY->>BUS: Publish shop.payment.events.v1 (payment.succeeded.v1)
+    PAY->>BUS: Publish shop.payment.lifecycle.v1 (payment.captured.v1)
 
     Note over ORD,SHP: Step 4: Order Confirmation & Fulfillment Dispatch
-    Customer->>ORD: Confirm Order / System Confirm Hook
-    ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
-    PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    alt Asynchronous Auto-Confirm via Kafka
+        BUS-->>ORD: PaymentLifecycleConsumer consumes payment.captured.v1
+    else Synchronous Client / Admin Confirm Hook
+        Customer->>ORD: POST /api/v1/orders/{id}/confirm [Idempotency-Key]
+        ORD->>PAY: REST GET /api/v1/payments/order/{orderId} (Verify CAPTURED)
+        PAY-->>ORD: PaymentStatusSnapshot (CAPTURED)
+    end
     ORD->>INV: REST POST /api/v1/inventory/reservations/{id}/commit
     INV-->>ORD: Stock Deducted
     ORD->>PRM: REST Commit Promotion Usage
@@ -811,7 +826,7 @@ def generate_order_saga_drawio():
         <mxCell id="box_phase1" value="Phase 1: Synchronous Checkout &amp; Two-Phase Inventory Reservation" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
           <mxGeometry x="80" y="110" width="2040" height="220" as="geometry" />
         </mxCell>
-        <mxCell id="step1_1" value="&lt;b&gt;1. Customer Checkout&lt;/b&gt;&lt;br/&gt;POST /api/v1/orders&lt;br/&gt;Payload: items, address, coupon&lt;br/&gt;Header: Authorization Bearer JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+        <mxCell id="step1_1" value="&lt;b&gt;1. Customer Checkout&lt;/b&gt;&lt;br/&gt;POST /api/v1/orders&lt;br/&gt;Header: Idempotency-Key (UUID)&lt;br/&gt;Pessimistic Cart Lock (SELECT FOR UPDATE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
           <mxGeometry x="30" y="50" width="260" height="80" as="geometry" />
         </mxCell>
         <mxCell id="step1_2" value="&lt;b&gt;2. Product Validation&lt;/b&gt;&lt;br/&gt;order-service calls product-service&lt;br/&gt;GET /api/v1/products/{id}&lt;br/&gt;Guards: Status == ACTIVE, SKU match" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
@@ -847,10 +862,10 @@ def generate_order_saga_drawio():
         <mxCell id="step2_2" value="&lt;b&gt;8. Stripe Gateway Capture&lt;/b&gt;&lt;br/&gt;User pays via Stripe Checkout&lt;br/&gt;Stripe Webhook calls payment-service&lt;br/&gt;Status updated to CAPTURED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
           <mxGeometry x="360" y="50" width="290" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="step2_3" value="&lt;b&gt;9. Payment Event Emitted&lt;/b&gt;&lt;br/&gt;Outbox emits payment.succeeded.v1&lt;br/&gt;Key = orderId&lt;br/&gt;notification-service sends receipt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase2">
+        <mxCell id="step2_3" value="&lt;b&gt;9. Payment Event Emitted&lt;/b&gt;&lt;br/&gt;Outbox emits payment.captured.v1&lt;br/&gt;Topic: shop.payment.lifecycle.v1&lt;br/&gt;order-service &amp; notification-service consume" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase2">
           <mxGeometry x="700" y="50" width="290" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="step2_4" value="&lt;b&gt;10. Order Confirm Gate&lt;/b&gt;&lt;br/&gt;order-service checks PaymentServiceClient&lt;br/&gt;Verifies CAPTURED (fails closed ORD-4012)&lt;br/&gt;Commits reservation in inventory-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
+        <mxCell id="step2_4" value="&lt;b&gt;10. Order Confirm Gate&lt;/b&gt;&lt;br/&gt;PaymentLifecycleConsumer OR POST /confirm&lt;br/&gt;Verifies CAPTURED (fails closed ORD-4012)&lt;br/&gt;Commits reservation in inventory-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
           <mxGeometry x="1040" y="50" width="310" height="80" as="geometry" />
         </mxCell>
         <mxCell id="step2_5" value="&lt;b&gt;11. Order Status CONFIRMED&lt;/b&gt;&lt;br/&gt;Status transitions to CONFIRMED&lt;br/&gt;Outbox emits order.updated.v1&lt;br/&gt;shipping-service consumes event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
@@ -1133,9 +1148,9 @@ flowchart TB
         subgraph PG_CLUSTER ["PostgreSQL 16 Instance (:5432) — max_connections=300"]
             DB_AUTH[("authservice<br/>users, roles, user_role")]:::pgClass
             DB_PRD[("productservice<br/>products, categories, brands, variants, outbox")]:::pgClass
-            DB_ORD[("orderservice<br/>orders, carts, cart_items, outbox")]:::pgClass
+            DB_ORD[("orderservice<br/>orders, carts, cart_items, order_returns, idempotency_keys, outbox")]:::pgClass
             DB_INV[("inventoryservice<br/>inventory, reservations, outbox")]:::pgClass
-            DB_PAY[("paymentservice<br/>payments, refunds, outbox")]:::pgClass
+            DB_PAY[("paymentservice<br/>payments, refunds, webhook_events, outbox")]:::pgClass
             DB_SHP[("shippingservice<br/>shippings, outbox")]:::pgClass
             DB_RTG[("ratingservice<br/>ratings, outbox")]:::pgClass
             DB_FAV[("favouriteservice<br/>favourites")]:::pgClass
@@ -1196,13 +1211,13 @@ def generate_data_topology_drawio():
         <mxCell id="pg2" value="&lt;b&gt;productservice&lt;/b&gt;&lt;br/&gt;products, categories,&lt;br/&gt;brands, outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
           <mxGeometry x="190" y="50" width="130" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="pg3" value="&lt;b&gt;orderservice&lt;/b&gt;&lt;br/&gt;orders, carts,&lt;br/&gt;cart_items, outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+        <mxCell id="pg3" value="&lt;b&gt;orderservice&lt;/b&gt;&lt;br/&gt;orders, carts, cart_items,&lt;br/&gt;order_returns, idempotency, outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
           <mxGeometry x="350" y="50" width="130" height="90" as="geometry" />
         </mxCell>
         <mxCell id="pg4" value="&lt;b&gt;inventoryservice&lt;/b&gt;&lt;br/&gt;inventory, reserves,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
           <mxGeometry x="510" y="50" width="130" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="pg5" value="&lt;b&gt;paymentservice&lt;/b&gt;&lt;br/&gt;payments, refunds,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
+        <mxCell id="pg5" value="&lt;b&gt;paymentservice&lt;/b&gt;&lt;br/&gt;payments, refunds,&lt;br/&gt;webhooks, outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">
           <mxGeometry x="670" y="50" width="130" height="90" as="geometry" />
         </mxCell>
         <mxCell id="pg6" value="&lt;b&gt;shippingservice&lt;/b&gt;&lt;br/&gt;shippings,&lt;br/&gt;outbox" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;" vertex="1" parent="c_pg">

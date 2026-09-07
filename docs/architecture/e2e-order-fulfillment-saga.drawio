@@ -17,7 +17,7 @@
         <mxCell id="box_phase1" value="Phase 1: Synchronous Checkout &amp; Two-Phase Inventory Reservation" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;" vertex="1" parent="1">
           <mxGeometry x="80" y="110" width="2040" height="220" as="geometry" />
         </mxCell>
-        <mxCell id="step1_1" value="&lt;b&gt;1. Customer Checkout&lt;/b&gt;&lt;br/&gt;POST /api/v1/orders&lt;br/&gt;Payload: items, address, coupon&lt;br/&gt;Header: Authorization Bearer JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
+        <mxCell id="step1_1" value="&lt;b&gt;1. Customer Checkout&lt;/b&gt;&lt;br/&gt;POST /api/v1/orders&lt;br/&gt;Header: Idempotency-Key (UUID)&lt;br/&gt;Pessimistic Cart Lock (SELECT FOR UPDATE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
           <mxGeometry x="30" y="50" width="260" height="80" as="geometry" />
         </mxCell>
         <mxCell id="step1_2" value="&lt;b&gt;2. Product Validation&lt;/b&gt;&lt;br/&gt;order-service calls product-service&lt;br/&gt;GET /api/v1/products/{id}&lt;br/&gt;Guards: Status == ACTIVE, SKU match" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="box_phase1">
@@ -53,10 +53,10 @@
         <mxCell id="step2_2" value="&lt;b&gt;8. Stripe Gateway Capture&lt;/b&gt;&lt;br/&gt;User pays via Stripe Checkout&lt;br/&gt;Stripe Webhook calls payment-service&lt;br/&gt;Status updated to CAPTURED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
           <mxGeometry x="360" y="50" width="290" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="step2_3" value="&lt;b&gt;9. Payment Event Emitted&lt;/b&gt;&lt;br/&gt;Outbox emits payment.succeeded.v1&lt;br/&gt;Key = orderId&lt;br/&gt;notification-service sends receipt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase2">
+        <mxCell id="step2_3" value="&lt;b&gt;9. Payment Event Emitted&lt;/b&gt;&lt;br/&gt;Outbox emits payment.captured.v1&lt;br/&gt;Topic: shop.payment.lifecycle.v1&lt;br/&gt;order-service &amp; notification-service consume" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="box_phase2">
           <mxGeometry x="700" y="50" width="290" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="step2_4" value="&lt;b&gt;10. Order Confirm Gate&lt;/b&gt;&lt;br/&gt;order-service checks PaymentServiceClient&lt;br/&gt;Verifies CAPTURED (fails closed ORD-4012)&lt;br/&gt;Commits reservation in inventory-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
+        <mxCell id="step2_4" value="&lt;b&gt;10. Order Confirm Gate&lt;/b&gt;&lt;br/&gt;PaymentLifecycleConsumer OR POST /confirm&lt;br/&gt;Verifies CAPTURED (fails closed ORD-4012)&lt;br/&gt;Commits reservation in inventory-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">
           <mxGeometry x="1040" y="50" width="310" height="80" as="geometry" />
         </mxCell>
         <mxCell id="step2_5" value="&lt;b&gt;11. Order Status CONFIRMED&lt;/b&gt;&lt;br/&gt;Status transitions to CONFIRMED&lt;br/&gt;Outbox emits order.updated.v1&lt;br/&gt;shipping-service consumes event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#56517e;fontSize=11;" vertex="1" parent="box_phase2">

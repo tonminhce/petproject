@@ -59,7 +59,7 @@ flowchart TB
         T_PRD["shop.product.lifecycle.v1<br/>• ProductCreated<br/>• ProductUpdated<br/>• ProductDeleted"]:::topicClass
         T_ORD["shop.order.lifecycle.v1<br/>• order.created.v1<br/>• order.updated.v1<br/>• order.cancelled.v1"]:::topicClass
         T_INV["shop.inventory.events.v1<br/>• inventory.reserved.v1<br/>• inventory.committed.v1<br/>• inventory.released.v1"]:::topicClass
-        T_PAY["shop.payment.events.v1<br/>• payment.succeeded.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
+        T_PAY["shop.payment.lifecycle.v1<br/>• payment.captured.v1<br/>• payment.failed.v1<br/>• payment.refunded.v1"]:::topicClass
         T_SHP["shop.shipping.events.v1<br/>• shipping.dispatched.v1<br/>• shipping.delivered.v1"]:::topicClass
         T_RTG["shop.rating.events.v1<br/>• RatingCreated<br/>• RatingApproved"]:::topicClass
     end
@@ -75,6 +75,7 @@ flowchart TB
 
         subgraph C_ORDER ["order-service (:8084)"]
             C_ORD_LST["ShippingDeliveredConsumer<br/>Auto-Transition Order to DELIVERED"]:::subClass
+            C_ORD_PAY["PaymentLifecycleConsumer<br/>Auto-Confirm Order on payment.captured.v1"]:::subClass
         end
 
         subgraph C_NOTIF ["notification-service (:8090)"]
@@ -99,6 +100,7 @@ flowchart TB
     T_ORD -->|"Consume Order Events"| C_SHP_LST
     T_ORD -->|"Consume Order Events"| C_NOTIF_LST
     T_PAY -->|"Consume Payment Events"| C_NOTIF_LST
+    T_PAY -->|"Consume payment.captured.v1"| C_ORD_PAY
     T_SHP -->|"Consume shipping.delivered.v1"| C_ORD_LST
     T_RTG -->|"Consume Rating Events"| C_PRD_LST
     T_RTG -->|"Sync Rating to ES"| C_SEARCH_LST

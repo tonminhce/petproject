@@ -50,7 +50,7 @@
     { "from": "inventory", "to": "order", "y": 325, "label": "200 OK (reservationId PENDING)", "variant": "return" },
     { "from": "order", "to": "user", "y": 355, "label": "201 Created (PENDING_PAYMENT)", "variant": "return" },
     { "from": "user", "to": "payment", "y": 405, "label": "POST /payments (Stripe Intent)", "variant": "emphasis" },
-    { "from": "payment", "to": "kafka", "y": 450, "label": "publish payment.succeeded.v1", "variant": "dashed" },
+    { "from": "payment", "to": "kafka", "y": 450, "label": "publish payment.captured.v1", "variant": "dashed" },
     { "from": "order", "to": "payment", "y": 490, "label": "REST GET verify CAPTURED", "variant": "default" },
     { "from": "payment", "to": "order", "y": 520, "label": "200 OK (status: CAPTURED)", "variant": "return" },
     { "from": "order", "to": "inventory", "y": 555, "label": "POST /commit (Phase 2 trừ kho)", "variant": "emphasis" },

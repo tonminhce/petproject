@@ -41,9 +41,9 @@
         ┌──────▼───────▼───────▼───────▼───────▼───────▼───────▼────────┐
         │                       Messaging Bus                         │
         │            Apache Kafka 3.9 (KRaft mode, no ZK)             │
-        │  Topics  order.created.v1 · order.updated.v1 ·              │
-        │          payment.success.v1 · payment.failed.v1 ·            │
-        │          shop.product.lifecycle.v1 · notification.send.v1     │
+        │  Topics  shop.order.lifecycle.v1 · shop.payment.lifecycle.v1 ·│
+        │          shop.product.lifecycle.v1 · shop.inventory.events.v1 ·│
+        │          shop.shipping.events.v1 · shop.rating.events.v1      │
         └──────┬────────────────┬───────────────────┬─────────────────┘
                │                │                   │
         ┌──────▼────┐ ┌─────────▼─────────┐ ┌──────▼─────────┐
@@ -129,24 +129,27 @@ cart-service        order-service      product-service    inventory-service   pa
     │ POST /carts        │                   │                   │                  │               │               │
     │ (validate items)   │                   │                   │                  │               │               │
     │                   │                   │                   │                  │               │               │
-    │ POST /orders       │                   │                   │                  │               │               │
+    │ POST /orders [Idempotency-Key]    │                   │                  │               │               │
     ├──────────────────►│                   │                   │                  │               │               │
+    │                   │ (pessimistic lock)│                   │                  │               │               │
     │                   │ reserve stock     │                   │                  │               │               │
     │                   ├──────────────────────────────────────►│                  │               │               │
     │                   │ ◄─── reserved                       │                  │               │               │
-    │                   │ publish OrderCreated                │                  │               │               │
+    │                   │ publish order.created.v1                                 │               │               │
     │                   ├──────────────────────────────────────────────────────────────────────────►│               │
-    │                   │                                              │ consume OrderCreated        │               │
+    │                   │                                              │ consume order.created.v1    │               │
     │                   │                                              ├──────────────────────────────►│               │
     │                   │                                              │ Stripe.checkout()            │               │
-    │                   │                                              │ publish PaymentSucceeded      │               │
-    │                   │ ◄─────────────────────────────────────────────────────────────────────────┤               │
-    │                   │ confirm stock deduction      │              │                              │               │
-    │                   ├─────────────────────────────►│              │                              │               │
-    │                   │ publish OrderConfirmed                       │                              │               │
-    │                   ├──────────────────────────────────────────────────────────────────────────►│               │
-    │ 201 OrderDto      │                                              │ consume OrderConfirmed       │               │
-    │ ◄─────────────────┤                                              │ send order.email             │               │
+    │                   │                                              │ publish payment.captured.v1   │               │
+    │                   │                                              ├──────────────────────────────►│               │
+    │                   │ consume payment.captured.v1 (or REST confirm)│                               │               │
+    │                   │ ◄────────────────────────────────────────────────────────────────────────────┤               │
+    │                   │ confirm stock deduction      │              │                                │               │
+    │                   ├─────────────────────────────►│              │                                │               │
+    │                   │ publish order.updated.v1 (CONFIRMED)                         │               │               │
+    │                   ├─────────────────────────────────────────────────────────────────────────────►│               │
+    │ 201 OrderResponse │                                              │ consume OrderConfirmed        │               │
+    │ ◄─────────────────┤                                              │ send order.email              │               │
     │                   │                                              │                              │               │
 ```
 

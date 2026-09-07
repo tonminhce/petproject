@@ -228,46 +228,50 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 Source: [Order.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/entity/Order.java),
 [Cart.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/entity/Cart.java).
 
-### 3.2 Endpoints: `/api/v1/orders` (workspace path; reference uses `/api/orders`)
+### 3.2 Endpoints: `/api/v1/orders`
 
 | M | Path | Auth | Body | Resp | Notes |
 |---|------|------|------|------|-------|
-| `GET` | `/api/v1/orders` | USER/ADMIN |: | `List<OrderDto>` | All orders (filter on userId in body in real impl) |
-| `GET` | `/api/v1/orders/all?page=&size=&sortBy=&sortOrder=` | USER/ADMIN |: | `Page<OrderDto>` | Paginated |
-| `GET` | `/api/v1/orders/{orderId}` | USER/ADMIN |: | `OrderDto` | |
-| `POST` | `/api/v1/orders` | USER | `OrderDto` | `OrderDto` | Reserve stock + publish `OrderCreated` |
-| `PUT` | `/api/v1/orders` | ADMIN | `OrderDto` | `OrderDto` | Force update |
-| `PUT` | `/api/v1/orders/{orderId}` | USER | `OrderDto` | `OrderDto` | Update with id |
-| `DELETE` | `/api/v1/orders/{orderId}` | USER/ADMIN |: | `Boolean` | |
-| `GET` | `/api/v1/orders/existOrderId?orderId=` | any |: | `Boolean` | Existence check |
+| `POST` | `/api/v1/orders` | USER | `OrderCreateRequest` | `ApiResponse<OrderResponse>` | Header: `Idempotency-Key` (UUID ≤64). Acquires pessimistic cart lock (`SELECT FOR UPDATE`), reserves stock + writes outbox event |
+| `GET` | `/api/v1/orders/me?page=&size=` | USER | : | `ApiResponse<PageResponse<OrderResponse>>` | Paginated user orders |
+| `GET` | `/api/v1/orders?status=&page=&size=` | ADMIN | : | `ApiResponse<PageResponse<OrderResponse>>` | Paginated all orders |
+| `GET` | `/api/v1/orders/{orderId}` | USER/ADMIN | : | `ApiResponse<OrderResponse>` | Order details (owner or admin) |
+| `POST` | `/api/v1/orders/{orderId}/cancel` | USER/ADMIN | : | `ApiResponse<OrderResponse>` | Cancels order, releases inventory & promo reservations, refunds if captured |
+| `POST` | `/api/v1/orders/{orderId}/confirm` | SERVICE/ADMIN | : | `ApiResponse<OrderResponse>` | Header: `Idempotency-Key`. Verifies payment CAPTURED, commits inventory & promo |
+| `POST` | `/api/v1/orders/{orderId}/ship` | SERVICE/ADMIN | : | `ApiResponse<OrderResponse>` | Transitions order status to SHIPPED |
+| `POST` | `/api/v1/orders/{orderId}/deliver` | SERVICE/ADMIN | : | `ApiResponse<OrderResponse>` | Transitions order status to DELIVERED |
+| `GET` | `/api/v1/orders/verify-purchase?userId=&productId=` | SERVICE/ADMIN | : | `ApiResponse<PageResponse<OrderItemResponse>>` | Verified buyer review gate check for rating-service |
+| `POST` | `/api/v1/orders/{orderId}/returns` | USER | `OrderReturnCreateRequest` | `ApiResponse<OrderReturnResponse>` | Submits return request; enforces cumulative refund amount ≤ order fee |
+| `GET` | `/api/v1/orders/{orderId}/returns` | USER | : | `ApiResponse<List<OrderReturnResponse>>` | Return requests for specific order |
+| `GET` | `/api/v1/orders/returns/me?page=&size=` | USER | : | `ApiResponse<PageResponse<OrderReturnResponse>>` | Return requests for current user |
+| `PUT` | `/api/v1/backoffice/returns/{returnId}/review` | ADMIN | `OrderReturnReviewRequest` | `ApiResponse<OrderReturnResponse>` | Approves/rejects return; triggers automated refund via `PaymentServiceClient` |
 
-Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microservices/blob/main/order-service/src/main/java/com/ecommerce/orderservice/controller/OrderController.java).
+Source: `com.shop.orderservice.controller.*`.
 
-### 3.3 Endpoints: `/api/v1/carts` (workspace path; reference uses `/api/carts`)
+### 3.3 Endpoints: `/api/v1/carts`
 
 | M | Path | Auth | Body | Resp |
 |---|------|------|------|------|
-| `GET` | `/api/v1/carts` | USER |: | `List<CartDto>` |
-| `GET` | `/api/v1/carts/{cartId}` | USER |: | `CartDto` |
-| `POST` | `/api/v1/carts` | USER | `CartDto` | `CartDto` |
-| `PUT` | `/api/v1/carts` | USER | `CartDto` | `CartDto` |
-| `DELETE` | `/api/v1/carts/{cartId}` | USER |: | `Boolean` |
+| `GET` | `/api/v1/carts` | USER | : | `ApiResponse<List<CartResponse>>` |
+| `GET` | `/api/v1/carts/{cartId}` | USER | : | `ApiResponse<CartResponse>` |
+| `POST` | `/api/v1/carts` | USER | `CartCreateRequest` | `ApiResponse<CartResponse>` |
+| `PUT` | `/api/v1/carts/{cartId}` | USER | `CartUpdateRequest` | `ApiResponse<CartResponse>` |
+| `DELETE` | `/api/v1/carts/{cartId}` | USER | : | `ApiResponse<Boolean>` |
 
 ### 3.4 Kafka events
 
-> **Workspace divergence**: the workspace order-service publishes topic
-> `shop.order.lifecycle.v1` (Transactional Outbox + `OrderOutboxRelay`, Kafka key =
-> orderId) with three dot-case event types: `order.created.v1` (orderId, userId, status,
-> items[], subtotal, taxAmount, discountAmount, total, couponCode, createdAt),
-> `order.updated.v1` (orderId, status, transitionedAt) and `order.cancelled.v1`
-> (orderId, cancelledAt, refunded=false until payment-service ships). Outbound HTTP
-> uses `RestClient` + `ApiResponse` envelope unwrapping (not Feign/`CallAPI`).
-> payment-service is the intended consumer of `order.created.v1`.
+The workspace `order-service` publishes to topic `shop.order.lifecycle.v1` (Transactional Outbox + `OrderOutboxRelay`, Kafka key = orderId) with three event types: `order.created.v1`, `order.updated.v1`, and `order.cancelled.v1`.
 
+#### Outbound Events:
 | Topic | Producer | Consumer | Payload |
 |-------|----------|----------|---------|
-| `order.created.v1` | order-service | payment, search, notification | `OrderCreatedEvent { orderId, userId, items[], totalAmount }` |
-| `order.updated.v1` | order-service | notification | `OrderUpdatedEvent { orderId, status, updatedAt }` |
+| `shop.order.lifecycle.v1` | order-service | notification-service, shipping-service | `order.created.v1`, `order.updated.v1`, `order.cancelled.v1` |
+
+#### Inbound Consumers:
+| Topic | Consumer Group | Consumer Bean | Action |
+|-------|----------------|---------------|--------|
+| `shop.payment.lifecycle.v1` | `order-service-payment-group` | `PaymentLifecycleConsumer` | On `payment.captured.v1`, auto-confirms order and commits inventory/promotion reservations. |
+| `shop.shipping.events.v1` | `order-service` | `ShippingDeliveredConsumer` | On `shipping.delivered.v1`, auto-advances order status to `DELIVERED`. |
 
 ### 3.5 Service dependencies
 
@@ -293,22 +297,21 @@ Source: [OrderController.java](https://github.com/hoangtien2k3/ecommerce-microse
 
 ### 4.2 Endpoints: `/api/v1/payments`
 
-| M | Path | Auth | Body | Resp |
-|---|------|------|------|------|
-| `POST` | `/api/v1/payments` | USER | `PaymentRequest { orderId, paymentMethod, returnUrl? }` | `ApiResponse<PaymentResponse>` |
-| `GET` | `/api/v1/payments/{paymentId}` | USER/ADMIN |: | `ApiResponse<PaymentDto>` |
-| `GET` | `/api/v1/payments/order/{orderId}` | USER/ADMIN |: | `ApiResponse<List<PaymentDto>>` |
-| `POST` | `/api/v1/payments/{paymentId}/refund` | ADMIN | `RefundRequest { amount, reason }` | `ApiResponse<RefundDto>` |
-| `POST` | `/api/v1/payments/webhook/stripe` | public (signature verify) | Stripe event | `ApiResponse<Void>` |
-| `GET` | `/api/v1/payments/admin/all?page=&size=` | ADMIN |: | `ApiResponse<Page<PaymentDto>>` |
+| M | Path | Auth | Body | Resp | Notes |
+|---|------|------|------|------|-------|
+| `POST` | `/api/v1/payments` | SERVICE/ADMIN | `CreatePaymentRequest` | `ApiResponse<PaymentResponse>` | Initiates payment with status `PENDING` |
+| `POST` | `/api/v1/payments/{id}/capture` | SERVICE/ADMIN | : | `ApiResponse<PaymentResponse>` | Transitions status to `CAPTURED`, publishes `payment.captured.v1`, generates receipt |
+| `POST` | `/api/v1/payments/{id}/refund` | SERVICE/ADMIN | : | `ApiResponse<PaymentResponse>` | Transitions status to `REFUNDED`, publishes `payment.refunded.v1` |
+| `GET` | `/api/v1/payments?orderId=&page=&size=` | SERVICE/ADMIN | : | `ApiResponse<PageResponse<PaymentResponse>>` | Paginated payments by order ID |
+| `GET` | `/api/v1/backoffice/payments?orderId=&page=&size=` | ADMIN | : | `ApiResponse<PageResponse<PaymentResponse>>` | Backoffice query payments |
+| `GET` | `/api/v1/backoffice/payments/{id}` | ADMIN | : | `ApiResponse<PaymentResponse>` | Payment detail by ID |
+| `POST` | `/api/v1/webhooks/payments/{provider}` | public (signature verify) | Raw body | `ApiResponse<Void>` | HMAC or Stripe signature verification; transactional outbox event relay |
 
 ### 4.3 Kafka events
 
 | Topic | Producer | Consumer | Payload |
 |-------|----------|----------|---------|
-| `payment.success.v1` | payment-service | order-service, notification | `PaymentSuccessEvent { paymentId, orderId, amount, paidAt }` |
-| `payment.failed.v1` | payment-service | order-service | `PaymentFailedEvent { paymentId, orderId, reason, retryable }` |
-| `order.created.v1` | (consumer) | payment-service | triggers checkout |
+| `shop.payment.lifecycle.v1` | payment-service | notification-service, order-service | `payment.captured.v1`<br/>`payment.failed.v1`<br/>`payment.refunded.v1` |
 
 ### 4.4 External integrations
 
