@@ -65,7 +65,7 @@ public class OrderOutboxRelay {
             metrics.setPendingOutboxCount((int) outboxRepo.countByStatus(OutboxStatus.PENDING));
             for (int drained = 0; drained < batchSize; drained++) {
                 Boolean claimed = transactionTemplate.execute(tx -> {
-                    Optional<OutboxEvent> locked = outboxRepo.claimOnePending(OutboxStatus.PENDING);
+                    Optional<OutboxEvent> locked = outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING);
                     if (locked.isEmpty()) {
                         return Boolean.FALSE; // nothing pending (or all locked by peers) — stop
                     }

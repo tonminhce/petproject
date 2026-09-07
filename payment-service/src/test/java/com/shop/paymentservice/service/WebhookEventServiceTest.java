@@ -255,7 +255,7 @@ class WebhookEventServiceTest {
     @Test
     void illegalTransition_marksEventFailedRetryable_andAcks() {
         happyPathStubs();
-        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.REFUNDED)));
 
         assertThatCode(() -> service.handle(PROVIDER, body(capturedPayload().build())))
                 .doesNotThrowAnyException();
@@ -264,6 +264,17 @@ class WebhookEventServiceTest {
         verify(writer).saveEvent(saveCaptor.capture());
         assertThat(saveCaptor.getValue().getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
         verify(writer, never()).completeWithEvent(any(Payment.class), any(PaymentEvent.class), anyString());
+    }
+
+    @Test
+    void idempotentTransition_capturedToCaptured_completesWithEvent() {
+        happyPathStubs();
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+
+        assertThatCode(() -> service.handle(PROVIDER, body(capturedPayload().build())))
+                .doesNotThrowAnyException();
+
+        verify(writer).completeWithEvent(any(Payment.class), any(PaymentEvent.class), eq("payment.captured.v1"));
     }
 
     @Test

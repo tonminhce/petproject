@@ -24,12 +24,14 @@ import com.shop.orderservice.service.OrderEventPublisher;
 import com.shop.orderservice.service.OrderService;
 import com.shop.orderservice.service.OrderStatusService;
 import com.shop.orderservice.service.StockReservationService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -48,7 +50,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OrderServiceImpl implements OrderService {
 
@@ -65,6 +66,59 @@ public class OrderServiceImpl implements OrderService {
     private final OrderCommitCoordinator commitCoordinator;
     private final OrderConfirmMetrics confirmMetrics;
     private final OrderCreateSaga orderCreateSaga;
+    private final TransactionTemplate transactionTemplate;
+
+    @Autowired
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            OrderItemRepository orderItemRepository,
+            PromotionServiceClient promotionClient,
+            PaymentServiceClient paymentClient,
+            StockReservationService stockReservationService,
+            OrderEventPublisher orderEventPublisher,
+            IdempotencyService idempotencyService,
+            OrderStatusService orderStatusService,
+            OrderMapper orderMapper,
+            ObjectMapper objectMapper,
+            OrderCommitCoordinator commitCoordinator,
+            OrderConfirmMetrics confirmMetrics,
+            OrderCreateSaga orderCreateSaga,
+            @Autowired(required = false) PlatformTransactionManager transactionManager) {
+        this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.promotionClient = promotionClient;
+        this.paymentClient = paymentClient;
+        this.stockReservationService = stockReservationService;
+        this.orderEventPublisher = orderEventPublisher;
+        this.idempotencyService = idempotencyService;
+        this.orderStatusService = orderStatusService;
+        this.orderMapper = orderMapper;
+        this.objectMapper = objectMapper;
+        this.commitCoordinator = commitCoordinator;
+        this.confirmMetrics = confirmMetrics;
+        this.orderCreateSaga = orderCreateSaga;
+        this.transactionTemplate = (transactionManager != null) ? new TransactionTemplate(transactionManager) : null;
+    }
+
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            OrderItemRepository orderItemRepository,
+            PromotionServiceClient promotionClient,
+            PaymentServiceClient paymentClient,
+            StockReservationService stockReservationService,
+            OrderEventPublisher orderEventPublisher,
+            IdempotencyService idempotencyService,
+            OrderStatusService orderStatusService,
+            OrderMapper orderMapper,
+            ObjectMapper objectMapper,
+            OrderCommitCoordinator commitCoordinator,
+            OrderConfirmMetrics confirmMetrics,
+            OrderCreateSaga orderCreateSaga) {
+        this(orderRepository, orderItemRepository, promotionClient, paymentClient,
+                stockReservationService, orderEventPublisher, idempotencyService,
+                orderStatusService, orderMapper, objectMapper, commitCoordinator,
+                confirmMetrics, orderCreateSaga, (PlatformTransactionManager) null);
+    }
 
     // ========================================================================
     // CREATE ORDER — SAGA with explicit compensation
@@ -220,7 +274,6 @@ public class OrderServiceImpl implements OrderService {
     // label resolved by token shape at the controller (H-6: ADMIN → sub,
     // SERVICE → service:<azp>) — stored verbatim on idempotency rows.
     @Override
-    @Transactional
     public OrderResponse confirmOrder(UUID orderId, String actor, String idempotencyKey) {
         confirmMetrics.attempt();
         String requestHash = sha256Hex(orderId.toString());
@@ -268,12 +321,16 @@ public class OrderServiceImpl implements OrderService {
                 throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
             }
 
-            order.setConfirmedAt(Instant.now());
-            order.setStatus(OrderStatus.CONFIRMED);
-            orderRepository.save(order);
-            orderEventPublisher.publishStatusChanged(order);
+            OrderResponse response = (transactionTemplate != null)
+                ? transactionTemplate.execute(tx -> {
+                    order.setConfirmedAt(Instant.now());
+                    order.setStatus(OrderStatus.CONFIRMED);
+                    orderRepository.save(order);
+                    orderEventPublisher.publishStatusChanged(order);
+                    return orderMapper.toResponse(order, items);
+                })
+                : applyConfirmedStatus(order, items);
 
-            OrderResponse response = orderMapper.toResponse(order, items);
             if (idempotencyKey != null)
                 idempotencyService.complete(idempotencyKey, actor, response, 200);
             return response;
@@ -289,6 +346,14 @@ public class OrderServiceImpl implements OrderService {
             }
             throw ex;  // state-machine guard etc. rethrown unchanged
         }
+    }
+
+    private OrderResponse applyConfirmedStatus(Order order, List<OrderItem> items) {
+        order.setConfirmedAt(Instant.now());
+        order.setStatus(OrderStatus.CONFIRMED);
+        orderRepository.save(order);
+        orderEventPublisher.publishStatusChanged(order);
+        return orderMapper.toResponse(order, items);
     }
 
     @Override

@@ -72,7 +72,7 @@ public class PaymentOutboxRelay {
         List<Long> claimedIds = new ArrayList<>();
         for (int drained = 0; drained < batchSize; drained++) {
             Long claimed = transactionTemplate.execute(tx -> {
-                Optional<OutboxEvent> locked = outboxRepo.claimOnePending(OutboxStatus.PENDING);
+                Optional<OutboxEvent> locked = outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING);
                 if (locked.isEmpty()) {
                     return null;  // nothing pending (or all locked by peers) — stop
                 }

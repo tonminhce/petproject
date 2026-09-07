@@ -100,7 +100,7 @@ class OrderCreateSagaTest {
             orderEventPublisher, idempotencyService, orderMapper
         );
         Cart cart = Cart.builder().id(UUID.randomUUID()).userId(userId).build();
-        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(cart));
         CartItem item = CartItem.builder().id(UUID.randomUUID())
             .cartId(cart.getId()).productId(productId).quantity(2).build();
         when(cartItemRepository.findByCartId(cart.getId())).thenReturn(List.of(item));

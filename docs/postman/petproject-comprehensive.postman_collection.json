@@ -658,6 +658,10 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{userToken}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{orderIdempotencyKey}}"
                   }
                 ],
                 "url": "{{orderUrl}}/api/v1/orders",
@@ -682,6 +686,16 @@
                       "pm.expect(res.data.id).to.be.a(\"string\");",
                       "pm.expect(res.data.status).to.be.oneOf([\"PENDING\", \"PENDING_PAYMENT\"]);",
                       "pm.collectionVariables.set(\"orderId\", res.data.id);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const ts = Date.now();",
+                      "pm.collectionVariables.set(\"orderIdempotencyKey\", \"ORD-IDEMP-\" + ts);"
                     ]
                   }
                 }
@@ -953,7 +967,39 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Payment captured\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                      "pm.test(\"Payment captured\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                      "const res = pm.response.json();",
+                      "pm.expect(res.data.status).to.eql(\"CAPTURED\");",
+                      "pm.expect(res.data.previousStatus).to.eql(\"PENDING\");"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6.6 Query Captured Payment Status (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": "{{paymentUrl}}/api/v1/backoffice/payments/{{paymentId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Payment retrieved and status is CAPTURED\", () => {",
+                      "  pm.expect(pm.response.code).to.eql(200);",
+                      "  const res = pm.response.json();",
+                      "  pm.expect(res.data.status).to.eql(\"CAPTURED\");",
+                      "  pm.expect(res.data.previousStatus).to.eql(\"PENDING\");",
+                      "});"
                     ]
                   }
                 }
@@ -1298,6 +1344,38 @@
                       "pm.test(\"Return reviewed and processed\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                       "const res = pm.response.json();",
                       "pm.expect(res.data.status).to.be.oneOf([\"APPROVED\", \"REFUNDED\"]);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9.5 Verify Payment Refunded after Return Approval (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": "{{paymentUrl}}/api/v1/payments?orderId={{orderId}}"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Payment refunded following return approval\", () => {",
+                      "  pm.expect(pm.response.code).to.eql(200);",
+                      "  const res = pm.response.json();",
+                      "  pm.expect(res.data.content).to.be.an(\"array\").that.is.not.empty;",
+                      "  const refunded = res.data.content.find(p => p.id === pm.collectionVariables.get(\"paymentId\"));",
+                      "  pm.expect(refunded).to.be.an(\"object\");",
+                      "  pm.expect(refunded.status).to.eql(\"REFUNDED\");",
+                      "  pm.expect(refunded.previousStatus).to.eql(\"CAPTURED\");",
+                      "});"
                     ]
                   }
                 }
@@ -2265,6 +2343,88 @@
                     "type": "text/javascript",
                     "exec": [
                       "pm.test(\"Rejects customer review with 403 Forbidden\", () => pm.expect(pm.response.code).to.eql(403));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18.4 Place Order with Invalid Long Idempotency Key (expect 400)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+                  }
+                ],
+                "url": "{{orderUrl}}/api/v1/orders",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipientName\": \"Test\",\n  \"phoneNumber\": \"{{customerPhone}}\",\n  \"shippingAddress\": \"123 Commerce St\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Rejects long idempotency key with 400\", () => pm.expect(pm.response.code).to.eql(400));",
+                      "const res = pm.response.json();",
+                      "pm.expect(res.message).to.include(\"Idempotency-Key\");"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18.5 Request Cumulative Return Exceeding Order Total (expect 400)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{userToken}}"
+                  }
+                ],
+                "url": "{{orderUrl}}/api/v1/orders/{{orderId}}/returns",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"DEFECTIVE\",\n  \"description\": \"Additional return exceeding order total\",\n  \"refundAmount\": 100\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Rejects cumulative refund exceeding total with 400\", () => pm.expect(pm.response.code).to.eql(400));",
+                      "const res = pm.response.json();",
+                      "pm.expect(res.message).to.include(\"order.return.refund.exceeds.total\");"
                     ]
                   }
                 }

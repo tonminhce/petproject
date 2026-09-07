@@ -126,9 +126,9 @@ public class OrderCreateSaga {
         // Step 1 (DB TX): Load cart + persist-early PENDING order
         CartAndOrder initial = executeInTx(() -> {
             Cart cart = (request.cartId() != null)
-                ? cartRepository.findByIdAndUserIdAndDeletedFalse(request.cartId(), userId)
+                ? cartRepository.findByIdAndUserIdForUpdate(request.cartId(), userId)
                     .orElseThrow(() -> BusinessException.of(ErrorCode.CART_NOT_FOUND, request.cartId()))
-                : cartRepository.findByUserIdAndDeletedFalse(userId)
+                : cartRepository.findByUserIdForUpdate(userId)
                     .orElseThrow(() -> BusinessException.of(ErrorCode.CART_EMPTY));
             List<CartItem> items = cartItemRepository.findByCartId(cart.getId()).stream()
                 .sorted(Comparator.comparing(CartItem::getProductId))

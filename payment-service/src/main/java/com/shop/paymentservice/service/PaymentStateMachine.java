@@ -17,7 +17,13 @@ public final class PaymentStateMachine {
     }
 
     public static PaymentStatus transition(PaymentStatus from, PaymentStatus to) {
-        if (from == null || to == null || !LEGAL_TRANSITIONS.getOrDefault(from, Set.of()).contains(to)) {
+        if (from == null || to == null) {
+            throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, from, to);
+        }
+        if (from == to) {
+            return to;
+        }
+        if (!LEGAL_TRANSITIONS.getOrDefault(from, Set.of()).contains(to)) {
             throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, from, to);
         }
         return to;

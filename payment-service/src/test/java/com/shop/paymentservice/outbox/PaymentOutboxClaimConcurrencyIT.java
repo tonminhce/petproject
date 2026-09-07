@@ -125,7 +125,7 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void twoPendingRows_secondRowUntouchedWhileHeadRowLocked() throws Exception {
+    void twoPendingRows_secondRowClaimedConcurrentlyWhileHeadRowLocked() throws Exception {
         Long row1 = outboxRepo.save(pendingEvent()).getId();
         Long row2 = outboxRepo.save(pendingEvent()).getId();
         TransactionTemplate tx = new TransactionTemplate(txManager);
@@ -178,12 +178,11 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        // A claimed the head row (MIN id)
+        // A claimed the head row
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        // B locked out entirely — even though row2 is free, the MIN-subquery claim
-        // shape serializes on the head row (see claimOnePending javadoc)
-        assertThat(claimBWhileLocked.get()).isEmpty();
-        // After A committed, row1 is re-claimable; row2 was never touched
+        // B claims the next available row (row2) concurrently because SKIP LOCKED skips row1
+        assertThat(claimBWhileLocked.get().map(OutboxEvent::getId)).contains(row2);
+        // After A committed, row1 is re-claimable
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
         assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
 

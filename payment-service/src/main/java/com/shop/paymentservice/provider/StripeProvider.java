@@ -8,7 +8,7 @@ import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
-import com.stripe.param.PaymentIntentListParams;
+import com.stripe.param.PaymentIntentSearchParams;
 import com.stripe.param.RefundCreateParams;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -111,7 +111,7 @@ public class StripeProvider implements PaymentProvider {
     @Override
     public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
         try {
-            PaymentIntent original = findIntentByLocalPaymentId(paymentId, idempotencyKey);
+            PaymentIntent original = findIntentByLocalPaymentId(paymentId);
             if (original == null) {
                 return new ProviderResult("stripe-error-intent-not-found", false);
             }
@@ -123,6 +123,9 @@ public class StripeProvider implements PaymentProvider {
                     .build();
             Refund refund = Refund.create(params, stripeOptions(refundKey));
             return new ProviderResult(refund.getId(), true);
+        } catch (IdempotencyException e) {
+            log.info("Stripe replayed cached refund for idempotency key {} — treating as accepted", idempotencyKey);
+            return new ProviderResult("idempotent-" + idempotencyKey, true);
         } catch (StripeException e) {
             log.error("Stripe API error on refund (paymentId={}, code={}, requestId={})",
                     paymentId, e.getCode(), e.getRequestId(), e);
@@ -135,17 +138,17 @@ public class StripeProvider implements PaymentProvider {
      * The port hands us only the LOCAL payment id — the Stripe intent id was
      * never persisted (no provider-reference column). The intent was created
      * with {@code metadata[payment_id]} at capture time, so the deterministic
-     * way back is a metadata-filtered list (no 24h idempotency-cache race).
+     * way back is the Stripe Search API (no 24h idempotency-cache race).
      */
-    private PaymentIntent findIntentByLocalPaymentId(UUID paymentId, String idempotencyKey) throws StripeException {
-        // stripe-java 24.x exposes no typed metadata filter on list params —
-        // the metadata[key] query filter goes through putExtraParam.
-        PaymentIntentListParams listParams = PaymentIntentListParams.builder()
+    private PaymentIntent findIntentByLocalPaymentId(UUID paymentId) throws StripeException {
+        PaymentIntentSearchParams searchParams = PaymentIntentSearchParams.builder()
+                .setQuery("metadata['payment_id']:'" + paymentId + "'")
                 .setLimit(1L)
-                .putExtraParam("metadata[payment_id]", paymentId.toString())
                 .build();
-        return PaymentIntent.list(listParams, stripeOptions(idempotencyKey))
-                .getData().stream().findFirst().orElse(null);
+        return PaymentIntent.search(searchParams, RequestOptions.builder()
+                .setApiKey(properties.secretKey())
+                .build())
+            .getData().stream().findFirst().orElse(null);
     }
 
     private RequestOptions stripeOptions(String idempotencyKey) {

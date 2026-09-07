@@ -38,7 +38,7 @@ public class VNPayProvider implements PaymentProvider {
     public ProviderResult capture(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
         try {
             String vnpTxnRef = paymentId.toString().replace("-", "").substring(0, 16);
-            String rawData = "vnp_Amount=" + amount.multiply(BigDecimal.valueOf(100)).intValue()
+            String rawData = "vnp_Amount=" + amount.multiply(BigDecimal.valueOf(100)).longValueExact()
                     + "&vnp_Command=pay"
                     + "&vnp_CurrCode=" + currency
                     + "&vnp_TmnCode=" + tmnCode

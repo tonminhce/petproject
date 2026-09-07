@@ -82,4 +82,24 @@ class PaymentWriterTest {
         verify(publisher).publish(captor.capture(), org.mockito.ArgumentMatchers.eq("payment.captured.v1"));
         assertThat(captor.getValue()).isSameAs(merged);
     }
+
+    @Test
+    void save_delegatesToRepositorySave() {
+        Payment payment = Payment.builder().id(PAYMENT_ID).build();
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        Payment result = writer.save(payment);
+
+        assertThat(result).isSameAs(payment);
+        verify(paymentRepository).save(payment);
+    }
+
+    @Test
+    void publishLifecycleEvent_delegatesToPublisher() {
+        Payment payment = Payment.builder().id(PAYMENT_ID).build();
+
+        writer.publishLifecycleEvent(payment, "payment.captured.v1");
+
+        verify(publisher).publish(payment, "payment.captured.v1");
+    }
 }

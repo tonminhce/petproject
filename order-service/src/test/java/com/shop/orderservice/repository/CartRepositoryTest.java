@@ -67,4 +67,22 @@ class CartRepositoryTest {
 
         assertThat(cartRepository.findByUserIdAndDeletedFalse(alice)).isEmpty();
     }
+
+    @Test
+    void findByUserIdForUpdate_returnsActiveCart() {
+        Cart cart = Cart.builder().userId(alice).subtotal(BigDecimal.ZERO).build();
+        em.persistAndFlush(cart);
+        em.clear();
+
+        assertThat(cartRepository.findByUserIdForUpdate(alice)).isPresent();
+    }
+
+    @Test
+    void findByIdAndUserIdForUpdate_returnsActiveCart() {
+        Cart cart = Cart.builder().userId(alice).subtotal(BigDecimal.ZERO).build();
+        em.persistAndFlush(cart);
+        em.clear();
+
+        assertThat(cartRepository.findByIdAndUserIdForUpdate(cart.getId(), alice)).isPresent();
+    }
 }

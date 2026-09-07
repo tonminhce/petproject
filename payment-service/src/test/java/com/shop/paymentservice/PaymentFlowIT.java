@@ -260,7 +260,6 @@ class PaymentFlowIT extends AbstractIntegrationTest {
     private Payment createCapturedPendingPayment() {
         PaymentResponse payment = paymentService.create(new CreatePaymentRequest(
                 UUID.randomUUID(), new BigDecimal("100.00"), "USD", UUID.randomUUID().toString()));
-        paymentService.capture(payment.id());
         return paymentRepository.findById(payment.id()).orElseThrow();
     }
 

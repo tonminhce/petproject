@@ -402,7 +402,7 @@ services:
       PROMOTION_SERVICE_ENABLED: "true"
       PROMOTION_SERVICE_URL: http://promotion-service:8093
       TAX_SERVICE_URL: http://tax-service:8091
-      PAYMENT_SERVICE_ENABLED: ${PAYMENT_SERVICE_ENABLED:-false}
+      PAYMENT_SERVICE_ENABLED: ${PAYMENT_SERVICE_ENABLED:-true}
       PAYMENT_SERVICE_URL: http://payment-service:8085
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379

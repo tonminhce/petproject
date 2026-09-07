@@ -1,6 +1,7 @@
 package com.shop.orderservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.orderservice.client.PaymentServiceClient;
 import com.shop.orderservice.constant.OrderStatus;
@@ -155,5 +156,86 @@ class OrderReturnServiceTest {
 
         assertThat(result.content()).hasSize(1);
         assertThat(result.totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void requestReturn_cumulativeRefundExceedsTotal_throwsBadRequest() {
+        Order order = Order.builder()
+                .id(orderId)
+                .userId(userId)
+                .status(OrderStatus.DELIVERED)
+                .total(BigDecimal.valueOf(200))
+                .build();
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+        OrderReturn approvedReturn = OrderReturn.builder()
+                .id(UUID.randomUUID())
+                .order(order)
+                .userId(userId)
+                .refundAmount(BigDecimal.valueOf(150))
+                .status(ReturnStatus.APPROVED)
+                .build();
+        when(orderReturnRepository.findByOrderId(orderId)).thenReturn(List.of(approvedReturn));
+
+        OrderReturnCreateRequest request = new OrderReturnCreateRequest(
+                "Defective item", "Screen broken", BigDecimal.valueOf(60));
+
+        assertThatThrownBy(() -> service.requestReturn(userId, orderId, request))
+                .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST.getCode());
+                    assertThat(ex.getMessage()).contains("order.return.refund.exceeds.total");
+                });
+    }
+
+    @Test
+    void requestReturn_cumulativeRefundWithinTotal_success() {
+        Order order = Order.builder()
+                .id(orderId)
+                .userId(userId)
+                .status(OrderStatus.DELIVERED)
+                .total(BigDecimal.valueOf(200))
+                .build();
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+        OrderReturn approvedReturn = OrderReturn.builder()
+                .id(UUID.randomUUID())
+                .order(order)
+                .userId(userId)
+                .refundAmount(BigDecimal.valueOf(80))
+                .status(ReturnStatus.APPROVED)
+                .build();
+        OrderReturn refundedReturn = OrderReturn.builder()
+                .id(UUID.randomUUID())
+                .order(order)
+                .userId(userId)
+                .refundAmount(BigDecimal.valueOf(40))
+                .status(ReturnStatus.REFUNDED)
+                .build();
+        OrderReturn rejectedReturn = OrderReturn.builder()
+                .id(UUID.randomUUID())
+                .order(order)
+                .userId(userId)
+                .refundAmount(BigDecimal.valueOf(50))
+                .status(ReturnStatus.REJECTED)
+                .build();
+        when(orderReturnRepository.findByOrderId(orderId))
+                .thenReturn(List.of(approvedReturn, refundedReturn, rejectedReturn));
+
+        OrderReturn saved = OrderReturn.builder()
+                .id(returnId)
+                .order(order)
+                .userId(userId)
+                .reason("Defective part")
+                .refundAmount(BigDecimal.valueOf(80))
+                .status(ReturnStatus.REQUESTED)
+                .build();
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenReturn(saved);
+
+        OrderReturnCreateRequest request = new OrderReturnCreateRequest(
+                "Defective part", "Connector loose", BigDecimal.valueOf(80));
+
+        OrderReturnResponse response = service.requestReturn(userId, orderId, request);
+        assertThat(response.id()).isEqualTo(returnId);
+        assertThat(response.refundAmount()).isEqualTo(BigDecimal.valueOf(80));
     }
 }

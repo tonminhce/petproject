@@ -500,4 +500,32 @@ class OrderServiceImplTest {
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));  // swallow — original error preserved
     }
+
+    @Test
+    void confirmOrder_runsStatusMutationInsideTransactionTemplate() {
+        org.springframework.transaction.PlatformTransactionManager txMgr =
+                mock(org.springframework.transaction.PlatformTransactionManager.class);
+        org.springframework.transaction.TransactionStatus txStat =
+                mock(org.springframework.transaction.TransactionStatus.class);
+        when(txMgr.getTransaction(any())).thenReturn(txStat);
+
+        OrderServiceImpl serviceWithTx = new OrderServiceImpl(
+                orderRepository, orderItemRepository, promotionClient, paymentClient,
+                stockReservationService, orderEventPublisher, idempotencyService,
+                orderStatusService, orderMapper, objectMapper, commitCoordinator,
+                confirmMetrics, orderCreateSaga, txMgr);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
+        when(orderMapper.toResponse(any(), any())).thenReturn(mock(OrderResponse.class));
+
+        serviceWithTx.confirmOrder(orderId, actor, null);
+
+        org.mockito.InOrder inOrder = inOrder(commitCoordinator, txMgr, orderRepository, orderEventPublisher);
+        inOrder.verify(commitCoordinator).commitForConfirm(eq(order), anyList());
+        inOrder.verify(txMgr).getTransaction(any());
+        inOrder.verify(orderRepository).save(order);
+        inOrder.verify(orderEventPublisher).publishStatusChanged(order);
+        inOrder.verify(txMgr).commit(txStat);
+    }
 }

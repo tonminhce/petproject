@@ -4,11 +4,11 @@ import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.CardException;
 import com.stripe.exception.IdempotencyException;
 import com.stripe.model.PaymentIntent;
-import com.stripe.model.PaymentIntentCollection;
+import com.stripe.model.PaymentIntentSearchResult;
 import com.stripe.model.Refund;
 import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
-import com.stripe.param.PaymentIntentListParams;
+import com.stripe.param.PaymentIntentSearchParams;
 import com.stripe.param.RefundCreateParams;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -179,9 +179,9 @@ class StripeProviderTest {
     @Test
     void refundSucceeds_withRefundIdempotencyKeyDerivedFromPaymentKey() throws Exception {
         PaymentIntent original = intent("pi_orig", "succeeded");
-        PaymentIntentCollection matches = new PaymentIntentCollection();
+        PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
         matches.setData(List.of(original));
-        paymentIntentStatic.when(() -> PaymentIntent.list(any(PaymentIntentListParams.class),
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
                 any(RequestOptions.class))).thenReturn(matches);
 
         Refund created = new Refund();
@@ -206,9 +206,9 @@ class StripeProviderTest {
 
     @Test
     void refundWithoutMatchingIntent_mapsToRejected() throws Exception {
-        PaymentIntentCollection noMatches = new PaymentIntentCollection();
+        PaymentIntentSearchResult noMatches = new PaymentIntentSearchResult();
         noMatches.setData(List.of());
-        paymentIntentStatic.when(() -> PaymentIntent.list(any(PaymentIntentListParams.class),
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
                 any(RequestOptions.class))).thenReturn(noMatches);
 
         PaymentProvider.ProviderResult result = provider.refund(
@@ -221,9 +221,9 @@ class StripeProviderTest {
     @Test
     void refundStripeError_mapsToRejected() throws Exception {
         PaymentIntent original = intent("pi_orig", "succeeded");
-        PaymentIntentCollection matches = new PaymentIntentCollection();
+        PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
         matches.setData(List.of(original));
-        paymentIntentStatic.when(() -> PaymentIntent.list(any(PaymentIntentListParams.class),
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
                 any(RequestOptions.class))).thenReturn(matches);
         refundStatic.when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
                 .thenThrow(new ApiConnectionException("network down"));
@@ -232,6 +232,23 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
+    }
+
+    @Test
+    void refundIdempotencyConflict_returnsCachedRefundAsAccepted() throws Exception {
+        PaymentIntent original = intent("pi_orig", "succeeded");
+        PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
+        matches.setData(List.of(original));
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
+                any(RequestOptions.class))).thenReturn(matches);
+        refundStatic.when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
+                .thenThrow(new IdempotencyException("idempotency conflict", "req_refund_1", "idempotency_error", 400));
+
+        PaymentProvider.ProviderResult result = provider.refund(
+                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+
+        assertThat(result.accepted()).isTrue();
+        assertThat(result.providerEventId()).isEqualTo("idempotent-" + IDEMPOTENCY_KEY);
     }
 
     @Test

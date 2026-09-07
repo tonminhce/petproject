@@ -209,15 +209,21 @@ class PaymentControllerTest {
         verify(paymentService).findAllByOrderId(eq(orderId), eq(PageRequest.of(0, 10)));
     }
 
-    // --- refund is ADMIN-only ---
+    // --- refund allows SERVICE and ADMIN ---
 
     @Test
-    void refund_serviceRole_returns403() throws Exception {
+    void refund_serviceRole_returns200WithPayment() throws Exception {
+        when(paymentService.refund(paymentId)).thenReturn(capturedPayment());
+
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.id").value(paymentId.toString()));
+
+        verify(paymentService).refund(paymentId);
     }
 
     // --- ADMIN happy paths ---

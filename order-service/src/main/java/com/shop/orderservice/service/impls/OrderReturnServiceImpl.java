@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -48,15 +49,19 @@ public class OrderReturnServiceImpl implements OrderReturnService {
             throw BusinessException.badRequest("order.return.only.delivered");
         }
 
-        if (request.refundAmount().compareTo(order.getTotal()) > 0) {
-            throw BusinessException.badRequest("order.return.refund.exceeds.total");
-        }
-
         List<OrderReturn> existingReturns = orderReturnRepository.findByOrderId(orderId);
         boolean hasActive = existingReturns.stream()
                 .anyMatch(r -> r.getStatus() == ReturnStatus.REQUESTED);
         if (hasActive) {
             throw BusinessException.conflict("order.return.pending.exists");
+        }
+
+        BigDecimal alreadyApprovedOrRefunded = existingReturns.stream()
+                .filter(r -> r.getStatus() == ReturnStatus.APPROVED || r.getStatus() == ReturnStatus.REFUNDED)
+                .map(OrderReturn::getRefundAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (alreadyApprovedOrRefunded.add(request.refundAmount()).compareTo(order.getTotal()) > 0) {
+            throw BusinessException.badRequest("order.return.refund.exceeds.total");
         }
 
         OrderReturn orderReturn = OrderReturn.builder()

@@ -29,11 +29,21 @@ class PaymentStateMachineTest {
     }
 
     @Test
-    void capturedToCapturedIsIllegal() {
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> PaymentStateMachine.transition(PaymentStatus.CAPTURED, PaymentStatus.CAPTURED));
+    void capturedToCapturedIsIdempotent() {
+        assertEquals(PaymentStatus.CAPTURED,
+                PaymentStateMachine.transition(PaymentStatus.CAPTURED, PaymentStatus.CAPTURED));
+    }
 
-        assertEquals(ErrorCode.PAYMENT_INVALID_STATE.getCode(), ex.getErrorCode());
+    @Test
+    void pendingToPendingIsIdempotent() {
+        assertEquals(PaymentStatus.PENDING,
+                PaymentStateMachine.transition(PaymentStatus.PENDING, PaymentStatus.PENDING));
+    }
+
+    @Test
+    void failedToFailedIsIdempotent() {
+        assertEquals(PaymentStatus.FAILED,
+                PaymentStateMachine.transition(PaymentStatus.FAILED, PaymentStatus.FAILED));
     }
 
     @Test
@@ -85,11 +95,9 @@ class PaymentStateMachineTest {
     }
 
     @Test
-    void refundedToRefundedIsIllegal() {
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> PaymentStateMachine.transition(PaymentStatus.REFUNDED, PaymentStatus.REFUNDED));
-
-        assertEquals(ErrorCode.PAYMENT_INVALID_STATE.getCode(), ex.getErrorCode());
+    void refundedToRefundedIsIdempotent() {
+        assertEquals(PaymentStatus.REFUNDED,
+                PaymentStateMachine.transition(PaymentStatus.REFUNDED, PaymentStatus.REFUNDED));
     }
 
     @Test

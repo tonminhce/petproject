@@ -76,7 +76,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
+                    claimA.set(outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING));
                     aClaimed.countDown();
                     try {
                         bLockedOut.await(10, TimeUnit.SECONDS); // hold the lock for B's attempt
@@ -91,7 +91,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
         Thread claimerB = new Thread(() -> {
             try {
                 if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING)));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -100,7 +100,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
             }
             try {
                 if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING)));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -126,7 +126,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
     }
 
     @Test
-    void twoPendingRows_secondRowUntouchedWhileHeadRowLocked() throws Exception {
+    void twoPendingRows_secondRowClaimedConcurrentlyWhileHeadRowLocked() throws Exception {
         Long row1 = outboxRepo.save(pendingEvent()).getId();
         Long row2 = outboxRepo.save(pendingEvent()).getId();
         TransactionTemplate tx = new TransactionTemplate(txManager);
@@ -141,7 +141,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
+                    claimA.set(outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING));
                     aClaimed.countDown();
                     try {
                         bLockedOut.await(10, TimeUnit.SECONDS);
@@ -156,7 +156,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
         Thread claimerB = new Thread(() -> {
             try {
                 if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING)));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -165,7 +165,7 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
             }
             try {
                 if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING)));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -179,12 +179,11 @@ class OrderOutboxClaimConcurrencyIT extends AbstractOrderServiceIT {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        // A claimed the head row (MIN id)
+        // A claimed the head row (row1)
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        // B locked out entirely — even though row2 is free, the MIN-subquery claim
-        // shape serializes on the head row (see claimOnePending javadoc)
-        assertThat(claimBWhileLocked.get()).isEmpty();
-        // After A committed, row1 is re-claimable; row2 was never touched
+        // With findFirstByStatusOrderByIdAsc + SKIP LOCKED, row1 is skipped, and B claims row2!
+        assertThat(claimBWhileLocked.get().map(OutboxEvent::getId)).contains(row2);
+        // After A committed, row1 is re-claimable by B since row1 < row2
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
         assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
 

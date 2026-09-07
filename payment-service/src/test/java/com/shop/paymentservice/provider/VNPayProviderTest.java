@@ -33,6 +33,17 @@ class VNPayProviderTest {
     }
 
     @Test
+    void capture_largeAmountExceedingIntegerMax_doesNotOverflow() {
+        UUID paymentId = UUID.randomUUID();
+        // 50,000,000 * 100 = 5,000,000,000 > Integer.MAX_VALUE (2,147,483,647)
+        PaymentProvider.ProviderResult result = provider.capture(
+            paymentId, BigDecimal.valueOf(50000000), "VND", "idemp-key-large");
+
+        assertThat(result.accepted()).isTrue();
+        assertThat(result.providerEventId()).isNotBlank();
+    }
+
+    @Test
     void refund_generatesValidResult() {
         UUID paymentId = UUID.randomUUID();
         PaymentProvider.ProviderResult result = provider.refund(

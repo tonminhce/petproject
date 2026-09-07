@@ -89,7 +89,11 @@ public class PaymentServiceImpl implements PaymentService {
         if (!result.accepted()) {
             throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
         }
-        return PaymentResponse.from(payment);
+        payment.setPreviousStatus(PaymentStatus.PENDING);
+        payment.setStatus(PaymentStatus.CAPTURED);
+        Payment saved = writer.save(payment);
+        writer.publishLifecycleEvent(saved, "payment.captured.v1");
+        return PaymentResponse.from(saved);
     }
 
     @Override
@@ -105,7 +109,11 @@ public class PaymentServiceImpl implements PaymentService {
         if (!result.accepted()) {
             throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
         }
-        return PaymentResponse.from(payment);
+        payment.setPreviousStatus(PaymentStatus.CAPTURED);
+        payment.setStatus(PaymentStatus.REFUNDED);
+        Payment saved = writer.save(payment);
+        writer.publishLifecycleEvent(saved, "payment.refunded.v1");
+        return PaymentResponse.from(saved);
     }
 
     @Override

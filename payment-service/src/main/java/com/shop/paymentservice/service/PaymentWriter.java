@@ -23,8 +23,17 @@ public class PaymentWriter {
     }
 
     @Transactional
+    public Payment save(Payment payment) {
+        return repository.save(payment);
+    }
+
+    @Transactional
     public Payment saveAndFlush(Payment payment) {
         return repository.saveAndFlush(payment);
+    }
+
+    public void publishLifecycleEvent(Payment payment, String eventType) {
+        publisher.publish(payment, eventType);
     }
 
     @Transactional

@@ -1,7 +1,7 @@
 # E2E Test Report : Petproject Microservices Platform
 
 > **Status**: 100% Pass Rate (0 Failures) 
-> **Updated**: 2026-09-04 
+> **Updated**: 2026-09-07 
 > **Environment**: Docker Compose Local Cluster (Linux) 
 > **Tech Stack**: Spring Boot 4.1.1 / Java 25 / Keycloak 26 / PostgreSQL 16 / Redis 7.4 / Kafka 3.9.0 (KRaft) / Elasticsearch 8.15 / RustFS S3 Storage 
 
@@ -15,8 +15,8 @@ Prior to this audit, multiple partial and overlapping Postman collections were p
 
 | Collection File | Status | Action Taken | Rationale |
 |-----------------|--------|--------------|-----------|
-| `petproject-comprehensive.postman_collection.json` (238 KB) | **CHOSEN AS MASTER** | **Retained & Updated** | **Single Definitive Master Suite**: Contains all 3 key tiers (Choreographed E2E Happy Path + Comprehensive Edge Cases & Security Audits + Complete 14-service Microservices API Catalog). Total 190 requests. |
-| `petproject-e2e-business-flow.postman_collection.json` (73 KB) | **COMPANION / CI RUNNER** | **Retained & Synced** | Lightweight suite containing only Part 1 (E2E Happy Path) + Part 2 (Edge Cases) (64 requests). Ideal for fast pre-commit hooks and CI/CD pipelines (<2s execution time). Automatically kept in sync with Master. |
+| `petproject-comprehensive.postman_collection.json` (245 KB) | **CHOSEN AS MASTER** | **Retained & Updated** | **Single Definitive Master Suite**: Contains all 3 key tiers (Choreographed E2E Happy Path + Comprehensive Edge Cases & Security Audits + Complete 14-service Microservices API Catalog). Total 194 requests. |
+| `petproject-e2e-business-flow.postman_collection.json` (79 KB) | **COMPANION / CI RUNNER** | **Retained & Synced** | Lightweight suite containing only Part 1 (E2E Happy Path) + Part 2 (Edge Cases) (68 requests). Ideal for fast pre-commit hooks and CI/CD pipelines (<3.6s execution time). Automatically kept in sync with Master. |
 | `E-commerce-Favourite-Inventory-E2E.postman_collection.json` (26 KB) | **OBSOLETE & CORRUPTED** | **Removed** | Syntax error at line 98 (`trailing comma`), only covered 3 services from early sprint development. Completely subsumed by Master. |
 | `E-commerce-Auth-Product-E2E.postman_collection.json` (17 KB) | **REDUNDANT** | **Removed** | Fragmentary sprint test covering only Auth & Product services. Completely subsumed by Master. |
 | `petproject-e2e-v1.json` (16 KB) | **REDUNDANT** | **Removed** | Legacy 6-service draft. Completely obsolete and subsumed by Master. |
@@ -93,27 +93,53 @@ npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collectio
 
 ```
 ┌─────────────────────────┬───────────────────┬──────────────────┐
-│ │ executed │ failed │
+│                         │          executed │           failed │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│ iterations │ 1 │ 0 │
+│              iterations │                 1 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│ requests │ 190 │ 0 │
+│                requests │               194 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│ test-scripts │ 190 │ 0 │
+│            test-scripts │               194 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│ prerequest-scripts │ 10 │ 0 │
+│      prerequest-scripts │                11 │                0 │
 ├─────────────────────────┼───────────────────┼──────────────────┤
-│ assertions │ 190 │ 0 │
+│              assertions │               194 │                0 │
 ├─────────────────────────┴───────────────────┴──────────────────┤
-│ total run duration: 4.2s │
+│ total run duration: 4.8s                                       │
 ├────────────────────────────────────────────────────────────────┤
-│ total data received: 155.38kB (approx) │
+│ total data received: 171.33kB (approx)                         │
 ├────────────────────────────────────────────────────────────────┤
-│ average response time: 10ms [min: 3ms, max: 181ms, s.d.: 14ms] │
+│ average response time: 13ms [min: 2ms, max: 248ms, s.d.: 18ms] │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-**Pass Rate**: **100% (190 / 190 passed, 0 failures)**
+**Pass Rate**: **100% (194 / 194 passed, 0 failures)**
+
+### 4.2 Companion CI Suite Run (`petproject-e2e-business-flow.postman_collection.json`)
+
+```
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                68 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                68 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                11 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                68 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 3.6s                                       │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 53.58kB (approx)                          │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 39ms [min: 4ms, max: 440ms, s.d.: 62ms] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Pass Rate**: **100% (68 / 68 passed, 0 failures)**
 
 ---
 
@@ -122,13 +148,23 @@ npx --yes newman run docs/postman/petproject-e2e-business-flow.postman_collectio
 1. **Auth Service**:
  - Added `/api/v1/auth/forgot-password` and `/api/v1/auth/reset-password` to `shop.security.public-paths`.
  - Fixed Liquibase migration `004-password-reset-and-addresses.yaml` foreign key constraint to reference `users(user_id)` correctly.
-2. **Order Service (RMA & Tracking)**:
+2. **Order Service (RMA & Tracking & Idempotency)**:
  - Added `created_by` and `updated_by` columns to `order_returns` table and `changelog-007-order-returns.yaml` to satisfy Hibernate audit validation.
  - Cleared and re-computed Liquibase checksums.
  - Fixed `OrderReturnService` delivered order status validation and max refund threshold checking.
-3. **Gateway Service**:
+ - Enforced checkout idempotency via `Idempotency-Key` validation and added edge test `18.4` (rejecting keys > 64 chars).
+ - Added cumulative refund validation and added edge test `18.5` (rejecting total refunds exceeding order total).
+ - Hardened `PaymentLifecycleConsumer` against redundant state transitions to prevent retry loops on already-confirmed orders.
+3. **Payment Service & Webhook Hardening**:
+ - Synchronous payment state transitions: `capture()` immediately transitions status to `CAPTURED` with `previousStatus = PENDING`; `refund()` transitions to `REFUNDED` with `previousStatus = CAPTURED`.
+ - Extended `POST /api/v1/payments/{id}/refund` authorization to `@PreAuthorize("hasAnyRole('SERVICE','ADMIN')")` so `order-service` can coordinate refunds upon RMA return approvals.
+ - Enabled `PAYMENT_SERVICE_ENABLED: true` in Docker stack so order cancellations and return approvals execute live payment refunds.
+ - Fixed `StripeProvider` metadata search syntax and `VNPayProvider` integer overflow protection.
+4. **Gateway Service**:
  - Updated `gateway.public-endpoints` in `application.yml` to expose `/api/v1/products`, `/api/v1/categories`, `/api/v1/brands`, `/api/v1/search`, `/api/v1/ratings`, `/api/v1/carts`, and `/api/v1/orders/track`.
- - Rebuilt container image with Jib (`compile jib:dockerBuild`) to sync gateway routing in runtime.
-4. **Postman Variable Chaining & Assertions**:
+ - Added edge routing for `BACKOFFICE_PAYMENTS` (`/api/v1/backoffice/payments/**`).
+5. **Postman Variable Chaining & Assertions**:
+ - Added Step 6.6 (`GET /api/v1/backoffice/payments/{{paymentId}}`) verifying payment capture.
+ - Added Step 9.5 (`GET /api/v1/payments?orderId={{orderId}}`) verifying payment refund following return approval.
  - Synchronized DTO contracts: Category (`title`), Brand (`name`), Product (`quantity: 100, status: "ACTIVE"`), Inventory (`availableQuantity`), Tax Class (`defaultRatePct: 10.0`), Promotions (`discountType`, `discountValue`, `startsAt`, `endsAt`).
  - Mapped security error codes: `PAY-5005` (payment webhook HMAC invalid), `SHP-10004` (shipping webhook HMAC invalid), `RTG-11001` (unverified purchaser review gate), `INV-3002` (inventory over-reservation guard).

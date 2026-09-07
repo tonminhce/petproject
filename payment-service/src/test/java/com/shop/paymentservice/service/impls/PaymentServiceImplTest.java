@@ -119,12 +119,30 @@ class PaymentServiceImplTest {
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
         when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
                 .thenReturn(new PaymentProvider.ProviderResult("mock-evt-1", true));
+        when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentResponse result = service.capture(PAYMENT_ID);
 
         verify(provider).capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY);
+        verify(writer).save(pending);
+        verify(writer).publishLifecycleEvent(pending, "payment.captured.v1");
         assertThat(result.id()).isEqualTo(pending.getId());
-        assertThat(result.status()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(result.status()).isEqualTo(PaymentStatus.CAPTURED);
+        assertThat(pending.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
+        assertThat(pending.getPreviousStatus()).isEqualTo(PaymentStatus.PENDING);
+    }
+
+    @Test
+    void capture_providerRejected_throwsPaymentProviderRejected() {
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
+                .thenReturn(new PaymentProvider.ProviderResult("card_declined", false));
+
+        assertThatThrownBy(() -> service.capture(PAYMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_PROVIDER_REJECTED.getCode()));
         verifyNoInteractions(writer);
     }
 
@@ -141,15 +159,34 @@ class PaymentServiceImplTest {
 
     @Test
     void refund_capturedPayment_callsProvider() {
-        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+        Payment captured = payment(PaymentStatus.CAPTURED);
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
         when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY))
                 .thenReturn(new PaymentProvider.ProviderResult("mock-evt-2", true));
+        when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentResponse result = service.refund(PAYMENT_ID);
 
         verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+        verify(writer).save(captured);
+        verify(writer).publishLifecycleEvent(captured, "payment.refunded.v1");
         assertThat(result.id()).isEqualTo(PAYMENT_ID);
-        assertThat(result.status()).isEqualTo(PaymentStatus.CAPTURED);
+        assertThat(result.status()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(captured.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(captured.getPreviousStatus()).isEqualTo(PaymentStatus.CAPTURED);
+    }
+
+    @Test
+    void refund_providerRejected_throwsPaymentProviderRejected() {
+        Payment captured = payment(PaymentStatus.CAPTURED);
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
+        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY))
+                .thenReturn(new PaymentProvider.ProviderResult("refund_failed", false));
+
+        assertThatThrownBy(() -> service.refund(PAYMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_PROVIDER_REJECTED.getCode()));
         verifyNoInteractions(writer);
     }
 
