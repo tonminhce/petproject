@@ -197,6 +197,42 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * F-004 — is the direct-access (password / ROPC) grant still enabled for a
+     * client?
+     *
+     * <p>The platform's own login flow uses the Resource Owner Password
+     * Credentials grant, and the provisioned realm enables
+     * {@code directAccessGrantsEnabled} on the client that serves it. ROPC is
+     * deprecated by the OAuth 2.0 Security Best Current Practice: the user
+     * discloses their password to the client, and there is no MFA binding.
+     * The grant cannot be removed unilaterally - first-party clients depend on
+     * it - but the platform CAN observe it, so the migration to Authorization
+     * Code + PKCE has a measurable signal instead of a memory.</p>
+     *
+     * @param clientId the Keycloak client id to inspect
+     * @return true when the password grant is enabled for that client
+     */
+    public boolean isDirectAccessGrantEnabled(String clientId) {
+        String adminToken = getAdminAccessToken();
+        try {
+            Map<String, Object> client = restClient.get()
+                    .uri(usersEndpoint + "/" + clientId)
+                    .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                    .retrieve()
+                    .body(MAP_TYPE);
+            return client != null && Boolean.TRUE.equals(client.get("directAccessGrantsEnabled"));
+        } catch (RestClientResponseException e) {
+            log.warn("Could not read the grant configuration of Keycloak client {}: {}",
+                    clientId, e.getResponseBodyAsString());
+            throw new KeycloakClientException(
+                    "Could not read the client grant configuration: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()),
+                    e
+            );
+        }
+    }
+
+    /**
      * Reset user's password in Keycloak.
      *
      * @param userId Keycloak user ID
