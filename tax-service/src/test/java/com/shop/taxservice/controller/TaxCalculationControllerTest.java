@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -23,6 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.core.authority.AuthorityUtils.createAuthorityList;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -33,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = TaxCalculationController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class TaxCalculationControllerTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -63,7 +67,7 @@ class TaxCalculationControllerTest {
             .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
 
         mockMvc.perform(post("/api/v1/tax/calculate")
-                .with(jwt().jwt(j -> j.subject("service-client"))
+                .with(jwt().jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(calculateBody()))
@@ -109,7 +113,7 @@ class TaxCalculationControllerTest {
     @Test
     void calculate_lowercaseCountry_returns400WithValidationCode() throws Exception {
         mockMvc.perform(post("/api/v1/tax/calculate")
-                .with(jwt().jwt(j -> j.subject("service-client"))
+                .with(jwt().jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -123,7 +127,7 @@ class TaxCalculationControllerTest {
     @Test
     void calculate_negativeAmount_returns400WithValidationCode() throws Exception {
         mockMvc.perform(post("/api/v1/tax/calculate")
-                .with(jwt().jwt(j -> j.subject("service-client"))
+                .with(jwt().jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -141,12 +145,29 @@ class TaxCalculationControllerTest {
 
         mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(calculateBody()))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.code").value("TAX-8002"));
+    }
+
+    /**
+     * F-041 — a tax rate is money, so the calculation must be bound to the
+     * service that owns it. Before the guard, any service client in the realm
+     * could compute a tax rate.
+     */
+    @Test
+    void calculate_fromADifferentServiceClient_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/tax/calculate")
+                .with(jwt().jwt(j -> j.subject("media-service").claim("azp", "media-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(calculateBody()))
+            .andExpect(status().isForbidden());
+
+        verify(taxCalculationService, never()).calculate(any());
     }
 }

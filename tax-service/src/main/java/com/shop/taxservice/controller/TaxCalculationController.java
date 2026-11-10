@@ -3,6 +3,7 @@ package com.shop.taxservice.controller;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.logging.audit.Audited;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.taxservice.dto.request.TaxCalculateRequest;
 import com.shop.taxservice.dto.response.TaxCalculateResponse;
 import com.shop.taxservice.service.TaxCalculationService;
@@ -18,11 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaxCalculationController {
 
     private final TaxCalculationService taxCalculationService;
+    private final ServiceCallerGuard serviceCallerGuard;
 
     @PostMapping(ApiPaths.TAX_CALCULATION)
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "tax.calculate", resourceType = "tax-calculation")
     public ApiResponse<TaxCalculateResponse> calculate(@Valid @RequestBody TaxCalculateRequest request) {
+        // F-041 - only order-service may drive a tax calculation; a tax rate
+        // is money, and the SERVICE role alone is a fleet-wide privilege.
+        serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(taxCalculationService.calculate(request));
     }
 }

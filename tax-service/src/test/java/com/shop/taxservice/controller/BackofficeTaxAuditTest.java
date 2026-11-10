@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -50,8 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         TaxCalculationController.class},
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class,
-        AuditAutoConfiguration.class, AopAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, AuditAutoConfiguration.class, AopAutoConfiguration.class})
 class BackofficeTaxAuditTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -124,7 +124,7 @@ class BackofficeTaxAuditTest {
 
         mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000b004")
-                        .claim("azp", "checkout-service"))
+                        .claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -137,7 +137,7 @@ class BackofficeTaxAuditTest {
         assertThat(event.action()).isEqualTo("tax.calculate");
         assertThat(event.resourceType()).isEqualTo("tax-calculation");
         assertThat(event.actorType()).isEqualTo("service");
-        assertThat(event.actorId()).isEqualTo("checkout-service");
+        assertThat(event.actorId()).isEqualTo("order-service");
         assertThat(event.outcome()).isEqualTo("success");
         assertThat(event.toJson()).contains("\"action\":\"tax.calculate\"");
     }
