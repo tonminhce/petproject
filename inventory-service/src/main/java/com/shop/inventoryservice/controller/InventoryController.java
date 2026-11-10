@@ -5,6 +5,7 @@ import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.logging.audit.Audited;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.InventoryResponse;
@@ -37,6 +38,7 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
     private final ReservationService reservationService;
+    private final ServiceCallerGuard serviceCallerGuard;
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -81,6 +83,8 @@ public class InventoryController {
     @Audited(action = "inventory.reserve", resourceType = "reservation")
     public ApiResponse<ReservationResponse> reserve(@PathVariable UUID productId,
                                                      @Valid @RequestBody ReserveRequest request) {
+        // F-041 - only order-service may drive the stock lifecycle.
+        serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(reservationService.reserveWithRetry(productId, request));
     }
 
@@ -88,6 +92,7 @@ public class InventoryController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "inventory.commit", resourceType = "reservation")
     public ApiResponse<Void> commit(@PathVariable UUID reservationId) {
+        serviceCallerGuard.requireCaller("order-service");
         reservationService.commitWithRetry(reservationId);
         return ApiResponse.message("Reservation committed successfully");
     }
@@ -96,6 +101,7 @@ public class InventoryController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "inventory.release", resourceType = "reservation")
     public ApiResponse<Void> release(@PathVariable UUID reservationId) {
+        serviceCallerGuard.requireCaller("order-service");
         reservationService.releaseWithRetry(reservationId);
         return ApiResponse.message("Reservation released successfully");
     }
@@ -104,6 +110,7 @@ public class InventoryController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "inventory.release-committed", resourceType = "reservation")
     public ApiResponse<Void> releaseCommitted(@PathVariable UUID reservationId) {
+        serviceCallerGuard.requireCaller("order-service");
         reservationService.releaseCommittedWithRetry(reservationId);
         return ApiResponse.ok(null);
     }

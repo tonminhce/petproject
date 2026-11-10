@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -49,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = PromotionReservationController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class PromotionReservationControllerTest {
 
     /**
@@ -92,7 +93,7 @@ class PromotionReservationControllerTest {
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(reserveBody()))
@@ -126,7 +127,7 @@ class PromotionReservationControllerTest {
     void commit_serviceRole_returnsOk() throws Exception {
         mockMvc.perform(post("/api/v1/promotions/reservations/{reservationId}/commit", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -140,7 +141,7 @@ class PromotionReservationControllerTest {
     void release_serviceRole_returnsOk() throws Exception {
         mockMvc.perform(post("/api/v1/promotions/reservations/{reservationId}/release", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -154,7 +155,7 @@ class PromotionReservationControllerTest {
     void releaseCommitted_serviceRole_returnsOk() throws Exception {
         mockMvc.perform(post("/api/v1/promotions/reservations/{reservationId}/release-committed", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -170,7 +171,7 @@ class PromotionReservationControllerTest {
 
         mockMvc.perform(get("/api/v1/promotions/reservations/{reservationId}/state", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -202,7 +203,7 @@ class PromotionReservationControllerTest {
     void reserve_missingUserId_returns400WithValidationCode() throws Exception {
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -221,7 +222,7 @@ class PromotionReservationControllerTest {
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(reserveBody()))
@@ -237,7 +238,7 @@ class PromotionReservationControllerTest {
 
         mockMvc.perform(post("/api/v1/promotions/reservations/{reservationId}/commit", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))

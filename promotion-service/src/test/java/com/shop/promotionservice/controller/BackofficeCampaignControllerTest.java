@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -56,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = BackofficeCampaignController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class BackofficeCampaignControllerTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -233,7 +234,7 @@ class BackofficeCampaignControllerTest {
     void list_serviceRole_returns403() throws Exception {
         mockMvc.perform(get("/api/v1/backoffice/promotions")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isForbidden());
     }
@@ -242,7 +243,7 @@ class BackofficeCampaignControllerTest {
     void delete_serviceRole_returns403() throws Exception {
         mockMvc.perform(delete("/api/v1/backoffice/promotions/{id}", campaignId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isForbidden());
     }

@@ -14,6 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
@@ -47,7 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = InventoryController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class ReservationStateEndpointTest {
 
     /**
@@ -82,7 +83,7 @@ class ReservationStateEndpointTest {
 
         mockMvc.perform(get("/api/v1/inventory/reservations/{reservationId}/state", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -118,7 +119,7 @@ class ReservationStateEndpointTest {
 
         mockMvc.perform(get("/api/v1/inventory/reservations/{reservationId}/state", reservationId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("service-client"))
+                    .jwt(j -> j.subject("service-client").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))

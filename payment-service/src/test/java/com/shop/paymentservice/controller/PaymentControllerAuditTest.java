@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -45,8 +46,7 @@ import org.springframework.http.MediaType;
 @WebMvcTest(value = PaymentController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class,
-        AuditAutoConfiguration.class, AopAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, AuditAutoConfiguration.class, AopAutoConfiguration.class, ServiceCallerGuard.class})
 class PaymentControllerAuditTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -109,8 +109,8 @@ class PaymentControllerAuditTest {
                 .build()));
 
         mockMvc.perform(post("/api/v1/payments")
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d006")
-                        .claim("azp", "checkout-service"))
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d006").claim("azp", "order-service")
+                        .claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -124,10 +124,10 @@ class PaymentControllerAuditTest {
         assertThat(event.action()).isEqualTo("payment.create");
         assertThat(event.resourceType()).isEqualTo("payment");
         assertThat(event.actorType()).isEqualTo("service");
-        assertThat(event.actorId()).isEqualTo("checkout-service");
+        assertThat(event.actorId()).isEqualTo("order-service");
         assertThat(event.outcome()).isEqualTo("success");
         assertThat(event.toJson()).contains(
             "\"action\":\"payment.create\"",
-            "\"actor\":{\"id\":\"checkout-service\",\"type\":\"service\"}");
+            "\"actor\":{\"id\":\"order-service\",\"type\":\"service\"}");
     }
 }

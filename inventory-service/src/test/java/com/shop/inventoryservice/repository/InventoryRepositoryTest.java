@@ -39,11 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({
-    JpaAuditingAutoConfiguration.class,
-    LiquibaseAutoConfiguration.class,
-    TestLiquibaseConfig.class
-})
+@Import({JpaAuditingAutoConfiguration.class, LiquibaseAutoConfiguration.class, TestLiquibaseConfig.class})
 class InventoryRepositoryTest {
 
     @Container

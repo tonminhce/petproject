@@ -5,6 +5,7 @@ import com.shop.common.core.constants.PageableConstant;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.logging.audit.Audited;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
 import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.service.PaymentService;
@@ -30,11 +31,14 @@ import java.util.UUID;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final ServiceCallerGuard serviceCallerGuard;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.create", resourceType = "payment")
     public ApiResponse<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
+        // F-041 - only order-service may create a payment.
+        serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(paymentService.create(request));
     }
 
@@ -42,6 +46,8 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.capture", resourceType = "payment")
     public ApiResponse<PaymentResponse> capture(@PathVariable UUID id) {
+        // F-041 - only order-service may drive a capture.
+        serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(paymentService.capture(id));
     }
 
@@ -49,6 +55,8 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.refund", resourceType = "payment")
     public ApiResponse<PaymentResponse> refund(@PathVariable UUID id) {
+        // F-041 - only order-service may drive a refund.
+        serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(paymentService.refund(id));
     }
 

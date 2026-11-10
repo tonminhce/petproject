@@ -3,6 +3,7 @@ package com.shop.promotionservice.controller;
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.logging.audit.Audited;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.promotionservice.dto.request.ReserveRequest;
 import com.shop.promotionservice.dto.response.ReservationResponse;
 import com.shop.promotionservice.service.ReservationRetryService;
@@ -26,6 +27,7 @@ import java.util.UUID;
 public class PromotionReservationController {
 
     private final ReservationRetryService reservationService;
+    private final ServiceCallerGuard serviceCallerGuard;
 
     @PostMapping("/{code}/reserve")
     @ResponseStatus(HttpStatus.CREATED)
@@ -33,6 +35,8 @@ public class PromotionReservationController {
     @Audited(action = "promotion.reserve", resourceType = "reservation")
     public ApiResponse<ReservationResponse> reserve(@PathVariable String code,
                                                      @Valid @RequestBody ReserveRequest request) {
+        // F-041 - only order-service may drive the coupon reservation lifecycle.
+        serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(reservationService.reserveWithRetry(code, request));
     }
 
@@ -40,6 +44,7 @@ public class PromotionReservationController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "promotion.commit", resourceType = "reservation")
     public ApiResponse<Void> commit(@PathVariable UUID reservationId) {
+        serviceCallerGuard.requireCaller("order-service");
         reservationService.commitWithRetry(reservationId);
         return ApiResponse.message("Reservation committed successfully");
     }
@@ -48,6 +53,7 @@ public class PromotionReservationController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "promotion.release", resourceType = "reservation")
     public ApiResponse<Void> release(@PathVariable UUID reservationId) {
+        serviceCallerGuard.requireCaller("order-service");
         reservationService.releaseWithRetry(reservationId);
         return ApiResponse.message("Reservation released successfully");
     }
@@ -56,6 +62,7 @@ public class PromotionReservationController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "promotion.release-committed", resourceType = "reservation")
     public ApiResponse<Void> releaseCommitted(@PathVariable UUID reservationId) {
+        serviceCallerGuard.requireCaller("order-service");
         reservationService.releaseCommittedWithRetry(reservationId);
         return ApiResponse.ok(null);
     }

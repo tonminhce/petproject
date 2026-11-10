@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -46,8 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = InventoryController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class,
-        AuditAutoConfiguration.class, AopAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, AuditAutoConfiguration.class, AopAutoConfiguration.class, ServiceCallerGuard.class})
 class InventoryControllerAuditTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -74,7 +74,7 @@ class InventoryControllerAuditTest {
                 Instant.parse("2026-01-01T00:15:00Z"), null, null, orderId));
 
         mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004")
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004").claim("azp", "order-service")
                         .claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -101,7 +101,7 @@ class InventoryControllerAuditTest {
         UUID reservationId = UUID.fromString("00000000-0000-0000-0000-00000000e005");
 
         mockMvc.perform(post("/api/v1/inventory/reservations/{reservationId}/commit", reservationId)
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004")
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004").claim("azp", "order-service")
                         .claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk());

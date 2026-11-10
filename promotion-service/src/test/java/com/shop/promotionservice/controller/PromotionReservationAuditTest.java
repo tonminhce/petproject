@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -46,8 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = PromotionReservationController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class,
-        AuditAutoConfiguration.class, AopAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, AuditAutoConfiguration.class, AopAutoConfiguration.class, ServiceCallerGuard.class})
 class PromotionReservationAuditTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -71,8 +71,7 @@ class PromotionReservationAuditTest {
                 "PENDING", Instant.parse("2026-01-01T00:15:00Z")));
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "WELCOME10")
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000a003")
-                        .claim("azp", "checkout-service"))
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000a003").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -87,11 +86,11 @@ class PromotionReservationAuditTest {
         assertThat(event.resourceType()).isEqualTo("reservation");
         assertThat(event.resourceId()).isNull();
         assertThat(event.actorType()).isEqualTo("service");
-        assertThat(event.actorId()).isEqualTo("checkout-service");
+        assertThat(event.actorId()).isEqualTo("order-service");
         assertThat(event.outcome()).isEqualTo("success");
         assertThat(event.toJson()).contains(
             "\"action\":\"promotion.reserve\"",
-            "\"actor\":{\"id\":\"checkout-service\",\"type\":\"service\"}");
+            "\"actor\":{\"id\":\"order-service\",\"type\":\"service\"}");
     }
 
     @Test
@@ -99,8 +98,7 @@ class PromotionReservationAuditTest {
         UUID reservationId = UUID.fromString("00000000-0000-0000-0000-00000000a006");
 
         mockMvc.perform(post("/api/v1/promotions/reservations/{reservationId}/release", reservationId)
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000a003")
-                        .claim("azp", "checkout-service"))
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000a003").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk());
 

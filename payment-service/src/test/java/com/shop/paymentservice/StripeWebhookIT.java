@@ -82,8 +82,7 @@ import static org.mockito.Mockito.times;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @AutoConfigureTestRestTemplate
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class, TestLiquibaseConfig.class,
-    StripeWebhookIT.FakeStorageConfig.class})
+@Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class, TestLiquibaseConfig.class, StripeWebhookIT.FakeStorageConfig.class})
 class StripeWebhookIT {
 
     static final String STRIPE_WHSEC = "whsec_it_stripe_test";

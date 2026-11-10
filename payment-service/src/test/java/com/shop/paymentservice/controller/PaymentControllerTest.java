@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +32,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.core.authority.AuthorityUtils.createAuthorityList;
@@ -42,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = PaymentController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class PaymentControllerTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -154,7 +156,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createBody()))
@@ -177,7 +179,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments/{id}/capture", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -197,7 +199,7 @@ class PaymentControllerTest {
         mockMvc.perform(get("/api/v1/payments")
                 .param("orderId", orderId.toString())
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -217,7 +219,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
@@ -281,7 +283,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
@@ -298,7 +300,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments")
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
@@ -315,7 +317,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments/{id}/capture", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.success").value(false))
@@ -329,7 +331,7 @@ class PaymentControllerTest {
 
         mockMvc.perform(post("/api/v1/payments/{id}/capture", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
-                    .jwt(j -> j.subject("order-service"))
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("PAY-5004"));
@@ -346,5 +348,43 @@ class PaymentControllerTest {
                     .authorities(createAuthorityList("ROLE_ADMIN"))))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("PAY-5006"));
+    }
+
+    /**
+     * F-041 (P1) regression - a service token must be bound to the service that
+     * owns the operation.
+     *
+     * <p>Every service client in the realm carries the single realm role
+     * SERVICE, so before this control a token minted for any service client was
+     * accepted by every SERVICE-gated endpoint in the fleet - including a
+     * capture or a refund on ANY payment id. One leaked service secret
+     * therefore granted fleet-wide control over money.</p>
+     */
+    @Test
+    void capture_fromADifferentServiceClient_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/payments/{id}/capture", paymentId)
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("media-service").claim("azp", "media-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE"))))
+            .andExpect(status().isForbidden());
+
+        verify(paymentService, never()).capture(any(UUID.class));
+    }
+
+    /**
+     * F-041 - a human administrator is unaffected: the backoffice still drives
+     * refunds through the ADMIN role.
+     */
+    @Test
+    void refund_byAdmin_isAllowed() throws Exception {
+        when(paymentService.refund(paymentId)).thenReturn(pendingPayment());
+
+        mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("admin-1"))
+                    .authorities(createAuthorityList("ROLE_ADMIN"))))
+            .andExpect(status().isOk());
+
+        verify(paymentService).refund(paymentId);
     }
 }

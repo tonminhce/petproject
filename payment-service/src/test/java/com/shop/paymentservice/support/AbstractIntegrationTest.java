@@ -78,8 +78,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * methods for service-specific overrides (Spring merges the hierarchy).</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class, TestLiquibaseConfig.class,
-    AbstractIntegrationTest.FakeStorageConfig.class})
+@Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class, TestLiquibaseConfig.class, AbstractIntegrationTest.FakeStorageConfig.class})
 public abstract class AbstractIntegrationTest {
 
     @SuppressWarnings("resource")

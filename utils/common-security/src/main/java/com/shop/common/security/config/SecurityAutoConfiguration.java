@@ -5,11 +5,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import com.shop.common.security.service.ServiceCallerGuard;
 
 /**
  * Autoconfigures the resource-server security stack for every servlet service
@@ -28,4 +31,15 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 @Import({BaseSecurityConfig.class, CorsAutoConfigurer.class})
 public class SecurityAutoConfiguration {
+
+    /**
+     * F-041 — binds a service-to-service call to the service that owns it, so
+     * a token minted for one service client cannot drive another service's
+     * money or stock operations.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ServiceCallerGuard serviceCallerGuard() {
+        return new ServiceCallerGuard();
+    }
 }
