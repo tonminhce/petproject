@@ -35,7 +35,7 @@ public class PromotionReservationController {
     @Audited(action = "promotion.reserve", resourceType = "reservation")
     public ApiResponse<ReservationResponse> reserve(@PathVariable String code,
                                                      @Valid @RequestBody ReserveRequest request) {
-        // F-041 - only order-service may drive the coupon reservation lifecycle.
+
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(reservationService.reserveWithRetry(code, request));
     }

@@ -26,10 +26,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * F2/F3 — mirrors {@code payment-service/.../WebhookRetrySchedulerTest} for
- * the shipping side. See that class for design notes.
- */
 @ExtendWith(MockitoExtension.class)
 class WebhookRetrySchedulerTest {
 

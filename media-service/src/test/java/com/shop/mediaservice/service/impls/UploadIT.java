@@ -46,12 +46,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * D1/D2 upload pipeline against the real MinIO singleton: per-format
- * six-variant renders within caps, oversize 413 / wrong-mime 415 / corrupt
- * 400 mapping, SHA-256 dedup before any object write, EXIF/GPS strip proof,
- * and orphan-object cleanup on an injected mid-write storage failure.
- */
 class UploadIT extends AbstractMediaIntegrationTest {
 
     @Autowired
@@ -115,7 +109,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(response.sizeBytes()).isEqualTo(source.length);
         assertThat(response.canonicalPath()).isEqualTo("/api/v1/medias/" + response.id());
 
-        // D2 variant rows: original/display/thumb × original-format + webp.
         // A WebP SOURCE collapses the two formats — 3 distinct rows then.
         int expectedFormats = "webp".equals(format) ? 1 : 2;
         assertThat(response.variants()).hasSize(3 * expectedFormats);
@@ -136,7 +129,7 @@ class UploadIT extends AbstractMediaIntegrationTest {
                 default -> throw new IllegalStateException(variant.variant());
             }
             assertThat(variant.bytes()).isPositive();
-            // D1 key contract: {mediaId}/{variant}.{ext}
+
             String expectedExt = MediaFormats.WEBP.equals(variant.format()) ? "webp" : ext;
             assertThat(variant.objectKey())
                     .isEqualTo(response.id() + "/" + variant.variant() + "." + expectedExt);

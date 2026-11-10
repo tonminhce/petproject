@@ -22,13 +22,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H-5 retention unit proofs (inventory OutboxRetentionScheduler shape,
- * extended with terminal aging): ONE cutoff drives both passes — SENT rows
- * purged by sent_at, FAILED rows aged to DEAD by failed_at — and the dead
- * count feeds the {@code media_outbox_dead_total} meter. A repository failure
- * is logged and swallowed (the scheduler never crashes the cycle).
- */
 @ExtendWith(MockitoExtension.class)
 class MediaOutboxRetentionSchedulerTest {
 

@@ -33,13 +33,13 @@ import static org.mockito.Mockito.*;
 
 /**
  * OrderReconciliationScheduler unit tests — hardening §6, task 12 scenarios 1-5.
- * State-poll failure routes to the mixed/alert path — never auto-decide (spec §6,
- * T5 ledger pointer). "Failure" is ANY exception from the poll: BusinessException
+ * State-poll failure routes to the mixed/alert path — never auto-decide.
+ * "Failure" is ANY exception from the poll: BusinessException
  * (404→RESERVATION_NOT_FOUND, promotion 4xx→SERVICE_UNAVAILABLE fallback) and
  * transport errors (ResourceAccessException/RestClientException from 5xx or
- * timeouts — fix round 1). Null reservation ids are not-applicable (D5 analog),
+ * timeouts). Null reservation ids are not-applicable,
  * never mixed. Empty applicable set → mixed (nothing verifiable — no automatic
- * decision, needs human eyes per D8).
+ * decision, needs human eyes).
  */
 @ExtendWith(MockitoExtension.class)
 class OrderReconciliationSchedulerTest {
@@ -285,15 +285,6 @@ class OrderReconciliationSchedulerTest {
         verify(orderRepository, never()).save(any());
     }
 
-    /**
-     * F-016 (P1) regression - an orphan PENDING order with NO line items.
-     *
-     * <p>The order never got past step 1 of the create saga: no stock was
-     * reserved, no promotion was held and no payment could have been captured.
-     * The old decision table sent it to the mixed path forever, so the row
-     * stayed PENDING, was re-selected on every tick and raised the
-     * mixed-counter alert indefinitely.</p>
-     */
     @Test
     void orphanOrderWithNoItems_isAutoCancelled() {
         Order order = stuckOrder(null);
@@ -310,11 +301,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isZero();
     }
 
-    /**
-     * F-016 companion - an order that HAS items but no applicable reservation
-     * stays on the mixed path: a legacy order or a partially migrated state is
-     * not safe to decide automatically.
-     */
     @Test
     void orderWithItemsButNoReservations_staysOnTheMixedPath() {
         Order order = stuckOrder(null);

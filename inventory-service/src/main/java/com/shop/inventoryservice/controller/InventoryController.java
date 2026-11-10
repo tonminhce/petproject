@@ -83,7 +83,7 @@ public class InventoryController {
     @Audited(action = "inventory.reserve", resourceType = "reservation")
     public ApiResponse<ReservationResponse> reserve(@PathVariable UUID productId,
                                                      @Valid @RequestBody ReserveRequest request) {
-        // F-041 - only order-service may drive the stock lifecycle.
+
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(reservationService.reserveWithRetry(productId, request));
     }

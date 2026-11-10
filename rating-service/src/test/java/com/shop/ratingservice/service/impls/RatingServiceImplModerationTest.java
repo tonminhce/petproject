@@ -143,7 +143,6 @@ class RatingServiceImplModerationTest {
 
         service.unhide(ratingId, adminId);
 
-        // D2: audit trio retained as history; only the flag flips.
         assertThat(rating.isHidden()).isFalse();
         assertThat(rating.getHiddenAt()).isEqualTo(Instant.parse("2026-08-31T08:00:00Z"));
         assertThat(rating.getHiddenBy()).isEqualTo(adminId);

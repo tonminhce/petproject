@@ -74,7 +74,7 @@ public class WebhookRetryScheduler {
     }
 
     void replayOne(PaymentEvent event) {
-        // F2 — real per-event tx boundary (self-invocation bypasses @Transactional).
+
         transactionTemplate.execute(status -> {
             if (event.getRetryCount() >= MAX_ATTEMPTS) {
                 event.setStatus(PaymentEvent.STATUS_FAILED_PERMANENT);

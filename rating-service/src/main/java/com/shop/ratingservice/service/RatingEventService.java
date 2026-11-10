@@ -93,18 +93,6 @@ public class RatingEventService {
         ratingMetrics.recordSubmitted(action);
     }
 
-    /**
-     * F-069 (P1) — the aggregate query returns a NULL average when the product
-     * has no VISIBLE rating left.
-     * <p>The aggregation runs over {@code hidden = false and deleted = false},
-     * so hiding the only rating of a product leaves the average NULL. The
-     * previous implementation called {@code String.valueOf(null)}, which
-     * returns the literal string {@code "null"} rather than {@code null}, and
-     * {@code new BigDecimal("null")} throws NumberFormatException. The whole
-     * hide operation therefore failed with a 500 and rolled back - an
-     * administrator could not moderate away the only review of a product, and
-     * the abusive review stayed visible.</p>
-     */
     private BigDecimal toBigDecimal(Object raw) {
         if (raw instanceof BigDecimal bd) {
             return bd;

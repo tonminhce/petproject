@@ -26,15 +26,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * C12/C17 — the consumer entrypoint persists the event as {@code PENDING}
- * FIRST (the durable record of "we owe this user a notification"), then
- * claims it ({@code PENDING → SENDING} heartbeat) and delegates the send to
- * {@link NotificationDeliveryService}, which writes {@code SENT} only after
- * a provider ack or schedules a bounded retry on failure. The claim also
- * arbitrates against the retry scheduler — whoever claims first delivers;
- * the loser skips.
- */
 @Service
 @Slf4j
 public class NotificationServiceImpl implements NotificationService {

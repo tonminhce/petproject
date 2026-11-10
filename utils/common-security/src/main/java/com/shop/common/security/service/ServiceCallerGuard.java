@@ -10,24 +10,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 
 import java.util.List;
 
-/**
- * F-041 (P1) — binds a service-to-service call to the service that owns it.
- *
- * <p>Every service client in the Keycloak realm carries the single realm role
- * {@code SERVICE}. A token minted for {@code order-service} was therefore
- * accepted by every {@code @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")}
- * endpoint in the fleet — including {@code PaymentController.capture} and
- * {@code PaymentController.refund} on ANY payment id. One leaked service
- * secret granted fleet-wide administrative power over money and stock.</p>
- *
- * <p>The provisioned realm emits no {@code aud} claim, so the only usable
- * client discriminator is {@code azp} — the client the token was actually
- * issued to. This guard checks it against the clients that are allowed to
- * invoke the operation.</p>
- *
- * <p>Human administrators ({@code ADMIN} / {@code MANAGER}) are unaffected:
- * they act through the backoffice, not as a service identity.</p>
- */
 public class ServiceCallerGuard {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceCallerGuard.class);

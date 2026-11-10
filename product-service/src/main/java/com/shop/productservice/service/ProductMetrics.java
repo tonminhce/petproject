@@ -72,12 +72,6 @@ public class ProductMetrics {
         registry.counter("product_media_sweep_checked_total").increment();
     }
 
-    /**
-     * H-3 sweep observability: incremented by the number of media references
-     * actually removed. A dangling mediaId shared by several rows repairs in
-     * one {@code clearReference} call — the caller passes the affected-row
-     * count so the meter tracks cleared ROWS, not repair calls.
-     */
     public void recordSweepCleared(long cleared) {
         registry.counter("product_media_sweep_cleared_total").increment(cleared);
     }

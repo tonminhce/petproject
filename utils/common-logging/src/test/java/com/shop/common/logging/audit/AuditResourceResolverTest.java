@@ -12,10 +12,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D6 binding: resourceId comes ONLY from a path variable named {@code id} or
- * {@code *Id}; titles, emails or other variables never qualify.
- */
 class AuditResourceResolverTest {
 
     @AfterEach

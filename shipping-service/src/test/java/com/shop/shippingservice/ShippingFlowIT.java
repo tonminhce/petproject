@@ -282,6 +282,65 @@ class ShippingFlowIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("6b. a carrier-acknowledged shipment the carrier never reported on is still closed out")
+    void staleSweepClosesOutAcknowledgedShipmentWithoutCarrierUpdate() {
+        UUID orderId = UUID.randomUUID();
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+        Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
+
+        // The carrier took the shipment over (a tracking number came back)
+        // but never sent a status update, so there is no carrier timestamp.
+        jdbcTemplate.update("update shipments set status = 'IN_TRANSIT' where id = ?",
+            shipment.getId());
+        Shipment acknowledged = reload(shipment.getId());
+        assertThat(acknowledged.getCarrierAcknowledgedAt())
+            .as("the carrier handed the shipment over, so it is acknowledged")
+            .isNotNull();
+        assertThat(acknowledged.getLastCarrierUpdate())
+            .as("the carrier never reported a status")
+            .isNull();
+
+        Instant sweepAt = testInstant.get().plus(Duration.ofDays(8));
+        testInstant.set(sweepAt);
+        reconciliationScheduler.reconcile();
+
+        Shipment delivered = reload(shipment.getId());
+        assertThat(delivered.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+        assertThat(delivered.isAutoDelivered()).isTrue();
+        assertThat(delivered.getDeliveredAt()).isEqualTo(sweepAt);
+        awaitDeliveredEvent(shipment.getId(), true);
+    }
+
+    @Test
+    @DisplayName("6c. an in-flight shipment the carrier never accepted is never auto-delivered")
+    void staleSweepLeavesUnacknowledgedShipmentAlone() {
+        UUID orderId = UUID.randomUUID();
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+        Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
+
+        // An in-flight shipment with no handover: the carrier never took it.
+        // The stale carrier timestamp is present as well, so the test pins
+        // the acknowledgement gate itself and not just the null handling.
+        jdbcTemplate.update(
+            "update shipments set status = 'IN_TRANSIT', carrier_acknowledged_at = null, "
+                + "last_carrier_update = ? where id = ?",
+            java.sql.Timestamp.from(testInstant.get().minus(Duration.ofDays(30))),
+            shipment.getId());
+
+        Instant sweepAt = testInstant.get().plus(Duration.ofDays(365));
+        testInstant.set(sweepAt);
+        reconciliationScheduler.reconcile();
+
+        Shipment untouched = reload(shipment.getId());
+        assertThat(untouched.getStatus())
+            .as("a shipment the carrier never acknowledged must not be auto-delivered")
+            .isEqualTo(ShipmentStatus.IN_TRANSIT);
+        assertThat(untouched.isAutoDelivered()).isFalse();
+        assertThat(untouched.getDeliveredAt()).isNull();
+        assertThat(deliveredEvents(shipment.getId())).isEmpty();
+    }
+
+    @Test
     @DisplayName("7. CREATED shipment is never auto-delivered by time alone")
     void createdShipmentIsUntouchedByStaleSweep() {
         UUID orderId = UUID.randomUUID();

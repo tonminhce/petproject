@@ -46,13 +46,6 @@ public class OrderStatusController {
         return ApiResponse.ok(orderService.deliverOrder(orderId));
     }
 
-    /**
-     * H-6 actor label by token shape: ADMIN → {@code sub} (the human id),
-     * SERVICE → {@code service:<azp>} (the machine identity). Reuses the audit
-     * fleet's {@link AuditActorResolver} — the same KC26-probed claim rules the
-     * {@code @Audited} aspect applies — so idempotency rows and audit lines can
-     * never disagree about who confirmed an order.
-     */
     private static String resolveActor() {
         AuthenticatedUser.requireCurrent();  // fail fast when unauthenticated (401 semantics preserved)
         AuditActorResolver.Actor actor = AuditActorResolver.resolve();

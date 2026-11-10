@@ -14,12 +14,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H29 — multi-tenant leak surface. The previous {@code findByIdempotencyKey}
- * is a global-scope lookup: alice's idempotency key would return bob's
- * payment. The fix is to scope the lookup by user (and tenant) so a cross-user
- * key collision is impossible at the data layer, not just at the service layer.
- */
 @ExtendWith(MockitoExtension.class)
 class PaymentRepositoryIdempotencyScopingTest {
 

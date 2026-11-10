@@ -5,9 +5,6 @@ import org.springframework.core.Ordered;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * N2 binding: IP allowlist (HIGHEST_PRECEDENCE) -> rate limit (+10) -> role gate (+20).
- */
 class FilterOrderTest {
 
     @Test

@@ -7,19 +7,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H33 — the {@code JwtDecoder} bean MUST NOT block on OIDC / JWKS discovery
- * during bean creation. The previous implementation called
- * {@code NimbusJwtDecoder.withIssuerLocation(...).build()} directly inside the
- * {@code @Bean} factory, which performs a synchronous HTTP fetch of the OIDC
- * discovery document. That made startup (and the first request to a public
- * endpoint) wait on Keycloak being reachable — a blocker in dev / CI / multi-
- * pod rolling restarts.
- *
- * <p>The Holder-pattern fix moves discovery to first JWT decode. The unit
- * test below pins the contract that bean factory call returns within a
- * fraction of a second even when the issuer URL is unreachable.</p>
- */
 class BaseSecurityConfigJwtDecoderLazyTest {
 
     @Test

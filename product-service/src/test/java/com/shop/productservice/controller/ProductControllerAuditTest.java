@@ -83,7 +83,7 @@ class ProductControllerAuditTest {
 
     @Test
     void update_emitsAuditLineWithAnnotatedActionAndResourceId() throws Exception {
-        // H-2 guard: adding the clearMediaId flag must not disturb the PUT
+
         // audit wiring — the annotated action/resourceId stay unchanged.
         UUID productId = UUID.fromString("00000000-0000-0000-0000-000000006002");
         when(productService.update(eq(productId), any())).thenReturn(null);

@@ -7,7 +7,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.time.Clock;
 
-// C17 — @EnableScheduling is REQUIRED: NotificationRetryScheduler's @Scheduled
 // poll silently no-ops without it (fleet convention: order-service et al.).
 @EnableScheduling
 @SpringBootApplication

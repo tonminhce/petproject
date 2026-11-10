@@ -15,13 +15,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H46 — the {@code stuckPendingCount} gauge is read on every Prometheus scrape.
- * Without memoization each scrape issues a {@code COUNT(*)}; with hundreds of
- * scrapes per minute the orders table sees orders-of-magnitude more read traffic
- * than the reconcile sweep itself. The fix memoizes the count with a TTL —
- * the assertion proves 100 calls produce ≤1 DB hit.
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class OrderReconciliationSchedulerMemoizedCountTest {

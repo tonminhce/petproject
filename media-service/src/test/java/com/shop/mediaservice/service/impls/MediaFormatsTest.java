@@ -6,10 +6,6 @@ import static com.shop.mediaservice.service.impls.MediaFormats.formatOfContentTy
 import static com.shop.mediaservice.service.impls.MediaFormats.sniff;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D1 allowlist + magic-byte model: the sniff matrix and the declared-type
- * mapping the pipeline orders into 415 (not allowed) vs 400 (corrupt/lying).
- */
 class MediaFormatsTest {
 
     @Test

@@ -18,11 +18,6 @@ class PaymentProviderConfigTest {
             .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, StripeProvider.class,
                     CodProvider.class, PropsConfig.class);
 
-    /**
-     * C5 Task 2 — StripeProvider consumes PaymentStripeProperties
-     * (secret-key/webhook-secret/api-version/connect); the runner must enable
-     * the binding for the stripe-selection cases.
-     */
     @EnableConfigurationProperties(PaymentStripeProperties.class)
     static class PropsConfig {
     }
@@ -61,7 +56,7 @@ class PaymentProviderConfigTest {
 
     @Test
     void stripeFailsFastOnBlankSecretKey() {
-        // C5 Task 4 (D10) — config-level belt; StripeProvider's constructor
+
         // enforces the same rule. Message must name the env var ops has to set.
         contextRunner.withPropertyValues(
                         "shop.payment.provider=stripe",

@@ -19,18 +19,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H11 — outbox table grows unbounded: there is no retention purge, so every
- * SENT/DEAD row accumulates. This scheduler:
- * <ul>
- *   <li>deletes SENT events whose {@code sentAt} is older than the configured
- *       SENT retention (default 14d)</li>
- *   <li>deletes DEAD events whose {@code updatedAt} is older than the
- *       configured DEAD aging window (default 7d)</li>
- * </ul>
- * PENDING rows are NEVER purged (a stuck PENDING is a relay bug, not a
- * retention problem — the reconciliation scheduler owns it).
- */
 @ExtendWith(MockitoExtension.class)
 class OutboxRetentionSchedulerTest {
 

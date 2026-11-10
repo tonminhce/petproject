@@ -18,30 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * F-017 — replays records that were dead-lettered.
- *
- * <p>Publishing a poison record to a dead-letter topic only makes the loss
- * VISIBLE. Without a replay path the event is still lost: the operator sees a
- * record on the DLQ but there is nothing to send it back with. This service
- * closes that half — it reads a dead-letter topic and republishes each record
- * to the topic it originally came from.</p>
- *
- * <p>The original topic, partition and offset are taken from the headers that
- * Spring Kafka's {@code DeadLetterPublishingRecoverer} adds
- * ({@code kafka_dlt-original-topic} and friends), so the replay does not have
- * to guess the dead-letter naming scheme.</p>
- *
- * <p>The replay is deliberately BOUNDED and never automatic:</p>
- * <ul>
- *   <li>it replays at most {@code maxRecords} records per call, so an operator
- *       stays in control;</li>
- *   <li>it stops after {@code maxConsecutiveFailures} consecutive publish
- *       failures, so a broker outage does not spin;</li>
- *   <li>a record that is still poisonous is simply dead-lettered again by the
- *       consumer — the loop is bounded by the operator, not by the system.</li>
- * </ul>
- */
 public class DeadLetterReplayService {
 
     private static final Logger log = LoggerFactory.getLogger(DeadLetterReplayService.class);

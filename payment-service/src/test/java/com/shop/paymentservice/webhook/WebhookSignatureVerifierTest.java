@@ -100,7 +100,7 @@ class WebhookSignatureVerifierTest {
     }
 
     // ========================================================================
-    // H8 — Stripe signature scheme t=<timestamp>,v1=<hex> (sha256 prefix optional)
+
     // ========================================================================
 
     private static String hmacHexOf(String secret, String signedPayload) {
@@ -142,7 +142,7 @@ class WebhookSignatureVerifierTest {
     }
 
     // ========================================================================
-    // H27 — Webhook timestamp/replay protection (Stripe-style, 5-minute window)
+
     // ========================================================================
 
     /** H27: a timestamp far in the past (>5 min) is rejected even with a correct v1. */
@@ -169,12 +169,6 @@ class WebhookSignatureVerifierTest {
         assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, futureTs));
     }
 
-    /**
-     * H27: replay protection is the timestamp window itself — the same
-     * header sent twice within the 5-min window is currently accepted (Stripe's
-     * contract). Beyond the window, replays are rejected. Asserts the
-     * contract on both sides.
-     */
     @Test
     void replayWithinWindowIsAcceptedBeyondWindowIsRejected() {
         long now = java.time.Instant.now().getEpochSecond();

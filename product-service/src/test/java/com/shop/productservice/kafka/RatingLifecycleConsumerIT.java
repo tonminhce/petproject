@@ -174,7 +174,7 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-        // R1: the payload String is forwarded as raw UTF-8 bytes — the raw
+
         // wire value IS the event object, not a JSON string token.
         assertThat(node.isTextual())
             .as("R1 pin: wire value must be single-encoded (a JSON object, not a string token)")

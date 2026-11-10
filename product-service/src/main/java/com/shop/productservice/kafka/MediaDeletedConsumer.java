@@ -79,14 +79,6 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
         }
     }
 
-    /**
-     * H-3: bounded retry for transient storage failures only — a clear lost to
-     * a DB blip gets {@value #MAX_ATTEMPTS} total attempts; anything else
-     * (or exhaustion) falls through to the ack-always containment, where the
-     * sweep job owns eventual repair. TransientDataAccessException is a
-     * DataAccessException subclass, so this is the strict transient subset
-     * (see class javadoc for the narrowing rationale).
-     */
     private void clearWithBoundedRetry(UUID mediaId) {
         for (int attempt = 1; ; attempt++) {
             try {

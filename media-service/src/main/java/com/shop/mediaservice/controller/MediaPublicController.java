@@ -16,18 +16,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.UUID;
 
-/**
- * D3 public read surface (P2-6, fleet precedent — deliberately NO
- * {@code @PreAuthorize}: Keycloak users may lack an explicit USER realm role
- * and an unhelpful 403 is worse than the filter chain's own 401 for
- * anonymous callers; authentication is still enforced by the resource-server
- * chain on this edge-routed path).
- * <p>GET answers a 302 whose Location is the presigned GET URL — bytes never
- * stream through media-service. HEAD is the existence check WITHOUT presign
- * (200/404), product's Option C write-time validation endpoint. The two are
- * SEPARATE handlers: an implicit GET→HEAD fallback would run the presign,
- * which the D3 contract forbids for HEAD.</p>
- */
 @RestController
 @RequestMapping(ApiPaths.MEDIAS)
 @RequiredArgsConstructor

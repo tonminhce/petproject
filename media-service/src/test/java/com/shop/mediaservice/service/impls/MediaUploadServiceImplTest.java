@@ -40,13 +40,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * D1 dedup + persist-failure unit proofs (the real-DB dedup story lives in
- * UploadIT / MediaOutboxIT): the unique-index race is resolved to the WINNER's
- * media with duplicate:true — the loser's freshly written objects are purged
- * first — and a persist failure that is NOT a unique race rethrows after
- * orphan cleanup (the caller sees the failure, storage holds no orphans).
- */
 @ExtendWith(MockitoExtension.class)
 class MediaUploadServiceImplTest {
 

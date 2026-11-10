@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ProductController.class)
 @AutoConfigureMockMvc(addFilters = false)
-// C13 fix — the storefront controller keeps only the public read surface;
+
 // the write tests moved to BackofficeProductControllerTest (the write
 // endpoints now live behind the ADMIN-gated backoffice path).
 @Import(ApiExceptionHandler.class)

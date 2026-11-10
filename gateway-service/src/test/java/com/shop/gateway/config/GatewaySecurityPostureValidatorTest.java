@@ -8,20 +8,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * F-031 / F-033 — the gateway refuses to start with a silent security
- * misconfiguration.
- *
- * <ul>
- *   <li>F-033: a wildcard CORS origin pattern combined with the gateway's
- *       {@code allowCredentials(true)} lets any website issue credentialed
- *       cross-origin requests to the edge.</li>
- *   <li>F-031: {@code trusted-proxy-hops=0} with a forwarded-header strategy
- *       other than {@code none} makes the client IP resolve from a
- *       caller-controlled {@code X-Forwarded-For} header, bypassing both the
- *       admin IP allowlist and the per-IP rate limit.</li>
- * </ul>
- */
 class GatewaySecurityPostureValidatorTest {
 
     private GatewayProperties properties(List<String> corsPatterns) {

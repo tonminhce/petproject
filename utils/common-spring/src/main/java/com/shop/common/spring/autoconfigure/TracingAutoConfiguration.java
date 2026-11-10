@@ -26,27 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * D3 + R1 — fleet tracing wiring that Boot does not provide out of the box:
- * <ul>
- *   <li>{@link TraceparentInterceptor} + a {@link RestClientCustomizer} applying
- *       it to every auto-configured {@code RestClient.Builder} (guarded on
- *       {@code spring-boot-restclient} being present — services without the
- *       module must still boot).</li>
- *   <li>R1 — a {@link BeanPostProcessor} that enriches EVERY {@code RestClient.Builder}
- *       bean with the interceptor, regardless of who defines the builder
- *       (services or Boot), so no fleet service wires traceparent by hand.
- *       Idempotent: builders that already carry a {@link TraceparentInterceptor}
- *       are left untouched.</li>
- *   <li>{@link MdcOtelCurrentTraceContext} replaces Boot's event-less
- *       {@code OtelCurrentTraceContext} so MDC always carries traceId/spanId —
- *       even with no exporter configured.</li>
- *   <li>OTLP span exporter, created ONLY when {@code OTEL_EXPORTER_OTLP_ENDPOINT}
- *       is set (relaxed binding: env var → {@code otel.exporter.otlp.endpoint});
- *       Boot collects every {@link SpanExporter} bean into the SDK tracer
- *       provider, so the exporter attaches itself.</li>
- * </ul>
- */
 @AutoConfiguration(before = OpenTelemetryTracingAutoConfiguration.class)
 @ConditionalOnClass(name = "io.opentelemetry.api.trace.Span")
 public class TracingAutoConfiguration {

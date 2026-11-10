@@ -73,7 +73,6 @@ class ConfirmOrchestrationWebMvcTest {
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
 
-        // H-6: ADMIN token (no azp/session-free machine claims) → actor = sub string
         verify(orderService).confirmOrder(orderId, adminId.toString(), null);
     }
 
@@ -93,7 +92,6 @@ class ConfirmOrchestrationWebMvcTest {
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm"))
             .andExpect(status().isOk());
 
-        // H-6: SERVICE token → actor label "service:<azp>", NEVER the service-account UUID
         verify(orderService).confirmOrder(orderId, "service:fulfillment-service", null);
     }
 

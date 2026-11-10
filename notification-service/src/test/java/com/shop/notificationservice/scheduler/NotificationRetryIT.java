@@ -22,17 +22,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-/**
- * C17 — scheduler semantics on a REAL Postgres: the pessimistic claim query
- * compiles and runs, claims flip rows to SENDING with a heartbeat, and the
- * delivery loop settles rows through the writer. Real sender bean
- * ({@code LoggingNotificationSender} primary) — stubbed per test for the
- * failure path.
- *
- * <p>Backoff base is pinned to 1s so the second poll (with an advanced
- * clock) re-claims the FAILED_RETRYABLE row deterministically instead of
- * waiting the 5-minute production default.</p>
- */
 class NotificationRetryIT extends AbstractIntegrationTest {
 
     @Autowired

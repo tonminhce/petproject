@@ -39,14 +39,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * D4 same-transaction + relay contract against the real stack: the
- * MediaCreated outbox row commits INSIDE the media-row transaction (last, after
- * the S3 writes), the MediaDeleted row commits INSIDE the deleted_at-update
- * transaction, the relay publishes key=mediaId onto media.lifecycle.v1 with the
- * FULL snapshot payload, and a publisher outage leaves rows unsent for the next
- * cycle (no DLT).
- */
 class MediaOutboxIT extends AbstractMediaIntegrationTest {
 
     @Autowired

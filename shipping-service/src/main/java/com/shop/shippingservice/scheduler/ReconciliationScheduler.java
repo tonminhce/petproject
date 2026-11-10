@@ -45,12 +45,13 @@ public class ReconciliationScheduler {
     @Scheduled(cron = "${shop.shipping.reconcile-cron:0 0 * * * *}")
     public void reconcile() {
         Instant cutoff = clock.instant().minus(Duration.ofDays(autoDeliverDays));
-        List<Shipment> stale = repository.findByStatusInAndLastCarrierUpdateBefore(IN_FLIGHT, cutoff);
+        List<Shipment> stale = repository.findStaleAcknowledgedShipments(IN_FLIGHT, cutoff);
         metrics.setStaleInflightCount(stale.size());
         if (stale.isEmpty()) {
             return;
         }
-        log.info("Auto-delivering {} stale shipment(s) past cutoff {}", stale.size(), cutoff);
+        log.info("Auto-delivering {} stale carrier-acknowledged shipment(s) past cutoff {}",
+                stale.size(), cutoff);
         for (Shipment shipment : stale) {
             shipment.setPreviousStatus(shipment.getStatus());
             shipment.setStatus(ShipmentStatus.DELIVERED);

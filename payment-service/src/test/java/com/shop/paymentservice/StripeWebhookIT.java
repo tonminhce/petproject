@@ -60,25 +60,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
-/**
- * C5 Task 5 — full-context Stripe webhook + idempotency IT. DELIBERATELY
- * standalone (own containers, own property set): the shared
- * {@code AbstractIntegrationTest} pins {@code shop.payment.provider=mock} via
- * {@code @DynamicPropertySource}, and the base class's registration would
- * override any subclass re-registration of the same key. This suite needs the
- * REAL provider wiring ({@code provider=stripe} → StripeProvider +
- * payment-stripe health contributor beans present), so it owns its context.
- *
- * <p>NO real Stripe keys, NO network: the Stripe-Signature headers are
- * generated locally with stripe-java's own {@link Webhook.Util} HMAC helper
- * (the exact scheme {@code Webhook.constructEvent} verifies), and the SDK's
- * static entry points are statically mocked where the plan asks for
- * SDK-call counting.</p>
- *
- * <p>SINGLETON container lifecycle mirrors {@code AbstractIntegrationTest}:
- * plain static fields started once, never stopped by the framework — the
- * surefire fork's exit (Ryuk) reaps them.</p>
- */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @AutoConfigureTestRestTemplate
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

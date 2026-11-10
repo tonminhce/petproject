@@ -35,23 +35,6 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/**
- * H10 — TOCTOU regression test. The pre-fix design issued a read-then-write
- * to {@code inventory}, with a window where two concurrent reserves could
- * both observe the same available capacity and both succeed — leaving the
- * row in a state where {@code reservedQuantity} overshoots the available
- * quantity. The atomic {@code inventoryRepository.atomicReserve(...)} call
- * closes that window at the DB layer.
- *
- * <p>The test simulates the pre-fix repository contract (read returns
- * mutable state, write succeeds without capacity re-check) and asserts
- * that 50 concurrent reservations for the same product leave the
- * {@code reservedQuantity} consistent with the number of successful
- * reservations. With the atomic UPDATE the repository sees every reserve
- * individually; with the read-then-write contract (which we explicitly
- * DON'T use here), the test would fail at "expected 50 reservations,
- * got 200".</p>
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class InventoryServiceImplReserveConcurrencyTest {

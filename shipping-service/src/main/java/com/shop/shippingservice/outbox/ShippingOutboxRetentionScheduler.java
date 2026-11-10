@@ -10,10 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-/**
- * H-12: Purges SENT outbox rows older than retention window.
- * Without this scheduler, the shipping outbox table grows unbounded.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

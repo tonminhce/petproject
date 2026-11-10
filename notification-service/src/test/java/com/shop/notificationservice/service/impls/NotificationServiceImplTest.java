@@ -42,12 +42,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * C12/C17 — handle() persists the row as PENDING FIRST (never SENT), then
- * claims it and delegates the actual send to the delivery service. SENT is
- * only ever written by the writer AFTER a provider ack — a SMTP failure in
- * the send window must never leave a row claiming SENT.
- */
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceImplTest {
 
@@ -70,10 +64,6 @@ class NotificationServiceImplTest {
         service = new NotificationServiceImpl(repository, writer, sender, delivery, objectMapper, 900);
     }
 
-    /**
-     * H26 — OrderLifecycleEvent is a Java record. Per R1, construction goes
-     * through the canonical ctor (no Lombok @Builder).
-     */
     private OrderLifecycleEvent createdEvent() {
         return createdEvent(EVENT_ID.toString(), "order.created.v1");
     }
@@ -120,9 +110,9 @@ class NotificationServiceImplTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(writer).insert(captor.capture());
         Notification inserted = captor.getValue();
-        // C12: the row is born PENDING — never SENT.
+
         assertThat(inserted.getStatus()).isEqualTo(NotificationStatus.PENDING);
-        // C17: PENDING rows are scheduler-eligible from birth (fallback if the
+
         // instance dies between insert and claim).
         assertThat(inserted.getNextRetryAt()).isNotNull();
         assertThat(inserted.getChannel()).isEqualTo(NotificationChannel.LOG);
@@ -234,17 +224,6 @@ class NotificationServiceImplTest {
         verify(delivery, never()).deliver(any());
     }
 
-    /**
-     * H43 — concurrent-dedup proof. N threads race the same event id through
-     * {@code handle()}. All N threads see {@code existsByEventId == false} (the
-     * race window). One insert wins; every other insert fails with the unique
-     * constraint firing. Exactly one delivery happens.
-     *
-     * <p>This pins the contract that {@code saveAndFlush + catch
-     * DataIntegrityViolationException} (the Java equivalent of
-     * {@code ON CONFLICT DO NOTHING}) is the safety net — the optimistic
-     * {@code existsByEventId} check is only an optimization.</p>
-     */
     @Test
     void concurrentDuplicate_insertLosesRaceAndExactlyOneDelivery() throws Exception {
         int parallelism = 4;

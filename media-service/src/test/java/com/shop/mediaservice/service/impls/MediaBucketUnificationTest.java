@@ -40,16 +40,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.ArgumentCaptor;
 
-/**
- * H-5 ONE-SOURCE-OF-TRUTH proof: a single {@link MediaProperties} instance
- * (bucket = a deliberately non-default name) drives ALL object-storage
- * traffic — upload (write), orphan cleanup (delete), read presign, and purge
- * (delete). Historically presign rode the 2-arg default-bucket chain
- * ({@code shop.storage.bucket}) while upload/purge used {@code media.bucket}
- * — same value today, two drift-capable trees. Every call now goes through
- * the bucket-qualified overloads with {@code media.bucket}, and
- * {@code defaultBucket()} is never consulted.
- */
 @ExtendWith(MockitoExtension.class)
 class MediaBucketUnificationTest {
 

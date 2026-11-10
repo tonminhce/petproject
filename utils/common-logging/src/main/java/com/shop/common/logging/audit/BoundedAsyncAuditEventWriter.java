@@ -44,7 +44,6 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
 
     static final String ENV_AUDIT_LOG_PATH = "AUDIT_LOG_PATH";
 
-    // N1: intentionally hard-coded — audit must stay bounded even if someone
     static final int CORE_POOL_SIZE = 2;
     static final int MAX_POOL_SIZE = 4;
     static final int QUEUE_CAPACITY = 1000;

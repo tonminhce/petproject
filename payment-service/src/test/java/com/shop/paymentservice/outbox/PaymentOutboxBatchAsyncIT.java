@@ -15,22 +15,6 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H44 — outbox relay perf: the previous per-event
- * {@code kafkaPublisher.publish(...)} blocked on a per-event future.get(10s)
- * — 50 events could take 500s of wall time. The fix is to fan the batch out
- * async and wait on a bounded latch, so the 50 events travel in parallel and
- * the relay's wall-clock budget becomes roughly the slowest single publish,
- * not the sum.
- *
- * <p>This IT pins the budget at {@code <= 2s} of clock skew after the relay
- * finishes dispatching — well above the natural round-trip on a co-located
- * Kafka, but well below the synchronous path's worst case. A regression
- * (someone removing the async latch and falling back to sync future.get)
- * trips the budget immediately. The DB-side assertion (rows moved out of
- * PENDING) is the cheap, deterministic proof; the broker side is covered
- * by the existing fleet consumer ITs.</p>
- */
 class PaymentOutboxBatchAsyncIT extends AbstractIntegrationTest {
 
     private static final int BATCH = 50;

@@ -30,13 +30,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * C14 relay state machine — due rows (PENDING or replayable FAILED) come from
- * {@link OutboxEventRepository#claimOneDue} (one row per call). The
- * PlatformTransactionManager is a no-op stub (payment WebhookRetrySchedulerTest
- * precedent) because the assertions are about relay semantics, not transaction
- * propagation (that's verified by the claim-concurrency IT on a real DB).
- */
 @ExtendWith(MockitoExtension.class)
 class MediaOutboxRelayTest {
 

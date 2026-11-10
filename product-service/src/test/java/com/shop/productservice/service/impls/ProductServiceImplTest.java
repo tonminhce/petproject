@@ -395,7 +395,7 @@ class ProductServiceImplTest {
 
     @Test
     void update_clearMediaId_skipsHeadCheckAndProceeds() {
-        // H-2: an explicit clear carries no mediaId → the write-time gate must
+
         // not fire (nothing to verify) — the mapper removes the reference.
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,

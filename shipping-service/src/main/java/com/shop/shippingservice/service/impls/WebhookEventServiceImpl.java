@@ -73,7 +73,6 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             return;
         }
 
-        // C3 — dedup: skip only PROCESSED rows. FAILED_RETRYABLE rows fall through
         // so the retry scheduler can re-process them.
         Optional<ShipmentEvent> existing = eventRepository
                 .findFirstByCarrierAndProviderEventId(parsedCarrier, payload.getEventId());
@@ -163,6 +162,9 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         shipment.setPreviousStatus(from);
         shipment.setStatus(next);
         shipment.setLastCarrierUpdate(now);
+        if (shipment.getCarrierAcknowledgedAt() == null) {
+            shipment.setCarrierAcknowledgedAt(now);
+        }
         if (next == ShipmentStatus.DELIVERED) {
             shipment.setDeliveredAt(now);
             metrics.recordDelivered(false);

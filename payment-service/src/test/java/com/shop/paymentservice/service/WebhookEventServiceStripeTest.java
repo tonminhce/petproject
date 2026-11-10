@@ -38,19 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * C5 Task 3 — Stripe webhook branch of {@link WebhookEventService}. Signature
- * verification MUST go through stripe-java's {@link Webhook#constructEvent}
- * (spec D4 — never hand-rolled HMAC). Test signatures are generated locally
- * with the SDK's own {@link Webhook.Util#computeHmacSha256} over
- * {@code t + "." + payload} — no network, no Stripe account.
- *
- * <p>Event mapping (spec Task 3): payment_intent.succeeded → CAPTURED,
- * payment_intent.payment_failed → FAILED, charge.refunded → REFUNDED. The
- * verified event is converted into the fleet carrier payload (amounts back to
- * major units) so dedupe, state machine, amount check, outbox and receipt all
- * reuse the existing C3 machinery.</p>
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class WebhookEventServiceStripeTest {
@@ -168,11 +155,6 @@ class WebhookEventServiceStripeTest {
         return body.getBytes(StandardCharsets.UTF_8);
     }
 
-    /**
-     * C5 Task 3 — locally-signed Stripe-Signature header using the SDK's own
-     * HMAC util (t + "." + payload, hex v1) — the exact scheme
-     * {@code Webhook.constructEvent} verifies.
-     */
     private String signedHeader(byte[] rawBody, String secret) {
         long t = Webhook.Util.getTimeNow();
         String signedPayload = t + "." + new String(rawBody, StandardCharsets.UTF_8);
@@ -427,17 +409,6 @@ class WebhookEventServiceStripeTest {
         verify(writer).completeWithEvent(any(Payment.class), any(PaymentEvent.class), eq("payment.captured.v1"));
     }
 
-    /**
-     * F-021 (P1) regression - a PARTIAL refund must not be recorded as a full
-     * refund.
-     *
-     * <p>For a charge.refunded event, data.object is the CHARGE: 'amount' is
-     * the original charge amount and 'amount_refunded' is how much actually
-     * came back. The previous handler read 'amount' and mapped it straight onto
-     * REFUNDED, so a partial refund was reported as a full refund - the
-     * platform claimed money that never arrived, and the state machine then
-     * refused any further refund.</p>
-     */
     @Test
     void partialChargeRefund_marksPartiallyRefunded_notRefunded() {
         byte[] raw = chargeRefundedBody("evt_part_ref_1", 9800, "usd", 3000);
@@ -456,10 +427,6 @@ class WebhookEventServiceStripeTest {
                 eq("payment.refunded.v1"));
     }
 
-    /**
-     * F-021 - a full refund still completes the payment, and the refunded
-     * total is recorded.
-     */
     @Test
     void fullChargeRefund_marksRefunded_andRecordsTheRefundedTotal() {
         byte[] raw = chargeRefundedBody("evt_full_ref_2", 9800, "usd", 9800);
@@ -476,12 +443,6 @@ class WebhookEventServiceStripeTest {
         assertThat(updated.getRefundedAmount()).isEqualByComparingTo("98.00");
     }
 
-    /**
-     * F-021 - a refund that exceeds the captured amount is rejected instead of
-     * inflating the refunded total. The event is parked as retryable (the
-     * platform never fails a provider webhook with a 500) and the payment is
-     * left untouched.
-     */
     @Test
     void refundLargerThanTheCapturedAmount_isRejected_stateUnchanged() {
         byte[] raw = chargeRefundedBody("evt_over_ref_3", 9800, "usd", 9900);

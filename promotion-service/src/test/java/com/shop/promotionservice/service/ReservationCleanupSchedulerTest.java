@@ -38,7 +38,7 @@ import static org.mockito.Mockito.*;
  * per batch (TransactionTemplate), no persistence-context flush/clear — a
  * mid-cycle failure rolls back only the failing batch and terminates.
  *
- * <p>F-044 — the sweep now CLAIMS each row with a conditional UPDATE
+ * <p>The sweep now CLAIMS each row with a conditional UPDATE
  * ({@code status = PENDING} -> {@code status = EXPIRED}) instead of flipping
  * the status on a dirty-checked entity. A row that another writer already
  * transitioned affects zero rows and is skipped, so a COMMITTED redemption can
@@ -101,7 +101,6 @@ class ReservationCleanupSchedulerTest {
 
         scheduler.releaseAllExpiredReservations();
 
-        // F-044 — the transition happens through the conditional UPDATE, not a
         // dirty-checked entity, so the sweep must claim every candidate.
         verify(reservationRepository).claimForExpiry(
             eq(first.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class));
@@ -112,13 +111,6 @@ class ReservationCleanupSchedulerTest {
             eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500)));
     }
 
-    /**
-     * F-044 regression — the lost-update guard. When the claim affects zero
-     * rows, another writer already transitioned the reservation (a concurrent
-     * commit, or a competing sweep). The sweep must then do nothing at all: a
-     * committed redemption must never be reverted to EXPIRED, because the
-     * per-user limit and the campaign budget both count PENDING + COMMITTED.
-     */
     @Test
     void sweep_skipsRowsAlreadyClaimedByAnotherWriter() {
         CouponUsageReservation raced = pending(60);
@@ -137,12 +129,6 @@ class ReservationCleanupSchedulerTest {
         verify(campaignRepository, never()).findById(any());
     }
 
-    /**
-     * F-045 — the sweep emits the same promotion.released.v1 event as the
-     * service-layer release path, so the event stream describes every state
-     * transition (the inventory sweep already does this; the two sweeps had
-     * diverged).
-     */
     @Test
     void sweep_publishesReleasedEventForEachExpiredReservation() {
         CouponUsageReservation expired = pending(60);

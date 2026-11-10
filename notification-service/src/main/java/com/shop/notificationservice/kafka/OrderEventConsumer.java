@@ -18,7 +18,7 @@ public class OrderEventConsumer extends BaseKafkaConsumer<String, OrderLifecycle
 
     @KafkaListener(topics = "shop.order.lifecycle.v1", containerFactory = "notificationListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
-        // H-1 raw-wire entry: the base unwraps-once + binds the typed event;
+
         processMessage(rawValue, headers, OrderLifecycleEvent.class, notificationService::handle);
     }
 }

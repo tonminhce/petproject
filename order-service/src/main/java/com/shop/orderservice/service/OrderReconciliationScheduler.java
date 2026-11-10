@@ -135,7 +135,7 @@ public class OrderReconciliationScheduler {
         List<String> states = pollReservationStates(order);
         if (states == null) return;  // poll failure → already routed to the mixed path
         if (states.isEmpty()) {
-            // F-016 (P1) — an order with NO line items never got past step 1 of
+
             // the create saga: no stock was reserved, no promotion was held and
             // no payment could have been captured. It is an orphan left behind
             // by a crash between the two saga transactions, and the old

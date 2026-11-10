@@ -32,11 +32,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * C13 fix — brand CRUD moved off the storefront path; the write surface is
- * exercised here against the ADMIN-gated backoffice controller (audit
- * coverage follows the authorization level, rating-service precedent).
- */
 @WebMvcTest(value = BackofficeBrandController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

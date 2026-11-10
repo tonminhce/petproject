@@ -111,7 +111,7 @@ class InventoryServiceImplTest {
     @Test
     void reserve_incrementsReservedAndPublishes() {
         ReserveRequest req = new ReserveRequest(5, null);
-        // H10 — atomic UPDATE returns 1 row updated, capacity was sufficient.
+
         when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(1);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
         when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
@@ -122,7 +122,7 @@ class InventoryServiceImplTest {
         var result = service.reserve(productId, req);
 
         assertThat(result.quantity()).isEqualTo(5);
-        // H10 — the in-memory Inventory entity's reservedQuantity is NOT mutated
+
         // by the service; the atomic UPDATE on the inventory row owns the
         // authoritative count. Verify the SQL update was issued with the right
         // quantity, and the published event carries the request quantity.
@@ -139,7 +139,7 @@ class InventoryServiceImplTest {
     @Test
     void reserve_throwsStockInsufficient() {
         ReserveRequest req = new ReserveRequest(999, null);
-        // H10 — atomic UPDATE returns 0 (insufficient capacity OR product missing).
+
         // The disambiguation find returns the inventory, so STOCK_INSUFFICIENT wins.
         when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(0);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
@@ -345,7 +345,7 @@ class InventoryServiceImplTest {
     @Test
     void reserve_evictsCacheAfterCommit() {
         ReserveRequest req = new ReserveRequest(5, null);
-        // H10 — atomic reserve succeeds first, then the cache is evicted.
+
         when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(1);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
         when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
@@ -359,7 +359,7 @@ class InventoryServiceImplTest {
     void commit_evictsCacheAfterCommit() {
         // The reservation holds 5 units, so the inventory must actually be
         // holding them: a commit that subtracts from a reserved counter of 0
-        // would drive the counter negative (F-010).
+        // would drive the counter negative.
         inventory.setReservedQuantity(5);
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
@@ -384,12 +384,6 @@ class InventoryServiceImplTest {
         verify(cacheService).evictAfterCommit(productId);
     }
 
-    /**
-     * F-010 — the stock counters must never go negative. A commit that would
-     * drive reserved_quantity below zero is a data inconsistency (the hold was
-     * never taken) and must fail closed with a domain error instead of
-     * silently corrupting the capacity guard.
-     */
     @Test
     void commit_rejectsNegativeStockOutcome() {
         // reserved_quantity is 0 while the reservation claims 5 units.
@@ -406,9 +400,6 @@ class InventoryServiceImplTest {
         verify(inventoryRepository, never()).save(any());
     }
 
-    /**
-     * F-010 — same guard on the release path.
-     */
     @Test
     void release_rejectsNegativeStockOutcome() {
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));

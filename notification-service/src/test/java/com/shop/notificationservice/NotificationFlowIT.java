@@ -102,8 +102,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
                 List.of(Map.of("sku", "SKU-1", "quantity", 2), Map.of("sku", "SKU-2", "quantity", 1)));
         send(event);
 
-        Notification row = awaitRow(event.eventId());
-        assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
+        Notification row = awaitRowWithStatus(event.eventId(), NotificationStatus.SENT);
         assertThat(row.getChannel()).isEqualTo(NotificationChannel.LOG);
         assertThat(row.getSubject()).isEqualTo("Order " + orderId + " created");
         assertThat(row.getUserId()).isEqualTo(userId);
@@ -117,8 +116,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
                 "order.updated.v1", "CONFIRMED", null, null, null);
         send(event);
 
-        Notification row = awaitRow(event.eventId());
-        assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
+        Notification row = awaitRowWithStatus(event.eventId(), NotificationStatus.SENT);
         assertThat(row.getUserId()).isNull();
         assertThat(row.getEventType()).isEqualTo("order.updated.v1");
     }
@@ -130,8 +128,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
                 "order.cancelled.v1", "CANCELLED", null, Instant.now(), Boolean.FALSE);
         send(event);
 
-        Notification row = awaitRow(event.eventId());
-        assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
+        Notification row = awaitRowWithStatus(event.eventId(), NotificationStatus.SENT);
         assertThat(row.getBody()).contains("refunded=false");
     }
 
@@ -141,12 +138,12 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         UUID orderId = UUID.randomUUID();
         OrderLifecycleEvent event = createdEvent(orderId, UUID.randomUUID(), null);
         send(event);
-        awaitRow(event.eventId());
+        awaitRowWithStatus(event.eventId(), NotificationStatus.SENT);
 
         send(event);
         OrderLifecycleEvent marker = createdEvent(orderId, UUID.randomUUID(), null);
         send(marker);
-        awaitRow(marker.eventId());
+        awaitRowWithStatus(marker.eventId(), NotificationStatus.SENT);
 
         await().atMost(AWAIT).untilAsserted(() ->
             assertThat(rowsFor(event.eventId())).hasSize(1));
@@ -159,8 +156,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
                 "order.teleported.v9", "NEW", null, null, null);
         send(event);
 
-        Notification row = awaitRow(event.eventId());
-        assertThat(row.getStatus()).isEqualTo(NotificationStatus.SKIPPED);
+        Notification row = awaitRowWithStatus(event.eventId(), NotificationStatus.SKIPPED);
         assertThat(row.getSubject()).isEqualTo("[skipped] order.teleported.v9");
     }
 
@@ -172,7 +168,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         OrderLifecycleEvent failing = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(failing);
         Notification failedRow = awaitRowWithStatus(failing.eventId(), NotificationStatus.FAILED_RETRYABLE);
-        // C12: the row never claims SENT; C17: the failure is retryable with bookkeeping.
+
         assertThat(failedRow.getStatus()).isEqualTo(NotificationStatus.FAILED_RETRYABLE);
         assertThat(failedRow.getRetryCount()).isEqualTo(1);
         assertThat(failedRow.getNextRetryAt()).isNotNull();
@@ -191,8 +187,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
 
         OrderLifecycleEvent valid = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(valid);
-        Notification row = awaitRow(valid.eventId());
-        assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
+        Notification row = awaitRowWithStatus(valid.eventId(), NotificationStatus.SENT);
     }
 
     @Test
@@ -200,8 +195,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
     void legacyDoubleEncodedTokenIsAccepted() throws Exception {
         OrderLifecycleEvent event = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         sendLegacyDoubleEncoded(event);
-        Notification row = awaitRow(event.eventId());
-        assertThat(row.getStatus()).isEqualTo(NotificationStatus.SENT);
+        Notification row = awaitRowWithStatus(event.eventId(), NotificationStatus.SENT);
 
         // Wire proof on the real topic: the record value is a JSON string
         // token wrapping the event JSON — the pre-R1 wire that in-flight
@@ -280,16 +274,6 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         return notificationRepository.findAll().stream()
             .filter(n -> eventId.equals(n.getEventId().toString()))
             .toList();
-    }
-
-    private Notification awaitRow(String eventId) {
-        List<Notification> found = new ArrayList<>();
-        await().atMost(AWAIT).untilAsserted(() -> {
-            found.clear();
-            found.addAll(rowsFor(eventId));
-            assertThat(found).hasSize(1);
-        });
-        return found.get(0);
     }
 
     /**

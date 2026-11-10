@@ -6,11 +6,6 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D6 binding: the payload is EXACT — {@code timestamp, actor, action,
- * resourceType, resourceId, outcome, correlationId, traceId} in that order,
- * one compact JSON line, no other fields ever.
- */
 class AuditEventTest {
 
     private final AuditEvent event = new AuditEvent(

@@ -56,6 +56,16 @@ public class Shipment extends AbstractMappedEntity {
     @Column(name = "last_carrier_update")
     private Instant lastCarrierUpdate;
 
+    /**
+     * When the carrier took the shipment over. Set when the carrier hands
+     * back a tracking number, when an operator assigns one, and on the first
+     * carrier webhook. The stale sweep uses it as the gate: a shipment the
+     * carrier never accepted is never auto-delivered, and the window runs
+     * from the acknowledgement when the carrier has not reported since.
+     */
+    @Column(name = "carrier_acknowledged_at")
+    private Instant carrierAcknowledgedAt;
+
     @Column(name = "delivered_at")
     private Instant deliveredAt;
 

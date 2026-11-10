@@ -34,12 +34,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * C3 contract: event rows are PERSISTED FIRST as FAILED_RETRYABLE (before the
- * payment transition is attempted), dedupe skips only PROCESSED rows, and any
- * processing failure keeps the row FAILED_RETRYABLE via
- * {@code writer.saveEvent} so the retry scheduler can replay it.
- */
 @ExtendWith(MockitoExtension.class)
 class WebhookEventServiceTest {
 
@@ -100,11 +94,6 @@ class WebhookEventServiceTest {
                 .providerEventId(PROVIDER_EVENT_ID);
     }
 
-    /**
-     * C3: a fresh event id means no prior row — the service inserts one, then
-     * RE-READS it (findFirst) before processing. This stub simulates that
-     * persistence: empty on the dedupe probe, the stored row afterwards.
-     */
     private void happyPathStubs() {
         dedupeStubsNoRow();
         AtomicReference<PaymentEvent> stored = new AtomicReference<>();

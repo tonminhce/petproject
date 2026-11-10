@@ -29,16 +29,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * C17 — the retry poller. Mirrors payment/shipping WebhookRetrySchedulerTest:
- * state-machine semantics without booting Spring (the PlatformTransactionManager
- * is a no-op stub; tx propagation is proven on a real DB by NotificationRetryIT).
- *
- * <p>The claim must flip every candidate to SENDING with a FRESH heartbeat
- * before any send happens — that is the pessimistic claim that keeps two
- * instances from double-delivering and the crash-recovery horizon for rows
- * abandoned mid-send.</p>
- */
 @ExtendWith(MockitoExtension.class)
 class NotificationRetrySchedulerTest {
 

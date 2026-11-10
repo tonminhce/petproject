@@ -38,7 +38,6 @@ public class RatingServiceImpl implements RatingService {
                     throw BusinessException.of(ErrorCode.RATING_ALREADY_EXISTS);
                 });
 
-        // D1: fail-closed eligibility gate — the client returns false on ANY
         boolean eligible = eligibilityClient.isEligible(jwtUserId, request.productId());
         if (!eligible) {
             throw BusinessException.of(ErrorCode.RATING_NOT_ELIGIBLE);
@@ -77,7 +76,6 @@ public class RatingServiceImpl implements RatingService {
         Rating rating = ratingRepository.findByUserIdAndProductIdAndDeletedFalse(jwtUserId, productId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.RATING_NOT_FOUND));
 
-        // D6: verified stamped at submit time only — edit preserves it and never
         rating.setRating(request.rating());
         rating.setComment(request.comment());
         rating.setEditedAt(Instant.now());

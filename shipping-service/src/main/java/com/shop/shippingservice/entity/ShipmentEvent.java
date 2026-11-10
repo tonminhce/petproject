@@ -29,7 +29,7 @@ public class ShipmentEvent extends AbstractMappedEntity {
 
     public static final String STATUS_PROCESSED = "PROCESSED";
     public static final String STATUS_FAILED = "FAILED";
-    // C3 — new lifecycle states for the webhook retry scheduler.
+
     public static final String STATUS_FAILED_RETRYABLE = "FAILED_RETRYABLE";
     public static final String STATUS_FAILED_PERMANENT = "FAILED_PERMANENT";
 
@@ -60,7 +60,6 @@ public class ShipmentEvent extends AbstractMappedEntity {
     @Column(name = "version")
     private Long version;
 
-    // C3 — added in changelog-003-webhook-retry.
     @Column(name = "retry_count", nullable = false)
     @Builder.Default
     private int retryCount = 0;

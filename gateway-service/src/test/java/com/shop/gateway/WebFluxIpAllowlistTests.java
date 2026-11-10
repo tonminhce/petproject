@@ -27,12 +27,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 
-/**
- * D5 with ADMIN_IP_ALLOWLIST PRESENT (10.0.0.0/8,192.168.0.0/16):
- * non-matching source -> 403 envelope; webhooks and actuator health bypass;
- * the rightmost trusted X-Forwarded-For entry (after {@code trusted-proxy-hops})
- * is the one we evaluate — never the leftmost (which an attacker controls).
- */
 @SpringBootTest(
         classes = {GatewayServiceApplication.class, WebFluxIpAllowlistTests.WireMockProps.class},
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

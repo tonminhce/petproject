@@ -53,11 +53,6 @@ public class WebhookEventService {
     /** The stripe webhook path provider label (mirrors {@code {provider}=stripe}). */
     static final String STRIPE_PROVIDER = "stripe";
 
-    /**
-     * C5 Task 3 (spec D4) — Stripe event types mapped onto the payment
- * lifecycle. Exactly these three; everything else Stripe emits is
-     * deliberately-ignored (stored PROCESSED so dedupe swallows retries).
-     */
     private static final Map<String, String> STRIPE_EVENT_STATUS = Map.of(
             "payment_intent.succeeded", "CAPTURED",
             "payment_intent.payment_failed", "FAILED",
@@ -76,16 +71,6 @@ public class WebhookEventService {
     private final ReceiptService receiptService;
     private final PaymentStripeProperties stripeProperties;
 
-    /**
-     * C5 Task 3 — Stripe webhook entry ({@code POST /api/v1/webhooks/payments/stripe}).
-     * Signature verification is delegated to stripe-java's
-     * {@link Webhook#constructEvent} (spec D4 — NEVER hand-rolled HMAC);
-     * {@code SignatureVerificationException} → 401 PAY-5005 with no state
-     * change. A verified event is converted into the fleet carrier payload
-     * (minor units → major) and delegated to {@link #handle(String, byte[])}
-     * so dedupe, the state machine, the amount check, the outbox row and
-     * receipts reuse the existing C3 machinery untouched.
-     */
     public void handleStripe(byte[] rawBody, String signatureHeader) {
         String webhookSecret = stripeProperties == null ? null : stripeProperties.webhookSecret();
         if (webhookSecret == null || webhookSecret.isBlank()
@@ -121,7 +106,6 @@ public class WebhookEventService {
         WebhookPayload payload = tryParse(rawBody);
         String providerEventId = resolveProviderEventId(payload, rawBody);
 
-        // C3 — dedup decision:
         //   FAILED_RETRYABLE   → fall through; the retry scheduler will pick it up
         //                        status transitions to PROCESSED; if it fails we
         Optional<PaymentEvent> existing = eventRepository
@@ -230,15 +214,6 @@ public class WebhookEventService {
         }
     }
 
-    /**
-     * F-021 — apply a refund that has not returned the full amount.
-     *
-     * <p>The refunded amount must be positive and must not exceed what is
-     * still refundable; otherwise the event is rejected as an amount mismatch.
-     * The payment moves to PARTIALLY_REFUNDED - never to REFUNDED - and the
-     * refunded total is accumulated so a later full refund can complete
-     * it.</p>
-     */
     private void applyPartialRefund(WebhookPayload payload, Payment payment, PaymentEvent event) {
         BigDecimal already = payment.getRefundedAmount() == null
                 ? BigDecimal.ZERO : payment.getRefundedAmount();
@@ -258,13 +233,6 @@ public class WebhookEventService {
                 payment.getId(), already, payment.getAmount(), payload.amount());
     }
 
-    /**
-     * C5 Task 3 — convert a signature-verified Stripe event into the fleet
-     * carrier payload: payment id comes from {@code data.object.metadata}
-     * (set by StripeProvider at intent creation; Stripe copies PaymentIntent
-     * metadata onto its charges), amount goes minor → major units so the
-     * existing {@code process()} amount check compares like with like.
-     */
     private byte[] toCarrierPayload(String eventId, String stripeType, String mappedStatus, byte[] rawBody) {
         try {
             JsonNode obj = objectMapper.readTree(rawBody).path("data").path("object");
@@ -274,7 +242,7 @@ public class WebhookEventService {
             BigDecimal amount = StripeCurrencyUnits.fromMinor(amountMinor, currency);
             String status = mappedStatus;
             if (REFUND_EVENT_TYPE.equals(stripeType)) {
-                // F-021 — for a charge.refunded event, data.object is the CHARGE:
+
                 // 'amount' is the ORIGINAL charge amount and 'amount_refunded'
                 // is how much has actually come back. The refunded total is the
                 // amount that must be reconciled against the payment, so it is
@@ -306,12 +274,6 @@ public class WebhookEventService {
         }
     }
 
-    /**
-     * C5 Task 3 — deliberately-ignored Stripe types (e.g. charge.succeeded
-     * companion events). Stored PROCESSED keyed by the Stripe event id so
-     * dedupe swallows Stripe's delivery retries without the retry scheduler
-     * flagging them FAILED_PERMANENT for ops.
-     */
     private void storeProcessedNoOp(String eventId, String stripeType, byte[] rawBody) {
         PaymentEvent event = buildEvent(STRIPE_PROVIDER, eventId, null, rawBody);
         event.setType(stripeType);

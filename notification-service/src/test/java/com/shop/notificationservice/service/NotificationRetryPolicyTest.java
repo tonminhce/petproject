@@ -6,11 +6,6 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * C17 — bounded retry policy: exponential backoff (5× per attempt, fleet
- * payment/shipping convention) with a hard cap on attempts. The cap is what
- * turns "retry forever" into "FAILed_PERMANENT after N attempts".
- */
 class NotificationRetryPolicyTest {
 
     private static final Instant NOW = Instant.parse("2026-09-02T10:00:00Z");

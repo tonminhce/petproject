@@ -100,7 +100,7 @@ class ProductRatingServiceTest {
 
     @Test
     void apply_publishesProductUpdatedWithTheSavedEntityReturnedByRepoSave() {
-        // F4: the publisher must receive the entity returned by save() — the
+
         // persisted instance (audit fields filled), not the pre-save detached one.
         Product managed = product();
         Product saved = product();

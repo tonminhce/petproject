@@ -28,22 +28,6 @@ public abstract class AbstractMediaIntegrationTest {
     @SuppressWarnings("resource")
     static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
 
-    /**
-     * F-042 (P1) — the S3 test double is now the PRODUCTION backend.
-     *
-     * <p>The suite previously used {@code minio/minio:latest}. That tag no longer
-     * exists on Docker Hub ("pull access denied for minio/minio, repository does
-     * not exist"), so every media-service integration test - 44 tests across
-     * UploadIT, MediaOutboxIT, MediaOutboxRetentionIT, MediaPurgeIT,
-     * MediaOutboxClaimConcurrencyIT and ProvisioningIT - failed in the static
-     * initializer and could never run, in CI or anywhere else.</p>
-     *
-     * <p>Using RustFS - the same image and the same credential environment the
-     * compose stack runs ({@code rustfs/rustfs:1.0.0-rc.5} with
-     * RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY) - fixes the unrunnable suite AND
-     * removes the fidelity gap: the tests now exercise the S3 implementation the
-     * platform actually ships against, instead of a different product.</p>
-     */
     @SuppressWarnings("resource")
     static final GenericContainer<?> rustfs = new GenericContainer<>(
             DockerImageName.parse("rustfs/rustfs:1.0.0-rc.5"))

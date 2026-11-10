@@ -25,16 +25,6 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H-1 wire pin: the {@link BaseKafkaListenerConfig} factory delivers the RAW
- * STRING record value to the listener — for both the production
- * single-encoded wire (R1: KafkaMessagePublisher over StringSerializer ×2)
- * and the legacy double-encoded shape (a JSON string token wrapping the event
- * JSON; H-1 defense-in-depth for pre-R1 in-flight records). Under the
- * previous {@code JsonDeserializer} wiring the double-encoded publish failed
- * value deserialization before the listener ever ran (the silent-drop footgun
- * this base flip removes), so these asserts double as the old-vs-new pin.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BaseKafkaListenerConfigWireTest {
 

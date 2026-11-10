@@ -36,14 +36,6 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-017 — a dead-lettered record must be replayable.
- *
- * <p>Publishing a poison record to a dead-letter topic only makes the loss
- * VISIBLE. This test drives the whole round trip against an embedded Kafka
- * broker: an unbindable payload is dead-lettered, the replay service sends it
- * back to the topic it came from, and the consumer receives it again.</p>
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DeadLetterReplayServiceTest {
 

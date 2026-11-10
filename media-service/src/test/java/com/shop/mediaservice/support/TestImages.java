@@ -72,7 +72,7 @@ public final class TestImages {
     }
 
     /**
-     * JPEG carrying a valid EXIF APP1 (IFD0: Make="TestCam") and a GPS IFD
+     * JPEG carrying a valid EXIF APP1 (IFMake="TestCam") and a GPS IFD
      * (GPSLatitudeRef="N"). Sanity-check with metadata-extractor before use.
      */
     public static byte[] jpegWithExifAndGps(int width, int height) {

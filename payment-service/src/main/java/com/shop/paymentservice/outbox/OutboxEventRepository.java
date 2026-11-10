@@ -40,6 +40,20 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
         return findFirstByStatusOrderByIdAsc(status);
     }
 
+    /**
+     * Re-reads a row under its write lock for the mark phase.
+     * <p>The mark phase must be a compare-and-set: read the row, check it is
+     * still SENDING, then write the new status. Without the lock the
+     * recovery sweep could move the row from SENDING to PENDING between the
+     * read and the write, and the mark would then flip a row that another
+     * relay instance may already have re-claimed — a double publish that
+     * the row state said was impossible.</p>
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
+    @Query("SELECT e FROM OutboxEvent e WHERE e.id = :id")
+    Optional<OutboxEvent> findByIdForUpdate(@Param("id") Long id);
+
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
     int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
@@ -50,19 +64,17 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     int deleteByStatusAndUpdatedAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 
     /**
-     * F-052 (P1) — recover events stranded in the SENDING state.
-     *
+     * Recovers events stranded in the SENDING state.
      * <p>The relay claims a row by moving it to SENDING and committing, then
-     * publishes it outside that transaction. If the process dies between the two
-     * steps the row stays SENDING forever: it is no longer PENDING, so the
-     * claim never picks it up again, and nothing else in the service touches
-     * it. The event is silently lost with no alarm.</p>
-     *
+     * publishes it outside that transaction. If the process dies between the
+     * two steps the row stays SENDING forever: it is no longer PENDING, so
+     * the claim never picks it up again, and nothing else in the service
+     * touches it. The event is silently lost with no alarm.</p>
      * <p>This statement returns a stale SENDING row to PENDING so it is
-     * re-claimed, unless it has already burned its retry budget, in which case
-     * it is parked as FAILED for an operator. {@code updatedAt} is the claim
-     * timestamp (the entity carries {@code @UpdateTimestamp}), so the cutoff is
-     * the claim lease.</p>
+     * re-claimed, unless it has already burned its retry budget, in which
+     * case it is parked as FAILED for an operator. {@code updatedAt} is the
+     * claim timestamp (the entity carries {@code @UpdateTimestamp}), so the
+     * cutoff is the claim lease.</p>
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE OutboxEvent e SET "

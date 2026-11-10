@@ -20,12 +20,6 @@ import java.util.function.BooleanSupplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-/**
- * N1 binding: the writer's pool is hard-bounded (core 2 / max 4 / queue 1000),
- * overflow discards + WARNs without blocking or failing the caller, and sink
- * failures are logged-and-continued. The sink is the {@code AUDIT_LOG_PATH}
- * file when the path is present, the stdout {@code AUDIT} logger otherwise.
- */
 class BoundedAsyncAuditEventWriterTest {
 
     private static final AuditEvent EVENT = new AuditEvent(

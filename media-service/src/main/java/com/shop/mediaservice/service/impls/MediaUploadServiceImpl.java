@@ -35,32 +35,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * D1/D2 pipeline, in binding order:
- * <ol>
- *   <li>mime allowlist on the declared type → 415 MED-12003;</li>
- *   <li>magic-byte sniff must agree with the declared type — a lying file →
- *       400 MED-12001;</li>
- *   <li>size guard against {@code media.max-upload} → 413 MED-12002;</li>
- *   <li>SHA-256 dedup lookup — an existing media is returned (duplicate flag,
- *       same id) BEFORE any object is written;</li>
- *   <li>metadata-extractor audit log of EXIF/GPS (M1) — logged only;</li>
- *   <li>full-resolution re-encode + 6 variant renders (thumbnailator; the
- *       stored original is never the raw bytes — metadata dies in the
- *       decode/re-encode);</li>
- *   <li>S3 writes (each key tracked);</li>
- *   <li>media + variant rows + the MediaCreated outbox row commit LAST, in
- *       one short transaction (D4: the event commits or rolls back with the
- *       media row — never written before the S3 writes).</li>
- * </ol>
- * Any failure after the first object write triggers best-effort orphan
- * deletion of the already-written keys; object-storage failures surface as
- * 503 MED-12006, and undecodable uploads — magic-valid heads whose bodies no
- * codec can read (H-5/Task-3 reclassification, the bytes are simply not a
- * supported decodable image) — as 415 MED-12003. A unique-index race with a
- * concurrent duplicate upload resolves to the winner's media (duplicate:true)
- * and cleans up the loser's objects.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -174,7 +148,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         try {
             Media saved = transactionTemplate.execute(tx -> {
                 Media persisted = mediaRepository.saveAndFlush(media);
-                // D4: MediaCreated rides the SAME final DB transaction as the
+
                 mediaEvents.record(persisted, MediaEventType.MediaCreated);
                 return persisted;
             });

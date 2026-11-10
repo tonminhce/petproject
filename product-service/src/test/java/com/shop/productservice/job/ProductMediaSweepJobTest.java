@@ -33,13 +33,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * H-3 reconciliation sweep unit tests: the cycle is BOUNDED (exactly one page
- * of {@code limit} rows — no pagination loop), fail-safe on media outage (any
- * client failure aborts the remaining cycle — never mass-clearing behind
- * doubt), reuses the consumer's clear path on a 404, keeps live references on
- * a 200, and meters checked/cleared rows.
- */
 @ExtendWith(MockitoExtension.class)
 class ProductMediaSweepJobTest {
 

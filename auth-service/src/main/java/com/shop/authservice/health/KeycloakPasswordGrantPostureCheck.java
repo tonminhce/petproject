@@ -9,21 +9,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-/**
- * F-004 — makes the Resource Owner Password Credentials posture VISIBLE.
- *
- * <p>The platform's login flow uses the password grant, and the provisioned
- * Keycloak realm enables the direct-access grant on the client that serves it.
- * ROPC is deprecated by the OAuth 2.0 Security Best Current Practice: the
- * user discloses their password to the client, and the flow is not bound to
- * MFA. The grant cannot be removed unilaterally - first-party clients depend
- * on it today - but it must not be invisible, or it will never be migrated.</p>
- *
- * <p>The posture is checked once the application is ready and reported in the
- * log, with a counter the operator can alert on. The check never fails the
- * startup: an identity provider that is briefly unreachable must not stop the
- * service from booting.</p>
- */
 @Component
 @ConditionalOnProperty(prefix = "shop.keycloak", name = "admin-username")
 public class KeycloakPasswordGrantPostureCheck {

@@ -11,7 +11,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Regression guard for review finding C1: the {@code productPrice} cache
+ * Regression guard for review finding the {@code productPrice} cache
  * serializer must carry polymorphic type information. A serializer without
  * default typing writes no {@code @class} hint, so a cache HIT deserializes to
  * a {@code LinkedHashMap} and the {@code @Cacheable} proxy throws

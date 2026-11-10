@@ -70,14 +70,6 @@ public class CouponUsageReservation {
     @Column(name = "released_at")
     private Instant releasedAt;
 
-    /**
-     * F-044 (P1) — optimistic-lock guard for the coupon usage reservation.
-     * Without it the TTL sweep (an unlocked SELECT followed by a dirty-check
-     * flush) could overwrite a COMMITTED redemption with EXPIRED. The per-user
-     * limit and the campaign budget both count PENDING + COMMITTED, so a
-     * silently reverted redemption would let the customer redeem the same
-     * coupon again and would under-spend the campaign budget.
-     */
     @Version
     @Column(name = "version", nullable = false)
     @Builder.Default

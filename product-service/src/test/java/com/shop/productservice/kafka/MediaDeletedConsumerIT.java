@@ -33,9 +33,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * MediaDeleted consumer against the REAL Kafka wire (media epic spec D4, R1 +
- * H-1): this IT publishes through the SAME production path as MediaOutboxRelay
- * — the context {@link KafkaMessagePublisher} (R1 single-encode: JSON-as-String
+ * MediaDeleted consumer against the REAL Kafka wire: this IT publishes
+ * through the SAME production path as MediaOutboxRelay
+ * — the context {@link KafkaMessagePublisher} (single-encode: JSON-as-String
  * forwarded as raw UTF-8 bytes). On MediaDeleted the product's media_id is
  * cleared, the derived image falls back to the legacy imageUrl, and a
  * ProductUpdated outbox row (→ search refresh) is emitted per product. One
@@ -62,14 +62,6 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    /**
-     * T1 review carry-over: this IT ran on the unpinned application.yml
-     * default ({@code latest}) — a record published around container-join
-     * time was silently skipped (the exact class of bug this epic hunts).
-     * Pin {@code earliest} like {@link RatingLifecycleConsumerIT} so the
-     * listener consumes deterministically from offset 0 of the fresh
-     * container topic; prod keeps {@code latest}.
-     */
     @DynamicPropertySource
     static void kafkaEarliest(DynamicPropertyRegistry r) {
         r.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
@@ -148,7 +140,7 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
         assertThat(row.getTopic()).isEqualTo("shop.product.lifecycle.v1");
         assertThat(row.getStatus()).isEqualTo(OutboxStatus.PENDING);
         JsonNode snapshot = readPayload(row.getPayload());
-        // D5: the payload imageUrl falls back to the legacy free-string once
+
         // the reference is gone — the derived canonical path belonged to the
         // deleted media.
         assertThat(snapshot.get("imageUrl").asText()).isEqualTo("http://legacy.example/ip15.png");

@@ -51,7 +51,7 @@ public interface CouponUsageReservationRepository extends JpaRepository<CouponUs
                                                     @Param("cutoff") Instant cutoff, Pageable pageable);
 
     /**
-     * F-044 (P1) — claim a coupon usage reservation for TTL expiry.
+     * claim a coupon usage reservation for TTL expiry.
      * <p>The sweep used to SELECT the candidates and then dirty-check them to
      * EXPIRED. Without a version column, a sweep that read the row before
      * {@code commit()} ran could overwrite the COMMITTED state - which stops

@@ -20,12 +20,6 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D3 — the shared outbound interceptor must inject W3C {@code traceparent}
- * (and {@code tracestate} when present) from the CURRENT span context on every
- * fleet RestClient call, and inject NOTHING when no span is active.
- * Uses a real in-memory OTel SDK tracer — no exporter, no collector.
- */
 class TraceparentInterceptorTest {
 
     private static final ClientHttpRequestExecution OK = (req, body) -> new MockClientHttpResponse(new byte[0], HttpStatus.OK);

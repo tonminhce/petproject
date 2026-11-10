@@ -19,13 +19,6 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/**
- * F-067 (P1) — the GHTK adapter must call the carrier.
- *
- * <p>The previous test asserted that the generated tracking number starts with
- * "GHTK." - the locally derived, fabricated value. The adapter never contacted
- * GHTK. See {@link GhnCarrierAdapterTest} for the full consequence.</p>
- */
 class GhtkCarrierAdapterTest {
 
     private static final String ENDPOINT = "https://ghtk.test/api/shipments";

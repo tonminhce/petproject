@@ -193,7 +193,7 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
         } else if (order.getStatus() == OrderStatus.CONFIRMED && isAdmin) {
-            // H9 — admin cancel of CONFIRMED must restock (releaseCommitted). The
+
             // release() path would reject the row because it's COMMITTED, not
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)

@@ -20,28 +20,6 @@ import java.math.BigDecimal;
 import java.util.Locale;
 import java.util.UUID;
 
-/**
- * C5 Task 2 — real Stripe provider behind the existing {@link PaymentProvider}
- * port (spec D1: official stripe-java SDK, never raw HTTP). Activated only by
- * {@code SHOP_PAYMENT_PROVIDER=stripe}; fails fast at bean creation when the
- * secret key is missing (D10).
- * <p>Mapping onto the binding port — the port's
- * {@link ProviderResult}{@code (providerEventId, accepted)} carries no
- * attempt-status or client_secret, so:</p>
- * <ul>
- *   <li>a created/replayed Stripe object (succeeded, requires_action,
- *       requires_confirmation, …) is {@code accepted=true} — the payment row
- *       stays PENDING and the lifecycle completes via webhook (C7 contract:
- *       the synchronous capture API never transitions state itself);</li>
- *   <li>a Stripe-side rejection (CardException, infrastructure error) is
- *       {@code accepted=false} with the decline/error code as
- *       {@code providerEventId} — PaymentServiceImpl surfaces PAY-5008.</li>
- * </ul>
- * <p>Idempotency (spec D2): PaymentIntent.create reuses
- * {@code payments.idempotency_key} as Stripe's Idempotency-Key; refunds derive
- * {@code refund-{key}-{amount}} per refund attempt. A duplicate key replays
- * Stripe's cached original — accepted, never an error.</p>
- */
 @Component
 @ConditionalOnExpression("'${shop.payment.provider:}'.equalsIgnoreCase('stripe') || T(org.springframework.util.StringUtils).hasText('${shop.payment.stripe.secret-key:}')")
 @Slf4j
@@ -87,7 +65,7 @@ public class StripeProvider implements PaymentProvider {
             PaymentIntent intent = PaymentIntent.create(params, stripeOptions(idempotencyKey));
             return new ProviderResult(intent.getId(), true);
         } catch (IdempotencyException e) {
-            // D2 — duplicate Idempotency-Key: Stripe replays the cached
+
             // original intent; the adapter treats it as success, never an error.
             log.info("Stripe replayed cached intent for idempotency key {} — treating as accepted", idempotencyKey);
             return new ProviderResult("idempotent-" + idempotencyKey, true);
@@ -110,7 +88,7 @@ public class StripeProvider implements PaymentProvider {
             if (original == null) {
                 return new ProviderResult("stripe-error-intent-not-found", false);
             }
-            // D2 — refund-attempt idempotency derives from the payment's key.
+
             String refundKey = "refund-" + idempotencyKey + "-" + amount.toPlainString();
             RefundCreateParams params = RefundCreateParams.builder()
                     .setPaymentIntent(original.getId())

@@ -28,14 +28,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * H-2 explicit media clear — service level with the REAL mapper (the mocked
- * mapper in {@link ProductServiceImplTest} cannot prove persistence): sending
- * {@code clearMediaId=true} removes the stored {@code media_id} reference, the
- * derived image falls back to the legacy free-text {@code imageUrl} (spec D5),
- * the write-time HEAD gate never fires (nothing to verify on a clear), and the
- * ProductUpdated event still publishes so the search doc refreshes.
- */
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplMediaClearTest {
 

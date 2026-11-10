@@ -25,7 +25,7 @@ public class TaxCalculationController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "tax.calculate", resourceType = "tax-calculation")
     public ApiResponse<TaxCalculateResponse> calculate(@Valid @RequestBody TaxCalculateRequest request) {
-        // F-041 - only order-service may drive a tax calculation; a tax rate
+
         // is money, and the SERVICE role alone is a fleet-wide privilege.
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(taxCalculationService.calculate(request));

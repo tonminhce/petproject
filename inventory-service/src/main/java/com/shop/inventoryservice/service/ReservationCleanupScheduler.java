@@ -121,7 +121,6 @@ public class ReservationCleanupScheduler {
             cacheService.evictAfterCommit(productId);
         });
 
-        // F-012 — the sweep used to move stock WITHOUT emitting the
         // one outbox row per expired reservation, in the same transaction as the
         for (Reservation reservation : batch) {
             inventoryRepository.findByProductId(reservation.getProductId()).ifPresent(inventory -> {

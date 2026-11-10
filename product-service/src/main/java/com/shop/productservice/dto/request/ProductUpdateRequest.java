@@ -36,13 +36,6 @@ public record ProductUpdateRequest(
     Boolean clearMediaId
 ) {
 
-    /**
-     * H-2 cross-field guard: {@code clearMediaId=true} is only meaningful as a
-     * REMOVE — it cannot simultaneously carry a replacement {@code mediaId}.
-     * Surfaced as a property constraint so {@code @Valid} on the controller
-     * rejects the conflicting body with the common 400 validation channel
-     * (ERR-0422-V); the message key resolves from the platform i18n bundles.
-     */
     @AssertTrue(message = "{product.media.clear.conflict}")
     boolean isMediaClearConsistent() {
         return !Boolean.TRUE.equals(clearMediaId) || mediaId == null;

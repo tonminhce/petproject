@@ -16,15 +16,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H-5 relay aging against the real stack (real Postgres, real Liquibase
- * changelog-003 with {@code failed_at}, real Kafka for the replay): the
- * nightly scheduler purges SENT rows past the retention window and ages
- * FAILED rows past the terminal window to DEAD (+ meter + WARN), while YOUNG
- * FAILED rows still REPLAY through the relay (which never polls DEAD). The
- * retention cron is pinned to a never-fire instant — only explicit
- * {@code retain()} / {@code relay()} calls run.
- */
 class MediaOutboxRetentionIT extends AbstractMediaIntegrationTest {
 
     @Autowired

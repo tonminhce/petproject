@@ -10,17 +10,6 @@ import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-/**
- * C5 Task 4 — {@code GET /actuator/health/payment-stripe} (bean name drives
- * the endpoint id). Pings the Stripe API via {@code Balance.retrieve()} —
- * UP/DOWN reflects real reachability, not config presence. The Stripe account
- * id ({@code Account.retrieve()}) rides along as best-effort detail: the
- * balance probe is the liveness signal, a failed account lookup never flips
- * the indicator on its own.
- * <p>Probes are cached for {@link #CACHE_TTL_MS}: health checks fire every few
- * seconds and must not become a Stripe rate-limit vector. The mock provider
- * has no equivalent indicator (conditional on provider=stripe).</p>
- */
 @Component("payment-stripeHealthIndicator")
 @ConditionalOnProperty(name = "shop.payment.provider", havingValue = "stripe")
 public class StripeHealthIndicator implements HealthIndicator {

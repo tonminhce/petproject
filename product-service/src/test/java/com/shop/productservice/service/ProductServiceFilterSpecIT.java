@@ -62,7 +62,6 @@ class ProductServiceFilterSpecIT extends AbstractIntegrationTest {
             .status(ProductStatus.DRAFT)
             .build()).getId();
 
-        // H21: storefront path must default null status → ACTIVE.
         // The service call here bypasses the controller (which already does
         // this), proving the SERVICE layer normalises too — defence in depth
         // so any future caller that forgets the default does not silently

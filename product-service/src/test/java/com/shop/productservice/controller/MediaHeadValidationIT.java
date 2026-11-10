@@ -274,7 +274,7 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
         assertThat(resp.getStatusCode().value()).isEqualTo(400);
         JsonNode json = readBody(resp.getBody());
         assertThat(json.get("code").asText()).isEqualTo("ERR-0422-V");
-        // T2 review carry-over: pin the INTERPOLATED constraint message (the
+
         // raw template "{product.media.clear.conflict}" would not contain this
         // fragment — both bundles render "mediaClearConsistent: clearMediaId=true …").
         assertThat(json.get("errors").get(0).asText())

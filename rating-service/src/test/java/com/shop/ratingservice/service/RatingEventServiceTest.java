@@ -150,18 +150,6 @@ class RatingEventServiceTest {
         assertThat(json.get("visible").booleanValue()).isFalse();
     }
 
-    /**
-     * F-069 (P1) regression — hiding the ONLY visible rating of a product.
-     *
-     * <p>The aggregate query averages over {@code hidden = false and deleted =
-     * false}, so once the last visible rating is hidden the average comes back
-     * NULL. The previous implementation called {@code String.valueOf(null)},
-     * which yields the literal string {@code "null"} (not {@code null}), and
-     * {@code new BigDecimal("null")} threw NumberFormatException. The whole
-     * moderation transaction therefore rolled back with a 500 and the
-     * administrator could not remove the review - the exact situation
-     * moderation exists for.</p>
-     */
     @Test
     void record_withNullAggregateAverage_writesZeroAverageInsteadOfFailing() throws Exception {
         // PostgreSQL returns (NULL, 0) for an aggregate over zero visible rows.

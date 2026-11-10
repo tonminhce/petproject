@@ -8,13 +8,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H40 — composite index proof on real Postgres. App-side @Index is ignored
- * because ddl-auto=validate (R9) keeps Hibernate from creating it; only
- * Liquibase wires the index live. This test introspects pg_indexes (the
- * cheapest authoritative source for "does this index exist") and asserts the
- * (status, next_retry_at) composite index is present after migrations run.
- */
 class WebhookRetryIndexIT extends AbstractIntegrationTest {
 
     @Autowired JdbcTemplate jdbc;

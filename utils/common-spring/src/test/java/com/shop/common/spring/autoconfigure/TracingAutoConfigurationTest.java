@@ -30,11 +30,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D3 + N3 — explicit conditional-bean-creation tests for the tracing stack:
- * the OTLP exporter bean must exist ONLY when OTEL_EXPORTER_OTLP_ENDPOINT is
- * present, while the tracer (and MDC log correlation) always is.
- */
 class TracingAutoConfigurationTest {
 
     private static final String ENDPOINT = "http://127.0.0.1:4318/v1/traces";

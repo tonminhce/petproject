@@ -471,14 +471,13 @@ class OrderServiceImplTest {
         when(idempotencyService.begin(any(), eq(userId.toString()), any())).thenReturn(Optional.empty());
     }
 
-    // H13 — the persist-early contract test moved to OrderCreateSagaTest; the
 // outer createOrder orchestration only verifies that the saga is invoked
 // through Spring's proxy (so @Transactional takes effect).
 
     @Test
     void createOrder_stockReserveFails_releasesPromotionReservationThenThrows() throws Exception {
         stubIdempotency();
-        // H13 — the saga body now lives in OrderCreateSaga (sibling bean). Stub it
+
         // directly so the orchestration test stays focused on the outer createOrder
         // contract (idempotency abort path) without re-testing saga internals.
         when(orderCreateSaga.execute(eq(userId), any(), eq("promo-comp-key")))
@@ -492,7 +491,7 @@ class OrderServiceImplTest {
     @Test
     void createOrder_stockReserveFails_swallowsPromotionReleaseFailure() throws Exception {
         stubIdempotency();
-        // H13 — saga body in OrderCreateSaga. Stub the orchestration throw.
+
         when(orderCreateSaga.execute(eq(userId), any(), eq("promo-down-key")))
             .thenThrow(BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, productId));
 

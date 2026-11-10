@@ -26,11 +26,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 
-/**
- * D4 edge rate-limit matrix against the running gateway: backoffice scope
- * 3/min and search scope 5/min (small limits for a fast burst), other paths
- * unlimited, per-IP buckets, X-RateLimit-Remaining headers, 429 envelope.
- */
 @SpringBootTest(
         classes = {GatewayServiceApplication.class, WebFluxRateLimitTests.WireMockProps.class},
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)

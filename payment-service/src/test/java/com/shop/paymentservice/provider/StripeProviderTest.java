@@ -25,15 +25,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
-/**
- * C5 Task 2 — {@link StripeProvider} contract tests against the stripe-java
- * SDK. The SDK's static entry points ({@code PaymentIntent.create},
- * {@code PaymentIntent.list}, {@code Refund.create}) are statically mocked —
- * no network, no Stripe account. Mapping follows the binding
- * {@link PaymentProvider.ProviderResult} port: a created/cached Stripe object
- * is accepted=true (lifecycle completes via webhook), Stripe-side rejection is
- * accepted=false so the service surfaces PAYMENT_PROVIDER_REJECTED.
- */
 class StripeProviderTest {
 
     private static final UUID PAYMENT_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
@@ -82,7 +73,7 @@ class StripeProviderTest {
 
     @Test
     void captureRequiresActionIntent_isAccepted_scaCompletesViaWebhook() throws Exception {
-        // D3 — SCA: the intent is created unconfirmed (confirm=false); the
+
         // client_secret is consumed by Stripe.js on the client (Phase 9), the
         // lifecycle completes when payment_intent.succeeded arrives by webhook.
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
@@ -135,7 +126,7 @@ class StripeProviderTest {
 
     @Test
     void captureIdempotencyConflict_returnsCachedIntentAsAccepted() throws Exception {
-        // D2 — a duplicate Idempotency-Key replays the cached original intent;
+
         // the adapter treats it as success, never an error.
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class)))
@@ -253,7 +244,7 @@ class StripeProviderTest {
 
     @Test
     void blankSecretKey_failsFastAtBeanCreation() {
-        // D10 — provider=stripe with no credentials must never boot.
+
         com.shop.paymentservice.config.PaymentStripeProperties blank =
                 new com.shop.paymentservice.config.PaymentStripeProperties("", "whsec", "2024-06-20", false);
         assertThatThrownBy(() -> new StripeProvider(blank))

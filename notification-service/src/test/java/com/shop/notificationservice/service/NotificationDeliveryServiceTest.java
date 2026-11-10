@@ -30,11 +30,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * C12 — the SENT transition happens strictly AFTER {@code sender.send}
- * returns (provider ack). A failure inside the send window must land the row
- * in FAILED_RETRYABLE / FAILED_PERMANENT — never leave it claiming SENT.
- */
 @ExtendWith(MockitoExtension.class)
 class NotificationDeliveryServiceTest {
 

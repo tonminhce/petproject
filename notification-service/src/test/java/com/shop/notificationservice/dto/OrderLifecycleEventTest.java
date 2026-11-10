@@ -14,27 +14,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H26 / R1 — {@code OrderLifecycleEvent} must be a Java {@code record}, not a
- * mutable class with Lombok {@code @Getter}/{@code @Setter}/{@code @NoArgsConstructor}.
- *
- * <p>Records already produce a canonical constructor, accessors, equals,
- * hashCode and toString. Adding Lombok on top generates a second builder
- * class with no benefit and creates a foot-gun: Jackson + records uses the
- * {@code @JsonCreator}-discovered canonical-ctor binding, NOT the
- * Lombok-generated builder, so the {@code @Builder} API actively
- * mis-encourages callers to construct records piecemeal in tests while the
- * runtime expects full canonical-ctor serialisation.</p>
- *
- * <p>References:</p>
- * <ul>
- *   <li>JEP 395 (Java 16 records) — the canonical constructor is the
- *       construction API; no builder required.
- *       https://openjdk.org/jeps/395</li>
- *   <li>Lombok {@code @Builder} page.
- *       https://projectlombok.org/features/Builder</li>
- * </ul>
- */
 class OrderLifecycleEventTest {
 
     /**
@@ -60,13 +39,6 @@ class OrderLifecycleEventTest {
                         "transitionedAt", "cancelledAt", "refunded", "items");
     }
 
-    /**
-     * R1 — no Lombok on records. {@code @Builder} would generate a builder
-     * that calls the canonical constructor, but the canonical constructor is
-     * already the construction API; {@code @Getter} is redundant (records
-     * expose accessors); {@code @Setter} is forbidden (records are
-     * immutable).
-     */
     @Test
     void record_hasNoLombokStereotypeAnnotations() {
         assertThat(OrderLifecycleEvent.class.isAnnotationPresent(

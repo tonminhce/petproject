@@ -19,15 +19,6 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/**
- * F-067 (P1) — the GHN adapter must call the carrier.
- *
- * <p>The previous test asserted that the generated tracking number starts with
- * "GHN" - which was the locally derived, fabricated value. The adapter never
- * contacted GHN, so no parcel ever existed while the platform reported a
- * shipment, and the reconciliation scheduler auto-delivered the phantom parcel
- * after seven days, marking the order DELIVERED.</p>
- */
 class GhnCarrierAdapterTest {
 
     private static final String ENDPOINT = "https://ghn.test/api/shipments";

@@ -14,25 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * H-3 reconciliation sweep — the durable backstop for the at-most-once window
- * of the {@code MediaDeleted} consumer (bounded retry + ack-always posture):
- * the consumer can lose a clear to a crash right after its commit, so stale
- * product references must be re-verified EVENTUALLY, not only on event replay.
- * <p>Each cycle examines ONE bounded page ({@code limit}, default 100) of
- * products holding any media reference and HEAD-checks each against
- * media-service through the fail-closed {@link MediaHeadClient}: 200 → the
- * reference is live, keep; 404 → the media is gone, clear via the existing
- * {@link ProductMediaService#clearReference} path (also re-publishes
- * {@code ProductUpdated} so the search doc refreshes).</p>
- * <p>Fail-safe ruling H-3: media being UNAVAILABLE is not evidence that
- * references are dead — the client throws on anything except 200/404, and ANY
- * exception aborts the ENTIRE remaining cycle with a WARN. The sweep never
- * mass-clears references behind an outage; the next cron tick retries. The
- * {@code product_media_sweep_checked_total} / {@code product_media_sweep_cleared_total}
- * counters plus the per-cycle INFO summary make the drift (and its repair)
- * observable.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

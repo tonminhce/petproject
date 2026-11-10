@@ -47,16 +47,6 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D3 — a consumer instrumented through {@link BaseKafkaListenerConfig} continues
- * the trace carried by the W3C traceparent record header: the listener processing
- * span is created with the remote parent from the header. A record WITHOUT the
- * header keeps the previous behavior — a fresh root span.
- *
- * <p>The same wiring is used in production: an {@link ObservationRegistry} bean
- * whose tracing handlers extract from the record. The embedded broker keeps this
- * Docker-free.</p>
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TraceparentHeaderExtractionTest {
 
@@ -199,7 +189,6 @@ class TraceparentHeaderExtractionTest {
             return kafkaListenerContainerFactory();
         }
 
-        // H-1: the base factory delivers the RAW STRING value (the tracing
         // contract only needs the record headers + span context, so the wire
         // payload is not bound to a DTO here). The publish path of this test
         // is unchanged (single-encoded JSON — tolerated wire).

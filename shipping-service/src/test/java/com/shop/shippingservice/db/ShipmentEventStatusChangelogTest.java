@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Regression contract for H48: every persisted shipment-event status must be
+ * Regression contract for every persisted shipment-event status must be
  * accepted by the database check constraint after the webhook retry migration.
  */
 class ShipmentEventStatusChangelogTest {

@@ -60,13 +60,14 @@ class ReconciliationSchedulerTest {
                 .carrier(Carrier.MANUAL)
                 .status(status)
                 .lastCarrierUpdate(lastCarrierUpdate)
+                .carrierAcknowledgedAt(lastCarrierUpdate)
                 .build();
     }
 
     @Test
     void inFlightPastCutoff_flipsToDeliveredFlaggedAutoSavedDeliveredAndCounted() {
         Shipment shipment = shipment(ShipmentStatus.IN_TRANSIT, NOW.minus(Duration.ofDays(8)));
-        when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
                 .thenReturn(List.of(shipment));
         when(writer.saveDelivered(shipment, true)).thenReturn(shipment);
 
@@ -87,7 +88,7 @@ class ReconciliationSchedulerTest {
     @Test
     void pickedUpPastCutoff_alsoFlipsToDelivered() {
         Shipment shipment = shipment(ShipmentStatus.PICKED_UP, NOW.minus(Duration.ofDays(30)));
-        when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
                 .thenReturn(List.of(shipment));
         when(writer.saveDelivered(shipment, true)).thenReturn(shipment);
 
@@ -100,30 +101,30 @@ class ReconciliationSchedulerTest {
 
     @Test
     void cutoffIsNowMinusAutoDeliverDays_soUnderCutoffRowsNeverSurface() {
-        when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
                 .thenReturn(List.of());
 
         scheduler.reconcile();
 
-        verify(repository).findByStatusInAndLastCarrierUpdateBefore(any(),
+        verify(repository).findStaleAcknowledgedShipments(any(),
                 eq(NOW.minus(Duration.ofDays(AUTO_DELIVER_DAYS))));
     }
 
     @Test
     void queriesOnlyInFlightStatuses_createdNeverTouched() {
-        when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
                 .thenReturn(List.of());
 
         scheduler.reconcile();
 
-        verify(repository).findByStatusInAndLastCarrierUpdateBefore(statusesCaptor.capture(), any());
+        verify(repository).findStaleAcknowledgedShipments(statusesCaptor.capture(), any());
         assertThat(statusesCaptor.getValue()).containsExactlyInAnyOrder(
                 ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT, ShipmentStatus.OUT_FOR_DELIVERY);
     }
 
     @Test
     void emptyRepository_noWritesNoPublishNoCounts() {
-        when(repository.findByStatusInAndLastCarrierUpdateBefore(any(), any(Instant.class)))
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
                 .thenReturn(List.of());
 
         scheduler.reconcile();

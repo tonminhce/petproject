@@ -10,14 +10,13 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 
 /**
- * F-031 / F-033 — fail-fast guards for the gateway's two network-edge
- * security postures.
- * <p>Both misconfigurations are silent at runtime: a wildcard CORS pattern with
- * credentials silently accepts every origin, and a zero trusted-proxy hop count
- * silently makes the client-IP trust model either spoofable (behind the
- * ForwardedHeaderTransformer) or collapsed onto the proxy's address. Failing
- * fast at startup turns a silent security regression into a deployment
- * error.</p>
+ * Fail-fast guards for the gateway's two network-edge security postures.
+ * <p>Both misconfigurations are silent at runtime: a wildcard CORS pattern
+ * with credentials silently accepts every origin, and a zero trusted-proxy
+ * hop count silently makes the client-IP trust model either spoofable
+ * (behind the ForwardedHeaderTransformer) or collapsed onto the proxy's
+ * address. Failing fast at startup turns a silent security regression into
+ * a deployment error.</p>
  */
 @Configuration(proxyBeanMethods = false)
 public class GatewaySecurityPostureValidator {

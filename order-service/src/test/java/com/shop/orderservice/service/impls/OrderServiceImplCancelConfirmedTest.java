@@ -30,12 +30,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H9 — admin cancel of a CONFIRMED order must release the COMMITTED
- * reservation (restocking inventory) so the goods return to the available
- * pool. The pre-fix code released only on PENDING and silently skipped
- * CONFIRMED — leaving stock stranded after every admin cancel.
- */
 @ExtendWith(MockitoExtension.class)
 class OrderServiceImplCancelConfirmedTest {
 
@@ -79,7 +73,6 @@ class OrderServiceImplCancelConfirmedTest {
 
         service.cancelOrder(orderId, adminId, /*isAdmin*/ true);
 
-        // H9 — admin cancel CONFIRMED must call releaseCommitted, NOT release.
         verify(stockReservationService, times(1)).releaseCommitted(reservationId);
         verify(stockReservationService, never()).release(any(UUID.class));
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);

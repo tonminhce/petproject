@@ -25,13 +25,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * C12/C17 — the delivery state machine lives in the writer: status
- * transitions are the ONLY way a row reaches SENT (after a provider ack)
- * or a FAILED_* state, and every transition is guarded so a bug elsewhere
- * can never resurrect a settled row. SENT is only reachable from SENDING —
- * never from PENDING — which is exactly the C12 fix.
- */
 @ExtendWith(MockitoExtension.class)
 class NotificationWriterTest {
 
@@ -57,16 +50,6 @@ class NotificationWriterTest {
 
     // ---- insert -------------------------------------------------------
 
-    /**
-     * H23 — the writer is a persistence-layer component: its only job is to
-     * mediate writes to the notifications table through {@link NotificationRepository}.
-     * Per Spring's stereotype guidance, that is exactly what
-     * {@link Repository @Repository} is for (a specialization of {@code @Component}
-     * marking the persistence layer); {@link Service @Service} should be reserved
-     * for classes that own business logic. See:
-     * https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html
-     * https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html
-     */
     @Test
     void writerIsAnnotatedAsRepositoryNotService() {
         assertThat(NotificationWriter.class.isAnnotationPresent(Repository.class))
@@ -194,7 +177,7 @@ class NotificationWriterTest {
 
     @Test
     void markSent_fromPending_rejected_c12Guard() {
-        // C12 core guard: SENT must never be written before the send window opened.
+
         Notification n = row(NotificationStatus.PENDING);
         when(repository.findById(n.getId())).thenReturn(Optional.of(n));
 

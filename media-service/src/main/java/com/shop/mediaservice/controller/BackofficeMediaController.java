@@ -20,13 +20,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
-/**
- * D3 backoffice surface — ADMIN-gated upload (multipart → 201 created, or
- * 200 + {@code duplicate:true} when the SHA-256 dedup resolves to the
- * existing media) and soft delete (repeat delete → 409 MED-12005).
- * Class-level {@code hasRole('ADMIN')} mirrors the fleet backoffice pattern
- * (BackofficeSearchController / BackofficeRatingController).
- */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_MEDIAS)
 @RequiredArgsConstructor

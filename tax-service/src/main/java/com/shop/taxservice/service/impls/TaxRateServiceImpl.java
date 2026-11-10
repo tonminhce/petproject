@@ -77,7 +77,7 @@ public class TaxRateServiceImpl implements TaxRateService {
     public void delete(UUID id) {
         TaxRate taxRate = taxRateRepository.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
-        // F-037 — same contract as TaxClassServiceImpl.delete: a destructive
+
         // configuration change must be attributable to a real actor.
         taxRate.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         taxRateRepository.save(taxRate);

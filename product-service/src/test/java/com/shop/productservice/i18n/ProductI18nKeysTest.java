@@ -10,13 +10,6 @@ import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H-2 — every product-local message key surfaced by the media-reference
- * semantics must exist in BOTH bundles (common-spring is on the classpath as
- * a dependency jar). Pins the {@code product.media.clear.conflict} binding
- * error (clear=true together with a mediaId) so neither locale ever renders
- * the raw template key.
- */
 class ProductI18nKeysTest {
 
     private static final List<String> KEYS = List.of(

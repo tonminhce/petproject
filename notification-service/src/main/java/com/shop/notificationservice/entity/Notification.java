@@ -57,7 +57,6 @@ public class Notification extends AbstractMappedEntity {
     @Builder.Default
     private NotificationStatus status = NotificationStatus.PENDING;
 
-    // C12/C17 — retry bookkeeping (changelog-002). nextRetryAt doubles as the
     // SENDING heartbeat: the retry scheduler reclaims rows whose heartbeat has
     // elapsed (crash mid-send), so a delivery attempt is never silently lost.
     @Column(name = "retry_count", nullable = false)

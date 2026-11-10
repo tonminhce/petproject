@@ -350,16 +350,6 @@ class PaymentControllerTest {
             .andExpect(jsonPath("$.code").value("PAY-5006"));
     }
 
-    /**
-     * F-041 (P1) regression - a service token must be bound to the service that
-     * owns the operation.
-     *
-     * <p>Every service client in the realm carries the single realm role
-     * SERVICE, so before this control a token minted for any service client was
-     * accepted by every SERVICE-gated endpoint in the fleet - including a
-     * capture or a refund on ANY payment id. One leaked service secret
-     * therefore granted fleet-wide control over money.</p>
-     */
     @Test
     void capture_fromADifferentServiceClient_isForbidden() throws Exception {
         mockMvc.perform(post("/api/v1/payments/{id}/capture", paymentId)
@@ -371,10 +361,6 @@ class PaymentControllerTest {
         verify(paymentService, never()).capture(any(UUID.class));
     }
 
-    /**
-     * F-041 - a human administrator is unaffected: the backoffice still drives
-     * refunds through the ADMIN role.
-     */
     @Test
     void refund_byAdmin_isAllowed() throws Exception {
         when(paymentService.refund(paymentId)).thenReturn(pendingPayment());

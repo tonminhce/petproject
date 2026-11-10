@@ -22,14 +22,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H-4 client wire proofs over REAL HTTP (product MediaHeadClient precedent):
- * the fail-closed contract of {@link MediaReferenceClient} — a 200 with a
- * parseable body is the ONLY path to a count; 5xx, malformed bodies, and
- * connection resets all degrade to an EMPTY result (which the checker turns
- * into fail-safe REFERENCED). The raw downstream exception never escapes the
- * client.
- */
 class MediaReferenceClientIT extends AbstractMediaIntegrationTest {
 
     static final WireMockServer productServer = new WireMockServer(0);

@@ -35,18 +35,6 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-001 — a poison record must reach the dead-letter topic.
- *
- * <p>The consumer boundary used to log an unbindable payload and skip it: the
- * handler never ran, the offset advanced as if the event had been handled, and
- * no dead-letter entry existed. The event was lost with no way to see it and
- * no way to replay it.</p>
- *
- * <p>This test drives the real container against an embedded Kafka broker: an
- * unbindable payload is published, the listener must NOT receive it, and the
- * record must appear on the {@code .DLT} topic.</p>
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BaseKafkaConsumerDeadLetterTest {
 

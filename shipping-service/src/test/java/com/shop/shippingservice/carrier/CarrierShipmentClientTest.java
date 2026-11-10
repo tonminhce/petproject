@@ -20,15 +20,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/**
- * F-067 (P1) — the carrier adapters must call the real carrier and must fail
- * loudly when they cannot.
- *
- * <p>The previous GHN/GHTK adapters derived a tracking number from the order id
- * and never contacted the carrier, so the platform produced shipments that no
- * carrier knew about - and the reconciliation scheduler then auto-delivered
- * them, marking the order DELIVERED for a parcel that was never shipped.</p>
- */
 class CarrierShipmentClientTest {
 
     private static final String ENDPOINT = "https://carrier.test/api/shipments";

@@ -12,17 +12,6 @@ import java.sql.SQLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H32 — {@link ApiExceptionHandler} must NOT echo raw DB constraint names
- * (e.g. {@code users_username_key}, {@code ck_payment_status_d}) back to the
- * client. Those messages reveal schema layout (column names, check names,
- * unique indexes) — the kind of leak an attacker uses to map the data model
- * before crafting follow-up requests.
- *
- * <p>The handler continues to log the root cause at ERROR (so operators can
- * still debug), but the client-facing {@link ApiResponse#getMessage()} carries
- * only the canonical i18n string for the error code, with no DB-side detail.</p>
- */
 class ApiExceptionHandlerConstraintLeakTest {
 
     private final ApiExceptionHandler handler = new ApiExceptionHandler();

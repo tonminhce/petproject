@@ -30,14 +30,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * D3 — the producer wrapper injects the W3C traceparent record header from the
- * CURRENT span context, and omits the header entirely when no span is active.
- *
- * <p>R1 fix — the publisher forwards the payload as a raw String (no Jackson
- * re-encoding), so the assertions below check {@code record.value()} as a
- * String and the {@code KafkaTemplate} generic is {@code <String, String>}.</p>
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class KafkaMessagePublisherTest {
@@ -135,13 +127,6 @@ class KafkaMessagePublisherTest {
         assertThat(record.headers().headers("traceparent")).isEmpty();
     }
 
-    /**
-     * R1 fix — the publisher must forward non-String values as their
-     * {@code toString()} form. This is the existing fleet contract: relays
-     * call {@code publish(topic, key, event.getPayload())} where payload is a
-     * String, and the wire bytes are exactly that String. Tests assert the
-     * publisher does NOT call Jackson on the value (no double-encoding).
-     */
     @Test
     void publishCoercesNonStringToString() {
         stubSend();

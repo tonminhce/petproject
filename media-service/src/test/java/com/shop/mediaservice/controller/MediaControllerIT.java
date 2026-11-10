@@ -141,13 +141,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(upload(TestImages.jpeg(64, 64), null).getStatusCode().value()).isEqualTo(401);
     }
 
-    /**
-     * T3 review M3 — the 415 MED-12003 contract asserted at the CONTROLLER
-     * level: over real HTTP the part's Content-Type is guessed from the
-     * filename (Spring's MediaTypeFactory), "clip.gif" arrives as image/gif,
-     * the upload allowlist rejects it, and the API envelope maps to 415 with
-     * the MED code — nothing stored.
-     */
     @Test
     @DisplayName("real-HTTP multipart with an allowlist-external content type → 415 MED-12003")
     void uploadViaRealHttp_gifContentType_415Med12003() throws Exception {

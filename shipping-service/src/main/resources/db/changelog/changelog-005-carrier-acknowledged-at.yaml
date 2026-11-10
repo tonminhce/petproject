@@ -1,0 +1,21 @@
+databaseChangeLog:
+  # The stale sweep must auto-deliver only shipments the carrier has taken
+  # over. Until now the gate was implicit: only a shipment with a
+  # last_carrier_update could be swept, which also left a shipment the
+  # carrier accepted but never reported on stuck in flight forever.
+  # This column records the handover explicitly; the sweep reads
+  # COALESCE(last_carrier_update, carrier_acknowledged_at).
+  - changeSet:
+      id: 005-carrier-acknowledged-at
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE shipments
+              ADD COLUMN IF NOT EXISTS carrier_acknowledged_at timestamptz
+        - sql:
+            sql: >-
+              UPDATE shipments
+              SET carrier_acknowledged_at = last_carrier_update
+              WHERE carrier_acknowledged_at IS NULL
+                AND last_carrier_update IS NOT NULL

@@ -154,11 +154,6 @@ class TaxCalculationControllerTest {
             .andExpect(jsonPath("$.code").value("TAX-8002"));
     }
 
-    /**
-     * F-041 — a tax rate is money, so the calculation must be bound to the
-     * service that owns it. Before the guard, any service client in the realm
-     * could compute a tax rate.
-     */
     @Test
     void calculate_fromADifferentServiceClient_isForbidden() throws Exception {
         mockMvc.perform(post("/api/v1/tax/calculate")

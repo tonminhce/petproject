@@ -197,7 +197,7 @@ public class KeycloakAdminClient {
     }
 
     /**
-     * F-004 — is the direct-access (password / ROPC) grant still enabled for a
+     * is the direct-access (password / ROPC) grant still enabled for a
      * client?
      *
      * <p>The platform's own login flow uses the Resource Owner Password

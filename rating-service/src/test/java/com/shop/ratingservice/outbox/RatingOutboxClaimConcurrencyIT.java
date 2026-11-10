@@ -19,16 +19,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * C14 proof on real Postgres (Testcontainers): two concurrent
- * {@code claimOnePending} attempts must never return the same PENDING row.
- * The FOR UPDATE SKIP LOCKED hint makes the second claimer skip the locked
- * head row and get an EMPTY claim — the "another pod grabbed it" signal — so
- * two relay instances can never double-publish the same outbox row (the
- * review-flagged 2-instance double-publish race). After the first claimer
- * commits, the still-PENDING row is claimable again (progress resumes,
- * exactly-once-per-claim-window preserved).
- */
 class RatingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
 
     @DynamicPropertySource

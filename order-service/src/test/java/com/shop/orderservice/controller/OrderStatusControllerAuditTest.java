@@ -111,12 +111,6 @@ class OrderStatusControllerAuditTest {
         assertThat(event.toJson()).contains("\"action\":\"order.deliver\"");
     }
 
-    /**
-     * H-6: a SERVICE token confirming an order passes the actor label
-     * {@code service:<azp>} into the service layer (idempotency rows key on it)
-     * and emits the service-shaped audit line — the service-account UUID sub
-     * never surfaces as the actor.
-     */
     @Test
     void confirm_byServiceToken_passesServiceLabelAndEmitsServiceAudit() throws Exception {
         UUID orderId = UUID.fromString("00000000-0000-0000-0000-00000000f005");

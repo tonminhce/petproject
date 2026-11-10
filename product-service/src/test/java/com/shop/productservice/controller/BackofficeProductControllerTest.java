@@ -266,7 +266,7 @@ class BackofficeProductControllerTest {
 
     @Test
     void update_clearFlagTogetherWithMediaId_conflictingInput_rejected400() throws Exception {
-        // H-2: clear=true + replacement mediaId is ambiguous — binding-time
+
         // validation rejects it on the common 400 channel (ERR-0422-V) with
         // the interpolated i18n message (both bundle texts name the flag; the
         // rendered locale depends on the request — see ProductI18nKeysTest

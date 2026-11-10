@@ -15,16 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * H-1 typed-bind contract at the {@link BaseKafkaConsumer} boundary: the
- * raw-wire {@code processMessage} overload unwraps-once and binds the typed
- * event (ISO-8601 instants included, via jsr310) before the handler runs.
- * F-001 — a payload that cannot be bound is a POISON RECORD: the consumer
- * throws so the container's error handler retries it and then routes it to the
- * dead-letter topic. The previous behaviour (log and skip) advanced the offset
- * as if the event had been handled, so the event was lost with no DLQ entry and
- * nothing to replay.
- */
 class BaseKafkaConsumerTypedBindTest {
 
     /** Mirror of a fleet lifecycle DTO: UUID identity + ISO instant fields. */

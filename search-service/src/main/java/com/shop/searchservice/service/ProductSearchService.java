@@ -45,7 +45,7 @@ public class ProductSearchService {
                 .id(event.productId().toString())
                 .document(document));
         } catch (IOException | ElasticsearchException ex) {
-            // C18 fix — surface a domain exception so ApiExceptionHandler maps it
+
             throw BusinessException.of(
                 ErrorCode.SEARCH_INDEX_FAILED,
                 event.productId());

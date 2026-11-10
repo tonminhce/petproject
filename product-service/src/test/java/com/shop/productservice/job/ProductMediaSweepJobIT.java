@@ -30,15 +30,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H-3 reconciliation sweep over REAL HTTP (WireMock-backed media + client-
- * credentials token stub, MediaHeadValidationIT precedent): a dangling product
- * reference (HEAD 404) is cleared and re-published as ProductUpdated; a live
- * reference (HEAD 200) is kept; media being DOWN (fail-closed client) must
- * skip the ENTIRE cycle — no clears, no re-publication (never mass-clear
- * behind an outage). The cron is pinned to a never-fire instant so only the
- * explicit {@code sweep()} invocations run.
- */
 class ProductMediaSweepJobIT extends AbstractIntegrationTest {
 
     static final WireMockServer mediaServer = new WireMockServer(0);

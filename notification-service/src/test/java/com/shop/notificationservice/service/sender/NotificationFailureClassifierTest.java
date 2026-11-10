@@ -10,13 +10,6 @@ import java.net.UnknownHostException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * C17 — failure classification drives the state machine: transient failures
- * (IO, timeouts, SMTP 4xx/5xx, auth hiccups) schedule a retry; permanent ones
- * (invalid/unknown recipient) go straight to FAILED_PERMANENT — retrying a
- * bad address is pure noise. The SMTP sender wraps everything in
- * IllegalStateException, so the classifier must walk the cause chain.
- */
 class NotificationFailureClassifierTest {
 
     private final NotificationFailureClassifier classifier = new NotificationFailureClassifier();

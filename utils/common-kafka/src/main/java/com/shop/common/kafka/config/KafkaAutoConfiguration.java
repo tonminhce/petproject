@@ -76,11 +76,6 @@ public class KafkaAutoConfiguration {
         return new KafkaTemplate<>(factory);
     }
 
-    /**
-     * F-017 - the replay path for records that were dead-lettered. Without it
-     * the dead-letter topic only makes the loss visible; the operator has
-     * nothing to send the record back with.
-     */
     @Bean
     @ConditionalOnMissingBean
     public DeadLetterReplayService deadLetterReplayService(
@@ -90,12 +85,6 @@ public class KafkaAutoConfiguration {
                 kafkaProperties.getBootstrapServers(), "shop");
     }
 
-    /**
-     * F-017 — the operational replay entry point. OFF by default: the bean is
-     * only registered when the operator explicitly enables it, and it is a
-     * WRITE operation, so it is not reachable over the web unless it is also
-     * added to management.endpoints.web.exposure.include.
-     */
     @Bean
     @ConditionalOnClass(org.springframework.boot.actuate.endpoint.annotation.Endpoint.class)
     @ConditionalOnProperty(prefix = "shop.kafka.dlq-replay", name = "enabled", havingValue = "true")

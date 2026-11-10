@@ -74,7 +74,6 @@ class RatingServiceImplEditTest {
 
         RatingResponse response = service.edit(userId, productId, editRequest());
 
-        // D6: edit sets rating+comment+editedAt; verified/hidden untouched.
         assertThat(own.getRating()).isEqualTo(2);
         assertThat(own.getComment()).isEqualTo("Edited comment, still decent value");
         assertThat(own.getEditedAt()).isNotNull();

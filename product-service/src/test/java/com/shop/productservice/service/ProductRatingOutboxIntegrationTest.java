@@ -19,7 +19,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Spec D4: {@code ProductRatingService.apply} must emit a ProductUpdated
+ * Spec {@code ProductRatingService.apply} must emit a ProductUpdated
  * outbox row in the SAME transaction as the product row (REQUIRED propagation
  * joins). By the time {@code apply} returns, both rows are committed together
  * — asserted here against the real Postgres outbox table (mirrors the

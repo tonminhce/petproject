@@ -203,17 +203,11 @@ class UserServiceImplTest {
 
         assertEquals("Password changed successfully", result);
         verify(keycloakAdminClient).resetUserPassword("kc-123", "Newpass1", false);
-        // F-052 — the sessions established with the OLD password must be
+
         // revoked; Keycloak's reset-password endpoint does not end them.
         verify(keycloakAdminClient).logoutUser("kc-123");
     }
 
-    /**
-     * F-052 — a revocation failure must NOT be reported as a failed password
-     * change: the credential has already been changed, and telling the caller
-     * that it failed would leave the user believing the old password is still
-     * in place.
-     */
     @Test
     void changePasswordSucceedsEvenWhenSessionRevocationFails() {
         User user = newUser();
@@ -317,7 +311,7 @@ class UserServiceImplTest {
     }
 
     // ------------------------------------------------------------------
-    // C1 — server-side role whitelist on self-registration. ADMIN/SERVICE/
+
     // MANAGER must NOT be assignable through the public sign-up endpoint,
     // even when the request payload sends them. The whitelist only keeps
     // {USER}; anything else is silently dropped.
@@ -365,16 +359,6 @@ class UserServiceImplTest {
                 "Alice Wonder", "Passw0rd", List.of("USER"));
     }
 
-    /**
-     * F-061 (P1) — a self-registration whose requested roles are ALL
-     * privileged must still receive the base USER role.
-     *
-     * <p>The previous behaviour filtered every requested role away and used
-     * the resulting EMPTY list for both the Keycloak role assignment and the
-     * local {@code user_role} rows, creating an account with zero realm roles:
-     * the customer could sign in but every authorization rule failed, and the
-     * account was permanently broken without operator intervention.</p>
-     */
     @Test
     void registerAllDisallowedRolesFallsBackToUser() {
         RegisterRequest req = registerRequestWithRoles(Set.of("ADMIN", "SERVICE", "MANAGER"));

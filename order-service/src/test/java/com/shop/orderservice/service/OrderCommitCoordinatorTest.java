@@ -181,7 +181,6 @@ class OrderCommitCoordinatorTest {
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("INV-3003"));
 
-        // D4 — the failure propagates; already-committed targets are still compensated
         verify(inventoryClient, never()).releaseCommitted(r2);   // never committed → never compensated
         verify(inventoryClient).releaseCommitted(r1);
         verify(promotionClient).releaseCommitted(promoId);

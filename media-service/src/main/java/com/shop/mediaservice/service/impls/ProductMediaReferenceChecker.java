@@ -8,22 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * H-4 PRODUCTION implementation of the {@link MediaReferenceChecker} port:
- * asks product-service (via {@link MediaReferenceClient}, SERVICE token) how
- * many live products still reference the media, and answers REFERENCED when
- * the count is non-zero. Replaces the fail-safe-always Noop default of the
- * media epic (F-3) — purge candidates are now checked for real.
- * <p><strong>PURGE POLICY (H-4, fail-safe):</strong> when the checker cannot
- * PROVE the media is unreferenced — product outage, non-2xx, timeout,
- * malformed body (client answers empty) — the answer is REFERENCED: the purge
- * job skips the media with a WARN and retries next cycle. Purge never
- * hard-deletes on doubt; soft-deleted objects accumulating during an outage
- * is the accepted cost. (The job additionally treats ANY exception thrown by
- * this checker the same way — belt and braces for failure modes outside the
- * client's mapped ones.) A successful count of 0 is the ONLY purge-green
- * answer.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

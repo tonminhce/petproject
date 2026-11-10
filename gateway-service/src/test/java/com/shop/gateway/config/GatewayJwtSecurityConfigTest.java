@@ -10,13 +10,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-032 / F-040 — the reactive edge validates the token's client identity.
- *
- * <p>The gateway is the edge, so it is the place where a token minted for the
- * wrong client must be rejected. The provisioned Keycloak realm emits no
- * {@code aud} claim, so the {@code azp} claim is the discriminator.</p>
- */
 class GatewayJwtSecurityConfigTest {
 
     private static final String ISSUER = "http://keycloak:8080/realms/ecommerce";

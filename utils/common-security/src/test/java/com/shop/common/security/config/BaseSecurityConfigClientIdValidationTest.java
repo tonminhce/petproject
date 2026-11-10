@@ -10,23 +10,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-040 — client-identity validation via the {@code azp} claim.
- *
- * <p>Runtime evidence against the provisioned Keycloak 26 realm (production
- * audit): the realm has no audience mapper and no client scopes, so every
- * access token it mints carries NO {@code aud} claim - only {@code azp}, the
- * client the token was issued to:</p>
- *
- * <pre>
- *   user token     -> azp=ecommerce-client, aud absent
- *   admin token    -> azp=ecommerce-client, aud absent
- *   service token  -> azp=order-service,   aud absent
- * </pre>
- *
- * <p>The validator therefore reads {@code azp}. A token minted for a client the
- * service does not accept must be rejected.</p>
- */
 class BaseSecurityConfigClientIdValidationTest {
 
     private static final String ISSUER = "http://keycloak:8080/realms/ecommerce";

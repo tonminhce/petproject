@@ -21,23 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-/**
- * H31 — {@link S3ObjectStorageService#download(String, String)} MUST release the underlying
- * AWS SDK {@link ResponseInputStream} when it returns a {@link StorageObject}.
- *
- * <p>The earlier implementation handed the live S3 stream out as
- * {@code StorageObject.content()} and relied on the caller to close it. If the caller
- * skipped the close (or read failed mid-stream), the HTTP connection backing
- * the {@code ResponseInputStream} was not returned to the pool — the classic
- * "fd leak" the report flagged. The fix wraps the S3 call in
- * try-with-resources and buffers the body before returning, so the S3 stream
- * is always closed before the storage call returns.</p>
- *
- * <p>The fake stream here is a plain {@link InputStream} wrapped in
- * {@link ResponseInputStream} whose {@code close()} flips a sentinel flag —
- * the test asserts that flag is true after {@code download()} returns,
- * proving the S3-side resource was released.</p>
- */
 @ExtendWith(MockitoExtension.class)
 class S3ObjectStorageServiceDownloadLeakTest {
 
@@ -72,7 +55,6 @@ class S3ObjectStorageServiceDownloadLeakTest {
 
         StorageObject obj = service.download("test", "k");
 
-        // H31 pin: the S3 backing stream is closed by download() itself, before
         // the StorageObject is handed to the caller. The caller's close() on
         // .content() is now an idempotent cleanup of an in-memory copy.
         assertThat(underlyingClosed.get())
@@ -120,7 +102,7 @@ class S3ObjectStorageServiceDownloadLeakTest {
         StorageObject obj;
         try {
             obj = service.download("test", "k");
-            // H31: even if readAllBytes() in download() blows up, the S3 stream
+
             // must be closed (try-with-resources) before the exception propagates.
             assertThatNoException().isThrownBy(() -> obj.content().readAllBytes());
         } catch (RuntimeException expected) {

@@ -48,7 +48,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 
     /**
-     * H-5 relay aging: flips every FAILED row whose {@code failed_at} is past
+     * Relay aging: flips every FAILED row whose {@code failed_at} is past
      * the terminal window to DEAD (one bulk UPDATE — DEAD is terminal, the
      * relay never polls it again).
      *

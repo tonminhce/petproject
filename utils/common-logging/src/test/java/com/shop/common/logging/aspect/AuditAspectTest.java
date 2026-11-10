@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Wires the {@link AuditAspect} through a real AspectJ proxy and asserts the
- * D6 binding end-to-end at the unit level: actor from the security context,
+ * binding end-to-end at the unit level: actor from the security context,
  * resourceId from path variables, outcome from the joinpoint result, ids from
  * MDC — and, critically, PII (email/name/username/title) never appearing in
  * the serialized event.

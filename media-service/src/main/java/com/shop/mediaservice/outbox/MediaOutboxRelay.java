@@ -14,33 +14,32 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * D4 relay: polls due outbox rows in insertion order and publishes them
- * to Kafka, key = {@code aggregateId} (= mediaId, per-media partition
- * ordering). Scheduling shape ports rating-service's outbox relay:
- * fixed-delay poll, one batch per tick, first publish failure breaks the
- * loop — with per-media partition ordering the head-of-queue row is on the
- * same partition as everything behind it, so blocking preserves order.
- * No DLT: a failed row stays PENDING (up to {@code max-retries}, then
- * FAILED), and FAILED rows are REPLAYED on subsequent cycles (one attempt
- * per row per cycle, batch-capped, first-failure break — no hot loop), so
- * a broker outage past {@code max-retries} delays delivery instead of
- * killing it. Containment fleet posture.
- * <p>H-5: FAILED is deliberately NOT terminal — but it is not forever either.
- * A parked row is stamped {@code failed_at} (cleared again on any later
- * success) and the nightly {@link MediaOutboxRetentionScheduler} ages
- * FAILED rows past the terminal window to DEAD, which this relay never
- * polls. Replay for younger FAILED rows continues unchanged.</p>
- * <p>Type-agnostic by design: the row carries its eventType and FULL
- * snapshot payload; the relay publishes whatever the row carries and
+ * Polls due outbox rows in insertion order and publishes them to Kafka,
+ * keyed by {@code aggregateId} (the media id), so every event of one media
+ * lands on one partition.
+ * <p>Scheduling shape: fixed-delay poll, one batch per tick, and the first
+ * publish failure breaks the loop. Because the key is the partition key,
+ * the head-of-queue row shares its partition with everything behind it, so
+ * breaking on failure preserves the per-media order.</p>
+ * <p>No dead-letter topic: a failed row stays PENDING (up to
+ * {@code max-retries}, then FAILED) and FAILED rows are REPLAYED on
+ * subsequent cycles — one attempt per row per cycle, batch-capped, with the
+ * same first-failure break, so there is no hot loop. A broker outage past
+ * {@code max-retries} delays delivery instead of killing it.</p>
+ * <p>FAILED is deliberately not terminal, but not forever either: a parked
+ * row is stamped {@code failed_at} (cleared again on any later success) and
+ * the nightly {@link MediaOutboxRetentionScheduler} ages FAILED rows past
+ * the terminal window to DEAD, which this relay never polls. Replay of
+ * younger FAILED rows continues unchanged.</p>
+ * <p>Type-agnostic by design: the row carries its event type and a FULL
+ * snapshot payload, the relay publishes whatever the row carries, and
  * consumers ack-skip unknown types.</p>
- * <p>Due rows (PENDING or replayable FAILED) are claimed one at a time
- * via {@link OutboxEventRepository#claimOneDue} (PESSIMISTIC_WRITE + SKIP
- * LOCKED) inside a per-event {@link TransactionTemplate} transaction: the row
- * lock spans the Kafka publish and the status save, so a second relay
+ * <p>Due rows (PENDING or replayable FAILED) are claimed one at a time via
+ * {@link OutboxEventRepository#claimOneDue} (PESSIMISTIC_WRITE + SKIP
+ * LOCKED) inside a per-event {@link TransactionTemplate} transaction: the
+ * row lock spans the Kafka publish and the status save, so a second relay
  * instance can never claim and double-publish the same row — it gets an
- * empty claim and moves on. Ordering (id ASC across both due statuses,
- * head-of-line break on failure) is preserved because the claim always takes
- * the lowest still-due id.</p>
+ * empty claim and moves on.</p>
  */
 @Component
 @Slf4j

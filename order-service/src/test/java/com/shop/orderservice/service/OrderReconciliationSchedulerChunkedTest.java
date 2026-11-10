@@ -37,12 +37,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H38 — chunked reconciliation. With 100 stuck orders and a batch-size of
- * 50, two consecutive {@code reconcileStuckOrders()} calls process all 100
- * orders — the bounded chunk guarantees the second call picks up where
- * the first left off (or rather, processes the remaining 50).
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class OrderReconciliationSchedulerChunkedTest {

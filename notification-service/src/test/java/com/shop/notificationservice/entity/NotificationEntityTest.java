@@ -5,12 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * C16 — fleet soft-delete convention: every business entity extending
- * {@code AbstractMappedEntity} carries {@code @SQLRestriction("deleted = false")}
- * (Payment, Order, Media, User, …) so Hibernate auto-filters tombstoned rows.
- * Notification was the only entity missing it.
- */
 class NotificationEntityTest {
 
     @Test

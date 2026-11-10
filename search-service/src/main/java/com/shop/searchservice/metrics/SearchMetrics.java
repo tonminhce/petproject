@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
  * RatingMetrics/OrderMetrics pattern):
  * <ul>
  *   <li>{@code search_queries_total{sort}} — counter incremented once per
- *       executed query, tagged with the RESOLVED sort (spec D6 / F3: an
+ *       executed query, tagged with the RESOLVED sort (spec D6 / an
  *       empty-q browse without an explicit sort is tagged {@code newest},
  *       never {@code relevance}).</li>
  * </ul>

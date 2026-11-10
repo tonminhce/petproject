@@ -6,18 +6,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * H41 — producer defaults were missing {@code batch.size}, {@code linger.ms},
- * {@code compression.type=lz4} and {@code enable.idempotence=true}. Without
- * those the fleet's KafkaTemplate sent one record per network round-trip
- * with no compression, no batching window, and at-most-once delivery on a
- * broker failover. Batching + linger + lz4 cut payload + wire cost; idempotent
- * producer + acks=all gives exactly-once-per-attempt semantics.
- *
- * <p>Wire contract (R1) is unchanged: {@code KafkaMessagePublisher} continues
- * to forward the payload as a raw String (single-encoded JSON). The producer
- * properties map only governs transport-layer behaviour.</p>
- */
 class KafkaPropertiesProducerDefaultsTest {
 
     @Test
@@ -25,7 +13,6 @@ class KafkaPropertiesProducerDefaultsTest {
         KafkaProperties props = new KafkaProperties();
         Map<String, Object> producer = props.buildProducerProperties();
 
-        // H41 — pin the four transport-layer defaults.
         assertThat(producer)
                 .containsEntry("compression.type", "lz4")
                 .containsEntry("enable.idempotence", true);

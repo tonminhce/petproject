@@ -32,11 +32,6 @@ import com.shop.common.security.service.ServiceCallerGuard;
 @Import({BaseSecurityConfig.class, CorsAutoConfigurer.class})
 public class SecurityAutoConfiguration {
 
-    /**
-     * F-041 — binds a service-to-service call to the service that owns it, so
-     * a token minted for one service client cannot drive another service's
-     * money or stock operations.
-     */
     @Bean
     @ConditionalOnMissingBean
     public ServiceCallerGuard serviceCallerGuard() {

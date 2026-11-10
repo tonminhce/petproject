@@ -91,6 +91,10 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .build();
         CarrierAdapter.ShipmentDraft draft = adapter.createShipment(orderId);
         shipment.setTrackingNumber(draft.trackingNumber());
+        // The carrier handed back a tracking number, so it has taken the
+        // shipment over: the stale sweep may close it out if the carrier
+        // never reports.
+        shipment.setCarrierAcknowledgedAt(clock.instant());
         shipment.setStatus(draft.initialStatus());
         shipment.setAutoDelivered(draft.initialStatus() == ShipmentStatus.DELIVERED);
         try {
@@ -149,6 +153,7 @@ public class ShipmentServiceImpl implements ShipmentService {
         }
         shipment.setTrackingNumber(trackingNumber.trim());
         shipment.setLastCarrierUpdate(clock.instant());
+        shipment.setCarrierAcknowledgedAt(clock.instant());
         return advance(shipment, ShipmentStatus.PICKED_UP);
     }
 

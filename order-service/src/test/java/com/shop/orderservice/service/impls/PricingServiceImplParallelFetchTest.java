@@ -22,18 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-/**
- * H14 — five products fetched in parallel must take roughly the slowest
- * single fetch, not the sum. The pre-fix design ran the loop serially —
- * five products × RTT. With simulated per-fetch latency of 200ms each, the
- * wall time drops from ~1000ms (sum) to ~250ms (slowest + scheduling
- * overhead) when the fan-out executor runs them in parallel.
- *
- * <p>This is a perf-budget regression test, not a strict-equality assertion:
- * we assert wall ≤ slowest + 100ms tolerance. A future refactor that
- * accidentally reverts to a serial loop would push wall past 1000ms and
- * trip the assertion.</p>
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PricingServiceImplParallelFetchTest {
@@ -43,7 +31,7 @@ class PricingServiceImplParallelFetchTest {
     @Mock PromotionServiceClient promotionClient;
 
     private static final long PER_FETCH_LATENCY_MS = 200L;
-    // H14 — wall budget is "much less than the sum" not "exactly the slowest".
+
     // The fan-out executor pool size = 2*N_cpu threads, so on a 2-core CI box
     // 5 tasks schedule as ~3 batches (~600ms worst case). The test asserts
     // wall < 80% of the serial-equivalent (5 * 200 = 1000ms) — a serial loop

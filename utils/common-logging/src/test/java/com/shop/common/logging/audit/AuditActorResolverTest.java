@@ -11,11 +11,6 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * D6 binding: actor is JWT {@code sub} (user) or {@code clientId}/{@code azp}
- * (service) — email/phone/name are never read as the identifier, even when
- * present on the token.
- */
 class AuditActorResolverTest {
 
     @AfterEach

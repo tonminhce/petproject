@@ -82,10 +82,10 @@ public abstract class BaseKafkaConsumer<K, V> {
 
     /**
      * Unwrap-once + typed bind: a textual top-level node (the LEGACY
-     * double-encoded wire — a JSON string token wrapping the event JSON;
-     * H-1 defense-in-depth for in-flight records) is unwrapped and parsed
+     * double-encoded wire — a JSON string token wrapping the event JSON —
+     * is unwrapped and parsed
      * again; a non-textual node binds directly (the production single-encoded
-     * wire since R1). Any decode failure returns {@code null} so the caller
+     * wire). Any decode failure returns {@code null} so the caller
      * ack-skips.
      */
     private V decodeContained(String rawValue, Class<V> type) {

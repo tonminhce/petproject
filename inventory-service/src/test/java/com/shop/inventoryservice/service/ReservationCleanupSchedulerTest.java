@@ -62,7 +62,7 @@ class ReservationCleanupSchedulerTest {
                 eq(ReservationStatus.PENDING), any(Instant.class), any(PageRequest.class)))
             .thenReturn(List.of(expired))
             .thenReturn(List.of());
-        // F-011 — the sweep CLAIMS the row before it moves any stock.
+
         when(reservationRepository.claimForExpiry(
                 expired.getId(), ReservationStatus.PENDING, ReservationStatus.EXPIRED)).thenReturn(1);
         when(inventoryRepository.releaseReserved(productId, 5)).thenReturn(1);
@@ -80,12 +80,6 @@ class ReservationCleanupSchedulerTest {
         verify(cacheService).evictAfterCommit(productId);
     }
 
-    /**
-     * F-012 — the expiry sweep is a stock movement and must emit the same
-     * inventory.released.v1 event as the service-layer release path, in the same
-     * transaction, otherwise shop.inventory.events.v1 under-reports releases and
-     * the outbox stops describing the domain state.
-     */
     @Test
     void sweep_publishesReleasedEventForEachExpiredReservation() {
         Reservation expired = Reservation.builder()
@@ -106,13 +100,6 @@ class ReservationCleanupSchedulerTest {
         verify(publisher).publishReleased(inventory, expired, "PENDING");
     }
 
-    /**
-     * F-011 regression — the lost-update guard. When the claim affects zero
-     * rows, another writer already transitioned the reservation (a concurrent
-     * commit(), or a competing sweep). The sweep must then NOT touch the
-     * inventory counters at all: a committed reservation must never have its
-     * stock released by the expiry path.
-     */
     @Test
     void sweep_skipsRowsAlreadyClaimedByAnotherWriter() {
         Reservation raced = Reservation.builder()

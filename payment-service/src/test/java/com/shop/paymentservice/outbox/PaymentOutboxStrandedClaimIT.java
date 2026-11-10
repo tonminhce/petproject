@@ -15,15 +15,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-052 (P1) — an event stranded in the SENDING state must be recoverable.
- *
- * <p>The relay claims a row by moving it to SENDING and committing, then
- * publishes it outside that transaction. If the process dies between the two
- * steps the row stays SENDING forever: it is no longer PENDING, so the claim
- * never picks it up again, and nothing else in the service touches it. The
- * event was silently lost with no alarm.</p>
- */
 class PaymentOutboxStrandedClaimIT extends AbstractIntegrationTest {
 
     @DynamicPropertySource

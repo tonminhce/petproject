@@ -123,7 +123,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         try {
             saved = reservationRepository.save(reservation);
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-            // F-047 — uk_cur_order_id is UNIQUE, so a concurrent second reserve
+
             // for the same order is rejected by the database. Without this
             log.info("Concurrent coupon reservation for order {} rejected by uk_cur_order_id",
                     request.orderId());

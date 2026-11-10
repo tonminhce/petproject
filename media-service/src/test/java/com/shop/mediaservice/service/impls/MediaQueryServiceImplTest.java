@@ -30,13 +30,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * D3 read resolution unit proofs: variant/format selection (auto → WebP
- * when stored, fallback to the original-format render; webp → WebP-only),
- * 404 MED-12004 for unknown media/variant/row, 503 MED-12006 on storage
- * failure, TTL pass-through, and the {@code media_presigned_total{variant}}
- * meter.
- */
 @ExtendWith(MockitoExtension.class)
 class MediaQueryServiceImplTest {
 
@@ -86,7 +79,7 @@ class MediaQueryServiceImplTest {
 
     private URL presignedFor(String objectKey) throws Exception {
         URL url = new URL("http://minio.test:9000/media/" + objectKey + "?X-Amz-Signature=sig");
-        // H-5: reads presign against the EXPLICIT media.bucket (3-arg overload)
+
         when(storage.presignedGetUrl(BUCKET, objectKey, TTL)).thenReturn(url);
         return url;
     }

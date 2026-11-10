@@ -45,11 +45,6 @@ public class OutboxEvent {
     @Column(name = "sent_at")
     private Instant sentAt;
 
-    /**
-     * H-5: when the relay parked this row as FAILED (null while PENDING/SENT
-     * and on every later success). The nightly retention scheduler ages
-     * FAILED → terminal DEAD against this clock.
-     */
     @Column(name = "failed_at")
     private Instant failedAt;
 

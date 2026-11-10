@@ -34,11 +34,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * C13 fix — category CRUD moved off the storefront path; the write surface is
- * exercised here against the ADMIN-gated backoffice controller (audit
- * coverage follows the authorization level, rating-service precedent).
- */
 @WebMvcTest(value = BackofficeCategoryController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -127,7 +122,7 @@ class BackofficeCategoryControllerTest {
 
     @Test
     void update_cycleDetected_returns409WithPrd20009() throws Exception {
-        // C11: re-parenting a category under its own descendant is a 409 —
+
         // the mapped i18n key lives in the common bundles (EN+VI).
         when(categoryService.update(eq(ID), any()))
             .thenThrow(BusinessException.of(ErrorCode.CATEGORY_CYCLE_DETECTED));

@@ -25,21 +25,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * F2/F3 — covers the {@link WebhookRetryScheduler} state machine without booting
- * Spring or touching Postgres. The PlatformTransactionManager is a no-op stub
- * because the assertions are about state-machine semantics, not transaction
- * propagation (that's verified by integration tests on a real DB).
- *
- * <p>The two tests assert:</p>
- * <ul>
- *   <li>backoff: every failed attempt increments {@code retry_count} and sets
- *       a later {@code next_retry_at}; exceeding MAX_ATTEMPTS flips status to
- *       FAILED_PERMANENT and increments the counter;</li>
- *   <li>successful replay: status transitions to PROCESSED and counter is not
- *       incremented.</li>
- * </ul>
- */
 @ExtendWith(MockitoExtension.class)
 class WebhookRetrySchedulerTest {
 
@@ -97,7 +82,6 @@ class WebhookRetrySchedulerTest {
         assertThat(event.getNextRetryAt()).isNotNull();
         verify(eventRepository, times(1)).save(event);
 
-        // F3 — counter incremented exactly once.
         Double count = meterRegistry.find("payment_webhook_failed_permanent_total").counter().count();
         assertThat(count).isEqualTo(1.0);
     }
@@ -125,7 +109,6 @@ class WebhookRetrySchedulerTest {
         assertThat(event.getStatus()).isEqualTo(PaymentEvent.STATUS_PROCESSED);
         verify(eventRepository, atLeastOnce()).save(event);
 
-        // F3 — counter must NOT have been touched on a successful replay.
         Double count = meterRegistry.find("payment_webhook_failed_permanent_total").counter().count();
         assertThat(count).isEqualTo(0.0);
     }

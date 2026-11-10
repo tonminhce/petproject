@@ -19,11 +19,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * R2 test — @WebMvcTest slice test enforcing that DataIntegrityViolationException
- * maps to HTTP 409 CONFLICT and never leaks DB schema details (table, column, constraint, SQL).
- * (Migrated from utils/common-patterns to utils/common-spring).
- */
 @WebMvcTest(controllers = ApiExceptionHandlerDataIntegrityTest.StubDataIntegrityController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({ApiExceptionHandler.class, ApiExceptionHandlerDataIntegrityTest.StubDataIntegrityController.class})

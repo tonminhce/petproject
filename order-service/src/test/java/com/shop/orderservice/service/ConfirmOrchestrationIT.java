@@ -92,7 +92,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(response.status()).isEqualTo(OrderStatus.PENDING);
         Order saved = orderRepository.findById(response.id()).orElseThrow();
         assertThat(saved.getPromotionReservationId()).isEqualTo(promoReservationId);
-        // F-019 (P0) — the captured-payment confirm gate: the confirm path is
+
         // only allowed to proceed when payment-service reports a CAPTURED
         // payment for this order.
         stubCapturedPayment(response.id());
@@ -106,12 +106,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
                 """.formatted(productId))));
     }
 
-    /**
-     * F-019 (P0) — the captured-payment confirm gate. The confirm path only
-     * proceeds when payment-service reports a CAPTURED payment for the order;
-     * without this stub the gate fails closed with ORD-4012 (which is the
-     * behaviour asserted by the dedicated gate test).
-     */
     private void stubCapturedPayment(UUID orderId) {
         paymentServer.stubFor(get(urlPathEqualTo("/api/v1/payments"))
             .withQueryParam("orderId", equalTo(orderId.toString()))
@@ -147,15 +141,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
     // 1. Happy confirm — promotion commits BEFORE inventory, order CONFIRMED
     // ------------------------------------------------------------------
 
-    /**
-     * F-019 (P0) regression — the captured-payment confirm gate.
-     *
-     * <p>The gate used to be switched OFF by default
-     * ({@code shop.services.payment.enabled=false}), so an order could reach
-     * CONFIRMED with no captured payment. With the gate active the confirm
-     * must fail closed with ORD-4012 when payment-service reports no captured
-     * payment for the order, and the order must stay PENDING.</p>
-     */
     @Test
     void confirm_withoutCapturedPayment_failsClosedWithOrd4012() throws Exception {
         OrderResponse order = pendingOrderWithPromotion("create-no-payment");
@@ -200,7 +185,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey))
             .hasValueSatisfying(ik -> {
                 assertThat(ik.getResponseStatus()).isEqualTo(200);
-                // H-6: ADMIN token → the row owner label is the sub (UUID text), not a parsed column
+
                 assertThat(ik.getActor()).isEqualTo(adminId.toString());
             });
 

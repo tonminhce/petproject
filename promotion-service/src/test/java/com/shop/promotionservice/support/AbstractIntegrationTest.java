@@ -92,7 +92,7 @@ public abstract class AbstractIntegrationTest {
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
-        // F-043 — background mutators OFF by default for every promotion IT
+
         // context. Each distinct property set creates a separate cached
         // ApplicationContext, and every context keeps its own @Scheduled tasks
         // running for the rest of the surefire fork. Several contexts

@@ -6,15 +6,6 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * C5 Task 1 — {@link PaymentStripeProperties} binding contract (spec §3):
- * {@code shop.payment.stripe.{secret-key, webhook-secret, api-version, connect}}
- * binds as a single configuration-properties record. The Stripe API version is
- * pinned onto SDK calls via the {@link PaymentStripeProperties#stripeVersionOverride()}
- * only when a secret key is present (i.e. the stripe provider is actually
- * activating) — a blank key (mock default) yields {@code null} so the SDK
- * global default stays untouched.
- */
 class PaymentStripePropertiesTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

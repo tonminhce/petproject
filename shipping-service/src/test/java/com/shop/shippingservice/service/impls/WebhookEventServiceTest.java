@@ -46,12 +46,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * C3 contract: the event row is PERSISTED FIRST as FAILED_RETRYABLE (before
- * the shipment transition is attempted), dedupe skips only PROCESSED rows,
- * and any processing failure marks the row FAILED_RETRYABLE via
- * {@code writer.saveEvent} so the retry scheduler can replay it.
- */
 @ExtendWith(MockitoExtension.class)
 class WebhookEventServiceTest {
 

@@ -16,11 +16,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * H-4 unit proofs for the internal reference-count surface: the service is a
- * read-only passthrough to the indexed {@code countByMediaId} probe — never a
- * write, never the clear-set query.
- */
 @ExtendWith(MockitoExtension.class)
 class ProductMediaServiceTest {
 

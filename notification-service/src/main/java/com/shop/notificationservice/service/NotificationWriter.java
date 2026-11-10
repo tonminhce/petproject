@@ -11,38 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * C12/C17 — the delivery state machine. This class is the ONLY writer of
- * {@link NotificationStatus} values; every transition is guarded so a row can
- * never be mutated out of a settled state and, critically, {@link
- * NotificationStatus#SENT} is reachable ONLY from {@link
- * NotificationStatus#SENDING} (i.e. after a provider ack) — never from
- * {@link NotificationStatus#PENDING}, which is the C12 loss bug.
- * <p>Transitions:</p>
- * <pre>
- * PENDING ──markSending──▶ SENDING ──markSent──▶ SENT
- *    ▲                      │  │
- *    │        markRetryable │  └─ markPermanent ──▶ FAILED_PERMANENT (terminal)
- *    └── FAILED_RETRYABLE ◀─┘
- * </pre>
- * <p>{@code markSending} doubles as the claim primitive for both the Kafka
- * consumer (initial attempt) and the retry scheduler: claiming writes a
- * heartbeat into {@code next_retry_at}, and a {@code SENDING} row whose
- * heartbeat has elapsed is reclaimable — that is the crash-mid-send recovery
- * path. F3 — {@code notification_failed_permanent_total} increments on every
- * terminal failure so ops can alert on it.</p>
- * <p>{@code @Repository} (not {@code @Service}): the class is a pure
- * persistence-layer component — every method writes through {@link
- * com.shop.notificationservice.repository.NotificationRepository} and the
- * status-machine guards exist solely to keep the row's {@code @Enumerated}
- * column in a legal state. {@code @Service} is reserved for classes that own
- * business logic. See Spring's stereotype docs:
- * <a href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/stereotype/Repository.html">
- *
- * @Repository javadoc</a> and
- * <a href="https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html">
- * classpath scanning / stereotype page</a>.</p>
- */
 @Repository
 public class NotificationWriter {
 

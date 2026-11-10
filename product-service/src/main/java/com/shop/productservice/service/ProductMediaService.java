@@ -59,7 +59,7 @@ public class ProductMediaService {
     }
 
     /**
-     * H-4: how many LIVE products still reference the given media — served to
+     * how many LIVE products still reference the given media — served to
      * media-service via the internal SERVICE-gated endpoint
      * {@code GET /internal/products/media-references/{mediaId}}. Read-only,
      * indexed (changelog 005), never mutates state.

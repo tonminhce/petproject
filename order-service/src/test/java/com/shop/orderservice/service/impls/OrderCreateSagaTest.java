@@ -52,23 +52,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * H13 — the saga body lives in a sibling bean so Spring's @Transactional
- * proxy is on the path. This test exercises the saga directly via a real
- * {@link TransactionTemplate} (the F2 idiom used by the rest of the fleet)
- * so a regression that drops the {@code @Transactional} on the saga or
- * bypasses the proxy is caught immediately:
- * <ul>
- *   <li>Persist-early contract: the ZERO-amount PENDING row is saved BEFORE
- *       pricing runs (H13 reaffirms the original design).</li>
- *   <li>Stock reservation failure evicts everything done in the saga —
- *       the row, the order items, the cart, and the promotion reservation
- *       are all gone or back to their prior state.</li>
- *   <li>Transaction rollback path: a simulated commit-then-rollback via the
- *       real {@link TransactionTemplate} confirms the saga body's writes
- *       do not leak to the database.</li>
- * </ul>
- */
 @ExtendWith(MockitoExtension.class)
 class OrderCreateSagaTest {
 
@@ -170,7 +153,7 @@ class OrderCreateSagaTest {
 
     @Test
     void outerRollbackEvictsInnerWork_transactionTemplateCommitsThenRollsBack() {
-        // F2 idiom — wrap the saga body in a real TransactionTemplate. The
+
         // real Template.commit() → rollback() cycle exercises the proxy's
         // tx boundary; a self-invocation regression (no proxy) would skip
         // the rollback because nothing was started.

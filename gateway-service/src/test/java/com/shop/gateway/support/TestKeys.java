@@ -50,7 +50,7 @@ public final class TestKeys {
                 .issueTime(Date.from(Instant.now()))
                 .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
                 .claim("realm_access", Map.of("roles", realmRoles))
-                // F-040: the provisioned Keycloak realm issues no 'aud' claim,
+
                 // so 'azp' (the client the token was issued to) is the only
                 // usable client discriminator. The gateway's reactive decoder
                 // validates it - a test token must carry it like a real one.
@@ -74,7 +74,7 @@ public final class TestKeys {
                 .issueTime(Date.from(Instant.now()))
                 .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
                 .claim("resource_access", Map.of(clientId, Map.of("roles", clientRoles)))
-                // F-040: a service token carries the client it was issued to.
+
                 .claim("azp", clientId)
                 .build();
         return signed(key, claims);

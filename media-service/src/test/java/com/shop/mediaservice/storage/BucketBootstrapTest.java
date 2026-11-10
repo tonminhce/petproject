@@ -29,14 +29,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * F-4 split of the bootstrap failure modes: an ACL violation on the private
- * assertion is a FATAL misconfiguration (the runner rethrows → startup
- * crashes — a public bucket must never serve private media, not even
- * degraded), while storage unavailability (bucket discovery/creation/ACL
- * read connectivity errors) only logs and degrades — the service boots and
- * recovers once the object store is reachable.
- */
 @ExtendWith(MockitoExtension.class)
 class BucketBootstrapTest {
 

@@ -4,14 +4,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * D1 format model — the mime allowlist, canonical format names
- * ({@code jpeg|png|webp}), file extensions, and magic-byte sniffing. Sniffing
- * is the source of truth: a declared type that the magic bytes contradict is
- * a corrupt upload (MED-12001), a declared type outside the allowlist is a
- * rejected type (MED-12003) — the pipeline in {@link MediaUploadServiceImpl}
- * applies that ordering.
- */
 final class MediaFormats {
 
     static final String JPEG = "jpeg";

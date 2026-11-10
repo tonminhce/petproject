@@ -37,7 +37,7 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.create", resourceType = "payment")
     public ApiResponse<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
-        // F-041 - only order-service may create a payment.
+
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(paymentService.create(request));
     }
@@ -46,7 +46,7 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.capture", resourceType = "payment")
     public ApiResponse<PaymentResponse> capture(@PathVariable UUID id) {
-        // F-041 - only order-service may drive a capture.
+
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(paymentService.capture(id));
     }
@@ -55,7 +55,7 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.refund", resourceType = "payment")
     public ApiResponse<PaymentResponse> refund(@PathVariable UUID id) {
-        // F-041 - only order-service may drive a refund.
+
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(paymentService.refund(id));
     }

@@ -13,25 +13,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * D3 purge: hard-deletes the S3 objects of media whose grace window has
- * fully elapsed ({@code deleted_at <= now - media.purge-grace}, default 30d),
- * then removes the rows (the variant rows cascade with the media row).
- * Scheduling shape ports rating-service's outbox relay: {@code @Scheduled}
- * fixed-delay, one batch per tick, per-item failure isolation — one broken
- * media never aborts the cycle, its purge simply retries next tick.
- * <p>Ordering is objects-then-rows: if the run dies mid-way, the row survives
- * (with its object keys) and the next cycle replays idempotently — S3 delete
- * of an already-gone key is a no-op. A media still REPORTED referenced by the
- * {@link MediaReferenceChecker} port is skipped with a WARN and retried next
- * cycle — never deleted behind a live reference.</p>
- * <p>H-4: the checker call sits INSIDE the per-row try — the checker (the
- * real one consults product-service over HTTP) failing for ONE row must never
- * abort the cycle. A checker exception is fail-safe REFERENCED (WARN + skip,
- * same as a mapped "unavailable" answer from the checker itself); the cycle
- * moves on to the next candidate. Only a successful zero-reference answer
- * lets {@link #purgeOne} run.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -57,7 +38,7 @@ public class MediaPurgeJob {
                     continue;
                 }
             } catch (Exception checkerFailure) {
-                // H-4 fail-safe: cannot PROVE the media is unreferenced → keep it.
+
                 log.warn("Reference check FAILED for media {} — FAIL-SAFE: treating as REFERENCED, "
                         + "purge skips (cycle continues)", mediaId, checkerFailure);
                 continue;

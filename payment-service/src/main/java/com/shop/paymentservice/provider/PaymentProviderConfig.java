@@ -22,11 +22,6 @@ public class PaymentProviderConfig {
         this.stripeSecretKey = stripeSecretKey;
     }
 
-    /**
-     * C5 Task 4 — fail-fast (D10): provider=stripe with no secret key must
-     * never reach a half-wired context. Belt alongside StripeProvider's own
-     * constructor guard — the message names the env var ops has to set.
-     */
     @PostConstruct
     void verifyStripeCredentialsWhenSelected() {
         if ("stripe".equals(provider) && (stripeSecretKey == null || stripeSecretKey.isBlank())) {

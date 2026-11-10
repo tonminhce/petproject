@@ -10,10 +10,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * F-004 — the password-grant posture must be reported, and an unreachable
- * identity provider must never fail the check.
- */
 @ExtendWith(MockitoExtension.class)
 class KeycloakPasswordGrantPostureCheckTest {
 

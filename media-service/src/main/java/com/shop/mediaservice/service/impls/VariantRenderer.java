@@ -16,14 +16,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- * D2 render stage — thumbnailator over the DECODED pixels only. The source is
- * decoded with ImageIO (which reads no metadata blocks into the image) and
- * every output is a fresh encode, so the stored original is a FULL-RESOLUTION
- * re-encode — never the raw upload bytes — and EXIF/GPS is gone by
- * construction (M1). Six renders per upload: original/display/thumb × the
- * original format AND WebP; display/thumb cap width and never upscale.
- */
 @Component
 class VariantRenderer {
 

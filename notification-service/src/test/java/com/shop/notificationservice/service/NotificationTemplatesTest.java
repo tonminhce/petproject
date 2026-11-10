@@ -18,13 +18,6 @@ class NotificationTemplatesTest {
     private static final UUID EVENT_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
     private static final String OCCURRED_AT = "2026-08-30T10:00:00Z";
 
-    /**
-     * H26 — OrderLifecycleEvent is a Java record. Per R1, construction goes
-     * through the canonical ctor (no Lombok @Builder). The {@code event()}
-     * helper returns a base record with the test-wide identifiers filled in;
-     * each test builds a derived record inline so the fields actually
-     * exercised by the production code path are obvious in the test body.
-     */
     private OrderLifecycleEvent event(String eventType) {
         return new OrderLifecycleEvent(
                 EVENT_ID.toString(),

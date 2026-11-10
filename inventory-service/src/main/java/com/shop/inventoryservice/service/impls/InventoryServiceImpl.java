@@ -175,7 +175,7 @@ public class InventoryServiceImpl implements InventoryService {
         }
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
-        // F-010 — never let the counters go negative. A negative reserved or
+
         int newAvailable = inventory.getAvailableQuantity() - r.getQuantity();
         int newReserved = inventory.getReservedQuantity() - r.getQuantity();
         if (newAvailable < 0 || newReserved < 0) {
@@ -214,7 +214,7 @@ public class InventoryServiceImpl implements InventoryService {
         }
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
-        // F-010 — the reserved counter must never go negative; see commit().
+
         int newReserved = inventory.getReservedQuantity() - r.getQuantity();
         if (newReserved < 0) {
             throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, r.getProductId());

@@ -12,8 +12,8 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import java.util.Map;
 
 /**
- * Listener container factory for the media lifecycle topic (media epic spec
- * D4). Standalone raw-string factory (predates the fleet-wide H-1 flip of
+ * Listener container factory for the media lifecycle topic. Standalone
+ * raw-string factory (predates the fleet-wide flip of
  * {@code BaseKafkaListenerConfig} to string-based consumers — same tolerance
  * contract, self-unwrap shape). Wire contract (R1 + H-1): producers publish
  * JSON-as-String via {@code KafkaMessagePublisher}, so records arrive

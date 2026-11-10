@@ -17,12 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
-/**
- * C5 Task 4 — {@code GET /actuator/health/payment-stripe} (mock provider has
- * no equivalent). UP requires a live Stripe API round-trip
- * ({@code Balance.retrieve()}); any StripeException → DOWN. The Stripe
- * account id rides along as a detail.
- */
 class StripeHealthIndicatorTest {
 
     private MockedStatic<Balance> balanceStatic;
