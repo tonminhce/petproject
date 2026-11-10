@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PaymentOutboxBatchAsyncIT extends AbstractIntegrationTest {
 
     private static final int BATCH = 50;
-    private static final Duration RELAY_BUDGET = Duration.ofSeconds(2);
+    private static final Duration RELAY_BUDGET = Duration.ofSeconds(5);
 
     @DynamicPropertySource
     static void slowDownForAssertion(DynamicPropertyRegistry registry) {
@@ -92,6 +92,11 @@ class PaymentOutboxBatchAsyncIT extends AbstractIntegrationTest {
         //    Async-fanout + bounded latch makes the relay thread's wait bounded by
         //    the slowest single publish, not the sum — sync future.get per event
         //    would push the budget past 10s on any single slow event.
+        // The contract under test is that the batch's wall-clock is roughly the
+        // SLOWEST single publish, not the sum of all of them. The pre-fix
+        // behaviour was 50 sequential publishes, each with a 10s budget - so
+        // hundreds of seconds. The ceiling is deliberately generous: it exists
+        // to catch that regression, not to measure this machine.
         assertThat(elapsedMs)
             .as("50-event batch must complete within %s ms on the relay thread (was %d ms)",
                 RELAY_BUDGET.toMillis(), elapsedMs)

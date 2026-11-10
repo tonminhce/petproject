@@ -109,8 +109,7 @@ class PaymentControllerAuditTest {
                 .build()));
 
         mockMvc.perform(post("/api/v1/payments")
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d006").claim("azp", "order-service")
-                        .claim("azp", "order-service"))
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d006").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""

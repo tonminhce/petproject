@@ -74,8 +74,7 @@ class InventoryControllerAuditTest {
                 Instant.parse("2026-01-01T00:15:00Z"), null, null, orderId));
 
         mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004").claim("azp", "order-service")
-                        .claim("azp", "order-service"))
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -101,8 +100,7 @@ class InventoryControllerAuditTest {
         UUID reservationId = UUID.fromString("00000000-0000-0000-0000-00000000e005");
 
         mockMvc.perform(post("/api/v1/inventory/reservations/{reservationId}/commit", reservationId)
-                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004").claim("azp", "order-service")
-                        .claim("azp", "order-service"))
+                .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000e004").claim("azp", "order-service"))
                     .authorities(createAuthorityList("ROLE_SERVICE"))))
             .andExpect(status().isOk());
 
