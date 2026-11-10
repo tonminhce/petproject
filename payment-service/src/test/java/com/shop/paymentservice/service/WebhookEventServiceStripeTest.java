@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -139,6 +140,31 @@ class WebhookEventServiceStripeTest {
                   }
                 }
                 """.formatted(eventId, amountMinor, currency, PAYMENT_ID);
+        return body.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** charge.refunded with the amount_refunded field Stripe actually sends. */
+    private byte[] chargeRefundedBody(String eventId, long amountMinor, String currency, long refundedMinor) {
+        String body = """
+                {
+                  "id": "%s",
+                  "object": "event",
+                  "type": "charge.refunded",
+                  "data": {
+                    "object": {
+                      "object": "charge",
+                      "id": "ch_test_1",
+                      "amount": %d,
+                      "amount_refunded": %d,
+                      "currency": "%s",
+                      "payment_intent": "pi_test_1",
+                      "metadata": {
+                        "payment_id": "%s"
+                      }
+                    }
+                  }
+                }
+                """.formatted(eventId, amountMinor, refundedMinor, currency, PAYMENT_ID);
         return body.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -399,5 +425,77 @@ class WebhookEventServiceStripeTest {
                 .doesNotThrowAnyException();
 
         verify(writer).completeWithEvent(any(Payment.class), any(PaymentEvent.class), eq("payment.captured.v1"));
+    }
+
+    /**
+     * F-021 (P1) regression - a PARTIAL refund must not be recorded as a full
+     * refund.
+     *
+     * <p>For a charge.refunded event, data.object is the CHARGE: 'amount' is
+     * the original charge amount and 'amount_refunded' is how much actually
+     * came back. The previous handler read 'amount' and mapped it straight onto
+     * REFUNDED, so a partial refund was reported as a full refund - the
+     * platform claimed money that never arrived, and the state machine then
+     * refused any further refund.</p>
+     */
+    @Test
+    void partialChargeRefund_marksPartiallyRefunded_notRefunded() {
+        byte[] raw = chargeRefundedBody("evt_part_ref_1", 9800, "usd", 3000);
+        happyPathStubs("evt_part_ref_1");
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+
+        service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
+
+        ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+        verify(writer).completeWithEvent(paymentCaptor.capture(), any(PaymentEvent.class),
+                eq("payment.partially_refunded.v1"));
+        Payment updated = paymentCaptor.getValue();
+        assertThat(updated.getStatus()).isEqualTo(PaymentStatus.PARTIALLY_REFUNDED);
+        assertThat(updated.getRefundedAmount()).isEqualByComparingTo("30.00");
+        verify(writer, never()).completeWithEvent(any(Payment.class), any(PaymentEvent.class),
+                eq("payment.refunded.v1"));
+    }
+
+    /**
+     * F-021 - a full refund still completes the payment, and the refunded
+     * total is recorded.
+     */
+    @Test
+    void fullChargeRefund_marksRefunded_andRecordsTheRefundedTotal() {
+        byte[] raw = chargeRefundedBody("evt_full_ref_2", 9800, "usd", 9800);
+        happyPathStubs("evt_full_ref_2");
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+
+        service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
+
+        ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+        verify(writer).completeWithEvent(paymentCaptor.capture(), any(PaymentEvent.class),
+                eq("payment.refunded.v1"));
+        Payment updated = paymentCaptor.getValue();
+        assertThat(updated.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(updated.getRefundedAmount()).isEqualByComparingTo("98.00");
+    }
+
+    /**
+     * F-021 - a refund that exceeds the captured amount is rejected instead of
+     * inflating the refunded total. The event is parked as retryable (the
+     * platform never fails a provider webhook with a 500) and the payment is
+     * left untouched.
+     */
+    @Test
+    void refundLargerThanTheCapturedAmount_isRejected_stateUnchanged() {
+        byte[] raw = chargeRefundedBody("evt_over_ref_3", 9800, "usd", 9900);
+        happyPathStubs("evt_over_ref_3");
+        Payment captured = payment(PaymentStatus.CAPTURED);
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
+
+        assertThatCode(() -> service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET)))
+                .doesNotThrowAnyException();
+
+        ArgumentCaptor<PaymentEvent> saveCaptor = ArgumentCaptor.forClass(PaymentEvent.class);
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
+        verify(writer, never()).completeWithEvent(any(Payment.class), any(PaymentEvent.class), anyString());
+        assertThat(captured.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
     }
 }

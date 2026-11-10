@@ -8,8 +8,7 @@ import com.shop.paymentservice.config.PaymentStripeProperties;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.entity.PaymentEvent;
-import com.shop.paymentservice.provider.StripeCurrencyUnits;
-import com.shop.paymentservice.repository.PaymentEventRepository;
+import com.shop.paymentservice.provider.StripeCurrencyUnits;import com.shop.paymentservice.repository.PaymentEventRepository;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.webhook.WebhookPayload;
 import com.stripe.exception.SignatureVerificationException;
@@ -20,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -62,6 +62,12 @@ public class WebhookEventService {
             "payment_intent.succeeded", "CAPTURED",
             "payment_intent.payment_failed", "FAILED",
             "charge.refunded", "REFUNDED");
+
+    /** The Stripe event type that carries a refund. */
+    private static final String REFUND_EVENT_TYPE = "charge.refunded";
+
+    /** Carrier status used for a refund that has not returned the full amount. */
+    private static final String PARTIAL_REFUND_STATUS = "PARTIALLY_REFUNDED";
 
     private final PaymentRepository paymentRepository;
     private final PaymentEventRepository eventRepository;
@@ -194,21 +200,62 @@ public class WebhookEventService {
         UUID paymentId = parsePaymentId(payload.paymentId());
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, paymentId));
-        if (payload.amount() == null || payment.getAmount() == null
-                || payload.amount().compareTo(payment.getAmount()) != 0) {
-            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, payload.amount(), payment.getAmount());
-        }
         PaymentStatus target = parseStatus(payload.status());
         if (target == null) {
             throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus(), payload.status());
         }
+        if (target == PaymentStatus.PARTIALLY_REFUNDED) {
+            applyPartialRefund(payload, payment, event);
+            return;
+        }
+        if (payload.amount() == null || payment.getAmount() == null
+                || payload.amount().compareTo(payment.getAmount()) != 0) {
+            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, payload.amount(), payment.getAmount());
+        }
         PaymentStatus next = PaymentStateMachine.transition(payment.getStatus(), target);
         payment.setPreviousStatus(payment.getStatus());
         payment.setStatus(next);
+        if (next == PaymentStatus.REFUNDED) {
+            BigDecimal already = payment.getRefundedAmount() == null
+                    ? BigDecimal.ZERO : payment.getRefundedAmount();
+            payment.setRefundedAmount(payment.getAmount());
+            if (already.compareTo(payment.getAmount()) > 0) {
+                log.warn("Payment {} refunded amount {} exceeds the captured amount {}",
+                        payment.getId(), already, payment.getAmount());
+            }
+        }
         Payment saved = writer.completeWithEvent(payment, event, outboxEventType(next));
         if (next == PaymentStatus.CAPTURED) {
             attachReceipt(saved);
         }
+    }
+
+    /**
+     * F-021 — apply a refund that has not returned the full amount.
+     *
+     * <p>The refunded amount must be positive and must not exceed what is
+     * still refundable; otherwise the event is rejected as an amount mismatch.
+     * The payment moves to PARTIALLY_REFUNDED - never to REFUNDED - and the
+     * refunded total is accumulated so a later full refund can complete
+     * it.</p>
+     */
+    private void applyPartialRefund(WebhookPayload payload, Payment payment, PaymentEvent event) {
+        BigDecimal already = payment.getRefundedAmount() == null
+                ? BigDecimal.ZERO : payment.getRefundedAmount();
+        BigDecimal remaining = payment.getAmount() == null
+                ? BigDecimal.ZERO : payment.getAmount().subtract(already);
+        if (payload.amount() == null || payload.amount().signum() <= 0
+                || payload.amount().compareTo(remaining) > 0) {
+            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, payload.amount(), remaining);
+        }
+        PaymentStatus next = PaymentStateMachine.transition(payment.getStatus(),
+                PaymentStatus.PARTIALLY_REFUNDED);
+        payment.setPreviousStatus(payment.getStatus());
+        payment.setStatus(next);
+        payment.setRefundedAmount(already.add(payload.amount()));
+        writer.completeWithEvent(payment, event, outboxEventType(next));
+        log.info("Partial refund applied to payment {}: {} of {} already refunded, {} returned now",
+                payment.getId(), already, payment.getAmount(), payload.amount());
     }
 
     /**
@@ -224,13 +271,31 @@ public class WebhookEventService {
             String paymentId = obj.path("metadata").path("payment_id").asText(null);
             String currency = obj.path("currency").asText(null);
             Long amountMinor = obj.path("amount").isNumber() ? obj.path("amount").asLong() : null;
+            BigDecimal amount = StripeCurrencyUnits.fromMinor(amountMinor, currency);
+            String status = mappedStatus;
+            if (REFUND_EVENT_TYPE.equals(stripeType)) {
+                // F-021 — for a charge.refunded event, data.object is the CHARGE:
+                // 'amount' is the ORIGINAL charge amount and 'amount_refunded'
+                // is how much has actually come back. The refunded total is the
+                // amount that must be reconciled against the payment, so it is
+                // the one carried on the carrier payload; the charge amount is
+                // only used to tell a full refund from a partial one.
+                Long refundedMinor = obj.path("amount_refunded").isNumber()
+                        ? obj.path("amount_refunded").asLong() : null;
+                if (refundedMinor != null) {
+                    amount = StripeCurrencyUnits.fromMinor(refundedMinor, currency);
+                    if (amountMinor != null && refundedMinor < amountMinor) {
+                        status = PARTIAL_REFUND_STATUS;
+                    }
+                }
+            }
             WebhookPayload payload = WebhookPayload.builder()
                     .eventId(eventId)
                     .eventType(stripeType)
                     .paymentId(paymentId)
-                    .amount(StripeCurrencyUnits.fromMinor(amountMinor, currency))
+                    .amount(amount)
                     .currency(currency == null ? null : currency.toUpperCase(Locale.ROOT))
-                    .status(mappedStatus)
+                    .status(status)
                     .providerEventId(eventId)
                     .build();
             return objectMapper.writeValueAsBytes(payload);
@@ -295,6 +360,7 @@ public class WebhookEventService {
     private PaymentStatus parseStatus(String status) {
         return switch (status == null ? "" : status) {
             case "CAPTURED" -> PaymentStatus.CAPTURED;
+            case "PARTIALLY_REFUNDED" -> PaymentStatus.PARTIALLY_REFUNDED;
             case "FAILED" -> PaymentStatus.FAILED;
             case "REFUNDED" -> PaymentStatus.REFUNDED;
             default -> null;
@@ -350,6 +416,7 @@ public class WebhookEventService {
     private String outboxEventType(PaymentStatus status) {
         return switch (status) {
             case CAPTURED -> "payment.captured.v1";
+            case PARTIALLY_REFUNDED -> "payment.partially_refunded.v1";
             case FAILED -> "payment.failed.v1";
             case REFUNDED -> "payment.refunded.v1";
             default -> throw new IllegalStateException("No outbox event type for status " + status);

@@ -11,7 +11,10 @@ public final class PaymentStateMachine {
 
     private static final Map<PaymentStatus, Set<PaymentStatus>> LEGAL_TRANSITIONS = Map.of(
             PaymentStatus.PENDING, Set.of(PaymentStatus.CAPTURED, PaymentStatus.FAILED),
-            PaymentStatus.CAPTURED, Set.of(PaymentStatus.REFUNDED));
+            PaymentStatus.CAPTURED, Set.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED),
+            // F-021 — a partial refund can be followed by another partial refund
+            // (the self-transition is allowed) and by the final full refund.
+            PaymentStatus.PARTIALLY_REFUNDED, Set.of(PaymentStatus.REFUNDED));
 
     private PaymentStateMachine() {
     }

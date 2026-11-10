@@ -1,0 +1,52 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  008-partial-refund
+  # ---------------------------------------------------------------------------
+  #  F-021 (P1) — a partial Stripe refund was recorded as a full refund.
+  #
+  #  The webhook handler mapped the Stripe event type charge.refunded straight
+  #  onto REFUNDED and read the amount from data.object.amount - the CHARGE's
+  #  original amount, not the refunded total. A partial refund therefore
+  #  matched the amount check exactly and moved the payment to REFUNDED, so the
+  #  platform reported a full refund for money that had never come back, and
+  #  the state machine then refused any further refund.
+  #
+  #  This changeset:
+  #    * widens ck_payments_status so a partially refunded payment is
+  #      representable (PARTIALLY_REFUNDED);
+  #    * adds refunded_amount so the refunded total is auditable.
+  #
+  #  Rolling-deployment safety:
+  #    * widening a CHECK constraint is additive - rows that were valid before
+  #      stay valid, and the new value is only written by the new code;
+  #    * refunded_amount is nullable with a default of 0, so existing rows
+  #      read as "nothing refunded";
+  #    * the old binary keeps working: it never writes PARTIALLY_REFUNDED, and
+  #      a status it does not know about only becomes visible to it if the new
+  #      binary wrote it - which is a forward-compatible, forward-only change.
+  # ===========================================================================
+  - changeSet:
+      id: 008-partial-refund
+      author: production-audit
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE payments DROP CONSTRAINT ck_payments_status;
+
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE payments ADD CONSTRAINT ck_payments_status
+              CHECK (status IN ('PENDING', 'CAPTURED', 'PARTIALLY_REFUNDED', 'FAILED', 'REFUNDED'));
+
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: refunded_amount
+                  type: 'numeric(19,2)'
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

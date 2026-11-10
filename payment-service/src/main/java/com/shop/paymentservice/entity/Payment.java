@@ -52,6 +52,16 @@ public class Payment extends AbstractMappedEntity {
     @Column(name = "receipt_key")
     private String receiptKey;
 
+    /**
+     * F-021 — the total amount refunded so far. A partial Stripe refund is no
+     * longer recorded as a full refund: the payment moves to
+     * PARTIALLY_REFUNDED and this counter carries the refunded total, so the
+     * platform never reports money that has not come back.
+     */
+    @Column(name = "refunded_amount", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
+    private BigDecimal refundedAmount = BigDecimal.ZERO;
+
     @Version
     @Column(name = "version")
     @Builder.Default
