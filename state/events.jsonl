@@ -1,0 +1,8 @@
+{"event": "task.transition", "timestamp": "2026-11-09T17:06:11", "task": "TSK-001", "from": "READY", "to": "IN_PROGRESS", "note": "iteration 1"}
+{"event": "task.transition", "timestamp": "2026-11-09T17:06:11", "task": "TSK-001", "from": "IN_PROGRESS", "to": "BLOCKED", "note": "no verify_command declared"}
+{"event": "task.transition", "timestamp": "2026-11-09T17:06:11", "task": "TSK-004", "from": "READY", "to": "IN_PROGRESS", "note": "iteration 2"}
+{"event": "task.transition", "timestamp": "2026-11-09T17:06:11", "task": "TSK-004", "from": "IN_PROGRESS", "to": "BLOCKED", "note": "no verify_command declared"}
+{"event": "task.transition", "timestamp": "2026-11-10T10:03:33", "task": "TSK-001", "from": "READY", "to": "IN_PROGRESS", "note": "iteration 1"}
+{"event": "task.transition", "timestamp": "2026-11-10T10:03:33", "task": "TSK-001", "from": "IN_PROGRESS", "to": "BLOCKED", "note": "no verify_command declared"}
+{"event": "task.transition", "timestamp": "2026-11-10T10:03:33", "task": "TSK-004", "from": "READY", "to": "IN_PROGRESS", "note": "iteration 2"}
+{"event": "task.transition", "timestamp": "2026-11-10T10:03:33", "task": "TSK-004", "from": "IN_PROGRESS", "to": "BLOCKED", "note": "no verify_command declared"}

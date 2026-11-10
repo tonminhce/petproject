@@ -88,6 +88,12 @@ public abstract class AbstractOrderServiceIT {
     protected static final WireMockServer taxServer = new WireMockServer(0);
     protected static final WireMockServer promotionServer = new WireMockServer(0);
     protected static final WireMockServer keycloakServer = new WireMockServer(0);
+    /**
+     * F-019 (P0) — the payment-captured confirm gate is ON by default, so a
+     * confirm only succeeds when payment-service reports a CAPTURED payment
+     * for the order. This WireMock stands in for payment-service.
+     */
+    protected static final WireMockServer paymentServer = new WireMockServer(0);
 
     static {
         postgres.start();
@@ -97,6 +103,7 @@ public abstract class AbstractOrderServiceIT {
         inventoryServer.start();
         taxServer.start();
         promotionServer.start();
+        paymentServer.start();
         // P0-8 — stub Keycloak's OIDC discovery + token endpoints so Boot's JwtDecoder
         // gets a resolvable issuer at boot AND ServiceTokenProvider can exchange for a
         // service token (shop.services.keycloak.token-url points at this WireMock).
@@ -140,6 +147,10 @@ public abstract class AbstractOrderServiceIT {
         // this changes nothing for them.
         r.add("shop.services.promotion.enabled", () -> "true");
         r.add("shop.services.promotion.url", () -> "http://localhost:" + promotionServer.port());
+        // F-019 (P0) — the payment integration (and therefore the
+        // captured-payment confirm gate) is enabled by default.
+        r.add("shop.services.payment.enabled", () -> "true");
+        r.add("shop.services.payment.url", () -> "http://localhost:" + paymentServer.port());
         // ⚠️ P0-8 — point Keycloak issuer to WireMock to avoid connection refused at boot
         r.add("shop.security.issuer-uri", () -> "http://localhost:" + keycloakServer.port() + "/realms/test");
         r.add("shop.security.csrf-disabled", () -> "true");

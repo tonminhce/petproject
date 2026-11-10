@@ -44,4 +44,23 @@ public interface InventoryRepository extends JpaRepository<Inventory, UUID> {
          + "WHERE i.productId = :productId "
          + "AND (i.availableQuantity - i.reservedQuantity) >= :qty")
     int atomicReserve(@Param("productId") UUID productId, @Param("qty") int qty);
+
+    /**
+     * F-011 — atomic release of a reservation hold.
+     * <p>Decrements {@code reservedQuantity} only when the row currently holds at
+     * least the requested quantity, so the counter can never go negative and a
+     * double release can never over-credit the stock. The version is bumped in
+     * the same statement, mirroring {@link #atomicReserve}, so a concurrent
+     * read-modify-write path ({@code commit()}, {@code release()}) sees a
+     * consistent version.</p>
+     *
+     * @return 1 when the hold was released, 0 when the row holds less than
+     *         {@code qty} (the caller must NOT mask this with a clamp - it is an
+     *         accounting inconsistency that needs an operator)
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Inventory i SET i.reservedQuantity = i.reservedQuantity - :qty, "
+         + "i.lastUpdated = CURRENT_TIMESTAMP, i.version = i.version + 1 "
+         + "WHERE i.productId = :productId AND i.reservedQuantity >= :qty")
+    int releaseReserved(@Param("productId") UUID productId, @Param("qty") int qty);
 }

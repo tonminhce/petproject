@@ -42,7 +42,16 @@ class PromotionBootstrapIT extends AbstractIntegrationTest {
             "databasechangelog",
             "databasechangeloglock");
 
-        // Repository layer works against the migrated schema (fresh DB → empty).
+        // Repository layer works against the migrated schema (fresh DB -> empty).
+        //
+        // The IT container is shared by every promotion integration test in the
+        // module, so the table may already hold rows created by another test
+        // class. The assertion is about the SCHEMA and the repository wiring,
+        // not about the other tests' data - clear the tables first so the
+        // assertion is deterministic instead of order-dependent. TRUNCATE ...
+        // CASCADE is required because coupon_usage_reservation has a foreign
+        // key to campaign.
+        jdbcTemplate.execute("TRUNCATE TABLE coupon_usage_reservation, campaign CASCADE");
         assertThat(campaignRepository.count()).isZero();
     }
 }

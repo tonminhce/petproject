@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: changelog-002-safety-stock-threshold.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-004-stock-invariants-and-reservation-version.yaml
+      relativeToChangelogFile: true

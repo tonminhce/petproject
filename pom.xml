@@ -269,11 +269,33 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <!--
+                          F-039 (P0): the PostgreSQL JDBC driver sends the JVM default
+                          timezone as the 'TimeZone' startup parameter on every connection
+                          (ConnectionFactoryImpl.createPostgresTimeZone()). PostgreSQL validates
+                          that parameter against pg_timezone_names, which does NOT contain
+                          backward-compatibility links such as 'Asia/Saigon' - the server then
+                          refuses the connection with
+                          "FATAL: invalid value for parameter \"TimeZone\": \"Asia/Saigon\"".
+                          Pinning user.timezone makes the build reproducible on any host
+                          timezone and removes the environment dependency that made the
+                          Testcontainers suites fail with 400+ errors.
+                        -->
+                        <systemPropertyVariables>
+                            <user.timezone>UTC</user.timezone>
+                        </systemPropertyVariables>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven-failsafe-plugin.version}</version>
+                    <configuration>
+                        <systemPropertyVariables>
+                            <user.timezone>UTC</user.timezone>
+                        </systemPropertyVariables>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -391,6 +413,14 @@
                         <user>100:101</user>
                         <jvmFlags>
                             <jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
+                            <!--
+                              F-039 (P0): pin the JVM timezone. The PostgreSQL JDBC driver
+                              forwards the JVM default timezone as the 'TimeZone' startup
+                              parameter; a backward-compatibility zone id such as
+                              'Asia/Saigon' makes PostgreSQL refuse every connection.
+                              UTC also keeps all services on one clock.
+                            -->
+                            <jvmFlag>-Duser.timezone=UTC</jvmFlag>
                         </jvmFlags>
                     </container>
                 </configuration>

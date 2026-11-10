@@ -1,0 +1,558 @@
+{
+  "command": "audit database",
+  "datasources": {
+    "utils/common-spring/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "utils/common-spring/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "tax-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/taxservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "tax-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/taxservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "shipping-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/shippingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "shipping-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/shippingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "search-service/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": true,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "search-service/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": true,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "rating-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/ratingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "rating-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/ratingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "promotion-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/promotionservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "promotion-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/promotionservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "product-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/productservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "product-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/productservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "payment-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/paymentservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": true,
+      "mentions_keycloak": false,
+      "mentions_rustfs": true
+    },
+    "payment-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/paymentservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": true,
+      "mentions_keycloak": false,
+      "mentions_rustfs": true
+    },
+    "order-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/orderservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "order-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/orderservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "notification-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/notificationservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "notification-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/notificationservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "media-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/mediaservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": true
+    },
+    "media-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/mediaservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": true
+    },
+    "inventory-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/inventoryservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "inventory-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/inventoryservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "gateway-service/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": false,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "gateway-service/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": false,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "favourite-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/favouriteservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "favourite-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/favouriteservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "auth-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/authservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "auth-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/authservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    }
+  },
+  "transactional_sites": 162,
+  "liquibase_masters": [
+    {
+      "master": "auth-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "001-create-users-and-roles.yaml",
+        "002-add-soft-delete.yaml",
+        "003-partial-unique-users.yaml",
+        "004-password-reset-and-addresses.yaml"
+      ],
+      "count": 4
+    },
+    {
+      "master": "auth-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "001-create-users-and-roles.yaml",
+        "002-add-soft-delete.yaml",
+        "003-partial-unique-users.yaml",
+        "004-password-reset-and-addresses.yaml"
+      ],
+      "count": 4
+    },
+    {
+      "master": "favourite-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml"
+      ],
+      "count": 1
+    },
+    {
+      "master": "favourite-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml"
+      ],
+      "count": 1
+    },
+    {
+      "master": "inventory-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-safety-stock-threshold.yaml",
+        "changelog-004-stock-invariants-and-reservation-version.yaml"
+      ],
+      "count": 3
+    },
+    {
+      "master": "inventory-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-safety-stock-threshold.yaml",
+        "changelog-004-stock-invariants-and-reservation-version.yaml"
+      ],
+      "count": 3
+    },
+    {
+      "master": "media-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-medias.yaml",
+        "changelog-002-outbox.yaml",
+        "changelog-003-outbox-aging.yaml"
+      ],
+      "count": 3
+    },
+    {
+      "master": "media-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-medias.yaml",
+        "changelog-002-outbox.yaml",
+        "changelog-003-outbox-aging.yaml"
+      ],
+      "count": 3
+    },
+    {
+      "master": "notification-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-notifications.yaml",
+        "changelog-002-notification-retry.yaml",
+        "changelog-003-retry-index.yaml"
+      ],
+      "count": 3
+    },
+    {
+      "master": "notification-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-notifications.yaml",
+        "changelog-002-notification-retry.yaml",
+        "changelog-003-retry-index.yaml"
+      ],
+      "count": 3
+    },
+    {
+      "master": "order-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-outbox-pending-index.yaml",
+        "changelog-003-orders-version.yaml",
+        "changelog-004-confirm-hardening.yaml",
+        "changelog-005-idempotency-actor.yaml",
+        "changelog-006-orders-shipping-address.yaml",
+        "changelog-007-order-returns.yaml"
+      ],
+      "count": 7
+    },
+    {
+      "master": "order-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-outbox-pending-index.yaml",
+        "changelog-003-orders-version.yaml",
+        "changelog-004-confirm-hardening.yaml",
+        "changelog-005-idempotency-actor.yaml",
+        "changelog-006-orders-shipping-address.yaml",
+        "changelog-007-order-returns.yaml"
+      ],
+      "count": 7
+    },
+    {
+      "master": "payment-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-payments.yaml",
+        "changelog-002-payment-outbox.yaml",
+        "changelog-003-webhook-retry.yaml",
+        "changelog-004-expand-events-status-check.yaml",
+        "changelog-005-outbox-retention.yaml",
+        "changelog-006-payment-user-id.yaml",
+        "changelog-007-webhook-retry-index.yaml"
+      ],
+      "count": 7
+    },
+    {
+      "master": "payment-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-payments.yaml",
+        "changelog-002-payment-outbox.yaml",
+        "changelog-003-webhook-retry.yaml",
+        "changelog-004-expand-events-status-check.yaml",
+        "changelog-005-outbox-retention.yaml",
+        "changelog-006-payment-user-id.yaml",
+        "changelog-007-webhook-retry-index.yaml"
+      ],
+      "count": 7
+    },
+    {
+      "master": "product-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-outbox-pending-index.yaml",
+        "changelog-003-rating-columns.yaml",
+        "changelog-004-media-reference.yaml",
+        "changelog-005-media-id-index.yaml",
+        "changelog-006-product-variants.yaml"
+      ],
+      "count": 6
+    },
+    {
+      "master": "product-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-outbox-pending-index.yaml",
+        "changelog-003-rating-columns.yaml",
+        "changelog-004-media-reference.yaml",
+        "changelog-005-media-id-index.yaml",
+        "changelog-006-product-variants.yaml"
+      ],
+      "count": 6
+    },
+    {
+      "master": "promotion-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-outbox.yaml",
+        "changelog-003-reservation-query-indexes.yaml",
+        "changelog-004-coupon-reservation-version.yaml"
+      ],
+      "count": 4
+    },
+    {
+      "master": "promotion-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml",
+        "changelog-002-outbox.yaml",
+        "changelog-003-reservation-query-indexes.yaml",
+        "changelog-004-coupon-reservation-version.yaml"
+      ],
+      "count": 4
+    },
+    {
+      "master": "rating-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-ratings.yaml"
+      ],
+      "count": 1
+    },
+    {
+      "master": "rating-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-ratings.yaml"
+      ],
+      "count": 1
+    },
+    {
+      "master": "shipping-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-shipments.yaml",
+        "changelog-002-shipping-outbox.yaml",
+        "changelog-003-webhook-retry.yaml",
+        "changelog-004-expand-events-status-check.yaml"
+      ],
+      "count": 4
+    },
+    {
+      "master": "shipping-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-shipments.yaml",
+        "changelog-002-shipping-outbox.yaml",
+        "changelog-003-webhook-retry.yaml",
+        "changelog-004-expand-events-status-check.yaml"
+      ],
+      "count": 4
+    },
+    {
+      "master": "tax-service/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml"
+      ],
+      "count": 1
+    },
+    {
+      "master": "tax-service/target/classes/db/changelog/db.changelog-master.yaml",
+      "changesets": [
+        "changelog-001-initial-schema.yaml"
+      ],
+      "count": 1
+    }
+  ]
+}

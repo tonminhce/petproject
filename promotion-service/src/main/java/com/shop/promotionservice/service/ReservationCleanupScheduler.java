@@ -2,6 +2,7 @@ package com.shop.promotionservice.service;
 
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.entity.CouponUsageReservation;
+import com.shop.promotionservice.repository.CampaignRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,8 @@ import java.util.List;
 public class ReservationCleanupScheduler {
 
     private final CouponUsageReservationRepository reservationRepository;
+    private final CampaignRepository campaignRepository;
+    private final PromotionEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
 
     @Value("${shop.promotion.reservation-cleanup-batch-size:500}")
@@ -45,8 +48,12 @@ public class ReservationCleanupScheduler {
 
     public ReservationCleanupScheduler(
             CouponUsageReservationRepository reservationRepository,
+            CampaignRepository campaignRepository,
+            PromotionEventPublisher eventPublisher,
             PlatformTransactionManager txManager) {
         this.reservationRepository = reservationRepository;
+        this.campaignRepository = campaignRepository;
+        this.eventPublisher = eventPublisher;
         // A16: each batch is its own transaction. A failure mid-cycle rolls back
         // only the failing batch — earlier successful batches stay committed.
         // The original single-@Transactional + try/catch-inside was wrong (the
@@ -55,10 +62,19 @@ public class ReservationCleanupScheduler {
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
-    @Scheduled(fixedDelayString = "${shop.promotion.reservation-cleanup-interval-ms:60000}")
+    /**
+     * The first run is delayed by one interval instead of firing at context
+     * startup (same reasoning as the inventory sweep). A startup-time sweep
+     * competes with the first application requests and, in an integration
+     * test, with the other test classes that share the same database.
+     */
+    @Scheduled(fixedDelayString = "${shop.promotion.reservation-cleanup-interval-ms:60000}",
+               initialDelayString = "${shop.promotion.reservation-cleanup-initial-delay-ms:60000}")
     public void releaseAllExpiredReservations() {
         try {
             int total = 0;
+            java.util.concurrent.atomic.AtomicInteger expiredCounter =
+                    new java.util.concurrent.atomic.AtomicInteger();
             while (true) {
                 Integer processed = transactionTemplate.execute(status -> {
                     List<CouponUsageReservation> batch = reservationRepository.findByStatusAndExpiresAtBefore(
@@ -66,7 +82,39 @@ public class ReservationCleanupScheduler {
                     if (batch.isEmpty()) {
                         return null;
                     }
-                    batch.forEach(r -> r.setStatus(UsageStatus.EXPIRED));
+                    // F-044 (P1) — CLAIM each row before flipping it. A row that
+                    // another writer already transitioned (a concurrent commit()
+                    // or a competing sweep) affects zero rows and is skipped, so a
+                    // COMMITTED redemption can never be reverted to EXPIRED.
+                    //
+                    // The consequence of that revert is money-relevant: the
+                    // per-user limit and the campaign budget both count
+                    // PENDING + COMMITTED, so a silently reverted redemption
+                    // would let the customer redeem the same coupon again and
+                    // would under-spend the campaign budget.
+                    Instant now = Instant.now();
+                    int expired = 0;
+                    for (CouponUsageReservation reservation : batch) {
+                        int claimed = reservationRepository.claimForExpiry(
+                            reservation.getId(), UsageStatus.PENDING, UsageStatus.EXPIRED, now);
+                        if (claimed == 0) {
+                            continue;
+                        }
+                        expired++;
+                        // F-045 — the sweep is a state transition, so it emits the
+                        // same promotion.released.v1 event as the service-layer
+                        // release path, in the same transaction. Without it,
+                        // shop.promotion.lifecycle.v1 reports a reservation that
+                        // was never released (the inventory sweep already does
+                        // this - the two sweeps were inconsistent).
+                        reservation.setReleasedAt(now);
+                        campaignRepository.findById(reservation.getCampaignId()).ifPresent(campaign ->
+                                eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name()));
+                    }
+                    expiredCounter.addAndGet(expired);
+                    // Loop control uses the number of rows EXAMINED, not the number
+                    // claimed: a page whose rows were all claimed by another writer
+                    // still means there may be more rows behind it.
                     return batch.size();
                 });
                 if (processed == null || processed == 0) {
@@ -75,7 +123,7 @@ public class ReservationCleanupScheduler {
                 total += processed;
             }
             if (total > 0) {
-                log.info("Expired-reservation sweep expired {} reservation(s)", total);
+                log.info("Expired-reservation sweep expired {} reservation(s)", expiredCounter.get());
             }
         } catch (Exception ex) {
             // Per-batch tx: earlier successful batches are committed; the failing batch

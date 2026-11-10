@@ -171,7 +171,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
 
         OrderLifecycleEvent failing = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(failing);
-        Notification failedRow = awaitRow(failing.eventId());
+        Notification failedRow = awaitRowWithStatus(failing.eventId(), NotificationStatus.FAILED_RETRYABLE);
         // C12: the row never claims SENT; C17: the failure is retryable with bookkeeping.
         assertThat(failedRow.getStatus()).isEqualTo(NotificationStatus.FAILED_RETRYABLE);
         assertThat(failedRow.getRetryCount()).isEqualTo(1);
@@ -180,7 +180,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
 
         OrderLifecycleEvent following = createdEvent(UUID.randomUUID(), UUID.randomUUID(), null);
         send(following);
-        Notification sentRow = awaitRow(following.eventId());
+        Notification sentRow = awaitRowWithStatus(following.eventId(), NotificationStatus.SENT);
         assertThat(sentRow.getStatus()).isEqualTo(NotificationStatus.SENT);
     }
 
@@ -288,6 +288,27 @@ class NotificationFlowIT extends AbstractIntegrationTest {
             found.clear();
             found.addAll(rowsFor(eventId));
             assertThat(found).hasSize(1);
+        });
+        return found.get(0);
+    }
+
+    /**
+     * Wait until the row reaches a terminal status.
+     *
+     * <p>{@link #awaitRow} only waits for the row to EXIST. A row is inserted
+     * with status PENDING and updated to its terminal status once the sender
+     * has run, so asserting the terminal status straight after awaitRow is a
+     * race - the assertion can observe the intermediate PENDING row. This
+     * variant polls until the expected status is reached (or the timeout
+     * expires), which is what the status assertions actually mean.</p>
+     */
+    private Notification awaitRowWithStatus(String eventId, NotificationStatus expected) {
+        List<Notification> found = new ArrayList<>();
+        await().atMost(AWAIT).untilAsserted(() -> {
+            found.clear();
+            found.addAll(rowsFor(eventId));
+            assertThat(found).hasSize(1);
+            assertThat(found.get(0).getStatus()).isEqualTo(expected);
         });
         return found.get(0);
     }

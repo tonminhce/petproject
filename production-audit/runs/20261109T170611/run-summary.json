@@ -1,0 +1,41 @@
+{
+  "command": "run",
+  "run_id": "20261109T170611",
+  "status": "exhausted",
+  "iterations": 2,
+  "history": [
+    {
+      "iteration": 1,
+      "task": "TSK-001",
+      "outcome": "BLOCKED"
+    },
+    {
+      "iteration": 2,
+      "task": "TSK-004",
+      "outcome": "BLOCKED"
+    }
+  ],
+  "tasks": {
+    "total": 42,
+    "by_state": {
+      "BLOCKED": 2,
+      "READY": 23,
+      "VERIFIED": 17
+    },
+    "by_priority": {
+      "P0": 2,
+      "P1": 16,
+      "P2": 19,
+      "P3": 5
+    },
+    "mandatory_open": [
+      "TSK-001",
+      "TSK-004",
+      "TSK-016",
+      "TSK-017",
+      "TSK-021",
+      "TSK-041"
+    ],
+    "mandatory_open_count": 6
+  }
+}

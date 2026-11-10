@@ -49,4 +49,27 @@ public interface CouponUsageReservationRepository extends JpaRepository<CouponUs
            "coalesce(r.committedAt, r.releasedAt, r.reservedAt) < :cutoff")
     List<CouponUsageReservation> findTerminalBefore(@Param("statuses") Collection<UsageStatus> statuses,
                                                     @Param("cutoff") Instant cutoff, Pageable pageable);
+
+    /**
+     * F-044 (P1) — claim a coupon usage reservation for TTL expiry.
+     * <p>The sweep used to SELECT the candidates and then dirty-check them to
+     * EXPIRED. Without a version column, a sweep that read the row before
+     * {@code commit()} ran could overwrite the COMMITTED state - which stops
+     * the redemption from being counted against the per-user limit and the
+     * campaign budget.</p>
+     * <p>This conditional UPDATE is the claim: only the writer whose UPDATE
+     * matches {@code status = PENDING} transitions the row, and every other
+     * writer (a concurrent commit, a competing sweep) affects zero rows and
+     * therefore does nothing.</p>
+     *
+     * @return 1 when this caller claimed the row, 0 when someone else already
+     *         transitioned it
+     */
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE CouponUsageReservation r SET r.status = :expired, r.releasedAt = :now, r.version = r.version + 1 "
+         + "WHERE r.id = :id AND r.status = :pending")
+    int claimForExpiry(@Param("id") UUID id,
+                        @Param("pending") UsageStatus pending,
+                        @Param("expired") UsageStatus expired,
+                        @Param("now") Instant now);
 }

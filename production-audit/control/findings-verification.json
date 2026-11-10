@@ -1,0 +1,116 @@
+{
+  "verification_run": "mvn -B -ntp -Dcheckstyle.skip=true -Djib.skip=true -Ddependency-check.skip=true test",
+  "verification_log": "production-audit/runs/build-20261109T151254/maven-test-FINAL.log",
+  "result": "BUILD SUCCESS",
+  "tests_run": 3324,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "test_classes_executed": 271,
+  "modules": "23/23 SUCCESS",
+  "note": "Verification is OBJECTIVE and AUTOMATED (the reactor test suite) but NOT independent: this harness has no sub-agent facility, so the implementer and the verifier are the same actor. Gate 17 therefore remains PARTIAL - see production-audit/reports/production-readiness.md section 17.",
+  "findings": [
+    {
+      "id": "F-005",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "Full reactor: 3324 tests / 0 failures / 0 errors. The azp validator is covered by BaseSecurityConfigClientIdValidationTest (4 cases) and GatewayJwtSecurityConfigTest (3 cases)."
+    },
+    {
+      "id": "F-010",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "inventory-service 64/64 green against real PostgreSQL with the new CHECK constraints; commit_rejectsNegativeStockOutcome and release_rejectsNegativeStockOutcome assert the domain error."
+    },
+    {
+      "id": "F-011",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "inventory-service 64/64 green; sweep_skipsRowsAlreadyClaimedByAnotherWriter asserts the lost-update regression (a claim that affects zero rows must NOT move stock)."
+    },
+    {
+      "id": "F-012",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "sweep_publishesReleasedEventForEachExpiredReservation asserts the outbox event for a swept reservation."
+    },
+    {
+      "id": "F-014",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "inventory-service 64/64 green including ReservationServiceImplTest."
+    },
+    {
+      "id": "F-018",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "Full reactor 3324/0/0 with auto-offset-reset=earliest across all seven consuming services."
+    },
+    {
+      "id": "F-019",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "order-service green; new integration test confirm_withoutCapturedPayment_failsClosedWithOrd4012 asserts the gate fails closed with ORD-4012 and the order stays PENDING."
+    },
+    {
+      "id": "F-020",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "Full reactor 3324/0/0 with the credential default removed."
+    },
+    {
+      "id": "F-024",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "payment-service green (36 tests) with the malformed-hex signature now rejected instead of throwing."
+    },
+    {
+      "id": "F-031",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "gateway-service green; GatewaySecurityPostureValidatorTest (5 cases) covers the wildcard-CORS and zero-hop rejections; the gateway now resolves the client IP itself with forward-headers-strategy=none and trusted-proxy-hops=1."
+    },
+    {
+      "id": "F-032",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "gateway-service green; GatewayJwtSecurityConfigTest (3 cases) including issuer mismatch; the reactive decoder is now lazy so the edge boots without the IdP being reachable."
+    },
+    {
+      "id": "F-033",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "gateway-service green; GatewaySecurityPostureValidatorTest.wildcardCorsOriginIsRejected asserts the startup refusal."
+    },
+    {
+      "id": "F-037",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "tax-service 86/86 green; the previously failing TaxClassServiceImplTest.deleteRequiresAuditor now passes unchanged."
+    },
+    {
+      "id": "F-039",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "Runtime proof (Asia/Saigon -> FAILED, UTC -> CONNECTED, Asia/Ho_Chi_Minh -> CONNECTED) plus the full reactor green: 416 timezone errors -> 0."
+    },
+    {
+      "id": "F-040",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "Keycloak 26.0 token inspection (aud absent, azp present for user/admin/service tokens) plus 7 new unit tests across common-security and gateway-service; full reactor green."
+    },
+    {
+      "id": "F-042",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "media-service 126/126 green (previously 44 errors) against the production RustFS image."
+    },
+    {
+      "id": "F-043",
+      "status": "VERIFIED",
+      "verification": "VERIFIED",
+      "verification_evidence": "inventory 64/64, promotion 120/120, notification 94/94 green and order-independent."
+    }
+  ]
+}

@@ -9,6 +9,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Webhook signature verifier for the payment fleet.
  *
@@ -39,6 +42,8 @@ import java.util.HexFormat;
  * ({@link MessageDigest#isEqual(byte[], byte[])}) to defeat timing oracles.</p>
  */
 public final class WebhookSignatureVerifier {
+
+    private static final Logger log = LoggerFactory.getLogger(WebhookSignatureVerifier.class);
 
     private static final String HMAC_SHA256 = "HmacSHA256";
     private static final int SHA256_HEX_LENGTH = 64;
@@ -99,7 +104,19 @@ public final class WebhookSignatureVerifier {
                 return false;
             }
             String signedPayload = wireTs + "." + new String(rawBody, StandardCharsets.UTF_8);
-            byte[] provided = HexFormat.of().parseHex(stripe.v1Hex);
+            // F-024 — parseStripeHeader only validates the LENGTH of v1 (64),
+            // not that it is hexadecimal. HexFormat.parseHex throws
+            // IllegalArgumentException for a 64-character non-hex string, which
+            // escaped as an HTTP 500 on an unauthenticated endpoint instead of
+            // a clean signature rejection. Treat any unparseable value as an
+            // invalid signature.
+            byte[] provided;
+            try {
+                provided = HexFormat.of().parseHex(stripe.v1Hex);
+            } catch (IllegalArgumentException ex) {
+                log.debug("Rejected webhook signature with a non-hex v1 component");
+                return false;
+            }
             return constantTimeEquals(provided, hmac(secret, signedPayload));
         }
 

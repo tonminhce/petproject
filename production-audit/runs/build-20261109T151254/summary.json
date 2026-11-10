@@ -1,0 +1,14 @@
+{
+  "run_id": "build-20261109T151254",
+  "purpose": "Final verification build for the production-readiness audit.",
+  "command": "mvn -B -ntp -Dcheckstyle.skip=true -Djib.skip=true -Ddependency-check.skip=true test",
+  "result": "BUILD SUCCESS",
+  "tests_run": 3332,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "test_classes_executed": 271,
+  "modules": "23/23 SUCCESS",
+  "raw_logs": "gitignored (tens of MB); the machine-readable evidence lives in production-audit/state/evidence.json under suite:unit",
+  "note": "An earlier run in this directory reported 26 product-service errors caused by Docker Desktop being down ('Could not find a valid Docker environment'); after restarting Docker the module ran 59/59 green. The recorded run is a clean pass."
+}

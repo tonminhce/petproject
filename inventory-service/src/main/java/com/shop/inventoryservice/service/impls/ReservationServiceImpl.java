@@ -57,16 +57,31 @@ public class ReservationServiceImpl implements ReservationService {
                 if (++attempt >= MAX_ATTEMPTS) {
                     throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, resourceId);
                 }
-                sleep(BACKOFF_BASE_MS * attempt);
+                if (!sleep(BACKOFF_BASE_MS * attempt)) {
+                    // F-014 — the thread was interrupted (client disconnected,
+                    // container shutting down). The previous implementation
+                    // restored the interrupt flag and kept looping, so every
+                    // remaining attempt failed instantly and the caller saw a
+                    // spurious INVENTORY_VERSION_CONFLICT. Propagate the
+                    // cancellation instead of retrying on a dead thread.
+                    Thread.currentThread().interrupt();
+                    throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, resourceId);
+                }
             }
         }
     }
 
-    private void sleep(long ms) {
+    /**
+     * @return {@code true} when the sleep completed normally, {@code false} when
+     *         the thread was interrupted.
+     */
+    private boolean sleep(long ms) {
         try {
             Thread.sleep(ms);
+            return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return false;
         }
     }
 }

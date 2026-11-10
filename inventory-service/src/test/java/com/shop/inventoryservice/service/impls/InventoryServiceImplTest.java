@@ -357,6 +357,10 @@ class InventoryServiceImplTest {
 
     @Test
     void commit_evictsCacheAfterCommit() {
+        // The reservation holds 5 units, so the inventory must actually be
+        // holding them: a commit that subtracts from a reserved counter of 0
+        // would drive the counter negative (F-010).
+        inventory.setReservedQuantity(5);
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
         when(inventoryRepository.save(inventory)).thenReturn(inventory);
@@ -369,6 +373,7 @@ class InventoryServiceImplTest {
 
     @Test
     void release_evictsCacheAfterCommit() {
+        inventory.setReservedQuantity(5);
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
         when(inventoryRepository.save(inventory)).thenReturn(inventory);
@@ -377,5 +382,45 @@ class InventoryServiceImplTest {
         service.release(reservationId);
 
         verify(cacheService).evictAfterCommit(productId);
+    }
+
+    /**
+     * F-010 — the stock counters must never go negative. A commit that would
+     * drive reserved_quantity below zero is a data inconsistency (the hold was
+     * never taken) and must fail closed with a domain error instead of
+     * silently corrupting the capacity guard.
+     */
+    @Test
+    void commit_rejectsNegativeStockOutcome() {
+        // reserved_quantity is 0 while the reservation claims 5 units.
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+
+        assertThatThrownBy(() -> service.commit(reservationId))
+            .isInstanceOf(BusinessException.class)
+            .satisfies(ex -> {
+                BusinessException be = (BusinessException) ex;
+                assertThat(be.getErrorCode()).isEqualTo(ErrorCode.STOCK_INSUFFICIENT.getCode());
+            });
+
+        verify(inventoryRepository, never()).save(any());
+    }
+
+    /**
+     * F-010 — same guard on the release path.
+     */
+    @Test
+    void release_rejectsNegativeStockOutcome() {
+        when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+        when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
+
+        assertThatThrownBy(() -> service.release(reservationId))
+            .isInstanceOf(BusinessException.class)
+            .satisfies(ex -> {
+                BusinessException be = (BusinessException) ex;
+                assertThat(be.getErrorCode()).isEqualTo(ErrorCode.STOCK_INSUFFICIENT.getCode());
+            });
+
+        verify(inventoryRepository, never()).save(any());
     }
 }

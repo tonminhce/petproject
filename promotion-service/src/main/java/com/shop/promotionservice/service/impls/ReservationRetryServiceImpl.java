@@ -78,16 +78,29 @@ public class ReservationRetryServiceImpl implements ReservationRetryService {
                 if (++attempt >= MAX_ATTEMPTS) {
                     throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_VERSION_CONFLICT, key);
                 }
-                sleep(BACKOFF_BASE_MS * attempt);
+                // F-046 — the interrupt flag is restored and the loop stops.
+                // The previous implementation restored the flag but kept
+                // retrying, so every remaining attempt failed instantly and
+                // the caller saw a spurious version-conflict error.
+                if (!sleep(BACKOFF_BASE_MS * attempt)) {
+                    Thread.currentThread().interrupt();
+                    throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_VERSION_CONFLICT, key);
+                }
             }
         }
     }
 
-    private void sleep(long ms) {
+    /**
+     * @return {@code true} when the sleep completed normally, {@code false} when
+     *         the thread was interrupted.
+     */
+    private boolean sleep(long ms) {
         try {
             Thread.sleep(ms);
+            return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return false;
         }
     }
 }

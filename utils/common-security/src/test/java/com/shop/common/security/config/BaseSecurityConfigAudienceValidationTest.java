@@ -51,7 +51,7 @@ class BaseSecurityConfigAudienceValidationTest {
 
     @SuppressWarnings("unchecked")
     private OAuth2TokenValidator<Jwt> validator(List<String> audiences) throws Exception {
-        var props = new SecurityProperties(true, ISSUER, true, true, List.of(), audiences,
+        var props = new SecurityProperties(true, ISSUER, true, true, List.of(), audiences, List.of(),
                 new SecurityProperties.Cors(true, List.of("*"), List.of(), List.of("*"), List.of(), false, 3600L));
         Method method = BaseSecurityConfig.class.getDeclaredMethod("buildValidatorChain");
         method.setAccessible(true);

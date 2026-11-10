@@ -50,6 +50,22 @@ import java.util.List;
  *                           horizontal privilege escalation). Set to the
  *                           {@code clientId}(s) whose tokens should reach THIS
  *                           service. Empty list = no aud check (legacy/dev only).
+ *
+ *                           IMPORTANT (measured against the provisioned Keycloak
+ *                           26 realm, production-audit finding F-040): the
+ *                           shipped realm has NO audience mapper and NO client
+ *                           scopes, so the access tokens it issues carry NO
+ *                           {@code aud} claim at all - only {@code azp}. Enabling
+ *                           this list against that realm would reject EVERY
+ *                           token (the validator requires a non-empty aud list).
+ *                           Use {@code expectedClientIds} (the {@code azp}
+ *                           claim) unless an audience mapper has been added to
+ *                           the realm first.
+ * @param expectedClientIds  optional list of client ids this service accepts.
+ *                           The check reads the {@code azp} claim (the client
+ *                           the token was actually issued to), which is the only
+ *                           client discriminator the provisioned realm emits.
+ *                           Empty list = no client check (legacy/dev only).
  * @param cors               CORS sub-configuration
  */
 @Validated
@@ -61,6 +77,7 @@ public record SecurityProperties(
         @DefaultValue("true") boolean statelessSession,
         @DefaultValue List<EndpointRule> publicPaths,
         @DefaultValue List<@NotBlank String> expectedAudiences,
+        @DefaultValue List<@NotBlank String> expectedClientIds,
         @Valid @DefaultValue Cors cors
 ) {
 

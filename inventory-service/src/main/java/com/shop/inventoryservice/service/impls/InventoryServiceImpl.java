@@ -186,8 +186,19 @@ public class InventoryServiceImpl implements InventoryService {
         }
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
-        inventory.setAvailableQuantity(inventory.getAvailableQuantity() - r.getQuantity());
-        inventory.setReservedQuantity(inventory.getReservedQuantity() - r.getQuantity());
+        // F-010 — never let the counters go negative. A negative reserved or
+        // available quantity defeats the (available - reserved) >= qty capacity
+        // guard and silently enables overselling. The database CHECK
+        // constraints (changelog-004) are the last line of defence; this guard
+        // turns the violation into a domain error instead of a raw constraint
+        // violation.
+        int newAvailable = inventory.getAvailableQuantity() - r.getQuantity();
+        int newReserved = inventory.getReservedQuantity() - r.getQuantity();
+        if (newAvailable < 0 || newReserved < 0) {
+            throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, r.getProductId());
+        }
+        inventory.setAvailableQuantity(newAvailable);
+        inventory.setReservedQuantity(newReserved);
         inventory.setLastUpdated(Instant.now());
         r.setStatus(ReservationStatus.COMMITTED);
         r.setCommittedAt(Instant.now());
@@ -219,7 +230,12 @@ public class InventoryServiceImpl implements InventoryService {
         }
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
-        inventory.setReservedQuantity(inventory.getReservedQuantity() - r.getQuantity());
+        // F-010 — the reserved counter must never go negative; see commit().
+        int newReserved = inventory.getReservedQuantity() - r.getQuantity();
+        if (newReserved < 0) {
+            throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, r.getProductId());
+        }
+        inventory.setReservedQuantity(newReserved);
         inventory.setLastUpdated(Instant.now());
         r.setStatus(ReservationStatus.RELEASED);
         r.setReleasedAt(Instant.now());

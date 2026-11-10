@@ -73,7 +73,13 @@ public class TaxClassServiceImpl implements TaxClassService {
         if (taxRateRepository.countByClassId(id) > 0) {
             throw BusinessException.of(ErrorCode.TAX_CLASS_IN_USE, id);
         }
-        taxClass.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
+        // F-037 — require a resolved auditor for a destructive configuration
+        // change. The previous `.orElse("system")` silently attributed the soft
+        // delete to a pseudo-actor, which destroyed the audit trail for a
+        // destructive administrative operation. This matches the campaign
+        // delete in promotion-service and the TaxClassServiceImpl contract
+        // asserted by TaxClassServiceImplTest.deleteRequiresAuditor.
+        taxClass.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         taxClassRepository.save(taxClass);
     }
 

@@ -136,6 +136,22 @@ public class BaseSecurityConfig {
                         && properties.expectedAudiences().stream().anyMatch(audiences::contains);
             }));
         }
+        if (!properties.expectedClientIds().isEmpty()) {
+            // F-040 — the provisioned Keycloak realm issues no 'aud' claim (no
+            // audience mapper, no client scopes), so the aud validator above can
+            // never be satisfied. The 'azp' claim - the client the token was
+            // actually issued to - IS present on every token the realm mints
+            // (verified against Keycloak 26: user tokens carry
+            // azp=ecommerce-client, service tokens carry azp=<service-client>).
+            // Validating azp gives the fleet a real client-identity control
+            // that works against the realm as shipped.
+            validators.add(new JwtClaimValidator<Object>("azp", azp -> {
+                if (!(azp instanceof String clientId) || clientId.isBlank()) {
+                    return false;
+                }
+                return properties.expectedClientIds().contains(clientId);
+            }));
+        }
         return new DelegatingOAuth2TokenValidator<>(validators);
     }
 

@@ -2,6 +2,7 @@ package com.shop.promotionservice.service;
 
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.entity.CouponUsageReservation;
+import com.shop.promotionservice.repository.CampaignRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,8 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -34,11 +37,20 @@ import static org.mockito.Mockito.*;
  * (verified by integration tests on a real DB). A16 shape: one transaction
  * per batch (TransactionTemplate), no persistence-context flush/clear — a
  * mid-cycle failure rolls back only the failing batch and terminates.
+ *
+ * <p>F-044 — the sweep now CLAIMS each row with a conditional UPDATE
+ * ({@code status = PENDING} -> {@code status = EXPIRED}) instead of flipping
+ * the status on a dirty-checked entity. A row that another writer already
+ * transitioned affects zero rows and is skipped, so a COMMITTED redemption can
+ * never be reverted to EXPIRED (which would stop it being counted against the
+ * per-user limit and the campaign budget).</p>
  */
 @ExtendWith(MockitoExtension.class)
 class ReservationCleanupSchedulerTest {
 
     @Mock CouponUsageReservationRepository reservationRepository;
+    @Mock CampaignRepository campaignRepository;
+    @Mock PromotionEventPublisher eventPublisher;
 
     private ReservationCleanupScheduler scheduler;
 
@@ -55,7 +67,8 @@ class ReservationCleanupSchedulerTest {
             @Override
             public void rollback(TransactionStatus status) { }
         };
-        scheduler = new ReservationCleanupScheduler(reservationRepository, txManager);
+        scheduler = new ReservationCleanupScheduler(
+                reservationRepository, campaignRepository, eventPublisher, txManager);
         // @Value fields are not injected outside Spring - set explicitly
         ReflectionTestUtils.setField(scheduler, "batchSize", 500);
         ReflectionTestUtils.setField(scheduler, "retentionDays", 30);
@@ -63,10 +76,10 @@ class ReservationCleanupSchedulerTest {
 
     private CouponUsageReservation pending(long secondsOverdue) {
         return CouponUsageReservation.builder()
-            .id(java.util.UUID.randomUUID())
-            .campaignId(java.util.UUID.randomUUID())
-            .userId(java.util.UUID.randomUUID())
-            .orderId(java.util.UUID.randomUUID())
+            .id(UUID.randomUUID())
+            .campaignId(UUID.randomUUID())
+            .userId(UUID.randomUUID())
+            .orderId(UUID.randomUUID())
             .status(UsageStatus.PENDING)
             .expiresAt(Instant.now().minusSeconds(secondsOverdue))
             .reservedAt(Instant.now().minusSeconds(secondsOverdue + 900))
@@ -74,21 +87,85 @@ class ReservationCleanupSchedulerTest {
     }
 
     @Test
-    void sweep_flipsPendingToExpired_batched() {
+    void sweep_claimsPendingRows_batched() {
         CouponUsageReservation first = pending(60);
         CouponUsageReservation second = pending(120);
         when(reservationRepository.findByStatusAndExpiresAtBefore(
                 eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500))))
             .thenReturn(List.of(first, second))
             .thenReturn(List.of());
+        when(reservationRepository.claimForExpiry(
+                any(UUID.class), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class)))
+            .thenReturn(1);
+        when(campaignRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
         scheduler.releaseAllExpiredReservations();
 
-        assertThat(first.getStatus()).isEqualTo(UsageStatus.EXPIRED);
-        assertThat(second.getStatus()).isEqualTo(UsageStatus.EXPIRED);
+        // F-044 — the transition happens through the conditional UPDATE, not a
+        // dirty-checked entity, so the sweep must claim every candidate.
+        verify(reservationRepository).claimForExpiry(
+            eq(first.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class));
+        verify(reservationRepository).claimForExpiry(
+            eq(second.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class));
         // batched: drain until the page comes back empty
         verify(reservationRepository, times(2)).findByStatusAndExpiresAtBefore(
             eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500)));
+    }
+
+    /**
+     * F-044 regression — the lost-update guard. When the claim affects zero
+     * rows, another writer already transitioned the reservation (a concurrent
+     * commit, or a competing sweep). The sweep must then do nothing at all: a
+     * committed redemption must never be reverted to EXPIRED, because the
+     * per-user limit and the campaign budget both count PENDING + COMMITTED.
+     */
+    @Test
+    void sweep_skipsRowsAlreadyClaimedByAnotherWriter() {
+        CouponUsageReservation raced = pending(60);
+        when(reservationRepository.findByStatusAndExpiresAtBefore(
+                eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500))))
+            .thenReturn(List.of(raced))
+            .thenReturn(List.of());
+        // The claim lost the race - the row is no longer PENDING.
+        when(reservationRepository.claimForExpiry(
+                eq(raced.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class)))
+            .thenReturn(0);
+
+        scheduler.releaseAllExpiredReservations();
+
+        verify(eventPublisher, never()).publishReleased(any(), any(), anyString());
+        verify(campaignRepository, never()).findById(any());
+    }
+
+    /**
+     * F-045 — the sweep emits the same promotion.released.v1 event as the
+     * service-layer release path, so the event stream describes every state
+     * transition (the inventory sweep already does this; the two sweeps had
+     * diverged).
+     */
+    @Test
+    void sweep_publishesReleasedEventForEachExpiredReservation() {
+        CouponUsageReservation expired = pending(60);
+        var campaign = com.shop.promotionservice.entity.Campaign.builder()
+            .id(expired.getCampaignId())
+            .code("SAVE10")
+            .name("Save 10")
+            .discountType("PERCENT")
+            .discountValue(new java.math.BigDecimal("10"))
+            .build();
+        when(reservationRepository.findByStatusAndExpiresAtBefore(
+                eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500))))
+            .thenReturn(List.of(expired))
+            .thenReturn(List.of());
+        when(reservationRepository.claimForExpiry(
+                eq(expired.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class)))
+            .thenReturn(1);
+        when(campaignRepository.findById(expired.getCampaignId())).thenReturn(Optional.of(campaign));
+
+        scheduler.releaseAllExpiredReservations();
+
+        verify(eventPublisher).publishReleased(campaign, expired, UsageStatus.PENDING.name());
+        assertThat(expired.getReleasedAt()).isNotNull();
     }
 
     @Test
@@ -100,6 +177,7 @@ class ReservationCleanupSchedulerTest {
         scheduler.releaseAllExpiredReservations();
 
         verify(reservationRepository, never()).saveAll(any());
+        verify(reservationRepository, never()).claimForExpiry(any(), any(), any(), any());
     }
 
     @Test
@@ -119,10 +197,10 @@ class ReservationCleanupSchedulerTest {
     @Test
     void purge_deletesTerminalRowsOlderThanCutoff_batched() {
         CouponUsageReservation oldReleased = CouponUsageReservation.builder()
-            .id(java.util.UUID.randomUUID())
-            .campaignId(java.util.UUID.randomUUID())
-            .userId(java.util.UUID.randomUUID())
-            .orderId(java.util.UUID.randomUUID())
+            .id(UUID.randomUUID())
+            .campaignId(UUID.randomUUID())
+            .userId(UUID.randomUUID())
+            .orderId(UUID.randomUUID())
             .status(UsageStatus.RELEASED)
             .expiresAt(Instant.now().minus(31, ChronoUnit.DAYS))
             .reservedAt(Instant.now().minus(31, ChronoUnit.DAYS))

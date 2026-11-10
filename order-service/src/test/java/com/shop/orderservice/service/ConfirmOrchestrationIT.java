@@ -92,6 +92,10 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(response.status()).isEqualTo(OrderStatus.PENDING);
         Order saved = orderRepository.findById(response.id()).orElseThrow();
         assertThat(saved.getPromotionReservationId()).isEqualTo(promoReservationId);
+        // F-019 (P0) — the captured-payment confirm gate: the confirm path is
+        // only allowed to proceed when payment-service reports a CAPTURED
+        // payment for this order.
+        stubCapturedPayment(response.id());
         return response;
     }
 
@@ -102,14 +106,36 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
                 """.formatted(productId))));
     }
 
+    /**
+     * F-019 (P0) — the captured-payment confirm gate. The confirm path only
+     * proceeds when payment-service reports a CAPTURED payment for the order;
+     * without this stub the gate fails closed with ORD-4012 (which is the
+     * behaviour asserted by the dedicated gate test).
+     */
+    private void stubCapturedPayment(UUID orderId) {
+        paymentServer.stubFor(get(urlPathEqualTo("/api/v1/payments"))
+            .withQueryParam("orderId", equalTo(orderId.toString()))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"content":[{"orderId":"%s","status":"CAPTURED","id":"%s"}],"page":0,"size":10,"totalElements":1,"totalPages":1,"first":true,"last":true}}
+                """.formatted(orderId, UUID.randomUUID()))));
+    }
+
+    /** No captured payment for the order - the confirm gate must fail closed. */
+    private void stubNoCapturedPayment(UUID orderId) {
+        paymentServer.stubFor(get(urlPathEqualTo("/api/v1/payments"))
+            .withQueryParam("orderId", equalTo(orderId.toString()))
+            .willReturn(okJson("""
+                {"success":true,"code":"OK","data":{"content":[],"page":0,"size":10,"totalElements":0,"totalPages":0,"first":true,"last":true}}
+                """)));
+    }
+
     private static com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder reservationJson(UUID id) {
         return okJson("""
             {"success":true,"code":"OK","data":{"reservationId":"%s","productId":"%s","quantity":1}}
             """.formatted(id, id));
     }
 
-    private void stubCommitsAllOk() {
-        promotionServer.stubFor(post(urlEqualTo("/api/v1/promotions/reservations/" + promoReservationId + "/commit"))
+    private void stubCommitsAllOk() {        promotionServer.stubFor(post(urlEqualTo("/api/v1/promotions/reservations/" + promoReservationId + "/commit"))
             .willReturn(aResponse().withStatus(200)));
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/reservations/" + resA + "/commit"))
             .willReturn(aResponse().withStatus(200)));
@@ -120,6 +146,30 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
     // ------------------------------------------------------------------
     // 1. Happy confirm — promotion commits BEFORE inventory, order CONFIRMED
     // ------------------------------------------------------------------
+
+    /**
+     * F-019 (P0) regression — the captured-payment confirm gate.
+     *
+     * <p>The gate used to be switched OFF by default
+     * ({@code shop.services.payment.enabled=false}), so an order could reach
+     * CONFIRMED with no captured payment. With the gate active the confirm
+     * must fail closed with ORD-4012 when payment-service reports no captured
+     * payment for the order, and the order must stay PENDING.</p>
+     */
+    @Test
+    void confirm_withoutCapturedPayment_failsClosedWithOrd4012() throws Exception {
+        OrderResponse order = pendingOrderWithPromotion("create-no-payment");
+        // A later-registered matching stub wins in WireMock.
+        stubNoCapturedPayment(order.id());
+        stubCommitsAllOk();
+
+        assertThatThrownBy(() -> orderService.confirmOrder(order.id(), adminId.toString(), "no-payment-key"))
+            .isInstanceOf(BusinessException.class)
+            .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo("ORD-4012"));
+
+        Order stillPending = orderRepository.findById(order.id()).orElseThrow();
+        assertThat(stillPending.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
 
     @Test
     void happyConfirm_promotionCommitsBeforeInventory_orderConfirmed() throws Exception {

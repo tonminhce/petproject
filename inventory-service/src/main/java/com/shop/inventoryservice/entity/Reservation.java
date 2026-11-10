@@ -1,6 +1,7 @@
 package com.shop.inventoryservice.entity;
 
 import com.shop.inventoryservice.constant.ReservationStatus;
+import jakarta.persistence.Version;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -62,4 +63,18 @@ public class Reservation {
 
     @Column(name = "order_id")
     private UUID orderId;
+
+    /**
+     * F-011 — optimistic-lock guard for the reservation aggregate. Without it
+     * the expiry sweep (an unlocked SELECT followed by a blind save) could
+     * overwrite a COMMITTED reservation with EXPIRED, which released stock that
+     * had already been consumed by a paid order. The sweep now also claims the
+     * row with a conditional UPDATE, so exactly one writer can transition it;
+     * this version column is the second line of defence for the concurrent
+     * commit/release paths.
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 }

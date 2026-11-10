@@ -1,0 +1,1515 @@
+{
+  "schema_version": 1,
+  "maven": {
+    "modules": {
+      "auth-service": {
+        "path": "auth-service/pom.xml",
+        "artifact": "auth-service",
+        "depends_on": [
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "favourite-service": {
+        "path": "favourite-service/pom.xml",
+        "artifact": "favourite-service",
+        "depends_on": [
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "gateway-service": {
+        "path": "gateway-service/pom.xml",
+        "artifact": "gateway-service",
+        "depends_on": [
+          "common-core"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "inventory-service": {
+        "path": "inventory-service/pom.xml",
+        "artifact": "inventory-service",
+        "depends_on": [
+          "common-kafka",
+          "common-logging",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "media-service": {
+        "path": "media-service/pom.xml",
+        "artifact": "media-service",
+        "depends_on": [
+          "common-kafka",
+          "common-spring",
+          "common-storage"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-storage",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "notification-service": {
+        "path": "notification-service/pom.xml",
+        "artifact": "notification-service",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-keycloak",
+          "common-security",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "order-service": {
+        "path": "order-service/pom.xml",
+        "artifact": "order-service",
+        "depends_on": [
+          "common-kafka",
+          "common-logging",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "payment-service": {
+        "path": "payment-service/pom.xml",
+        "artifact": "payment-service",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-keycloak",
+          "common-logging",
+          "common-security",
+          "common-spring",
+          "common-storage"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-storage",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "petproject": {
+        "path": "pom.xml",
+        "artifact": "petproject",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-keycloak",
+          "common-logging",
+          "common-security",
+          "common-spring",
+          "common-storage"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-storage",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": false,
+        "has_tests": false
+      },
+      "product-service": {
+        "path": "product-service/pom.xml",
+        "artifact": "product-service",
+        "depends_on": [
+          "common-kafka",
+          "common-logging",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "promotion-service": {
+        "path": "promotion-service/pom.xml",
+        "artifact": "promotion-service",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-keycloak",
+          "common-logging",
+          "common-security",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "rating-service": {
+        "path": "rating-service/pom.xml",
+        "artifact": "rating-service",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-logging",
+          "common-security",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "search-service": {
+        "path": "search-service/pom.xml",
+        "artifact": "search-service",
+        "depends_on": [
+          "common-kafka",
+          "common-logging",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "shipping-service": {
+        "path": "shipping-service/pom.xml",
+        "artifact": "shipping-service",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-keycloak",
+          "common-logging",
+          "common-security",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "tax-service": {
+        "path": "tax-service/pom.xml",
+        "artifact": "tax-service",
+        "depends_on": [
+          "common-core",
+          "common-keycloak",
+          "common-logging",
+          "common-security",
+          "common-spring"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-spring",
+            "scope": "test"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": false,
+        "is_service": true,
+        "has_tests": true
+      },
+      "common-core": {
+        "path": "utils/common-core/pom.xml",
+        "artifact": "common-core",
+        "depends_on": [],
+        "dependency_scopes": [],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": true
+      },
+      "common-kafka": {
+        "path": "utils/common-kafka/pom.xml",
+        "artifact": "common-kafka",
+        "depends_on": [],
+        "dependency_scopes": [],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": true
+      },
+      "common-keycloak": {
+        "path": "utils/common-keycloak/pom.xml",
+        "artifact": "common-keycloak",
+        "depends_on": [
+          "common-core"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": false
+      },
+      "common-logging": {
+        "path": "utils/common-logging/pom.xml",
+        "artifact": "common-logging",
+        "depends_on": [
+          "common-core"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": true
+      },
+      "common-security": {
+        "path": "utils/common-security/pom.xml",
+        "artifact": "common-security",
+        "depends_on": [
+          "common-core"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": true
+      },
+      "common-spring": {
+        "path": "utils/common-spring/pom.xml",
+        "artifact": "common-spring",
+        "depends_on": [
+          "common-core",
+          "common-kafka",
+          "common-keycloak",
+          "common-logging",
+          "common-security",
+          "common-storage"
+        ],
+        "dependency_scopes": [
+          {
+            "artifact": "common-core",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-security",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-logging",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-keycloak",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-kafka",
+            "scope": "compile"
+          },
+          {
+            "artifact": "common-storage",
+            "scope": "compile"
+          }
+        ],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": true
+      },
+      "common-storage": {
+        "path": "utils/common-storage/pom.xml",
+        "artifact": "common-storage",
+        "depends_on": [],
+        "dependency_scopes": [],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": true
+      },
+      "utils": {
+        "path": "utils/pom.xml",
+        "artifact": "utils",
+        "depends_on": [],
+        "dependency_scopes": [],
+        "is_shared": true,
+        "is_service": false,
+        "has_tests": false
+      }
+    },
+    "edges": [
+      {
+        "from": "auth-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "favourite-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "gateway-service",
+        "to": "common-core"
+      },
+      {
+        "from": "inventory-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "inventory-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "inventory-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "inventory-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "media-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "media-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "media-service",
+        "to": "common-storage"
+      },
+      {
+        "from": "media-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "notification-service",
+        "to": "common-core"
+      },
+      {
+        "from": "notification-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "notification-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "notification-service",
+        "to": "common-security"
+      },
+      {
+        "from": "notification-service",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "notification-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "order-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "order-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "order-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-core"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-security"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "payment-service",
+        "to": "common-storage"
+      },
+      {
+        "from": "petproject",
+        "to": "common-core"
+      },
+      {
+        "from": "petproject",
+        "to": "common-spring"
+      },
+      {
+        "from": "petproject",
+        "to": "common-storage"
+      },
+      {
+        "from": "petproject",
+        "to": "common-security"
+      },
+      {
+        "from": "petproject",
+        "to": "common-logging"
+      },
+      {
+        "from": "petproject",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "petproject",
+        "to": "common-kafka"
+      },
+      {
+        "from": "product-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "product-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "product-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "product-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-core"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-security"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "promotion-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "rating-service",
+        "to": "common-core"
+      },
+      {
+        "from": "rating-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "rating-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "rating-service",
+        "to": "common-security"
+      },
+      {
+        "from": "rating-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "rating-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "search-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "search-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "search-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "search-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-core"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-security"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-kafka"
+      },
+      {
+        "from": "shipping-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "tax-service",
+        "to": "common-core"
+      },
+      {
+        "from": "tax-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "tax-service",
+        "to": "common-spring"
+      },
+      {
+        "from": "tax-service",
+        "to": "common-security"
+      },
+      {
+        "from": "tax-service",
+        "to": "common-logging"
+      },
+      {
+        "from": "tax-service",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "common-keycloak",
+        "to": "common-core"
+      },
+      {
+        "from": "common-logging",
+        "to": "common-core"
+      },
+      {
+        "from": "common-security",
+        "to": "common-core"
+      },
+      {
+        "from": "common-spring",
+        "to": "common-core"
+      },
+      {
+        "from": "common-spring",
+        "to": "common-security"
+      },
+      {
+        "from": "common-spring",
+        "to": "common-logging"
+      },
+      {
+        "from": "common-spring",
+        "to": "common-keycloak"
+      },
+      {
+        "from": "common-spring",
+        "to": "common-kafka"
+      },
+      {
+        "from": "common-spring",
+        "to": "common-storage"
+      }
+    ],
+    "pom_count": 23
+  },
+  "kafka": {
+    "producers": {},
+    "consumers": {
+      "shipping-service/src/main/java/com/shop/shippingservice/kafka/OrderEventConsumer.java": [
+        "shop.order.lifecycle.v1"
+      ],
+      "search-service/src/main/java/com/shop/searchservice/kafka/ProductSearchConsumer.java": [
+        "shop.product.lifecycle.v1"
+      ],
+      "product-service/src/main/java/com/shop/productservice/kafka/MediaDeletedConsumer.java": [
+        "media.lifecycle.v1"
+      ],
+      "product-service/src/main/java/com/shop/productservice/kafka/ProductRatingConsumer.java": [
+        "shop.rating.lifecycle.v1"
+      ],
+      "order-service/src/main/java/com/shop/orderservice/kafka/PaymentLifecycleConsumer.java": [
+        "shop.payment.lifecycle.v1"
+      ],
+      "order-service/src/main/java/com/shop/orderservice/kafka/ShippingDeliveredConsumer.java": [
+        "shop.shipping.lifecycle.v1"
+      ],
+      "notification-service/src/main/java/com/shop/notificationservice/kafka/OrderEventConsumer.java": [
+        "shop.order.lifecycle.v1"
+      ]
+    },
+    "topic_to_groups": {
+      "shop.payment.lifecycle.v1": [
+        "order-service-payment-group"
+      ]
+    }
+  },
+  "datasources": {
+    "utils/common-spring/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "utils/common-spring/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "tax-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/taxservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "tax-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/taxservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "shipping-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/shippingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "shipping-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/shippingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "search-service/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": true,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "search-service/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": true,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "rating-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/ratingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "rating-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/ratingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "promotion-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/promotionservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "promotion-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/promotionservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "product-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/productservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "product-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/productservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "payment-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/paymentservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": true,
+      "mentions_keycloak": false,
+      "mentions_rustfs": true
+    },
+    "payment-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/paymentservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": true,
+      "mentions_keycloak": false,
+      "mentions_rustfs": true
+    },
+    "order-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/orderservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "order-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/orderservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "notification-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/notificationservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "notification-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/notificationservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "media-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/mediaservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": true
+    },
+    "media-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/mediaservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": true
+    },
+    "inventory-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/inventoryservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "inventory-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/inventoryservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "gateway-service/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": false,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "gateway-service/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": false,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "favourite-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/favouriteservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "favourite-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/favouriteservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "auth-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/authservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "auth-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/authservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    }
+  },
+  "rest_endpoints": {
+    "auth-service/src/main/java/com/shop/authservice/controller/AddressController.java": [
+      "REQUEST:/api/v1/users/me/addresses/api/v1/users/me/addresses",
+      "GET:/api/v1/users/me/addresses",
+      "POST:/api/v1/users/me/addresses",
+      "PUT:/api/v1/users/me/addresses/{id}",
+      "DELETE:/api/v1/users/me/addresses/{id}",
+      "PUT:/api/v1/users/me/addresses/{id}/default"
+    ],
+    "auth-service/src/main/java/com/shop/authservice/controller/AuthController.java": [
+      "POST:/api/v1/auth/sign-up",
+      "POST:/api/v1/auth/login",
+      "POST:/api/v1/auth/refresh",
+      "POST:/api/v1/auth/logout",
+      "POST:/api/v1/auth/forgot-password",
+      "POST:/api/v1/auth/reset-password"
+    ],
+    "auth-service/src/main/java/com/shop/authservice/controller/RoleController.java": [
+      "POST:/api/v1/roles/users/{userId}/assign",
+      "POST:/api/v1/roles/users/{userId}/revoke",
+      "GET:/api/v1/roles/users/{userId}"
+    ],
+    "auth-service/src/main/java/com/shop/authservice/controller/UserController.java": [
+      "PUT:/api/v1/users/me",
+      "PUT:/api/v1/users/me/password",
+      "DELETE:/api/v1/users/me",
+      "GET:/api/v1/users/me",
+      "GET:/api/v1/users/{id}",
+      "GET:/api/v1/users",
+      "PUT:/api/v1/users/{id}/restore"
+    ],
+    "favourite-service/src/main/java/com/shop/favouriteservice/controller/FavouriteController.java": [
+      "GET:/api/v1/favourites",
+      "GET:/api/v1/favourites/{favouriteId}",
+      "POST:/api/v1/favourites",
+      "DELETE:/api/v1/favourites/{favouriteId}",
+      "DELETE:/api/v1/favourites/by-product/{productId}"
+    ],
+    "inventory-service/src/main/java/com/shop/inventoryservice/controller/InventoryController.java": [
+      "GET:/api/v1/inventory",
+      "GET:/api/v1/inventory/{productId}",
+      "POST:/api/v1/inventory",
+      "PUT:/api/v1/inventory/{productId}",
+      "DELETE:/api/v1/inventory/{productId}",
+      "POST:/api/v1/inventory/{productId}/reserve",
+      "POST:/api/v1/inventory/reservations/{reservationId}/commit",
+      "POST:/api/v1/inventory/reservations/{reservationId}/release",
+      "POST:/api/v1/inventory/reservations/{reservationId}/release-committed",
+      "GET:/api/v1/inventory/reservations/{reservationId}/state"
+    ],
+    "media-service/src/main/java/com/shop/mediaservice/controller/BackofficeMediaController.java": [
+      "POST:/api/v1/backoffice/medias",
+      "DELETE:/api/v1/backoffice/medias/{id}"
+    ],
+    "media-service/src/main/java/com/shop/mediaservice/controller/MediaPublicController.java": [
+      "GET:/api/v1/medias/{id}",
+      "REQUEST:/api/v1/medias/{id}"
+    ],
+    "notification-service/src/main/java/com/shop/notificationservice/controller/BackofficeNotificationController.java": [
+      "GET:/api/v1/backoffice/notifications",
+      "GET:/api/v1/backoffice/notifications/{id}"
+    ],
+    "order-service/src/main/java/com/shop/orderservice/controller/BackofficeOrderReturnController.java": [
+      "REQUEST:/api/v1/backoffice/returns/api/v1/backoffice/returns",
+      "PUT:/api/v1/backoffice/returns/{returnId}/review"
+    ],
+    "order-service/src/main/java/com/shop/orderservice/controller/CartController.java": [
+      "GET:/api/v1/carts/me",
+      "POST:/api/v1/carts/me/items",
+      "PUT:/api/v1/carts/me/items/{cartItemId}",
+      "DELETE:/api/v1/carts/me/items/{cartItemId}",
+      "DELETE:/api/v1/carts/me",
+      "POST:/api/v1/carts/merge"
+    ],
+    "order-service/src/main/java/com/shop/orderservice/controller/OrderController.java": [
+      "POST:/api/v1/orders",
+      "GET:/api/v1/orders/me",
+      "GET:/api/v1/orders",
+      "GET:/api/v1/orders/{orderId}",
+      "POST:/api/v1/orders/{orderId}/cancel",
+      "GET:/api/v1/orders/verify-purchase"
+    ],
+    "order-service/src/main/java/com/shop/orderservice/controller/OrderReturnController.java": [
+      "POST:/api/v1/orders/{orderId}/returns",
+      "GET:/api/v1/orders/{orderId}/returns",
+      "GET:/api/v1/orders/returns/me"
+    ],
+    "order-service/src/main/java/com/shop/orderservice/controller/OrderStatusController.java": [
+      "POST:/api/v1/orders/{orderId}/confirm",
+      "POST:/api/v1/orders/{orderId}/ship",
+      "POST:/api/v1/orders/{orderId}/deliver"
+    ],
+    "order-service/src/main/java/com/shop/orderservice/controller/OrderTrackingController.java": [
+      "GET:/api/v1/orders/track"
+    ],
+    "payment-service/src/main/java/com/shop/paymentservice/controller/BackofficePaymentController.java": [
+      "GET:/api/v1/backoffice/payments",
+      "GET:/api/v1/backoffice/payments/{id}"
+    ],
+    "payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java": [
+      "POST:/api/v1/payments",
+      "POST:/api/v1/payments/{id}/capture",
+      "POST:/api/v1/payments/{id}/refund",
+      "GET:/api/v1/payments"
+    ],
+    "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java": [
+      "POST:/api/v1/webhooks/payments/{provider}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/BackofficeBrandController.java": [
+      "POST:/api/v1/backoffice/brands",
+      "PUT:/api/v1/backoffice/brands/{id}",
+      "DELETE:/api/v1/backoffice/brands/{id}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/BackofficeCategoryController.java": [
+      "POST:/api/v1/backoffice/categories",
+      "PUT:/api/v1/backoffice/categories/{id}",
+      "DELETE:/api/v1/backoffice/categories/{id}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/BackofficeProductController.java": [
+      "GET:/api/v1/backoffice/products",
+      "POST:/api/v1/backoffice/products",
+      "PUT:/api/v1/backoffice/products/{id}",
+      "DELETE:/api/v1/backoffice/products/{id}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/BackofficeProductVariantController.java": [
+      "REQUEST:/api/v1/backoffice/products/{productId}/variants/api/v1/backoffice/products/{productId}/variants",
+      "GET:/api/v1/backoffice/products/{productId}/variants",
+      "GET:/api/v1/backoffice/products/{productId}/variants/{variantId}",
+      "POST:/api/v1/backoffice/products/{productId}/variants",
+      "PUT:/api/v1/backoffice/products/{productId}/variants/{variantId}",
+      "DELETE:/api/v1/backoffice/products/{productId}/variants/{variantId}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/BrandController.java": [
+      "GET:/api/v1/brands",
+      "GET:/api/v1/brands/{id}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/CategoryController.java": [
+      "GET:/api/v1/categories",
+      "GET:/api/v1/categories/tree",
+      "GET:/api/v1/categories/{id}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/InternalProductMediaController.java": [
+      "GET:/internal/products/media-references/{mediaId}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/ProductController.java": [
+      "GET:/api/v1/products",
+      "GET:/api/v1/products/{id}",
+      "GET:/api/v1/products/slug/{slug}"
+    ],
+    "product-service/src/main/java/com/shop/productservice/controller/ProductVariantController.java": [
+      "REQUEST:/api/v1/products/{productId}/variants/api/v1/products/{productId}/variants",
+      "GET:/api/v1/products/{productId}/variants",
+      "GET:/api/v1/products/{productId}/variants/{variantId}"
+    ],
+    "promotion-service/src/main/java/com/shop/promotionservice/controller/BackofficeCampaignController.java": [
+      "GET:/api/v1/backoffice/promotions",
+      "GET:/api/v1/backoffice/promotions/{id}",
+      "POST:/api/v1/backoffice/promotions",
+      "PUT:/api/v1/backoffice/promotions/{id}",
+      "DELETE:/api/v1/backoffice/promotions/{id}",
+      "GET:/api/v1/backoffice/promotions/{id}/usages"
+    ],
+    "promotion-service/src/main/java/com/shop/promotionservice/controller/PromotionReservationController.java": [
+      "POST:/api/v1/promotions/{code}/reserve",
+      "POST:/api/v1/promotions/reservations/{reservationId}/commit",
+      "POST:/api/v1/promotions/reservations/{reservationId}/release",
+      "POST:/api/v1/promotions/reservations/{reservationId}/release-committed",
+      "GET:/api/v1/promotions/reservations/{reservationId}/state"
+    ],
+    "rating-service/src/main/java/com/shop/ratingservice/controller/BackofficeRatingController.java": [
+      "POST:/api/v1/backoffice/ratings/{id}/hide",
+      "POST:/api/v1/backoffice/ratings/{id}/unhide"
+    ],
+    "rating-service/src/main/java/com/shop/ratingservice/controller/StorefrontRatingController.java": [
+      "GET:/api/v1/ratings",
+      "POST:/api/v1/ratings",
+      "PUT:/api/v1/ratings/{productId}"
+    ],
+    "search-service/src/main/java/com/shop/searchservice/controller/BackofficeSearchController.java": [
+      "POST:/api/v1/backoffice/search/reindex"
+    ],
+    "search-service/src/main/java/com/shop/searchservice/controller/SearchController.java": [
+      "GET:/api/v1/search",
+      "GET:/api/v1/search/suggestions"
+    ],
+    "shipping-service/src/main/java/com/shop/shippingservice/controller/BackofficeShipmentController.java": [
+      "GET:/api/v1/backoffice/shipments",
+      "GET:/api/v1/backoffice/shipments/{id}",
+      "POST:/api/v1/backoffice/shipments/{id}/tracking",
+      "POST:/api/v1/backoffice/shipments/{id}/transition",
+      "POST:/api/v1/backoffice/shipments/{id}/fail",
+      "POST:/api/v1/backoffice/shipments/{id}/retry"
+    ],
+    "shipping-service/src/main/java/com/shop/shippingservice/webhook/CarrierWebhookController.java": [
+      "POST:/api/v1/webhooks/shipping/{carrier}"
+    ],
+    "tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxClassController.java": [
+      "GET:/api/v1/backoffice/tax-classes",
+      "GET:/api/v1/backoffice/tax-classes/{id}",
+      "POST:/api/v1/backoffice/tax-classes",
+      "PUT:/api/v1/backoffice/tax-classes/{id}",
+      "DELETE:/api/v1/backoffice/tax-classes/{id}"
+    ],
+    "tax-service/src/main/java/com/shop/taxservice/controller/BackofficeTaxRateController.java": [
+      "GET:/api/v1/backoffice/tax-rates",
+      "GET:/api/v1/backoffice/tax-rates/{id}",
+      "POST:/api/v1/backoffice/tax-rates",
+      "PUT:/api/v1/backoffice/tax-rates/{id}",
+      "DELETE:/api/v1/backoffice/tax-rates/{id}"
+    ],
+    "utils/common-core/src/main/java/com/shop/common/core/constants/ApiPaths.java": [
+      "REQUEST:"
+    ],
+    "utils/common-spring/src/test/java/com/shop/common/spring/web/ApiExceptionHandlerDataIntegrityTest.java": [
+      "POST:/__test__/trigger/data-integrity"
+    ]
+  }
+}

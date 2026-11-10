@@ -30,7 +30,7 @@ class BaseSecurityConfigJwtDecoderLazyTest {
         String unreachable = "http://127.0.0.1:1/realms/ecommerce";
         SecurityProperties props = new SecurityProperties(
                 true, unreachable, true, true,
-                java.util.List.of(), java.util.List.of(),
+                java.util.List.of(), java.util.List.of(), java.util.List.of(),
                 new SecurityProperties.Cors(true, java.util.List.of("*"), java.util.List.of(),
                         java.util.List.of("*"), java.util.List.of(), false, 3600L));
 

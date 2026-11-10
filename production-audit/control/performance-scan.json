@@ -1,0 +1,219 @@
+{
+  "command": "audit performance",
+  "blocking_call_sites": [
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/impls/ReservationRetryServiceImpl.java",
+      "line": 99,
+      "code": "Thread.sleep(ms);"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/kafka/MediaDeletedConsumer.java",
+      "line": 114,
+      "code": "Thread.sleep(BACKOFF_MILLIS);"
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/ReservationServiceImpl.java",
+      "line": 80,
+      "code": "Thread.sleep(ms);"
+    }
+  ],
+  "scheduled_jobs": [
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java",
+      "line": 51,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionScheduler.java",
+      "line": 24,
+      "code": "@Scheduled(cron = \"${shop.shipping.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ReconciliationScheduler.java",
+      "line": 45,
+      "code": "@Scheduled(cron = \"${shop.shipping.reconcile-cron:0 0 * * * *}\")"
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/scheduler/WebhookRetryScheduler.java",
+      "line": 52,
+      "code": "@Scheduled(fixedDelayString = \"${shop.shipping.webhook.retry-poll-ms:60000}\")"
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxRetentionScheduler.java",
+      "line": 33,
+      "code": "@Scheduled(cron = \"${rating.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/RatingOutboxRelay.java",
+      "line": 50,
+      "code": "@Scheduled(fixedDelayString = \"${shop.rating.outbox.poll-millis:2000}\", initialDelayString = \"${shop.rating.outbox.poll-millis:2000}\")"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/OutboxRetentionScheduler.java",
+      "line": 26,
+      "code": "@Scheduled(cron = \"${promotion.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/PromotionOutboxRelay.java",
+      "line": 67,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/ReservationCleanupScheduler.java",
+      "line": 71,
+      "code": "@Scheduled(fixedDelayString = \"${shop.promotion.reservation-cleanup-interval-ms:60000}\","
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/ReservationCleanupScheduler.java",
+      "line": 136,
+      "code": "@Scheduled(cron = \"${shop.promotion.reservation-retention-cron:0 0 4 * * *}\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java",
+      "line": 50,
+      "code": "@Scheduled(cron = \"${shop.product.media-sweep.cron:0 */30 * * * *}\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java",
+      "line": 64,
+      "code": "@Scheduled(fixedDelayString = \"${product.outbox.poll-interval-ms:5000}\", initialDelayString = \"${product.outbox.poll-interval-ms:5000}\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRetentionScheduler.java",
+      "line": 35,
+      "code": "@Scheduled(cron = \"${product.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java",
+      "line": 36,
+      "code": "* <p>Scheduled via {@code @Scheduled(fixedDelayString = \"...\")} with the same"
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java",
+      "line": 69,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentOutboxRelay.java",
+      "line": 68,
+      "code": "@Scheduled(fixedDelayString = \"${shop.payment.outbox.poll-millis:2000}\", initialDelayString = \"${shop.payment.outbox.poll-millis:2000}\")"
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/scheduler/WebhookRetryScheduler.java",
+      "line": 64,
+      "code": "@Scheduled(fixedDelayString = \"${shop.payment.webhook.retry-poll-ms:60000}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java",
+      "line": 122,
+      "code": "@Scheduled(fixedDelayString = \"${order.reconciliation.interval-ms:300000}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/GuestCartCleanupScheduler.java",
+      "line": 28,
+      "code": "@Scheduled(cron = \"${order.cleanup.guest-cart-cron:0 0 4 * * *}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyKeyCleanupScheduler.java",
+      "line": 19,
+      "code": "@Scheduled(cron = \"${order.cleanup.idempotency-cron:0 0 4 * * *}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OrderOutboxRelay.java",
+      "line": 61,
+      "code": "@Scheduled(fixedDelayString = \"${order.outbox.poll-interval-ms:5000}\", initialDelayString = \"${order.outbox.poll-interval-ms:5000}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OutboxRetentionScheduler.java",
+      "line": 25,
+      "code": "@Scheduled(cron = \"${order.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "notification-service/src/main/java/com/shop/notificationservice/NotificationServiceApplication.java",
+      "line": 10,
+      "code": "// C17 — @EnableScheduling is REQUIRED: NotificationRetryScheduler's @Scheduled"
+    },
+    {
+      "path": "notification-service/src/main/java/com/shop/notificationservice/scheduler/NotificationRetryScheduler.java",
+      "line": 69,
+      "code": "@Scheduled(fixedDelayString = \"${shop.notification.retry.poll-ms:60000}\","
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/job/MediaPurgeJob.java",
+      "line": 20,
+      "code": "* Scheduling shape ports rating-service's outbox relay: {@code @Scheduled}"
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/job/MediaPurgeJob.java",
+      "line": 47,
+      "code": "@Scheduled(fixedDelayString = \"${media.purge.poll-millis:3600000}\")"
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRelay.java",
+      "line": 70,
+      "code": "@Scheduled(fixedDelayString = \"${shop.media.outbox.poll-millis:2000}\", initialDelayString = \"${shop.media.outbox.poll-millis:2000}\")"
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRetentionScheduler.java",
+      "line": 49,
+      "code": "@Scheduled(cron = \"${shop.media.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryOutboxRelay.java",
+      "line": 65,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java",
+      "line": 26,
+      "code": "@Scheduled(cron = \"${inventory.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java",
+      "line": 59,
+      "code": "@Scheduled(fixedDelayString = \"${inventory.reservation-cleanup-interval-ms:60000}\","
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java",
+      "line": 139,
+      "code": "@Scheduled(cron = \"${inventory.reservation-retention-cron:0 0 4 * * *}\")"
+    }
+  ],
+  "cacheable_sites": [
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/BrandServiceImpl.java",
+      "line": 48,
+      "code": "@Cacheable(value = \"brand\", key = \"#id\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/CategoryServiceImpl.java",
+      "line": 69,
+      "code": "@Cacheable(value = \"category\", key = \"#id\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/ProductServiceImpl.java",
+      "line": 109,
+      "code": "@Cacheable(value = \"product\", key = \"#id\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/ProductServiceImpl.java",
+      "line": 118,
+      "code": "@Cacheable(value = \"productBySlug\", key = \"#slug\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/client/ProductServiceClient.java",
+      "line": 38,
+      "code": "@Cacheable(value = \"productPrice\", key = \"#productId\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/config/CacheConfig.java",
+      "line": 63,
+      "code": "* and the {@code @Cacheable} proxy throws {@code ClassCastException}"
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java",
+      "line": 65,
+      "code": "@Cacheable(value = \"inventory\", key = \"#productId\")"
+    }
+  ]
+}

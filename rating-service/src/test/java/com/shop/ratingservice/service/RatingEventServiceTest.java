@@ -149,4 +149,36 @@ class RatingEventServiceTest {
         assertThat(json.get("action").textValue()).isEqualTo("HIDDEN");
         assertThat(json.get("visible").booleanValue()).isFalse();
     }
+
+    /**
+     * F-069 (P1) regression — hiding the ONLY visible rating of a product.
+     *
+     * <p>The aggregate query averages over {@code hidden = false and deleted =
+     * false}, so once the last visible rating is hidden the average comes back
+     * NULL. The previous implementation called {@code String.valueOf(null)},
+     * which yields the literal string {@code "null"} (not {@code null}), and
+     * {@code new BigDecimal("null")} threw NumberFormatException. The whole
+     * moderation transaction therefore rolled back with a 500 and the
+     * administrator could not remove the review - the exact situation
+     * moderation exists for.</p>
+     */
+    @Test
+    void record_withNullAggregateAverage_writesZeroAverageInsteadOfFailing() throws Exception {
+        // PostgreSQL returns (NULL, 0) for an aggregate over zero visible rows.
+        when(ratingRepository.findAggregateByProductId(productId))
+                .thenReturn(List.<Object[]>of(new Object[]{null, 0L}));
+        Rating rating = rating(5, true, true);
+
+        service.record(rating, RatingAction.HIDDEN);
+
+        ArgumentCaptor<OutboxEvent> captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepository).save(captor.capture());
+        OutboxEvent event = captor.getValue();
+
+        assertThat(event.getStatus()).isEqualTo(OutboxStatus.PENDING);
+        JsonNode payload = objectMapper.readTree(event.getPayload());
+        assertThat(payload.get("avgRating").decimalValue()).isEqualByComparingTo("0.00");
+        assertThat(payload.get("ratingCount").asInt()).isZero();
+        assertThat(payload.get("action").asText()).isEqualTo("HIDDEN");
+    }
 }

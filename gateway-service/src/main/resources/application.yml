@@ -1,7 +1,18 @@
 server:
   port: 8080
   shutdown: graceful
-  forward-headers-strategy: framework
+  # F-031 (P1): the gateway MUST resolve the client IP itself.
+  #
+  # With 'framework', Spring Boot registers a ForwardedHeaderTransformer that
+  # rewrites the request remote address from the client-supplied X-Forwarded-For
+  # header, taking the LEFTMOST entry - a value the caller controls. Both the
+  # admin IP allowlist (ClientIpResolver) and the anonymous per-IP rate-limit
+  # bucket (RateLimitKeyResolver) read that address when
+  # gateway.rate-limit.trusted-proxy-hops is 0, which is the shipped default in
+  # docker-compose.yml and .env.example. With 'none' the transformer is not
+  # registered and the gateway resolves the client from the raw
+  # X-Forwarded-For chain using the configured trusted-proxy hop count.
+  forward-headers-strategy: none
 
 spring:
   application:
@@ -35,6 +46,14 @@ shop:
 
 gateway:
   keycloak-issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
+  security:
+    # F-032 (P1) / F-040 — the reactive edge validates the token's client
+    # identity. The provisioned Keycloak realm emits NO 'aud' claim (no audience
+    # mapper, no client scopes), so the 'azp' claim - the client the token was
+    # issued to - is the only usable discriminator. These are the client ids the
+    # realm can issue; narrow this per deployment with
+    # GATEWAY_EXPECTED_CLIENT_IDS.
+    expected-client-ids: ${GATEWAY_EXPECTED_CLIENT_IDS:ecommerce-client,order-service,rating-service,search-service,product-service,media-service}
   cors-allowed-origin-patterns:
     # C9 fix — wildcard `*` with allowCredentials=true is rejected by browsers
     # AND is a fleet-wide security foot-gun. Refuse to boot unless the deployer
@@ -70,8 +89,14 @@ gateway:
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:100}
     burst-capacity: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:200}
     requested-tokens: ${GATEWAY_RATE_LIMIT_REQUESTED_TOKENS:1}
-    # Set only when a trusted reverse proxy is in front of the gateway.
-    trusted-proxy-hops: ${GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS:0}
+    # F-031 (P1): trust exactly ONE X-Forwarded-For hop by default - the
+    # reverse proxy / LB that the deployment mandates in front of the gateway.
+    # A value of 0 makes the resolver fall back to the socket address, which
+    # behind a proxy is the PROXY's address: every anonymous client then shares
+    # one rate-limit bucket, and the admin allowlist evaluates the proxy's
+    # address instead of the caller's. The gateway refuses to start when this
+    # is 0 while a forwarded-header strategy other than 'none' is active.
+    trusted-proxy-hops: ${GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS:1}
     global:
       enabled: ${GATEWAY_GLOBAL_RATE_LIMIT_ENABLED:true}
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}

@@ -79,6 +79,21 @@ public abstract class AbstractIntegrationTest {
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
+        // Background mutators OFF by default for every inventory IT context.
+        //
+        // Each distinct property set creates a separate cached ApplicationContext,
+        // and every context keeps its own @Scheduled tasks running for the rest of
+        // the surefire fork. Several contexts therefore shared ONE PostgreSQL
+        // database, and the relay from one context claimed and marked SENT the
+        // PENDING rows that another context's test was asserting on (the
+        // InventoryOutboxClaimConcurrencyTest MIN(id) race failed with
+        // "Expecting actual: Optional[2] to contain: 3L"). Pinning the intervals
+        // here gives every IT the same context AND removes the background
+        // mutation, so each test sees only the rows it created. The tests that
+        // exercise the relay or the sweep drive them explicitly.
+        registry.add("inventory.outbox.poll-interval-ms", () -> "3600000");
+        registry.add("inventory.reservation-cleanup-interval-ms", () -> "3600000");
+        registry.add("inventory.reservation-cleanup-initial-delay-ms", () -> "3600000");
     }
 
     @Autowired

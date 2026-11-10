@@ -1,0 +1,1776 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-10T10:04:54",
+  "nodes": [
+    {
+      "id": "TSK-001",
+      "priority": "P1",
+      "state": "READY",
+      "module": "utils/common-kafka",
+      "finding": "F-001",
+      "watch_paths": [
+        "utils/common-kafka"
+      ]
+    },
+    {
+      "id": "TSK-002",
+      "priority": "P2",
+      "state": "READY",
+      "module": "inventory-service",
+      "finding": "F-002",
+      "watch_paths": [
+        "inventory-service",
+        "promotion-service",
+        "product-service"
+      ]
+    },
+    {
+      "id": "TSK-003",
+      "priority": "P3",
+      "state": "READY",
+      "module": "utils/common-kafka",
+      "finding": "F-003",
+      "watch_paths": [
+        "utils/common-kafka"
+      ]
+    },
+    {
+      "id": "TSK-004",
+      "priority": "P1",
+      "state": "READY",
+      "module": "utils/common-keycloak",
+      "finding": "F-004",
+      "watch_paths": [
+        "utils/common-keycloak",
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-005",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "utils/common-security",
+      "finding": "F-005",
+      "watch_paths": [
+        "utils/common-security",
+        "utils/common-spring"
+      ]
+    },
+    {
+      "id": "TSK-006",
+      "priority": "P2",
+      "state": "READY",
+      "module": "utils/common-spring",
+      "finding": "F-006",
+      "watch_paths": [
+        "utils/common-spring"
+      ]
+    },
+    {
+      "id": "TSK-007",
+      "priority": "P3",
+      "state": "READY",
+      "module": "utils/common-security",
+      "finding": "F-007",
+      "watch_paths": [
+        "utils/common-security"
+      ]
+    },
+    {
+      "id": "TSK-008",
+      "priority": "P3",
+      "state": "READY",
+      "module": "utils/common-storage",
+      "finding": "F-008",
+      "watch_paths": [
+        "utils/common-storage"
+      ]
+    },
+    {
+      "id": "TSK-009",
+      "priority": "P2",
+      "state": "READY",
+      "module": "utils/common-spring",
+      "finding": "F-009",
+      "watch_paths": [
+        "utils/common-spring"
+      ]
+    },
+    {
+      "id": "TSK-010",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "inventory-service",
+      "finding": "F-010",
+      "watch_paths": [
+        "inventory-service"
+      ]
+    },
+    {
+      "id": "TSK-011",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "inventory-service",
+      "finding": "F-011",
+      "watch_paths": [
+        "inventory-service"
+      ]
+    },
+    {
+      "id": "TSK-012",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "inventory-service",
+      "finding": "F-012",
+      "watch_paths": [
+        "inventory-service"
+      ]
+    },
+    {
+      "id": "TSK-013",
+      "priority": "P2",
+      "state": "READY",
+      "module": "inventory-service",
+      "finding": "F-013",
+      "watch_paths": [
+        "inventory-service",
+        "utils/common-kafka"
+      ]
+    },
+    {
+      "id": "TSK-014",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "inventory-service",
+      "finding": "F-014",
+      "watch_paths": [
+        "inventory-service"
+      ]
+    },
+    {
+      "id": "TSK-015",
+      "priority": "P3",
+      "state": "READY",
+      "module": "inventory-service",
+      "finding": "F-015",
+      "watch_paths": [
+        "inventory-service"
+      ]
+    },
+    {
+      "id": "TSK-016",
+      "priority": "P1",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-016",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-017",
+      "priority": "P1",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-017",
+      "watch_paths": [
+        "utils/common-kafka",
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-018",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "order-service",
+      "finding": "F-018",
+      "watch_paths": [
+        "order-service",
+        "payment-service",
+        "product-service",
+        "search-service",
+        "shipping-service",
+        "notification-service",
+        "media-service"
+      ]
+    },
+    {
+      "id": "TSK-019",
+      "priority": "P0",
+      "state": "VERIFIED",
+      "module": "order-service",
+      "finding": "F-019",
+      "watch_paths": [
+        "order-service",
+        "payment-service"
+      ]
+    },
+    {
+      "id": "TSK-020",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "order-service",
+      "finding": "F-020",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-021",
+      "priority": "P1",
+      "state": "READY",
+      "module": "payment-service",
+      "finding": "F-021",
+      "watch_paths": [
+        "payment-service"
+      ]
+    },
+    {
+      "id": "TSK-022",
+      "priority": "P2",
+      "state": "READY",
+      "module": "payment-service",
+      "finding": "F-022",
+      "watch_paths": [
+        "payment-service"
+      ]
+    },
+    {
+      "id": "TSK-023",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-023",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-024",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "payment-service",
+      "finding": "F-024",
+      "watch_paths": [
+        "payment-service"
+      ]
+    },
+    {
+      "id": "TSK-025",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-025",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-026",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-026",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-027",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-027",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-028",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-028",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-029",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-029",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-030",
+      "priority": "P2",
+      "state": "READY",
+      "module": "order-service",
+      "finding": "F-030",
+      "watch_paths": [
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-031",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "gateway-service",
+      "finding": "F-031",
+      "watch_paths": [
+        "gateway-service"
+      ]
+    },
+    {
+      "id": "TSK-032",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "gateway-service",
+      "finding": "F-032",
+      "watch_paths": [
+        "gateway-service",
+        "utils/common-security"
+      ]
+    },
+    {
+      "id": "TSK-033",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "gateway-service",
+      "finding": "F-033",
+      "watch_paths": [
+        "gateway-service"
+      ]
+    },
+    {
+      "id": "TSK-034",
+      "priority": "P2",
+      "state": "READY",
+      "module": "gateway-service",
+      "finding": "F-034",
+      "watch_paths": [
+        "gateway-service"
+      ]
+    },
+    {
+      "id": "TSK-035",
+      "priority": "P2",
+      "state": "READY",
+      "module": "gateway-service",
+      "finding": "F-035",
+      "watch_paths": [
+        "gateway-service"
+      ]
+    },
+    {
+      "id": "TSK-036",
+      "priority": "P3",
+      "state": "READY",
+      "module": "gateway-service",
+      "finding": "F-036",
+      "watch_paths": [
+        "docker-compose.prod.yml",
+        ".env.prod.example"
+      ]
+    },
+    {
+      "id": "TSK-037",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "tax-service",
+      "finding": "F-037",
+      "watch_paths": [
+        "tax-service"
+      ]
+    },
+    {
+      "id": "TSK-039",
+      "priority": "P0",
+      "state": "VERIFIED",
+      "module": "utils/common-kafka",
+      "finding": "F-039",
+      "watch_paths": [
+        "pom.xml"
+      ]
+    },
+    {
+      "id": "TSK-040",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "utils/common-security",
+      "finding": "F-040",
+      "watch_paths": [
+        "utils/common-security",
+        "gateway-service"
+      ]
+    },
+    {
+      "id": "TSK-041",
+      "priority": "P1",
+      "state": "READY",
+      "module": "payment-service",
+      "finding": "F-041",
+      "watch_paths": [
+        "payment-service",
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-042",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "media-service",
+      "finding": "F-042",
+      "watch_paths": [
+        "media-service"
+      ]
+    },
+    {
+      "id": "TSK-043",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "inventory-service",
+      "finding": "F-043",
+      "watch_paths": [
+        "inventory-service",
+        "promotion-service",
+        "notification-service"
+      ]
+    },
+    {
+      "id": "TSK-044",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "promotion-service",
+      "finding": "F-044",
+      "watch_paths": [
+        "promotion-service"
+      ]
+    },
+    {
+      "id": "TSK-045",
+      "priority": "P3",
+      "state": "VERIFIED",
+      "module": "promotion-service",
+      "finding": "F-045",
+      "watch_paths": [
+        "promotion-service"
+      ]
+    },
+    {
+      "id": "TSK-046",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "promotion-service",
+      "finding": "F-046",
+      "watch_paths": [
+        "promotion-service"
+      ]
+    },
+    {
+      "id": "TSK-047",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "promotion-service",
+      "finding": "F-047",
+      "watch_paths": [
+        "promotion-service"
+      ]
+    },
+    {
+      "id": "TSK-048",
+      "priority": "P3",
+      "state": "READY",
+      "module": "promotion-service",
+      "finding": "F-048",
+      "watch_paths": [
+        "promotion-service"
+      ]
+    },
+    {
+      "id": "TSK-049",
+      "priority": "P3",
+      "state": "READY",
+      "module": "promotion-service",
+      "finding": "F-049",
+      "watch_paths": [
+        "promotion-service",
+        "tax-service",
+        "product-service",
+        "favourite-service"
+      ]
+    },
+    {
+      "id": "TSK-050",
+      "priority": "P2",
+      "state": "READY",
+      "module": "auth-service",
+      "finding": "F-050",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-051",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "auth-service",
+      "finding": "F-051",
+      "watch_paths": [
+        "auth-service",
+        "utils/common-keycloak"
+      ]
+    },
+    {
+      "id": "TSK-052",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "auth-service",
+      "finding": "F-052",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-053",
+      "priority": "P2",
+      "state": "READY",
+      "module": "auth-service",
+      "finding": "F-053",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-054",
+      "priority": "P2",
+      "state": "READY",
+      "module": "auth-service",
+      "finding": "F-054",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-055",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "auth-service",
+      "finding": "F-055",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-056",
+      "priority": "P3",
+      "state": "READY",
+      "module": "auth-service",
+      "finding": "F-056",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-057",
+      "priority": "P3",
+      "state": "READY",
+      "module": "auth-service",
+      "finding": "F-057",
+      "watch_paths": [
+        "auth-service"
+      ]
+    },
+    {
+      "id": "TSK-058",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "product-service",
+      "finding": "F-058",
+      "watch_paths": [
+        "product-service"
+      ]
+    },
+    {
+      "id": "TSK-059",
+      "priority": "P2",
+      "state": "VERIFIED",
+      "module": "product-service",
+      "finding": "F-059",
+      "watch_paths": [
+        "product-service",
+        "rating-service"
+      ]
+    },
+    {
+      "id": "TSK-060",
+      "priority": "P2",
+      "state": "READY",
+      "module": "product-service",
+      "finding": "F-060",
+      "watch_paths": [
+        "product-service"
+      ]
+    },
+    {
+      "id": "TSK-061",
+      "priority": "P3",
+      "state": "READY",
+      "module": "product-service",
+      "finding": "F-061",
+      "watch_paths": [
+        "product-service"
+      ]
+    },
+    {
+      "id": "TSK-062",
+      "priority": "P2",
+      "state": "READY",
+      "module": "media-service",
+      "finding": "F-062",
+      "watch_paths": [
+        "media-service"
+      ]
+    },
+    {
+      "id": "TSK-063",
+      "priority": "P2",
+      "state": "READY",
+      "module": "media-service",
+      "finding": "F-063",
+      "watch_paths": [
+        "media-service"
+      ]
+    },
+    {
+      "id": "TSK-064",
+      "priority": "P3",
+      "state": "READY",
+      "module": "media-service",
+      "finding": "F-064",
+      "watch_paths": [
+        "media-service"
+      ]
+    },
+    {
+      "id": "TSK-065",
+      "priority": "P1",
+      "state": "VERIFIED",
+      "module": "rating-service",
+      "finding": "F-065",
+      "watch_paths": [
+        "rating-service"
+      ]
+    },
+    {
+      "id": "TSK-066",
+      "priority": "P2",
+      "state": "READY",
+      "module": "product-service",
+      "finding": "F-066",
+      "watch_paths": [
+        "product-service",
+        "rating-service",
+        "order-service"
+      ]
+    },
+    {
+      "id": "TSK-067",
+      "priority": "P1",
+      "state": "READY",
+      "module": "shipping-service",
+      "finding": "F-067",
+      "watch_paths": [
+        "shipping-service"
+      ]
+    },
+    {
+      "id": "TSK-068",
+      "priority": "P2",
+      "state": "READY",
+      "module": "shipping-service",
+      "finding": "F-068",
+      "watch_paths": [
+        "shipping-service"
+      ]
+    },
+    {
+      "id": "TSK-069",
+      "priority": "P2",
+      "state": "READY",
+      "module": "gateway-service",
+      "finding": "F-069",
+      "watch_paths": [
+        "gateway-service"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "TSK-040",
+      "to": "TSK-005",
+      "reason": "the azp validator is the mechanism that discharges the audience requirement"
+    },
+    {
+      "from": "TSK-031",
+      "to": "TSK-032",
+      "reason": "the reactive decoder and the client-IP trust model are one edge posture"
+    },
+    {
+      "from": "TSK-033",
+      "to": "TSK-032",
+      "reason": "the CORS posture validator and the JWT posture validator are one startup guard"
+    },
+    {
+      "from": "TSK-019",
+      "to": "TSK-016",
+      "reason": "the reconciler decision table is only meaningful once the payment gate is enforced"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-017",
+      "reason": "the DLQ must exist before a replay path can be built on it"
+    },
+    {
+      "from": "TSK-010",
+      "to": "TSK-011",
+      "reason": "the non-negative constraints and the reservation version land in the same schema"
+    },
+    {
+      "from": "TSK-011",
+      "to": "TSK-044",
+      "reason": "the reservation version pattern is shared between the inventory and coupon aggregates"
+    },
+    {
+      "from": "TSK-021",
+      "to": "TSK-041",
+      "reason": "partial refunds need a state the money model can express"
+    },
+    {
+      "from": "TSK-040",
+      "to": "TSK-041",
+      "reason": "binding a token to its caller needs a client discriminator"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-058",
+      "reason": "the outbox relay restructure applies to every relay"
+    },
+    {
+      "from": "TSK-037",
+      "to": "TSK-043",
+      "reason": "the tax attribution convention is part of the fleet-wide attribution change"
+    },
+    {
+      "from": "TSK-049",
+      "to": "TSK-037",
+      "reason": "the fleet attribution convention must be decided before it is applied everywhere"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-002",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-003",
+      "reason": "shared modules: utils/common-kafka",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-013",
+      "reason": "shared modules: product-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-016",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-017",
+      "reason": "shared modules: notification-service, order-service, product-service, search-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-023",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-025",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-026",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-027",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service, product-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-049",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-060",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-067",
+      "reason": "shared modules: shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-001",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-013",
+      "reason": "shared modules: inventory-service, product-service, promotion-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-015",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-017",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-026",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-041",
+      "reason": "shared modules: inventory-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-048",
+      "reason": "shared modules: promotion-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-049",
+      "reason": "shared modules: product-service, promotion-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-060",
+      "reason": "shared modules: inventory-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-002",
+      "to": "TSK-066",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-004",
+      "to": "TSK-050",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-004",
+      "to": "TSK-053",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-004",
+      "to": "TSK-054",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-004",
+      "to": "TSK-056",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-004",
+      "to": "TSK-057",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-006",
+      "to": "TSK-009",
+      "reason": "shared modules: utils/common-spring",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-015",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-017",
+      "reason": "shared modules: product-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-021",
+      "reason": "shared modules: payment-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-022",
+      "reason": "shared modules: payment-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-026",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-041",
+      "reason": "shared modules: inventory-service, payment-service, product-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-048",
+      "reason": "shared modules: promotion-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-049",
+      "reason": "shared modules: product-service, promotion-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-060",
+      "reason": "shared modules: inventory-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-062",
+      "reason": "shared modules: media-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-063",
+      "reason": "shared modules: media-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-064",
+      "reason": "shared modules: media-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-066",
+      "reason": "shared modules: product-service, rating-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-067",
+      "reason": "shared modules: shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-013",
+      "to": "TSK-068",
+      "reason": "shared modules: shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-015",
+      "to": "TSK-026",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-015",
+      "to": "TSK-041",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-015",
+      "to": "TSK-060",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-017",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-023",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-025",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-026",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-027",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-016",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-023",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-025",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-026",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-027",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service, product-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-049",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-060",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-067",
+      "reason": "shared modules: shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-017",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-021",
+      "to": "TSK-022",
+      "reason": "shared modules: payment-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-021",
+      "to": "TSK-041",
+      "reason": "shared modules: payment-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-022",
+      "to": "TSK-041",
+      "reason": "shared modules: payment-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-025",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-026",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-027",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-023",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-026",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-027",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-025",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-027",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-041",
+      "reason": "shared modules: inventory-service, order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-060",
+      "reason": "shared modules: inventory-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-026",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-027",
+      "to": "TSK-028",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-027",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-027",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-027",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-027",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-027",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-028",
+      "to": "TSK-029",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-028",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-028",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-028",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-028",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-029",
+      "to": "TSK-030",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-029",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-029",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-029",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-030",
+      "to": "TSK-041",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-030",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-030",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-034",
+      "to": "TSK-035",
+      "reason": "shared modules: gateway-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-034",
+      "to": "TSK-036",
+      "reason": "shared modules: gateway-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-034",
+      "to": "TSK-069",
+      "reason": "shared modules: gateway-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-035",
+      "to": "TSK-036",
+      "reason": "shared modules: gateway-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-035",
+      "to": "TSK-069",
+      "reason": "shared modules: gateway-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-036",
+      "to": "TSK-069",
+      "reason": "shared modules: gateway-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-049",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-060",
+      "reason": "shared modules: inventory-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-066",
+      "reason": "shared modules: order-service, product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-067",
+      "reason": "shared modules: shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-041",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service, shipping-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-048",
+      "to": "TSK-049",
+      "reason": "shared modules: promotion-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-049",
+      "to": "TSK-060",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-049",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-049",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-049",
+      "to": "TSK-066",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-050",
+      "to": "TSK-053",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-050",
+      "to": "TSK-054",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-050",
+      "to": "TSK-056",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-050",
+      "to": "TSK-057",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-053",
+      "to": "TSK-054",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-053",
+      "to": "TSK-056",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-053",
+      "to": "TSK-057",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-054",
+      "to": "TSK-056",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-054",
+      "to": "TSK-057",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-056",
+      "to": "TSK-057",
+      "reason": "shared modules: auth-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-060",
+      "to": "TSK-061",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-060",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-060",
+      "to": "TSK-066",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-061",
+      "to": "TSK-063",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-061",
+      "to": "TSK-066",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-062",
+      "to": "TSK-063",
+      "reason": "shared modules: media-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-062",
+      "to": "TSK-064",
+      "reason": "shared modules: media-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-063",
+      "to": "TSK-064",
+      "reason": "shared modules: media-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-063",
+      "to": "TSK-066",
+      "reason": "shared modules: product-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-066",
+      "to": "TSK-068",
+      "reason": "shared modules: order-service",
+      "kind": "module-overlap"
+    },
+    {
+      "from": "TSK-067",
+      "to": "TSK-068",
+      "reason": "shared modules: shipping-service",
+      "kind": "module-overlap"
+    }
+  ]
+}

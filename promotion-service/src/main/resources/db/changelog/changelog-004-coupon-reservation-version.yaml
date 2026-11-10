@@ -1,0 +1,35 @@
+databaseChangeLog:
+
+  # ===========================================================================
+  #  004-coupon-reservation-version
+  # ---------------------------------------------------------------------------
+  #  F-044 (P1) — coupon_usage_reservation had no version column.
+  #
+  #  The TTL sweep selected PENDING rows with an unlocked SELECT and then
+  #  dirty-check-flipped them to EXPIRED. Because the row carried no version,
+  #  a sweep that read the row before commit() ran could overwrite a COMMITTED
+  #  redemption with EXPIRED - the same lost-update class as the inventory
+  #  reservation (F-011).
+  #
+  #  The consequence is money-relevant: the per-user limit and the campaign
+  #  budget both count PENDING + COMMITTED. A committed redemption that is
+  #  silently reverted to EXPIRED stops being counted, so the customer can
+  #  redeem the same coupon again and the campaign budget is under-spent.
+  #
+  #  Rolling-deployment safety: the column is added with DEFAULT 0 NOT NULL -
+  #  an additive, backward-compatible change. Old code ignores the column;
+  #  new code reads 0 for pre-existing rows.
+  # ===========================================================================
+  - changeSet:
+      id: 004-coupon-reservation-version
+      author: production-audit
+      changes:
+        - addColumn:
+            tableName: coupon_usage_reservation
+            columns:
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

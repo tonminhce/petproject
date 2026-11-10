@@ -166,6 +166,38 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * Revoke every active session (and therefore every refresh token) for a
+     * user.
+     *
+     * <p>Keycloak's admin {@code reset-password} endpoint changes the
+     * credential but does NOT end the user's existing sessions, so a refresh
+     * token captured before a password change keeps working. Calling the
+     * {@code /logout} admin endpoint after a credential change closes that
+     * window: every previously issued refresh token is invalidated and the
+     * client must authenticate again.</p>
+     *
+     * @param userId Keycloak user id
+     * @throws KeycloakClientException if the revocation request fails
+     */
+    public void logoutUser(String userId) {
+        String adminToken = getAdminAccessToken();
+        try {
+            restClient.post()
+                    .uri(usersEndpoint + "/" + userId + "/logout")
+                    .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            log.error("Keycloak session revocation failed for user {}: {}", userId, e.getResponseBodyAsString());
+            throw new KeycloakClientException(
+                    "Session revocation failed: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()),
+                    e
+            );
+        }
+    }
+
+    /**
      * Reset user's password in Keycloak.
      *
      * @param userId Keycloak user ID

@@ -27,7 +27,10 @@ shop:
       # fleet-safe defaults now so any future listener doesn't fall back to the
       # common `shop-service` / `earliest` defaults (silent data loss + replay).
       group-id: ${SHOP_KAFKA_CONSUMER_GROUP:payment-service}
-      auto-offset-reset: latest
+      # F-018 (P1): a consumer group must replay the events it missed.
+      # 'latest' silently skipped everything published while the group had no
+      # active member (redeploy, scaled-to-zero service, expired offsets).
+      auto-offset-reset: earliest
 
   # common-storage auto-config creates the S3 client + ensures the bucket at
   # startup; point it at RustFS in compose (see docker-compose payment stanza).

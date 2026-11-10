@@ -24,7 +24,10 @@ shop:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: media-service
-      auto-offset-reset: latest
+      # F-018 (P1): a consumer group must replay the events it missed.
+      # 'latest' silently skipped everything published while the group had no
+      # active member (redeploy, scaled-to-zero service, expired offsets).
+      auto-offset-reset: earliest
 
   # common-storage wires S3Client/S3Presigner/ObjectStorageService from these
   # props (RustFS in compose, MinIO in ITs). Bucket creation is BucketBootstrap's

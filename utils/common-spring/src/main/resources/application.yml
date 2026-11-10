@@ -130,6 +130,25 @@ shop:
     issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
     csrf-disabled: true
     stateless-session: true
+    # F-040 (P1): client-identity validation.
+    #
+    # The provisioned Keycloak 26 realm has NO audience mapper and NO client
+    # scopes, so the access tokens it mints carry NO 'aud' claim at all - only
+    # 'azp' (the client the token was issued to). Measured against Keycloak 26:
+    #   user token     -> azp=ecommerce-client, aud absent
+    #   admin token    -> azp=ecommerce-client, aud absent
+    #   service token  -> azp=order-service,   aud absent
+    #
+    # Two consequences:
+    #   * the 'aud' validator in common-security CANNOT be satisfied against this
+    #     realm - enabling shop.security.expected-audiences would reject every
+    #     token and take the whole fleet offline. Leave it empty until an
+    #     audience mapper is added to the realm.
+    #   * the only usable client discriminator is 'azp'. This list restricts the
+    #     tokens a service accepts to the clients the realm actually knows
+    #     about. Narrow it per service where the callers are known.
+    expected-client-ids: ${SHOP_SECURITY_EXPECTED_CLIENT_IDS:ecommerce-client,order-service,rating-service,search-service,product-service,media-service}
+    expected-audiences: ${SHOP_SECURITY_EXPECTED_AUDIENCES:}
     # Note: actuator/swagger/api-docs paths are public via SecurityProperties.PlatformDefaults.PUBLIC_PATHS
     # (utils/common-security/.../SecurityProperties.java); service-specific paths go in each service's
     # application.yml under shop.security.public-paths (EndpointRule format).

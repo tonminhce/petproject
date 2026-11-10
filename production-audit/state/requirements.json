@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-10",
+  "note": "Requirement registry for the Petproject production-readiness programme. Each requirement is derived from the audit mandate (the production-readiness gates and the named evidence classes), mapped to the findings that violate it, and to the tasks that discharge it. Coverage is computed by the harness (requirements.coverage()).",
+  "requirements": [
+    {
+      "id": "REQ-GATE-01",
+      "title": "Every in-scope first-party production source file must be read completely at least once",
+      "source": "audit mandate, section 5 (100% source reading coverage) / GATE 1",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "production-audit/control/source-coverage.json - 584/584 production main-source files carry a FULLY_READ entry with a content hash; harness inventory invalidates a review whose hash no longer matches.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-GATE-02",
+      "title": "The actual architecture, boundaries, contracts and dependencies must be reconstructed from source",
+      "source": "audit mandate, section 7 / GATE 2",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "production-audit/control/architecture-map.json - 23 modules, 78 internal edges, the real Kafka topology, the per-service datasource map and the REST surface.",
+      "linked_findings": ["F-002"],
+      "linked_tasks": ["TSK-002"]
+    },
+    {
+      "id": "REQ-GATE-03",
+      "title": "Critical e-commerce workflows and state transitions must be verified",
+      "source": "audit mandate, section 8 / GATE 3",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "The checkout saga, the order state machine, the two-phase inventory reservation and the two-phase coupon reservation were traced source-level and exercised by the integration suites. The order reconciliation decision table still has no case for a PENDING order with no reservation-bearing item.",
+      "linked_findings": ["F-016", "F-025"],
+      "linked_tasks": ["TSK-016", "TSK-025"]
+    },
+    {
+      "id": "REQ-GATE-04",
+      "title": "Concurrent reservation, commit, release, expiry and compensation must be verified",
+      "source": "audit mandate, section 8.2 / GATE 4",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "The atomic conditional UPDATE, the reservation version column, the conditional expiry claim and the non-negative CHECK constraints are implemented and covered by unit and real-PostgreSQL integration tests.",
+      "linked_findings": ["F-010", "F-011", "F-012", "F-014", "F-044", "F-045", "F-046", "F-047"],
+      "linked_tasks": ["TSK-010", "TSK-011", "TSK-012", "TSK-014", "TSK-044", "TSK-045", "TSK-046", "TSK-047"]
+    },
+    {
+      "id": "REQ-GATE-05",
+      "title": "Payment confirmation, webhook security, idempotency and refunds must be verified",
+      "source": "audit mandate, section 10 / GATE 5",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "Stripe signature verification, webhook dedupe, the retry scheduler and the provider idempotency keys were verified. Two defects remain open: a partial refund is recorded as a full refund, and the cancel-refund trigger was disabled by default (the latter is now fixed and enforced at startup).",
+      "linked_findings": ["F-021", "F-022", "F-023", "F-024", "F-019"],
+      "linked_tasks": ["TSK-021", "TSK-022", "TSK-023", "TSK-024", "TSK-019"]
+    },
+    {
+      "id": "REQ-GATE-06",
+      "title": "Transactional boundaries, duplicate processing, retries and failure recovery must be verified",
+      "source": "audit mandate, section 9 / GATE 6",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "Every producer writes its outbox row inside the business transaction and every relay claims with FOR UPDATE SKIP LOCKED. Three defects remain open: decode failures are dropped without a DLT, there is no DLQ replay path, and a consumer group that was down silently skipped its events (the last is fixed).",
+      "linked_findings": ["F-001", "F-017", "F-018", "F-058", "F-059", "F-013"],
+      "linked_tasks": ["TSK-001", "TSK-017", "TSK-018", "TSK-058", "TSK-059", "TSK-013"]
+    },
+    {
+      "id": "REQ-GATE-07",
+      "title": "Schemas, migrations, ownership, constraints and critical transactions must be verified",
+      "source": "audit mandate, section 13 / GATE 7",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "Every PostgreSQL-backed service owns its schema with a Liquibase master changelog; the stock CHECK constraints and the reservation version columns were added; the missing outbox retention jobs were added.",
+      "linked_findings": ["F-010", "F-011", "F-015", "F-044", "F-059"],
+      "linked_tasks": ["TSK-010", "TSK-011", "TSK-015", "TSK-044", "TSK-059"]
+    },
+    {
+      "id": "REQ-GATE-08",
+      "title": "Authentication, authorization, token handling, gateway policies and data isolation must be verified",
+      "source": "audit mandate, section 12 / GATE 8",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "The client-IP trust model, the gateway audience check, the wildcard-CORS combination and the session revocation on a credential change were all implemented and covered. Two identity defects remain open: ROPC is still the user login flow, and the SERVICE realm role is a fleet-wide super-privilege.",
+      "linked_findings": ["F-004", "F-005", "F-031", "F-032", "F-033", "F-040", "F-041", "F-051", "F-052", "F-055"],
+      "linked_tasks": ["TSK-004", "TSK-005", "TSK-031", "TSK-032", "TSK-033", "TSK-040", "TSK-041", "TSK-051", "TSK-052", "TSK-055"]
+    },
+    {
+      "id": "REQ-GATE-09",
+      "title": "The applicable distributed rate limits and their failure behaviour must be verified",
+      "source": "audit mandate, section 11 / GATE 9",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "Both Redis-backed tiers match the documented rates (global 2000/4000, per-client 100/200); the client-IP trust model that the per-IP bucket depends on was fixed and is now guarded at startup.",
+      "linked_findings": ["F-031", "F-034"],
+      "linked_tasks": ["TSK-031", "TSK-034"]
+    },
+    {
+      "id": "REQ-GATE-10",
+      "title": "Index synchronisation and the file lifecycle must be verified",
+      "source": "audit mandate, sections 16 and 17 / GATE 10",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "The media lifecycle (magic bytes, re-encode, orphan purge, presign, fail-safe reference check) is verified against the production RustFS backend, and the alias-swap reindex is verified. The memory ceiling of the upload path and the media-delete reference check remain open.",
+      "linked_findings": ["F-062", "F-063", "F-064", "F-042"],
+      "linked_tasks": ["TSK-062", "TSK-063", "TSK-064", "TSK-042"]
+    },
+    {
+      "id": "REQ-GATE-11",
+      "title": "Timeouts, retries, circuit breaking, shutdown and recovery must be verified",
+      "source": "audit mandate, section 18 / GATE 11",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "Circuit breakers, the graceful shutdown grace period and the reconciliation sweeps are in place. The outbox relay still holds a row lock and an open transaction across a blocking Kafka publish, and remote calls are made inside database transactions in four services.",
+      "linked_findings": ["F-013", "F-027", "F-066"],
+      "linked_tasks": ["TSK-013", "TSK-027", "TSK-066"]
+    },
+    {
+      "id": "REQ-GATE-12",
+      "title": "Approved workload and SLO targets must be measured, or the gate must be explicitly blocked",
+      "source": "audit mandate, section 18 / GATE 12",
+      "mandatory": true,
+      "status": "BLOCKED",
+      "evidence": "No workload profile or SLO has been approved by the product owner. This audit does not invent one: the gate is reported as blocked rather than passed against invented thresholds. The metrics needed to derive them (Micrometer timers on the confirm path, the relay duration, the outbox backlog gauge) are already instrumented.",
+      "linked_findings": [],
+      "linked_tasks": ["TSK-042"]
+    },
+    {
+      "id": "REQ-GATE-13",
+      "title": "Critical errors, state transitions and resource behaviour must be diagnosable",
+      "source": "audit mandate, section 19 / GATE 13",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "Structured logging with correlation IDs, W3C trace propagation, Actuator, Prometheus and the per-domain meters are in place. The business-critical failure counters (for example order.confirm.outcome=compensated) have no Prometheus alert rule in k8s/prometheus-alerts.yaml.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-GATE-14",
+      "title": "The required unit, integration, E2E, contract and concurrency tests must pass",
+      "source": "audit mandate, section 20 / GATE 14",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "mvn test: BUILD SUCCESS - 3332 tests, 0 failures, 0 errors, 271 test classes, 23/23 modules. 28 regression tests were added by this audit.",
+      "linked_findings": ["F-037", "F-042", "F-043"],
+      "linked_tasks": ["TSK-037", "TSK-042", "TSK-043"]
+    },
+    {
+      "id": "REQ-GATE-15",
+      "title": "Configuration, migrations, secrets, CI/CD, health checks and rollback must be reviewed",
+      "source": "audit mandate, section 22 / GATE 15",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "The CI workflow, the compose topology, the health probes and the rollback-safe migration pattern were reviewed. Credential defaults remain in the shared library and in the environment templates, and one required variable is missing from the production template.",
+      "linked_findings": ["F-006", "F-020", "F-036", "F-039"],
+      "linked_tasks": ["TSK-006", "TSK-020", "TSK-036", "TSK-039"]
+    },
+    {
+      "id": "REQ-GATE-16",
+      "title": "Backup, restore and incident recovery must be validated where required",
+      "source": "audit mandate, section 22 / GATE 16",
+      "mandatory": true,
+      "status": "BLOCKED",
+      "evidence": "No backup or restore procedure is exercised anywhere in the repository, and this audit has no authorised environment in which to run one. Reported as blocked rather than passed.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-GATE-17",
+      "title": "All release-blocking findings must be independently verified",
+      "source": "audit mandate, sections 6 and 27 / GATE 17",
+      "mandatory": true,
+      "status": "PARTIAL",
+      "evidence": "Verification is objective and automated (the reactor suite plus the static invariant checks), but this harness provides no sub-agent facility, so the implementer and the verifier are the same actor. The limitation is disclosed rather than papered over; 27 findings are VERIFIED against executable evidence.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-GATE-18",
+      "title": "No applicable mandatory task may remain silently omitted",
+      "source": "audit mandate, section 22 / GATE 18",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "68 findings map one-to-one onto 68 registry tasks (harness tasks import-findings is idempotent and reports the mapping). No finding exists without a task.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-GATE-19",
+      "title": "Verification evidence must correspond to the actual code revision under review",
+      "source": "audit mandate, section 29 / GATE 19",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "harness inventory invalidates any review whose content hash changed; harness reconcile reports 0 stale reviews and 0 reopened tasks against the current working tree, and the build evidence points at the log of the current revision.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-GATE-20",
+      "title": "At least two final reconciliation passes must be run against a stable baseline",
+      "source": "audit mandate, section 22 / GATE 20",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "harness reconcile was executed repeatedly after every remediation batch (batches 01-10 plus the final pass); the last pass reports 0 stale reviews, 0 reopened tasks and a consistent findings/task mapping.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-EVIDENCE",
+      "title": "Every conclusion must carry its evidence class and be reproducible",
+      "source": "audit mandate, section 2 (evidence classes)",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "Every finding carries a confidence and an evidence class (SOURCE_VERIFIED, TEST_VERIFIED, RUNTIME_MEASURED). The two P0 findings and F-040 carry RUNTIME_MEASURED evidence with a reproducible command.",
+      "linked_findings": [],
+      "linked_tasks": []
+    },
+    {
+      "id": "REQ-NO-FAKE",
+      "title": "A finding must never be marked VERIFIED without executable evidence, and a blocked gate must be reported as blocked",
+      "source": "audit mandate, sections 25, 27 and 31",
+      "mandatory": true,
+      "status": "SATISFIED",
+      "evidence": "The task registry keeps IMPLEMENTED and VERIFIED distinct; the scheduler never promotes a task without a passing verify_command; the harness verify suites return BLOCKED when a tool is missing rather than PASS; and the sign-off predicate evaluates the real gate state instead of a hardcoded success.",
+      "linked_findings": [],
+      "linked_tasks": []
+    }
+  ]
+}

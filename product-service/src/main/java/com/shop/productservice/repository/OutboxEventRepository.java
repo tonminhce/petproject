@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,4 +40,19 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     Optional<OutboxEvent> claimOnePending(@Param("status") OutboxStatus status);
 
     long countByStatus(OutboxStatus status);
+
+    /**
+     * F-059 (P2) — retention purge for SENT rows.
+     *
+     * <p>product-service had NO retention scheduler, so its {@code outbox_events}
+     * table grew by one row per product/brand/category mutation forever, with
+     * nothing ever reclaiming the space. Every other event-producing service
+     * (inventory, promotion, media, payment, shipping, order) purges SENT rows
+     * older than a retention window; this service was the outlier and its
+     * repository did not even have the delete method.</p>
+     */
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
+    int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status,
+                                      @Param("cutoff") Instant cutoff);
 }

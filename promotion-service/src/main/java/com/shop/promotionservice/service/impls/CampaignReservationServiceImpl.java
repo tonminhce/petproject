@@ -122,7 +122,18 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             .expiresAt(now.plusSeconds(reservationTtlSeconds))
             .reservedAt(now)
             .build();
-        CouponUsageReservation saved = reservationRepository.save(reservation);
+        CouponUsageReservation saved;
+        try {
+            saved = reservationRepository.save(reservation);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            // F-047 — uk_cur_order_id is UNIQUE, so a concurrent second reserve
+            // for the same order is rejected by the database. Without this
+            // mapping the loser surfaced a raw constraint violation as a 500
+            // instead of the domain's PROMOTION_DUPLICATE_REQUEST.
+            log.info("Concurrent coupon reservation for order {} rejected by uk_cur_order_id",
+                    request.orderId());
+            throw BusinessException.of(ErrorCode.PROMOTION_DUPLICATE_REQUEST, request.orderId());
+        }
         eventPublisher.publishReserved(campaign, saved);
         return ReservationResponse.from(campaign, saved);
     }

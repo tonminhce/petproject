@@ -59,7 +59,10 @@ shop:
       # First consumer: rating lifecycle events (spec D5). Mirrors shipping's
       # consumer block style.
       group-id: product-service
-      auto-offset-reset: latest
+      # F-018 (P1): a consumer group must replay the events it missed.
+      # 'latest' silently skipped everything published while the group had no
+      # active member (redeploy, scaled-to-zero service, expired offsets).
+      auto-offset-reset: earliest
   security:
     # Catalog reads are anonymous; writes stay authenticated.
     # (actuator, swagger, api-docs are public via common-security platform defaults)

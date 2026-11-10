@@ -103,6 +103,13 @@ public class UserServiceImpl implements UserService {
                 request.newPassword(),
                 false
         );
+        // F-052 - revoke the sessions that were established with the OLD
+        // password. Keycloak's reset-password endpoint does not end existing
+        // sessions, so a refresh token captured before the change would keep
+        // working. The credential change has already succeeded at this point,
+        // so a revocation failure is logged (and surfaced to the operator)
+        // rather than reported as a failed password change.
+        revokeSessions(currentUser.getKeycloakUserId());
 
         return "Password changed successfully";
     }
@@ -201,13 +208,26 @@ public class UserServiceImpl implements UserService {
         if (requestedRoles == null || requestedRoles.isEmpty()) {
             return List.of(RoleName.USER);
         }
-        return requestedRoles.stream()
+        List<RoleName> allowed = requestedRoles.stream()
                 .map(String::trim)
                 .filter(role -> !role.isBlank())
                 .filter(SELF_REGISTRATION_ALLOWED_ROLES::contains)
                 .map(RoleName::valueOf)
                 .distinct()
                 .toList();
+        if (allowed.isEmpty()) {
+            // F-061 (P1) — every requested role was privileged and therefore
+            // dropped, which used to leave the list EMPTY. The empty list was
+            // then used for BOTH the Keycloak role assignment and the local
+            // user_role rows, so the customer was created with zero realm
+            // roles: they could sign in, but every @PreAuthorize rule failed
+            // and the account was permanently broken without operator
+            // intervention. The filter's purpose is to stop a self-registration
+            // from obtaining a privileged role - not to strip the customer of
+            // their base role - so fall back to USER.
+            return List.of(RoleName.USER);
+        }
+        return allowed;
     }
 
     private User buildUserFromRequest(RegisterRequest request, String keycloakUserId) {
@@ -322,11 +342,30 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found", resetToken.getUserId()));
 
         keycloakAdminClient.resetUserPassword(user.getKeycloakUserId(), request.newPassword(), false);
+        // F-053 - same session-revocation requirement as the password change:
+        // a reset performed because the password may have been compromised must
+        // not leave the attacker's session alive.
+        revokeSessions(user.getKeycloakUserId());
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
 
         log.info("Password successfully reset for user {}", user.getUsername());
         return "Password reset successfully";
+    }
+
+    /**
+     * Revoke every Keycloak session for a user. Best-effort by design: the
+     * credential change has already been applied, so a failure here must not
+     * be reported as a failed password change. It is logged at ERROR so the
+     * operator can see that the old sessions survived.
+     */
+    private void revokeSessions(String keycloakUserId) {
+        try {
+            keycloakAdminClient.logoutUser(keycloakUserId);
+        } catch (RuntimeException ex) {
+            log.error("Password changed but the existing sessions could not be revoked for user {} - "
+                    + "previously issued refresh tokens may still be usable", keycloakUserId, ex);
+        }
     }
 
     private String hashToken(String token) {

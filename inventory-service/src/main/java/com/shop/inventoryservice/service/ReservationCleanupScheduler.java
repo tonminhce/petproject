@@ -20,10 +20,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Background jobs:
@@ -43,12 +43,21 @@ public class ReservationCleanupScheduler {
     private final ReservationRepository reservationRepository;
     private final InventoryRepository inventoryRepository;
     private final InventoryCacheService cacheService;
+    private final InventoryEventPublisher publisher;
     private final PlatformTransactionManager txManager;
 
     @Value("${inventory.reservation-cleanup-batch-size:500}")
     private int batchSize;
 
-    @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}")
+    /**
+     * The first run is delayed by one interval instead of firing at context
+     * startup. A startup-time sweep competes with the first application
+     * requests (and, in an integration test, with the other test classes that
+     * share the same database), and it removes the "a background job inserts an
+     * outbox row while another test is asserting on the outbox table" race.
+     */
+    @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}",
+               initialDelayString = "${inventory.reservation-cleanup-initial-delay-ms:60000}")
     public void releaseAllExpiredReservations() {
         TransactionTemplate txTemplate = new TransactionTemplate(txManager);
         try {
@@ -76,23 +85,55 @@ public class ReservationCleanupScheduler {
         }
     }
 
+    /**
+     * F-011 — release the hold of every expired reservation in the batch.
+     * <p>Each row is CLAIMED with a conditional UPDATE
+     * ({@code status = PENDING} -> {@code status = EXPIRED}) before any stock is
+     * moved. A row that another writer already transitioned (a concurrent
+     * {@code commit()}, or a competing sweep) affects zero rows and is skipped,
+     * so a committed reservation can never be flipped back to EXPIRED and the
+     * stock counters are decremented exactly once per reservation.</p>
+     * <p>The inventory decrement itself is an atomic guarded UPDATE
+     * ({@code reservedQuantity >= qty}), so the counter can never go negative
+     * and a double release cannot over-credit stock. The previous
+     * {@code Math.max(0, ...)} clamp silently masked exactly that inconsistency;
+     * a short balance is now logged as an error for an operator instead.</p>
+     */
     private void releaseBatch(List<Reservation> batch) {
-        Map<UUID, List<Reservation>> byProduct = batch.stream()
-            .collect(Collectors.groupingBy(Reservation::getProductId));
-        byProduct.forEach((productId, reservations) -> {
-            int quantity = reservations.stream().mapToInt(Reservation::getQuantity).sum();
-            inventoryRepository.findByProductId(productId).ifPresent(inv -> {
-                inv.setReservedQuantity(Math.max(0, inv.getReservedQuantity() - quantity));
-                inv.setLastUpdated(Instant.now());
-                reservations.forEach(r -> r.setStatus(ReservationStatus.EXPIRED));
-                inventoryRepository.save(inv);
-                reservationRepository.saveAll(reservations);
-                // Same invariant as the service-layer write paths: any mutation to
-                // Inventory.reservedQuantity must drop the cached entry, otherwise a
-                // hot GET /api/v1/inventory/{id} reads a stale value for up to 60s.
-                cacheService.evictAfterCommit(productId);
-            });
+        Map<UUID, Integer> claimedByProduct = new LinkedHashMap<>();
+        for (Reservation reservation : batch) {
+            int claimed = reservationRepository.claimForExpiry(
+                reservation.getId(), ReservationStatus.PENDING, ReservationStatus.EXPIRED);
+            if (claimed == 0) {
+                // Already transitioned by a commit() or a competing sweep -
+                // not ours to release.
+                continue;
+            }
+            claimedByProduct.merge(reservation.getProductId(), reservation.getQuantity(), Integer::sum);
+        }
+        claimedByProduct.forEach((productId, quantity) -> {
+            int released = inventoryRepository.releaseReserved(productId, quantity);
+            if (released == 0) {
+                log.error("Expiry sweep could not release {} reserved unit(s) for product {} - "
+                        + "the reserved counter is lower than the claimed holds. "
+                        + "Stock accounting needs manual reconciliation.", quantity, productId);
+            }
+            // Same invariant as the service-layer write paths: any mutation to
+            // Inventory.reservedQuantity must drop the cached entry, otherwise a
+            // hot GET /api/v1/inventory/{id} reads a stale value for up to 60s.
+            cacheService.evictAfterCommit(productId);
         });
+
+        // F-012 — the sweep used to move stock WITHOUT emitting the
+        // inventory.released.v1 event, so shop.inventory.events.v1 under-reported
+        // releases and the outbox no longer described the domain state. Publish
+        // one outbox row per expired reservation, in the same transaction as the
+        // stock movement, exactly like InventoryServiceImpl.release() does.
+        for (Reservation reservation : batch) {
+            inventoryRepository.findByProductId(reservation.getProductId()).ifPresent(inventory -> {
+                publisher.publishReleased(inventory, reservation, "PENDING");
+            });
+        }
     }
 
     @Scheduled(cron = "${inventory.reservation-retention-cron:0 0 4 * * *}")

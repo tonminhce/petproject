@@ -92,6 +92,19 @@ public abstract class AbstractIntegrationTest {
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
+        // F-043 — background mutators OFF by default for every promotion IT
+        // context. Each distinct property set creates a separate cached
+        // ApplicationContext, and every context keeps its own @Scheduled tasks
+        // running for the rest of the surefire fork. Several contexts
+        // therefore shared ONE PostgreSQL database, and the outbox relay from
+        // one context claimed and marked SENT the PENDING rows that another
+        // context's test was asserting on (PromotionOutboxClaimConcurrencyIT
+        // failed with "Expecting actual: Optional[2] to contain: 3L").
+        // Pinning the intervals gives every IT the same context AND removes
+        // the background mutation, so each test sees only the rows it created.
+        registry.add("promotion.outbox.poll-interval-ms", () -> "3600000");
+        registry.add("shop.promotion.reservation-cleanup-interval-ms", () -> "3600000");
+        registry.add("shop.promotion.reservation-cleanup-initial-delay-ms", () -> "3600000");
     }
 
     @Autowired

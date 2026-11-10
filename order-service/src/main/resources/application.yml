@@ -35,7 +35,10 @@ shop:
     producer: { acks: all, retries: 3 }
     consumer:
       group-id: order-service
-      auto-offset-reset: latest
+      # F-018 (P1): a consumer group must replay the events it missed.
+      # 'latest' silently skipped everything published while the group had no
+      # active member (redeploy, scaled-to-zero service, expired offsets).
+      auto-offset-reset: earliest
   security:
     public-paths:
       - path: /api/v1/carts/**
@@ -59,11 +62,11 @@ shop:
     payment:
       url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
       timeout-ms: 3000
-      enabled: ${PAYMENT_SERVICE_ENABLED:false}  # order-wiring D1 — payment-captured confirm gate, default off until payment-service ships
+      enabled: ${PAYMENT_SERVICE_ENABLED:true}
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${ORDER_SERVICE_CLIENT_ID:order-service}
-      client-secret: ${ORDER_SERVICE_CLIENT_SECRET:changeme}
+      client-secret: ${ORDER_SERVICE_CLIENT_SECRET:}
 
 order:
   idempotency:

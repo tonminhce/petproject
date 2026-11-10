@@ -1,0 +1,942 @@
+{
+  "command": "audit distributed-systems",
+  "kafka_listeners": [
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java",
+      "line": 42,
+      "code": "* {@code @KafkaListener}. {@code StringDeserializer} never throws — poison"
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/kafka/OrderEventConsumer.java",
+      "line": 19,
+      "code": "@KafkaListener(topics = \"shop.order.lifecycle.v1\", containerFactory = \"shippingListenerFactory\")"
+    },
+    {
+      "path": "search-service/src/main/java/com/shop/searchservice/kafka/ProductSearchConsumer.java",
+      "line": 33,
+      "code": "@KafkaListener(topics = \"shop.product.lifecycle.v1\", containerFactory = \"searchListenerFactory\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/kafka/MediaDeletedConsumer.java",
+      "line": 64,
+      "code": "@KafkaListener(topics = \"media.lifecycle.v1\", containerFactory = \"mediaListenerFactory\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/kafka/ProductRatingConsumer.java",
+      "line": 18,
+      "code": "@KafkaListener(topics = \"shop.rating.lifecycle.v1\", containerFactory = \"ratingListenerFactory\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/kafka/PaymentLifecycleConsumer.java",
+      "line": 20,
+      "code": "@KafkaListener("
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/kafka/ShippingDeliveredConsumer.java",
+      "line": 19,
+      "code": "@KafkaListener(topics = \"shop.shipping.lifecycle.v1\", containerFactory = \"shippingListenerFactory\")"
+    },
+    {
+      "path": "notification-service/src/main/java/com/shop/notificationservice/kafka/OrderEventConsumer.java",
+      "line": 19,
+      "code": "@KafkaListener(topics = \"shop.order.lifecycle.v1\", containerFactory = \"notificationListenerFactory\")"
+    }
+  ],
+  "kafka_producers": [
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaAutoConfiguration.java",
+      "line": 63,
+      "code": "public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {"
+    },
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaAutoConfiguration.java",
+      "line": 73,
+      "code": "public KafkaTemplate<String, String> stringKafkaTemplate(KafkaProperties kafkaProperties) {"
+    },
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/producer/KafkaMessagePublisher.java",
+      "line": 83,
+      "code": "private final KafkaTemplate<String, String> kafkaTemplate;"
+    },
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/producer/KafkaMessagePublisher.java",
+      "line": 86,
+      "code": "public KafkaMessagePublisher(KafkaTemplate<String, String> kafkaTemplate) {"
+    },
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/producer/KafkaMessagePublisher.java",
+      "line": 90,
+      "code": "public KafkaMessagePublisher(KafkaTemplate<String, String> kafkaTemplate, long publishTimeoutMs) {"
+    }
+  ],
+  "outbox_implementations": [
+    {
+      "path": "utils/common-kafka/src/main/java/com/shop/common/kafka/producer/KafkaMessagePublisher.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "utils/common-core/src/main/java/com/shop/common/core/constants/OutboxStatus.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingEventPublisher.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingEventPublisherImpl.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "search-service/src/main/java/com/shop/searchservice/kafka/ProductSearchConsumer.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/RatingOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": false
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/service/RatingEventService.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": true
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/entity/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/repository/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/OutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/PromotionMetrics.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/PromotionOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/impls/TransactionalPromotionEventPublisher.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/entity/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/ProductMetrics.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/TransactionalBrandEventPublisher.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": true
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/TransactionalCategoryEventPublisher.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": true
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/impls/TransactionalProductEventPublisher.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": true
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentEventPublisher.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/OrderServiceApplication.java",
+      "has_outbox_entity": false,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/entity/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/repository/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/OrderMetrics.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OrderEventPublisherImpl.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OrderOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/metrics/MediaMetrics.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaEventService.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": true
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaEventType.java",
+      "has_outbox_entity": false,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": false
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/service/MediaLifecycleService.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/entity/Inventory.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/entity/OutboxEvent.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/repository/OutboxEventRepository.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryMetrics.java",
+      "has_outbox_entity": false,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": false
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryOutboxRelay.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": true,
+      "transactional": false
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java",
+      "has_outbox_entity": true,
+      "has_publisher": false,
+      "scheduled": true,
+      "transactional": true
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/TransactionalInventoryEventPublisher.java",
+      "has_outbox_entity": true,
+      "has_publisher": true,
+      "scheduled": false,
+      "transactional": true
+    }
+  ],
+  "scheduled_jobs": [
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java",
+      "line": 51,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionScheduler.java",
+      "line": 24,
+      "code": "@Scheduled(cron = \"${shop.shipping.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ReconciliationScheduler.java",
+      "line": 45,
+      "code": "@Scheduled(cron = \"${shop.shipping.reconcile-cron:0 0 * * * *}\")"
+    },
+    {
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/scheduler/WebhookRetryScheduler.java",
+      "line": 52,
+      "code": "@Scheduled(fixedDelayString = \"${shop.shipping.webhook.retry-poll-ms:60000}\")"
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxRetentionScheduler.java",
+      "line": 33,
+      "code": "@Scheduled(cron = \"${rating.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/RatingOutboxRelay.java",
+      "line": 50,
+      "code": "@Scheduled(fixedDelayString = \"${shop.rating.outbox.poll-millis:2000}\", initialDelayString = \"${shop.rating.outbox.poll-millis:2000}\")"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/OutboxRetentionScheduler.java",
+      "line": 26,
+      "code": "@Scheduled(cron = \"${promotion.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/PromotionOutboxRelay.java",
+      "line": 67,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/ReservationCleanupScheduler.java",
+      "line": 71,
+      "code": "@Scheduled(fixedDelayString = \"${shop.promotion.reservation-cleanup-interval-ms:60000}\","
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/ReservationCleanupScheduler.java",
+      "line": 136,
+      "code": "@Scheduled(cron = \"${shop.promotion.reservation-retention-cron:0 0 4 * * *}\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java",
+      "line": 50,
+      "code": "@Scheduled(cron = \"${shop.product.media-sweep.cron:0 */30 * * * *}\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java",
+      "line": 64,
+      "code": "@Scheduled(fixedDelayString = \"${product.outbox.poll-interval-ms:5000}\", initialDelayString = \"${product.outbox.poll-interval-ms:5000}\")"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRetentionScheduler.java",
+      "line": 35,
+      "code": "@Scheduled(cron = \"${product.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java",
+      "line": 36,
+      "code": "* <p>Scheduled via {@code @Scheduled(fixedDelayString = \"...\")} with the same"
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java",
+      "line": 69,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentOutboxRelay.java",
+      "line": 68,
+      "code": "@Scheduled(fixedDelayString = \"${shop.payment.outbox.poll-millis:2000}\", initialDelayString = \"${shop.payment.outbox.poll-millis:2000}\")"
+    },
+    {
+      "path": "payment-service/src/main/java/com/shop/paymentservice/scheduler/WebhookRetryScheduler.java",
+      "line": 64,
+      "code": "@Scheduled(fixedDelayString = \"${shop.payment.webhook.retry-poll-ms:60000}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java",
+      "line": 122,
+      "code": "@Scheduled(fixedDelayString = \"${order.reconciliation.interval-ms:300000}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/GuestCartCleanupScheduler.java",
+      "line": 28,
+      "code": "@Scheduled(cron = \"${order.cleanup.guest-cart-cron:0 0 4 * * *}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyKeyCleanupScheduler.java",
+      "line": 19,
+      "code": "@Scheduled(cron = \"${order.cleanup.idempotency-cron:0 0 4 * * *}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OrderOutboxRelay.java",
+      "line": 61,
+      "code": "@Scheduled(fixedDelayString = \"${order.outbox.poll-interval-ms:5000}\", initialDelayString = \"${order.outbox.poll-interval-ms:5000}\")"
+    },
+    {
+      "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OutboxRetentionScheduler.java",
+      "line": 25,
+      "code": "@Scheduled(cron = \"${order.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "notification-service/src/main/java/com/shop/notificationservice/NotificationServiceApplication.java",
+      "line": 10,
+      "code": "// C17 — @EnableScheduling is REQUIRED: NotificationRetryScheduler's @Scheduled"
+    },
+    {
+      "path": "notification-service/src/main/java/com/shop/notificationservice/scheduler/NotificationRetryScheduler.java",
+      "line": 69,
+      "code": "@Scheduled(fixedDelayString = \"${shop.notification.retry.poll-ms:60000}\","
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/job/MediaPurgeJob.java",
+      "line": 20,
+      "code": "* Scheduling shape ports rating-service's outbox relay: {@code @Scheduled}"
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/job/MediaPurgeJob.java",
+      "line": 47,
+      "code": "@Scheduled(fixedDelayString = \"${media.purge.poll-millis:3600000}\")"
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRelay.java",
+      "line": 70,
+      "code": "@Scheduled(fixedDelayString = \"${shop.media.outbox.poll-millis:2000}\", initialDelayString = \"${shop.media.outbox.poll-millis:2000}\")"
+    },
+    {
+      "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRetentionScheduler.java",
+      "line": 49,
+      "code": "@Scheduled(cron = \"${shop.media.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryOutboxRelay.java",
+      "line": 65,
+      "code": "@Scheduled("
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java",
+      "line": 26,
+      "code": "@Scheduled(cron = \"${inventory.outbox.retention-cron:0 0 3 * * *}\")"
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java",
+      "line": 59,
+      "code": "@Scheduled(fixedDelayString = \"${inventory.reservation-cleanup-interval-ms:60000}\","
+    },
+    {
+      "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java",
+      "line": 139,
+      "code": "@Scheduled(cron = \"${inventory.reservation-retention-cron:0 0 4 * * *}\")"
+    }
+  ],
+  "transactional_sites": 162,
+  "services": {
+    "utils/common-spring/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "utils/common-spring/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "tax-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/taxservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "tax-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/taxservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "shipping-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/shippingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "shipping-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/shippingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "search-service/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": true,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "search-service/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": true,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "rating-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/ratingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "rating-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/ratingservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "promotion-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/promotionservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "promotion-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/promotionservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "product-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/productservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "product-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/productservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "payment-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/paymentservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": true,
+      "mentions_keycloak": false,
+      "mentions_rustfs": true
+    },
+    "payment-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/paymentservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": true,
+      "mentions_keycloak": false,
+      "mentions_rustfs": true
+    },
+    "order-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/orderservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "order-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/orderservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "notification-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/notificationservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "notification-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/notificationservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "media-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/mediaservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": true
+    },
+    "media-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/mediaservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": true
+    },
+    "inventory-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/inventoryservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "inventory-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/inventoryservice}"
+      ],
+      "mentions_kafka": true,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "gateway-service/target/classes/application.yml": {
+      "datasources": [],
+      "mentions_kafka": false,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "gateway-service/src/main/resources/application.yml": {
+      "datasources": [],
+      "mentions_kafka": false,
+      "mentions_redis": true,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": true,
+      "mentions_rustfs": false
+    },
+    "favourite-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/favouriteservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "favourite-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/favouriteservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "auth-service/target/classes/application.yml": {
+      "datasources": [
+        "localhost:5432/authservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    },
+    "auth-service/src/main/resources/application.yml": {
+      "datasources": [
+        "localhost:5432/authservice}"
+      ],
+      "mentions_kafka": false,
+      "mentions_redis": false,
+      "mentions_elasticsearch": false,
+      "mentions_stripe": false,
+      "mentions_keycloak": false,
+      "mentions_rustfs": false
+    }
+  }
+}

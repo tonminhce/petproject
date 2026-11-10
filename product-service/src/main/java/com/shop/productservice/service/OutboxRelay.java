@@ -94,7 +94,25 @@ public class OutboxRelay {
                         // Continue-on-error relay (fleet divergence note above): save the
                         // retry state and keep draining — later aggregates must not starve.
                         outboxRepo.save(event);
-                        return Boolean.TRUE;
+                        // F-058 (P1) — STOP the batch on a publish failure.
+                        //
+                        // The previous implementation returned TRUE and kept
+                        // draining. Because the claim always takes the MIN(id)
+                        // PENDING row, the very next iteration re-claimed the
+                        // SAME failing row and retried it, so the whole
+                        // max-retries budget (10) was burned inside ONE tick
+                        // rather than across the poll interval. The row was then
+                        // parked as FAILED - and product-service has no retry or
+                        // repair path for FAILED rows - so a transient broker
+                        // outage permanently lost the product lifecycle event and
+                        // the search index diverged from the catalogue with no
+                        // repair route.
+                        //
+                        // Stopping here keeps the row PENDING, spreads the retry
+                        // budget across ticks, and preserves per-aggregate
+                        // ordering - the same contract the inventory, promotion
+                        // and media relays use.
+                        return Boolean.FALSE;  // STOP: keep ordering - retry later events next poll
                     }
                     outboxRepo.save(event);
                     return Boolean.TRUE;

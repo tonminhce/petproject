@@ -39,6 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -200,6 +203,32 @@ class UserServiceImplTest {
 
         assertEquals("Password changed successfully", result);
         verify(keycloakAdminClient).resetUserPassword("kc-123", "Newpass1", false);
+        // F-052 — the sessions established with the OLD password must be
+        // revoked; Keycloak's reset-password endpoint does not end them.
+        verify(keycloakAdminClient).logoutUser("kc-123");
+    }
+
+    /**
+     * F-052 — a revocation failure must NOT be reported as a failed password
+     * change: the credential has already been changed, and telling the caller
+     * that it failed would leave the user believing the old password is still
+     * in place.
+     */
+    @Test
+    void changePasswordSucceedsEvenWhenSessionRevocationFails() {
+        User user = newUser();
+        user.setKeycloakUserId("kc-123");
+        authenticateAs(user);
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(keycloakTokenClient.verifyCredentials("alice", "Oldpass1")).thenReturn(true);
+        doThrow(new com.shop.common.keycloak.exception.KeycloakClientException(
+                "revocation down", HttpStatus.SERVICE_UNAVAILABLE))
+                .when(keycloakAdminClient).logoutUser("kc-123");
+
+        ChangePasswordRequest req = new ChangePasswordRequest("Oldpass1", "Newpass1", "Newpass1");
+
+        assertEquals("Password changed successfully", userService.changePassword(req));
+        verify(keycloakAdminClient).resetUserPassword("kc-123", "Newpass1", false);
     }
 
     @Test
@@ -336,26 +365,38 @@ class UserServiceImplTest {
                 "Alice Wonder", "Passw0rd", List.of("USER"));
     }
 
+    /**
+     * F-061 (P1) — a self-registration whose requested roles are ALL
+     * privileged must still receive the base USER role.
+     *
+     * <p>The previous behaviour filtered every requested role away and used
+     * the resulting EMPTY list for both the Keycloak role assignment and the
+     * local {@code user_role} rows, creating an account with zero realm roles:
+     * the customer could sign in but every authorization rule failed, and the
+     * account was permanently broken without operator intervention.</p>
+     */
     @Test
-    void registerAllDisallowedRolesResultsInEmptyList() {
+    void registerAllDisallowedRolesFallsBackToUser() {
         RegisterRequest req = registerRequestWithRoles(Set.of("ADMIN", "SERVICE", "MANAGER"));
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);
-        // After whitelist filter, both calls receive empty lists — Keycloak is
-        // asked to create a user with no realm roles, local DB gets no role rows.
+        // The privileged roles are dropped, but the base USER role is applied -
+        // Keycloak gets USER and the local DB gets the USER role row.
         when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
-                "Passw0rd", List.of()))
+                "Passw0rd", List.of("USER")))
                 .thenReturn("kc-123");
-        when(roleRepository.findByNameIn(List.<RoleName>of())).thenReturn(Set.of());
+        when(roleRepository.findByNameIn(List.of(RoleName.USER))).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         userService.register(req);
 
         verify(keycloakAdminClient).createUser("alice", "alice@example.com",
-                "Alice Wonder", "Passw0rd", List.of());
-        verify(roleRepository).findByNameIn(List.<RoleName>of());
+                "Alice Wonder", "Passw0rd", List.of("USER"));
+        verify(roleRepository).findByNameIn(List.of(RoleName.USER));
+        verify(keycloakAdminClient, never()).createUser(anyString(), anyString(), anyString(),
+                anyString(), eq(List.of()));
     }
 
     // ------------------------------------------------------------------

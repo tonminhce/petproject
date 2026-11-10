@@ -1,0 +1,114 @@
+{
+  "command": "audit source",
+  "in_scope_files": 1028,
+  "reviewed_files": 584,
+  "coverage_pct": 56.81,
+  "java_scope_files": 880,
+  "java_reviewed_files": 584,
+  "java_coverage_pct": 66.36,
+  "java_line_coverage_pct": 43.55,
+  "invalidated": [
+    {
+      "path": "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java",
+      "reason": "content_changed",
+      "old_sha256": "5179197c4b118e4283da3d21d375c3daba954e967a60ba70e94d0c9e9d436b01",
+      "new_sha256": "b8edffa9e7490bd2aebbeb776f24b3c742e0243d5023118b7d34e5fa47d8fa9e"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/entity/CouponUsageReservation.java",
+      "reason": "content_changed",
+      "old_sha256": "d24a02c90032f375b439229b673b28582636093d4618718df1a88a7fd0bcf7ad",
+      "new_sha256": "4ff37714c338993434e4ae0cd04bad328ef82b46c3e3e6a18288b8f21f55ff78"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/repository/CouponUsageReservationRepository.java",
+      "reason": "content_changed",
+      "old_sha256": "17bb075c75c3341fec415c3a975a8ed70b03b6403131560339412e9ffb381b07",
+      "new_sha256": "ca2afc5ca63127f4f74781c58480353e6261c7f07fa792f9b287fc4525fc7ed7"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/impls/CampaignReservationServiceImpl.java",
+      "reason": "content_changed",
+      "old_sha256": "06cf862a041bbba0461c709b4461d1302e2172efa95b9744f4e91b15bfd3cc82",
+      "new_sha256": "942afc456240679b9f806ba2145addf6b119166654aca4af82b64fbfbad5587f"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/impls/ReservationRetryServiceImpl.java",
+      "reason": "content_changed",
+      "old_sha256": "6f3c62b66d9987055e55c02558c9770a0850ae276e15f809e33ff5876f82d377",
+      "new_sha256": "fe8fc4731e951ae8affcb90d373e1e26856a7a6597a8f5a38a49ddb0ecb9e790"
+    },
+    {
+      "path": "promotion-service/src/main/java/com/shop/promotionservice/service/ReservationCleanupScheduler.java",
+      "reason": "content_changed",
+      "old_sha256": "ba99ed31d812f5a13d71db690048e31fba8014ecbef5731df09f24ac2c06c8fd",
+      "new_sha256": "d3bc2c733e9aac061d9797a056a617ca8db05d76be0ff75c7260dbda5ae908a1"
+    },
+    {
+      "path": "auth-service/src/main/java/com/shop/authservice/service/impls/UserServiceImpl.java",
+      "reason": "content_changed",
+      "old_sha256": "a30b6ddf5a440c838dd41d7ba269bb8f20b82fdcb4cb4b085042d33bcf6666f5",
+      "new_sha256": "a4fe7d86065e13ffce8fadb2a1db1aa5030b0caaf8d54e964da86178f5cb8e9b"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java",
+      "reason": "content_changed",
+      "old_sha256": "5b5f1e554dbce990c441fcba66f20b003fba6339688582be236e0592e05a4b0c",
+      "new_sha256": "1497cf2fd0449809c840de8c369c293763611cf6f57952a340ce80cb9aa80585"
+    },
+    {
+      "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java",
+      "reason": "content_changed",
+      "old_sha256": "a5245125340ccb52bd10d1cf5d915f7fa016ddbd70e18aa073a26cea7c38e933",
+      "new_sha256": "52f57c3d917727013db6f09eea66f5f8ce6bec7f5ee6b8cdcfa4b1d320143dce"
+    },
+    {
+      "path": "rating-service/src/main/java/com/shop/ratingservice/service/RatingEventService.java",
+      "reason": "content_changed",
+      "old_sha256": "eff2a31398df461070aee0fd588bbc1e563d01e0c1f36ad5d1a3524efeb70409",
+      "new_sha256": "9b816b16d8d94a158677a34551175f2abbb1beaf0f37c24751b870c51b31eaff"
+    }
+  ],
+  "unreviewed_sample": [
+    "auth-service/src/test/java/com/shop/authservice/controller/AuthControllerTest.java",
+    "auth-service/src/test/java/com/shop/authservice/controller/RoleControllerTest.java",
+    "auth-service/src/test/java/com/shop/authservice/controller/UserControllerTest.java",
+    "auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java",
+    "auth-service/src/test/java/com/shop/authservice/service/impls/AuthServiceImplTest.java",
+    "auth-service/src/test/java/com/shop/authservice/service/impls/RoleServiceImplTest.java",
+    "auth-service/src/test/java/com/shop/authservice/service/impls/UserServiceImplTest.java",
+    "favourite-service/src/test/java/com/shop/favouriteservice/config/TestLiquibaseConfig.java",
+    "favourite-service/src/test/java/com/shop/favouriteservice/controller/FavouriteControllerTest.java",
+    "favourite-service/src/test/java/com/shop/favouriteservice/repository/FavouriteRepositoryTest.java",
+    "favourite-service/src/test/java/com/shop/favouriteservice/service/impls/FavouriteServiceImplTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/GatewayRateLimitContextTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/KeycloakRealmImportIT.java",
+    "gateway-service/src/test/java/com/shop/gateway/WebFluxIpAllowlistTests.java",
+    "gateway-service/src/test/java/com/shop/gateway/WebFluxRateLimitTests.java",
+    "gateway-service/src/test/java/com/shop/gateway/WebFluxRouteTests.java",
+    "gateway-service/src/test/java/com/shop/gateway/config/GatewayJwtSecurityConfigTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/config/GatewaySecurityPostureValidatorTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/config/RoutesConfigTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/config/SecurityConfigTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/filter/AdminIpAllowlistFilterTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/filter/AdminRoleGateFilterTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/filter/ClientIpResolverTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/filter/FilterOrderTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/filter/GatewayErrorResponseWriterTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/filter/RateLimitFilterTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/ratelimit/GlobalRateLimitFilterTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/ratelimit/GlobalRateLimitPropertiesTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/ratelimit/RateLimitKeyResolverTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/ratelimit/RateLimitPropertiesTest.java",
+    "gateway-service/src/test/java/com/shop/gateway/support/TestKeys.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/config/TestLiquibaseConfig.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/controller/InventoryControllerAuditTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/controller/InventoryControllerTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/controller/ReservationStateEndpointTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/repository/InventoryRepositoryTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryLifecycleIdempotencyTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxClaimConcurrencyTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxRelayIntegrationTest.java",
+    "inventory-service/src/test/java/com/shop/inventoryservice/service/ReleaseCommittedTest.java"
+  ]
+}
