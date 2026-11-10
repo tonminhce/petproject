@@ -2,6 +2,8 @@ package com.shop.common.kafka.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
+import com.shop.common.kafka.replay.DeadLetterReplayEndpoint;
+import com.shop.common.kafka.replay.DeadLetterReplayService;
 import com.shop.common.kafka.serialization.JsonKafkaSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.ObjectProvider;
@@ -72,6 +74,34 @@ public class KafkaAutoConfiguration {
         props.put("value.serializer", StringSerializer.class.getName());
         DefaultKafkaProducerFactory<String, String> factory = new DefaultKafkaProducerFactory<>(props);
         return new KafkaTemplate<>(factory);
+    }
+
+    /**
+     * F-017 - the replay path for records that were dead-lettered. Without it
+     * the dead-letter topic only makes the loss visible; the operator has
+     * nothing to send the record back with.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DeadLetterReplayService deadLetterReplayService(
+            @Qualifier("stringKafkaTemplate") KafkaTemplate<String, String> stringKafkaTemplate,
+            KafkaProperties kafkaProperties) {
+        return new DeadLetterReplayService(stringKafkaTemplate,
+                kafkaProperties.getBootstrapServers(), "shop");
+    }
+
+    /**
+     * F-017 — the operational replay entry point. OFF by default: the bean is
+     * only registered when the operator explicitly enables it, and it is a
+     * WRITE operation, so it is not reachable over the web unless it is also
+     * added to management.endpoints.web.exposure.include.
+     */
+    @Bean
+    @ConditionalOnClass(org.springframework.boot.actuate.endpoint.annotation.Endpoint.class)
+    @ConditionalOnProperty(prefix = "shop.kafka.dlq-replay", name = "enabled", havingValue = "true")
+    @ConditionalOnMissingBean
+    public DeadLetterReplayEndpoint deadLetterReplayEndpoint(DeadLetterReplayService replayService) {
+        return new DeadLetterReplayEndpoint(replayService);
     }
 
     @Bean

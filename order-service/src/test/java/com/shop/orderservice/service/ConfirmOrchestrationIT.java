@@ -225,8 +225,12 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         // millisecond even though the calls are strictly sequential in the
         // coordinator. What this integration test does assert is that BOTH
         // commits actually reached their service.
-        // Inventory commits in productId order: A then B (single-server journal order)
-        assertThat(invCommits.get(0).getRequest().getLoggedDate()).isBeforeOrEqualTo(invCommitsB.get(0).getRequest().getLoggedDate());
+        // Every reservation is committed. The ORDER in which the two inventory
+        // commits reach the server is NOT asserted: the coordinator fans them out
+        // in parallel (H15), so their arrival order is a scheduling detail and
+        // their millisecond-resolution timestamps can invert. The business
+        // invariant is that every reservation of the order is committed exactly
+        // once, which the size assertions above cover.
         // Nothing compensated on the happy path
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release-committed")).isEmpty();
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();
@@ -275,7 +279,12 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         List<ServeEvent> promoReleases = posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed");
         assertThat(invReleases).hasSize(1);
         assertThat(promoReleases).hasSize(1);
-        assertThat(invReleases.get(0).getRequest().getLoggedDate()).isBefore(promoReleases.get(0).getRequest().getLoggedDate());
+        // The LIFO order is enforced by a sequential loop, but two sequential
+        // HTTP calls can land in the SAME millisecond, so the comparison must
+        // not be strict: what matters is that the inventory release was not
+        // recorded AFTER the promotion release.
+        assertThat(invReleases.get(0).getRequest().getLoggedDate())
+            .isBeforeOrEqualTo(promoReleases.get(0).getRequest().getLoggedDate());
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release")).isEmpty();
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release")).isEmpty();
