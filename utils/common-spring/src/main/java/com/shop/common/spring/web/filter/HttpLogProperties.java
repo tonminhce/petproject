@@ -4,19 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration for {@link HttpLoggingFilter}, bound from {@code shop.web.logging.*}.
- * <pre>{@code
- * shop:
- *   web:
- *     logging:
- *       request:
- *         enabled: true
- *         include-body: false
- *         max-body-bytes: 4096
- *       response:
- *         enabled: true
- *         include-body: false
- *         max-body-bytes: 4096
- * }</pre>
  */
 @ConfigurationProperties(prefix = "shop.web.logging")
 public class HttpLogProperties {

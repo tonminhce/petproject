@@ -10,11 +10,6 @@ import java.lang.annotation.Target;
  * <p>The AOP aspect logs duration and result only when execution time exceeds
  * {@code shop.web.logging.performance.threshold-ms} (default 50ms),
  * keeping logs quiet for fast, healthy calls.</p>
- * <pre>{@code
- *
- * @LogPerformance(title = "fetch product", logInput = true)
- * public ProductDto getById(Integer id) { ... }
- * }</pre>
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

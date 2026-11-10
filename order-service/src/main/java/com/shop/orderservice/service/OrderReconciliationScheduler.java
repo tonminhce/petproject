@@ -134,7 +134,22 @@ public class OrderReconciliationScheduler {
     private void reconcile(Order order) {
         List<String> states = pollReservationStates(order);
         if (states == null) return;  // poll failure → already routed to the mixed path
-        if (states.isEmpty()) {      // nothing verifiable → never auto-decide (D8)
+        if (states.isEmpty()) {
+            // F-016 (P1) — an order with NO line items never got past step 1 of
+            // the create saga: no stock was reserved, no promotion was held and
+            // no payment could have been captured. It is an orphan left behind
+            // by a crash between the two saga transactions, and the old
+            // decision table sent it to the mixed path forever - so the row
+            // stayed PENDING, was re-selected on every tick and raised the
+            // mixed-counter alert indefinitely.
+            //
+            // An order that HAS items but no applicable reservation is a
+            // different case (a legacy order, or a partially migrated state)
+            // and stays on the mixed path: it is not safe to decide.
+            if (hasNoOrderItems(order)) {
+                autoCancel(order, "orphan order with no line items - the create saga never completed");
+                return;
+            }
             routeToMixed(order, states, "no applicable reservations");
             return;
         }
@@ -147,6 +162,10 @@ public class OrderReconciliationScheduler {
         } else {
             routeToMixed(order, states, "mixed reservation states");
         }
+    }
+
+    private boolean hasNoOrderItems(Order order) {
+        return orderItemRepository.findByOrderId(order.getId()).isEmpty();
     }
 
     /**
@@ -187,13 +206,21 @@ public class OrderReconciliationScheduler {
     }
 
     private void autoCancel(Order order) {
+        autoCancel(order, null);
+    }
+
+    private void autoCancel(Order order, String reason) {
         transactionTemplate.executeWithoutResult(tx -> {
             order.setCancelledAt(Instant.now());
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
             orderEventPublisher.publishCancelled(order);
         });
-        log.info("AUTO_CANCELLED_BY_RECON order={}", order.getId());
+        if (reason == null) {
+            log.info("AUTO_CANCELLED_BY_RECON order={}", order.getId());
+        } else {
+            log.info("AUTO_CANCELLED_BY_RECON order={} reason={}", order.getId(), reason);
+        }
     }
 
     private void routeToMixed(Order order, List<String> states, String reason) {

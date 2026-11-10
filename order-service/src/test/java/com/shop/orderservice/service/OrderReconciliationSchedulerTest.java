@@ -284,4 +284,48 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(2.0);
         verify(orderRepository, never()).save(any());
     }
+
+    /**
+     * F-016 (P1) regression - an orphan PENDING order with NO line items.
+     *
+     * <p>The order never got past step 1 of the create saga: no stock was
+     * reserved, no promotion was held and no payment could have been captured.
+     * The old decision table sent it to the mixed path forever, so the row
+     * stayed PENDING, was re-selected on every tick and raised the
+     * mixed-counter alert indefinitely.</p>
+     */
+    @Test
+    void orphanOrderWithNoItems_isAutoCancelled() {
+        Order order = stuckOrder(null);
+        givenCandidates(order);
+
+        scheduler.reconcileStuckOrders();
+
+        ArgumentCaptor<Order> saved = ArgumentCaptor.forClass(Order.class);
+        verify(orderRepository).save(saved.capture());
+        assertThat(saved.getValue().getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(saved.getValue().getCancelledAt()).isNotNull();
+        verify(eventPublisher).publishCancelled(order);
+        verify(eventPublisher, never()).publishStatusChanged(any());
+        assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isZero();
+    }
+
+    /**
+     * F-016 companion - an order that HAS items but no applicable reservation
+     * stays on the mixed path: a legacy order or a partially migrated state is
+     * not safe to decide automatically.
+     */
+    @Test
+    void orderWithItemsButNoReservations_staysOnTheMixedPath() {
+        Order order = stuckOrder(null);
+        givenCandidates(order, item(null));
+
+        scheduler.reconcileStuckOrders();
+
+        verify(orderRepository, never()).save(any());
+        verify(eventPublisher, never()).publishCancelled(any());
+        verify(eventPublisher, never()).publishStatusChanged(any());
+        assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
 }

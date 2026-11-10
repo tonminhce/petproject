@@ -8,11 +8,6 @@ import java.lang.annotation.Target;
 /**
  * Logs method entry (with arguments) and exit (with result or exception).
  * Useful for service and repository methods during development/debugging.
- * <pre>{@code
- *
- * @Loggable
- * public CartDto findById(Integer cartId) { ... }
- * }</pre>
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

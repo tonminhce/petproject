@@ -7,24 +7,6 @@ import java.util.Map;
 
 /**
  * Configuration for the shared Kafka producer / consumer beans.
- * <pre>{@code
- * shop:
- *   kafka:
- *     enabled: true
- *     bootstrap-servers: localhost:9092
- *     topics:
- *       order-events: order-events
- *       payment-events: payment-events
- *     retry:
- *       backoff-ms: 6000
- *       max-attempts: 4
- *     producer:
- *       acks: all
- *       retries: 3
- *     consumer:
- *       group-id: shop-service
- *       auto-offset-reset: earliest
- * }</pre>
  */
 @ConfigurationProperties(prefix = "shop.kafka")
 public class KafkaProperties {

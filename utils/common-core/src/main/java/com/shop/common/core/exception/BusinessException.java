@@ -10,11 +10,6 @@ import org.springframework.http.HttpStatus;
  *   <li>Resolved, locale-aware message (computed eagerly at throw site)</li>
  * </ul>
  * <h3>Throw sites — pick the smallest API that fits</h3>
- * <pre>{@code
- * throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND);                     // canonical
- * throw BusinessException.of(ErrorCode.AUTH_USERNAME_EXISTS, "alice");         // with i18n args
- * throw BusinessException.notFound("auth.user.not.found.with.username", "x"); // ad-hoc + status
- * }</pre>
  * <p>We <strong>do not</strong> wrap an arbitrary message + arbitrary status in a no-code
  * constructor — every error must map to an {@link ErrorCode} so dashboards stay consistent.</p>
  */

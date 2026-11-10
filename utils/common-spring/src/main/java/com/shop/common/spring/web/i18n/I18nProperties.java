@@ -10,16 +10,6 @@ import java.util.Locale;
 
 /**
  * Configuration for the platform's i18n setup, bound from {@code shop.i18n.*}.
- * <pre>{@code
- * shop:
- *   i18n:
- *     default-locale: vi
- *     fallback-to-system-locale: true
- *     use-code-as-default-message: false
- *     encoding: UTF-8
- *     cache-duration: 5m
- *     basenames: classpath:messages/messages
- * }</pre>
  */
 @ConfigurationProperties(prefix = "shop.i18n")
 public class I18nProperties {
