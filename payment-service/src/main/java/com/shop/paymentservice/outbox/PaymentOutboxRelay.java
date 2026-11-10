@@ -54,6 +54,13 @@ public class PaymentOutboxRelay {
 
     @Value("${shop.payment.outbox.publish-timeout-ms:5000}")
     private long publishTimeoutMs;
+    /**
+     * F-052 — how long a claimed (SENDING) row may stay unpublished before the
+     * recovery sweep reclaims it. Must comfortably exceed the publish timeout
+     * so a slow in-flight publish is never mistaken for a crash.
+     */
+    @Value("${shop.payment.outbox.claim-lease-ms:60000}")
+    private long claimLeaseMs;
 
     public PaymentOutboxRelay(OutboxEventRepository outboxRepo,
                               KafkaMessagePublisher kafkaPublisher,
@@ -99,6 +106,28 @@ public class PaymentOutboxRelay {
         // Phase 3 — mark each row SENT or record the retry/failure.
         for (OutboxEvent e : rows) {
             transactionTemplate.executeWithoutResult(tx -> markFinalState(e, allSuccess));
+        }
+    }
+
+    /**
+     * F-052 — return events stranded in SENDING to the claimable set.
+     *
+     * <p>A crash between the claim commit and the publish leaves the row in
+     * SENDING, which no other code path touches: it is not PENDING, so the
+     * claim never picks it up, and the event is lost silently. The reclaim
+     * uses the row's updatedAt (set when it was claimed) against the claim
+     * lease. Rows that have already exhausted their retry budget are parked as
+     * FAILED for an operator instead of being retried forever.</p>
+     */
+    private void recoverStrandedClaims() {
+        Instant cutoff = Instant.now().minusMillis(claimLeaseMs);
+        int reclaimed = outboxRepo.reclaimStaleSending(
+                OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,
+                cutoff, maxRetries,
+                "reclaimed after the claim lease expired - the relay died before publishing");
+        if (reclaimed > 0) {
+            log.warn("Reclaimed {} outbox event(s) stranded in SENDING (claim lease {} ms expired)",
+                    reclaimed, claimLeaseMs);
         }
     }
 
