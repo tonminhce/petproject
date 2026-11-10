@@ -99,10 +99,20 @@ public abstract class BaseKafkaConsumer<K, V> {
                 // Legacy double-encoded wire (pre-R1): an old producer
                 node = WIRE_MAPPER.readTree(node.textValue());
             }
-            return WIRE_MAPPER.treeToValue(node, type);
+            V bound = WIRE_MAPPER.treeToValue(node, type);
+            if (bound == null) {
+                // An empty or structurally empty payload binds to null. Handing a
+                // null event to the handler would surface as a NullPointerException
+                // deep inside business logic instead of a clear poison record.
+                throw new IllegalStateException(
+                        "Payload did not bind to " + type.getSimpleName());
+            }
+            return bound;
         } catch (Exception ex) {
-            log.error("Failed to decode Kafka payload for {} — ack-skipping: {}", type.getSimpleName(), rawValue, ex);
-            return null;
+            log.error("Failed to decode Kafka payload for {} — routing to the dead-letter topic: {}",
+                    type.getSimpleName(), rawValue, ex);
+            throw new PoisonRecordException(
+                    "Undecodable Kafka payload for " + type.getSimpleName(), ex);
         }
     }
 }

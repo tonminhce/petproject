@@ -3,6 +3,7 @@ package com.shop.orderservice.kafka;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.orderservice.dto.ShippingDeliveredEvent;
+import com.shop.common.kafka.consumer.PoisonRecordException;
 import com.shop.orderservice.service.ShippingDeliveredHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -81,10 +82,10 @@ class ShippingDeliveredConsumerTest {
     }
 
     @Test
-    @DisplayName("H-1 containment: poison payload is an ack-skip — handler never invoked, no throw")
-    void onMessage_poisonPayload_containedAckSkip() {
-        assertThatCode(() -> consumer.onMessage("{ this is not json }", new MessageHeaders(new HashMap<>())))
-            .doesNotThrowAnyException();
+    @DisplayName("F-001: a poison payload is dead-lettered - the handler never runs")
+    void onMessage_poisonPayload_isRoutedToTheDeadLetterTopic() {
+        assertThatThrownBy(() -> consumer.onMessage("{ this is not json }", new MessageHeaders(new HashMap<>())))
+            .isInstanceOf(PoisonRecordException.class);
 
         verify(handler, never()).handle(any());
     }

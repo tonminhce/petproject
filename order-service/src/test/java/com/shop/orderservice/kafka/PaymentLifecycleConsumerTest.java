@@ -2,6 +2,7 @@ package com.shop.orderservice.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.kafka.consumer.PoisonRecordException;
 import com.shop.orderservice.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -82,10 +84,10 @@ class PaymentLifecycleConsumerTest {
     }
 
     @Test
-    @DisplayName("Poison payload is ack-skipped without invoking confirmOrder")
-    void onMessage_poisonPayload_containedAckSkip() {
-        assertThatCode(() -> consumer.onMessage("{ not valid json }", new MessageHeaders(new HashMap<>())))
-                .doesNotThrowAnyException();
+    @DisplayName("F-001: a poison payload is dead-lettered - the handler never runs")
+    void onMessage_poisonPayload_isRoutedToTheDeadLetterTopic() {
+        assertThatThrownBy(() -> consumer.onMessage("{ not valid json }", new MessageHeaders(new HashMap<>())))
+                .isInstanceOf(PoisonRecordException.class);
 
         verify(orderService, never()).confirmOrder(any(), any(), any());
     }

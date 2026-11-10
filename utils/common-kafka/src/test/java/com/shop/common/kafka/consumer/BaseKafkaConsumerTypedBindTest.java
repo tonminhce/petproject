@@ -13,13 +13,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * H-1 typed-bind contract at the {@link BaseKafkaConsumer} boundary: the
  * raw-wire {@code processMessage} overload unwraps-once and binds the typed
  * event (ISO-8601 instants included, via jsr310) before the handler runs.
- * Decode failures are contained ack-skips — the handler is never invoked and
- * the call never throws (fleet containment: no DLT, no container crash).
+ * F-001 — a payload that cannot be bound is a POISON RECORD: the consumer
+ * throws so the container's error handler retries it and then routes it to the
+ * dead-letter topic. The previous behaviour (log and skip) advanced the offset
+ * as if the event had been handled, so the event was lost with no DLQ entry and
+ * nothing to replay.
  */
 class BaseKafkaConsumerTypedBindTest {
 
@@ -73,24 +77,24 @@ class BaseKafkaConsumerTypedBindTest {
     }
 
     @Test
-    @DisplayName("malformed payload is a contained ack-skip: no handler call, no throw")
-    void malformedPayloadIsContainedAckSkip() {
-        assertThatCode(() -> consumer.onMessage("{ this is not json }", new MessageHeaders(new HashMap<>())))
-            .doesNotThrowAnyException();
-        assertThatCode(() -> consumer.onMessage("", new MessageHeaders(new HashMap<>())))
-            .doesNotThrowAnyException();
+    @DisplayName("F-001: a malformed payload is a poison record - it throws so the container routes it to the DLQ")
+    void malformedPayloadIsRoutedToTheDeadLetterTopic() {
+        assertThatThrownBy(() -> consumer.onMessage("{ this is not json }", new MessageHeaders(new HashMap<>())))
+            .isInstanceOf(PoisonRecordException.class);
+        assertThatThrownBy(() -> consumer.onMessage("", new MessageHeaders(new HashMap<>())))
+            .isInstanceOf(PoisonRecordException.class);
 
         assertThat(consumer.handled).isEmpty();
     }
 
     @Test
-    @DisplayName("type-incompatible payload is a contained ack-skip (conversion failure, not handler domain)")
-    void typeIncompatiblePayloadIsContainedAckSkip() {
+    @DisplayName("F-001: a type-incompatible payload is a poison record too")
+    void typeIncompatiblePayloadIsRoutedToTheDeadLetterTopic() {
         String json = "{\"eventId\":\"e-3\",\"eventType\":\"shipping.delivered.v1\","
             + "\"occurredAt\":\"definitely-not-a-date\",\"orderId\":\"" + ORDER_ID + "\"}";
 
-        assertThatCode(() -> consumer.onMessage(json, new MessageHeaders(new HashMap<>())))
-            .doesNotThrowAnyException();
+        assertThatThrownBy(() -> consumer.onMessage(json, new MessageHeaders(new HashMap<>())))
+            .isInstanceOf(PoisonRecordException.class);
 
         assertThat(consumer.handled).isEmpty();
     }
