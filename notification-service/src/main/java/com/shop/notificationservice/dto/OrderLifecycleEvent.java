@@ -11,7 +11,6 @@ import java.util.UUID;
 /**
  * Inbound Kafka event: order lifecycle transitions emitted by order-service
  * over {@code shop.order.lifecycle.v1} (R1 single-encoded UTF-8 JSON).
- *
  * <p>H26 / R1 — this is a Java {@code record}: immutable, canonical-ctor
  * construction, accessor API. No Lombok on top (R1 forbids {@code @Builder}
  * / {@code @Getter} / {@code @Setter} on records): the canonical

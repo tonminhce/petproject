@@ -18,14 +18,13 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * C17 — bounded retry poller for failed/stuck notification deliveries. The
+ * Bounded retry poller for failed/stuck notification deliveries. The
  * previous design had a single send attempt and no recovery: any transient
  * SMTP outage permanently lost the notification. This scheduler walks the
  * claim queue ({@code FAILED_RETRYABLE} past its backoff window, stale
  * {@code SENDING} rows whose heartbeat elapsed — the crash-mid-send recovery
  * path — and legacy {@code FAILED} rows) and re-invokes {@link
  * NotificationDeliveryService#deliver}.
- *
  * <p>PESSIMISTIC claim: candidates are locked, flipped to {@code SENDING}
  * with a fresh heartbeat, and committed in ONE short transaction BEFORE any
  * send — the SMTP call itself never runs inside a transaction, so row locks
@@ -64,7 +63,6 @@ public class NotificationRetryScheduler {
         this.batchSize = batchSize;
     }
 
-    // initial-delay-ms defaults to 0 (immediate first poll — good crash
     // recovery in prod); ITs pin it high so the poller never races test bodies.
     @Scheduled(fixedDelayString = "${shop.notification.retry.poll-ms:60000}",
             initialDelayString = "${shop.notification.retry.initial-delay-ms:0}")

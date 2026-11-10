@@ -17,23 +17,20 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * C3 — replay failed payment webhooks. The previous design had no retry path:
+ * Replay failed payment webhooks. The previous design had no retry path:
  * once an event was marked FAILED its state was terminal. This scheduler walks
  * the {@code FAILED_RETRYABLE} queue and re-invokes {@link WebhookEventService#retry}
  * for each event whose {@code next_retry_at} has elapsed.
- *
  * <p>Backoff: {@code 5min × 5^(retryCount)} so the 6 attempts land at roughly
  * 5m, 25m, 2h, 8h, 22h, 4d. Exceeding {@code MAX_ATTEMPTS} transitions the
  * row to {@code FAILED_PERMANENT} — a state ops can detect and investigate.</p>
- *
- * <p>F2 — per-event transaction via {@link TransactionTemplate} (not
+ * <p>Per-event transaction via {@link TransactionTemplate} (not
  * {@code @Transactional}): {@code replayOne} is called from {@link #replay()} via
  * self-invocation, which bypasses Spring's proxy and silently disables
  * {@code @Transactional}. Wrapping the body in {@code transactionTemplate.execute(...)}
  * gives a real per-event tx boundary: a failure rolls back only that row's update,
  * siblings keep their progress.</p>
- *
- * <p>F3 — {@code payment_webhook_failed_permanent_total} counter increments on
+ * <p>{@code payment_webhook_failed_permanent_total} counter increments on
  * terminal failures so ops can alert on it.</p>
  */
 @Component
@@ -92,7 +89,6 @@ public class WebhookRetryScheduler {
             try {
                 webhookEventService.retry(event);
                 // On success `retry()` raises nothing and process() set status=PROCESSED via completeWithEvent.
-                // Defensive: if a quirk left the row not PROCESSED, mark it now.
                 if (!PaymentEvent.STATUS_PROCESSED.equals(event.getStatus())) {
                     event.setStatus(PaymentEvent.STATUS_PROCESSED);
                     event.setLastError(null);

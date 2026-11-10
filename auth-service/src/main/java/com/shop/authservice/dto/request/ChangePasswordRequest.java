@@ -4,9 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Self-service password change payload. H3 — Java record (fleet convention rule 1).
- */
 public record ChangePasswordRequest(
         @NotBlank(message = "Old password must not be blank")
         String oldPassword,

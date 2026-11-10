@@ -15,14 +15,12 @@ import java.util.Map;
 /**
  * Writes the fleet {@link ApiResponse} error envelope from the gateway edge
  * (D4 rate-limit 429, D5 IP-block 403 and encoded-path 400 responses).
- *
  * <p><strong>Message i18n choice (documented):</strong> the gateway is the
  * edge — it does not run the per-request Locale resolution services use.
  * It answers with the EN-default messages, mirroring
  * {@code messages_en.properties} strings exactly so clients get a
  * deterministic copy-paste of the service-side default locale payload.
  * The stable {@code code} field is the real contract; EN prose is best-effort.</p>
- *
  * <p>{@code traceId} mirrors the servlet-side envelope behaviour: services
  * stamp the MDC trace id; at the edge the passthrough {@code X-Correlation-Id}
  * request header (if any) fills the same JSON field — omitted when absent.</p>

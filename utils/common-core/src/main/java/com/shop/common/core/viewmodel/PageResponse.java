@@ -8,11 +8,6 @@ import java.util.function.Function;
 /**
  * Lightweight page envelope used for paginated endpoints. Decouples the wire format
  * from Spring Data's {@code Page} (which is not designed to be serialized directly).
- *
- * <h3>Why not return Spring {@code Page<T>} directly?</h3>
- * The {@code Page<T>} JSON shape changed between Spring Boot 2 and 3 (now wrapped in
- * {@code PageImpl}) and is officially flagged as unstable. This record pins the shape
- * the platform exposes externally.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record PageResponse<T>(

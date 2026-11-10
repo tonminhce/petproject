@@ -14,14 +14,12 @@ import java.util.UUID;
 /**
  * C12/C17 — executes ONE delivery attempt for an already-claimed (SENDING)
  * notification and settles the row through {@link NotificationWriter}.
- *
  * <p>The ordering contract is the C12 fix: {@code SENT} is written strictly
  * after {@link NotificationSender#send} returns (provider ack) — a failure
  * anywhere in the send window lands the row in {@code FAILED_RETRYABLE}
  * (transient; scheduler retries with backoff) or {@code FAILED_PERMANENT}
  * (invalid recipient / attempt budget exhausted), never in a state that
  * claims success.</p>
- *
  * <p>Shared by the Kafka consumer's initial attempt and the retry scheduler,
  * so both paths settle rows identically.</p>
  */

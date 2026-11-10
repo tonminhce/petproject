@@ -32,7 +32,7 @@ public class WebhookEventWriter {
     }
 
     /**
-     * C3 — generic event save used by the retry scheduler and the entry path to
+     * Generic event save used by the retry scheduler and the entry path to
      * mark FAILED_RETRYABLE rows.
      */
     @Transactional

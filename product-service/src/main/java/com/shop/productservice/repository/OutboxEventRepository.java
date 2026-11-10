@@ -20,14 +20,13 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
 
     /**
-     * C14 fix — claim a single PENDING row with a row-level write lock so that
+     * Claim a single PENDING row with a row-level write lock so that
      * concurrent relay instances running in multiple pods can't pick the same
      * row and double-publish to Kafka. Postgres returns the row only if no
      * other transaction holds the lock (FOR UPDATE SKIP LOCKED); the doomed
      * "lost update" pattern that the previous design had on `status = PENDING`
      * is gone. Single-instance deployments still work — only the locked-out
      * instance sees an empty result.
-     *
      * <p>The query hint {@code jakarta.persistence.lock.timeout = -2} is the
      * Hibernate/Spring portable form of SKIP LOCKED. The method returns
      * {@code Optional} so callers must check presence — an empty list here is
@@ -42,8 +41,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     long countByStatus(OutboxStatus status);
 
     /**
-     * F-059 (P2) — retention purge for SENT rows.
-     *
      * <p>product-service had NO retention scheduler, so its {@code outbox_events}
      * table grew by one row per product/brand/category mutation forever, with
      * nothing ever reclaiming the space. Every other event-producing service

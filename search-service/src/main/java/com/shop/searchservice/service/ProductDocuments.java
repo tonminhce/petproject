@@ -55,7 +55,6 @@ public final class ProductDocuments {
         document.put("avgRating", avgRating);
         document.put("ratingCount", ratingCount);
         document.put("status", status);
-        // ES client's JacksonJsonpMapper has no JavaTimeModule — the Instant
         // is serialized as an ISO-8601 string, which the `date` mapping accepts.
         document.put("updatedAt", updatedAt != null ? updatedAt.toString() : null);
         return document;

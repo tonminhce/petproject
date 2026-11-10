@@ -48,7 +48,7 @@ public class PaymentWriter {
     }
 
     /**
-     * C3 — generic event save used by the retry scheduler and the webhook entry
+     * Generic event save used by the retry scheduler and the webhook entry
      * path. The caller is expected to have set all fields (status, retryCount,
      * nextRetryAt, lastError) before calling.
      */

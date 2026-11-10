@@ -33,14 +33,12 @@ public class RatingServiceImpl implements RatingService {
     @Override
     @Transactional
     public RatingResponse submit(UUID jwtUserId, RatingSubmitRequest request) {
-        // D6: one rating per (user, product) EVER — edit goes through PUT.
         ratingRepository.findByUserIdAndProductIdAndDeletedFalse(jwtUserId, request.productId())
                 .ifPresent(existing -> {
                     throw BusinessException.of(ErrorCode.RATING_ALREADY_EXISTS);
                 });
 
         // D1: fail-closed eligibility gate — the client returns false on ANY
-        // verification failure, ineligible is a hard 403 (no unverified rows).
         boolean eligible = eligibilityClient.isEligible(jwtUserId, request.productId());
         if (!eligible) {
             throw BusinessException.of(ErrorCode.RATING_NOT_ELIGIBLE);
@@ -80,7 +78,6 @@ public class RatingServiceImpl implements RatingService {
                 .orElseThrow(() -> BusinessException.of(ErrorCode.RATING_NOT_FOUND));
 
         // D6: verified stamped at submit time only — edit preserves it and never
-        // re-checks eligibility; hidden/audit fields are the backoffice's alone.
         rating.setRating(request.rating());
         rating.setComment(request.comment());
         rating.setEditedAt(Instant.now());
@@ -107,7 +104,6 @@ public class RatingServiceImpl implements RatingService {
         rating.setHiddenReason(reason);
 
         // NIT #1: flush REQUIRED before record() — the snapshot aggregate must
-        // see the hidden row (count drops) once record() recomputes it.
         Rating saved = ratingRepository.saveAndFlush(rating);
         ratingEventService.record(saved, RatingAction.HIDDEN);
         return RatingResponse.from(saved);
@@ -123,8 +119,6 @@ public class RatingServiceImpl implements RatingService {
             throw BusinessException.of(ErrorCode.RATING_NOT_HIDDEN);
         }
 
-        // D2: hiddenAt/hiddenBy/hiddenReason RETAINED as history — only the
-        // flag flips.
         rating.setHidden(false);
 
         // NIT #1: flush REQUIRED before record() — same discipline as hide.

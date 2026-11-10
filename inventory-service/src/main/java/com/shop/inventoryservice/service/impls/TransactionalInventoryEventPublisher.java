@@ -22,7 +22,6 @@ import java.util.UUID;
  * Writes one {@link OutboxEvent} row per domain action in the SAME
  * {@code @Transactional} boundary as the inventory change. The relay
  * ({@code InventoryOutboxRelay}) drains the table to Kafka.
- *
  * <p>Event contract: topic {@code shop.inventory.events.v1}, event types in
  * dot.case ({@code inventory.reserved.v1}, …) — a deliberate CloudEvents-style
  * contract (same style as {@code notification.send.v1}), NOT a typo of
@@ -78,8 +77,6 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
         if (reservation.getOrderId() != null) {
             data.put("orderId", reservation.getOrderId());
         }
-        // previousStatus ("PENDING"|"COMMITTED") — hardening spec §7.2: lets
-        // consumers distinguish a plain release from a half-commit rollback
         // (restock) without a separate event type.
         data.put("previousStatus", previousStatus);
         save(inventory, "inventory.released.v1", data);

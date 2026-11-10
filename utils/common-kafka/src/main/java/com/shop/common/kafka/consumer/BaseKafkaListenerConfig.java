@@ -15,9 +15,7 @@ import java.util.Map;
 
 /**
  * Base class for a typed Kafka listener container factory with Dead Letter Topic (DLT) recovery support.
- *
  * <h3>Fleet wire contract (R1 + H-1)</h3>
- *
  * <p>The <em>value</em> deserializes as RAW STRING ({@link StringDeserializer}).
  * Producers: JSON-as-String via {@code KafkaMessagePublisher} →
  * {@code stringKafkaTemplate} (StringSerializer ×2, R1) — records arrive
@@ -30,20 +28,17 @@ import java.util.Map;
  * runs and silently drops real records — which is why the base no longer
  * offers a typed value path; a decode failure is a contained ack-skip there,
  * never a listener-container crash.</p>
- *
  * <p>The <em>key</em> deserializer is likewise fixed to
  * {@link StringDeserializer}: the fleet-wide producer convention is String
  * keys, so records are always deserialized with a String key regardless of the
  * declared {@code K}. The {@code keyType} constructor parameter is currently
  * unused for deserialization.</p>
- *
  * <p>Subclasses pin {@code K} and expose {@link #listenerContainerFactory()}
  * as a Spring bean so the container can be referenced by name from
  * {@code @KafkaListener}. {@code StringDeserializer} never throws — poison
  * bytes cannot tombstone a partition at deserialize time, so the previous
  * {@code ErrorHandlingDeserializer} wrapper is unnecessary.</p>
- *
- * <p>D3 — container observation is enabled so spring-kafka's listener
+ * <p>Container observation is enabled so spring-kafka's listener
  * instrumentation kicks in whenever the application context provides an
  * {@code ObservationRegistry}: the propagating tracing handler extracts the
  * W3C {@code traceparent} record header and the listener processing runs in

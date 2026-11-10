@@ -4,7 +4,6 @@ package com.shop.common.core.constants;
  * Outbox row lifecycle. DB-INTERNAL state — never travels on the wire
  * (consumers only see broker payloads), so adding values here is invisible
  * outside the owning service's database.
- *
  * <ul>
  *   <li>{@link #PENDING} — row written, awaiting relay publish</li>
  *   <li>{@link #SENT} — published to the broker; terminal-success, purged by

@@ -8,7 +8,6 @@ import java.util.UUID;
  * requested variant/format, and answers existence checks WITHOUT touching
  * storage (the {@code HEAD /api/v1/medias/{id}} service-facing validation,
  * product Option C write-time check).
- *
  * <p>Param contract (binding): {@code variant} is one of
  * {@code display|thumb|original} ({@link #DEFAULT_VARIANT} when null/blank);
  * anything else — or a media/variant that has no stored row — is

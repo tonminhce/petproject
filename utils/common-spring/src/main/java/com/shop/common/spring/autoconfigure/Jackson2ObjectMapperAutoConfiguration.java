@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Bean;
  * {@code com.shop.common.kafka.serialization.JsonKafkaSerializer}) consume
  * Jackson 2, even though Spring Boot 4's autoconfig ships Jackson 3 by
  * default.
- *
  * <p>{@code @ConditionalOnMissingBean} keeps any user-supplied mapper (custom
  * modules, etc.) in charge. Module only auto-activates when Jackson 2 is
  * actually on the classpath — services that already pulled in Jackson 3 only

@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
  * id ({@code Account.retrieve()}) rides along as best-effort detail: the
  * balance probe is the liveness signal, a failed account lookup never flips
  * the indicator on its own.
- *
  * <p>Probes are cached for {@link #CACHE_TTL_MS}: health checks fire every few
  * seconds and must not become a Stripe rate-limit vector. The mock provider
  * has no equivalent indicator (conditional on provider=stripe).</p>

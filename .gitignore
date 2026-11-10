@@ -167,8 +167,7 @@ scratch/
 .env.sonar
 
 # --- production-audit harness artefacts -------------------------------------
-# Raw Maven build logs are large (tens of MB) and are not source. The
-# machine-readable evidence (counts, results, hashes) is committed in
-# production-audit/state/evidence.json instead.
-production-audit/runs/**/maven-*.log
-production-audit/runs/**/*.log
+# The audit harness, its state, its reports and its build logs are local
+# working artefacts, not product source. They stay on disk for the audit
+# trail but are not tracked.
+production-audit/

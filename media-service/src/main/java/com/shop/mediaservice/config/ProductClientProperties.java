@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Binds {@code shop.product.*} — the product-service internal reference-count
  * endpoint consumed by the purge gate (H-4) and the Keycloak service-token
  * endpoint (client_credentials flow).
- *
  * <p>Local to media-service deliberately (rating/search/product precedent):
  * keycloak settings are NOT {@code shop.keycloak} (auth-owned) and the
  * outbound service config is NOT a shared {@code shop.services} block —

@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Binds {@code shop.media.*} — the media-service existence-check endpoint used
  * by the Option C write-time validation (media epic spec D5) and the Keycloak
  * service-token endpoint (client_credentials flow).
- *
  * <p>Local to product-service deliberately (rating/search precedent): keycloak
  * settings are NOT {@code shop.keycloak} (auth-owned) and the outbound service
  * config is NOT a shared {@code shop.services} block — media is the one

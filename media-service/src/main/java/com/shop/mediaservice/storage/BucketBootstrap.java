@@ -13,10 +13,9 @@ import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.Type;
 
 /**
- * D1 — startup bootstrap of the PRIVATE media bucket. Creates the bucket when
+ * Startup bootstrap of the PRIVATE media bucket. Creates the bucket when
  * missing (idempotent) and then asserts the ACL carries no public grant. The
  * two failure modes are split (final review F-4), stated precisely:
- *
  * <ul>
  *   <li><strong>FATAL — ACL violation:</strong> the bucket exists but the ACL
  *   assertion itself fails ({@link IllegalStateException} from

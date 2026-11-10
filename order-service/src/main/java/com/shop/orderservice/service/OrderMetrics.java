@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Micrometer-backed observability surface for order-service (review I4 — brings
  * order-service to parity with ProductMetrics/InventoryMetrics):
- *
  * <ul>
  *   <li>{@code order.outbox.relay.duration} — timer recorded by {@code OrderOutboxRelay}.</li>
  *   <li>{@code order.outbox.pending.count} — gauge updated by the relay each tick.</li>
@@ -40,10 +39,6 @@ public class OrderMetrics {
             .register(registry);
 
         if (cacheManager.getCache("productPrice") instanceof RedisCache redisCache) {
-            // Bind the RedisCache itself and read getStatistics() INSIDE the gauge
-            // value function: getStatistics() returns an immutable snapshot, so a
-            // constructor-time capture would freeze the counters at their boot
-            // values (re-review finding 2b).
             Gauge.builder("order.cache.hit", redisCache, rc -> rc.getStatistics().getHits())
                 .tag("cache", "productPrice")
                 .register(registry);

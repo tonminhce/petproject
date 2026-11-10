@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 /**
  * Micrometer-backed observability surface for media-service (fleet
  * SearchMetrics/RatingMetrics pattern):
- *
  * <ul>
  *   <li>{@code media_uploads_total{outcome}} — counter incremented once per
  *       processed upload, tagged {@code created} (new media persisted),

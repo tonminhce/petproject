@@ -8,8 +8,6 @@ import org.springframework.stereotype.Component;
 public class FavouriteMapper {
 
     public FavouriteResponse toResponse(Favourite favourite) {
-        // Manual mapping — only 4 fields, ModelMapper overhead exceeds benefit.
-        // Same approach as auth-service UserMapper.toResponse.
         return new FavouriteResponse(
                 favourite.getId(),
                 favourite.getUserId(),
@@ -18,6 +16,4 @@ public class FavouriteMapper {
         );
     }
 
-    // No toEntity() — FavouriteServiceImpl.create() builds the entity via
-    // .builder() directly (only 2 user-supplied fields + generated id).
 }

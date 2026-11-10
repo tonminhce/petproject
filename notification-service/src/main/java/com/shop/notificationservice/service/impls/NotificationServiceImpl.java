@@ -82,7 +82,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .subject(draft.subject())
                 .body(draft.body())
                 .payload(payload(event))
-                // Scheduler-eligible from birth: if this instance dies before
                 // claiming, the retry poller picks the PENDING row up.
                 .nextRetryAt(draft.known() ? Instant.now() : null)
                 .build();

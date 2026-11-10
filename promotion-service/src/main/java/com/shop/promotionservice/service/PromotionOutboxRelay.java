@@ -18,7 +18,6 @@ import java.util.Optional;
 /**
  * Drains the {@code outbox_events} table and publishes each PENDING row to
  * Kafka through {@link KafkaMessagePublisher}.
- *
  * <p>Single-thread, ordered by id ASC. On a publish failure we save the row
  * (retry count + possibly FAILED) then {@code break} - later events of the
  * same aggregate must not overtake an earlier failed one. The failed row
@@ -28,8 +27,7 @@ import java.util.Optional;
  * math downstream; the cost — bounded head-of-line blocking for unrelated
  * aggregates for at most {@code max-retries} polls — is accepted and
  * documented here.</p>
- *
- * <p>C14 — rows are claimed one at a time via
+ * <p>Rows are claimed one at a time via
  * {@link OutboxEventRepository#claimOnePending} (PESSIMISTIC_WRITE + SKIP
  * LOCKED) inside a per-event {@link TransactionTemplate} transaction (the
  * {@code ReservationCleanupScheduler} per-batch idiom — self-invocation would

@@ -23,7 +23,6 @@ import java.util.UUID;
  * lifecycle change; a relay drains PENDING rows to Kafka. Hard delete - no
  * audit or soft-delete columns (spec section 5.5). aggregateId = campaignId
  * (used as Kafka partition key).
- *
  * <p>Deliberately does NOT extend the {@code AbstractMappedEntity}-based
  * style of audited entities: outbox rows are bulk-purged by retention, so
  * audit + soft-delete columns would be dead weight, and the relay lifecycle

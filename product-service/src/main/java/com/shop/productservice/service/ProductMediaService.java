@@ -16,7 +16,6 @@ import java.util.UUID;
  * {@code media_id} of every live product that points at it makes the derived
  * image fall back to the legacy free-text imageUrl automatically (spec D5) —
  * the derived canonical path is computed at mapping time, nothing stored.
- *
  * <p>Each cleared product is re-published as {@code ProductUpdated} through
  * the existing enriched publisher so the search doc refreshes via the
  * established chain (media delete → product update → search refresh).
@@ -51,9 +50,7 @@ public class ProductMediaService {
         }
         for (Product product : affected) {
             product.setMediaId(null);
-            // Spec D4: publish the ProductUpdated snapshot AFTER the save,
             // inside this transaction — REQUIRED propagation joins the outbox
-            // insert so the product row and the event row commit atomically.
             Product saved = productRepository.save(product);
             productEventPublisher.publishUpdated(saved);
         }

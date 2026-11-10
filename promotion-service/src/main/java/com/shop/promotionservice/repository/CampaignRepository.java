@@ -11,7 +11,6 @@ import java.util.UUID;
 
 /**
  * Campaign persistence.
- *
  * <p>{@code Campaign} carries {@code @SQLRestriction("deleted = false")}, so Hibernate
  * excludes soft-deleted rows from every query (derived, JPQL, and {@code findAll}) —
  * derived method names therefore need no explicit {@code DeletedFalse} predicate.

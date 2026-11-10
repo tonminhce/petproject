@@ -5,7 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Bind {@code shop.services.*} — endpoints, timeouts, feature flags, and the
  * Keycloak service-token endpoint (client_credentials flow).
- *
  * <p>Local to order-service deliberately: NOT {@code shop.keycloak} (owned by
  * {@code common-keycloak KeycloakProperties}) — see Task 2 P0-7b rationale.</p>
  *

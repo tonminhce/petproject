@@ -85,7 +85,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             throw BusinessException.of(ErrorCode.MEDIA_INVALID_FILE);
         }
 
-        // 1. allowlist on the declared type (415)
         String format = MediaFormats.formatOfContentType(file.getContentType());
         if (format == null) {
             log.warn("Upload rejected: content type '{}' not in allowlist", file.getContentType());
@@ -102,7 +101,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             throw BusinessException.of(ErrorCode.MEDIA_INVALID_FILE);
         }
 
-        // 3. business size guard (413) — servlet ceiling sits above this
         if (file.getSize() > properties.maxUploadBytes()) {
             log.warn("Upload rejected: {} bytes exceed cap of {} bytes", file.getSize(), properties.maxUploadBytes());
             metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
@@ -123,13 +121,10 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         // 5. metadata audit log (M1) — inspect, log, never store
         metadataInspector.inspect(source);
 
-        // 6. decode + full-res re-encode + six variants (undecodable → 415)
         List<VariantRenderer.Render> renders;
         try {
             renders = renderer.render(source, format, properties.displayWidth(), properties.thumbWidth());
         } catch (VariantRenderer.InvalidImageException e) {
-            // magic-valid but undecodable — the bytes are NOT a supported
-            // image despite the head, so the type classification (415 family)
             // is the honest answer, not "corrupt file" (Task-3 review ruling)
             log.warn("Upload rejected: magic-valid '{}' bytes are not decodable — {}", format, e.getMessage());
             metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
@@ -149,7 +144,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                     .build());
         }
 
-        // 7. S3 writes first — every key tracked for orphan cleanup
         Set<String> writtenKeys = new LinkedHashSet<>();
         try {
             for (int i = 0; i < renders.size(); i++) {
@@ -167,7 +161,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             throw BusinessException.of(ErrorCode.MEDIA_STORAGE_UNAVAILABLE);
         }
 
-        // 8. media row + variant rows commit LAST (short tx, no S3 inside)
         Media media = Media.builder()
                 .id(mediaId)
                 .sha256(sha256)
@@ -182,7 +175,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             Media saved = transactionTemplate.execute(tx -> {
                 Media persisted = mediaRepository.saveAndFlush(media);
                 // D4: MediaCreated rides the SAME final DB transaction as the
-                // media row (which commits LAST, after the S3 writes).
                 mediaEvents.record(persisted, MediaEventType.MediaCreated);
                 return persisted;
             });
@@ -192,7 +184,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             return toResponse(saved, false);
         } catch (DataIntegrityViolationException race) {
             // Concurrent duplicate upload won the unique index — keep THEIR
-            // media, purge our now-orphaned objects.
             log.info("Dedup race lost for sha256={} — resolving to the winner's media", sha256);
             purgeOrphans(writtenKeys);
             Media winner = mediaRepository.findBySha256(sha256)

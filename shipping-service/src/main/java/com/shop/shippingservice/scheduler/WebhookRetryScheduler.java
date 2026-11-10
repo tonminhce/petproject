@@ -17,12 +17,11 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * C3 — retry failed shipping webhooks. See
+ * Retry failed shipping webhooks. See
  * {@code payment-service/.../scheduler/WebhookRetryScheduler.java} for the design
  * rationale; this scheduler mirrors it against the shipment_events table.
- *
- * <p>F2 — per-event transaction via {@link TransactionTemplate} (see sibling).
- * F3 — {@code shipment_webhook_failed_permanent_total} counter on terminal failures.</p>
+ * <p>Per-event transaction via {@link TransactionTemplate} (see sibling).
+ * {@code shipment_webhook_failed_permanent_total} counter on terminal failures.</p>
  */
 @Component
 @Slf4j

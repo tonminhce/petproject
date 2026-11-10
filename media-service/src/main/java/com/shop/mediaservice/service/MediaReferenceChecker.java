@@ -3,10 +3,6 @@ package com.shop.mediaservice.service;
 import java.util.UUID;
 
 /**
- * PORT — answers whether a media is still referenced by an owning aggregate
- * (today: product.media_id). The MediaPurgeJob consults it before hard-delete
- * and SKIPS + logs WARN for referenced media, retrying next cycle (D3).
- *
  * <p>Why a port and not a direct query: the media database is SEPARATE from
  * the product database (spec D5) — there is no joinable FK, so the truth
  * lives behind another service's boundary. Task 5's product wiring closes

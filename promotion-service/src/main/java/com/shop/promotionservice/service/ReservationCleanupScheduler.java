@@ -55,10 +55,8 @@ public class ReservationCleanupScheduler {
         this.campaignRepository = campaignRepository;
         this.eventPublisher = eventPublisher;
         // A16: each batch is its own transaction. A failure mid-cycle rolls back
-        // only the failing batch — earlier successful batches stay committed.
         // The original single-@Transactional + try/catch-inside was wrong (the
         // catch swallowed the exception so the outer tx COMMITTED partial work;
-        // the javadoc claimed the opposite).
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
@@ -82,16 +80,8 @@ public class ReservationCleanupScheduler {
                     if (batch.isEmpty()) {
                         return null;
                     }
-                    // F-044 (P1) — CLAIM each row before flipping it. A row that
                     // another writer already transitioned (a concurrent commit()
-                    // or a competing sweep) affects zero rows and is skipped, so a
                     // COMMITTED redemption can never be reverted to EXPIRED.
-                    //
-                    // The consequence of that revert is money-relevant: the
-                    // per-user limit and the campaign budget both count
-                    // PENDING + COMMITTED, so a silently reverted redemption
-                    // would let the customer redeem the same coupon again and
-                    // would under-spend the campaign budget.
                     Instant now = Instant.now();
                     int expired = 0;
                     for (CouponUsageReservation reservation : batch) {
@@ -101,20 +91,13 @@ public class ReservationCleanupScheduler {
                             continue;
                         }
                         expired++;
-                        // F-045 — the sweep is a state transition, so it emits the
-                        // same promotion.released.v1 event as the service-layer
                         // release path, in the same transaction. Without it,
-                        // shop.promotion.lifecycle.v1 reports a reservation that
                         // was never released (the inventory sweep already does
-                        // this - the two sweeps were inconsistent).
                         reservation.setReleasedAt(now);
                         campaignRepository.findById(reservation.getCampaignId()).ifPresent(campaign ->
                                 eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name()));
                     }
                     expiredCounter.addAndGet(expired);
-                    // Loop control uses the number of rows EXAMINED, not the number
-                    // claimed: a page whose rows were all claimed by another writer
-                    // still means there may be more rows behind it.
                     return batch.size();
                 });
                 if (processed == null || processed == 0) {
@@ -126,8 +109,6 @@ public class ReservationCleanupScheduler {
                 log.info("Expired-reservation sweep expired {} reservation(s)", expiredCounter.get());
             }
         } catch (Exception ex) {
-            // Per-batch tx: earlier successful batches are committed; the failing batch
-            // is rolled back. The next cycle retries from where this one stopped —
             // safe because status flips are idempotent.
             log.error("Expired-reservation sweep failed at batch boundary - will retry next cycle", ex);
         }

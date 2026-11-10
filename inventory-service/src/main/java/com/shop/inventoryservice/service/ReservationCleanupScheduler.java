@@ -86,7 +86,7 @@ public class ReservationCleanupScheduler {
     }
 
     /**
-     * F-011 — release the hold of every expired reservation in the batch.
+     * Release the hold of every expired reservation in the batch.
      * <p>Each row is CLAIMED with a conditional UPDATE
      * ({@code status = PENDING} -> {@code status = EXPIRED}) before any stock is
      * moved. A row that another writer already transitioned (a concurrent
@@ -105,8 +105,6 @@ public class ReservationCleanupScheduler {
             int claimed = reservationRepository.claimForExpiry(
                 reservation.getId(), ReservationStatus.PENDING, ReservationStatus.EXPIRED);
             if (claimed == 0) {
-                // Already transitioned by a commit() or a competing sweep -
-                // not ours to release.
                 continue;
             }
             claimedByProduct.merge(reservation.getProductId(), reservation.getQuantity(), Integer::sum);
@@ -120,15 +118,11 @@ public class ReservationCleanupScheduler {
             }
             // Same invariant as the service-layer write paths: any mutation to
             // Inventory.reservedQuantity must drop the cached entry, otherwise a
-            // hot GET /api/v1/inventory/{id} reads a stale value for up to 60s.
             cacheService.evictAfterCommit(productId);
         });
 
         // F-012 — the sweep used to move stock WITHOUT emitting the
-        // inventory.released.v1 event, so shop.inventory.events.v1 under-reported
-        // releases and the outbox no longer described the domain state. Publish
         // one outbox row per expired reservation, in the same transaction as the
-        // stock movement, exactly like InventoryServiceImpl.release() does.
         for (Reservation reservation : batch) {
             inventoryRepository.findByProductId(reservation.getProductId()).ifPresent(inventory -> {
                 publisher.publishReleased(inventory, reservation, "PENDING");

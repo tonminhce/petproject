@@ -13,8 +13,6 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    // ---- Query methods (auto-filtered via @SQLRestriction) ----
-
     Optional<User> findByUsername(String username);
 
     Optional<User> findByEmail(String email);
@@ -24,8 +22,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     boolean existsByPhone(String phone);
-
-    // ---- Soft-delete operations ----
 
     /**
      * Soft-deletes a user instead of removing the row. Sets {@code deleted=true},
@@ -45,9 +41,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     int softDelete(@Param("id") UUID id, @Param("deletedBy") String deletedBy);
 
-    /**
-     * Restores a previously soft-deleted user.
-     */
     @Modifying
     @Query("""
             UPDATE User u

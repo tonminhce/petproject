@@ -32,7 +32,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * C3 — webhook entry + retry. Same shape as payment-service's WebhookEventService:
+ * Webhook entry + retry. Same shape as payment-service's WebhookEventService:
  * events start as {@link ShipmentEvent#STATUS_FAILED_RETRYABLE}, are processed
  * once, and the new {@code WebhookRetryScheduler} picks up any that didn't
  * reach {@link ShipmentEvent#STATUS_PROCESSED}. After max retries the row
@@ -114,8 +114,6 @@ public class WebhookEventServiceImpl implements WebhookEventService {
 
     @Override
     public void retry(ShipmentEvent event) {
-        // The scheduler query is only an optimization; re-check the state here so
-        // a stale row cannot be replayed after another worker made it terminal.
         if (!ShipmentEvent.STATUS_FAILED_RETRYABLE.equals(event.getStatus())) {
             log.info("Skipping webhook retry {} in status {}",
                     event.getProviderEventId(), event.getStatus());
@@ -143,10 +141,8 @@ public class WebhookEventServiceImpl implements WebhookEventService {
     public void process(CarrierWebhookPayload payload, ShipmentEvent event) {
         Shipment shipment = shipmentRepository.findByTrackingNumber(payload.getTrackingNumber()).orElse(null);
         if (shipment == null) {
-            // Unknown tracking — almost always a carrier mistake. Throw a retryable
             // error so the scheduler eventually surfaces FAILED_PERMANENT and ops
             // can investigate. We avoid logging inside the exception path because
-            // WebhookRetryScheduler will log attempt context.
             throw BusinessException.badRequest("shipping.webhook.unknown.tracking",
                 payload.getTrackingNumber());
         }

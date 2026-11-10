@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 /**
  * Micrometer-backed observability surface for search-service (fleet
  * RatingMetrics/OrderMetrics pattern):
- *
  * <ul>
  *   <li>{@code search_queries_total{sort}} — counter incremented once per
  *       executed query, tagged with the RESOLVED sort (spec D6 / F3: an

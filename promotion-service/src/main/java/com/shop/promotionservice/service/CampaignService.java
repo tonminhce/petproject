@@ -9,9 +9,6 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 
-/**
- * Backoffice campaign CRUD (spec §4.2).
- */
 public interface CampaignService {
 
     Page<CampaignResponse> findAll(CampaignStatus status, Pageable pageable);

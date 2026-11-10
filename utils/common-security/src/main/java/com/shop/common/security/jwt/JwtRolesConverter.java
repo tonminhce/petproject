@@ -14,16 +14,13 @@ import java.util.Objects;
 /**
  * Maps Keycloak's {@code realm_access.roles} JWT claim into Spring Security's
  * {@link GrantedAuthority} set.
- *
  * <p>For every realm role, the converter emits <strong>two</strong> authorities:</p>
  * <ul>
  *   <li>The raw role name — usable via {@code .hasAuthority("admin")}</li>
  *   <li>The {@code ROLE_}-prefixed form — usable via {@code .hasRole("admin")}</li>
  * </ul>
- *
  * <p>Emitting both shapes keeps the converter compatible with services that
  * mix the two styles — pick whichever reads better at the call site.</p>
- *
  * <p>If the token has no {@code realm_access} claim or the roles list is empty,
  * the converter returns an empty collection (Spring Security treats the user
  * as authenticated but without authorities, which is exactly what we want for

@@ -24,10 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-// NO @PreAuthorize (rev 2): auth is enforced by BaseSecurityConfig filter chain
-// (anyRequest().authenticated() — public-paths is empty). Class-level annotation
-// is redundant and creates ambiguous method-security semantics inside the
-// @WebMvcTest slice. Matches the ProductController pattern.
 @RestController
 @RequestMapping(ApiPaths.FAVOURITES)
 @RequiredArgsConstructor
@@ -39,7 +35,6 @@ public class FavouriteController {
     public ApiResponse<PageResponse<FavouriteResponse>> findAll(
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
-        // Cap page size — PageableConstant.MAX_PAGE_SIZE guards against ?size=100000 dumps.
         Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         return ApiResponse.ok(service.findAllByCurrentUser(currentUserId(), pageable));
     }
@@ -73,7 +68,6 @@ public class FavouriteController {
             return UUID.fromString(sub);
         } catch (IllegalArgumentException ex) {
             // Defensive — valid Keycloak JWT subjects are always UUIDs. Prevents a
-            // 500 if a non-UUID subject is ever introduced.
             throw BusinessException.unauthorized("favourite.user.subject.malformed");
         }
     }

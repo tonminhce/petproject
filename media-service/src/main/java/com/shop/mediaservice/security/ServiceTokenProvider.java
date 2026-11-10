@@ -23,7 +23,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * HTTP clients ({@code MediaReferenceClient}) to attach a {@code Bearer}
  * token when calling downstream services — the internal reference-count
  * endpoint is SERVICE-role gated.
- *
  * <p>Local to media-service deliberately (rating/search/product precedent) —
  * keycloak {@code token-url / client-id / client-secret} live in
  * {@link ProductClientProperties.Keycloak} (not the auth-owned

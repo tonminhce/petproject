@@ -4,11 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration for the audit aspect ({@link com.shop.common.logging.audit.Audited}).
- *
  * <p>Bound from {@code shop.audit.*}. The writer's pool is deliberately NOT
  * configurable (hard-bounded core 2 / max 4 / queue 1000); the sink location
  * comes exclusively from the {@code AUDIT_LOG_PATH} environment variable.</p>
- *
  * <pre>{@code
  * shop:
  *   audit:

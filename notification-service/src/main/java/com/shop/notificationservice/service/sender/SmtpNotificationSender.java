@@ -79,7 +79,6 @@ public class SmtpNotificationSender implements NotificationSender {
                     }
                 }
             } catch (Exception ignored) {
-                // fall back to fallbackRecipient
             }
         }
         return fallbackRecipient;

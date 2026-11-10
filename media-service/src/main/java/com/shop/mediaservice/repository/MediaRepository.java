@@ -31,7 +31,6 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
      * live, so a repeat delete loses the race and returns 0 affected rows
      * (→ 409 MED-12005). {@code deleted_at} set here is the purge-eligibility
      * timestamp the MediaPurgeJob measures the grace window against.
-     *
      * <p>The conditional UPDATE (not load-then-mark) also means no entity is
      * loaded, so the EAGER variants join never fires on the delete path.</p>
      *

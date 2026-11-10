@@ -20,7 +20,6 @@ import java.util.UUID;
  * Dumb upsert/delete of the FULL-snapshot product document behind the
  * {@link IndexProvisioner#ALIAS} alias (spec D1/D2): the payload is copied
  * as-is, no recompute, no source lookups.
- *
  * <p>Status handling is BIDIRECTIONAL (F1): an ACTIVE payload upserts the
  * doc, any non-ACTIVE payload deletes it — which covers every transition
  * including DRAFT re-published to ACTIVE.</p>
@@ -47,8 +46,6 @@ public class ProductSearchService {
                 .document(document));
         } catch (IOException | ElasticsearchException ex) {
             // C18 fix — surface a domain exception so ApiExceptionHandler maps it
-            // to a 503 with the canonical envelope instead of leaking the raw
-            // IllegalStateException (which would be 500 with a stack trace).
             throw BusinessException.of(
                 ErrorCode.SEARCH_INDEX_FAILED,
                 event.productId());

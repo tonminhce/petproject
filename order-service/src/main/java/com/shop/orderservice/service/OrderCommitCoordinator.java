@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * H15 — inventory commits in the confirm transaction used to run serially
+ * Inventory commits in the confirm transaction used to run serially
  * (one HTTP round-trip per item, ~50ms each, ~1s for a 20-item order).
  * The promotion commit runs first; only after it succeeds do the inventory
  * commits start. Both branches are now parallelised via {@link CompletableFuture}
@@ -70,9 +70,6 @@ public class OrderCommitCoordinator {
                 List<OrderItem> sorted = items.stream()
                     .sorted(Comparator.comparing(OrderItem::getProductId)).toList();
 
-                // H15 — fan inventory commits out in parallel. Each commit
-                // becomes a CompletableFuture; the coordinator joins once
-                // after all are dispatched. We track SUCCESSFUL commits
                 // (handle() callback) so a failure doesn't poison the
                 // compensation list — the failed row was never committed
                 // and so must not be released-committed on rollback.
@@ -104,7 +101,6 @@ public class OrderCommitCoordinator {
                         }, COMMIT_EXECUTOR)
                         .handle((v, ex) -> {
                             if (ex != null) {
-                                // unwrap and queue for rethrow below
                                 Throwable cause = ex;
                                 if (cause instanceof CompletionException && cause.getCause() != null) {
                                     cause = cause.getCause();
@@ -124,9 +120,7 @@ public class OrderCommitCoordinator {
                         });
                     commitFutures.add(future);
                 }
-                // Block until ALL dispatches complete (success or failure).
                 CompletableFuture.allOf(commitFutures.toArray(new CompletableFuture[0])).join();
-                // Surface the first failure so the outer catch compensates and rethrows.
                 RuntimeException firstFailure = failures.poll();
                 if (firstFailure != null) {
                     throw firstFailure;

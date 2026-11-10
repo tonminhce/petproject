@@ -13,7 +13,6 @@ import java.time.Duration;
 
 /**
  * Aggregator configuration bound from {@code shop.common.*}.
- *
  * <p>This record is the single-import handle for the most-used cross-cutting
  * settings. Each sub-record mirrors a platform module so a service can read
  * or override its top-level toggles from one bean. Detailed module-level
@@ -22,28 +21,6 @@ import java.time.Duration;
  * {@code shop.storage.*}, {@code shop.web.logging.performance.*}) — the
  * sub-records here only carry aggregator-level defaults that complement,
  * never duplicate, those.</p>
- *
- * <h3>Example</h3>
- * <pre>{@code
- * shop:
- *   common:
- *     service:
- *       name: product-service
- *     security:
- *       enabled: true
- *     keycloak:
- *       enabled: true
- *     logging:
- *       correlation-id: true
- *       level: INFO
- *     kafka:
- *       enabled: false
- *     storage:
- *       enabled: false
- *     defaults:
- *       server-port: 8080
- *       shutdown-grace-period: 30s
- * }</pre>
  *
  * @param service   service-level metadata (name, description)
  * @param security  platform security toggle

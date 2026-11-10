@@ -6,11 +6,9 @@ import java.time.Duration;
 
 /**
  * Configuration for the shared S3-compatible {@link com.shop.common.storage.service.ObjectStorageService}.
- *
  * <p>Defaults target a local RustFS node exposing the S3 API on {@code :9000}.
  * Any S3-compatible backend (RustFS, AWS S3, ...) works by pointing
  * {@code endpoint} / credentials at it.</p>
- *
  * <pre>
  * shop:
  *   storage:

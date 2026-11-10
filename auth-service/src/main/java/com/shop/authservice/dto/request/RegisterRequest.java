@@ -6,12 +6,6 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
-/**
- * Registration payload. H3 — Java record (fleet convention rule 1: layer +
- * records). All validation annotations are field-level on the record
- * components; Jackson binds by component name on deserialisation and the
- * service layer reads via accessors.
- */
 public record RegisterRequest(
         @NotBlank(message = "The fullName must not be left blank")
         @Size(min = 6, max = 50, message = "The fullName must be 6 characters or more")
@@ -43,7 +37,7 @@ public record RegisterRequest(
         String avatar,
 
         /**
-         * C1 — caller-supplied role names. The server enforces a server-side whitelist
+         * Caller-supplied role names. The server enforces a server-side whitelist
          * (see {@code UserServiceImpl.SELF_REGISTRATION_ALLOWED_ROLES}); values not on
          * the whitelist are silently dropped. ADMIN/SERVICE/MANAGER cannot be obtained
          * through this endpoint by design — keep the field here so existing clients

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * F-019 (P0) — the payment-captured confirm gate must be effective.
- *
  * <p>{@code shop.services.payment.enabled} gates the whole payment
  * integration. When it is off, {@code OrderServiceImpl.confirmOrder()} skips
  * the "is there a CAPTURED payment for this order?" check entirely and
@@ -18,11 +17,9 @@ import org.springframework.stereotype.Component;
  * issuing a refund. Both money invariants are then silently unenforced: an
  * order can be confirmed with no payment, and a cancelled order is never
  * refunded.</p>
- *
  * <p>The configuration now defaults to enabled, but a deployment can still
  * disable it. This validator makes the dangerous combination fail fast at
  * startup instead of degrading silently:</p>
- *
  * <ul>
  *   <li>payment integration enabled + gate required  -> OK (the intended state)</li>
  *   <li>payment integration enabled + gate not required -> OK, with a WARN</li>

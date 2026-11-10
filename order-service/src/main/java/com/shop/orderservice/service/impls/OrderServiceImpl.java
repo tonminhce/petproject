@@ -120,21 +120,14 @@ public class OrderServiceImpl implements OrderService {
                 confirmMetrics, orderCreateSaga, (PlatformTransactionManager) null);
     }
 
-    // ========================================================================
-    // CREATE ORDER — SAGA with explicit compensation
-    // ========================================================================
-
     @Override
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
         // 1. Idempotency pre-insert (in-flight row commits in its own TX, before the saga).
-        // Actor label = the customer's sub (UUID canonical text) — H-6 rows are string-keyed.
         String requestHash = hash(request);
         Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId.toString(), requestHash);
         if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the saga
 
         // 2. H13 — delegate to OrderCreateSaga (sibling bean) so the @Transactional
-        // boundary on the saga body is honoured through the Spring proxy. Self-invocation
-        // on this class would bypass the proxy, leaving the saga outside any tx.
         try {
             return orderCreateSaga.execute(userId, request, idempotencyKey);
         } catch (RuntimeException ex) {
@@ -168,40 +161,28 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    // ========================================================================
-    // CANCEL
-    // ========================================================================
-
     @Override
     @Transactional
     public OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin) {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
 
-        // Authorization: hide existence from non-owners
         if (!isAdmin && !order.getUserId().equals(userId)) {
             throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
         }
 
-        // Policy: USER may cancel PENDING only (not yet confirmed); ADMIN may cancel
-        // PENDING + CONFIRMED. SHIPPED/DELIVERED/CANCELLED are terminal for everyone —
-        // validateTransition is the single source of truth for both roles.
         if (!isAdmin && order.getStatus() != OrderStatus.PENDING) {
             throw BusinessException.of(ErrorCode.ORDER_INVALID_STATE, orderId);
         }
         orderStatusService.validateTransition(order.getStatus(), OrderStatus.CANCELLED);
 
-        // Release stock only when PENDING (reservations are still PENDING in inventory).
-        // CONFIRMED: reservations are already COMMITTED — H9 fix releases them via the
         // releaseCommitted endpoint (restocking) on admin cancel. Without it, admin
-        // cancellation leaves stock stranded after the order is marked CANCELLED.
         if (order.getStatus() == OrderStatus.PENDING) {
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
                 .filter(Objects::nonNull)
                 .toList();
             releaseAllReservationsById(reservationIds);
-            // Best-effort promotion release (spec §12 swallow pattern — TTL sweep covers
             // failures; never mask the cancel flow).
             if (order.getPromotionReservationId() != null) {
                 try {
@@ -214,7 +195,6 @@ public class OrderServiceImpl implements OrderService {
         } else if (order.getStatus() == OrderStatus.CONFIRMED && isAdmin) {
             // H9 — admin cancel of CONFIRMED must restock (releaseCommitted). The
             // release() path would reject the row because it's COMMITTED, not
-            // PENDING. Best-effort per the same convention as the PENDING branch.
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
                 .filter(Objects::nonNull)
@@ -265,13 +245,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    // ========================================================================
-    // STATUS TRANSITIONS (admin / service-to-service in Phase 8)
-    // ========================================================================
-
-    // Endpoint-level authz lives on OrderStatusController (SERVICE or ADMIN); the
-    // service layer only enforces the state machine. {@code actor} is the caller
-    // label resolved by token shape at the controller (H-6: ADMIN → sub,
     // SERVICE → service:<azp>) — stored verbatim on idempotency rows.
     @Override
     public OrderResponse confirmOrder(UUID orderId, String actor, String idempotencyKey) {
@@ -288,11 +261,9 @@ public class OrderServiceImpl implements OrderService {
             orderStatusService.validateTransition(order.getStatus(), OrderStatus.CONFIRMED);
             List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
 
-            // order-wiring D1 — payment gate BEFORE any remote commit: with the
             // payment-service flag on, confirm requires a CAPTURED payment. ANY
             // client failure also yields ORD-4012 (fail-closed — a payment we
             // could not verify must block confirm, and the raw exception never
-            // leaks past this seam). Flag off (default) → guard bypassed.
             if (paymentClient.isEnabled()) {
                 PaymentStatusSnapshot payment;
                 try {
@@ -306,14 +277,7 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // External commit BEFORE local state flip — local row stays PENDING until
-            // inventory/promotion commits succeed (coordinator compensates on failure).
-            // Phase timing (commit_inventory/commit_promotion) is owned by the
-            // coordinator — no caller-side timer (would double-count §8 latencies).
-            // ANY coordinator throw — including the clients' BusinessException mappings
-            // for remote 4xx/5xx — surfaces as 409 ORD-4011 (task 13 IT: a remote 500
             // must not leak as 503). validateTransition's guard sits BEFORE this inner
-            // try and is rethrown unchanged by the outer catch.
             try {
                 commitCoordinator.commitForConfirm(order, items);
             } catch (RuntimeException commitEx) {
@@ -340,7 +304,6 @@ public class OrderServiceImpl implements OrderService {
             if (idempotencyKey != null)
                 idempotencyService.abort(idempotencyKey, actor, requestHash);
             if (!(ex instanceof BusinessException)) {  // infra failure → 409 ORD-4011, order stays PENDING
-                // Wrap drops the root cause — log it so the infra failure stays diagnosable
                 log.error("Confirm commit failed for order {}", orderId, ex);
                 throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
             }
@@ -386,10 +349,6 @@ public class OrderServiceImpl implements OrderService {
         orderEventPublisher.publishStatusChanged(order);
         return orderMapper.toResponse(order, orderItemRepository.findByOrderId(orderId));
     }
-
-    // ========================================================================
-    // READ
-    // ========================================================================
 
     @Override
     @Transactional(readOnly = true)

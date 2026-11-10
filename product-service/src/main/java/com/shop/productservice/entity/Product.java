@@ -48,8 +48,6 @@ public class Product extends AbstractMappedEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    // Logical ref to media-service (spec D5) — media's DB is SEPARATE, so NO
-    // FK: integrity is eventual via the MediaDeleted consumer. The displayed
     // image is DERIVED at mapping time (canonicalPath) — never stored.
     @Column(name = "media_id")
     private UUID mediaId;
@@ -60,7 +58,6 @@ public class Product extends AbstractMappedEntity {
     @Column(length = 50)
     private String dimensions;
 
-    // Denormalized rating stars (spec D5) — copied from rating lifecycle
     // events by ProductRatingService, never recomputed here.
     @Column(name = "avg_rating", precision = 3, scale = 2)
     private BigDecimal avgRating;

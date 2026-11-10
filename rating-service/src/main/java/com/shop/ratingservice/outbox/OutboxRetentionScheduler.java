@@ -11,14 +11,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 /**
- * F-059 (P2) — purges SENT outbox rows older than the retention window.
- *
  * <p>rating-service had a {@code deleteByStatusAndSentAtBefore} method on its
  * repository but no scheduler ever called it, so the table grew by one row per
  * rating lifecycle event forever. Every other event-producing service in the
  * fleet (inventory, promotion, media, payment, shipping, order, product)
  * purges SENT rows after seven days; this service was the outlier.</p>
- *
  * <p>Only SENT rows are purged. PENDING rows are the relay's backlog, FAILED
  * rows need a manual root cause before deletion, and DEAD rows are the
  * explicit "parked for an operator" state.</p>

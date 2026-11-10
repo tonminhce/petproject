@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Micrometer-backed observability surface for inventory-service — mirrors
  * product-service's {@code ProductMetrics} so outbox health is visible the
  * same way across the two event-producing services.
- *
  * <p>Meters:
  * <ul>
  *   <li>{@code inventory.cache.hit} / {@code inventory.cache.miss} — gauges
@@ -45,14 +44,7 @@ public class InventoryMetrics {
         Gauge.builder("inventory.outbox.pending.count", pendingOutboxCount, AtomicInteger::get)
             .register(registry);
 
-        // Cache hit/miss: bind to Spring Data Redis's CacheStatistics. The Spring
-        // `Cache` interface does not expose getStatistics(); only `RedisCache`
         // does — cast and skip if the cast fails (e.g. test context running with
-        // spring.cache.type=none).
-        //
-        // Bind the RedisCache itself and call getStatistics() INSIDE the gauge
-        // function: it returns an immutable snapshot, so a constructor-time capture
-        // would freeze the counters at their boot values (platform metrics fix).
         if (cacheManager.getCache("inventory") instanceof RedisCache redisCache) {
             Gauge.builder("inventory.cache.hit", redisCache, rc -> rc.getStatistics().getHits())
                 .tag("cache", "inventory")

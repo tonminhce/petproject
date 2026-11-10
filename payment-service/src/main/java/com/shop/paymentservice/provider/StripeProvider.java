@@ -25,7 +25,6 @@ import java.util.UUID;
  * port (spec D1: official stripe-java SDK, never raw HTTP). Activated only by
  * {@code SHOP_PAYMENT_PROVIDER=stripe}; fails fast at bean creation when the
  * secret key is missing (D10).
- *
  * <p>Mapping onto the binding port — the port's
  * {@link ProviderResult}{@code (providerEventId, accepted)} carries no
  * attempt-status or client_secret, so:</p>
@@ -38,7 +37,6 @@ import java.util.UUID;
  *       {@code accepted=false} with the decline/error code as
  *       {@code providerEventId} — PaymentServiceImpl surfaces PAY-5008.</li>
  * </ul>
- *
  * <p>Idempotency (spec D2): PaymentIntent.create reuses
  * {@code payments.idempotency_key} as Stripe's Idempotency-Key; refunds derive
  * {@code refund-{key}-{amount}} per refund attempt. A duplicate key replays
@@ -78,9 +76,6 @@ public class StripeProvider implements PaymentProvider {
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                 .setAmount(toMinorUnits(amount, currency))
                 .setCurrency(currency.toLowerCase(Locale.ROOT))
-                // D3 — SCA: intent is created UNCONFIRMED; Stripe.js on the
-                // client confirms with the returned client_secret (storefront
-                // Phase 9). The lifecycle completes via payment_intent.* webhook.
                 .setConfirm(false)
                 .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                         .setEnabled(true)

@@ -22,7 +22,6 @@ import java.util.UUID;
  * Writes one {@link OutboxEvent} row per domain action in the SAME
  * {@code @Transactional} boundary as the entity write. A subsequent relay
  * (see {@code OutboxRelay}) drains the table and publishes to Kafka.
- *
  * <p>The publisher itself is intentionally NOT {@code @Transactional}: the
  * caller's transaction (e.g. {@code ProductServiceImpl.create/update/delete})
  * provides the boundary. If no transaction is open the row would still be
@@ -72,8 +71,6 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("productId", p.getId());
         payload.put("slug", p.getSlug());
         payload.put("status", p.getStatus() != null ? p.getStatus().name() : null);
-        // Full catalog snapshot (spec D2, additive-only): brand/category names
-        // resolved exactly like ProductMapper.toDetailResponse (same relations,
         // null-safe); avgRating stays JSON null for never-rated products.
         payload.put("title", p.getTitle());
         payload.put("description", p.getDescription());
@@ -82,7 +79,6 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("categoryId", p.getCategory() != null ? p.getCategory().getId() : null);
         payload.put("categoryName", p.getCategory() != null ? p.getCategory().getTitle() : null);
         payload.put("price", p.getPriceUnit());
-        // Media epic spec D5: the payload's imageUrl is the DERIVED canonical
         // path when the product references a media (17-name contract stable —
         // same names, new value source); legacy free-string otherwise.
         payload.put("imageUrl", p.getMediaId() != null

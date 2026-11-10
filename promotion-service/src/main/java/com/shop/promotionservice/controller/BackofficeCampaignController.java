@@ -28,12 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/**
- * Backoffice campaign CRUD (spec §4.2). ADMIN-only — class-level gate per the
- * fleet hardening direction (T8 review finding: reservation controller keeps
- * per-endpoint because two endpoints are SERVICE-visible; every route here is
- * backoffice, so one gate covers all).
- */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_PROMOTIONS)
 @PreAuthorize("hasRole('ADMIN')")
@@ -47,7 +41,6 @@ public class BackofficeCampaignController {
             @RequestParam(required = false) CampaignStatus status,
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_NUMBER) int page,
             @RequestParam(defaultValue = "" + PageableConstant.DEFAULT_PAGE_SIZE) int size) {
-        // Cap page size — PageableConstant.MAX_PAGE_SIZE guards against ?size=100000 dumps.
         Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         Page<CampaignResponse> result = campaignService.findAll(status, pageable);
         return ApiResponse.ok(PageResponse.of(

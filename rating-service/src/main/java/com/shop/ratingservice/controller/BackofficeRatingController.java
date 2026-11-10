@@ -18,11 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/**
- * Backoffice moderation surface (spec D2/D6) — the abuse lever behind the
- * auto-publish posture: fast hide/unhide beats any queue latency. Class-level
- * ADMIN gate per the fleet backoffice convention (BackofficePaymentController).
- */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_RATINGS)
 @PreAuthorize("hasRole('ADMIN')")

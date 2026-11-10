@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Bind {@code shop.services.*} — the product-service backoffice endpoint that
  * streams the reindex source (spec D5) and the Keycloak service-token endpoint
  * (client_credentials flow).
- *
  * <p>Order-service {@code ShopServicesProperties} record style; local to
  * search-service deliberately: NOT {@code shop.keycloak} (auth-owned) — see
  * order-service Task 2 P0-7b rationale.</p>

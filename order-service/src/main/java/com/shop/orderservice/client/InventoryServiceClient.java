@@ -22,8 +22,8 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 /**
- * P0-5 — unwraps the ApiResponse envelope into the typed payload.
- * P1-3 — attaches a per-call Authorization header from {@link ServiceTokenProvider}:
+ * 5 — unwraps the ApiResponse envelope into the typed payload.
+ * 3 — attaches a per-call Authorization header from {@link ServiceTokenProvider}:
  * only this client needs a token (product GET is a public path; tax/promotion are
  * disabled in the MVP).
  */
@@ -56,8 +56,6 @@ public class InventoryServiceClient {
             return resp.data().reservationId();
         } catch (HttpClientErrorException ex) {
             log.warn("Inventory reserve failed for product {}: {}", productId, ex.getMessage());
-            // 409 = insufficient stock; 404 = no inventory row for the product. Both are
-            // "this item cannot be reserved" — route both through the compensation
             // exception instead of surfacing a 500 (review M7).
             if (ex.getStatusCode() == HttpStatus.CONFLICT || ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new StockReservationFailedException(productId, ex);
@@ -128,8 +126,6 @@ public class InventoryServiceClient {
             return resp.data();
         } catch (HttpClientErrorException ex) {
             log.warn("Inventory state lookup failed for reservation {}: {}", reservationId, ex.getMessage());
-            // 404 lets reconciliation (releases a reservation that already finalized)
-            // distinguish "already gone" from a real failure (hardening §7.3).
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId);
             }

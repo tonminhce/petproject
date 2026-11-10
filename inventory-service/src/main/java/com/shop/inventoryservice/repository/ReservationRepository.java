@@ -17,14 +17,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     List<Reservation> findByProductIdAndStatusAndExpiresAtBefore(
             UUID productId, ReservationStatus status, Instant expiresBefore);
 
-    // ReservationCleanupScheduler - sweep ALL pending-and-expired in pages.
     // Pageable is REQUIRED: an unbounded query can pull 50K+ entities after extended
-    // downtime or a flash-sale backlog, blowing the persistence-context heap.
-    // Hits idx_reservations_status_expires.
     List<Reservation> findByStatusAndExpiresAtBefore(
             ReservationStatus status, Instant expiresBefore, Pageable pageable);
 
-    // ReservationCleanupScheduler.purgeOldExpiredReservations (Task 22) - retention EXPIRED
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Reservation r WHERE r.status = :status AND r.createdAt < :cutoff")
     int deleteByStatusAndCreatedAtBefore(@Param("status") ReservationStatus status,
@@ -33,7 +29,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     long countByProductIdAndStatusIn(UUID productId, List<ReservationStatus> statuses);
 
     /**
-     * F-011 — claim a reservation for TTL expiry.
+     * Claim a reservation for TTL expiry.
      * <p>The expiry sweep used to SELECT the candidates and then blind-save them
      * as EXPIRED. Because the reservations table had no version column, a sweep
      * that read the row before {@code commit()} ran could overwrite the COMMITTED

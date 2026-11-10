@@ -21,7 +21,6 @@ import java.util.function.Consumer;
  * Default {@link AuditEventWriter}: formats each event to a JSON line on the
  * caller thread (cheap, and the event's context is request-bound), then hands
  * the line to a bounded executor that performs the I/O.
- *
  * <p>Binding rules (spec D6 + review nit N1, sink recovery per review I-1):</p>
  * <ul>
  *   <li>Pool is hard-bounded: core 2, max 4, queue 1000 — NOT configurable.</li>
@@ -46,7 +45,6 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
     static final String ENV_AUDIT_LOG_PATH = "AUDIT_LOG_PATH";
 
     // N1: intentionally hard-coded — audit must stay bounded even if someone
-    // misconfigures a property file.
     static final int CORE_POOL_SIZE = 2;
     static final int MAX_POOL_SIZE = 4;
     static final int QUEUE_CAPACITY = 1000;
@@ -77,7 +75,6 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
                 },
                 (r, e) -> {
                     if (e.isShutdown()) {
-                        // pool already closed — a lost event, not queue overflow
                         recordSinkFailure("audit: writer rejected event (shutting down) — request unaffected", null);
                     } else {
                         onRejection();
@@ -116,8 +113,6 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
                 }
             });
         } catch (RuntimeException e) {
-            // Overflow rejections go through the discard handler; this is any
-            // other rejection (pool shut down) — a failure, not an overflow.
             recordSinkFailure("audit: writer rejected event (shutting down) — request unaffected", e);
         }
     }
@@ -211,7 +206,6 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
                 try {
                     writer.close();
                 } catch (IOException ignored) {
-                    // best effort — the reopen on the next event is what matters
                 }
             }
             writer = null;

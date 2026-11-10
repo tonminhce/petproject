@@ -88,13 +88,11 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryResponse update(UUID productId, InventoryUpsertRequest request) {
         if (request.productId() != null && !request.productId().equals(productId)) {
             // Body productId (if present) must agree with the path — never silently
-            // update a different row than the caller addressed.
             throw BusinessException.badRequest("inventory.product.id.mismatch", request.productId(), productId);
         }
         Inventory existing = inventoryRepository.findByProductId(productId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         if (request.availableQuantity() != null) {
-            // A10: refuse to drop available below already-committed/held stock — would let
             // reservations/orders oversell. Caller must release or commit reservations first.
             int reserved = existing.getReservedQuantity() == null ? 0 : existing.getReservedQuantity();
             if (request.availableQuantity() < reserved) {
@@ -122,8 +120,6 @@ public class InventoryServiceImpl implements InventoryService {
         long active = reservationRepository.countByProductIdAndStatusIn(
             productId, List.of(ReservationStatus.PENDING, ReservationStatus.COMMITTED));
         if (active > 0) {
-            // INV-3009 — the conflict is about the INVENTORY having active
-            // reservations, not about a reservation being in an invalid state.
             throw BusinessException.of(ErrorCode.INVENTORY_IN_USE, productId);
         }
         inventoryRepository.delete(existing);
@@ -134,18 +130,11 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public ReservationResponse reserve(UUID productId, ReserveRequest request) {
-        // H10 — atomic capacity check + increment. The pre-fix read-then-write
         // path had a TOCTOU window: two concurrent reserves could both observe
-        // the same available capacity and both succeed. The atomic UPDATE on
-        // the repository collapses the check + write into one statement that
         // Postgres serializes via the row lock — concurrent requests can never
-        // both succeed past the available-reserved guard.
         int updated = inventoryRepository.atomicReserve(productId, request.quantity());
         if (updated == 0) {
-            // 0 rows updated — capacity was insufficient OR product missing.
-            // We disambiguate by looking the row up (the atomic UPDATE doesn't
             // tell us which side failed). The find is rare-path only; the hot
-            // success path takes the early return below.
             inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
             throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, productId);
@@ -187,11 +176,6 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = inventoryRepository.findByProductId(r.getProductId())
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, r.getProductId()));
         // F-010 — never let the counters go negative. A negative reserved or
-        // available quantity defeats the (available - reserved) >= qty capacity
-        // guard and silently enables overselling. The database CHECK
-        // constraints (changelog-004) are the last line of defence; this guard
-        // turns the violation into a domain error instead of a raw constraint
-        // violation.
         int newAvailable = inventory.getAvailableQuantity() - r.getQuantity();
         int newReserved = inventory.getReservedQuantity() - r.getQuantity();
         if (newAvailable < 0 || newReserved < 0) {
@@ -264,7 +248,6 @@ public class InventoryServiceImpl implements InventoryService {
             return;
         }
         if (r.getStatus() != ReservationStatus.COMMITTED) {
-            // PENDING rows belong to the plain release() path.
             throw BusinessException.of(ErrorCode.RESERVATION_INVALID_STATE, reservationId);
         }
         Inventory inv = inventoryRepository.findByProductId(r.getProductId())
@@ -279,10 +262,6 @@ public class InventoryServiceImpl implements InventoryService {
         cacheService.evictAfterCommit(r.getProductId());
     }
 
-    /**
-     * Read-only reservation state projection for reconciliation polling
-     * (hardening spec §7.3). No retries needed — a single consistent read.
-     */
     @Override
     @Transactional(readOnly = true)
     public ReservationResponse getState(UUID reservationId) {

@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * Client-credentials token cache for outbound service-to-service calls
  * (rating/order precedent, local to search-service deliberately — the
  * keycloak settings live in {@link ShopServicesProperties#keycloak()}).
- *
  * <p>Obtains an access token from Keycloak via the {@code client_credentials}
  * grant and caches it in-memory, refreshing 30 seconds before expiry. Used by
  * {@code ProductBackofficeClient} to attach a {@code Bearer} token when

@@ -18,8 +18,7 @@ import java.util.Optional;
 /**
  * Drains the {@code outbox_events} table and publishes each PENDING row to
  * Kafka through the shared {@link KafkaMessagePublisher}.
- *
- * <p>C14 — rows are claimed one at a time via
+ * <p>Rows are claimed one at a time via
  * {@link OutboxEventRepository#claimOnePending} (PESSIMISTIC_WRITE + SKIP
  * LOCKED) inside a per-event {@link TransactionTemplate} transaction (the F2
  * scheduler idiom — self-invocation would bypass {@code @Transactional}): the
@@ -31,7 +30,6 @@ import java.util.Optional;
  * successes, and this relay deliberately CONTINUES the batch on a publish
  * failure (retry counter bumped, row saved) unlike the stricter
  * order/promotion/inventory relays that break.</p>
- *
  * <p>Catches {@link Exception} (not just {@code KafkaPublishException}) so
  * transient infrastructure issues — e.g. timeout inside the Kafka producer —
  * do not abort the rest of the batch.</p>
@@ -91,27 +89,12 @@ public class OutboxRelay {
                             log.warn("Outbox event {} retry {}/{}: {}",
                                 event.getEventId(), event.getRetryCount(), maxRetries, ex.getMessage());
                         }
-                        // Continue-on-error relay (fleet divergence note above): save the
                         // retry state and keep draining — later aggregates must not starve.
                         outboxRepo.save(event);
-                        // F-058 (P1) — STOP the batch on a publish failure.
-                        //
-                        // The previous implementation returned TRUE and kept
-                        // draining. Because the claim always takes the MIN(id)
-                        // PENDING row, the very next iteration re-claimed the
-                        // SAME failing row and retried it, so the whole
-                        // max-retries budget (10) was burned inside ONE tick
-                        // rather than across the poll interval. The row was then
                         // parked as FAILED - and product-service has no retry or
                         // repair path for FAILED rows - so a transient broker
-                        // outage permanently lost the product lifecycle event and
-                        // the search index diverged from the catalogue with no
-                        // repair route.
-                        //
                         // Stopping here keeps the row PENDING, spreads the retry
-                        // budget across ticks, and preserves per-aggregate
                         // ordering - the same contract the inventory, promotion
-                        // and media relays use.
                         return Boolean.FALSE;  // STOP: keep ordering - retry later events next poll
                     }
                     outboxRepo.save(event);

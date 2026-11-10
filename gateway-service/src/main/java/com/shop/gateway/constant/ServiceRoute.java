@@ -25,7 +25,6 @@ public enum ServiceRoute {
     PROMOTION("promotion-service", "promotions", "promotion-service", 8093),
     SEARCH("search-service", "search", "search-service", 8094),
 
-    // ---- Backoffice edge routes (D1) — ADMIN realm-role gated at the gateway ----
     BACKOFFICE_RATINGS("backoffice-ratings", "backoffice/ratings", "rating-service", 8089),
     BACKOFFICE_PRODUCTS("backoffice-products", "backoffice/products", "product-service", 8086),
     BACKOFFICE_CATEGORIES("backoffice-categories", "backoffice/categories", "product-service", 8086),

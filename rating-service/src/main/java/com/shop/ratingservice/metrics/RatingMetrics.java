@@ -5,9 +5,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
 /**
- * Micrometer-backed observability surface for rating-service (spec D7 —
- * fleet OrderMetrics/ShippingMetrics pattern):
- *
  * <ul>
  *   <li>{@code rating_submitted_total{action}} — counter incremented once per
  *       rating lifecycle write (CREATED / UPDATED / HIDDEN / UNHIDDEN), from

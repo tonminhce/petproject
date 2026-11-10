@@ -25,18 +25,15 @@ import java.util.Optional;
  * per row per cycle, batch-capped, first-failure break — no hot loop), so
  * a broker outage past {@code max-retries} delays delivery instead of
  * killing it. Containment fleet posture.
- *
  * <p>H-5: FAILED is deliberately NOT terminal — but it is not forever either.
  * A parked row is stamped {@code failed_at} (cleared again on any later
  * success) and the nightly {@link MediaOutboxRetentionScheduler} ages
  * FAILED rows past the terminal window to DEAD, which this relay never
  * polls. Replay for younger FAILED rows continues unchanged.</p>
- *
  * <p>Type-agnostic by design: the row carries its eventType and FULL
  * snapshot payload; the relay publishes whatever the row carries and
  * consumers ack-skip unknown types.</p>
- *
- * <p>C14 — due rows (PENDING or replayable FAILED) are claimed one at a time
+ * <p>Due rows (PENDING or replayable FAILED) are claimed one at a time
  * via {@link OutboxEventRepository#claimOneDue} (PESSIMISTIC_WRITE + SKIP
  * LOCKED) inside a per-event {@link TransactionTemplate} transaction: the row
  * lock spans the Kafka publish and the status save, so a second relay
@@ -90,8 +87,6 @@ public class MediaOutboxRelay {
                     event.setLastError(ex.getMessage());
                     if (event.getRetryCount() >= maxRetries) {
                         event.setStatus(OutboxStatus.FAILED);
-                        // H-5: stamp the aging clock the row is parked with — the
-                        // retention scheduler measures the terminal window against it
                         event.setFailedAt(Instant.now());
                         log.error("Media outbox event {} failed {} attempt(s) — parked as FAILED, "
                                 + "will be replayed on a later cycle (aged to DEAD after the "

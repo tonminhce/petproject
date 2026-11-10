@@ -10,7 +10,6 @@ import java.util.Locale;
 
 /**
  * Configuration for the platform's i18n setup, bound from {@code shop.i18n.*}.
- *
  * <pre>{@code
  * shop:
  *   i18n:

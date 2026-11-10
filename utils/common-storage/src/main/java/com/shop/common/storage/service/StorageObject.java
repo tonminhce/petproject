@@ -4,7 +4,6 @@ import java.io.InputStream;
 
 /**
  * Result of a download: the object payload plus its metadata.
- *
  * <p>{@link #content()} is an in-memory stream backed by the bytes already
  * buffered by {@code S3ObjectStorageService.download()}. The S3-side HTTP
  * connection is released before this object is returned to the caller, so

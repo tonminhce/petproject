@@ -13,11 +13,6 @@ import java.util.Set;
 @Service
 public class OrderStatusServiceImpl implements OrderStatusService {
 
-    // H12 — SHIPPED → CANCELLED is now allowed. The pre-fix design blocked
-    // it, but admin tooling needs to cancel post-shipment orders for
-    // carrier-side issues (lost parcels, fraud chargebacks, recall flows).
-    // DELIVERED → CANCELLED is still terminal: post-delivery cancel belongs
-    // to the refund / return flow, not the cancel-state machine.
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED = Map.of(
         OrderStatus.PENDING,   EnumSet.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
         OrderStatus.CONFIRMED, EnumSet.of(OrderStatus.SHIPPED,   OrderStatus.CANCELLED),

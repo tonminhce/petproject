@@ -107,7 +107,6 @@ class VariantRenderer {
             }
             return image;
         } catch (IOException e) {
-            // reachable: magic-valid heads whose bodies the claimed codec
             // rejects (e.g. a bogus segment length) surface as IIOException
             throw new InvalidImageException("Truncated or unreadable image stream", e);
         }
@@ -130,8 +129,6 @@ class VariantRenderer {
         ByteArrayOutputStream out = new ByteArrayOutputStream(64 * 1024);
         var thumbnail = Thumbnails.of(image).size(width, height);
         if (MediaFormats.JPEG.equals(format)) {
-            // JPEG cannot carry alpha — flatten first so transparency
-            // doesn't render black.
             thumbnail.imageType(BufferedImage.TYPE_INT_RGB);
         }
         thumbnail.outputFormat(format).outputQuality(0.9).toOutputStream(out);

@@ -23,12 +23,10 @@ import java.util.regex.Pattern;
 
 /**
  * Logs every HTTP request/response for servlet-stack services (virtual thread compatible).
- *
  * <p>One log line per request, emitted after the response is written:
  * <pre>
  * path | METHOD | status | Xms | ip=... | ua=... | corrId=...[| req=...][| res=...]
  * </pre>
- *
  * <p>Log level follows response status: INFO (2xx/3xx) · WARN (4xx) · ERROR (5xx).
  * Actuator health/metrics paths are skipped automatically.</p>
  */

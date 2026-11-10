@@ -17,11 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * F-032 — the gateway is the edge, so it is the place where a token minted for
+ * The gateway is the edge, so it is the place where a token minted for
  * the wrong client must be rejected. Before this configuration the gateway
  * relied on Spring Boot's reactive auto-configuration, whose default validator
  * chain is issuer + timestamp only:
- *
  * <ul>
  *   <li>the gateway depends only on {@code common-core}, not {@code common-security},
  *       so the servlet-only {@code BaseSecurityConfig} (issuer + timestamp +
@@ -31,8 +30,7 @@ import java.util.List;
  *       entirely. A token issued to any client in the realm was accepted at the
  *       edge.</li>
  * </ul>
- *
- * <p>F-040 — the validator reads the {@code azp} claim, because the
+ * <p>The validator reads the {@code azp} claim, because the
  * provisioned realm emits no {@code aud} claim at all (measured against
  * Keycloak 26: user tokens carry {@code azp=ecommerce-client}, service tokens
  * carry {@code azp=<service-client>}, and {@code aud} is absent for every
@@ -59,8 +57,6 @@ public class GatewayJwtSecurityConfig {
     @Bean
     public ReactiveJwtDecoder reactiveJwtDecoder() {
         OAuth2TokenValidator<Jwt> chain = buildValidatorChain();
-        // Lazy: the discovery fetch is deferred to the first decode so the
-        // edge boots even when the IdP is briefly unavailable.
         return new LazyReactiveJwtDecoder(() -> {
             NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withIssuerLocation(issuerUri).build();
             decoder.setJwtValidator(chain);

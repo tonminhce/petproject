@@ -65,7 +65,7 @@ public class Reservation {
     private UUID orderId;
 
     /**
-     * F-011 — optimistic-lock guard for the reservation aggregate. Without it
+     * Optimistic-lock guard for the reservation aggregate. Without it
      * the expiry sweep (an unlocked SELECT followed by a blind save) could
      * overwrite a COMMITTED reservation with EXPIRED, which released stock that
      * had already been consumed by a paid order. The sweep now also claims the

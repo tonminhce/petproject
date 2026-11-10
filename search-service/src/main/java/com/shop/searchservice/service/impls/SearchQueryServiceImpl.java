@@ -42,12 +42,10 @@ import java.util.UUID;
  * match_all browse otherwise, with keyword filters for brand/category, a
  * range filter for price, and an avgRating floor for {@code minRating}
  * (never-rated docs have no value and drop out naturally).
- *
  * <p>F3 sort branching: {@code _score} is meaningless on match_all, so an
  * empty-q browse defaults to NEWEST — including when the client explicitly
  * asks for relevance. A q-present query defaults to RELEVANCE, and an
  * explicit sort param always wins.</p>
- *
  * <p>ES failures surface as 503 SRH-12002 — never a raw exception or 500
  * (spec D6): transport failures (I/O, timeout, connection refused) arrive as
  * IOException, while error responses (e.g. {@code index_not_found_exception}
@@ -76,14 +74,6 @@ public class SearchQueryServiceImpl implements SearchQueryService {
 
         SearchResponse<Map> response;
         if (from + size > SearchRequest.MAX_RESULT_WINDOW) {
-            // Wave-C finding H37: deep pagination beyond the index
-            // max_result_window (10000) uses a Point-In-Time + search_after
-            // cursor walk instead of the from+size path that ES would refuse
-            // (result_window_total_hits_exceeded). The PIT fixes a stable
-            // snapshot of the index, then we step forward one size per
-            // "page" using the last hit's sort values as the next cursor.
-            // https://www.elastic.co/guide/en/elasticsearch/reference/9.4/paginate-search-results.html
-            // https://www.elastic.co/guide/en/elasticsearch/reference/9.4/point-in-time-api.html
             response = searchDeepWithPit(boolQuery, sort, size, request.page());
         } else {
             response = searchShallow(boolQuery, sort, size, from);
@@ -162,11 +152,6 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         return bool.build();
     }
 
-    /**
-     * The fast path: a single ES search with from+size, scoped to the products
-     * alias, with the resolved sort. Any failure surfaces as 503 SRH-12002
-     * (spec D6).
-     */
     private SearchResponse<Map> searchShallow(BoolQuery boolQuery, List<SortOptions> sort, int size, long from) {
         try {
             return client.search(s -> s
@@ -176,13 +161,10 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 .size(size)
                 .sort(sort), Map.class);
         } catch (ElasticsearchException ex) {
-            // ES error responses — e.g. index_not_found_exception on a missing
-            // alias during the degraded provisioning window.
             log.warn("Search query failed — Elasticsearch error response", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         } catch (IOException ex) {
             // 8.15/9.15 transport failures (connect refused, timeout, socket
-            // reset) all surface as IOException — TransportException included.
             log.warn("Search query failed — Elasticsearch unavailable", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         }
@@ -192,7 +174,6 @@ public class SearchQueryServiceImpl implements SearchQueryService {
      * Deep-pagination path: open a PIT on the alias, walk forward {@code page}
      * times with {@code search_after} (one size per step), and return the
      * final page. PIT open/close failures map to 503 SRH-12002 (spec D6).
-     *
      * <p>Reference:
      * https://www.elastic.co/guide/en/elasticsearch/reference/9.4/paginate-search-results.html
      * https://www.elastic.co/guide/en/elasticsearch/reference/9.4/point-in-time-api.html</p>
@@ -207,8 +188,6 @@ public class SearchQueryServiceImpl implements SearchQueryService {
                 response = executePitSearch(pitId, boolQuery, sort, size, nextCursor);
                 List<Hit<Map>> hits = response.hits().hits();
                 if (hits.isEmpty()) {
-                    // We walked past the last matching doc; ES will keep
-                    // returning empty hits indefinitely, so stop here.
                     return response;
                 }
                 cursor = hits.get(hits.size() - 1).sort();
@@ -241,9 +220,6 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         try {
             client.closePointInTime(ClosePointInTimeRequest.of(c -> c.id(pitId)));
         } catch (Exception ex) {
-            // PIT close is best-effort — the cluster will reclaim the context
-            // at keepAlive expiry regardless. Surfacing the failure here would
-            // turn a successful query into a 503.
             log.warn("Search query warning — PIT close failed (cluster will reclaim context)", ex);
         }
     }

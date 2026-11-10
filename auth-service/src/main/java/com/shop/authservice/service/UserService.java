@@ -23,9 +23,6 @@ public interface UserService {
      */
     String delete(UUID id, String deletedBy);
 
-    /**
-     * Restores a previously soft-deleted user (admin only).
-     */
     String restore(UUID id);
 
     /**

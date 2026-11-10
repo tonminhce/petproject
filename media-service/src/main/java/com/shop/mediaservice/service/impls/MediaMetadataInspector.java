@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayInputStream;
 
 /**
- * M1 — upload-time metadata INSPECTION using metadata-extractor: logs which
+ * Upload-time metadata INSPECTION using metadata-extractor: logs which
  * classes of personal metadata the upload carried (EXIF, GPS, IPTC, XMP).
  * Logging only — raw metadata is never persisted anywhere; every stored byte
  * comes out of the thumbnailator re-encode, which drops all metadata blocks
@@ -41,8 +41,6 @@ class MediaMetadataInspector {
                 log.info("GPS metadata present in upload ({} tags) — removed by re-encode before storage", tagCount);
             }
         } catch (Exception inspectFailure) {
-            // Inspection is advisory — a file that survived magic-byte checks but
-            // confuses the extractor still proceeds to the render stage, which
             // enforces decodability. Never fail an upload from here.
             log.debug("Metadata inspection skipped (unreadable metadata block): {}", inspectFailure.toString());
         }

@@ -22,12 +22,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Backoffice campaign CRUD (spec §4.2).
- *
  * <p>{@code Campaign} carries {@code @SQLRestriction("deleted = false")}, so
  * soft-deleted rows are invisible to every lookup here — {@code existsByCode}
  * can never collide with a deleted campaign's code, and a deleted id 404s.
- *
  * <p>Delete guard (spec: usage keeps quota): a campaign with PENDING or
  * COMMITTED reservations cannot be deleted; RELEASED/EXPIRED rows are terminal
  * and don't block.
@@ -115,8 +112,6 @@ public class CampaignServiceImpl implements CampaignService {
         if (reservationRepository.existsByCampaignIdAndStatusIn(id, COUNTED_STATUSES)) {
             throw BusinessException.of(ErrorCode.CAMPAIGN_IN_USE, campaign.getCode());
         }
-        // Backoffice precedent (product-service ProductServiceImpl.delete):
-        // auditor as deletedBy actor, then explicit save.
         campaign.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
         campaignRepository.save(campaign);
     }

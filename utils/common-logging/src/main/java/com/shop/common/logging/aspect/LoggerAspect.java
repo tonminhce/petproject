@@ -17,21 +17,9 @@ import java.util.Arrays;
 
 /**
  * AOP aspect for {@link LogPerformance} and {@link Loggable} annotations.
- *
  * <p>Registered as a bean by {@link com.shop.common.logging.config.LoggingAutoConfiguration}
  * — NOT via {@code @Component} — so it is discovered regardless of the service's
  * component-scan base package.</p>
- *
- * <h3>Performance log format (INFO via {@code perfLogger})</h3>
- * <pre>
- * [action=Service.method] [duration=123ms] [result=SUCCESS] [title=...] [corrId=...] [input=...] [output=...]
- * </pre>
- *
- * <h3>Loggable log format (DEBUG via {@code LoggerAspect} logger)</h3>
- * <pre>
- * → Service.method(arg1, arg2)
- * ← Service.method → returnValue   (or WARN on error)
- * </pre>
  */
 @Aspect
 public class LoggerAspect {
@@ -44,10 +32,6 @@ public class LoggerAspect {
     public LoggerAspect(PerformanceLogProperties props) {
         this.props = props;
     }
-
-    // ----------------------------------------------------------------
-    // @LogPerformance — duration + optional input/output
-    // ----------------------------------------------------------------
 
     @Around("@annotation(logPerformance)")
     public Object aroundLogPerformance(ProceedingJoinPoint pjp,
@@ -74,10 +58,6 @@ public class LoggerAspect {
         }
     }
 
-    // ----------------------------------------------------------------
-    // @Loggable — entry / exit trace
-    // ----------------------------------------------------------------
-
     @Around("@annotation(loggable)")
     public Object aroundLoggable(ProceedingJoinPoint pjp,
                                  Loggable loggable) throws Throwable {
@@ -103,10 +83,6 @@ public class LoggerAspect {
             throw t;
         }
     }
-
-    // ----------------------------------------------------------------
-    // helpers
-    // ----------------------------------------------------------------
 
     private void logPerf(String action, String title, long durationMs,
                          String result, String inputs, String output) {

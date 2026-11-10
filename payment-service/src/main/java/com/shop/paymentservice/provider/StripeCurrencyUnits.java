@@ -5,17 +5,8 @@ import java.math.RoundingMode;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * C5 — Stripe minor-unit conversion helpers shared by the capture/refund
- * adapter and the webhook event mapping. Stripe wires amounts in the
- * currency's smallest unit; zero-decimal currencies (VND is the V1 fleet
- * currency, spec §8) travel as whole units.
- */
 public final class StripeCurrencyUnits {
 
-    /**
-     * Zero-decimal currencies per Stripe's documentation.
-     */
     private static final Set<String> ZERO_DECIMAL_CURRENCIES = Set.of(
             "BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "MGA",
             "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF");

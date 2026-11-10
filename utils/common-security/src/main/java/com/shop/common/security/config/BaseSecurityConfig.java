@@ -26,7 +26,6 @@ import java.util.List;
 
 /**
  * Default {@link SecurityFilterChain} for every resource server in the platform.
- *
  * <h3>Behavior</h3>
  * <ul>
  *   <li>CSRF disabled (stateless JWT auth)</li>
@@ -37,7 +36,6 @@ import java.util.List;
  *   <li>Authorities mapped via {@link JwtRolesConverter}</li>
  *   <li>CORS enabled when a {@link CorsConfigurationSource} bean is available</li>
  * </ul>
- *
  * <p>Services that need custom rules (e.g. method-level scope checks) declare
  * their own {@code SecurityFilterChain} bean — the
  * {@code @ConditionalOnMissingBean} ensures this one steps aside.</p>
@@ -96,15 +94,13 @@ public class BaseSecurityConfig {
      * normally does this from {@code spring.security.oauth2.resourceserver.jwt.issuer-uri},
      * but exposing it here keeps the module self-contained when a service
      * configures only {@code shop.security.issuer-uri}.
-     *
-     * <p>H33 — this factory returns a {@link LazyJwtDecoder} holder instead of
+     * <p>This factory returns a {@link LazyJwtDecoder} holder instead of
      * building the {@link NimbusJwtDecoder} directly. The eager build path
      * did a synchronous HTTP fetch of the OIDC discovery document, which made
      * every service hang on Keycloak being reachable at startup. The Holder
      * defers that fetch to the first JWT decode, with a background pre-warm so
      * the first request path is rarely affected.</p>
-     *
-     * <p>C1 fix — the validator chain now asserts (in order): issuer matches
+     * <p>The validator chain now asserts (in order): issuer matches
      * {@link SecurityProperties#issuerUri()}, exp/nbf timestamps are valid,
      * and — if {@code shop.security.expected-audiences} is set — the {@code aud}
      * claim intersects that list. Without the aud check a token issued for
@@ -137,14 +133,7 @@ public class BaseSecurityConfig {
             }));
         }
         if (!properties.expectedClientIds().isEmpty()) {
-            // F-040 — the provisioned Keycloak realm issues no 'aud' claim (no
-            // audience mapper, no client scopes), so the aud validator above can
             // never be satisfied. The 'azp' claim - the client the token was
-            // actually issued to - IS present on every token the realm mints
-            // (verified against Keycloak 26: user tokens carry
-            // azp=ecommerce-client, service tokens carry azp=<service-client>).
-            // Validating azp gives the fleet a real client-identity control
-            // that works against the realm as shipped.
             validators.add(new JwtClaimValidator<Object>("azp", azp -> {
                 if (!(azp instanceof String clientId) || clientId.isBlank()) {
                     return false;

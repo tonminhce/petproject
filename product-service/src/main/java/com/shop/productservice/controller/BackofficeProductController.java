@@ -29,12 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Backoffice entry point for product operations. Mixes two trust models
- * deliberately: the reindex list endpoint uses SERVICE+ADMIN (search-service
- * streams this with its client-credentials token; an ADMIN-only rule would 403
- * the production reindex), while human CRUD lives in ADMIN-only methods added
- * here under the C13 fix.
- *
  * <p>Each endpoint declares its required role explicitly. This keeps the security
  * policy local to the operation and avoids a redundant class-level guard.</p>
  */
@@ -57,8 +51,6 @@ public class BackofficeProductController {
         Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
         return ApiResponse.ok(productService.findAllDetail(filter, pageable));
     }
-
-    // C13 fix — product CRUD moved here from the storefront ProductController.
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

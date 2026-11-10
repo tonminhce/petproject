@@ -3,8 +3,6 @@ package com.shop.mediaservice.service;
 import java.util.UUID;
 
 /**
- * D3 delete side — soft delete (deleted_at marker) of an uploaded media.
- *
  * <p><strong>Task-3 binding ruling:</strong> NO outbox row is written here.
  * The {@code MediaDeleted} emission wires up in Task 4, when the
  * {@code OutboxEvent} entity lands and the lifecycle write can carry the

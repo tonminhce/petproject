@@ -20,7 +20,6 @@ import java.util.UUID;
  * Stock record for a product. Hard-delete semantics - NOT soft-deletable.
  * {@code @Version} provides optimistic locking to prevent lost updates
  * when concurrent reserve/commit/release operations touch the same row.
- *
  * <p>Deliberately does NOT extend {@code AbstractMappedEntity}: a stock row is
  * mutable numeric state, not an audited business record — it carries a single
  * {@code lastUpdated} marker instead of the audit columns, which keeps the

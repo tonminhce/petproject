@@ -36,12 +36,10 @@ public class IdempotencyServiceImpl implements IdempotencyService {
      * would bypass the INSERT and silently merge, so {@code DataIntegrityViolation}
      * never fires on a plain save; the explicit existence check is what short-circuits
      * replays, and the unique composite PK is the final arbiter on concurrent inserts.
-     *
      * <p>The insert runs in its own committed transaction (independent of the caller's
      * saga TX) so other requests can observe the in-flight row during the saga, and a
      * lost same-key race rolls back cleanly without poisoning the caller's transaction
      * (review finding I1).</p>
-     *
      * <p>Pool note (review finding 7): while the caller's transaction is active, this
      * template holds a SECOND pooled connection for the whole saga — including the
      * remote pricing/reserve calls. Hikari's pool must be sized with that in mind
@@ -69,13 +67,7 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     public Optional<OrderResponse> begin(String key, String actor, String requestHash) {
         if (key == null) return Optional.empty();
 
-        // C6 fix — the previous design opened TWO pooled connections during the
-        // in-flight insert: the caller's saga TX held conn #1 for the existence
-        // SELECT, then REQUIRES_NEW opened conn #2 for the INSERT. Hikari's pool
         // had to be sized to 2 × concurrent sagas, exhausting at half the
-        // theoretical throughput. Folding both queries into one REQUIRES_NEW
-        // tx holds a single connection for the brief lifetime of begin() and
-        // releases it the instant we return.
         Optional<OrderResponse> result = requiresNewTemplate.execute(status -> {
             Optional<IdempotencyKey> preExisting = repository.findByActorAndKey(actor, key);
             if (preExisting.isPresent()) {
@@ -87,9 +79,6 @@ public class IdempotencyServiceImpl implements IdempotencyService {
                 return Optional.<OrderResponse>empty();  // owner — proceed with saga
             } catch (DataIntegrityViolationException ex) {
                 // Lost a same-key race: the winner's insert committed first.
-                // Re-read inside the same short-lived tx (it sees the winner's
-                // committed row because the collision aborted only our flush,
-                // not the surrounding tx). Resolve like any other collision —
                 // never leak a raw constraint violation as a 500.
                 IdempotencyKey winner = repository.findByActorAndKey(actor, key)
                     .orElseThrow(() -> ex);
@@ -102,7 +91,6 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     private Optional<OrderResponse> resolve(IdempotencyKey existing, String requestHash, String key) {
         if (existing.getResponseStatus() != 0) {
             // Complete — but spec §5.6 requires hash match before replay.
-            // Same key + different payload is a 409, not a silent replay.
             if (!existing.getRequestHash().equals(requestHash)) {
                 throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
             }
@@ -142,13 +130,10 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         try {
             repository.findByActorAndKey(actor, key)
                 .filter(ik -> ik.getResponseStatus() == 0)
-                // Defense-in-depth: only ever delete the row THIS execution created —
-                // a hash mismatch means the row belongs to a different payload.
                 .filter(ik -> Objects.equals(ik.getRequestHash(), requestHash))
                 .ifPresent(repository::delete);
         } catch (Exception ex) {
             log.warn("Failed to abort in-flight idempotency key {}/{}: {}", actor, key, ex.getMessage());
-            // Row will be TTL-purged (rev 2 fallback)
         }
     }
 

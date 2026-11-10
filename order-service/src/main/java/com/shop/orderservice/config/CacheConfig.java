@@ -22,7 +22,6 @@ public class CacheConfig {
 
     /**
      * Builds the Redis cache manager with IMMEDIATE (synchronous) cache writes.
-     *
      * <p>RACE this overrides (proven with Redis MONITOR wire evidence): spring-data-redis
      * 4.1.1's {@code DefaultRedisCacheWriter} defaults to {@code asynchronousWrites=true} —
      * {@code put()} dispatches the Redis {@code SET} fire-and-forget on a Netty/Reactor
@@ -32,7 +31,6 @@ public class CacheConfig {
      * duplicate downstream fetch. There is no Boot {@code spring.cache.redis.*} property for
      * this — it must be set on the writer via {@code immediateWrites()}, which restores
      * synchronous put/clear semantics (writes block until visible).</p>
-     *
      * <p>{@code .enableStatistics()} still applies on top of this writer (the builder wraps it
      * via {@code withStatisticsCollector}), keeping the order.cache.hit/miss gauges
      * (OrderMetrics) working. {@code .transactionAware()} is orthogonal: it defers to
@@ -44,12 +42,8 @@ public class CacheConfig {
             RedisConnectionFactory connectionFactory) {
         var jacksonSerializer = productPriceSerializer(objectMapper);
         return builder -> builder
-                // Immediate writes: async put default raced same-TX readers (duplicate
-                // downstream fetch). No Boot property exists for this.
                 .cacheWriter(RedisCacheWriter.create(connectionFactory, config -> config.immediateWrites()))
                 // Required for the order.cache.hit/miss gauges (OrderMetrics) — without
-                // it the cache writer uses a NoOp statistics collector and counters
-                // stay at zero forever.
                 .enableStatistics()
                 .cacheDefaults(defaultConfig(jacksonSerializer))
                 .withCacheConfiguration("productPrice", defaultConfig(jacksonSerializer).entryTtl(PRODUCT_PRICE_TTL))
@@ -62,7 +56,6 @@ public class CacheConfig {
      * {@code @class} hint — a cache HIT then deserializes to a {@code LinkedHashMap}
      * and the {@code @Cacheable} proxy throws {@code ClassCastException}
      * (review finding C1; regression-guarded by CacheSerializerRoundTripTest).
-     *
      * <p>CRITICAL (re-review finding 1): {@code build()} MUTATES the mapper it
      * receives ({@code setDefaultTyping} + NullValue module). It must therefore
      * receive a PRIVATE copy — handing it the shared Boot bean would inject

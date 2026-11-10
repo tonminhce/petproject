@@ -27,8 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * into synchronous "publish and wait" semantics with a bounded timeout, and
  * translates {@link Exception} into {@link KafkaPublishException} so callers
  * can use a single error type.
- *
- * <h3>R1 fix — string passthrough</h3>
+ * <h3>String passthrough</h3>
  * The fleet's outbox contract is: callers pass a JSON-as-String payload (already
  * serialised by the producer's {@code objectMapper.writeValueAsString(...)}).
  * This publisher FORWARDS that String as raw UTF-8 bytes. There is exactly one
@@ -39,20 +38,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * unwrap-once) read this single-encoded wire directly and still tolerate the
  * legacy pre-R1 double-encoded shape for in-flight records (H-1
  * defense-in-depth).
- *
  * <p>If a caller passes a non-String value (rare; reserved for tests / future
  * typed producers), the value is coerced via {@link Object#toString()} — this is
  * the SAME contract the relay sites have always had in practice, and tests cover
  * the coercion. For any caller that needs a real POJO on the wire, prefer a
  * dedicated bean over reusing this publisher.</p>
- *
- * <p>D3 — before a record is handed to the template, the W3C
+ * <p>Before a record is handed to the template, the W3C
  * {@code traceparent} header (plus {@code tracestate} when the upstream
  * supplied one) is injected from the CURRENT span context here, so every
  * fleet publisher propagates the trace without per-callsite effort. No
  * header is injected when no span is active.</p>
- *
- * <h3>H44 — async batch fan-out</h3>
+ * <h3>Async batch fan-out</h3>
  * The previous synchronous {@link #publish(String, String, Object)} blocked
  * the relay on a per-event {@code future.get(10s)} — 50 events could take
  * 500s of wall time, which is why the PaymentOutboxRelay drained one row
@@ -130,14 +126,13 @@ public class KafkaMessagePublisher {
     }
 
     /**
-     * H44 — publish a batch of records asynchronously and wait for the
+     * Publish a batch of records asynchronously and wait for the
      * slowest one with a bounded timeout. Each record is fired in parallel
      * via {@code KafkaTemplate.send} (which returns a
      * {@link CompletableFuture}); a {@link java.util.concurrent.CountDownLatch}
      * countdowns on each completion (success OR failure) and the relay thread
      * blocks once on {@code await(timeout)} so the relay's wall-clock budget
      * becomes roughly the slowest single publish, not the sum.
-     *
      * <p>The wire contract is unchanged: every record here goes through
      * {@link #traceparentRecord(String, String, String)} so the traceparent
      * header + JSON-as-String value are identical to the sync path.</p>
@@ -170,7 +165,6 @@ public class KafkaMessagePublisher {
                 future = kafkaTemplate.send(record);
             } catch (RuntimeException ex) {
                 // The send() call itself rejected (e.g. buffer full, broker
-                // unreachable on the producer side) — count it and move on.
                 sent.incrementAndGet();
                 latch.countDown();
                 log.warn("Async Kafka publish enqueue failed topic={} key={}", msg.topic(), msg.key(), ex);
@@ -213,15 +207,11 @@ public class KafkaMessagePublisher {
         return record;
     }
 
-    /**
-     * H44 — a single outbox-style message for the batch path. The relay
-     * constructs one per row; the publisher fans them out in parallel.
-     */
     public record OutboxMessage(String topic, String key, Object value) {
     }
 
     /**
-     * H44 — the result of {@link #publishBatch(List, long, java.util.concurrent.TimeUnit)}.
+     * The result of {@link #publishBatch(List, long, java.util.concurrent.TimeUnit)}.
      * {@code sent} counts every record that was either enqueued OR rejected
      * on enqueue (because we counted both). {@code success} counts only the
      * ones the broker ACKed. {@code completed} is true when the latch

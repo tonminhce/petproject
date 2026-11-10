@@ -61,8 +61,6 @@ public class RatingEventService {
         event.setAggregateType(AGGREGATE_TYPE);
         // Spec D4: Kafka message key = productId (per-product partition
         // ordering) and the relay keys on aggregateId — so the partition key
-        // lives here, not the rating row id. Rating identity still travels in
-        // payload.ratingId and eventId.
         event.setAggregateId(rating.getProductId());
         event.setEventType(EVENT_TYPE);
         event.setTopic(TOPIC);
@@ -92,18 +90,12 @@ public class RatingEventService {
         event.setStatus(OutboxStatus.PENDING);
         event.setRetryCount(0);
         outboxRepository.save(event);
-        // Spec D7: incremented after the outbox row write, inside the tx —
-        // every lifecycle write hits record() exactly once, so the counter
-        // commits atomically with the event it counts (rollback = no count).
         ratingMetrics.recordSubmitted(action);
     }
 
-    // JPQL AVG over an integral column returns Double on some Hibernate
-    // versions, BigDecimal on others — normalize before scaling.
     /**
      * F-069 (P1) — the aggregate query returns a NULL average when the product
      * has no VISIBLE rating left.
-     *
      * <p>The aggregation runs over {@code hidden = false and deleted = false},
      * so hiding the only rating of a product leaves the average NULL. The
      * previous implementation called {@code String.valueOf(null)}, which
@@ -118,7 +110,6 @@ public class RatingEventService {
             return bd;
         }
         if (raw == null) {
-            // No visible rating remains: the average is zero, not an error.
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
         return new BigDecimal(String.valueOf(raw));

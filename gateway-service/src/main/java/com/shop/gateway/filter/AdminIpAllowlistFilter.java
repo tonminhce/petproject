@@ -18,15 +18,13 @@ import java.net.UnknownHostException;
 import java.util.List;
 
 /**
- * D5 — denies every request whose client IP is outside {@code ADMIN_IP_ALLOWLIST},
+ * Denies every request whose client IP is outside {@code ADMIN_IP_ALLOWLIST},
  * expressed as comma-separated CIDRs. Because the env is absent in dev, the
  * filter starts INACTIVE and becomes a fail-closed deny-by-default control the
  * moment the variable carries content.
- *
  * <p>Bypass list (never IP-blocked — third-party callers and probes have no
  * office IP): payment/shipping webhook paths ({@code /api/v1/webhooks/**}) and
  * the actuator health endpoint (incl. liveness/readiness probes).</p>
- *
  * <p>Evasive paths (percent-encoded — raw &ne; decoded, incl. double encoding
  * and malformed escapes — or carrying matrix variables) are rejected with the
  * fleet 400 envelope before any bypass/IP decision — see
@@ -98,7 +96,6 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
 
     private boolean isAllowed(final String clientIp) {
         // Literal-IP guard: InetAddress.getByName would otherwise perform a
-        // blocking DNS lookup on attacker-controlled X-Forwarded-For input.
         if (!isLiteralAddress(clientIp)) {
             return false;
         }

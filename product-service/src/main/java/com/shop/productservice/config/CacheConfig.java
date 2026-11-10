@@ -18,23 +18,19 @@ import java.time.Duration;
 
 /**
  * Redis cache tuning for the catalog read paths.
- *
  * <p>The {@code RedisCacheManager} itself is built by Spring Boot's cache
  * autoconfiguration ({@code spring.cache.type: redis}); this class only
  * customises the per-cache entries so each one can carry its own TTL instead of
  * inheriting the global {@code spring.cache.redis.time-to-live} fallback.</p>
- *
  * <p>Note the Boot 4 package: {@code RedisCacheManagerBuilderCustomizer} lives in
  * {@code org.springframework.boot.cache.autoconfigure} (module
  * {@code spring-boot-cache}), no longer in {@code o.s.b.autoconfigure.cache}.</p>
- *
  * <p><b>Important:</b> Spring Boot 4 + Spring Data Redis 4.x defaults to
  * {@code JdkSerializationRedisSerializer}, which can't serialize records
  * ({@code ProductDetailResponse}, {@code ProductSummaryResponse}). We wire a
  * {@code GenericJackson2JsonRedisSerializer} with a hand-tuned ObjectMapper
  * (JavaTimeModule for {@code Instant}, polymorphic typing for record types) so
  * the same serializer survives cache round-trips for any cached type.</p>
- *
  * <p><b>Immediate writes (fleet rule 6):</b> spring-data-redis 4.1.1's
  * {@code DefaultRedisCacheWriter} defaults to {@code asynchronousWrites=true} —
  * {@code put()} dispatches the Redis {@code SET} fire-and-forget on a
@@ -63,12 +59,7 @@ public class CacheConfig {
     @Bean
     public RedisCacheManagerBuilderCustomizer redisCacheManagerCustomizer(
             RedisConnectionFactory connectionFactory) {
-        // enableStatistics() is on RedisCacheManagerBuilder (Spring Data Redis
-        // 4.x), not on the per-cache RedisCacheConfiguration. Wired here so
-        // ProductMetrics can read hit/miss via RedisCache.getStatistics().
         return builder -> builder
-                // Immediate writes: async put default raced same-request readers
-                // (fleet rule 6). No Boot property exists for this.
                 .cacheWriter(RedisCacheWriter.create(connectionFactory, config -> config.immediateWrites()))
                 .enableStatistics()
                 .withCacheConfiguration("product", cacheConfig(PRODUCT_TTL))
@@ -83,11 +74,8 @@ public class CacheConfig {
      * {@code <cacheName>::<key>} key layout.
      */
     private RedisCacheConfiguration cacheConfig(Duration ttl) {
-        // Build the ObjectMapper with JavaTimeModule so Instant / LocalDateTime
         // round-trip cleanly. We then hand it to the serializer via the builder,
-        // which also enables the default-typing writer that emits a @class
         // hint on every serialized value — without it, the read path
-        // can't reconstruct the original record type.
         ObjectMapper mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

@@ -22,12 +22,10 @@ import org.springframework.web.client.RestClient;
  * copy {@code @Qualifier} from fields to constructor params, so Spring wires
  * by parameter NAME here ({@code productRestClient}) and clients inject with
  * {@code @Qualifier("productRestClient")}.
- *
- * <p>P1-3 — no auth header is set HERE (shared builder). Authorization is
+ * <p>3 — no auth header is set HERE (shared builder). Authorization is
  * attached PER-CALL inside {@code MediaReferenceClient} — the header value
  * comes from {@code ServiceTokenProvider.getToken()}.</p>
- *
- * <p>R1 — traceparent propagation is central: the {@code RestClient.Builder}
+ * <p>Traceparent propagation is central: the {@code RestClient.Builder}
  * bean is enriched by common-spring's
  * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
  * that bean and no interceptor is hand-added here.</p>
@@ -43,7 +41,6 @@ public class ProductClientConfig {
             .baseUrl(props.baseUrl())
             .requestFactory(factory)
             .defaultHeader("Accept", "application/json")
-            // propagate the correlation id to the downstream product-service call.
             .requestInitializer(req -> {
                 String corrId = MDC.get(MdcKey.CORRELATION_ID);
                 if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);

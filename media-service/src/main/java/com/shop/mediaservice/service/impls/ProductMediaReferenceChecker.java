@@ -14,7 +14,6 @@ import java.util.UUID;
  * many live products still reference the media, and answers REFERENCED when
  * the count is non-zero. Replaces the fail-safe-always Noop default of the
  * media epic (F-3) — purge candidates are now checked for real.
- *
  * <p><strong>PURGE POLICY (H-4, fail-safe):</strong> when the checker cannot
  * PROVE the media is unreferenced — product outage, non-2xx, timeout,
  * malformed body (client answers empty) — the answer is REFERENCED: the purge

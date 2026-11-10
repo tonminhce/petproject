@@ -31,7 +31,6 @@ import java.util.function.LongSupplier;
  * A PENDING order older than {@code order.reconciliation.stuck-minutes} means its
  * confirm orchestration died mid-flight. The reservation ledger is polled and the
  * order finalized without re-running the commit orchestration:
- *
  * <ul>
  *   <li>all applicable reservations COMMITTED → auto-confirm (AUTO_CONFIRMED_BY_RECON)</li>
  *   <li>all applicable reservations terminal (RELEASED/EXPIRED) → auto-cancel
@@ -41,7 +40,6 @@ import java.util.function.LongSupplier;
  *       structured log for alerting; a missing reservation row inside the 30-min TTL
  *       window is inconsistent data that needs human eyes</li>
  * </ul>
- *
  * <p>Null reservation ids (no promotion reservation, legacy item without stock
  * reservation) are not-applicable — skipped, never mixed (D5 analog). Mutations set
  * fields directly (like {@code transitionStatus}) and go through orderRepository.save +
@@ -50,16 +48,6 @@ import java.util.function.LongSupplier;
  * the commit orchestration and recurse. Races with a concurrent admin transition are
  * caught by the Order {@code @Version} guard; the losing write rolls back and the
  * order is re-examined next cycle.</p>
- *
- * <h3>H38 — bounded chunking + parallel fan-out</h3>
- * The pre-fix design loaded ALL stuck orders in a single unbounded
- * {@code findByStatusAndCreatedAtBefore(...)} and processed them serially —
- * one poll + one HTTP per order. A backlog of 1000 orders held the scheduler
- * thread for 1000 round-trips. The fix loads in chunks of
- * {@code order.reconciliation.batch-size} (default 50) and fans the per-order
- * reconcile across an executor — N orders complete in roughly the slowest
- * single remote poll, not the sum. The chunk size caps memory; the fan-out
- * caps wall time.
  */
 @Component
 @Slf4j
@@ -122,11 +110,6 @@ public class OrderReconciliationScheduler {
     @Scheduled(fixedDelayString = "${order.reconciliation.interval-ms:300000}")
     public void reconcileStuckOrders() {
         Instant cutoff = stuckCutoff();
-        // H38 — bounded chunk: load up to batchSize stuck orders per pass. A
-        // backlog of 1000 orders is processed as 20 successive batches (each
-        // tick); a scheduler tick that finds >batchSize orders leaves the rest
-        // for the next tick. The repository overload takes Pageable so the
-        // SQL LIMIT is set in the DB layer (cheap, no over-fetch).
         List<Order> candidates = orderRepository.findByStatusAndCreatedAtBefore(
             OrderStatus.PENDING, cutoff,
             PageRequest.of(0, batchSize));
@@ -134,9 +117,6 @@ public class OrderReconciliationScheduler {
         log.info("RECONCILIATION_SCAN candidates={} batch_size={} cutoff={}",
             candidates.size(), batchSize, cutoff);
 
-        // H38 — fan-out per-order reconcile in parallel so a 50-order chunk
-        // completes in ~slowest poll rather than sum. The catch below isolates
-        // one poisoned order — the rest of the chunk keeps its progress.
         List<CompletableFuture<Void>> futures = new ArrayList<>(candidates.size());
         for (Order order : candidates) {
             futures.add(CompletableFuture.runAsync(() -> {
@@ -227,7 +207,7 @@ public class OrderReconciliationScheduler {
     }
 
     /**
-     * H46 — the gauge supplier runs on every Prometheus scrape (default 15s).
+     * The gauge supplier runs on every Prometheus scrape (default 15s).
      * Without memoization each scrape issues a {@code COUNT(*)} against
      * {@code orders}; with hundreds of scrapes per minute the table sees
      * orders of magnitude more read traffic than the reconcile sweep itself.
@@ -262,7 +242,6 @@ public class OrderReconciliationScheduler {
             }
         }
 
-        // VisibleForTesting — force the next get() to re-invoke the supplier.
         void invalidateForTest() {
             synchronized (this) {
                 this.lastUpdatedNanos = 0L;

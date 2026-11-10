@@ -18,7 +18,6 @@ import java.util.UUID;
  * still reference a given media. NOT part of the public API — never routed to
  * browsers; the only caller is media-service's
  * {@code MediaReferenceClient} with a client-credentials SERVICE token.
- *
  * <p>Security: {@code hasRole('SERVICE')} — deliberately NARROWER than the
  * fleet's human-facing {@code hasAnyRole('SERVICE','ADMIN')} convention
  * (order verify-purchase): an internal machine endpoint exists for service

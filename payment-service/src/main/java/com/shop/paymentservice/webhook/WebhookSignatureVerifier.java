@@ -14,9 +14,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Webhook signature verifier for the payment fleet.
- *
  * <h3>H8 + H27 — Stripe-style signature scheme</h3>
- *
  * Two on-the-wire shapes are accepted:
  * <ol>
  *   <li><b>Stripe-style header</b> — {@code "t=<unix_seconds>,v1=<hex_hmac>"}.
@@ -29,14 +27,12 @@ import org.slf4j.LoggerFactory;
  *       {@code sha256=} prefix is the bug being fixed — anything other than the
  *       two accepted shapes above is rejected).</li>
  * </ol>
- *
  * <p>The Stripe-style variant <b>also</b> enforces H27 timestamp/replay
  * protection: when the supplied header carries a {@code t=...} component, the
  * verifier rejects the request unless {@code |now - t| <= TOLERANCE_SECONDS}
  * (default 5 min, overridable). The {@link #verify(String, byte[], String, Clock)}
  * overload lets a caller pin the clock in tests for deterministic expiry
  * scenarios without exposing the clock globally.</p>
- *
  * <p>Rejection is all-or-nothing — the verifier never partial-accepts a
  * malformed header. The compare is constant-time
  * ({@link MessageDigest#isEqual(byte[], byte[])}) to defeat timing oracles.</p>
@@ -89,10 +85,8 @@ public final class WebhookSignatureVerifier {
             return false;
         }
 
-        // Branch 1 — Stripe-style header: "t=<ts>,v1=<hex>"
         StripeHeader stripe = parseStripeHeader(signatureHeader);
         if (stripe != null) {
-            // H27 — replay protection (only enforced when the header carries a t= component).
             // We trust the wire timestamp over the caller's declared value when both exist
             // because the wire is the attacker-controlled surface.
             long wireTs = stripe.timestampSeconds;
@@ -104,12 +98,7 @@ public final class WebhookSignatureVerifier {
                 return false;
             }
             String signedPayload = wireTs + "." + new String(rawBody, StandardCharsets.UTF_8);
-            // F-024 — parseStripeHeader only validates the LENGTH of v1 (64),
             // not that it is hexadecimal. HexFormat.parseHex throws
-            // IllegalArgumentException for a 64-character non-hex string, which
-            // escaped as an HTTP 500 on an unauthenticated endpoint instead of
-            // a clean signature rejection. Treat any unparseable value as an
-            // invalid signature.
             byte[] provided;
             try {
                 provided = HexFormat.of().parseHex(stripe.v1Hex);
@@ -120,7 +109,6 @@ public final class WebhookSignatureVerifier {
             return constantTimeEquals(provided, hmac(secret, signedPayload));
         }
 
-        // Branch 2 — bare 64-char lowercase hex (legacy HMAC over rawBody).
         if (signatureHeader.length() != SHA256_HEX_LENGTH) {
             return false;
         }

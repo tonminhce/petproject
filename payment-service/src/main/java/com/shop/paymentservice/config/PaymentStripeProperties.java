@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * C5 Task 1 — Stripe provider credentials + behaviour (spec §3). Env-driven
  * activation: {@code SHOP_PAYMENT_PROVIDER=stripe} selects the StripeProvider
  * bean; this record carries the keys it needs.
- *
  * <ul>
  *   <li>{@code secret-key} — {@code SHOP_PAYMENT_STRIPE_SECRET_KEY} (sk_test_*
  *       / sk_live_*); blank under the mock default, so binding must tolerate

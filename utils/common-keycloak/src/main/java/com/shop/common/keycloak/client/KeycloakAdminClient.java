@@ -168,7 +168,6 @@ public class KeycloakAdminClient {
     /**
      * Revoke every active session (and therefore every refresh token) for a
      * user.
-     *
      * <p>Keycloak's admin {@code reset-password} endpoint changes the
      * credential but does NOT end the user's existing sessions, so a refresh
      * token captured before a password change keeps working. Calling the

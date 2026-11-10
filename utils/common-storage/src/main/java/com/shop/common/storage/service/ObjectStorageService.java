@@ -6,7 +6,6 @@ import java.time.Duration;
 
 /**
  * Backend-agnostic façade over an S3-compatible object store.
- *
  * <p>Single-argument overloads operate on the configured default bucket
  * ({@code shop.storage.bucket}); the bucket-qualified overloads target any bucket.
  * Implementations translate SDK failures into

@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * C13 fix — brand CRUD moved out of the storefront {@link BrandController}
+ * Brand CRUD moved out of the storefront {@link BrandController}
  * into this ADMIN-only backoffice entry point.
  */
 @RestController

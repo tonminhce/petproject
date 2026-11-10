@@ -22,7 +22,6 @@ import java.util.UUID;
  * and an unhelpful 403 is worse than the filter chain's own 401 for
  * anonymous callers; authentication is still enforced by the resource-server
  * chain on this edge-routed path).
- *
  * <p>GET answers a 302 whose Location is the presigned GET URL — bytes never
  * stream through media-service. HEAD is the existence check WITHOUT presign
  * (200/404), product's Option C write-time validation endpoint. The two are

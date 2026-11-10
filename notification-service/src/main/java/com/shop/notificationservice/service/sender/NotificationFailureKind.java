@@ -1,7 +1,7 @@
 package com.shop.notificationservice.service.sender;
 
 /**
- * C17 — classification of a delivery failure: whether the retry scheduler
+ * Classification of a delivery failure: whether the retry scheduler
  * should get another shot at it, or whether retrying is pointless.
  */
 public enum NotificationFailureKind {

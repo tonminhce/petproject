@@ -28,12 +28,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * H14 — product snapshots used to be fetched serially in a {@code for} loop,
+ * Product snapshots used to be fetched serially in a {@code for} loop,
  * one HTTP round-trip per cart item. With N items the wall time was
  * {@code N * RTT} — a 50-item cart blocked the order thread for 50 round
  * trips. The fix fans the snapshot fetches out via {@link CompletableFuture}
  * on a small executor: the slowest single fetch sets the budget.
- *
  * <p>Traceparent propagation is fleet-wide via
  * {@code com.shop.common.web.TraceparentInterceptor} on the
  * {@code RestClient.Builder} — the call sites don't need to do anything.</p>
@@ -64,14 +63,10 @@ public class PricingServiceImpl implements PricingService {
     @Override
     public PricingBreakdown calculate(UUID orderId, UUID userId, List<CartItem> items, String couponCode) {
         // P1-5 — Reject couponCode upfront if promotion service is disabled.
-        // Spec §5.2: "Có couponCode mà promotion disabled → 400 ORDER_PROMOTION_INVALID
-        // (không âm thầm bỏ qua discount user nhập)". Silent ZERO discount would be
-        // a UI lie — user sees a coupon field that doesn't work.
         if (couponCode != null && !couponCode.isBlank() && !promotionClient.isEnabled()) {
             throw BusinessException.of(ErrorCode.ORDER_PROMOTION_INVALID, couponCode);
         }
 
-        // 1. H14 — fetch product snapshots in parallel via CompletableFuture.
         Map<String, String> mdcContext = MDC.getCopyOfContextMap();
         Map<UUID, CompletableFuture<ProductSnapshot>> futures = new HashMap<>();
         for (CartItem item : items) {
@@ -109,7 +104,6 @@ public class PricingServiceImpl implements PricingService {
             subtotal = subtotal.add(lineTotal);
         }
 
-        // 2. Apply promotion if coupon provided
         UUID promotionReservationId = null;
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (couponCode != null && !couponCode.isBlank()) {
@@ -120,19 +114,17 @@ public class PricingServiceImpl implements PricingService {
             discountAmount = promoResp.discountAmount();
         }
 
-        // 3. Calculate tax on (subtotal - discount)
         BigDecimal taxableAmount = subtotal.subtract(discountAmount);
         var taxResp = calculateTaxSafely(taxableAmount, promotionReservationId);
         BigDecimal taxAmount = taxResp.taxAmount();
 
-        // 4. Compute total
         BigDecimal total = taxableAmount.add(taxAmount);
 
         return new PricingBreakdown(subtotal, taxAmount, discountAmount, total, snapshots, promotionReservationId);
     }
 
     /**
-     * T7 — the promotion reservation (step 2) already exists REMOTELY when the tax
+     * The promotion reservation (step 2) already exists REMOTELY when the tax
      * call runs; a tax failure must not leak it until the TTL sweep. Best-effort
      * plain {@code /release} (the saga's compensation convention — the commit-side
      * {@code /release-committed} belongs to the confirm coordinator), then rethrow

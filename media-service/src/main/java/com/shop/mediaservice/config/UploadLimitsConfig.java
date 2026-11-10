@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import java.nio.file.Paths;
 
 /**
- * D1 — the servlet multipart ceiling is DERIVED from {@code media.max-upload},
+ * The servlet multipart ceiling is DERIVED from {@code media.max-upload},
  * never configured independently: it sits one megabyte above the business cap
  * so Spring's parser never fires first — oversize uploads reach the pipeline's
  * own size guard and surface as 413 MED-12002 (D6), not the generic ERR-0413.

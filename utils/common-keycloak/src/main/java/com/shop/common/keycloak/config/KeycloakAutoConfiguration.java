@@ -18,9 +18,6 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
-/**
- * Auto-configuration for Keycloak clients.
- */
 @AutoConfiguration
 @ConditionalOnClass(RestClient.class)
 @EnableConfigurationProperties(KeycloakProperties.class)
@@ -29,12 +26,11 @@ public class KeycloakAutoConfiguration {
     private static final TextMapSetter<HttpHeaders> TRACE_HEADERS_SETTER = HttpHeaders::set;
 
     /**
-     * D3 — W3C traceparent propagation. common-keycloak cannot depend on
+     * W3C traceparent propagation. common-keycloak cannot depend on
      * common-spring (cycle: common-spring depends on common-keycloak), so the
      * injection mirrors {@code TraceparentInterceptor} inline instead of
      * reusing the shared class.
-     *
-     * <p>R1 — deliberately NOT folded into common-spring's
+     * <p>Deliberately NOT folded into common-spring's
      * {@code traceparentRestClientBuilderPostProcessor}: the builders here are
      * transient values consumed inside the {@code KeycloakTokenClient} /
      * {@code KeycloakAdminClient} bean construction, never exposed as

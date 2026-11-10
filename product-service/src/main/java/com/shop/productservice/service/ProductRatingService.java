@@ -32,9 +32,7 @@ public class ProductRatingService {
         Product product = found.get();
         product.setAvgRating(event.avgRating());
         product.setRatingCount(event.ratingCount());
-        // Spec D4: publish the ProductUpdated snapshot AFTER the save, inside
         // this transaction — REQUIRED propagation joins the outbox insert so
-        // the product row and the event row commit atomically.
         Product saved = productRepository.save(product);
         productEventPublisher.publishUpdated(saved);
     }

@@ -3,11 +3,6 @@ package com.shop.authservice.dto.request;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Partial update payload for the authenticated user (or admin acting on a user).
- * All fields are optional; the service layer skips nulls. H3 — Java record
- * (fleet convention rule 1).
- */
 public record UpdateUserRequest(
         @Size(min = 6, max = 50, message = "The fullName must be 6 characters or more")
         String fullName,

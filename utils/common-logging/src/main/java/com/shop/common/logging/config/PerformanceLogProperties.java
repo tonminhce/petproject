@@ -4,9 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration for the AOP performance logging aspect ({@link com.shop.common.logging.LogPerformance}).
- *
  * <p>Bound from {@code shop.web.logging.performance.*}.</p>
- *
  * <pre>{@code
  * shop:
  *   web:

@@ -5,13 +5,11 @@ import org.springframework.http.HttpStatus;
 /**
  * Centralized error catalog. Each entry is the contract between services and clients:
  * a stable machine-readable {@code code}, an i18n message key, and the HTTP status to return.
- *
  * <p>Why an enum: gives compile-time exhaustiveness checks at every {@code switch} site
  * and prevents typos in {@code code} / {@code messageKey} drift.</p>
  */
 public enum ErrorCode implements ErrorCatalog {
 
-    // ---- Generic ----
     BAD_REQUEST("ERR-0400", "error.bad.request", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED("ERR-0401", "error.unauthorized", HttpStatus.UNAUTHORIZED),
     FORBIDDEN("ERR-0403", "error.forbidden", HttpStatus.FORBIDDEN),
@@ -29,7 +27,6 @@ public enum ErrorCode implements ErrorCatalog {
     GATEWAY_TIMEOUT("ERR-0504", "error.gateway.timeout", HttpStatus.GATEWAY_TIMEOUT),
     ACCESS_DENIED("ERR-0403-A", "access.denied", HttpStatus.FORBIDDEN),
 
-    // ---- Auth domain ----
     AUTH_TOKEN_INVALID("AUTH-1001", "auth.token.invalid", HttpStatus.UNAUTHORIZED),
     AUTH_TOKEN_EXPIRED("AUTH-1002", "auth.token.expired", HttpStatus.UNAUTHORIZED),
     AUTH_USERNAME_EXISTS("AUTH-1003", "auth.username.exists", HttpStatus.CONFLICT),
@@ -40,7 +37,6 @@ public enum ErrorCode implements ErrorCatalog {
     AUTH_PASSWORD_MANAGED_BY_KEYCLOAK("AUTH-1008", "auth.password.managed.by.keycloak", HttpStatus.BAD_REQUEST),
     AUTH_INVALID_CREDENTIALS("AUTH-1009", "auth.invalid.credentials", HttpStatus.UNAUTHORIZED),
 
-    // ---- Product domain ----
     PRODUCT_NOT_FOUND("PRD-2001", "product.not.found", HttpStatus.NOT_FOUND),
     PRODUCT_NAME_EXISTS("PRD-2002", "product.name.exists", HttpStatus.CONFLICT),
     CATEGORY_NOT_FOUND("PRD-2003", "category.not.found", HttpStatus.NOT_FOUND),
@@ -51,7 +47,6 @@ public enum ErrorCode implements ErrorCatalog {
     CATEGORY_SLUG_EXISTS("PRD-2008", "category.slug.exists", HttpStatus.CONFLICT),
     CATEGORY_CYCLE_DETECTED("PRD-2009", "category.cycle.detected", HttpStatus.CONFLICT),
 
-    // ---- Inventory domain ----
     WAREHOUSE_NOT_FOUND("INV-3001", "warehouse.not.found", HttpStatus.NOT_FOUND),
     STOCK_INSUFFICIENT("INV-3002", "stock.insufficient", HttpStatus.CONFLICT),
     RESERVATION_NOT_FOUND("INV-3003", "reservation.not.found", HttpStatus.NOT_FOUND),
@@ -62,20 +57,16 @@ public enum ErrorCode implements ErrorCatalog {
     INVENTORY_NOT_FOUND("INV-3008", "inventory.not.found", HttpStatus.NOT_FOUND),
     INVENTORY_IN_USE("INV-3009", "inventory.in.use", HttpStatus.CONFLICT),
 
-    // ---- Order domain ----
     ORDER_NOT_FOUND("ORD-4001", "order.not.found", HttpStatus.NOT_FOUND),
     CART_NOT_FOUND("ORD-4002", "cart.not.found", HttpStatus.NOT_FOUND),
 
-    // ---- Payment domain ----
     PAYMENT_FAILED("PAY-5001", "payment.failed", HttpStatus.BAD_REQUEST),
     PAYMENT_NOT_FOUND("PAY-5002", "payment.not.found", HttpStatus.NOT_FOUND),
 
-    // ---- Favourite domain ---- (range 6xxx — PAY already owns 5xxx)
     FAVOURITE_NOT_FOUND("FAV-6001", "favourite.not.found", HttpStatus.NOT_FOUND),
     FAVOURITE_ALREADY_EXISTS("FAV-6002", "favourite.already.exists", HttpStatus.CONFLICT),
     FAVOURITE_PRODUCT_NOT_FOUND("FAV-6003", "favourite.product.not.found", HttpStatus.NOT_FOUND),
 
-    // ---- Order domain (continued) — ORD-4003..4010 ----
     ORDER_INVALID_STATE("ORD-4003", "order.invalid.state", HttpStatus.CONFLICT),
     ORDER_INVALID_STATE_TRANSITION("ORD-4004", "order.invalid.transition", HttpStatus.CONFLICT),
     CART_EMPTY("ORD-4005", "cart.empty", HttpStatus.CONFLICT),
@@ -103,10 +94,8 @@ public enum ErrorCode implements ErrorCatalog {
     TAX_CLASS_IN_USE("TAX-8004", "tax.class.in_use", HttpStatus.CONFLICT),
     TAX_RATE_NOT_FOUND("TAX-8005", "tax.rate.not_found", HttpStatus.NOT_FOUND),
 
-    // ---- Notification domain ----
     NOTIFICATION_NOT_FOUND("NTF-9001", "notification.not_found", HttpStatus.NOT_FOUND),
 
-    // ---- Payment domain (continued) — PAY-5003..5008 ----
     PAYMENT_DUPLICATE_REQUEST("PAY-5003", "payment.duplicate_request", HttpStatus.CONFLICT),
     PAYMENT_INVALID_STATE("PAY-5004", "payment.invalid_state", HttpStatus.CONFLICT),
     WEBHOOK_SIGNATURE_INVALID("PAY-5005", "payment.webhook_signature_invalid", HttpStatus.UNAUTHORIZED),
@@ -114,7 +103,6 @@ public enum ErrorCode implements ErrorCatalog {
     AMOUNT_MISMATCH("PAY-5007", "payment.amount_mismatch", HttpStatus.BAD_REQUEST),
     PAYMENT_PROVIDER_REJECTED("PAY-5008", "payment.provider_rejected", HttpStatus.BAD_GATEWAY),
 
-    // ---- Shipping domain ---- SHP-10001..10006
     SHIPMENT_NOT_FOUND("SHP-10001", "shipping.not_found", HttpStatus.NOT_FOUND),
     SHIPMENT_DUPLICATE("SHP-10002", "shipping.duplicate", HttpStatus.CONFLICT),
     SHIPMENT_INVALID_TRANSITION("SHP-10003", "shipping.invalid_transition", HttpStatus.CONFLICT),
@@ -123,21 +111,18 @@ public enum ErrorCode implements ErrorCatalog {
     CARRIER_NOT_CONFIGURED("SHP-10006", "shipping.carrier_not_configured", HttpStatus.CONFLICT),
     ORDER_PAYMENT_NOT_CAPTURED("ORD-4012", "order.payment.not_captured", HttpStatus.CONFLICT),
 
-    // ---- Rating domain ---- RTG-11001..11005
     RATING_NOT_ELIGIBLE("RTG-11001", "rating.not_eligible", HttpStatus.FORBIDDEN),
     RATING_NOT_FOUND("RTG-11002", "rating.not_found", HttpStatus.NOT_FOUND),
     RATING_ALREADY_HIDDEN("RTG-11003", "rating.already_hidden", HttpStatus.CONFLICT),
     RATING_NOT_HIDDEN("RTG-11004", "rating.not_hidden", HttpStatus.CONFLICT),
     RATING_ALREADY_EXISTS("RTG-11005", "rating.already_exists", HttpStatus.CONFLICT),
 
-    // ---- Search domain ---- SRH-12001..12005
     SEARCH_REINDEX_IN_PROGRESS("SRH-12001", "search.reindex_in_progress", HttpStatus.CONFLICT),
     SEARCH_REINDEX_CLEANUP_FAILED("SRH-12005", "search.reindex_cleanup_failed", HttpStatus.SERVICE_UNAVAILABLE),
     SEARCH_QUERY_FAILED("SRH-12002", "search.query_failed", HttpStatus.SERVICE_UNAVAILABLE),
     SEARCH_INDEX_FAILED("SRH-12003", "search.index_failed", HttpStatus.SERVICE_UNAVAILABLE),
     SEARCH_DELETE_FAILED("SRH-12004", "search.delete_failed", HttpStatus.SERVICE_UNAVAILABLE),
 
-    // ---- Media domain ---- MED-12001..12006
     MEDIA_INVALID_FILE("MED-12001", "media.invalid_file", HttpStatus.BAD_REQUEST),
     MEDIA_TOO_LARGE("MED-12002", "media.too_large", HttpStatus.PAYLOAD_TOO_LARGE),
     MEDIA_TYPE_NOT_ALLOWED("MED-12003", "media.type_not_allowed", HttpStatus.UNSUPPORTED_MEDIA_TYPE),

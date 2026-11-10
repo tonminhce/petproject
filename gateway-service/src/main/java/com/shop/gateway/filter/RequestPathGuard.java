@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
  * ratings backoffice route while a raw-string prefix match sees an unrelated
  * path — one encoded character would evade allowlist, rate limit and role
  * gate at once.
- *
  * <p><strong>Chosen strategy (uniform across all 3 edge filters, documented):
  * reject-with-400.</strong> A request whose raw path changes under
  * percent-decoding (single pass — catches single- and double-encoding alike;
@@ -22,7 +21,6 @@ import java.nio.charset.StandardCharsets;
  * is consumed first, so an evasion attempt is metered and gated — never
  * silently normalized into a pass. Fleet paths are canonical ASCII segments;
  * legitimate callers never percent-encode a controlled prefix.</p>
- *
  * <p>N-R1 — same evasion class, second vector: matrix variables
  * ({@code /api/v1/backoffice;r=1/ratings}). Route predicates match segments
  * with the {@code ;params} suffix stripped, so a semicolon can move a request

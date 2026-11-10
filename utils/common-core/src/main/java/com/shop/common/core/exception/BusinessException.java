@@ -9,14 +9,12 @@ import org.springframework.http.HttpStatus;
  *   <li>{@link ErrorCode} — machine-readable code + HTTP status</li>
  *   <li>Resolved, locale-aware message (computed eagerly at throw site)</li>
  * </ul>
- *
  * <h3>Throw sites — pick the smallest API that fits</h3>
  * <pre>{@code
  * throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND);                     // canonical
  * throw BusinessException.of(ErrorCode.AUTH_USERNAME_EXISTS, "alice");         // with i18n args
  * throw BusinessException.notFound("auth.user.not.found.with.username", "x"); // ad-hoc + status
  * }</pre>
- *
  * <p>We <strong>do not</strong> wrap an arbitrary message + arbitrary status in a no-code
  * constructor — every error must map to an {@link ErrorCode} so dashboards stay consistent.</p>
  */
@@ -55,10 +53,6 @@ public class BusinessException extends RuntimeException {
         this.errorCode = other.errorCode;
     }
 
-    // ------------------------------------------------------------------
-    // Canonical factory — preferred entry point
-    // ------------------------------------------------------------------
-
     public static BusinessException of(ErrorCatalog code, Object... messageArgs) {
         return new BusinessException(code, Messages.get(code.getMessageKey(), messageArgs));
     }
@@ -70,10 +64,6 @@ public class BusinessException extends RuntimeException {
     public static BusinessException ofKey(ErrorCatalog code, String messageKey, Object... messageArgs) {
         return new BusinessException(code, Messages.get(messageKey, messageArgs));
     }
-
-    // ------------------------------------------------------------------
-    // Status shortcuts — all funnel through ErrorCode so the catalog stays canonical
-    // ------------------------------------------------------------------
 
     public static BusinessException badRequest(String messageKey, Object... args) {
         return new BusinessException(ErrorCode.BAD_REQUEST, Messages.get(messageKey, args));

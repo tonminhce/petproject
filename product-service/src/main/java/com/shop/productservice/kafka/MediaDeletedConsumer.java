@@ -17,18 +17,15 @@ import java.util.UUID;
  * and re-published as ProductUpdated (→ search doc refresh via the existing
  * chain). Other event types — e.g. the audit-only {@code MediaCreated} — are
  * ack-skipped.
- *
  * <p>Wire contract (R1 + H-1): producers publish JSON-as-String via the fleet
  * {@code KafkaMessagePublisher}, so records arrive SINGLE-ENCODED UTF-8 JSON.
  * The raw value is parsed once and, when textual (a LEGACY double-encoded
  * token — a JSON string token wrapping the event JSON, from pre-R1 producers),
  * unwrapped and parsed again; both shapes bind. Malformed bytes (poison
  * records) are contained at parse time — never a listener throw.</p>
- *
  * <p>Ack-always poison posture (ProductRatingConsumer precedent): the
  * listener method must never throw — a handler failure is logged and
  * swallowed so the offset still advances. No DLT (fleet containment rule).</p>
- *
  * <p>H-3 bounded retry: {@code clearReference} is a DB write, and the fleet
  * posture acks every failure — so a TRANSIENT storage failure would otherwise
  * drop a clear until the next media event. The clear is therefore retried
@@ -36,7 +33,6 @@ import java.util.UUID;
  * then logged at ERROR and acked (posture preserved — the H-3 reconciliation
  * sweep is the durable backstop). Parse/unknown-eventType failures stay
  * immediate ack-skip.</p>
- *
  * <p>Retry scope is {@link TransientDataAccessException}, NOT the broader
  * {@code DataAccessException}: TransientDataAccessException IS a
  * DataAccessException subclass (QueryTimeout, deadlock/serialization,
@@ -121,7 +117,6 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
             // Legacy double-encoded wire (pre-R1): an old producer
-            // JSON-string-encoded the payload — unwrap once before binding.
             node = objectMapper.readTree(node.textValue());
         }
         return objectMapper.treeToValue(node, MediaLifecycleEvent.class);

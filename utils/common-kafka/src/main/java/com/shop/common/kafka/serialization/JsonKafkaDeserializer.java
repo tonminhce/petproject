@@ -28,7 +28,6 @@ public class JsonKafkaDeserializer<T> implements Deserializer<T> {
 
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
-        // No-op: configuration is provided via constructor.
     }
 
     @Override
@@ -50,7 +49,6 @@ public class JsonKafkaDeserializer<T> implements Deserializer<T> {
 
     @Override
     public void close() {
-        // No resources to release.
     }
 
     /** Convenience helper for tests. */

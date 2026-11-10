@@ -31,8 +31,6 @@ public class OutboxRetentionScheduler {
             if (deleted > 0) log.info("Purged {} SENT outbox events older than {} days", deleted, retentionDays);
         } catch (Exception ex) {
             log.error("Outbox purge failed", ex);
-            // Spring's ScheduledAnnotationBeanPostProcessor also auto-logs ERROR;
-            // this catch + custom message improves alert routing
         }
     }
 }

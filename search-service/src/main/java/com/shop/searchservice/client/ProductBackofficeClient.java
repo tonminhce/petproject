@@ -20,10 +20,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * Product-service client for the reindex source stream (spec D5): pages
- * through the backoffice full-snapshot list with the SERVICE token attached
- * per-call (verify-purchase pattern).
- *
  * <p>Error posture — retry-free fail-fast: ANY failure (non-2xx, timeout,
  * malformed/empty body) aborts immediately as SRH-12002 (503). A partial
  * reindex source is never a benign answer — the caller (ReindexService) aborts

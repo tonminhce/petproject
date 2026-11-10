@@ -18,10 +18,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
     /** Batch loader for paginated reads (avoids the per-order N+1). */
     List<OrderItem> findByOrderIdIn(Collection<UUID> orderIds);
 
-    /**
-     * Rating-eligibility probe (Task 7, rating-service epic): items of the given
-     * product whose parent order is the user's, DELIVERED, and not soft-deleted.
-     */
     @Query("""
         SELECT i FROM OrderItem i
         WHERE i.productId = :productId

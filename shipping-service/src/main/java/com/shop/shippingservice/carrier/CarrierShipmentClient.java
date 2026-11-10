@@ -12,15 +12,12 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 /**
- * F-067 (P1) — the HTTP call that actually creates a shipment with the carrier.
- *
  * <p>The GHN and GHTK adapters previously never contacted their carrier: they
  * derived a tracking number locally from the order id and returned it as if the
  * carrier had issued it. The API token fields were injected and never used. The
  * result was a shipment no carrier knew about, carrying a predictable tracking
  * number, which the reconciliation scheduler then auto-delivered after seven
  * days - so the order reached DELIVERED for a parcel that was never shipped.</p>
- *
  * <p>This client performs the real call. The request and response shapes are
  * carrier-specific, so the tracking-number location is configurable per carrier
  * ({@code shop.shipping.<carrier>.tracking-json-path}). If the endpoint is not

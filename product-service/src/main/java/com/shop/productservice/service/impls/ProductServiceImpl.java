@@ -49,8 +49,6 @@ public class ProductServiceImpl implements ProductService {
     private final CacheManager cacheManager;
 
     /**
-     * Storefront catalog list — H21 default.
-     *
      * <p>A missing {@code status} is normalised to {@link ProductStatus#ACTIVE}
      * at the SERVICE layer so the public catalog never leaks DRAFT,
      * DISCONTINUED, or OUT_OF_STOCK rows. The {@code ProductController} also
@@ -59,7 +57,6 @@ public class ProductServiceImpl implements ProductService {
      * privacy leak. The backoffice / reindex path
      * {@link #findAllDetail(ProductFilter, Pageable)} deliberately keeps the
      * {@code null = all statuses} semantics.
-     *
      * <p>Spec construction reference:
      * https://docs.spring.io/spring-data/jpa/reference/jpa/specifications.html
      */

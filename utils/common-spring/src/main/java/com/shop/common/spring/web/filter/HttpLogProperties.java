@@ -4,7 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration for {@link HttpLoggingFilter}, bound from {@code shop.web.logging.*}.
- *
  * <pre>{@code
  * shop:
  *   web:

@@ -22,7 +22,6 @@ import java.util.UUID;
  * Mirrors {@link InventoryServiceClient}/{@link PromotionServiceClient}: per-call
  * Authorization header from {@link ServiceTokenProvider} — the payment list
  * endpoint is SERVICE-role.
- *
  * <p>Error posture — fail-closed: ANY failure (non-2xx, timeout, malformed body)
  * maps to {@code Optional.empty()} instead of a thrown exception; the confirm
  * guard turns that into ORD-4012. The raw downstream exception never leaves this

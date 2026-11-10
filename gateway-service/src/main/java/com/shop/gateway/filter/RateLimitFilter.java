@@ -20,12 +20,11 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * D4 — bucket4j per-IP token buckets for the two edge scopes:
+ * Bucket4j per-IP token buckets for the two edge scopes:
  * backoffice prefixes and the search prefix. Other paths are unlimited.
  * Buckets live in-process (single gateway instance, V1); a rejected request
  * gets the fleet 429 envelope plus {@code X-RateLimit-Remaining: 0}, a passed
  * request is tagged with the remaining tokens for debuggability (§4.4).
- *
  * <p>Scope lookup happens on the percent-DECODED path and a percent-encoded
  * request whose decoded form falls into a scope is still metered, then
  * rejected with the fleet 400 envelope (raw &ne; decoded — see

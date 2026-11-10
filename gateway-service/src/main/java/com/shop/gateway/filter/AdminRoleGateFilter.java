@@ -18,12 +18,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * D1 — backoffice edge role gate. Requests under one of the 9 backoffice
+ * Backoffice edge role gate. Requests under one of the 9 backoffice
  * prefixes must carry an ADMIN realm role, mirroring the fleet's
  * {@code JwtRolesConverter} (realm_access.roles) with a resource_access
  * fallback for client-scoped roles. Anything else on those prefixes gets the
  * fleet 403 envelope.
- *
  * <p>Prefix matching runs on the percent-DECODED path; a percent-encoded
  * request whose decoded form falls under a backoffice prefix is rejected with
  * the fleet 400 envelope before the role check (raw &ne; decoded — see
@@ -32,7 +31,6 @@ import java.util.Map;
  * gate). Matrix-variable paths (N-R1) are rejected outright, before the
  * prefix decision — the {@code ;} suffix defeats the prefix match itself
  * while route predicates still land the request on the gated route.</p>
- *
  * <p>401 (no/invalid token) is already handled upstream by the resource-server
  * security chain — this filter only ever sees authenticated requests.</p>
  */

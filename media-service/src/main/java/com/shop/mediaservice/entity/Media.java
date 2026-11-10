@@ -24,13 +24,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * D1 — one uploaded image: content-addressed by SHA-256 (unique — duplicate
+ * One uploaded image: content-addressed by SHA-256 (unique — duplicate
  * uploads resolve to the existing row, never a second object), the declared
  * content type of the ORIGINAL, and the original byte size. Variants are the
  * six D2 renders (original/display/thumb × original-format/WebP) owned
  * cascade-all so media + variants commit in one transaction LAST, after all
  * S3 objects are already durable.
- *
  * <p>The id is application-assigned: object keys are {@code {mediaId}/…} (D1),
  * so the UUID must exist BEFORE the S3 writes. {@link Persistable} tells
  * Spring Data a pre-set id is still a NEW entity (persist, not merge).</p>

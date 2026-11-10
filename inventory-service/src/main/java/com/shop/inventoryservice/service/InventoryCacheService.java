@@ -11,7 +11,6 @@ import java.util.UUID;
 
 /**
  * Cache invalidation helper for the inventory cache.
- *
  * <p>{@code evictAfterCommit} registers a synchronization so the Redis key is
  * removed ONLY after the current transaction commits successfully. If the
  * transaction rolls back, the cache is NOT touched - preventing a spurious
@@ -53,7 +52,6 @@ public class InventoryCacheService {
                 cache.evict(productId);
             }
         } catch (Exception ex) {
-            // Redis failure - log and let TTL expire the stale entry (eventual consistency).
             log.warn("Failed to evict inventory cache for productId {}: {}", productId, ex.getMessage());
         }
     }

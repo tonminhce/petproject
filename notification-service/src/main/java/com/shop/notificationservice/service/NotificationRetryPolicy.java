@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 
 /**
- * C17 — bounded retry arithmetic for the delivery state machine: exponential
+ * Bounded retry arithmetic for the delivery state machine: exponential
  * backoff ({@code base × 5^(attempt-1)}, the fleet payment/shipping
  * convention) and the hard attempt cap. {@code max-attempts} and the backoff
  * base are configurable via {@code shop.notification.retry.*}; the cap is

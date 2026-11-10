@@ -19,16 +19,8 @@ import java.util.Locale;
  * Sets up the platform-wide {@link MessageSource} and bridges it into the static
  * {@link Messages} helper so non-Spring contexts (exception constructors, etc.) can
  * resolve i18n keys with the same locale resolution rules as MVC handlers.
- *
  * <p>Also publishes an {@link AcceptHeaderLocaleResolver} so the locale is picked from the
  * incoming {@code Accept-Language} header instead of {@code Locale.getDefault()}.</p>
- *
- * <h3>Why SmartInitializingSingleton instead of @PostConstruct?</h3>
- * {@code @PostConstruct} runs while the owning bean is still being constructed — if
- * {@code MessageSource} is defined inside this same class, Spring hasn't finished wiring it
- * yet, producing a circular-dependency error. {@link SmartInitializingSingleton} is invoked
- * by Spring after <em>all</em> singleton beans are fully initialized, so the
- * {@code MessageSource} bean (ours or a custom one) is always present by then.
  */
 @AutoConfiguration
 @EnableConfigurationProperties(I18nProperties.class)

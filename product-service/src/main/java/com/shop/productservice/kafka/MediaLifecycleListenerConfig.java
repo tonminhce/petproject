@@ -23,7 +23,6 @@ import java.util.Map;
  * which also stays tolerant of the legacy double-encoded shape (a JSON
  * string token wrapping the event JSON) that in-flight/retained records may
  * still carry (H-1 defense-in-depth).
- *
  * <p>Same fleet shape as the rating listener otherwise: {@code shop.kafka.*}
  * properties, container observation enabled (W3C traceparent extraction).</p>
  */

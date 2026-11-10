@@ -25,11 +25,9 @@ import java.util.UUID;
  * {@code @SQLRestriction} — a deleted media reads as unknown, 404) → variant
  * row per the variant/format contract ({@link MediaQueryService}) → presigned
  * GET from the common-storage client with the configured TTL.
- *
  * <p>Presign is a local computation (no S3 round-trip), but a misconfigured
  * or down signer still surfaces as 503 MED-12006 — object-storage failures
  * map to the D6 storage-unavailable code everywhere.</p>
- *
  * <p>H-5 bucket unification: presign uses the bucket-qualified 3-arg overload
  * with {@code media.bucket} — the SAME property that drives upload and purge
  * writes/deletes. (Historically presign rode the 2-arg default-bucket chain,

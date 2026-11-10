@@ -12,7 +12,6 @@ import org.springframework.context.event.EventListener;
 /**
  * F-031 / F-033 — fail-fast guards for the gateway's two network-edge
  * security postures.
- *
  * <p>Both misconfigurations are silent at runtime: a wildcard CORS pattern with
  * credentials silently accepts every origin, and a zero trusted-proxy hop count
  * silently makes the client-IP trust model either spoofable (behind the
@@ -45,7 +44,7 @@ public class GatewaySecurityPostureValidator {
     }
 
     /**
-     * F-033 — {@code allowCredentials(true)} combined with a wildcard origin
+     * {@code allowCredentials(true)} combined with a wildcard origin
      * pattern makes every website able to issue credentialed cross-origin
      * requests to the gateway and read the responses. The gateway's CORS
      * configuration always sets allowCredentials(true), so a wildcard pattern
@@ -65,7 +64,7 @@ public class GatewaySecurityPostureValidator {
     }
 
     /**
-     * F-031 — the client IP is resolved from the X-Forwarded-For chain using
+     * The client IP is resolved from the X-Forwarded-For chain using
      * {@code gateway.rate-limit.trusted-proxy-hops}. A hop count of 0 makes the
      * resolver fall back to the socket address. Behind a reverse proxy that is
      * the PROXY's address: every anonymous caller shares one rate-limit bucket

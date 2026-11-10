@@ -20,7 +20,6 @@ import java.util.UUID;
  * epic spec D5): a lightweight {@code HEAD /api/v1/medias/{id}} (existence
  * only — NO presign) so admin typos on create/update never ship broken
  * images. Per-call Authorization header from {@link ServiceTokenProvider}.
- *
  * <p>Error posture — three-valued, per the binding design: 200 → {@code true};
  * 404 → {@code false} (caller rejects with MED-12004); ANY other failure
  * (timeout, connection refused, 5xx, unexpected 4xx) → throws MED-12006

@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * inventory-service's {@code InventoryMetrics} so outbox health is visible
  * the same way across the event-producing services (no Redis cache gauges:
  * promotion-service has no cache tier).
- *
  * <p>Meters:
  * <ul>
  *   <li>{@code promotion.events.published} — counter tagged with

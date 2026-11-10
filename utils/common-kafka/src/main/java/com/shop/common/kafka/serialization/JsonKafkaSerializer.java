@@ -11,7 +11,6 @@ import java.util.Map;
  * Jackson-based JSON serializer used by the platform's Kafka producer.
  * Falls back to the string representation of the payload when Jackson cannot
  * serialise it so the producer never blocks the caller.
- *
  * <p>Wire context (R1 + H-1): serialising a payload STRING through this
  * serializer JSON-string-encodes it again — a JSON string token wrapping the
  * event JSON (DOUBLE-ENCODED). That was the pre-R1 fleet wire; consumers'
@@ -44,7 +43,6 @@ public class JsonKafkaSerializer<T> implements Serializer<T> {
 
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
-        // No-op: configuration is provided via constructor.
     }
 
     @Override
@@ -55,7 +53,6 @@ public class JsonKafkaSerializer<T> implements Serializer<T> {
         try {
             return objectMapper.writeValueAsBytes(data);
         } catch (Exception ex) {
-            // last-resort fallback: keep the producer non-blocking
             return data.toString().getBytes(StandardCharsets.UTF_8);
         }
     }
@@ -67,6 +64,5 @@ public class JsonKafkaSerializer<T> implements Serializer<T> {
 
     @Override
     public void close() {
-        // No resources to release.
     }
 }

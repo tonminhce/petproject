@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * C13 fix — category CRUD moved out of the storefront {@link CategoryController}
+ * Category CRUD moved out of the storefront {@link CategoryController}
  * into this ADMIN-only backoffice entry point.
  */
 @RestController

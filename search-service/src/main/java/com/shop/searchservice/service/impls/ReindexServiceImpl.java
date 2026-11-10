@@ -29,11 +29,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * successful run resolves {@code max(products-v*)+1}, skips the orphan number,
  * and its post-swap cleanup deletes ALL {@code products-v*} indices except the
  * new target, so the orphan is reaped then.
- *
  * <p>Concurrency: an in-process {@link AtomicBoolean} lock rejects a second
  * concurrent run with 409 SRH-12001 (single-instance MVP posture — a multi-node
  * deployment needs a distributed lock first).</p>
- *
  * <p>NO auto full-sync on startup (ops §4(1)): the first deploy runs reindex
  * once via this endpoint; the Kafka consumer keeps the index fresh after.</p>
  */
@@ -134,12 +132,7 @@ public class ReindexServiceImpl implements ReindexService {
         try {
             int max = 0;
             for (String name : listGenerationIndices()) {
-                // C15 fix — parse the generation suffix defensively. An index name
-                // that doesn't follow the `products-v<n>` convention (an old
-                // hand-created index, a stray operator typo) used to throw
-                // NumberFormatException and abort reindex with a 500. Now we
                 // log and skip — a safe default that doesn't fail the whole
-                // operation because of one bad row.
                 String suffix = name.substring("products-v".length());
                 try {
                     max = Math.max(max, Integer.parseInt(suffix));

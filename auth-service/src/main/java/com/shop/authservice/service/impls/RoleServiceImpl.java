@@ -66,7 +66,6 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     // A1: auth-service yml has open-in-view: false and User.roles is LAZY. Without a tx
-    // around this read, `user.getRoles()` would throw LazyInitializationException.
     @Transactional(readOnly = true)
     public List<String> getUserRoles(UUID id) {
         User user = userRepository.findById(id)

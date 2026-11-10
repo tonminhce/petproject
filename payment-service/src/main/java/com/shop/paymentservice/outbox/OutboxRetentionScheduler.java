@@ -14,12 +14,11 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * H11 — outbox retention purge. Without this scheduler, the
+ * Outbox retention purge. Without this scheduler, the
  * {@code outbox_events} table grows unbounded: every SENT row (after a
  * successful publish) and every DEAD row (after the relay gave up) lives
  * forever. This component bounds the table by deleting rows past a configurable
  * age window.
- *
  * <h3>Retention policy</h3>
  * <ul>
  *   <li><b>SENT</b> — keep {@code ${shop.payment.outbox.sent-retention:14d}}
@@ -32,11 +31,9 @@ import java.time.Instant;
  * </ul>
  * PENDING rows are NEVER purged — a stuck PENDING is a relay bug, not a
  * retention problem (reconciliation owns it).
- *
  * <p>Scheduled via {@code @Scheduled(fixedDelayString = "...")} with the same
  * timestamped property idiom as the rest of the fleet (see
  * {@code WebhookRetryScheduler}). Default cadence is 1 hour.</p>
- *
  * <p>Each delete runs in its own statement via {@code @Modifying} on the
  * repository — no transaction holds a row lock across the table; PG can run
  * the delete without blocking the relay. The repository returns the affected

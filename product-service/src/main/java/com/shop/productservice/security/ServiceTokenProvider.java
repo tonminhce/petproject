@@ -18,12 +18,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Client-credentials token cache for outbound service-to-service calls.
- *
  * <p>Obtains an access token from Keycloak via the {@code client_credentials}
  * grant and caches it in-memory, refreshing 30 seconds before expiry. Used by
  * outbound HTTP clients (e.g. {@code MediaHeadClient}) to attach a
  * {@code Bearer} token when calling downstream services.</p>
- *
  * <p>Local to product-service deliberately (rating/search precedent) —
  * keycloak {@code token-url / client-id / client-secret} live in
  * {@link MediaClientProperties.Keycloak} (not the auth-owned

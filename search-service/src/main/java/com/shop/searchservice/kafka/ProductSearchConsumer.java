@@ -37,8 +37,6 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
 
     // Ack-always poison posture (product-service ProductRatingConsumer
     // precedent): the listener method must never throw — a handler failure is
-    // logged and swallowed so the offset still advances. Unknown eventTypes
-    // are ack-skipped (spec D1); no DLT (fleet containment rule).
     private void handleContained(String rawValue) {
         ProductLifecycleEvent event;
         try {
@@ -62,7 +60,6 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
             // Legacy double-encoded wire (pre-R1): an old producer
-            // JSON-string-encoded the payload — unwrap once before binding.
             node = objectMapper.readTree(node.textValue());
         }
         return objectMapper.treeToValue(node, ProductLifecycleEvent.class);

@@ -22,7 +22,6 @@ import java.util.UUID;
  * Writes one {@link OutboxEvent} row per domain action in the SAME
  * transactional boundary as the reservation lifecycle change. The relay
  * ({@code PromotionOutboxRelay}) drains the table to Kafka.
- *
  * <p>Event contract (spec §5.5): topic {@code shop.promotion.lifecycle.v1},
  * event types in dot.case ({@code promotion.reserved.v1}, …) — the same
  * dot-style payload contract as inventory-service's
@@ -78,10 +77,7 @@ public class TransactionalPromotionEventPublisher implements PromotionEventPubli
         data.put("reservationId", reservation.getId());
         data.put("discountAmount", reservation.getDiscountAmount());
         data.put("releasedAt", reservation.getReleasedAt().toString());
-        // previousStatus ("PENDING"|"COMMITTED") — spec §5.5: distinguishes a
-        // plain release (reserve→release, quota returned unused) from a
         // half-commit rollback (confirm-flow compensation) without a separate
-        // event type.
         data.put("previousStatus", previousStatus);
         save(campaign, "promotion.released.v1", data);
     }

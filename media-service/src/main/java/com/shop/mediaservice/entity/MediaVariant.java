@@ -19,7 +19,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 /**
- * D2 — one rendered variant of a {@link Media}: canonical names
+ * One rendered variant of a {@link Media}: canonical names
  * {@code original|display|thumb}, format {@code jpeg|png|webp}, rendered
  * pixel width, encoded byte size, and the private-bucket object key
  * ({@code {mediaId}/{variant}.{ext}}).

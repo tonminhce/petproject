@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Bind {@code shop.rating.*} client-side settings — the order-service endpoint
  * for purchase verification and the Keycloak service-token endpoint
  * (client_credentials flow).
- *
  * <p>Local to rating-service deliberately: keycloak settings are NOT
  * {@code shop.keycloak} (auth-owned) and the outbound service config is NOT a
  * shared {@code shop.services} block — rating has exactly one downstream

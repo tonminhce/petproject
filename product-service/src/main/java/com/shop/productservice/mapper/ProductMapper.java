@@ -66,9 +66,6 @@ public class ProductMapper {
     }
 
     public Product toEntity(ProductCreateRequest request) {
-        // RecordValueReader (registered in common-spring) lets STRICT + field-
-        // matching mode see Java record components as source properties, so this
-        // map is no longer a silent no-op (it was before the platform fix).
         Product p = modelMapper.map(request, Product.class);
         p.setId(null);   // force identity insert even if request carried an id
         return p;

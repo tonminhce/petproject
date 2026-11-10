@@ -17,7 +17,6 @@ import java.time.temporal.ChronoUnit;
  * inventory-service's {@code OutboxRetentionScheduler} shape and EXTENDS it
  * with terminal aging, which media needs because it is the only relay that
  * replays FAILED):
- *
  * <ul>
  *   <li><strong>SENT &gt; retention window</strong> → purged (the table would
  *   otherwise grow one row per domain event forever; a successfully published
@@ -29,7 +28,6 @@ import java.time.temporal.ChronoUnit;
  *   root-cause is overdue (runbook: inspect {@code last_error}, re-drive or
  *   delete by hand; DEAD rows are NEVER auto-purged).</li>
  * </ul>
- *
  * <p>Younger FAILED rows keep replaying — the relay only ever polls
  * PENDING + FAILED and never sees DEAD. Same failure posture as the inventory
  * original: any exception is logged (ERROR) and swallowed so the scheduler

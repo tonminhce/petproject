@@ -19,18 +19,16 @@ import org.springframework.web.client.RestClient;
 import java.time.Duration;
 
 /**
- * P0-4 — NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
+ * 4 — NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
  * {@code @Qualifier} from fields to constructor params. Defining beans as method
  * signatures here works because Spring wires by parameter NAME ({@code productRestClient},
  * {@code inventoryRestClient}, etc.) — clients inject by name with
  * {@code @Qualifier("productRestClient")}.
- *
- * <p>P1-3 — no auth header is set HERE (shared builders). Authorization is attached
+ * <p>3 — no auth header is set HERE (shared builders). Authorization is attached
  * PER-CALL inside each client method — only {@code InventoryServiceClient} needs a
  * token (product GET is a public path; tax/promotion are disabled in the MVP). The
  * header value comes from {@code ServiceTokenProvider.getToken()}.</p>
- *
- * <p>R1 — traceparent propagation is central: every {@code RestClient.Builder}
+ * <p>Traceparent propagation is central: every {@code RestClient.Builder}
  * bean is enriched by common-spring's
  * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
  * that bean and no interceptor is hand-added here.</p>
@@ -70,8 +68,6 @@ public class RestClientConfig {
             .baseUrl(baseUrl)
             .requestFactory(factory)
             .defaultHeader("Accept", "application/json")
-            // hardening §2/D9 — propagate the correlation id to every downstream
-            // service call (product/inventory/tax/promotion all share this builder).
             .requestInitializer(req -> {
                 String corrId = MDC.get(MdcKey.CORRELATION_ID);
                 if (corrId != null) req.getHeaders().set("X-Correlation-Id", corrId);

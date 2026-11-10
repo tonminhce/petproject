@@ -15,13 +15,13 @@ public interface ShipmentEventRepository extends JpaRepository<ShipmentEvent, UU
     boolean existsByCarrierAndProviderEventId(Carrier carrier, String eventId);
 
     /**
-     * C3 — same shape as payment-service's repository: used by dedup to
+     * Same shape as payment-service's repository: used by dedup to
      * distinguish PROCESSED-skip from FAILED_RETRYABLE-fall-through.
      */
     Optional<ShipmentEvent> findFirstByCarrierAndProviderEventId(Carrier carrier, String providerEventId);
 
     /**
-     * C3 — batch pull of events whose retry window has elapsed.
+     * Batch pull of events whose retry window has elapsed.
      */
     List<ShipmentEvent> findByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
             String status, Instant cutoff, Pageable pageable);

@@ -30,15 +30,10 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    // P2-6 — deliberately NOT @PreAuthorize("hasRole('USER')"): Keycloak users may
-    // lack an explicit USER realm role, which would surface as an unhelpful 403. The
-    // filter chain already enforces authentication (class level); the service-layer
-    // owner check ensures users only ever touch their own orders.
     public ApiResponse<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         // The idempotency_keys.key column is varchar(64) — reject longer headers with
-        // a 400 instead of a DB constraint violation (review M5).
         if (idempotencyKey != null && idempotencyKey.length() > 64) {
             throw BusinessException.badRequest("order.idempotency.key.tooLong", 64);
         }

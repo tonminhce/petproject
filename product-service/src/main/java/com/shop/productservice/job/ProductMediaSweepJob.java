@@ -19,14 +19,12 @@ import java.util.UUID;
  * of the {@code MediaDeleted} consumer (bounded retry + ack-always posture):
  * the consumer can lose a clear to a crash right after its commit, so stale
  * product references must be re-verified EVENTUALLY, not only on event replay.
- *
  * <p>Each cycle examines ONE bounded page ({@code limit}, default 100) of
  * products holding any media reference and HEAD-checks each against
  * media-service through the fail-closed {@link MediaHeadClient}: 200 → the
  * reference is live, keep; 404 → the media is gone, clear via the existing
  * {@link ProductMediaService#clearReference} path (also re-publishes
  * {@code ProductUpdated} so the search doc refreshes).</p>
- *
  * <p>Fail-safe ruling H-3: media being UNAVAILABLE is not evidence that
  * references are dead — the client throws on anything except 200/404, and ANY
  * exception aborts the ENTIRE remaining cycle with a WARN. The sweep never
@@ -70,8 +68,6 @@ public class ProductMediaSweepJob {
                     continue;   // 200 — reference live, keep
                 }
                 // 404 — clear via the consumer's own path (transactional clear
-                // + ProductUpdated per row). clearReference re-queries by
-                // mediaId, so rows sharing this dead media are all repaired.
                 long removed = productMediaService.clearReference(mediaId);
                 cleared += removed;
                 metrics.recordSweepCleared(removed);

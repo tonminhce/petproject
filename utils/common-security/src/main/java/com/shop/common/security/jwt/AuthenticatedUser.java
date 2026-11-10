@@ -9,14 +9,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-
 /**
  * Immutable snapshot of the currently authenticated principal.
- *
  * <p>Built from a {@link Jwt} via {@link #fromCurrentJwt()} or directly via
  * {@link #from(Jwt)}. The fields mirror what most services need to make
  * authorization decisions without re-parsing the JWT themselves.</p>
- *
  * <p>This is a value object — safe to share between threads, never mutated.
  * It does <em>not</em> hold any reactive context; pull a fresh instance on
  * each request rather than caching.</p>

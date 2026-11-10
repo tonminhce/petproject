@@ -20,8 +20,7 @@ import java.util.Optional;
  * Drains {@code outbox_events} and publishes each PENDING row to Kafka. Breaks on
  * the first failure so events for the same aggregate stay ordered (deliberate
  * divergence from product-service's continue-on-error relay).
- *
- * <p>C14 — rows are claimed one at a time via
+ * <p>Rows are claimed one at a time via
  * {@link OutboxEventRepository#claimOnePending} (PESSIMISTIC_WRITE + SKIP
  * LOCKED) inside a per-event {@link TransactionTemplate} transaction (the F2
  * scheduler idiom — self-invocation would bypass {@code @Transactional}): the
@@ -29,7 +28,6 @@ import java.util.Optional;
  * instance can never claim and double-publish the same row — it gets an empty
  * claim and moves on. Ordering (id ASC, head-of-line break on failure) is
  * preserved because the claim always takes the lowest still-PENDING id.</p>
- *
  * <p>Metered via {@link OrderMetrics}: batch drain time is recorded in a
  * {@code finally} block, and the pending gauge is refreshed on every tick.</p>
  */

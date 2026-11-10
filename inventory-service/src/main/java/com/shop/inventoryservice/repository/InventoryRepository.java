@@ -16,11 +16,10 @@ public interface InventoryRepository extends JpaRepository<Inventory, UUID> {
     boolean existsByProductId(UUID productId);
 
     /**
-     * H10 — atomic reserve. The pre-fix design read the inventory row,
+     * Atomic reserve. The pre-fix design read the inventory row,
      * computed available capacity, then wrote the increment — a TOCTOU
      * window where two concurrent requests could both observe the same
      * available capacity and both succeed even though only one truly fit.
-     *
      * <p>The atomic UPDATE collapses the check + write into a single
      * statement that Postgres serializes via row-level locking. The
      * {@code WHERE (available - reserved) >= :qty} guard makes the capacity
@@ -29,7 +28,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, UUID> {
      * {@link com.shop.common.core.exception.ErrorCode#STOCK_INSUFFICIENT}
      * domain error. Concurrent requests can never observe a stale capacity
      * because the row lock is held for the duration of the UPDATE.</p>
-     *
      * <p>{@code @Version} stays on the entity for the read-then-write paths
      * (commit/release); this UPDATE doesn't go through the entity at all,
      * so the version bump is folded into the {@code version = version + 1}
@@ -46,7 +44,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, UUID> {
     int atomicReserve(@Param("productId") UUID productId, @Param("qty") int qty);
 
     /**
-     * F-011 — atomic release of a reservation hold.
+     * Atomic release of a reservation hold.
      * <p>Decrements {@code reservedQuantity} only when the row currently holds at
      * least the requested quantity, so the counter can never go negative and a
      * double release can never over-credit the stock. The version is bumped in

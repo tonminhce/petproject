@@ -54,7 +54,6 @@ public class S3ObjectStorageService implements ObjectStorageService {
         } catch (NoSuchBucketException e) {
             createBucket(bucket);
         } catch (S3Exception e) {
-            // RustFS / S3 return 404 (sometimes wrapped) when the bucket is missing.
             if (e.statusCode() == 404) {
                 createBucket(bucket);
             } else {

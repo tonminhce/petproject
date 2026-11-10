@@ -8,7 +8,6 @@ import java.util.Map;
 /**
  * Per-service target-URI overrides applied on top of the default
  * {@code ServiceRoute} URIs (service discovery by compose DNS name).
- *
  * <p>Primary purpose: test/tooling environments point the route table at a
  * local stub server instead of the compose network, e.g.
  * {@code gateway.route-targets.overrides.rating-service=http://localhost:12345}.

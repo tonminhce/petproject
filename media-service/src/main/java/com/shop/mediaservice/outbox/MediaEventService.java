@@ -51,8 +51,6 @@ public class MediaEventService {
                 .aggregateType(AGGREGATE_TYPE)
                 // Spec D4: Kafka message key = mediaId (per-media partition
                 // ordering) and the relay keys on aggregateId — the partition
-                // key lives here, not the outbox row id. Media identity still
-                // travels in payload.mediaId and eventId.
                 .aggregateId(media.getId())
                 .eventType(type.name())
                 .topic(TOPIC)

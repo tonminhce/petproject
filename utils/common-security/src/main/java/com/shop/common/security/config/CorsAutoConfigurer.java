@@ -15,12 +15,10 @@ import java.util.List;
 /**
  * Builds the {@link CorsConfigurationSource} bean used by Spring Security's
  * filter chain.
- *
  * <p>Driven entirely by {@link SecurityProperties.Cors} so a service can tune
  * CORS per environment without recompiling. When {@code shop.security.cors.enabled}
  * is {@code false} the bean is omitted and Spring Security falls back to its
  * built-in CORS handling.</p>
- *
  * <p>The {@code allowedOriginPatterns} field (not {@code allowedOrigins}) is
  * used intentionally — it is the only knob that supports {@code "*"} together
  * with {@code allowCredentials=true}, which is what most SPA backends need
@@ -52,8 +50,6 @@ public class CorsAutoConfigurer {
         config.setExposedHeaders(unwrap(nullToEmpty(props.exposedHeaders())));
         config.setAllowCredentials(props.allowCredentials());
         config.setMaxAge(props.maxAgeSeconds());
-        // Spring Security picks up the source only when wired via http.cors(Customizer.withDefaults())
-        // — that happens in BaseSecurityConfig.
         return config;
     }
 

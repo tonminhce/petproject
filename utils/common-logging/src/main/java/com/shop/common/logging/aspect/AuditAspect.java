@@ -17,14 +17,12 @@ import java.time.Instant;
 
 /**
  * Emits ONE audit event per invocation of an {@link Audited} endpoint.
- *
  * <p>Ordering vs security: the servlet security filter chain runs entirely
  * before DispatcherServlet, so the {@code SecurityContext} is always fully
  * populated by the time any controller advice executes — aspect order cannot
  * affect actor resolution. Among aspects this one runs innermost (lowest
  * precedence) so the outcome and MDC snapshot reflect the state closest to
  * the endpoint.</p>
- *
  * <p>The aspect itself never fails the request: any throwable from the writer
  * is swallowed (the writer also swallows internally), and the joinpoint's
  * exception is always rethrown untouched. Outcome is {@code fail} exactly

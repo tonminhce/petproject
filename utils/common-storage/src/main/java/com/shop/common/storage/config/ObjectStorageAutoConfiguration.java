@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 /**
  * Auto-wires an S3-compatible {@link ObjectStorageService} (RustFS by default).
- *
  * <p>Activated whenever the AWS SDK is on the classpath and
  * {@code shop.storage.enabled} is not explicitly set to {@code false}. Services
  * override any bean by declaring their own {@link S3Client}, {@link S3Presigner}

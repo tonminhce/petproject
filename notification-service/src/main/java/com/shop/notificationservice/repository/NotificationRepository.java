@@ -27,7 +27,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     Optional<Notification> findById(UUID id);
 
     /**
-     * C17 — claim candidates for the retry scheduler: retryable rows whose
+     * Claim candidates for the retry scheduler: retryable rows whose
      * backoff window has elapsed, rows in SENDING whose heartbeat expired
      * (crash mid-send), and legacy FAILED rows written by pre-C12 instances
      * (no heartbeat — reclaimable immediately). PESSIMISTIC_WRITE locks the

@@ -15,8 +15,7 @@ import java.util.Optional;
 /**
  * Drains {@code outbox_events} and publishes each PENDING row to Kafka.
  * Breaks on the first failure so events for the same aggregate stay ordered.
- *
- * <p>C14 — rows are claimed one at a time via
+ * <p>Rows are claimed one at a time via
  * {@link OutboxEventRepository#claimOnePending} (PESSIMISTIC_WRITE + SKIP
  * LOCKED) inside a per-event {@link TransactionTemplate} transaction (the F2
  * scheduler idiom used by {@code WebhookRetryScheduler} — self-invocation

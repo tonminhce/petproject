@@ -4,9 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Configuration properties for Keycloak integration.
- */
 @Getter
 @Setter
 @ConfigurationProperties(prefix = "shop.keycloak")
@@ -22,39 +19,18 @@ public class KeycloakProperties {
      */
     private String publicServerUrl;
 
-    /**
-     * Target realm for user operations.
-     */
     private String realm = "ecommerce";
 
-    /**
-     * OAuth2 client ID for token operations.
-     */
     private String clientId = "shop-backend";
 
-    /**
-     * OAuth2 client secret (optional, for confidential clients).
-     */
     private String clientSecret;
 
-    /**
-     * Admin realm (usually "master").
-     */
     private String adminRealm = "master";
 
-    /**
-     * Admin client ID (usually "admin-cli").
-     */
     private String adminClientId = "admin-cli";
 
-    /**
-     * Admin username for user management operations.
-     */
     private String adminUsername;
 
-    /**
-     * Admin password for user management operations.
-     */
     private String adminPassword;
 
     public String getPublicServerUrlOrDefault() {

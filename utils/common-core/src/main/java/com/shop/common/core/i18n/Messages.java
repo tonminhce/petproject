@@ -11,7 +11,6 @@ import java.util.ResourceBundle;
 
 /**
  * Static i18n facade used from non-Spring contexts (exception constructors, utility code).
- *
  * <p>Resolution order:</p>
  * <ol>
  *   <li>Spring-managed {@link MessageSource} if it has been installed via {@link #setMessageSource}.
@@ -22,7 +21,6 @@ import java.util.ResourceBundle;
  *   <li>The raw {@code messageKey} when nothing else matches, so error responses always
  *       contain <em>something</em> instead of crashing the handler.</li>
  * </ol>
- *
  * <p>Format placeholders use {@link MessageFormat} {@code {0}} indexed syntax — the same
  * syntax Spring's {@code MessageSource} understands so templates are interpreted identically
  * on both lookup paths.</p>
@@ -56,7 +54,6 @@ public final class Messages {
             try {
                 return source.getMessage(messageKey, args, locale);
             } catch (NoSuchMessageException ignored) {
-                // fall through to the bundle path
             }
         }
 

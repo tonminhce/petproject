@@ -12,14 +12,12 @@ import java.util.Set;
 
 /**
  * {@link ValueReader} that exposes Java record components as source properties.
- *
  * <p>ModelMapper 3.2.6 with {@code MatchingStrategies.STRICT} and
  * {@code setFieldMatchingEnabled(true)} does not see record components as
  * source properties (records' canonical accessors like {@code title()} are not
  * JavaBean-style {@code getTitle()}, and the field-matching SPI doesn't read
  * them). Registering this reader ahead of the default chain restores
  * record-to-entity mapping for every service that uses records as request DTOs.
- *
  * <p>Wired by {@code ModelMapperAutoConfiguration#modelMapper} via
  * {@link org.modelmapper.Configuration#addValueReader}. Only registered when
  * the source object is a {@link Record} — falls through to the default readers

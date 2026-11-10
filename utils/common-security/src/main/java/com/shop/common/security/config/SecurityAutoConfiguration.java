@@ -14,12 +14,10 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Autoconfigures the resource-server security stack for every servlet service
  * that has {@code spring-security} on the classpath.
- *
  * <p>{@code @Import(BaseSecurityConfig.class)} is intentional — it tells Spring
  * to process {@code BaseSecurityConfig} as a {@code @Configuration}, so its
  * {@code @Bean} methods ({@code securityFilterChain}, {@code jwtDecoder},
  * {@code jwtAuthenticationConverter}) are discovered and registered.</p>
- *
  * <p>Disable by setting {@code shop.security.enabled=false}.</p>
  */
 @AutoConfiguration

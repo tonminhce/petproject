@@ -9,7 +9,6 @@ import java.util.Optional;
 /**
  * Convenience accessor for the claims that every service reaches for first —
  * subject, email, full name, and realm roles.
- *
  * <p>Centralizes the claim-name knowledge in one place so the rest of the
  * codebase stops guessing whether the email claim is {@code email},
  * {@code preferred_username}, or something else entirely. Keycloak's defaults

@@ -82,11 +82,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
         Category category = mapper.toEntity(request);
         if (request.parentId() != null) {
-            // C11 fix — refuse to link under a parent that is, or descends from,
             // a row already in this category's future chain. Without this check
-            // a malicious or buggy client could build a cycle that breaks the
-            // /api/v1/categories/tree response (infinite loop while building the
-            // child list).
             assertNoCycle(null, request.parentId());
             Category parent = repo.findById(request.parentId())
                 .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.parentId()));
@@ -108,9 +104,6 @@ public class CategoryServiceImpl implements CategoryService {
         }
         mapper.partialUpdate(existing, request);
         if (request.parentId() != null) {
-            // C11 fix — see create(); the cycle window here is wider because
-            // the existing node may already be part of a chain that loops back
-            // through the new parent.
             assertNoCycle(id, request.parentId());
             Category parent = repo.findById(request.parentId())
                 .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.parentId()));
@@ -122,10 +115,9 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     /**
-     * C11 fix — verify that linking {@code categoryId} under {@code newParentId}
+     * Verify that linking {@code categoryId} under {@code newParentId}
      * would not form a cycle. {@code categoryId} is null for {@code create}
      * (the new node has no descendants yet) and non-null for {@code update}.
-     *
      * <p>Walks up the parent chain from {@code newParentId} bounded by
      * {@link #MAX_PARENT_DEPTH} so a corrupt chain can't trigger an unbounded
      * load. Returns silently on a healthy tree; throws {@code CYCLE_DETECTED}

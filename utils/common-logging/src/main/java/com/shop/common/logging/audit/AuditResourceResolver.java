@@ -9,7 +9,6 @@ import java.util.Map;
 /**
  * Resolves the audit resourceId from the current request's URI template
  * variables (populated by Spring MVC's {@code RequestMappingHandlerMapping}).
- *
  * <p>Binding rules (spec D6): only a path variable named exactly {@code id} or
  * ending in {@code Id} qualifies — entity titles, emails or slugs must never
  * become the resourceId. When several {@code *Id} variables exist the

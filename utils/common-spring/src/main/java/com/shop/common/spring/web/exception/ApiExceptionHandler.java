@@ -39,7 +39,6 @@ import java.util.List;
 /**
  * Global, cross-service exception translator. Every uncaught exception in any service
  * is converted to the canonical {@link ApiResponse} envelope so clients see one shape.
- *
  * <h3>Why one handler per exception type instead of a generic mapper?</h3>
  * Each branch encodes a deliberate translation: which {@link ErrorCode}, whether to surface
  * the original message (validation) or a canned one (auth), and whether to log at WARN or ERROR.
@@ -52,7 +51,6 @@ public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     private static final String ERROR_LOG_TEMPLATE = "ApiError uri={} status={} code={} message={} cause={}";
 
-    // ------------------- Business -------------------
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception, WebRequest request) {
         return buildErrorResponse(
@@ -66,7 +64,6 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Validation -------------------
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception, WebRequest request) {
@@ -121,7 +118,6 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleUnreadableMessage(
             HttpMessageNotReadableException exception, WebRequest request) {
         // Deliberately do NOT surface exception.getMessage(): it can contain the raw
-        // JSON payload and internal deserialization details.
         String safeMessage = Messages.get(ErrorCode.BAD_REQUEST.getMessageKey());
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
@@ -134,7 +130,6 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Routing -------------------
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException exception, WebRequest request) {
@@ -177,7 +172,6 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Upload / Payload -------------------
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(
             MaxUploadSizeExceededException exception, WebRequest request) {
@@ -207,15 +201,9 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Data integrity -------------------
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, WebRequest request) {
-        // H32 (Wave A fix-up) — the most-specific cause's message carries raw JDBC
-        // text (constraint name, table, column, SQL state). ECHO NOTHING OF IT.
-        // Keep 409 + domain ErrorCode so callers and operators still see the right
-        // signal; the i18n string for `error.conflict` is the generic, leak-free
-        // message. Full cause is logged at ERROR for operators.
         log.error("DataIntegrityViolationException swallowed into 409 ERR-0409 — see cause", exception);
         String safeMessage = Messages.get(ErrorCode.CONFLICT.getMessageKey());
         return buildErrorResponse(
@@ -234,9 +222,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLocking(
             OptimisticLockingFailureException exception, WebRequest request) {
         // Another transaction updated the same row between our read and write
-        // (e.g. two admins racing confirm/cancel on one order). That is a
         // client-visible conflict, not a server fault — canonical 409, never
-        // the 500 fallback (order-service review finding 3).
         String message = Messages.get(ErrorCode.CONFLICT.getMessageKey());
         return buildErrorResponse(
                 HttpStatus.CONFLICT,
@@ -249,7 +235,6 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Security -------------------
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
             AccessDeniedException exception, WebRequest request) {
@@ -280,7 +265,6 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Fallback -------------------
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleOtherException(Exception exception, WebRequest request) {
         String message = Messages.get(ErrorCode.INTERNAL_SERVER_ERROR.getMessageKey());
@@ -295,7 +279,6 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Helpers -------------------
     private ResponseEntity<ApiResponse<Void>> handleValidationError(
             List<String> errorMessages, WebRequest request, Exception exception) {
 
@@ -322,7 +305,6 @@ public class ApiExceptionHandler {
         String requestUri = extractRequestUri(request);
         Throwable rootCause = findRootCause(exception);
 
-        // Log at the severity the translation branch asked for
         if (shouldLogAsError) {
             log.error(ERROR_LOG_TEMPLATE, requestUri, status.value(), errorCode, message, rootCause.getMessage(), exception);
         } else {

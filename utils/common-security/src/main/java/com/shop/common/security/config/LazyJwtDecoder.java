@@ -11,16 +11,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
- * H33 — Holder-pattern {@link JwtDecoder} that defers the OIDC discovery + JWKS
+ * Holder-pattern {@link JwtDecoder} that defers the OIDC discovery + JWKS
  * fetch to the first {@link #decode(String)} call.
- *
  * <p>The previous {@code @Bean} factory called
  * {@code NimbusJwtDecoder.withIssuerLocation(...).build()} directly, which
  * synchronously fetches the OIDC discovery document over HTTP at startup.
  * That made every service hang on Keycloak being reachable — a blocker for
  * dev loops, CI image builds, and multi-pod rolling restarts when the IdP
  * is briefly unavailable.</p>
- *
  * <p>This Holder:</p>
  * <ul>
  *   <li>Returns instantly from the bean factory — startup is non-blocking.</li>

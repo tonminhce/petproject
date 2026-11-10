@@ -5,8 +5,7 @@ import org.springframework.mail.MailSendException;
 import org.springframework.stereotype.Component;
 
 /**
- * C17 — maps a thrown delivery failure to {@link NotificationFailureKind}.
- *
+ * Maps a thrown delivery failure to {@link NotificationFailureKind}.
  * <p>PERMANENT means the message can never be delivered to these recipients:
  * an {@link AddressException} (syntax/unknown address) anywhere in the cause
  * chain, or the JavaMail invalid-recipient aggregate — providers throw

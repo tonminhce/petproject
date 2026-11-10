@@ -20,7 +20,6 @@ import java.util.UUID;
  * {@code GET /internal/products/media-references/{id}} returning how many live
  * products still point at the media. Per-call Authorization header from
  * {@link ServiceTokenProvider} — the endpoint is SERVICE-role.
- *
  * <p>Error posture — fail-closed, EligibilityClient shape: ANY HTTP failure
  * (non-2xx, timeout, connection refused, malformed body) maps to an EMPTY
  * result instead of a thrown exception — the downstream {@link RestClientException}

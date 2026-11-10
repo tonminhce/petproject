@@ -81,7 +81,6 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             return ReservationResponse.from(campaign, existing);
         }
 
-        // Frozen up-front (D3): budget check needs the new discount, and the
         // returned amounts must match the stored row exactly.
         BigDecimal discount = DiscountCalculator.compute(
             campaign.getDiscountType(), campaign.getDiscountValue(), request.orderAmount());
@@ -104,9 +103,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         }
 
         // ⚠️ Race protection (spec §5.2) — explicit choice: version-touch on the campaign row.
-        // Checks 2c-2e are check-then-insert against the reservation table; under READ_COMMITTED
         // two concurrent reserves can both pass. Touching a mapped field + saveAndFlush makes
-        // THIS tx issue an UPDATE on campaign → the flush compares @Version: the loser gets
         // OptimisticLockingFailureException → the retry wrapper re-reads (now seeing the
         // winner's committed PENDING row) and re-validates → correctly rejected.
         campaign.setUpdatedAt(now);
@@ -128,8 +125,6 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             // F-047 — uk_cur_order_id is UNIQUE, so a concurrent second reserve
             // for the same order is rejected by the database. Without this
-            // mapping the loser surfaced a raw constraint violation as a 500
-            // instead of the domain's PROMOTION_DUPLICATE_REQUEST.
             log.info("Concurrent coupon reservation for order {} rejected by uk_cur_order_id",
                     request.orderId());
             throw BusinessException.of(ErrorCode.PROMOTION_DUPLICATE_REQUEST, request.orderId());

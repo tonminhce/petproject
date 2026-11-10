@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Drains {@code outbox_events} and publishes each PENDING row to Kafka.
- *
  * <p><b>C14</b> — rows are claimed one at a time via
  * {@link OutboxEventRepository#claimOnePending} (PESSIMISTIC_WRITE + SKIP
  * LOCKED) inside a per-event {@link TransactionTemplate} transaction (the F2
@@ -27,7 +26,6 @@ import java.util.concurrent.TimeUnit;
  * would bypass {@code @Transactional}): the row lock spans the Kafka publish
  * and the status save, so a second relay instance can never claim and
  * double-publish the same row — it gets an empty claim and moves on.</p>
- *
  * <p><b>H44</b> — the relay no longer blocks on a per-event
  * {@code future.get(10s)} (which would let a single slow publish pin the
  * scheduler thread for ten seconds). Inside a single drain cycle the relay
@@ -76,7 +74,6 @@ public class PaymentOutboxRelay {
                 if (locked.isEmpty()) {
                     return null;  // nothing pending (or all locked by peers) — stop
                 }
-                // Mark SENDING so a stuck relay row is visible to recovery tooling
                 // without holding the lock long enough to matter.
                 locked.get().setStatus(OutboxStatus.SENDING);
                 locked.get().setLastError(null);
@@ -88,7 +85,6 @@ public class PaymentOutboxRelay {
         }
         if (claimedIds.isEmpty()) return;
 
-        // Phase 2 — load the rows and fan them out async.
         List<OutboxEvent> rows = outboxRepo.findAllById(claimedIds);
         List<OutboxMessage> messages = new ArrayList<>(rows.size());
         for (OutboxEvent e : rows) {
@@ -108,7 +104,6 @@ public class PaymentOutboxRelay {
 
     private void markFinalState(OutboxEvent event, boolean allCompleted) {
         // Reload under the row's lock so a concurrent recovery sweep sees a
-        // consistent final state.
         OutboxEvent e = outboxRepo.findById(event.getId()).orElse(null);
         if (e == null || e.getStatus() != OutboxStatus.SENDING) {
             return;  // recovery already moved this row; skip.

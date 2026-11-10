@@ -25,7 +25,6 @@ import java.util.UUID;
  * Promotion client for the confirm-hardening reserve/commit flow (hardening §2).
  * Mirrors {@link InventoryServiceClient}: per-call Authorization header from
  * {@link ServiceTokenProvider} — promotion endpoints are SERVICE-role.
- *
  * <p>Error mapping: {@code reserve()} 4xx → ORDER_PROMOTION_INVALID (user-facing
  * coupon problem); {@code commit}/{@code release}/{@code releaseCommitted} 4xx →
  * rethrow the remote {@code ApiResponse.code} as a matching {@link ErrorCode}
@@ -66,8 +65,6 @@ public class PromotionServiceClient {
     public PromotionReserveResponse reserve(PromotionReserveRequest request) {
         if (!props.promotion().isEnabled()) {
             // Caller (PricingService) should have already rejected user-supplied coupon when
-            // promotion is disabled — see PricingServiceImpl.calculate for the check.
-            // Defensive fallback: no discount.
             return new PromotionReserveResponse(null, BigDecimal.ZERO, request.orderAmount());
         }
         try {

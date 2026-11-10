@@ -15,25 +15,10 @@ import java.util.List;
 
 /**
  * Security configuration bound from {@code shop.security.*}.
- *
  * <p>Each service can override any field via {@code application.yml} or
  * environment variables (e.g. {@code SHOP_SECURITY_ISSUER_URI}). Defaults are
  * safe but deliberately conservative — JWT validation is on, CSRF is off, the
  * session is stateless, and CORS only allows the configured origins.</p>
- *
- * <h3>Example</h3>
- * <pre>{@code
- * shop:
- *   security:
- *     enabled: true
- *     issuer-uri: http://keycloak:8080/realms/ecommerce
- *     public-paths:
- *       - path: /api/v1/auth/login
- *       - path: /api/v1/auth/refresh
- *     cors:
- *       enabled: true
- *       allowed-origin-patterns: ["http://localhost:3000"]
- * }</pre>
  *
  * @param enabled            master switch — when {@code false} the autoconfiguration
  *                           backs off so a service can wire its own security stack

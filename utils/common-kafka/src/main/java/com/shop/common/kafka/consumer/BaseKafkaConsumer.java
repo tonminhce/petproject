@@ -14,7 +14,6 @@ import java.util.function.Consumer;
 /**
  * Template-method base class for Kafka consumers. Three flavors of
  * {@code processMessage}:
- *
  * <ul>
  *   <li>Raw-wire + typed bind (H-1): the listener hands over the RAW STRING
  *       value (see {@link BaseKafkaListenerConfig}'s wire contract) plus the
@@ -26,7 +25,6 @@ import java.util.function.Consumer;
  *   <li>Key + value: when the consumer needs to dedupe or partition by
  *       key.</li>
  * </ul>
- *
  * <p>The wire mapper is a shared {@link ObjectMapper} with
  * {@link JavaTimeModule} so ISO-8601 instants on the fleet wire (e.g.
  * {@code transitionedAt}) bind like they do on the producer side (Boot's
@@ -99,7 +97,6 @@ public abstract class BaseKafkaConsumer<K, V> {
             JsonNode node = WIRE_MAPPER.readTree(rawValue);
             if (node.isTextual()) {
                 // Legacy double-encoded wire (pre-R1): an old producer
-                // JSON-string-encoded the payload — unwrap once before binding.
                 node = WIRE_MAPPER.readTree(node.textValue());
             }
             return WIRE_MAPPER.treeToValue(node, type);

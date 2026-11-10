@@ -19,7 +19,6 @@ import java.util.UUID;
  * Soft delete via the repository's conditional native UPDATE: the row flips
  * {@code deleted} only if still live, so the 0-rows outcome IS the
  * already-deleted conflict (409 MED-12005) — no load-then-mark race window.
- *
  * <p><strong>D4 (Task 4):</strong> the row is loaded (pre-delete snapshot) and
  * a {@code MediaDeleted} outbox row is written by {@link MediaEventService} in
  * the SAME transaction as the {@code deleted_at} update — a 409 on the
@@ -41,9 +40,7 @@ public class MediaLifecycleServiceImpl implements MediaLifecycleService {
         if (!mediaRepository.existsIncludingDeleted(mediaId)) {
             throw BusinessException.of(ErrorCode.MEDIA_NOT_FOUND);
         }
-        // Pre-delete snapshot source: @SQLRestriction hides deleted rows, so a
         // concurrent delete between the exists-check and here surfaces as an
-        // empty load — the same 409 conflict, just raced.
         Media media = mediaRepository.findById(mediaId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.MEDIA_ALREADY_DELETED));
         String actor = AuthenticatedUser.current()

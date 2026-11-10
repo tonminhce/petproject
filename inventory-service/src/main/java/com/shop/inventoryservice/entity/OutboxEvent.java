@@ -23,7 +23,6 @@ import java.util.UUID;
  * change; a relay drains PENDING rows to Kafka. Hard delete - no audit or
  * soft-delete columns (spec section 3.4). aggregateId = productId (used as
  * Kafka partition key).
- *
  * <p>Deliberately does NOT extend product-service's
  * {@code AbstractMappedEntity}-based OutboxEvent: outbox rows are bulk-purged
  * by retention, so audit + soft-delete columns would be dead weight, and the

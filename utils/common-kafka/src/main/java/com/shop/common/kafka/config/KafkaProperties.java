@@ -7,7 +7,6 @@ import java.util.Map;
 
 /**
  * Configuration for the shared Kafka producer / consumer beans.
- *
  * <pre>{@code
  * shop:
  *   kafka:
@@ -104,7 +103,6 @@ public class KafkaProperties {
         props.put("retries", producer.getRetries());
         props.put("max.in.flight.requests.per.connection", 1);
         props.put("key.serializer", org.apache.kafka.common.serialization.StringSerializer.class.getName());
-        // H41 — pin the transport-layer defaults so every fleet producer gets
         // batching, a small linger window, lz4 compression, and idempotent
         // exactly-once-per-attempt delivery without per-service config. The
         // wire contract (R1, single-encoded JSON-string via KafkaMessagePublisher)
@@ -168,7 +166,6 @@ public class KafkaProperties {
 
     /**
      * Retry/DLT defaults — INTENTIONALLY UNUSED (C20 review finding).
-     *
      * <p>The fleet's listener factory uses a raw-String value deserializer
      * ({@link org.apache.kafka.common.serialization.StringDeserializer}, see
      * {@code BaseKafkaListenerConfig}). That deserializer never throws on
@@ -177,7 +174,6 @@ public class KafkaProperties {
      * logged, and the offset still advances. Combined, neither deserialize
      * failures nor handler failures ever reach a {@code CommonErrorHandler}
      * that could trigger retry / DLT routing.</p>
-     *
      * <p>This block is kept for two reasons:</p>
      * <ol>
      *   <li>Future listeners that drop the ack-always posture (e.g. async
@@ -217,29 +213,19 @@ public class KafkaProperties {
         private int retries = 3;
 
         /**
-         * H41 — exactly-once-per-attempt delivery on producer failover.
+         * Exactly-once-per-attempt delivery on producer failover.
          * Combined with {@code acks=all} and {@code max.in.flight.requests.
          * per.connection=1} (pinned at the build site), this is the canonical
          * fleet recipe.
          */
         private boolean enableIdempotence = true;
 
-        /**
-         * H41 — lz4 is the cheapest CPU cost per byte saved; snappy is faster
-         * but compresses less. zstd is also viable but is a separate native
-         * dep on the broker side; stick to lz4.
-         */
         private String compressionType = "lz4";
 
-        /**
-         * H41 — batch size in bytes. 32 KiB amortises one network round-trip
-         * across ~20 small JSON envelopes while staying well under the
-         * default request size cap.
-         */
         private int batchSizeBytes = 32 * 1024;
 
         /**
-         * H41 — linger window in milliseconds. A small (5 ms) wait lets the
+         * Linger window in milliseconds. A small (5 ms) wait lets the
          * producer coalesce synchronous outbox sends without adding latency
          * a human caller would notice.
          */

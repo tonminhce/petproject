@@ -6,13 +6,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 /**
  * Resolves the audit actor from the current Spring Security context.
- *
  * <p>Binding rules (spec D6): a JWT user token resolves to {@code sub} with
  * actor type {@code user}; a service token resolves to the {@code clientId}
  * (or {@code azp} fallback) claim with type {@code service}. Email, phone and
  * name claims are NEVER read for the identifier — they may exist on the token
  * but are deliberately ignored here so they can never reach the audit line.</p>
- *
  * <p>Claim order (final-review F3, KC26 live probe): {@code clientId} means a
  * service token outright. {@code azp} means service ONLY when the token
  * carries no user-session marker ({@code session_state}/{@code sid}): the
@@ -25,7 +23,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
  * always do. {@code sub} resolves a session-bearing token to
  * {@code user}. Tokens without any resolvable claim (or with no
  * authentication at all) resolve to {@code anonymous}/{@code user}.</p>
- *
  * <p>All Spring Security types are referenced only inside method bodies; this
  * class is only instantiated when the audit aspect is active, which the
  * autoconfiguration guards with {@code @ConditionalOnClass}.</p>

@@ -38,7 +38,6 @@ import java.util.function.Supplier;
 
 /**
  * Saga orchestrator for {@code OrderServiceImpl.createOrder}.
- *
  * <p>Separates DB transaction boundaries from remote HTTP calls (Pricing,
  * Stock Reservation) to prevent HikariCP connection pool exhaustion during
  * downstream latency spikes.</p>
@@ -123,7 +122,6 @@ public class OrderCreateSaga {
      * Executes the order creation saga with isolated transaction boundaries.
      */
     public OrderResponse execute(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // Step 1 (DB TX): Load cart + persist-early PENDING order
         CartAndOrder initial = executeInTx(() -> {
             Cart cart = (request.cartId() != null)
                 ? cartRepository.findByIdAndUserIdForUpdate(request.cartId(), userId)
@@ -154,7 +152,6 @@ public class OrderCreateSaga {
         List<CartItem> items = initial.items();
         Order order = initial.order();
 
-        // Step 2 (OUTSIDE DB TX - HikariCP released): Pricing calculation
         PricingBreakdown pricing;
         try {
             pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
@@ -183,7 +180,6 @@ public class OrderCreateSaga {
             orderItems.add(orderItem);
         }
 
-        // Step 3 (OUTSIDE DB TX - HikariCP released): Reserve stock per item
         List<OrderItem> reserved = new ArrayList<>();
         try {
             for (OrderItem orderItem : orderItems) {
@@ -213,7 +209,6 @@ public class OrderCreateSaga {
             throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getMessage());
         }
 
-        // Step 4 (DB TX): Save finalized order, items, clear cart, publish outbox
         executeInTxWithoutResult(() -> {
             orderRepository.save(order);
             orderItemRepository.saveAll(orderItems);

@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Micrometer-backed observability surface for product-service.
- *
  * <p>Meters:
  * <ul>
  *   <li>{@code product.cache.hit} / {@code product.cache.miss} — gauges backed
@@ -47,15 +46,7 @@ public class ProductMetrics {
         Gauge.builder("product.outbox.pending.count", pendingOutboxCount, AtomicInteger::get)
             .register(registry);
 
-        // Cache hit/miss: bind to Spring Data Redis's CacheStatistics so we get
-        // accurate counts from the same source the CacheInterceptor records into.
-        // The Spring `Cache` interface does not expose getStatistics(); only
         // `RedisCache` does — cast and skip if the cast fails (e.g. test context
-        // using a different CacheManager implementation).
-        //
-        // Bind the RedisCache itself and call getStatistics() INSIDE the gauge
-        // function: it returns an immutable snapshot, so a constructor-time capture
-        // would freeze the counters at their boot values (platform metrics fix).
         for (String cacheName : List.of("product", "productBySlug", "category", "brand")) {
             if (!(cacheManager.getCache(cacheName) instanceof RedisCache redisCache)) {
                 continue;
@@ -77,12 +68,6 @@ public class ProductMetrics {
 
     public void setPendingOutboxCount(int n) { pendingOutboxCount.set(n); }
 
-    // --- H-3 media reconciliation sweep ---
-
-    /**
-     * H-3 sweep observability: one increment per product row whose media
-     * reference was HEAD-checked this cycle (kept or cleared alike).
-     */
     public void recordSweepChecked() {
         registry.counter("product_media_sweep_checked_total").increment();
     }

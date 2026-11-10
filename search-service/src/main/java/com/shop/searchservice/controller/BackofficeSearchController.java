@@ -13,11 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Backoffice search administration (spec D5). ADMIN only — the reindex is an
- * expensive streaming operation (product-service scan + full index rebuild)
- * and deliberately NOT auto-started (ops §4(1)).
- */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_SEARCH)
 @RequiredArgsConstructor

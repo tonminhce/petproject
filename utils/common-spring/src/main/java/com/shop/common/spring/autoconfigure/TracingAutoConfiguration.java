@@ -76,7 +76,7 @@ public class TracingAutoConfiguration {
         }
 
         /**
-         * R1 — enriches every {@link RestClient.Builder} bean with the traceparent
+         * Enriches every {@link RestClient.Builder} bean with the traceparent
          * interceptor (idempotent). Declared {@code static} so this configuration
          * class is never instantiated early; the interceptor is resolved lazily
          * from the {@link BeanFactory} on first builder post-processing instead of

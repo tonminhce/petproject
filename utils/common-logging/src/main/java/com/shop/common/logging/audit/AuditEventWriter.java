@@ -2,7 +2,6 @@ package com.shop.common.logging.audit;
 
 /**
  * Sink for audit events — one event becomes one JSON line, exactly once.
- *
  * <p>Contract (spec D6 + review nit N1): {@link #write} NEVER blocks the
  * request thread beyond O(microseconds) of formatting, NEVER throws, and
  * never propagates audit failures — an audit outage must not fail the

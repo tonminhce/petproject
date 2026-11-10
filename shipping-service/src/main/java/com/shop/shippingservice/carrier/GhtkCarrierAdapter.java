@@ -12,13 +12,10 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * F-067 (P1) — the GHTK carrier adapter.
- *
  * <p>Previously this adapter never contacted GHTK: it derived a tracking
  * number locally from the order id and returned it as if the carrier had issued
  * it, while the injected API token was never used. See {@link GhnCarrierAdapter}
  * for the full consequence.</p>
- *
  * <p>Now the adapter calls the real create-shipment endpoint and stores the
  * tracking number the carrier issued. If the endpoint is not configured, the
  * application context FAILS AT STARTUP with

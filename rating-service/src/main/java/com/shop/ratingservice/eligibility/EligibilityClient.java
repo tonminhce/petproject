@@ -20,7 +20,6 @@ import java.util.UUID;
  * Order-service client for the verified-purchase eligibility gate (rating
  * design D1). Per-call Authorization header from {@link ServiceTokenProvider} —
  * the verify-purchase endpoint is SERVICE-role.
- *
  * <p>Error posture — fail-closed: ANY failure (non-2xx, timeout, malformed
  * body) maps to {@code false} instead of a thrown exception; the submit guard
  * turns that into RTG-11001. The raw downstream exception never leaves this
