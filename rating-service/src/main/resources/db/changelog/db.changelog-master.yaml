@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       file: changelog-001-ratings.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-002-rating-outbox-claim-lease.yaml
+      relativeToChangelogFile: true
