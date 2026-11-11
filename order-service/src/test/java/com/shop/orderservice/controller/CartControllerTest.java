@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -111,6 +113,84 @@ class CartControllerTest {
     @Test
     void clearCart_returns200() throws Exception {
         mockMvc.perform(delete("/api/v1/carts/me"))
+            .andExpect(status().isOk());
+    }
+
+    // --- F-028: the guest cart id is a bearer capability ---
+
+    @Test
+    void mergeCart_returns200_whenTheIdIsPresentedInTheHeader() throws Exception {
+        when(cartService.mergeCart(any(UUID.class), any(UUID.class))).thenReturn(sampleCart());
+        String guestCartId = UUID.randomUUID().toString();
+
+        mockMvc.perform(post("/api/v1/carts/merge")
+                .header("X-Guest-Cart-Id", guestCartId)
+                .param("guestCartId", guestCartId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void mergeCart_returns400_whenTheIdOnlyComesFromTheQueryString() throws Exception {
+        // A capability that came out of an access log, a proxy log, the
+        // browser history or a Referer header is exactly what an attacker
+        // would have. The header is what proves the caller holds it.
+        mockMvc.perform(post("/api/v1/carts/merge")
+                .param("guestCartId", UUID.randomUUID().toString()))
+            .andExpect(status().isBadRequest())
+            // the rejection has to say WHICH rule was broken, otherwise a
+            // different refusal (the mismatch rule) would pass this test
+            // while the header rule was silently gone.
+            .andExpect(jsonPath("$.message")
+                .value(org.hamcrest.Matchers.containsString("must be sent in the X-Guest-Cart-Id header")));
+
+        verify(cartService, never()).mergeCart(any(UUID.class), any(UUID.class));
+    }
+
+    @Test
+    void mergeCart_returns400_whenTheQueryStringIdDoesNotMatchTheHeader() throws Exception {
+        mockMvc.perform(post("/api/v1/carts/merge")
+                .header("X-Guest-Cart-Id", UUID.randomUUID().toString())
+                .param("guestCartId", UUID.randomUUID().toString()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message")
+                .value(org.hamcrest.Matchers.containsString("does not match the X-Guest-Cart-Id header")));
+
+        verify(cartService, never()).mergeCart(any(UUID.class), any(UUID.class));
+    }
+
+    @Test
+    void mergeCart_returns400_whenTheGuestCartIdIsNotAUuid() throws Exception {
+        // A short or sequential id would make every guest cart in the shop
+        // enumerable to any caller who guessed the next value.
+        mockMvc.perform(post("/api/v1/carts/merge")
+                .header("X-Guest-Cart-Id", "1"))
+            .andExpect(status().isBadRequest());
+
+        verify(cartService, never()).mergeCart(any(UUID.class), any(UUID.class));
+    }
+
+    @Test
+    void guestCartEndpoints_return400_whenTheGuestCartIdIsNotAUuid() throws Exception {
+        // the guest path only applies to an ANONYMOUS caller; an
+        // authenticated one is served from its own cart and the guest id is
+        // ignored.
+        SecurityContextHolder.clearContext();
+
+        mockMvc.perform(get("/api/v1/carts/me")
+                .header("X-Guest-Cart-Id", "42"))
+            .andExpect(status().isBadRequest());
+
+        verify(cartService, never()).getMyCart(any(UUID.class));
+    }
+
+    @Test
+    void guestCartEndpoints_serveAUuidGuestCart() throws Exception {
+        SecurityContextHolder.clearContext();
+        when(cartService.getMyCart(any(UUID.class))).thenReturn(sampleCart());
+
+        mockMvc.perform(get("/api/v1/carts/me")
+                .header("X-Guest-Cart-Id", UUID.randomUUID().toString()))
             .andExpect(status().isOk());
     }
 }
