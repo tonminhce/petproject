@@ -50,4 +50,12 @@ public class OutboxEvent {
 
     @Column(name = "last_error", length = 1000)
     private String lastError;
+
+    /**
+     * When the relay claimed this row (moved it to SENDING). The stale sweep
+     * uses it as the claim lease: a row left in SENDING by a crash is
+     * reclaimed once the lease expires, so the media event is not lost.
+     */
+    @Column(name = "claimed_at")
+    private Instant claimedAt;
 }

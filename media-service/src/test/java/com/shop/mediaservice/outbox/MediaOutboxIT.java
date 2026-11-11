@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.kafka.exception.KafkaPublishException;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
+import com.shop.common.kafka.producer.KafkaMessagePublisher.BatchOutcome;
+import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
 import com.shop.mediaservice.dto.response.MediaResponse;
 import com.shop.mediaservice.entity.Media;
 import com.shop.mediaservice.repository.MediaRepository;
@@ -32,7 +34,9 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.Map;
 import java.util.UUID;
 
@@ -375,6 +379,23 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
                 throw new KafkaPublishException("Injected kafka outage (test)");
             }
             super.publish(topic, key, value);
+        }
+
+        /**
+         * The relay publishes in a batch, so the outage has to be injected on
+         * the batch path too - otherwise the test would silently exercise a
+         * healthy publish and assert a failure that never happened.
+         */
+        @Override
+        public BatchOutcome publishBatch(List<OutboxMessage> records, long timeout, TimeUnit unit) {
+            if (failing) {
+                List<BatchOutcome.RecordOutcome> outcomes = new ArrayList<>(records.size());
+                for (int i = 0; i < records.size(); i++) {
+                    outcomes.add(new BatchOutcome.RecordOutcome(i, false, "Injected kafka outage (test)"));
+                }
+                return new BatchOutcome(records.size(), 0, true, outcomes);
+            }
+            return super.publishBatch(records, timeout, unit);
         }
     }
 }
