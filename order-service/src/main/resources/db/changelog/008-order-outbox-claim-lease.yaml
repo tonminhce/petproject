@@ -1,0 +1,21 @@
+databaseChangeLog:
+  # The relay claims a row by moving it to SENDING and committing, then
+  # publishes it outside that transaction. A crash between the two steps left
+  # the row in SENDING forever: nothing else touches a SENDING row, so the
+  # event was silently lost. The stale sweep needs the claim timestamp to
+  # tell a crashed claim from a publish that is still in flight.
+  - changeSet:
+      id: 008-order-outbox-claim-lease
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: claimed_at
+                  type: TIMESTAMP
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_claimed_at
+            columns:
+              - column: { name: claimed_at }

@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: changelog-004-coupon-reservation-version.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 005-promotion-outbox-claim-lease.yaml
+      relativeToChangelogFile: true
