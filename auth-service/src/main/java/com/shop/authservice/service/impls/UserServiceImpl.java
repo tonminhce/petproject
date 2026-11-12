@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,15 +62,72 @@ public class UserServiceImpl implements UserService {
     public UserResponse register(RegisterRequest request) {
         validateUniqueConstraints(request);
 
-        String keycloakUserId = createKeycloakUser(request);
-
+        // F-050: the local row is inserted BEFORE the Keycloak user exists, so
+        // the unique index is the arbiter of a concurrent registration. The
+        // loser of the race fails on the insert and never creates a Keycloak
+        // user at all - with the previous order both registrations created a
+        // Keycloak user and the local insert of the loser only failed
+        // afterwards.
+        User user = buildUserFromRequest(request, null);
         try {
-            User user = buildUserFromRequest(request, keycloakUserId);
-            User saved = userRepository.saveAndFlush(user);
-            return userMapper.toResponse(saved);
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            // A concurrent registration won the race on the unique index: the
+            // caller gets the catalogue conflict, not a raw constraint
+            // violation.
+            throw conflictForDuplicate(e, request);
+        }
+
+        String keycloakUserId;
+        try {
+            keycloakUserId = createKeycloakUser(request);
         } catch (RuntimeException e) {
-            rollbackKeycloakUser(keycloakUserId);
+            // The local row must not keep the username hostage when the
+            // identity provider refused the user.
+            rollbackLocalUser(user.getId());
             throw e;
+        }
+
+        user.setKeycloakUserId(keycloakUserId);
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
+    }
+
+    /**
+     * The catalogue conflict for a unique-constraint violation.
+     *
+     * <p>The constraint name decides the code, so the caller learns WHICH
+     * field is taken (username / email / phone) instead of a generic
+     * conflict.</p>
+     */
+    private BusinessException conflictForDuplicate(DataIntegrityViolationException e, RegisterRequest request) {
+        String detail = rootMessage(e);
+        if (detail.contains("username")) {
+            return BusinessException.conflict("auth.username.exists", request.username());
+        }
+        if (detail.contains("email")) {
+            return BusinessException.conflict("auth.email.exists", request.email());
+        }
+        if (detail.contains("phone")) {
+            return BusinessException.conflict("auth.phone.exists", request.phone());
+        }
+        return BusinessException.conflict("error.conflict");
+    }
+
+    private String rootMessage(Throwable throwable) {
+        Throwable root = throwable;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        return String.valueOf(root.getMessage()).toLowerCase();
+    }
+
+    /** Removes the local row of a registration whose Keycloak user could not be created. */
+    private void rollbackLocalUser(UUID userId) {
+        try {
+            userRepository.deleteById(userId);
+        } catch (Exception e) {
+            log.error("Failed to roll back the local user {} after the Keycloak user could not be created", userId, e);
         }
     }
 

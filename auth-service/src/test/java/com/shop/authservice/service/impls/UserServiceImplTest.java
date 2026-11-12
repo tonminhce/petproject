@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -139,19 +141,64 @@ class UserServiceImplTest {
     }
 
     @Test
-    void registerRollsBackKeycloakUserWhenPersistenceFails() {
+    void registerDoesNotCreateAKeycloakUserWhenTheLocalInsertFails() {
+        // F-050: the local row is inserted first, so the unique index arbitrates
+        // a concurrent registration. When the insert fails, NO Keycloak user has
+        // been created - there is nothing to roll back, and no orphan with the
+        // taken username is left behind.
         RegisterRequest req = registerRequest();
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);
-        when(keycloakAdminClient.createUser(any(), any(), any(), any(), any())).thenReturn("kc-123");
         when(roleRepository.findByNameIn(any())).thenReturn(Set.of(userRole));
         when(userMapper.toEntity(req)).thenReturn(newUser());
         when(userRepository.saveAndFlush(any(User.class))).thenThrow(new RuntimeException("db down"));
 
         assertThrows(RuntimeException.class, () -> userService.register(req));
 
-        verify(keycloakAdminClient).deleteUser("kc-123");
+        verify(keycloakAdminClient, never()).createUser(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void registerRemovesTheLocalRowWhenTheKeycloakUserCannotBeCreated() {
+        // The compensation now runs the other way round: the local row must not
+        // keep the username hostage when the identity provider refused the user.
+        RegisterRequest req = registerRequest();
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByPhone("0901234567")).thenReturn(false);
+        when(roleRepository.findByNameIn(any())).thenReturn(Set.of(userRole));
+        when(userMapper.toEntity(req)).thenReturn(newUser());
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(newUser());
+        when(keycloakAdminClient.createUser(any(), any(), any(), any(), any()))
+                .thenThrow(new RuntimeException("keycloak down"));
+
+        assertThrows(RuntimeException.class, () -> userService.register(req));
+
+        verify(userRepository).deleteById(userId);
+    }
+
+    @Test
+    void registerAnswersAConcurrentDuplicateWithTheCatalogueConflict() {
+        // The unique index is the arbiter of the race; the loser must get
+        // AUTH_USERNAME_EXISTS, not a raw constraint violation.
+        RegisterRequest req = registerRequest();
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByPhone("0901234567")).thenReturn(false);
+        when(roleRepository.findByNameIn(any())).thenReturn(Set.of(userRole));
+        when(userMapper.toEntity(req)).thenReturn(newUser());
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(
+                new DataIntegrityViolationException("could not execute statement",
+                        new java.sql.SQLException(
+                                "ERROR: duplicate key value violates unique constraint \"users_username_key\"", "23505")));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> userService.register(req));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatus());
+        assertTrue(ex.getMessage().toLowerCase().contains("alice"));
+        // and no Keycloak user was created for the loser of the race
+        verify(keycloakAdminClient, never()).createUser(any(), any(), any(), any(), any());
     }
 
     @Test
