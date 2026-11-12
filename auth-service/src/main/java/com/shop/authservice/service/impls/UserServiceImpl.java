@@ -374,11 +374,18 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(resetToken.getUserId())
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found", resetToken.getUserId()));
 
+        // F-053: the token is consumed BEFORE the password is changed, and the
+        // consumption is a conditional update - only one redemption can win the
+        // race. Consuming first also means a crash between the two steps
+        // cannot leave a token that is still redeemable.
+        if (passwordResetTokenRepository.consumeIfUnused(tokenHash) != 1) {
+            // another redemption won the race: the token is single-use
+            throw BusinessException.badRequest("auth.token.invalid.or.expired");
+        }
+
         keycloakAdminClient.resetUserPassword(user.getKeycloakUserId(), request.newPassword(), false);
         // a reset performed because the password may have been compromised must
         revokeSessions(user.getKeycloakUserId());
-        resetToken.setUsed(true);
-        passwordResetTokenRepository.save(resetToken);
 
         log.info("Password successfully reset for user {}", user.getUsername());
         return "Password reset successfully";

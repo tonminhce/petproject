@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changeset/003-partial-unique-users.yaml
   - include:
       file: db/changelog/changeset/004-password-reset-and-addresses.yaml
+  - include:
+      file: db/changelog/changeset/005-password-reset-token-version.yaml

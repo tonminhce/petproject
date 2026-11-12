@@ -3,11 +3,14 @@ package com.shop.authservice.service.impls;
 import com.shop.authservice.constant.RoleName;
 import com.shop.authservice.dto.request.ChangePasswordRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
+import com.shop.authservice.dto.request.ResetPasswordRequest;
 import com.shop.authservice.dto.request.UpdateUserRequest;
 import com.shop.authservice.dto.response.UserResponse;
+import com.shop.authservice.entity.PasswordResetToken;
 import com.shop.authservice.entity.Role;
 import com.shop.authservice.entity.User;
 import com.shop.authservice.mapper.UserMapper;
+import com.shop.authservice.repository.PasswordResetTokenRepository;
 import com.shop.authservice.repository.RoleRepository;
 import com.shop.authservice.repository.UserRepository;
 import com.shop.common.core.exception.BusinessException;
@@ -65,6 +68,9 @@ class UserServiceImplTest {
 
     @Mock
     private KeycloakTokenClient keycloakTokenClient;
+
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -199,6 +205,61 @@ class UserServiceImplTest {
         assertTrue(ex.getMessage().toLowerCase().contains("alice"));
         // and no Keycloak user was created for the loser of the race
         verify(keycloakAdminClient, never()).createUser(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void resetPasswordRejectsASecondRedemptionOfTheSameToken() {
+        // F-053: the token is consumed with a conditional update before the
+        // password is changed. When another redemption won the race, the
+        // consumption affects no row and the password must stay untouched -
+        // otherwise the second redemption would silently replace the password
+        // the owner had just chosen.
+        when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(anyString()))
+                .thenReturn(Optional.of(resetToken()));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(userWithKeycloakAccount()));
+        when(passwordResetTokenRepository.consumeIfUnused(anyString())).thenReturn(0);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> userService.resetPassword(resetRequest()));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        verify(keycloakAdminClient, never()).resetUserPassword(anyString(), anyString(), any(Boolean.class));
+    }
+
+    @Test
+    void resetPasswordChangesThePasswordWhenTheTokenCouldBeConsumed() {
+        when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(anyString()))
+                .thenReturn(Optional.of(resetToken()));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(userWithKeycloakAccount()));
+        when(passwordResetTokenRepository.consumeIfUnused(anyString())).thenReturn(1);
+
+        String message = userService.resetPassword(resetRequest());
+
+        assertTrue(message.contains("Password reset"));
+        verify(keycloakAdminClient).resetUserPassword("kc-123", "N3wPassw0rd", false);
+    }
+
+    private User userWithKeycloakAccount() {
+        return User.builder()
+                .id(userId)
+                .fullName("Alice Wonder")
+                .username("alice")
+                .email("alice@example.com")
+                .keycloakUserId("kc-123")
+                .build();
+    }
+
+    private PasswordResetToken resetToken() {
+        return PasswordResetToken.builder()
+                .userId(userId)
+                .tokenHash("hash")
+                .expiresAt(Instant.now().plusSeconds(600))
+                .used(false)
+                .build();
+    }
+
+    private ResetPasswordRequest resetRequest() {
+        return new ResetPasswordRequest("raw-token", "N3wPassw0rd", "N3wPassw0rd");
     }
 
     @Test
