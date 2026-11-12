@@ -102,7 +102,12 @@ gateway:
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}
       burst-capacity: ${GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY:4000}
       requested-tokens: ${GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS:1}
-  # D4 — bucket4j edge scopes (in-process buckets, single instance V1)
+  # D4 — the edge scopes (backoffice + search). F-034: the buckets live in
+  # Redis, so the numbers below are the budget of the WHOLE gateway fleet and
+  # not of a single replica (with in-process buckets 4 replicas meant 4 x the
+  # configured limit). The bucket keeps the token-bucket semantics: the
+  # capacity is the requests-per-minute value and the refill rate is that
+  # value per minute.
   edge-rate-limit:
     enabled: ${GATEWAY_EDGE_RATE_LIMIT_ENABLED:true}
     backoffice-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_BACKOFFICE_RPM:10}

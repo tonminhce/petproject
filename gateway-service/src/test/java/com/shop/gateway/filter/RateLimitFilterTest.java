@@ -1,6 +1,13 @@
 package com.shop.gateway.filter;
 
+import com.shop.gateway.ratelimit.EdgeRateLimiter;
+import com.shop.gateway.ratelimit.RedisEdgeRateLimiter;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -11,16 +18,57 @@ import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
 
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.DockerImageName;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * The edge limiter is fleet-wide (F-034), so the filter is exercised against
+ * a REAL Redis: the bucket the filter meters is the one every gateway replica
+ * would share.
+ */
 class RateLimitFilterTest {
+
+    private static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+            .withExposedPorts(6379);
+
+    private static ReactiveStringRedisTemplate redis;
 
     private final GatewayFilterChain chain = mock(GatewayFilterChain.class);
     private final GatewayErrorResponseWriter errorWriter = new GatewayErrorResponseWriter(new ObjectMapper());
     private final ClientIpResolver ipResolver = new ClientIpResolver(1);
+
+    @BeforeAll
+    static void startRedis() {
+        REDIS.start();
+        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(
+                new RedisStandaloneConfiguration(REDIS.getHost(), REDIS.getFirstMappedPort()));
+        connectionFactory.afterPropertiesSet();
+        redis = new ReactiveStringRedisTemplate(connectionFactory);
+    }
+
+    /**
+     * The buckets live in Redis, so every case starts with an empty database —
+     * otherwise the cases would share the budget of the same client.
+     */
+    @BeforeEach
+    void flushBuckets() {
+        redis.getConnectionFactory().getReactiveConnection()
+                .serverCommands().flushDb()
+                .block();
+    }
+
+    private RateLimitFilter filter(final EdgeRateLimitProperties properties) {
+        return new RateLimitFilter(properties, errorWriter, ipResolver, edgeLimiter(properties));
+    }
+
+    private EdgeRateLimiter edgeLimiter(final EdgeRateLimitProperties properties) {
+        return new RedisEdgeRateLimiter(redis, properties);
+    }
 
     @Test
     void backofficeBurstExceedingLimitYields429EnvelopeAndZeroRemainingHeader() throws Exception {
@@ -29,8 +77,7 @@ class RateLimitFilterTest {
             exchange.getResponse().setStatusCode(HttpStatus.OK);
             return Mono.empty();
         });
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 3, 60), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 3, 60));
 
         MockServerWebExchange last = null;
         for (int i = 0; i < 4; i++) {
@@ -50,8 +97,7 @@ class RateLimitFilterTest {
     @Test
     void passedRequestsCarryRemainingHeader() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 3, 60), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 3, 60));
 
         var first = exchange("/api/v1/backoffice/products", "203.0.113.7");
         filter.filter(first, chain).block();
@@ -63,8 +109,7 @@ class RateLimitFilterTest {
     @Test
     void searchScopeHasItsOwnBudget() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 1, 2), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 1, 2));
 
         var first = exchange("/api/v1/search?q=shoes", "203.0.113.7");
         filter.filter(first, chain).block();
@@ -81,8 +126,7 @@ class RateLimitFilterTest {
     @Test
     void nonScopedPathsAreUnlimited() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 1, 1), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 1, 1));
 
         for (int i = 0; i < 10; i++) {
             var exchange = exchange("/api/v1/products", "203.0.113.7");
@@ -94,8 +138,7 @@ class RateLimitFilterTest {
     @Test
     void bucketsAreIsolatedPerIp() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 1, 1), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 1, 1));
 
         var firstIp = exchange("/api/v1/backoffice/products", "203.0.113.7");
         filter.filter(firstIp, chain).block();
@@ -109,8 +152,7 @@ class RateLimitFilterTest {
     @Test
     void disabledFilterNeverLimits() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(false, 1, 1), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(false, 1, 1));
 
         for (int i = 0; i < 5; i++) {
             var exchange = exchange("/api/v1/backoffice/products", "203.0.113.7");
@@ -122,8 +164,7 @@ class RateLimitFilterTest {
     @Test
     void singleCharEncodedBackofficePathIsMeteredThenRejectedWith400() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 2, 60), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 2, 60));
 
         var first = encodedExchange("/api/v1/backoffice/%72atings", "203.0.113.7");
         filter.filter(first, chain).block();
@@ -140,8 +181,7 @@ class RateLimitFilterTest {
     @Test
     void matrixVariableBackofficePathIsRejectedWith400() throws Exception {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 10, 60), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 10, 60));
 
         var exchange = encodedExchange("/api/v1/backoffice;r=1/ratings", "203.0.113.7");
         filter.filter(exchange, chain).block();
@@ -156,8 +196,7 @@ class RateLimitFilterTest {
     @Test
     void doubleEncodedBackofficePathIsRejectedWith400Envelope() throws Exception {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 10, 60), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 10, 60));
 
         var exchange = encodedExchange("/api/v1/backoffice/%2572atings", "203.0.113.7");
         filter.filter(exchange, chain).block();
@@ -172,8 +211,7 @@ class RateLimitFilterTest {
     @Test
     void encodedSearchPathIsMeteredThenRejectedWith400() {
         stubChainOk();
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 10, 1), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 10, 1));
 
         var first = encodedExchange("/api/v1/%73earch?q=shoes", "203.0.113.7");
         filter.filter(first, chain).block();
@@ -186,8 +224,7 @@ class RateLimitFilterTest {
 
     @Test
     void filterOrderFollowsBindingConstant() {
-        var filter = new RateLimitFilter(
-                new EdgeRateLimitProperties(true, 10, 60), errorWriter, ipResolver);
+        var filter = filter(new EdgeRateLimitProperties(true, 10, 60));
 
         assertThat(filter.getOrder())
                 .isEqualTo(FilterOrder.RATE_LIMIT)

@@ -7,9 +7,12 @@ import com.shop.gateway.filter.ClientIpResolver;
 import com.shop.gateway.filter.EdgeRateLimitProperties;
 import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import com.shop.gateway.filter.RateLimitFilter;
+import com.shop.gateway.ratelimit.EdgeRateLimiter;
 import com.shop.gateway.ratelimit.RateLimitProperties;
+import com.shop.gateway.ratelimit.RedisEdgeRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -37,11 +40,23 @@ public class EdgeFiltersConfiguration {
         return new AdminIpAllowlistFilter(properties, errorResponseWriter, clientIpResolver);
     }
 
+    /**
+     * The edge limiter is backed by Redis (F-034): the budget has to be
+     * shared by every gateway replica, otherwise the effective limit grows
+     * with the replica count.
+     */
+    @Bean
+    public EdgeRateLimiter edgeRateLimiter(final ReactiveStringRedisTemplate redis,
+                                           final EdgeRateLimitProperties properties) {
+        return new RedisEdgeRateLimiter(redis, properties);
+    }
+
     @Bean
     public RateLimitFilter edgeRateLimitFilter(final EdgeRateLimitProperties properties,
                                                final GatewayErrorResponseWriter errorResponseWriter,
-                                               final ClientIpResolver clientIpResolver) {
-        return new RateLimitFilter(properties, errorResponseWriter, clientIpResolver);
+                                               final ClientIpResolver clientIpResolver,
+                                               final EdgeRateLimiter edgeRateLimiter) {
+        return new RateLimitFilter(properties, errorResponseWriter, clientIpResolver, edgeRateLimiter);
     }
 
     @Bean

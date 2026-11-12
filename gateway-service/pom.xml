@@ -12,7 +12,6 @@
     <name>gateway-service</name>
     <description>Spring Cloud Gateway: single entry point routing requests to backend microservices with JWT validation.</description>
     <properties>
-        <bucket4j.version>8.14.0</bucket4j.version>
     </properties>
     <dependencies>
         <dependency>
@@ -34,15 +33,6 @@
                     <artifactId>jakarta.persistence-api</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.bucket4j</groupId>
-            <artifactId>bucket4j_jdk17-core</artifactId>
-            <version>${bucket4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>

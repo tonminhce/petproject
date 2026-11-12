@@ -2,9 +2,8 @@ package com.shop.gateway.filter;
 
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.gateway.constant.ServiceRoute;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
+import com.shop.gateway.ratelimit.EdgeRateLimitDecision;
+import com.shop.gateway.ratelimit.EdgeRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -13,18 +12,21 @@ import org.springframework.core.Ordered;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Bucket4j per-IP token buckets for the two edge scopes:
+ * Per-IP token buckets for the two edge scopes:
  * backoffice prefixes and the search prefix. Other paths are unlimited.
- * Buckets live in-process (single gateway instance, V1); a rejected request
- * gets the fleet 429 envelope plus {@code X-RateLimit-Remaining: 0}, a passed
- * request is tagged with the remaining tokens for debuggability (§4.4).
+ *
+ * <p>F-034: the buckets are held in Redis, so every gateway replica meters a
+ * client against the same budget. The previous in-process bucket4j cache
+ * multiplied the effective limit by the replica count — with four replicas a
+ * single client could make 4 x 10 backoffice requests per minute, which is
+ * exactly the abuse the backoffice limit exists to stop.</p>
+ *
+ * <p>A rejected request gets the fleet 429 envelope plus
+ * {@code X-RateLimit-Remaining: 0}, a passed request is tagged with the
+ * remaining tokens for debuggability (§4.4).
  * <p>Scope lookup happens on the percent-DECODED path and a percent-encoded
  * request whose decoded form falls into a scope is still metered, then
  * rejected with the fleet 400 envelope (raw &ne; decoded — see
@@ -46,20 +48,18 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
     private final EdgeRateLimitProperties properties;
     private final GatewayErrorResponseWriter errorResponseWriter;
     private final ClientIpResolver clientIpResolver;
+    private final EdgeRateLimiter rateLimiter;
     private final List<String> backofficePrefixes;
-    private final Cache<String, Bucket> buckets;
 
     public RateLimitFilter(final EdgeRateLimitProperties properties,
                            final GatewayErrorResponseWriter errorResponseWriter,
-                           final ClientIpResolver clientIpResolver) {
+                           final ClientIpResolver clientIpResolver,
+                           final EdgeRateLimiter rateLimiter) {
         this.properties = properties;
         this.errorResponseWriter = errorResponseWriter;
         this.clientIpResolver = clientIpResolver;
+        this.rateLimiter = rateLimiter;
         this.backofficePrefixes = ServiceRoute.backofficeRoutes().map(ServiceRoute::prefix).toList();
-        this.buckets = Caffeine.newBuilder()
-                .maximumSize(properties.maximumBuckets())
-                .expireAfterAccess(properties.bucketExpiration().toMillis(), TimeUnit.MILLISECONDS)
-                .build();
     }
 
     @Override
@@ -77,13 +77,23 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        final String key = scope + ":" + clientIpResolver.resolve(exchange);
-        final Bucket bucket = buckets.get(key, ignored -> newBucket(scope));
-        if (!bucket.tryConsume(1)) {
+        final String clientIp = clientIpResolver.resolve(exchange);
+        final int requestsPerMinute = scope == Scope.BACKOFFICE
+                ? properties.backofficeRequestsPerMinute()
+                : properties.searchRequestsPerMinute();
+        return rateLimiter.acquire(scope.name(), clientIp, requestsPerMinute)
+                .flatMap(decision -> applyDecision(exchange, chain, decision, rawPath));
+    }
+
+    private Mono<Void> applyDecision(final ServerWebExchange exchange,
+                                      final GatewayFilterChain chain,
+                                      final EdgeRateLimitDecision decision,
+                                      final String rawPath) {
+        if (!decision.allowed()) {
             exchange.getResponse().getHeaders().set(REMAINING_HEADER, "0");
             return errorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS);
         }
-        exchange.getResponse().getHeaders().set(REMAINING_HEADER, Long.toString(bucket.getAvailableTokens()));
+        exchange.getResponse().getHeaders().set(REMAINING_HEADER, Long.toString(decision.remaining()));
         if (RequestPathGuard.isEncoded(rawPath)) {
             log.warn("Rejected percent-encoded path in a rate-limited scope (attempt still metered): {}", rawPath);
             return errorResponseWriter.write(exchange, ErrorCode.BAD_REQUEST);
@@ -106,12 +116,4 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
         return null;
     }
 
-    private Bucket newBucket(final Scope scope) {
-        final long capacity = scope == Scope.BACKOFFICE
-                ? properties.backofficeRequestsPerMinute()
-                : properties.searchRequestsPerMinute();
-        return Bucket.builder()
-                .addLimit(Bandwidth.classic(capacity, Refill.greedy(capacity, Duration.ofMinutes(1))))
-                .build();
-    }
 }

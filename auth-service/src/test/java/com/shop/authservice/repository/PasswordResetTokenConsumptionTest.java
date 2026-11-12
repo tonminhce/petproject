@@ -124,7 +124,8 @@ class PasswordResetTokenConsumptionTest {
                 .username("alice-" + suffix)
                 .email("alice-" + suffix + "@example.com")
                 .gender("female")
-                .phone("09" + Math.abs(UUID.randomUUID().hashCode() % 100000000L))
+                // the entity validates the phone (10-11 digits, ^0[0-9]{9,10}$)
+                .phone("09" + String.format("%08d", Math.abs(UUID.randomUUID().hashCode() % 100_000_000L)))
                 .build());
         PasswordResetToken token = PasswordResetToken.builder()
                 .userId(owner.getId())

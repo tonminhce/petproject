@@ -15,6 +15,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.DockerImageName;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,17 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 class WebFluxRateLimitTests {
 
     private static final RSAKey JWK = TestKeys.rsaKey();
+
+    /**
+     * F-034: the edge limiter is fleet-wide, so the gateway needs a Redis to
+     * meter against. The container is started once for the whole class.
+     */
+    static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+            .withExposedPorts(6379);
+
+    static {
+        REDIS.start();
+    }
 
     static final WireMockServer WIRE_MOCK = startWireMock();
 
@@ -166,6 +180,8 @@ class WebFluxRateLimitTests {
                 registry.add("gateway.rate-limit.global.enabled", () -> "false");
                 registry.add("gateway.edge-rate-limit.backoffice-requests-per-minute", () -> "3");
                 registry.add("gateway.edge-rate-limit.search-requests-per-minute", () -> "5");
+                registry.add("spring.data.redis.host", REDIS::getHost);
+                registry.add("spring.data.redis.port", () -> REDIS.getFirstMappedPort());
                 Map.<String, java.util.function.Supplier<Object>>of(
                                 "gateway.route-targets.overrides.rating-service", WIRE_MOCK::baseUrl,
                                 "gateway.route-targets.overrides.product-service", WIRE_MOCK::baseUrl,

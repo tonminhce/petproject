@@ -31,7 +31,44 @@ The rate limiter employs two independent token buckets backed by Redis. Requests
 - **Global alone is insufficient**: A single aggressive client calling `/products` could consume the entire shared pool, starving legitimate users.
 - **Combined model**: The global bucket counts all incoming cluster traffic against a fixed key, while the route bucket isolates traffic per route and client identifier.
 
-### 2.2 Primary bean designation
+### 2.2 Edge scopes: backoffice and search (F-034)
+
+The two tiers above are not the whole picture: two further scopes are metered
+per **client IP** by `RateLimitFilter` — the backoffice prefixes
+(`/api/v1/backoffice/**`, 10 req/min) and the search prefix (`/api/v1/search/**`,
+60 req/min). Every other path is unlimited.
+
+| Property | Value |
+|---|---|
+| Bucket location | Redis — `gateway:edge-rate-limit:<scope>:<client-ip>:{tokens,timestamp}` |
+| Algorithm | Token bucket in a Lua script (atomic read → refill → consume → write) |
+| Capacity | The configured requests-per-minute value (10 / 60) |
+| Refill rate | The same value per minute (10 rpm = 0.1667 tokens/s) |
+| Rejection | HTTP 429 with the fleet error envelope and `X-RateLimit-Remaining: 0` |
+| Redis outage | The error propagates (HTTP 500) — a limiter outage is never reported as "too many requests" |
+
+**F-034 — the budget is fleet-wide.** The buckets used to live in the gateway
+JVM (a Caffeine cache of bucket4j buckets), which multiplied the effective
+limit by the replica count: with four replicas a single client could make
+4 x 10 backoffice requests per minute, i.e. four times the budget that is
+supposed to protect the backoffice. The bucket now lives in Redis, so every
+replica meters the client against the same budget. `RedisEdgeRateLimiterTest`
+proves this by driving two independent limiter instances (two replicas)
+against one Redis.
+
+The refill rate is fractional (10 rpm = 1 token per 6 s), which is why the
+edge buckets use their own script instead of the Spring Cloud Gateway
+limiter, whose replenish rate is an integer number of tokens per second.
+
+**Configuration** (`gateway.edge-rate-limit.*`):
+
+| Environment variable | Default | Meaning |
+|---|---|---|
+| `GATEWAY_EDGE_RATE_LIMIT_ENABLED` | `true` | Switches the edge scopes off entirely |
+| `GATEWAY_EDGE_RATE_LIMIT_BACKOFFICE_RPM` | `10` | Fleet-wide budget per client IP for the backoffice prefixes |
+| `GATEWAY_EDGE_RATE_LIMIT_SEARCH_RPM` | `60` | Fleet-wide budget per client IP for the search prefix |
+
+### 2.3 Primary bean designation
 
 Spring Cloud Gateway autoconfiguration for `RequestRateLimiterGatewayFilterFactory` injects `RateLimiter<?>` without a bean qualifier. When registering two `RedisRateLimiter` beans, the Spring context fails with a `NoUniqueBeanDefinitionException`. Marking `gatewayRateLimiter` as `@Primary` resolves this for route-level filters, while `GlobalRateLimitFilter` injects `globalRateLimiter` explicitly using `@Qualifier("globalRateLimiter")`.
 

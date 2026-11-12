@@ -209,6 +209,10 @@ class WebFluxRouteTests {
                 // Redis-backed limiters are out of scope here (no Docker); the
                 // bucket4j edge scopes under test stay enabled.
                 registry.add("gateway.rate-limit.enabled", () -> "false");
+                // the routing test is not a rate-limit test: the edge limiter
+                // needs a Redis (F-034) and is covered by
+                // WebFluxRateLimitTests instead
+                registry.add("gateway.edge-rate-limit.enabled", () -> "false");
                 registry.add("gateway.rate-limit.global.enabled", () -> "false");
                 registry.add("gateway.edge-rate-limit.backoffice-requests-per-minute", () -> "100");
                 registry.add("gateway.edge-rate-limit.search-requests-per-minute", () -> "60");
