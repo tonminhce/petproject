@@ -128,7 +128,8 @@ public enum ErrorCode implements ErrorCatalog {
     MEDIA_TYPE_NOT_ALLOWED("MED-12003", "media.type_not_allowed", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     MEDIA_NOT_FOUND("MED-12004", "media.not_found", HttpStatus.NOT_FOUND),
     MEDIA_ALREADY_DELETED("MED-12005", "media.already_deleted", HttpStatus.CONFLICT),
-    MEDIA_STORAGE_UNAVAILABLE("MED-12006", "media.storage_unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+    MEDIA_STORAGE_UNAVAILABLE("MED-12006", "media.storage_unavailable", HttpStatus.SERVICE_UNAVAILABLE),
+    MEDIA_IN_USE("MED-12007", "media.in_use", HttpStatus.CONFLICT);
 
     private final String code;
     private final String messageKey;

@@ -249,6 +249,10 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
         var file = new org.springframework.mock.web.MockMultipartFile(
                 "file", "img." + format, contentType, bytes);
         Media media = mediaRepository.findById(uploadService.upload(file).id()).orElseThrow();
+        // F-063: the delete path consults the reference checker, so the
+        // fixture reports "no live reference" before the soft delete. The
+        // cases re-stub the counts afterwards for the purge phase.
+        stubReferenceCount(media.getId().toString(), 0);
         lifecycleService.softDelete(media.getId());
         return media.getId().toString();
     }

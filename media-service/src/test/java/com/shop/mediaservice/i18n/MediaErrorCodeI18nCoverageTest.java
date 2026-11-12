@@ -35,7 +35,8 @@ class MediaErrorCodeI18nCoverageTest {
             "MED-12003", // MEDIA_TYPE_NOT_ALLOWED
             "MED-12004", // MEDIA_NOT_FOUND
             "MED-12005", // MEDIA_ALREADY_DELETED
-            "MED-12006"); // MEDIA_STORAGE_UNAVAILABLE
+            "MED-12006", // MEDIA_STORAGE_UNAVAILABLE
+            "MED-12007"); // MEDIA_IN_USE
 
     private static final String[] BUNDLES = {
             "/messages/messages_en.properties",

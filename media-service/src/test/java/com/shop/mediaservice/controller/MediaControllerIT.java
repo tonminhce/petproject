@@ -3,6 +3,7 @@ package com.shop.mediaservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.mediaservice.client.MediaReferenceClient;
 import com.shop.mediaservice.config.MediaProperties;
 import com.shop.mediaservice.support.AbstractMediaIntegrationTest;
 import com.shop.mediaservice.support.TestImages;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.context.annotation.Bean;
@@ -35,8 +37,11 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * Real-HTTP wire proofs over the full stack (real MinIO + Postgres +
@@ -68,8 +73,17 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
 
     private int port;
 
+    /**
+     * The reference checker is the product-service boundary; the delete path
+     * consults it (F-063). Unreferenced by default so the delete cases stay
+     * readable - the referenced case stubs its own count.
+     */
+    @MockitoBean
+    MediaReferenceClient referenceClient;
+
     @BeforeEach
     void wipeAndReadPort() {
+        when(referenceClient.referenceCount(any())).thenReturn(OptionalLong.of(0L));
         // native DELETE — the entity's @SQLRestriction hides soft-deleted rows
         // from bulk JPQL too, so deleteAllInBatch would leave them behind
         jdbcTemplate.update("DELETE FROM media_variants");
@@ -239,6 +253,24 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
                 ApiPaths.BACKOFFICE_MEDIAS + "/00000000-0000-0000-0000-00000000dead", ADMIN_TOKEN);
         assertThat(unknown.status).isEqualTo(404);
         assertThat(JSON.readTree(unknown.body).get("code").asText()).isEqualTo("MED-12004");
+    }
+
+    @Test
+    @DisplayName("DELETE of a media that a live product still references → 409 MED-12007")
+    void deleteReferencedMedia_409Med12007() throws Exception {
+        String mediaId = uploadAndId(TestImages.jpeg(800, 600));
+        when(referenceClient.referenceCount(any())).thenReturn(OptionalLong.of(2L));
+
+        Http referenced = http("DELETE", ApiPaths.BACKOFFICE_MEDIAS + "/" + mediaId, ADMIN_TOKEN);
+
+        assertThat(referenced.status).isEqualTo(409);
+        assertThat(JSON.readTree(referenced.body).get("code").asText()).isEqualTo("MED-12007");
+
+        // the delete was REFUSED: the media was not soft-deleted, so once the
+        // product reference is gone the very same media can be deleted
+        when(referenceClient.referenceCount(any())).thenReturn(OptionalLong.of(0L));
+        Http afterRelease = http("DELETE", ApiPaths.BACKOFFICE_MEDIAS + "/" + mediaId, ADMIN_TOKEN);
+        assertThat(afterRelease.status).isEqualTo(200);
     }
 
     @Test

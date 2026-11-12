@@ -8,6 +8,7 @@ import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.BatchOutcome;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
 import com.shop.mediaservice.dto.response.MediaResponse;
+import com.shop.mediaservice.client.MediaReferenceClient;
 import com.shop.mediaservice.entity.Media;
 import com.shop.mediaservice.repository.MediaRepository;
 import com.shop.mediaservice.service.MediaLifecycleService;
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.lang.reflect.Proxy;
@@ -38,12 +40,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MediaOutboxIT extends AbstractMediaIntegrationTest {
+
+    /**
+     * F-063: the delete path consults the reference checker. This suite is
+     * about the outbox, so the product-service boundary reports "no live
+     * reference".
+     */
+    @MockitoBean
+    MediaReferenceClient referenceClient;
 
     @Autowired
     private MediaUploadService uploadService;
@@ -73,6 +86,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
 
     @BeforeEach
     void resetState() {
+        when(referenceClient.referenceCount(any())).thenReturn(OptionalLong.of(0L));
         outboxRepository.deleteAllInBatch();
         mediaRepository.deleteAllInBatch();
         FlakyOutbox.failSave = false;

@@ -5,6 +5,7 @@ import com.shop.mediaservice.entity.Media;
 import com.shop.mediaservice.outbox.MediaEventService;
 import com.shop.mediaservice.outbox.MediaEventType;
 import com.shop.mediaservice.repository.MediaRepository;
+import com.shop.mediaservice.service.MediaReferenceChecker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,6 +40,9 @@ class MediaLifecycleServiceImplTest {
     @Mock
     private MediaEventService mediaEvents;
 
+    @Mock
+    private MediaReferenceChecker referenceChecker;
+
     @InjectMocks
     private MediaLifecycleServiceImpl lifecycleService;
 
@@ -59,6 +63,7 @@ class MediaLifecycleServiceImplTest {
 
     @Test
     void softDelete_liveMedia_updatesRowWithActorAndRecordsDeletedEvent() {
+        when(referenceChecker.isReferenced(MEDIA_ID)).thenReturn(false);
         when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
         when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.of(Media.builder().id(MEDIA_ID).build()));
         when(mediaRepository.softDelete(MEDIA_ID, "system")).thenReturn(1);
@@ -70,7 +75,42 @@ class MediaLifecycleServiceImplTest {
     }
 
     @Test
+    void softDelete_referencedMedia_isRejectedWith409_andNothingIsDeleted() {
+        // F-063: the DELETE path must consult the reference checker - a media
+        // that a live product still points at must not lose its image.
+        when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
+        when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.of(Media.builder().id(MEDIA_ID).build()));
+        when(referenceChecker.isReferenced(MEDIA_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> lifecycleService.softDelete(MEDIA_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo("MED-12007");
+                    assertThat(ex.getStatus().value()).isEqualTo(409);
+                });
+
+        verify(mediaRepository, never()).softDelete(any(), any());
+        verify(mediaEvents, never()).record(any(), any());
+    }
+
+    @Test
+    void softDelete_unavailableReferenceService_failsSafeAndRefusesTheDelete() {
+        // the checker itself is fail-safe; a checker that throws must not turn
+        // into a delete on incomplete data
+        when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
+        when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.of(Media.builder().id(MEDIA_ID).build()));
+        when(referenceChecker.isReferenced(MEDIA_ID)).thenThrow(new RuntimeException("product-service down"));
+
+        assertThatThrownBy(() -> lifecycleService.softDelete(MEDIA_ID))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo("MED-12007"));
+
+        verify(mediaRepository, never()).softDelete(any(), any());
+        verify(mediaEvents, never()).record(any(), any());
+    }
+
+    @Test
     void softDelete_repeatDelete_zeroRowsMeans409_noEvent() {
+        when(referenceChecker.isReferenced(MEDIA_ID)).thenReturn(false);
         when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
         when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.of(Media.builder().id(MEDIA_ID).build()));
         when(mediaRepository.softDelete(MEDIA_ID, "system")).thenReturn(0);
