@@ -31,6 +31,9 @@ import java.util.UUID;
 @Slf4j
 public class OrderReturnServiceImpl implements OrderReturnService {
 
+    /** The reason of a return row that comes from an admin cancellation after shipment. */
+    static final String REASON_SHIPPED_CANCELLATION = "ADMIN_CANCEL_AFTER_SHIPMENT";
+
     private final OrderRepository orderRepository;
     private final OrderReturnRepository orderReturnRepository;
     private final PaymentServiceClient paymentServiceClient;
@@ -75,6 +78,37 @@ public class OrderReturnServiceImpl implements OrderReturnService {
 
         OrderReturn saved = orderReturnRepository.save(orderReturn);
         log.info("Created return request {} for order {} by user {}", saved.getId(), orderId, userId);
+        return mapToResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public OrderReturnResponse recordShippedCancellation(UUID orderId, UUID adminId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
+
+        if (order.getStatus() != OrderStatus.SHIPPED) {
+            throw BusinessException.badRequest("order.return.not.shipped");
+        }
+
+        boolean hasActive = orderReturnRepository.findByOrderId(orderId).stream()
+                .anyMatch(r -> r.getStatus() == ReturnStatus.REQUESTED);
+        if (hasActive) {
+            throw BusinessException.conflict("order.return.pending.exists");
+        }
+
+        OrderReturn orderReturn = OrderReturn.builder()
+                .order(order)
+                .userId(order.getUserId())
+                .reason(REASON_SHIPPED_CANCELLATION)
+                .description("Admin cancelled the order after shipment; the refund is driven by the return review.")
+                .refundAmount(order.getTotal())
+                .status(ReturnStatus.REQUESTED)
+                .build();
+
+        OrderReturn saved = orderReturnRepository.save(orderReturn);
+        log.info("Admin {} cancelled the shipped order {} - return {} created for the refund review",
+                adminId, orderId, saved.getId());
         return mapToResponse(saved);
     }
 

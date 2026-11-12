@@ -13,6 +13,17 @@ public interface OrderReturnService {
 
     OrderReturnResponse requestReturn(UUID userId, UUID orderId, OrderReturnCreateRequest request);
 
+    /**
+     * The return record of an admin cancellation of a SHIPPED order.
+     *
+     * <p>A post-shipment cancellation (carrier loss, fraud, recall) must not
+     * end as a bare status change: the refund has to be driven by the platform
+     * and leave a record. The return row is created REQUESTED, so the existing
+     * admin review drives the refund - exactly once, and with the failure
+     * handling of that flow.</p>
+     */
+    OrderReturnResponse recordShippedCancellation(UUID orderId, UUID adminId);
+
     List<OrderReturnResponse> findByOrderId(UUID userId, UUID orderId);
 
     PageResponse<OrderReturnResponse> findMyReturns(UUID userId, Pageable pageable);

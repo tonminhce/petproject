@@ -22,6 +22,7 @@ import com.shop.orderservice.service.OrderCommitCoordinator;
 import com.shop.orderservice.service.OrderConfirmMetrics;
 import com.shop.orderservice.service.OrderEventPublisher;
 import com.shop.orderservice.service.OrderService;
+import com.shop.orderservice.service.OrderReturnService;
 import com.shop.orderservice.service.OrderStatusService;
 import com.shop.orderservice.service.StockReservationService;
 import lombok.extern.slf4j.Slf4j;
@@ -73,6 +74,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderCommitCoordinator commitCoordinator;
     private final OrderConfirmMetrics confirmMetrics;
     private final OrderCreateSaga orderCreateSaga;
+    private final OrderReturnService orderReturnService;
     private final TransactionTemplate transactionTemplate;
 
     @Autowired
@@ -90,7 +92,8 @@ public class OrderServiceImpl implements OrderService {
             OrderCommitCoordinator commitCoordinator,
             OrderConfirmMetrics confirmMetrics,
             OrderCreateSaga orderCreateSaga,
-            @Autowired(required = false) PlatformTransactionManager transactionManager) {
+            @Autowired(required = false) PlatformTransactionManager transactionManager,
+            @Autowired(required = false) OrderReturnService orderReturnService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.promotionClient = promotionClient;
@@ -104,6 +107,7 @@ public class OrderServiceImpl implements OrderService {
         this.commitCoordinator = commitCoordinator;
         this.confirmMetrics = confirmMetrics;
         this.orderCreateSaga = orderCreateSaga;
+        this.orderReturnService = orderReturnService;
         this.transactionTemplate = (transactionManager != null) ? new TransactionTemplate(transactionManager) : null;
     }
 
@@ -124,7 +128,7 @@ public class OrderServiceImpl implements OrderService {
         this(orderRepository, orderItemRepository, promotionClient, paymentClient,
                 stockReservationService, orderEventPublisher, idempotencyService,
                 orderStatusService, orderMapper, objectMapper, commitCoordinator,
-                confirmMetrics, orderCreateSaga, (PlatformTransactionManager) null);
+                confirmMetrics, orderCreateSaga, (PlatformTransactionManager) null, null);
     }
 
     @Override
@@ -220,6 +224,15 @@ public class OrderServiceImpl implements OrderService {
             } catch (Exception rex) {
                 log.error("Failed to trigger payment refund during admin cancel for order {}", orderId, rex);
             }
+        } else if (order.getStatus() == OrderStatus.SHIPPED && isAdmin) {
+            // H12: the admin cancels a post-shipment order (carrier loss, fraud,
+            // recall). The goods are in transit, so the stock must NOT be moved
+            // back here - that would put goods back on sale that may still be
+            // delivered - and the refund must NOT be fired here either: the
+            // return flow drives it, exactly once, through the admin review,
+            // which is also where the refund failure is handled. Without this
+            // the cancellation was a bare status change: no record, no refund.
+            orderReturnService.recordShippedCancellation(orderId, userId);
         }
 
         order.setStatus(OrderStatus.CANCELLED);

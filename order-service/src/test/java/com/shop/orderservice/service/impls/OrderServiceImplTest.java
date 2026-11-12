@@ -45,6 +45,7 @@ class OrderServiceImplTest {
     @Mock OrderCommitCoordinator commitCoordinator;
     @Mock OrderConfirmMetrics confirmMetrics;
     @Mock OrderCreateSaga orderCreateSaga;
+    @Mock com.shop.orderservice.service.OrderReturnService orderReturnService;
 
     @InjectMocks OrderServiceImpl service;
 
@@ -512,7 +513,7 @@ class OrderServiceImplTest {
                 orderRepository, orderItemRepository, promotionClient, paymentClient,
                 stockReservationService, orderEventPublisher, idempotencyService,
                 orderStatusService, orderMapper, objectMapper, commitCoordinator,
-                confirmMetrics, orderCreateSaga, txMgr);
+                confirmMetrics, orderCreateSaga, txMgr, orderReturnService);
 
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
         when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());

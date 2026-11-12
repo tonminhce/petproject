@@ -183,7 +183,10 @@ class OrderReturnServiceTest {
         assertThatThrownBy(() -> service.requestReturn(userId, orderId, request))
                 .isInstanceOfSatisfying(BusinessException.class, ex -> {
                     assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST.getCode());
-                    assertThat(ex.getMessage()).contains("order.return.refund.exceeds.total");
+                    // the i18n key resolves to a human message - the raw key must
+                    // never reach the client
+                    assertThat(ex.getMessage()).contains("exceeds the order total");
+                    assertThat(ex.getMessage()).doesNotContain("order.return.refund.exceeds.total");
                 });
     }
 
