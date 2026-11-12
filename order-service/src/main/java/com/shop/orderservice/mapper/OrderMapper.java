@@ -30,7 +30,8 @@ public class OrderMapper {
             order.getCancelledAt(),
             order.getRecipientName(),
             order.getPhoneNumber(),
-            order.getShippingAddress()
+            order.getShippingAddress(),
+            order.getTrackingCode()
         );
     }
 

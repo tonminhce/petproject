@@ -35,5 +35,14 @@ public interface OrderService {
     Page<OrderItemResponse> findDeliveredItemsByUserAndProduct(UUID userId, UUID productId, Pageable pageable);
 
     /** Public guest tracking by order ID and matching recipient phone number. */
-    OrderTrackingResponse trackOrder(UUID orderId, String phoneNumber);
+    /**
+     * Looks up an order for tracking.
+     *
+     * @param orderId       the order
+     * @param trackingToken the per-order tracking capability; when present it
+     *                       authorises the lookup on its own
+     * @param phoneNumber   the legacy secondary factor, used only when no
+     *                       tracking token is presented
+     */
+    OrderTrackingResponse trackOrder(UUID orderId, String trackingToken, String phoneNumber);
 }

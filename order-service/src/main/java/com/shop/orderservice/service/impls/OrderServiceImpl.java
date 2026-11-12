@@ -37,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -52,6 +53,12 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class OrderServiceImpl implements OrderService {
+
+    /** Wrong phone numbers tolerated before the phone-only tracking path locks. */
+    static final int MAX_TRACK_PHONE_FAILURES = 5;
+
+    /** How long the phone-only tracking path stays locked for one order. */
+    static final Duration TRACK_PHONE_LOCK = Duration.ofMinutes(15);
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -398,18 +405,78 @@ public class OrderServiceImpl implements OrderService {
             order, itemsByOrder.getOrDefault(order.getId(), List.of())));
     }
 
+    /**
+     * The legacy phone-number path of the tracking endpoint.
+     *
+     * <p>The phone number is a weak factor: it is low entropy, it is often
+     * known to third parties, and the order id - the other half of the old
+     * pair - leaks routinely through links, screenshots, support tickets and
+     * logs. An unauthenticated caller who knows an order id could grind
+     * through candidate numbers. So the path is kept for the callers that
+     * have no tracking token yet, but every wrong number is counted and the
+     * order is locked out of the phone path for a cool-down window after a
+     * few failures. A wrong token and a wrong phone produce the SAME error,
+     * so the endpoint is not an oracle for "which half was wrong".</p>
+     */
+    private void authorizeByPhone(Order order, String phoneNumber) {
+        Instant now = Instant.now();
+        if (order.getTrackLockedUntil() != null && order.getTrackLockedUntil().isAfter(now)) {
+            log.warn("Rejected tracking lookup for order {}: phone path locked until {}",
+                    order.getId(), order.getTrackLockedUntil());
+            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, order.getId());
+        }
+        if (order.getPhoneNumber() == null
+                || !order.getPhoneNumber().trim().equalsIgnoreCase(phoneNumber.trim())) {
+            int failures = (order.getTrackFailures() == null ? 0 : order.getTrackFailures()) + 1;
+            order.setTrackFailures(failures);
+            if (failures >= MAX_TRACK_PHONE_FAILURES) {
+                order.setTrackLockedUntil(now.plus(TRACK_PHONE_LOCK));
+                order.setTrackFailures(0);
+                log.warn("Locked the phone-only tracking path of order {} until {} after {} wrong numbers",
+                        order.getId(), order.getTrackLockedUntil(), failures);
+            }
+            orderRepository.save(order);
+            log.warn("Rejected tracking lookup for order {}: wrong phone number (failure #{})",
+                    order.getId(), failures);
+            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, order.getId());
+        }
+        if (order.getTrackFailures() != null && order.getTrackFailures() > 0) {
+            order.setTrackFailures(0);
+            order.setTrackLockedUntil(null);
+            orderRepository.save(order);
+        }
+    }
+
     @Override
-    @Transactional(readOnly = true)
-    public OrderTrackingResponse trackOrder(UUID orderId, String phoneNumber) {
-        if (orderId == null || phoneNumber == null || phoneNumber.isBlank()) {
+    // noRollbackFor: the abuse brake of the phone path is written by the very
+    // rejection it records, and BusinessException is a RuntimeException - the
+    // default rollback would discard the failure counter and the lockout with
+    // the error, so the brake would never engage. Every other runtime failure
+    // still rolls back.
+    @Transactional(noRollbackFor = BusinessException.class)
+    public OrderTrackingResponse trackOrder(UUID orderId, String trackingToken, String phoneNumber) {
+        if (orderId == null) {
             throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
+        }
+        boolean tokenGiven = trackingToken != null && !trackingToken.isBlank();
+        boolean phoneGiven = phoneNumber != null && !phoneNumber.isBlank();
+        if (!tokenGiven && !phoneGiven) {
+            throw BusinessException.badRequest("order.track.credentials_required");
         }
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
 
-        if (order.getPhoneNumber() == null || !order.getPhoneNumber().trim().equalsIgnoreCase(phoneNumber.trim())) {
-            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
+        if (tokenGiven) {
+            // The tracking code is a random capability the customer holds, so
+            // it authorises the lookup on its own - no phone number needed.
+            if (order.getTrackingCode() == null
+                    || !order.getTrackingCode().toString().equalsIgnoreCase(trackingToken.trim())) {
+                log.warn("Rejected tracking lookup for order {}: wrong tracking token", orderId);
+                throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
+            }
+        } else {
+            authorizeByPhone(order, phoneNumber);
         }
 
         List<OrderItem> items = orderItemRepository.findByOrderId(orderId);

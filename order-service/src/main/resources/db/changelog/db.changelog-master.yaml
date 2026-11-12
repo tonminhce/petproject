@@ -23,3 +23,6 @@ databaseChangeLog:
   - include:
       file: 008-order-outbox-claim-lease.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-009-order-tracking-code.yaml
+      relativeToChangelogFile: true

@@ -1,0 +1,36 @@
+databaseChangeLog:
+  # Order tracking was an unauthenticated endpoint gated only by the phone
+  # number. The order id leaks routinely, and a phone number is low entropy,
+  # so the phone was the only secret and it could be ground through against a
+  # known order id. The tracking code is a random token the customer holds;
+  # track_failures / track_locked_until are the abuse brake for the
+  # phone-only path that the storefront still uses.
+  - changeSet:
+      id: 009-order-tracking-code
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: tracking_code
+                  type: UUID
+              - column:
+                  name: track_failures
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: track_locked_until
+                  type: TIMESTAMP
+        # The tracking code IS the capability, so it must be unique. A plain
+        # index would let two orders share one capability and break the
+        # "the token alone authorises the lookup" guarantee. Existing rows
+        # keep NULL, and PostgreSQL allows many NULLs in a unique index.
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_tracking_code
+            unique: true
+            columns:
+              - column: { name: tracking_code }

@@ -68,6 +68,34 @@ public class Order extends AbstractMappedEntity {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+    /**
+     * The unguessable tracking capability of this order.
+     *
+     * <p>Order tracking used to be gated by the phone number alone. The order
+     * id is a UUID that leaks routinely (links, screenshots, support tickets,
+     * logs), and a phone number is low entropy and frequently known to third
+     * parties, so the phone was the only real secret - and an unauthenticated
+     * caller could grind through candidates against a known order id. The
+     * tracking code is a random token the customer holds, so the token alone
+     * authorises the lookup.</p>
+     */
+    @Column(name = "tracking_code", unique = true)
+    private UUID trackingCode;
+
+    /**
+     * Failed phone-only tracking attempts for this order. The phone path is
+     * kept for the storefront that has no tracking code yet, so it needs an
+     * abuse brake: after a few wrong numbers the order is locked out of the
+     * phone path for a cool-down window.
+     */
+    @Column(name = "track_failures", nullable = false)
+    @Builder.Default
+    private Integer trackFailures = 0;
+
+    /** Until when the phone-only tracking path is locked for this order. */
+    @Column(name = "track_locked_until")
+    private Instant trackLockedUntil;
+
     @Column(name = "shipping_address", length = 500)
     private String shippingAddress;
 

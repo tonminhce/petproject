@@ -143,6 +143,8 @@ public class OrderCreateSaga {
                 .recipientName(request.recipientName())
                 .phoneNumber(request.phoneNumber())
                 .shippingAddress(request.shippingAddress())
+                // the tracking capability of the order, issued with it
+                .trackingCode(UUID.randomUUID())
                 .build());
 
             return new CartAndOrder(cart, items, order);
