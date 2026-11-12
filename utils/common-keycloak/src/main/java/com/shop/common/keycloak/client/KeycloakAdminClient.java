@@ -61,6 +61,19 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * Whether real master-realm admin credentials were configured.
+     *
+     * <p>F-006: the shared defaults ship no credential any more, so a
+     * deployment that forgets to set them has a client that cannot
+     * authenticate. The callers must be able to say so instead of sending a
+     * blank credential to the identity provider.</p>
+     */
+    public boolean hasAdminCredentials() {
+        return adminUsername != null && !adminUsername.isBlank()
+                && adminPassword != null && !adminPassword.isBlank();
+    }
+
+    /**
      * Create a new user in Keycloak and assign realm roles.
      *
      * @param username user's username

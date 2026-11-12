@@ -163,7 +163,10 @@ shop:
     cors:
       enabled: ${ECOMMERCE_CORS_ENABLED:true}
       allowed-origin-patterns:
-        - ${CORS_ALLOWED_ORIGIN_PATTERNS:*}
+        # F-006: the shipped default is an explicit localhost list - a wildcard
+        # origin is never the default (it lets any site read the unauthenticated
+        # endpoints of the platform).
+        - ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:3000,http://localhost:5173}
       allowed-methods:
         - GET
         - POST
@@ -182,8 +185,12 @@ shop:
     client-id: ${KEYCLOAK_CLIENT_ID:shop-backend}
     admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
-    admin-username: ${KEYCLOAK_ADMIN_USERNAME:admin}
-    admin-password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+    # F-006: NO credential default in a shared library. A shipped
+    # master-realm password is a takeover waiting to happen: the service that
+    # actually administers the realm (auth-service) declares these itself and
+    # fails fast when they are unset.
+    admin-username: ${KEYCLOAK_ADMIN_USERNAME:}
+    admin-password: ${KEYCLOAK_ADMIN_PASSWORD:}
   common:
     service:
       name: shop-service

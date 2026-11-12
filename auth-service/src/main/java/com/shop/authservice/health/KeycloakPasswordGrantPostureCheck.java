@@ -27,6 +27,15 @@ public class KeycloakPasswordGrantPostureCheck {
 
     @EventListener(ApplicationReadyEvent.class)
     public void report() {
+        if (!adminClient.hasAdminCredentials()) {
+            // F-006: the shared defaults ship no credential any more. Say so
+            // explicitly - the admin API is unusable and the ROPC posture
+            // cannot be read.
+            log.warn("SECURITY-POSTURE: the master-realm admin credentials "
+                    + "(shop.keycloak.admin-username / admin-password) are not configured - "
+                    + "the admin API is unusable and the ROPC posture cannot be checked.");
+            return;
+        }
         try {
             boolean enabled = adminClient.isDirectAccessGrantEnabled(clientId);
             if (enabled) {
