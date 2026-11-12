@@ -34,6 +34,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -79,6 +80,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderReturnService orderReturnService;
     private final CompensationFailureService compensationFailureService;
     private final TransactionTemplate transactionTemplate;
+    /** The cancel path commits its local change in its OWN short transaction. */
+    private final TransactionTemplate cancelTransactionTemplate;
 
     @Autowired
     public OrderServiceImpl(
@@ -114,6 +117,13 @@ public class OrderServiceImpl implements OrderService {
         this.orderReturnService = orderReturnService;
         this.compensationFailureService = compensationFailureService;
         this.transactionTemplate = (transactionManager != null) ? new TransactionTemplate(transactionManager) : null;
+        if (transactionManager != null) {
+            this.cancelTransactionTemplate = new TransactionTemplate(transactionManager);
+            this.cancelTransactionTemplate.setPropagationBehavior(
+                    TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        } else {
+            this.cancelTransactionTemplate = null;
+        }
     }
 
     public OrderServiceImpl(
@@ -177,8 +187,18 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    /**
+     * Cancels an order.
+     *
+     * <p>Deliberately NOT transactional: the remote releases below are HTTP
+     * calls with a 3-5 second timeout each, and holding a pooled database
+     * connection across them exhausts the pool (Hikari max 20) when a
+     * downstream service degrades - a burst of cancellations then stalls
+     * unrelated requests of the same service. The local state change and its
+     * outbox event are committed in a short transaction afterwards, the same
+     * shape the confirm path uses.</p>
+     */
     @Override
-    @Transactional
     public OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin) {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
@@ -240,6 +260,13 @@ public class OrderServiceImpl implements OrderService {
             orderReturnService.recordShippedCancellation(orderId, userId);
         }
 
+        return (cancelTransactionTemplate != null)
+                ? cancelTransactionTemplate.execute(tx -> applyCancelledStatus(order))
+                : applyCancelledStatus(order);
+    }
+
+    /** The local part of the cancel: the status change and its outbox event, atomically. */
+    private OrderResponse applyCancelledStatus(Order order) {
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancelledAt(Instant.now());
         // NO markDeleted — cancelled orders must remain in user/admin history (rev 2 fix)
