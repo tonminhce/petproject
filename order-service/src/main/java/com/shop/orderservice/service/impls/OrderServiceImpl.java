@@ -12,11 +12,13 @@ import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.dto.response.OrderTrackingResponse;
+import com.shop.orderservice.entity.FailedCompensation;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.entity.OrderItem;
 import com.shop.orderservice.mapper.OrderMapper;
 import com.shop.orderservice.repository.OrderItemRepository;
 import com.shop.orderservice.repository.OrderRepository;
+import com.shop.orderservice.service.CompensationFailureService;
 import com.shop.orderservice.service.IdempotencyService;
 import com.shop.orderservice.service.OrderCommitCoordinator;
 import com.shop.orderservice.service.OrderConfirmMetrics;
@@ -75,6 +77,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderConfirmMetrics confirmMetrics;
     private final OrderCreateSaga orderCreateSaga;
     private final OrderReturnService orderReturnService;
+    private final CompensationFailureService compensationFailureService;
     private final TransactionTemplate transactionTemplate;
 
     @Autowired
@@ -93,7 +96,8 @@ public class OrderServiceImpl implements OrderService {
             OrderConfirmMetrics confirmMetrics,
             OrderCreateSaga orderCreateSaga,
             @Autowired(required = false) PlatformTransactionManager transactionManager,
-            @Autowired(required = false) OrderReturnService orderReturnService) {
+            @Autowired(required = false) OrderReturnService orderReturnService,
+            @Autowired(required = false) CompensationFailureService compensationFailureService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.promotionClient = promotionClient;
@@ -108,6 +112,7 @@ public class OrderServiceImpl implements OrderService {
         this.confirmMetrics = confirmMetrics;
         this.orderCreateSaga = orderCreateSaga;
         this.orderReturnService = orderReturnService;
+        this.compensationFailureService = compensationFailureService;
         this.transactionTemplate = (transactionManager != null) ? new TransactionTemplate(transactionManager) : null;
     }
 
@@ -128,7 +133,7 @@ public class OrderServiceImpl implements OrderService {
         this(orderRepository, orderItemRepository, promotionClient, paymentClient,
                 stockReservationService, orderEventPublisher, idempotencyService,
                 orderStatusService, orderMapper, objectMapper, commitCoordinator,
-                confirmMetrics, orderCreateSaga, (PlatformTransactionManager) null, null);
+                confirmMetrics, orderCreateSaga, (PlatformTransactionManager) null, null, null);
     }
 
     @Override
@@ -193,7 +198,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(OrderItem::getReservationId)
                 .filter(Objects::nonNull)
                 .toList();
-            releaseAllReservationsById(reservationIds);
+            releaseAllReservationsById(orderId, reservationIds);
             // failures; never mask the cancel flow).
             if (order.getPromotionReservationId() != null) {
                 try {
@@ -210,7 +215,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(OrderItem::getReservationId)
                 .filter(Objects::nonNull)
                 .toList();
-            releaseAllCommittedReservationsById(reservationIds);
+            releaseAllCommittedReservationsById(orderId, reservationIds);
             if (order.getPromotionReservationId() != null) {
                 try {
                     promotionClient.releaseCommitted(order.getPromotionReservationId());
@@ -244,22 +249,37 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.toResponse(order, orderItemRepository.findByOrderId(order.getId()));
     }
 
-    private void releaseAllReservationsById(List<UUID> reservationIds) {
+    /**
+     * A failed release during a cancel must leave a durable trace: the order
+     * row is cancelled right after, so a swallowed failure would orphan the
+     * hold with nothing pointing at it.
+     */
+    private void recordCompensationFailure(UUID orderId, UUID reservationId, Exception ex) {
+        if (compensationFailureService == null) {
+            return;
+        }
+        compensationFailureService.record(orderId, reservationId,
+                FailedCompensation.KIND_RESERVATION_RELEASE, ex.getMessage());
+    }
+
+    private void releaseAllReservationsById(UUID orderId, List<UUID> reservationIds) {
         for (UUID id : reservationIds) {
             try {
                 stockReservationService.release(id);
             } catch (Exception ex) {
+                recordCompensationFailure(orderId, id, ex);
                 log.error("Failed to release reservation {} during cancel", id, ex);
             }
         }
     }
 
     /** H9 — admin cancel CONFIRMED path; restocks via releaseCommitted. */
-    private void releaseAllCommittedReservationsById(List<UUID> reservationIds) {
+    private void releaseAllCommittedReservationsById(UUID orderId, List<UUID> reservationIds) {
         for (UUID id : reservationIds) {
             try {
                 stockReservationService.releaseCommitted(id);
             } catch (Exception ex) {
+                recordCompensationFailure(orderId, id, ex);
                 log.error("Failed to release committed reservation {} during admin cancel", id, ex);
             }
         }

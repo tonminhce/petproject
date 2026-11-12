@@ -46,7 +46,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -74,19 +76,23 @@ class OrderCreateSagaTest {
     private final UUID productId = UUID.randomUUID();
     private final UUID reservationId = UUID.randomUUID();
     private final UUID promoReservationId = UUID.randomUUID();
+    private CartItem cartItem;
+
+    @Mock com.shop.orderservice.service.CompensationFailureService compensationFailureService;
 
     @BeforeEach
     void setUp() {
         saga = new OrderCreateSaga(
             orderRepository, orderItemRepository, cartRepository, cartItemRepository,
             pricingService, stockReservationService, promotionClient,
-            orderEventPublisher, idempotencyService, orderMapper
+            orderEventPublisher, idempotencyService, orderMapper, null, compensationFailureService
         );
         Cart cart = Cart.builder().id(UUID.randomUUID()).userId(userId).build();
         when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(cart));
         CartItem item = CartItem.builder().id(UUID.randomUUID())
             .cartId(cart.getId()).productId(productId).quantity(2).build();
-        when(cartItemRepository.findByCartId(cart.getId())).thenReturn(List.of(item));
+        cartItem = item;
+        lenient().when(cartItemRepository.findByCartId(cart.getId())).thenReturn(List.of(item));
     }
 
     @Test
@@ -171,5 +177,40 @@ class OrderCreateSagaTest {
         verify(txManager).getTransaction(any());
         verify(txManager).rollback(txStatus);
         verify(txManager, never()).commit(txStatus);
+    }
+
+    @Test
+    void aFailedCompensationReleaseIsRecordedForTheRetry() {
+        UUID secondProductId = UUID.randomUUID();
+        CartItem secondItem = CartItem.builder().id(UUID.randomUUID())
+            .cartId(UUID.randomUUID()).productId(secondProductId).quantity(1).build();
+        when(cartItemRepository.findByCartId(any())).thenReturn(List.of(cartItem, secondItem));
+
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(pricingService.calculate(any(), eq(userId), anyList(), any()))
+            .thenReturn(new PricingBreakdown(
+                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
+                Map.of(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN),
+                        secondProductId, new ProductSnapshot(secondProductId, "Widget", BigDecimal.TEN)),
+                promoReservationId));
+
+        // the first reservation succeeds, the second one fails -> compensation.
+        // The saga iterates the pricing snapshots, so the order of the two
+        // products is not the order of the cart: the stub is call-count based.
+        when(stockReservationService.reserve(any(), any()))
+            .thenReturn(reservationId)
+            .thenThrow(new StockReservationFailedException(secondProductId, null));
+        // ... and the compensation of the first reservation fails as well
+        doThrow(new RuntimeException("inventory down")).when(stockReservationService).release(any());
+
+        assertThatThrownBy(() ->
+            saga.execute(userId, new OrderCreateRequest(null, "SAVE10"), "h13-compensation-key"))
+            .isInstanceOf(BusinessException.class);
+
+        verify(stockReservationService).release(reservationId);
+        // the failure is recorded, so the hold is recoverable instead of being
+        // orphaned until the inventory TTL sweep
+        verify(compensationFailureService).record(any(), eq(reservationId),
+            eq(com.shop.orderservice.entity.FailedCompensation.KIND_RESERVATION_RELEASE), any());
     }
 }

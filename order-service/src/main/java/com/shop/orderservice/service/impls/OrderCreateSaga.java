@@ -12,6 +12,7 @@ import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.Cart;
 import com.shop.orderservice.entity.CartItem;
 import com.shop.orderservice.entity.Order;
+import com.shop.orderservice.entity.FailedCompensation;
 import com.shop.orderservice.entity.OrderItem;
 import com.shop.orderservice.exception.StockReservationFailedException;
 import com.shop.orderservice.mapper.OrderMapper;
@@ -19,6 +20,7 @@ import com.shop.orderservice.repository.CartItemRepository;
 import com.shop.orderservice.repository.CartRepository;
 import com.shop.orderservice.repository.OrderItemRepository;
 import com.shop.orderservice.repository.OrderRepository;
+import com.shop.orderservice.service.CompensationFailureService;
 import com.shop.orderservice.service.IdempotencyService;
 import com.shop.orderservice.service.OrderEventPublisher;
 import com.shop.orderservice.service.PricingService;
@@ -56,6 +58,7 @@ public class OrderCreateSaga {
     private final OrderEventPublisher orderEventPublisher;
     private final IdempotencyService idempotencyService;
     private final OrderMapper orderMapper;
+    private final CompensationFailureService compensationFailureService;
     private final TransactionTemplate transactionTemplate;
 
     @Autowired
@@ -70,7 +73,8 @@ public class OrderCreateSaga {
             OrderEventPublisher orderEventPublisher,
             IdempotencyService idempotencyService,
             OrderMapper orderMapper,
-            @Autowired(required = false) PlatformTransactionManager transactionManager) {
+            @Autowired(required = false) PlatformTransactionManager transactionManager,
+            @Autowired(required = false) CompensationFailureService compensationFailureService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartRepository = cartRepository;
@@ -81,6 +85,7 @@ public class OrderCreateSaga {
         this.orderEventPublisher = orderEventPublisher;
         this.idempotencyService = idempotencyService;
         this.orderMapper = orderMapper;
+        this.compensationFailureService = compensationFailureService;
         this.transactionTemplate = (transactionManager != null) ? new TransactionTemplate(transactionManager) : null;
     }
 
@@ -97,7 +102,7 @@ public class OrderCreateSaga {
             OrderMapper orderMapper) {
         this(orderRepository, orderItemRepository, cartRepository, cartItemRepository,
              pricingService, stockReservationService, promotionClient,
-             orderEventPublisher, idempotencyService, orderMapper, null);
+             orderEventPublisher, idempotencyService, orderMapper, null, null);
     }
 
     private <T> T executeInTx(Supplier<T> action) {
@@ -192,7 +197,7 @@ public class OrderCreateSaga {
                 reserved.add(orderItem);
             }
         } catch (Exception ex) {
-            releaseAllReservations(reserved);
+            releaseAllReservations(order.getId(), reserved);
             if (order.getPromotionReservationId() != null) {
                 try {
                     promotionClient.release(order.getPromotionReservationId());
@@ -226,13 +231,22 @@ public class OrderCreateSaga {
         return response;
     }
 
-    private void releaseAllReservations(List<OrderItem> reserved) {
+    private void releaseAllReservations(UUID orderId, List<OrderItem> reserved) {
         for (OrderItem item : reserved) {
             try {
                 if (item.getReservationId() != null) {
                     stockReservationService.release(item.getReservationId());
                 }
             } catch (Exception ex) {
+                // The order row is deleted right after this compensation, so a
+                // swallowed failure would leave an orphaned hold with no
+                // reference to it - recoverable only through inventory's TTL
+                // sweep (900 seconds of unavailable stock). The failure is
+                // therefore recorded, and the retry releases the hold.
+                if (compensationFailureService != null) {
+                    compensationFailureService.record(orderId, item.getReservationId(),
+                            FailedCompensation.KIND_RESERVATION_RELEASE, ex.getMessage());
+                }
                 log.error("Failed to release reservation {} for product {} during compensation",
                     item.getReservationId(), item.getProductId(), ex);
             }

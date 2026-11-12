@@ -26,3 +26,6 @@ databaseChangeLog:
   - include:
       file: changelog-009-order-tracking-code.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-010-failed-compensations.yaml
+      relativeToChangelogFile: true

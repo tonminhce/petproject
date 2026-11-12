@@ -1,0 +1,43 @@
+databaseChangeLog:
+  # A compensation (release the stock reservation of a failed checkout) that
+  # fails was swallowed: the order row is deleted right after, so nothing in
+  # the order-service referenced the orphaned hold any more. The only way back
+  # was inventory-service's TTL sweep - up to 900 seconds of unavailable
+  # stock, with a log line as the only trace. This table is that trace and the
+  # work list of the retry.
+  - changeSet:
+      id: 010-create-failed-compensations
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: failed_compensations
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: order_id,  type: uuid }
+              - column: { name: reservation_id, type: uuid }
+              - column: { name: kind,      type: varchar(32), constraints: { nullable: false } }
+              - column: { name: attempts,  type: integer, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: status,    type: varchar(16), defaultValue: PENDING, constraints: { nullable: false } }
+              - column: { name: last_error, type: text }
+              - column: { name: next_attempt_at, type: timestamp }
+              - column: { name: resolved_at,     type: timestamp }
+              - column: { name: created_at, type: timestamp, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamp, constraints: { nullable: false } }
+
+        - createIndex:
+            tableName: failed_compensations
+            indexName: idx_failed_compensations_due
+            columns:
+              - column: { name: status }
+              - column: { name: next_attempt_at }
+
+        - createIndex:
+            tableName: failed_compensations
+            indexName: idx_failed_compensations_reservation
+            columns:
+              - column: { name: reservation_id }

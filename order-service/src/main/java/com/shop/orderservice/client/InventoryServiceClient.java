@@ -90,6 +90,15 @@ public class InventoryServiceClient {
         }
     }
 
+    /**
+     * Releases a stock reservation.
+     *
+     * <p>The failure is reported to the caller: it used to be swallowed here
+     * ("best-effort"), which made an orphaned hold invisible - the caller saw
+     * a success, the order row was deleted right after and the only way back
+     * was inventory-service's TTL sweep. The caller records the failure in the
+     * compensation ledger and the retry releases the hold.</p>
+     */
     public void release(UUID reservationId) {
         try {
             restClient.post()
@@ -99,7 +108,7 @@ public class InventoryServiceClient {
                 .toBodilessEntity();
         } catch (Exception ex) {
             log.error("Failed to release reservation {}", reservationId, ex);
-            // DO NOT throw — compensation failures are best-effort, logged for ops review
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
         }
     }
 
@@ -112,7 +121,7 @@ public class InventoryServiceClient {
                 .toBodilessEntity();
         } catch (Exception ex) {
             log.error("Failed to release committed reservation {}", reservationId, ex);
-            // DO NOT throw — same best-effort compensation convention as release()
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
         }
     }
 
