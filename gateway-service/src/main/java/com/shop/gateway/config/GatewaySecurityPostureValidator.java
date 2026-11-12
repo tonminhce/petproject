@@ -1,5 +1,6 @@
 package com.shop.gateway.config;
 
+import com.shop.gateway.filter.AdminIpAllowlistProperties;
 import com.shop.gateway.ratelimit.RateLimitProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,21 +26,28 @@ public class GatewaySecurityPostureValidator {
 
     private final GatewayProperties gatewayProperties;
     private final RateLimitProperties rateLimitProperties;
+    private final AdminIpAllowlistProperties adminIpAllowlistProperties;
     private final String forwardHeadersStrategy;
+    private final boolean requireAdminIpAllowlist;
 
     public GatewaySecurityPostureValidator(
             GatewayProperties gatewayProperties,
             RateLimitProperties rateLimitProperties,
-            @Value("${server.forward-headers-strategy:none}") String forwardHeadersStrategy) {
+            AdminIpAllowlistProperties adminIpAllowlistProperties,
+            @Value("${server.forward-headers-strategy:none}") String forwardHeadersStrategy,
+            @Value("${gateway.admin-ip-allowlist.required:false}") boolean requireAdminIpAllowlist) {
         this.gatewayProperties = gatewayProperties;
         this.rateLimitProperties = rateLimitProperties;
+        this.adminIpAllowlistProperties = adminIpAllowlistProperties;
         this.forwardHeadersStrategy = forwardHeadersStrategy;
+        this.requireAdminIpAllowlist = requireAdminIpAllowlist;
     }
 
     @EventListener(ContextRefreshedEvent.class)
     public void validate() {
         validateCors();
         validateClientIpTrust();
+        validateAdminIpAllowlist();
     }
 
     /**
@@ -72,6 +80,37 @@ public class GatewaySecurityPostureValidator {
      * the remote address from the caller-supplied header, which makes the
      * fallback spoofable instead.
      */
+    /**
+     * The backoffice (products, categories, promotions, tax, payments, ratings,
+     * shipments, search) is only protected by the JWT role check when the admin
+     * IP allowlist is INACTIVE - the shipped default. An empty
+     * ADMIN_IP_ALLOWLIST therefore leaves the administrative surface reachable
+     * from any network origin.
+     *
+     * <p>Where the deployment declares the allowlist mandatory
+     * ({@code gateway.admin-ip-allowlist.required=true}, set by the production
+     * compose file), an empty allowlist is a deployment error and the gateway
+     * refuses to start. Elsewhere the gap is reported loudly: the allowlist is
+     * the only network-layer control in front of the backoffice.</p>
+     */
+    private void validateAdminIpAllowlist() {
+        if (adminIpAllowlistProperties.active()) {
+            log.info("Admin IP allowlist is enforcing with {} CIDR entr(y|ies)",
+                    adminIpAllowlistProperties.cidrs().size());
+            return;
+        }
+        if (requireAdminIpAllowlist) {
+            throw new IllegalStateException(
+                    "ADMIN_IP_ALLOWLIST is empty while gateway.admin-ip-allowlist.required=true. "
+                    + "The backoffice would be reachable from any network origin. Set "
+                    + "ADMIN_IP_ALLOWLIST to the operator CIDRs (comma separated) or turn the "
+                    + "requirement off explicitly.");
+        }
+        log.warn("Admin IP allowlist is INACTIVE: the backoffice is reachable from any network origin "
+                + "and only the JWT role check protects it. Set ADMIN_IP_ALLOWLIST to the operator "
+                + "CIDRs (comma separated) for any deployment that is not a local sandbox.");
+    }
+
     private void validateClientIpTrust() {
         int hops = rateLimitProperties.trustedProxyHops();
         String strategy = forwardHeadersStrategy == null ? "none" : forwardHeadersStrategy.trim();
