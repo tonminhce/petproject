@@ -81,10 +81,15 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             throw BusinessException.of(ErrorCode.MEDIA_TOO_LARGE);
         }
 
-        byte[] source = readAll(file);
+        // F-062: the source is materialised ONCE and digested in the same
+        // pass - the previous code read the multipart stream for the magic
+        // bytes, materialised it again for the digest and again for every
+        // ImageIO stream.
+        SourceBytes sourceBytes = readAllAndDigest(file);
+        byte[] source = sourceBytes.bytes();
 
         // 4. SHA-256 dedup — BEFORE any S3 write (D1)
-        String sha256 = sha256(source);
+        String sha256 = sourceBytes.sha256();
         var existing = mediaRepository.findBySha256(sha256);
         if (existing.isPresent()) {
             log.info("Upload dedup hit: sha256={} resolves to existing media {}", sha256, existing.get().getId());
@@ -98,6 +103,12 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         List<VariantRenderer.Render> renders;
         try {
             renders = renderer.render(source, format, properties.displayWidth(), properties.thumbWidth());
+        } catch (VariantRenderer.ImageTooLargeException e) {
+            // F-062: the image is valid, but decoding it would exceed the
+            // memory budget of the service - that is a 413, not a 415.
+            log.warn("Upload rejected: {} (budget {} bytes)", e.getMessage(), properties.maxDecodedHeapBytes());
+            metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
+            throw BusinessException.of(ErrorCode.MEDIA_TOO_LARGE);
         } catch (VariantRenderer.InvalidImageException e) {
             // is the honest answer, not "corrupt file" (Task-3 review ruling)
             log.warn("Upload rejected: magic-valid '{}' bytes are not decodable — {}", format, e.getMessage());
@@ -180,9 +191,17 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         }
     }
 
-    private byte[] readAll(MultipartFile file) {
-        try {
-            return file.getBytes();
+    /**
+     * Reads the multipart stream ONCE and digests it in the same pass.
+     *
+     * <p>F-062: the source used to be materialised more than once (the magic
+     * bytes, the digest and every ImageIO stream over the same bytes).</p>
+     */
+    private SourceBytes readAllAndDigest(MultipartFile file) {
+        MessageDigest digest = sha256Digest();
+        try (InputStream in = new DigestInputStream(file.getInputStream(), digest)) {
+            byte[] bytes = in.readAllBytes();
+            return new SourceBytes(bytes, HexFormat.of().formatHex(digest.digest()));
         } catch (IOException e) {
             log.warn("Upload rejected: multipart bytes unreadable", e);
             metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
@@ -190,13 +209,16 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         }
     }
 
-    private static String sha256(byte[] content) {
+    private static MessageDigest sha256Digest() {
         try {
-            MessageDigest digest = MessageDigest.getInstance(SHA_256);
-            return HexFormat.of().formatHex(digest.digest(content));
+            return MessageDigest.getInstance(SHA_256);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 digest unavailable", e);
         }
+    }
+
+    /** The source bytes and their digest. */
+    private record SourceBytes(byte[] bytes, String sha256) {
     }
 
     private String objectKey(UUID mediaId, String variant, String format) {

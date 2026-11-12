@@ -1,5 +1,7 @@
 package com.shop.mediaservice.service.impls;
 
+import com.shop.mediaservice.config.MediaProperties;
+import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +19,15 @@ import java.util.Iterator;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 class VariantRenderer {
 
     private static final int MAX_DIMENSION = 8192;
+
+    /** Bytes per pixel of a decoded {@code BufferedImage} (ARGB). */
+    private static final long BYTES_PER_PIXEL = 4L;
+
+    private final MediaProperties properties;
 
     /** One rendered variant pending its S3 write. */
     record Render(String variant, String format, int width, byte[] bytes) {
@@ -69,35 +77,54 @@ class VariantRenderer {
         return renders;
     }
 
+    /**
+     * Decodes the upload ONCE.
+     *
+     * <p>F-062: the source used to be parsed twice - once by the dimension
+     * probe and once more by {@code ImageIO.read}, which opened its own
+     * stream over the same bytes. The probe and the decode now share one
+     * {@code ImageInputStream} and one {@code ImageReader}.</p>
+     *
+     * <p>The guard is expressed in DECODED MEMORY, not in pixels: a
+     * {@code BufferedImage} of width x height costs 4 bytes per pixel, and
+     * the source bytes are held at the same time. An image above the budget
+     * is rejected BEFORE it is decoded, so the peak heap of the upload stays
+     * bounded instead of exhausting the heap (the old pixel guard allowed
+     * 8192 x 8192 = 268 MB for a single upload).</p>
+     */
     private BufferedImage decode(byte[] source) throws InvalidImageException {
-        try {
-            try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(source))) {
-                if (in == null) {
-                    throw new InvalidImageException("Unable to create image input stream");
-                }
-                Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
-                if (!readers.hasNext()) {
-                    throw new InvalidImageException("No ImageIO reader could decode the upload");
-                }
-                ImageReader reader = readers.next();
-                try {
-                    reader.setInput(in, true, true);
-                    int width = reader.getWidth(0);
-                    int height = reader.getHeight(0);
-                    if (width > MAX_DIMENSION || height > MAX_DIMENSION
-                            || ((long) width * height) > (long) MAX_DIMENSION * MAX_DIMENSION) {
-                        throw new InvalidImageException("Image dimensions exceed maximum allowed limits: "
-                                + width + "x" + height);
-                    }
-                } finally {
-                    reader.dispose();
-                }
+        try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(source))) {
+            if (in == null) {
+                throw new InvalidImageException("Unable to create image input stream");
             }
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(source));
-            if (image == null) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
                 throw new InvalidImageException("No ImageIO reader could decode the upload");
             }
-            return image;
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    throw new InvalidImageException("Image dimensions exceed maximum allowed limits: "
+                            + width + "x" + height);
+                }
+                long decodedBytes = (long) width * height * BYTES_PER_PIXEL;
+                long budget = properties.maxDecodedHeapBytes();
+                if (decodedBytes + source.length > budget) {
+                    throw new ImageTooLargeException("Decoded image (" + width + "x" + height + " = "
+                            + decodedBytes + " bytes) plus the source (" + source.length
+                            + " bytes) exceeds the budget of " + budget + " bytes");
+                }
+                BufferedImage image = reader.read(0);
+                if (image == null) {
+                    throw new InvalidImageException("No ImageIO reader could decode the upload");
+                }
+                return image;
+            } finally {
+                reader.dispose();
+            }
         } catch (IOException e) {
             // rejects (e.g. a bogus segment length) surface as IIOException
             throw new InvalidImageException("Truncated or unreadable image stream", e);
@@ -128,13 +155,23 @@ class VariantRenderer {
     }
 
     /** Corrupt upload that passed the magic check but cannot be decoded/rendered. */
-    static final class InvalidImageException extends Exception {
+    static class InvalidImageException extends Exception {
         InvalidImageException(String message) {
             super(message);
         }
 
         InvalidImageException(String message, Throwable cause) {
             super(message, cause);
+        }
+    }
+
+    /**
+     * The upload is a valid image, but decoding it would exceed the memory
+     * budget of the service (F-062) - a 413, not a 415.
+     */
+    static final class ImageTooLargeException extends InvalidImageException {
+        ImageTooLargeException(String message) {
+            super(message);
         }
     }
 }

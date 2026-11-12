@@ -569,6 +569,8 @@ services:
       # D1 — private bucket `media` (default); MEDIA_* knobs per spec §4.3.
       STORAGE_BUCKET: ${STORAGE_BUCKET:-media}
       MEDIA_MAX_UPLOAD: ${MEDIA_MAX_UPLOAD:-10MB}
+      # F-062: the decoded-memory budget of the upload path
+      MEDIA_MAX_DECODED_BYTES: ${MEDIA_MAX_DECODED_BYTES:-64MB}
       MEDIA_PRESIGN_TTL: ${MEDIA_PRESIGN_TTL:-7d}
       MEDIA_PURGE_GRACE: ${MEDIA_PURGE_GRACE:-30d}
       # H-4 — purge reference gate: client_credentials for media's

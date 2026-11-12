@@ -45,7 +45,7 @@ class BucketBootstrapTest {
     @BeforeEach
     void setUp() {
         MediaProperties properties = new MediaProperties(
-                BUCKET, Duration.ofDays(7), DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320);
+                BUCKET, Duration.ofDays(7), DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320, DataSize.ofMegabytes(64));
         bootstrap = new BucketBootstrap(storage, s3Client, properties);
     }
 

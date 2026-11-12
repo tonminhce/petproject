@@ -63,7 +63,7 @@ class MediaUploadServiceImplTest {
     @BeforeEach
     void setUp() {
         MediaProperties properties = new MediaProperties(
-                "media", Duration.ofDays(7), DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320);
+                "media", Duration.ofDays(7), DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320, DataSize.ofMegabytes(64));
         service = new MediaUploadServiceImpl(
                 mediaRepository, storage, renderer, metadataInspector,
                 new MediaMetrics(new SimpleMeterRegistry()), properties,

@@ -50,7 +50,7 @@ class MediaQueryServiceImplTest {
     void setUp() {
         registry = new SimpleMeterRegistry();
         MediaProperties properties = new MediaProperties(
-                "media", TTL, DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320);
+                "media", TTL, DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320, DataSize.ofMegabytes(64));
         queryService = new MediaQueryServiceImpl(
                 mediaRepository, storage, new MediaMetrics(registry), properties);
     }

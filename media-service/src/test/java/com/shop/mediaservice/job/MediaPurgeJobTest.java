@@ -65,7 +65,7 @@ class MediaPurgeJobTest {
     @BeforeEach
     void setUp() {
         MediaProperties properties = new MediaProperties(
-                BUCKET, Duration.ofDays(7), DataSize.ofMegabytes(10), GRACE, 1200, 320);
+                BUCKET, Duration.ofDays(7), DataSize.ofMegabytes(10), GRACE, 1200, 320, DataSize.ofMegabytes(64));
         job = new MediaPurgeJob(mediaRepository, storage, referenceChecker, properties);
     }
 

@@ -71,7 +71,7 @@ class MediaBucketUnificationTest {
     @BeforeEach
     void setUp() {
         properties = new MediaProperties(
-                BUCKET, Duration.ofDays(7), DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320);
+                BUCKET, Duration.ofDays(7), DataSize.ofMegabytes(10), Duration.ofDays(30), 1200, 320, DataSize.ofMegabytes(64));
         uploadService = new MediaUploadServiceImpl(
                 mediaRepository, storage, renderer, metadataInspector,
                 new MediaMetrics(new SimpleMeterRegistry()), properties,
