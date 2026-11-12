@@ -32,9 +32,9 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class PaymentServiceClientTest {
 
     private static final UUID ORDER_ID = UUID.randomUUID();
-    private static final UUID PAYMENT_PENDING = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
     private static final UUID PAYMENT_CAPTURED = UUID.fromString("00000000-0000-0000-0000-0000000000bb");
-    private static final String PAYMENTS_URL = "http://payment.test/api/v1/payments?orderId=" + ORDER_ID;
+    private static final String CAPTURED_URL =
+            "http://payment.test/api/v1/payments/by-order/" + ORDER_ID + "/captured";
 
     @Mock
     private ServiceTokenProvider serviceTokenProvider;
@@ -55,27 +55,19 @@ class PaymentServiceClientTest {
         lenient().when(serviceTokenProvider.getToken()).thenReturn("svc-token");
     }
 
-    private static String paymentJson(UUID id, String status) {
+    private static String capturedJson() {
         return """
-            {"id":"%s","orderId":"%s","amount":110.00,"currency":"VND","status":"%s","provider":"VNPAY"}
-            """.formatted(id, ORDER_ID, status);
-    }
-
-    private static String pageJson(String... entries) {
-        return """
-            {"success":true,"code":"OK","data":{"content":[%s],"page":0,"size":20,"totalElements":%d,"totalPages":1,"first":true,"last":true}}
-            """.formatted(String.join(",", entries), entries.length);
+            {"success":true,"code":"OK","data":{"id":"%s","orderId":"%s","status":"CAPTURED"}}
+            """.formatted(PAYMENT_CAPTURED, ORDER_ID);
     }
 
     @Test
     void capturedPaymentPresent_returnsCapturedSnapshotWithServiceToken() {
         stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
+        server.expect(requestTo(CAPTURED_URL))
             .andExpect(method(HttpMethod.GET))
             .andExpect(header("Authorization", "Bearer svc-token"))
-            .andRespond(withSuccess(pageJson(
-                paymentJson(PAYMENT_PENDING, "PENDING"),
-                paymentJson(PAYMENT_CAPTURED, "CAPTURED")), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
         Optional<PaymentStatusSnapshot> snapshot = client.findCapturedByOrderId(ORDER_ID);
 
@@ -85,39 +77,46 @@ class PaymentServiceClientTest {
         assertThat(snapshot.get().orderId()).isEqualTo(ORDER_ID);
     }
 
+    /**
+     * The captured payment is looked up through the dedicated endpoint, NOT
+     * through the paged list: a captured payment beyond the first page was
+     * invisible to the paged lookup, the confirm gate failed closed and the
+     * paid order was auto-cancelled.
+     */
     @Test
-    void onlyPendingOrRefunded_returnsEmpty() {
+    void theLookupUsesTheDedicatedCapturedEndpointNotThePagedList() {
         stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
-            .andRespond(withSuccess(pageJson(
-                paymentJson(PAYMENT_PENDING, "PENDING"),
-                paymentJson(PAYMENT_CAPTURED, "REFUNDED")), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CAPTURED_URL))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
-        assertThat(client.findCapturedByOrderId(ORDER_ID)).isEmpty();
+        client.findCapturedByOrderId(ORDER_ID);
+
+        server.verify();
     }
 
     @Test
-    void emptyPage_returnsEmpty() {
+    void noCapturedPayment_returnsEmpty() {
         stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
-            .andRespond(withSuccess(pageJson(), MediaType.APPLICATION_JSON));
-
-        assertThat(client.findCapturedByOrderId(ORDER_ID)).isEmpty();
-    }
-
-    @Test
-    void non2xxResponse_failsClosedReturnsEmpty() {
-        stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
+        server.expect(requestTo(CAPTURED_URL))
             .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertThat(findFailingClosed()).isEmpty();
+        assertThat(client.findCapturedByOrderId(ORDER_ID)).isEmpty();
+    }
+
+    @Test
+    void emptyBody_returnsEmpty() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess("{\"success\":true,\"code\":\"OK\",\"data\":null}", MediaType.APPLICATION_JSON));
+
+        assertThat(client.findCapturedByOrderId(ORDER_ID)).isEmpty();
     }
 
     @Test
     void serverError_failsClosedReturnsEmpty() {
         stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
+        server.expect(requestTo(CAPTURED_URL))
             .andRespond(withServerError());
 
         assertThat(findFailingClosed()).isEmpty();
@@ -126,7 +125,7 @@ class PaymentServiceClientTest {
     @Test
     void ioTimeout_failsClosedReturnsEmpty() {
         stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
+        server.expect(requestTo(CAPTURED_URL))
             .andRespond(withException(new IOException("read timeout")));
 
         assertThat(findFailingClosed()).isEmpty();
@@ -135,10 +134,39 @@ class PaymentServiceClientTest {
     @Test
     void malformedBody_failsClosedReturnsEmpty() {
         stubToken();
-        server.expect(requestTo(PAYMENTS_URL))
+        server.expect(requestTo(CAPTURED_URL))
             .andRespond(withSuccess("not-json{", MediaType.APPLICATION_JSON));
 
         assertThat(findFailingClosed()).isEmpty();
+    }
+
+    /**
+     * The refund path asks the same question before it refunds, so the new
+     * endpoint is its only way to find the captured payment too.
+     */
+    @Test
+    void theRefundPathFindsTheCapturedPaymentThroughTheSameEndpoint() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThat(client.refundByOrderId(ORDER_ID)).isTrue();
+
+        server.verify();
+    }
+
+    @Test
+    void theRefundPathDoesNotRefundAnOrderWithoutACapturedPayment() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        assertThat(client.refundByOrderId(ORDER_ID)).isFalse();
+
+        server.verify();
     }
 
     /** Fail-closed contract: ANY client failure must surface as empty, never a raw throw. */

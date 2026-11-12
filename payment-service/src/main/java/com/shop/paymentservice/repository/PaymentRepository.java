@@ -1,5 +1,6 @@
 package com.shop.paymentservice.repository;
 
+import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.entity.Payment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,15 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Page<Payment> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Payment> findAllByOrderIdOrderByCreatedAtDesc(UUID orderId, Pageable pageable);
+
+    /**
+     * The authoritative "does this order have a payment in this state" lookup.
+     *
+     * <p>A paged list cannot answer it: the caller would have to page through
+     * every payment of the order, and a payment beyond the first page is
+     * invisible to a caller that reads one page.</p>
+     */
+    Optional<Payment> findFirstByOrderIdAndStatusOrderByCreatedAtDesc(UUID orderId, PaymentStatus status);
 
     boolean existsByOrderId(UUID orderId);
 }

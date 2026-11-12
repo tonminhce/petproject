@@ -122,6 +122,16 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<PaymentResponse> findCapturedByOrderId(UUID orderId) {
+        if (orderId == null) {
+            return Optional.empty();
+        }
+        return repository.findFirstByOrderIdAndStatusOrderByCreatedAtDesc(orderId, PaymentStatus.CAPTURED)
+                .map(PaymentResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PaymentResponse findById(UUID id) {
         return PaymentResponse.from(requirePayment(id));
     }

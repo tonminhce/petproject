@@ -107,20 +107,24 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
     }
 
     private void stubCapturedPayment(UUID orderId) {
-        paymentServer.stubFor(get(urlPathEqualTo("/api/v1/payments"))
-            .withQueryParam("orderId", equalTo(orderId.toString()))
+        // the confirm gate asks the payment service for the captured payment of
+        // the order through the dedicated endpoint - the paged list cannot
+        // answer it (a captured payment beyond the first page is invisible).
+        paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + orderId + "/captured"))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"content":[{"orderId":"%s","status":"CAPTURED","id":"%s"}],"page":0,"size":10,"totalElements":1,"totalPages":1,"first":true,"last":true}}
+                {"success":true,"code":"OK","data":{"orderId":"%s","status":"CAPTURED","id":"%s"}}
                 """.formatted(orderId, UUID.randomUUID()))));
     }
 
     /** No captured payment for the order - the confirm gate must fail closed. */
     private void stubNoCapturedPayment(UUID orderId) {
-        paymentServer.stubFor(get(urlPathEqualTo("/api/v1/payments"))
-            .withQueryParam("orderId", equalTo(orderId.toString()))
-            .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"content":[],"page":0,"size":10,"totalElements":0,"totalPages":0,"first":true,"last":true}}
-                """)));
+        paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + orderId + "/captured"))
+            .willReturn(aResponse()
+                .withStatus(404)
+                .withHeader("Content-Type", "application/json")
+                .withBody("""
+                    {"success":false,"code":"PAY-5002","message":"Payment not found","path":"/api/v1/payments"}
+                    """)));
     }
 
     private static com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder reservationJson(UUID id) {

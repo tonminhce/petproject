@@ -2,6 +2,8 @@ package com.shop.paymentservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.PageableConstant;
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.logging.audit.Audited;
@@ -72,5 +74,23 @@ public class PaymentController {
         Page<PaymentResponse> result = paymentService.findAllByOrderId(orderId, pageable);
         return ApiResponse.ok(PageResponse.of(
             result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));
+    }
+
+    /**
+     * The captured payment of an order - the answer the order-service confirm
+     * gate needs.
+     *
+     * <p>The paged list endpoint above cannot answer it: the gate must see
+     * EVERY payment of the order, and a captured payment beyond the first page
+     * is invisible to a caller that reads one page. The gate then fails closed
+     * (ORD-4012), the order can never be confirmed and is auto-cancelled
+     * later - a customer who paid loses the order.</p>
+     */
+    @GetMapping("/by-order/{orderId}/captured")
+    @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    public ApiResponse<PaymentResponse> findCapturedByOrderId(@PathVariable UUID orderId) {
+        return paymentService.findCapturedByOrderId(orderId)
+                .map(ApiResponse::ok)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, orderId));
     }
 }

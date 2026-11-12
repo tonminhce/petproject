@@ -1,7 +1,6 @@
 package com.shop.orderservice.client;
 
 import com.shop.common.core.viewmodel.ApiResponse;
-import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
 import com.shop.orderservice.security.ServiceTokenProvider;
@@ -11,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -38,7 +38,7 @@ public class PaymentServiceClient {
 
     private static final String STATUS_CAPTURED = "CAPTURED";
 
-    private static final ParameterizedTypeReference<ApiResponse<PageResponse<PaymentStatusSnapshot>>> RESPONSE_TYPE =
+    private static final ParameterizedTypeReference<ApiResponse<PaymentStatusSnapshot>> SNAPSHOT_TYPE =
         new ParameterizedTypeReference<>() {};
 
     private final ShopServicesProperties props;
@@ -56,22 +56,31 @@ public class PaymentServiceClient {
         return props.payment().isEnabled();
     }
 
+    /**
+     * The captured payment of an order, if there is one.
+     *
+     * <p>The payment-service owns the answer (its dedicated captured-payment
+     * endpoint): the paged list endpoint could not answer it, because a
+     * captured payment beyond the first page is invisible to a caller that
+     * reads one page - and the gate fails closed, so the order could never be
+     * confirmed and was auto-cancelled while the customer had paid.</p>
+     */
     @CircuitBreaker(name = "paymentService")
     public Optional<PaymentStatusSnapshot> findCapturedByOrderId(UUID orderId) {
         try {
-            ApiResponse<PageResponse<PaymentStatusSnapshot>> resp = restClient.get()
-                .uri(uriBuilder -> uriBuilder.path("/api/v1/payments")
-                    .queryParam("orderId", orderId)
-                    .build())
+            ApiResponse<PaymentStatusSnapshot> resp = restClient.get()
+                .uri("/api/v1/payments/by-order/{orderId}/captured", orderId)
                 .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
                 .retrieve()
-                .body(RESPONSE_TYPE);
-            if (resp == null || resp.data() == null || resp.data().content() == null) {
+                .body(SNAPSHOT_TYPE);
+            if (resp == null || resp.data() == null) {
                 return Optional.empty();
             }
-            return resp.data().content().stream()
-                .filter(payment -> STATUS_CAPTURED.equals(payment.status()))
-                .findFirst();
+            PaymentStatusSnapshot payment = resp.data();
+            return STATUS_CAPTURED.equals(payment.status()) ? Optional.of(payment) : Optional.empty();
+        } catch (HttpClientErrorException.NotFound ex) {
+            // no captured payment for this order - a normal answer, not a failure
+            return Optional.empty();
         } catch (RestClientException ex) {
             log.error("Payment status lookup failed for order {} — failing closed", orderId, ex);
             return Optional.empty();
