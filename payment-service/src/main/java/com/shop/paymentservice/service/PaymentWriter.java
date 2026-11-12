@@ -7,6 +7,7 @@ import com.shop.paymentservice.repository.PaymentEventRepository;
 import com.shop.paymentservice.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
@@ -19,6 +20,19 @@ public class PaymentWriter {
 
     @Transactional
     public Payment insert(Payment payment) {
+        return repository.saveAndFlush(payment);
+    }
+
+    /**
+     * The insert in its OWN transaction.
+     *
+     * <p>A lost same-key race aborts the PostgreSQL transaction of the caller
+     * (a failed statement poisons it), so the winner has to be re-read in a
+     * fresh one - the order-service IdempotencyService resolves the same race
+     * the same way.</p>
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment insertIsolated(Payment payment) {
         return repository.saveAndFlush(payment);
     }
 

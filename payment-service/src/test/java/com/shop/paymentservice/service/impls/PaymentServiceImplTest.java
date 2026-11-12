@@ -73,14 +73,14 @@ class PaymentServiceImplTest {
         when(repository.findByIdempotencyKey(IDEMPOTENCY_KEY)).thenReturn(Optional.empty());
         when(provider.name()).thenReturn("mock");
         Payment saved = payment(PaymentStatus.PENDING);
-        when(writer.insert(any(Payment.class))).thenReturn(saved);
+        when(writer.insertIsolated(any(Payment.class))).thenReturn(saved);
 
         PaymentResponse result = service.create(request());
 
         assertThat(result.id()).isEqualTo(saved.getId());
         assertThat(result.status()).isEqualTo(saved.getStatus());
         ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
-        verify(writer).insert(captor.capture());
+        verify(writer).insertIsolated(captor.capture());
         Payment inserted = captor.getValue();
         assertThat(inserted.getOrderId()).isEqualTo(ORDER_ID);
         assertThat(inserted.getAmount()).isEqualByComparingTo(AMOUNT);

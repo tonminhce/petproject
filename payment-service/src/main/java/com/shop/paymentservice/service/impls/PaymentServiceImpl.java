@@ -12,17 +12,21 @@ import com.shop.paymentservice.provider.PaymentProviderFactory;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.service.PaymentService;
 import com.shop.paymentservice.service.PaymentWriter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository repository;
@@ -56,10 +60,13 @@ public class PaymentServiceImpl implements PaymentService {
         Optional<Payment> existing = (req.userId() != null)
                 ? repository.findByIdempotencyKeyAndUserId(req.idempotencyKey(), req.userId())
                 : repository.findByIdempotencyKey(req.idempotencyKey());
+        if (existing.isPresent()) {
+            return replay(existing.get(), req);
+        }
 
         PaymentProvider provider = resolveProvider(req.provider());
 
-        Payment payment = existing.orElseGet(() -> writer.insert(Payment.builder()
+        Payment payment = Payment.builder()
                 .orderId(req.orderId())
                 .userId(req.userId())
                 .amount(req.amount())
@@ -67,8 +74,46 @@ public class PaymentServiceImpl implements PaymentService {
                 .status(PaymentStatus.PENDING)
                 .provider(provider.name())
                 .idempotencyKey(req.idempotencyKey())
-                .build()));
+                .build();
+        try {
+            return PaymentResponse.from(writer.insertIsolated(payment));
+        } catch (DataIntegrityViolationException ex) {
+            // Lost the same-key race: the unique index is the final arbiter.
+            // The raw constraint violation must never surface as a 500.
+            Payment winner = repository.findByIdempotencyKey(req.idempotencyKey())
+                    .orElseThrow(() -> ex);
+            return replay(winner, req);
+        }
+    }
+
+    /**
+     * The replay of an idempotent create.
+     *
+     * <p>The key identifies the REQUEST, not the payment. Handing back the
+     * payment of another request would tell the caller that it created a
+     * payment for its own order while the money is bound to a different one:
+     * the capture then targets the wrong payment, the confirm gate of the real
+     * order fails closed, and a paid order is auto-cancelled. The stored
+     * payload is therefore compared before the replay is handed out, and a
+     * difference is a conflict (PAY-5003).</p>
+     */
+    private PaymentResponse replay(Payment payment, CreatePaymentRequest req) {
+        if (!samePayload(payment, req)) {
+            log.warn("Idempotency key {} reused with a different payload (stored order {} amount {}, requested order {} amount {}) - refusing the replay",
+                    req.idempotencyKey(), payment.getOrderId(), payment.getAmount(), req.orderId(), req.amount());
+            throw BusinessException.of(ErrorCode.PAYMENT_DUPLICATE_REQUEST, req.idempotencyKey());
+        }
         return PaymentResponse.from(payment);
+    }
+
+    /** The payment row stores the immutable payload, so it IS the request fingerprint. */
+    private boolean samePayload(Payment payment, CreatePaymentRequest req) {
+        return Objects.equals(payment.getOrderId(), req.orderId())
+                && Objects.equals(payment.getUserId(), req.userId())
+                && Objects.equals(payment.getCurrency(), req.currency())
+                && payment.getAmount() != null
+                && req.amount() != null
+                && payment.getAmount().compareTo(req.amount()) == 0;
     }
 
     @Override
