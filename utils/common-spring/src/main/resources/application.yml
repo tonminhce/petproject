@@ -46,7 +46,15 @@ server:
   # Trust the X-Forwarded-* headers set by the ingress / load balancer.
   forward-headers-strategy: framework
   error:
-    include-message: always
+    # The internal exception text must never reach the client: the platform
+    # exception handler (ApiExceptionHandler) emits the curated, i18n message
+    # for every error it handles - a generic one for 5xx and a detailed one for
+    # 4xx client errors. include-message=always only affects the errors that
+    # never reach that handler (filter-chain failures, unmapped MVC errors),
+    # where it would echo SQL fragments, host names or class names.
+    include-message: never
+    # Binding failures are 4xx client errors: their field detail is the
+    # curated validation message and stays useful.
     include-binding-errors: always
     include-stacktrace: never
     include-exception: false
