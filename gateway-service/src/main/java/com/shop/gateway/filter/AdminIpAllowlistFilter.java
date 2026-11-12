@@ -36,7 +36,23 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
 
     private static final String WEBHOOK_BYPASS_PREFIX = ApiPaths.WEBHOOKS_PREFIX + "/";
     private static final String HEALTH_BYPASS_PATH = ApiPaths.ACTUATOR_HEALTH;
-    private static final String HEALTH_BYPASS_PREFIX = ApiPaths.ACTUATOR_HEALTH + "/";
+
+    /**
+     * The storefront paths that are never IP-blocked.
+     *
+     * <p>Segment-aware on purpose: {@code /api/v1/ratings-admin} is not a
+     * child of {@code /api/v1/ratings}, so a bare prefix match would hand
+     * every route that merely begins with one of these prefixes the bypass.
+     * See {@link RequestPathMatcher}.</p>
+     */
+    private static final List<String> PUBLIC_STOREFRONT_PREFIXES = List.of(
+            "/api/v1/products",
+            "/api/v1/categories",
+            "/api/v1/brands",
+            "/api/v1/search",
+            "/api/v1/ratings",
+            "/api/v1/medias",
+            "/api/v1/auth");
 
     private final AdminIpAllowlistProperties properties;
     private final List<IpSubnetFilterRule> rules;
@@ -78,20 +94,13 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isBypassed(final String path) {
-        return path.equals(HEALTH_BYPASS_PATH)
-                || path.startsWith(HEALTH_BYPASS_PREFIX)
+        return RequestPathMatcher.matchesPrefix(path, HEALTH_BYPASS_PATH)
                 || path.startsWith(WEBHOOK_BYPASS_PREFIX)
                 || isPublicStorefront(path);
     }
 
     private boolean isPublicStorefront(final String path) {
-        return path.startsWith("/api/v1/products")
-                || path.startsWith("/api/v1/categories")
-                || path.startsWith("/api/v1/brands")
-                || path.startsWith("/api/v1/search")
-                || path.startsWith("/api/v1/ratings")
-                || path.startsWith("/api/v1/medias")
-                || path.startsWith("/api/v1/auth");
+        return RequestPathMatcher.matchesAnyPrefix(path, PUBLIC_STOREFRONT_PREFIXES);
     }
 
     private boolean isAllowed(final String clientIp) {

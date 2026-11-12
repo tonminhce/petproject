@@ -97,17 +97,13 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
     }
 
     private Scope scopeFor(final String path) {
-        if (backofficePrefixes.stream().anyMatch(prefix -> matchesPrefix(path, prefix))) {
+        if (backofficePrefixes.stream().anyMatch(prefix -> RequestPathMatcher.matchesPrefix(path, prefix))) {
             return Scope.BACKOFFICE;
         }
-        if (matchesPrefix(path, ServiceRoute.SEARCH.prefix())) {
+        if (RequestPathMatcher.matchesPrefix(path, ServiceRoute.SEARCH.prefix())) {
             return Scope.SEARCH;
         }
         return null;
-    }
-
-    private static boolean matchesPrefix(final String path, final String prefix) {
-        return path.equals(prefix) || path.startsWith(prefix + "/");
     }
 
     private Bucket newBucket(final Scope scope) {

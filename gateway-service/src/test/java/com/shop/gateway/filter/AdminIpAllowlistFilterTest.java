@@ -236,6 +236,56 @@ class AdminIpAllowlistFilterTest {
                 .isEqualTo(FilterOrder.ADMIN_IP_ALLOWLIST);
     }
 
+    @Test
+    void aPathThatMerelyStartsWithAPublicPrefixIsNotBypassed() {
+        // "/api/v1/ratings-admin" is NOT a child of "/api/v1/ratings": a bare
+        // prefix match would hand it the public bypass and let it reach the
+        // backoffice without the allowlist.
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
+
+        for (String path : List.of(
+                "/api/v1/ratings-admin",
+                "/api/v1/auth-internal",
+                "/api/v1/products-internal",
+                "/api/v1/search-admin",
+                "/api/v1/medias-private")) {
+            var exchange = exchange(path, "8.8.8.8");
+
+            filter.filter(exchange, chain).block();
+
+            assertThat(exchange.getResponse().getStatusCode())
+                    .as("%s must not inherit a public prefix bypass", path)
+                    .isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @Test
+    void thePublicStorefrontPrefixesAreStillBypassed() {
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
+
+        for (String path : List.of(
+                "/api/v1/products",
+                "/api/v1/products/42",
+                "/api/v1/categories",
+                "/api/v1/brands",
+                "/api/v1/search",
+                "/api/v1/search/shoes",
+                "/api/v1/ratings",
+                "/api/v1/medias",
+                "/api/v1/auth",
+                "/api/v1/auth/login")) {
+            var exchange = exchange(path, "8.8.8.8");
+
+            filter.filter(exchange, chain).block();
+
+            assertThat(exchange.getResponse().getStatusCode())
+                    .as("%s is a public storefront path and must stay reachable", path)
+                    .isEqualTo(org.springframework.http.HttpStatus.OK);
+        }
+    }
+
     private MockServerWebExchange exchange(String path, String forwardedFor) {
         var request = MockServerHttpRequest.get("http://gateway.local" + path)
                 .remoteAddress(new InetSocketAddress(101));
