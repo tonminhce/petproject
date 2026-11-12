@@ -30,7 +30,10 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "shop.product.lifecycle.v1", containerFactory = "searchListenerFactory")
+    // groupId is pinned: it is the consumer's identity, and changing it resets
+    // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
+    @KafkaListener(topics = "shop.product.lifecycle.v1", groupId = "search-service",
+            containerFactory = "searchListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
         processMessage(rawValue, headers, this::handleContained);
     }

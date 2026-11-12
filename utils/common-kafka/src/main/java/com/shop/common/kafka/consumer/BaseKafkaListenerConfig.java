@@ -45,6 +45,18 @@ import java.util.Map;
  * a child span of that remote parent. Without a registry on the classpath
  * (or without tracing handlers on it) the container degrades to a no-op —
  * a missing/unknown header still yields a new root trace.</p>
+ * <h3>Consumer group identity</h3>
+ * <p>A consumer group id is the consumer's IDENTITY: the committed offsets are
+ * keyed by it, and a NEW group id starts at the configured
+ * {@code auto-offset-reset} ({@code earliest} in this fleet), i.e. it replays
+ * the whole topic. For the listeners whose handlers are not idempotent - a
+ * notification that must not be sent twice, a shipment that must not be
+ * created twice - that is a data-incident, not a config change. Every
+ * {@code @KafkaListener} therefore pins its {@code groupId} in the annotation
+ * instead of inheriting {@code shop.kafka.consumer.group-id}, and the pinned
+ * value equals the id the listener resolved to before the pin, so the change
+ * moves no offset. A listener must never change its group id without a
+ * deliberate replay decision.</p>
  */
 public abstract class BaseKafkaListenerConfig<K> {
 

@@ -15,7 +15,10 @@ public class ProductRatingConsumer extends BaseKafkaConsumer<String, RatingLifec
         this.productRatingService = productRatingService;
     }
 
-    @KafkaListener(topics = "shop.rating.lifecycle.v1", containerFactory = "ratingListenerFactory")
+    // groupId is pinned: it is the consumer's identity, and changing it resets
+    // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
+    @KafkaListener(topics = "shop.rating.lifecycle.v1", groupId = "product-service",
+            containerFactory = "ratingListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
 
         processMessage(rawValue, headers, RatingLifecycleEvent.class, productRatingService::apply);

@@ -57,7 +57,13 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "media.lifecycle.v1", containerFactory = "mediaListenerFactory")
+    // groupId is pinned: it is the consumer's identity, and changing it resets
+    // the committed offsets and replays the topic (see BaseKafkaListenerConfig).
+    // It stays the service group id on purpose: splitting it from the rating
+    // consumer would give this listener a NEW group, which starts at the
+    // earliest offset and would replay every media event of the topic.
+    @KafkaListener(topics = "media.lifecycle.v1", groupId = "product-service",
+            containerFactory = "mediaListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
         processMessage(rawValue, headers, this::handleContained);
     }
