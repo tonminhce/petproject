@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -41,14 +42,20 @@ class ProductServiceImplMediaClearTest {
     @Mock AuditorAware<String> auditorAware;
     @Mock MediaHeadClient mediaHeadClient;
     @Mock org.springframework.cache.CacheManager cacheManager;
+    @Mock org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     private ProductServiceImpl service;
 
     @BeforeEach
     void setUp() {
         // Real mapper + real ModelMapper — the partialUpdate branch is the unit under test here.
+        org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            org.springframework.transaction.support.TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
         service = new ProductServiceImpl(repo, categoryRepo, brandRepo,
-            new ProductMapper(new ModelMapper()), publisher, auditorAware, mediaHeadClient, cacheManager);
+            new ProductMapper(new ModelMapper()), publisher, auditorAware, mediaHeadClient, cacheManager,
+            transactionTemplate);
     }
 
     private Product productWithMedia() {

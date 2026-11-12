@@ -30,9 +30,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -47,6 +49,7 @@ public class ProductServiceImpl implements ProductService {
     private final AuditorAware<String> auditorAware;
     private final MediaHeadClient mediaHeadClient;
     private final CacheManager cacheManager;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * <p>A missing {@code status} is normalised to {@link ProductStatus#ACTIVE}
@@ -120,8 +123,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Transactional
     public ProductDetailResponse create(ProductCreateRequest request) {
+        // F-066: the media HEAD check is a REMOTE call. It used to run inside
+        // the @Transactional method, so a slow media-service held a pooled DB
+        // connection and an open transaction for the whole round trip. The
+        // check now runs before the transaction is opened; only the local
+        // write is transactional.
         if (repo.existsBySlug(request.slug())) {
             throw BusinessException.of(ErrorCode.PRODUCT_SLUG_EXISTS);
         }
@@ -129,26 +136,31 @@ public class ProductServiceImpl implements ProductService {
             throw BusinessException.of(ErrorCode.PRODUCT_SKU_EXISTS);
         }
         assertMediaExists(request.mediaId());
-        Product product = mapper.toEntity(request);
-        if (request.categoryId() != null) {
-            Category category = categoryRepo.findById(request.categoryId())
-                .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.categoryId()));
-            product.setCategory(category);
-        }
-        if (request.brandId() != null) {
-            Brand brand = brandRepo.findById(request.brandId())
-                .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
-            product.setBrand(brand);
-        }
-        Product saved = repo.save(product);
-        publisher.publishCreated(saved);
-        return mapper.toDetailResponse(saved);
+
+        ProductDetailResponse response = transactionTemplate.execute(status -> {
+            Product product = mapper.toEntity(request);
+            if (request.categoryId() != null) {
+                Category category = categoryRepo.findById(request.categoryId())
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.categoryId()));
+                product.setCategory(category);
+            }
+            if (request.brandId() != null) {
+                Brand brand = brandRepo.findById(request.brandId())
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
+                product.setBrand(brand);
+            }
+            Product saved = repo.save(product);
+            publisher.publishCreated(saved);
+            return mapper.toDetailResponse(saved);
+        });
+        return Objects.requireNonNull(response);
     }
 
     @Override
-    @Transactional
     @CachePut(value = "product", key = "#id")
     public ProductDetailResponse update(UUID id, ProductUpdateRequest request) {
+        // F-066: the media HEAD check is a REMOTE call and must not run while
+        // a DB transaction (and its pooled connection) is held open.
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
@@ -159,22 +171,26 @@ public class ProductServiceImpl implements ProductService {
         }
         assertMediaExists(request.mediaId());
         String previousSlug = existing.getSlug();
-        mapper.partialUpdate(existing, request);
-        if (request.categoryId() != null) {
-            Category category = categoryRepo.findById(request.categoryId())
-                .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.categoryId()));
-            existing.setCategory(category);
-        }
-        if (request.brandId() != null) {
-            Brand brand = brandRepo.findById(request.brandId())
-                .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
-            existing.setBrand(brand);
-        }
-        Product saved = repo.save(existing);
-        evictProductSlug(previousSlug);
-        evictProductSlug(saved.getSlug());
-        publisher.publishUpdated(saved);
-        return mapper.toDetailResponse(saved);
+
+        ProductDetailResponse response = transactionTemplate.execute(status -> {
+            mapper.partialUpdate(existing, request);
+            if (request.categoryId() != null) {
+                Category category = categoryRepo.findById(request.categoryId())
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.categoryId()));
+                existing.setCategory(category);
+            }
+            if (request.brandId() != null) {
+                Brand brand = brandRepo.findById(request.brandId())
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.BRAND_NOT_FOUND, request.brandId()));
+                existing.setBrand(brand);
+            }
+            Product saved = repo.save(existing);
+            evictProductSlug(previousSlug);
+            evictProductSlug(saved.getSlug());
+            publisher.publishUpdated(saved);
+            return mapper.toDetailResponse(saved);
+        });
+        return Objects.requireNonNull(response);
     }
 
     @Override

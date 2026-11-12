@@ -18,8 +18,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -29,10 +31,16 @@ public class RatingServiceImpl implements RatingService {
     private final RatingRepository ratingRepository;
     private final EligibilityClient eligibilityClient;
     private final RatingEventService ratingEventService;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
-    @Transactional
     public RatingResponse submit(UUID jwtUserId, RatingSubmitRequest request) {
+        // F-066: the eligibility check is a REMOTE call. It used to run inside
+        // the @Transactional method, so a slow order-service held a pooled DB
+        // connection and an open transaction for the whole round trip (3-5s
+        // timeouts) - a burst against a degraded order-service exhausts the
+        // pool and stalls unrelated requests. The check now runs before the
+        // transaction is opened; only the local write is transactional.
         ratingRepository.findByUserIdAndProductIdAndDeletedFalse(jwtUserId, request.productId())
                 .ifPresent(existing -> {
                     throw BusinessException.of(ErrorCode.RATING_ALREADY_EXISTS);
@@ -43,20 +51,23 @@ public class RatingServiceImpl implements RatingService {
             throw BusinessException.of(ErrorCode.RATING_NOT_ELIGIBLE);
         }
 
-        Rating rating = Rating.builder()
-                .productId(request.productId())
-                .userId(jwtUserId)
-                .rating(request.rating())
-                .comment(request.comment())
-                .verified(eligible)
-                .hidden(false)
-                .build();
+        RatingResponse response = transactionTemplate.execute(status -> {
+            Rating rating = Rating.builder()
+                    .productId(request.productId())
+                    .userId(jwtUserId)
+                    .rating(request.rating())
+                    .comment(request.comment())
+                    .verified(eligible)
+                    .hidden(false)
+                    .build();
 
-        // NIT #1: flush REQUIRED before record() — the snapshot aggregate JPQL
-        // only sees this row once it is flushed in the current transaction.
-        Rating saved = ratingRepository.saveAndFlush(rating);
-        ratingEventService.record(saved, RatingAction.CREATED);
-        return RatingResponse.from(saved);
+            // NIT #1: flush REQUIRED before record() — the snapshot aggregate JPQL
+            // only sees this row once it is flushed in the current transaction.
+            Rating saved = ratingRepository.saveAndFlush(rating);
+            ratingEventService.record(saved, RatingAction.CREATED);
+            return RatingResponse.from(saved);
+        });
+        return Objects.requireNonNull(response);
     }
 
     @Override

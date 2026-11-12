@@ -25,6 +25,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -52,11 +54,22 @@ class ProductServiceImplTest {
     @Mock org.springframework.cache.CacheManager cacheManager;
     @Mock org.springframework.cache.Cache productCache;
     @Mock org.springframework.cache.Cache slugCache;
+    @Mock TransactionTemplate transactionTemplate;
     @InjectMocks ProductServiceImpl service;
 
     private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID BRAND_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
+
+    @org.junit.jupiter.api.BeforeEach
+    void runTransactionCallback() {
+        // the write runs inside the template; the callback itself is executed
+        // directly so the unit test can assert the transaction BOUNDARY
+        org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
+    }
 
     private ProductCreateRequest sampleCreate() {
         return new ProductCreateRequest("iPhone 15", "iphone-15", "desc", "IP15-001",

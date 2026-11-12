@@ -16,6 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -36,8 +38,17 @@ class RatingServiceImplTest {
     @Mock private RatingRepository ratingRepository;
     @Mock private EligibilityClient eligibilityClient;
     @Mock private RatingEventService ratingEventService;
+    @Mock private TransactionTemplate transactionTemplate;
 
     @InjectMocks private RatingServiceImpl service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void runTransactionCallback() {
+        org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
+    }
 
     private final UUID userId = UUID.randomUUID();
     private final UUID productId = UUID.randomUUID();
