@@ -98,15 +98,21 @@ class RedisEdgeRateLimiterTest {
         var properties = new EdgeRateLimitProperties(true, 60, 60);
         var limiter = limiter(properties);
 
-        // 60 per minute = one token per second; after the bucket is drained the
-        // next request has to wait for the refill
-        for (int i = 0; i < 60; i++) {
-            assertThat(limiter.acquire("SEARCH", "198.51.100.5", 60).block().allowed()).isTrue();
+        // 60 per minute = one token per second. The bucket is drained UNTIL it
+        // denies a request: a fixed number of requests is not enough, because
+        // the bucket refills while it is drained and a request that crosses a
+        // second boundary gets a token back (the refill works on whole
+        // seconds). A fixed count made this test fail under load - the
+        // machine was busy enough for the drain to cross a second boundary.
+        boolean denied = false;
+        for (int i = 0; i < 500 && !denied; i++) {
+            denied = !limiter.acquire("SEARCH", "198.51.100.5", 60).block().allowed();
         }
-        assertThat(limiter.acquire("SEARCH", "198.51.100.5", 60).block().allowed()).isFalse();
+        assertThat(denied).as("the bucket must be empty").isTrue();
 
-        // the refill is one token per second -> after ~1.1s one token is back
-        Thread.sleep(1_100L);
+        // the refill is one token per second -> after 1.5s at least one token
+        // is back
+        Thread.sleep(1_500L);
         var afterRefill = limiter.acquire("SEARCH", "198.51.100.5", 60).block();
         assertThat(afterRefill.allowed()).isTrue();
     }

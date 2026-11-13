@@ -74,12 +74,14 @@ class MediaUploadMemoryBudgetIT extends AbstractMediaIntegrationTest {
     @Test
     @DisplayName("an upload above the decoded-memory budget → 413 MED-12002")
     void anUploadAboveTheBudgetIsRejected() throws Exception {
-        // a unique size per run: media-service dedupes by sha256, and the
-        // shared Postgres already holds the deterministic 800x600 image from
-        // the other IT suites - a dedup hit would answer 200 without ever
-        // decoding the image
-        int width = 800 + Math.abs(UUID.randomUUID().hashCode() % 50);
-        ResponseEntity<String> response = upload(TestImages.jpeg(width, 600));
+        // A size that no other IT suite uses: media-service dedupes by
+        // sha256, and the shared Postgres already holds the deterministic
+        // 800x600 image of the other suites - a dedup hit answers 200
+        // without ever decoding the image. The width was drawn from
+        // 800..849, so it could land exactly on 800 and hit that image
+        // (the suite failed with 200 instead of 413 when it did).
+        int width = 1200 + Math.abs(UUID.randomUUID().hashCode() % 400);
+        ResponseEntity<String> response = upload(TestImages.jpeg(width, 601));
 
         assertThat(response.getStatusCode().value()).isEqualTo(413);
         assertThat(JSON.readTree(response.getBody()).get("code").asText()).isEqualTo("MED-12002");
