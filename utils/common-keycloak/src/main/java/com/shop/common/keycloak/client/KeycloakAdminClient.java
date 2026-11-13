@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
@@ -329,23 +330,103 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Grants a realm role to a Keycloak user (F-075).
+     *
+     * <p>The realm is the only place that decides what a token carries: the
+     * local role table of auth-service is a mirror. Before this method
+     * existed, the admin role API only wrote the mirror, so granting ADMIN
+     * answered 200 while the next token still carried no ADMIN.</p>
+     *
+     * @param userId the Keycloak user id
+     * @param roleName a realm role name - it must exist, otherwise the call
+     *                 fails instead of silently granting nothing
+     */
+    public void assignRealmRole(String userId, String roleName) {
+        String adminToken = getAdminAccessToken();
+        Map<String, Object> role = fetchRealmRole(adminToken, roleName);
+
+        try {
+            restClient.post()
+                    .uri(usersEndpoint + "/" + userId + "/role-mappings/realm")
+                    .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(List.of(role))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            log.error("Keycloak assign role failed: {}", e.getResponseBodyAsString());
+            throw new KeycloakClientException(
+                    "Assign role failed: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()),
+                    e
+            );
+        }
+    }
+
+    /**
+     * Revokes a realm role from a Keycloak user (F-075) - the mirror of
+     * {@link #assignRealmRole(String, String)}.
+     */
+    public void removeRealmRole(String userId, String roleName) {
+        String adminToken = getAdminAccessToken();
+        Map<String, Object> role = fetchRealmRole(adminToken, roleName);
+
+        try {
+            // method(DELETE) and not delete(): the Keycloak role mapping is
+            // removed with the role representation in the request body, and
+            // only the generic method spec carries a body.
+            restClient.method(HttpMethod.DELETE)
+                    .uri(usersEndpoint + "/" + userId + "/role-mappings/realm")
+                    .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                    .body(List.of(role))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            log.error("Keycloak remove role failed: {}", e.getResponseBodyAsString());
+            throw new KeycloakClientException(
+                    "Remove role failed: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()),
+                    e
+            );
+        }
+    }
+
+    /**
+     * Fetches a realm role. A role that the realm does not know is an error:
+     * skipping it silently would create a user whose authorities are not the
+     * ones the caller asked for.
+     */
+    private Map<String, Object> fetchRealmRole(String adminToken, String roleName) {
+        try {
+            Map<String, Object> role = restClient.get()
+                    .uri(rolesEndpoint + "/" + roleName)
+                    .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
+                    .retrieve()
+                    .body(MAP_TYPE);
+
+            if (role == null) {
+                throw new KeycloakClientException("Realm role not found: " + roleName, HttpStatus.NOT_FOUND);
+            }
+            return role;
+        } catch (RestClientResponseException e) {
+            log.warn("Failed to fetch role {}: {}", roleName, e.getResponseBodyAsString());
+            throw new KeycloakClientException(
+                    "Realm role lookup failed: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()),
+                    e
+            );
+        }
+    }
+
     private void assignRealmRoles(String adminToken, String userId, List<String> roleNames) {
         List<Map<String, Object>> roleRepresentations = new ArrayList<>();
 
         for (String roleName : roleNames) {
-            try {
-                Map<String, Object> role = restClient.get()
-                        .uri(rolesEndpoint + "/" + roleName)
-                        .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
-                        .retrieve()
-                        .body(MAP_TYPE);
-
-                if (role != null) {
-                    roleRepresentations.add(role);
-                }
-            } catch (RestClientResponseException e) {
-                log.warn("Failed to fetch role {}: {}", roleName, e.getResponseBodyAsString());
-            }
+            // F-075: a role that the realm does not know must fail the call.
+            // It used to be skipped with a warning, which created a Keycloak
+            // user with fewer authorities than requested - silently.
+            roleRepresentations.add(fetchRealmRole(adminToken, roleName));
         }
 
         if (!roleRepresentations.isEmpty()) {

@@ -55,6 +55,15 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- The admin client deserializes the Keycloak answers. In a service
+             the Jackson converter is on the runtime classpath (spring-boot
+             starter web); the module itself only needs the annotations, so the
+             databind is added for the tests only. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
