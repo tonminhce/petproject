@@ -14,8 +14,8 @@ import java.time.Duration;
  *   storage:
  *     endpoint: http://localhost:9000
  *     region: us-east-1
- *     access-key: rustfsadmin
- *     secret-key: rustfsadmin
+ *     access-key: ${STORAGE_ACCESS_KEY}   # no default - a blank value fails startup
+ *     secret-key: ${STORAGE_SECRET_KEY}   # no default - a blank value fails startup
  *     bucket: shop-media
  *     path-style-access: true
  *     auto-create-bucket: true
@@ -34,11 +34,24 @@ public class StorageProperties {
     /** Region sent in the signature; arbitrary but required by the SDK. */
     private String region = "us-east-1";
 
-    /** Access key / username. */
-    private String accessKey = "rustfsadmin";
+    /**
+     * Access key / username.
+     *
+     * <p>F-008: BLANK by default. The library used to ship
+     * {@code rustfsadmin} as the default credential, so a deployment that
+     * forgot to configure the object store silently used a well-known
+     * credential instead of failing. A blank value is not a usable
+     * credential: {@link ObjectStorageAutoConfiguration} refuses to build the
+     * client without one.</p>
+     */
+    private String accessKey = "";
 
-    /** Secret key / password. */
-    private String secretKey = "rustfsadmin";
+    /**
+     * Secret key / password.
+     *
+     * <p>F-008: BLANK by default - see {@link #accessKey}.</p>
+     */
+    private String secretKey = "";
 
     /** Default bucket used by the single-argument helper methods. */
     private String bucket = "shop-media";

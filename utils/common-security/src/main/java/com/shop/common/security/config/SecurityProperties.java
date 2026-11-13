@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.http.HttpMethod;
@@ -90,7 +89,10 @@ public record SecurityProperties(
             List<@NotBlank String> allowedHeaders,
             List<@NotBlank String> exposedHeaders,
             @DefaultValue("false") boolean allowCredentials,
-            @DefaultValue("3600") @Min(0) @Positive long maxAgeSeconds
+            // F-007: @Min(0) and @Positive contradicted each other - @Positive
+            // already implies > 0, and a max-age of 0 ("do not cache the
+            // preflight") is a legitimate CORS configuration. One rule: >= 0.
+            @DefaultValue("3600") @Min(0) long maxAgeSeconds
     ) {
 
         /** Default methods applied when none are configured explicitly. */

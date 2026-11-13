@@ -37,8 +37,8 @@ shop:
   # Key defaults mirror StorageProperties so no-env local runs still boot.
   storage:
     endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
-    access-key: ${STORAGE_ACCESS_KEY:rustfsadmin}
-    secret-key: ${STORAGE_SECRET_KEY:rustfsadmin}
+    access-key: ${STORAGE_ACCESS_KEY:}
+    secret-key: ${STORAGE_SECRET_KEY:}
     bucket: ${STORAGE_BUCKET:shop-payments}
 
   payment:

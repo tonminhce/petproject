@@ -54,7 +54,7 @@ All services follow the **Database-per-Service pattern**. They do not share phys
 | 10 | **`tax-service`** | `8091` | `taxservice` | Tax classes, real-time tax calculation by product class and geographic destination (country, state, postal code). | Spring Boot 4, Spring Data JPA, PostgreSQL | Provides calculation API to `order-service` |
 | 11 | **`promotion-service`** | `8093` | `promotionservice` | Marketing campaigns, discount coupons (percentage or fixed amount), minimum order rules, two-phase coupon usage reservation. | Spring Boot 4, Spring Data JPA, PostgreSQL | Provides reservation API to `order-service` |
 | 12 | **`favourite-service`** | `8081` | `favouriteservice` | Customer wishlist management, item bookmarks, paginated saved item queries. | Spring Boot 4, Spring Data JPA, PostgreSQL | Looks up customer ID from JWT |
-| 13 | **`media-service`** | `8083` | `mediaservice` | Multipart media uploads, magic-byte MIME validation against file spoofing, automated generation of 6 responsive WebP variants, presigned S3 URLs. | Spring Boot 4, RustFS/S3 SDK, ImageIO WebP | `product-service` (reference validation) |
+| 13 | **`media-service`** | `8083` | `mediaservice` | Multipart media uploads, magic-byte MIME validation against file spoofing, automated generation of 3 responsive variants (original/display/thumb), each stored in the source format AND in WebP - 6 objects for a JPEG/PNG upload, 3 for a WebP upload, presigned S3 URLs. | Spring Boot 4, RustFS/S3 SDK, ImageIO WebP | `product-service` (reference validation) |
 | 14 | **`notification-service`** | `8090` | `notificationservice` | Multi-channel notifications (in-app alerts, SMTP emails), automatic order confirmation, payment receipts, delivery updates. | Spring Boot 4, JavaMailSender, Kafka Consumers | Kafka topics (order, payment, shipping) |
 
 ---
@@ -132,7 +132,7 @@ flowchart TB
     subgraph PRICING_MEDIA ["Pricing, Tax, and Media Domain"]
         TAX_SVC["tax-service :8091<br/>Tax categories and jurisdiction calculation engine"]:::pricingServiceClass
         PROMO_SVC["promotion-service :8093<br/>Campaigns, coupon codes, and usage holds"]:::pricingServiceClass
-        MEDIA_SVC["media-service :8083<br/>Magic-byte sniffing and 6 WebP responsive variants"]:::pricingServiceClass
+        MEDIA_SVC["media-service :8083<br/>Magic-byte sniffing and 3 responsive variants (source format + WebP)"]:::pricingServiceClass
     end
 
     subgraph FULFILLMENT ["Fulfillment and Messaging Domain"]
@@ -304,7 +304,7 @@ flowchart TD
 
 ### Flow 3: Media Processing Pipeline and Responsive WebP Variants (RustFS S3)
 
-Protects against malicious uploads using magic-byte MIME validation, renders 6 responsive WebP variants, and uploads assets to RustFS S3.
+Protects against malicious uploads using magic-byte MIME validation, renders 3 responsive variants (original/display/thumb), each in the source format and in WebP - 6 objects for a JPEG/PNG upload, 3 for a WebP upload - and uploads assets to RustFS S3.
 
 ```mermaid
 sequenceDiagram
@@ -320,9 +320,9 @@ sequenceDiagram
     GW->>MED: Forward multipart binary stream
     MED->>MED: 1. Inspect initial 512 magic bytes to verify JPEG, PNG, or WebP
     MED->>RUSTFS: 2. S3Client.putObject() uploads original file to 'ecommerce-media/originals/'
-    MED->>MED: 3. Render 6 responsive WebP variants:
+    MED->>MED: 3. Render 3 responsive variants (original/display/thumb):
     Note over MED: 100w (thumbnail), 240w (mobile avatar), 480w (cart list),<br/>720w (product card), 1080w (detail zoom), 1440w (retina master)
-    MED->>RUSTFS: 4. Upload 6 WebP variants to 'variants/' prefix
+    MED->>RUSTFS: 4. Upload the variants to 'variants/' prefix (6 objects for a JPEG/PNG upload, 3 for a WebP upload)
     MED->>DB: 5. Insert Media and MediaVariant records (path, width, height, fileSize)
     MED-->>Client: 201 Created {mediaId, originalUrl, variants: [url, width, height]}
 
@@ -338,7 +338,7 @@ sequenceDiagram
 - **Processing Details**:
   - `MediaUploadServiceImpl.upload()`: Reads file magic bytes to verify genuine image formats.
   - Uploads the original file to RustFS S3 via AWS SDK v2 (`PutObjectRequest`).
-  - Processes 6 WebP variants: `100w`, `240w`, `480w`, `720w`, `1080w`, `1440w` at 85% WebP quality.
+  - Processes 3 variants: `original` (as uploaded), `display` (width cap `shop.media.display-width`, default 1200px) and `thumb` (width cap `shop.media.thumb-width`, default 320px). Each is stored in the SOURCE format and in WebP, so a JPEG/PNG upload produces 6 objects and a WebP upload produces 3.
   - Generates presigned URLs with 1-hour expiration or returns direct storage paths.
 - **Persistence**:
   - RustFS S3 `ecommerce-media`: `originals/<uuid>.<ext>`, `variants/<uuid>_720w.webp`, etc.

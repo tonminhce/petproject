@@ -36,8 +36,8 @@ shop:
   storage:
     endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
     region: ${STORAGE_REGION:us-east-1}
-    access-key: ${STORAGE_ACCESS_KEY:rustfsadmin}
-    secret-key: ${STORAGE_SECRET_KEY:rustfsadmin}
+    access-key: ${STORAGE_ACCESS_KEY:}
+    secret-key: ${STORAGE_SECRET_KEY:}
     bucket: ${STORAGE_BUCKET:media}
     auto-create-bucket: false
 

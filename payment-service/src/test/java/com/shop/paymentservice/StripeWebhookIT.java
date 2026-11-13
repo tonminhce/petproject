@@ -90,6 +90,11 @@ class StripeWebhookIT {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+        // F-008: common-storage refuses to build an S3 client without
+        // credentials (the receipt storage is faked here, but the S3Client
+        // bean is still created).
+        registry.add("shop.storage.access-key", () -> "paymenttest");
+        registry.add("shop.storage.secret-key", () -> "paymenttest");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");

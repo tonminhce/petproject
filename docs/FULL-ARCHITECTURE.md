@@ -68,7 +68,7 @@ flowchart TB
     subgraph PRICING_MEDIA ["Pricing, Tax & Media Domain"]
         TAX_SVC["tax-service :8091<br/>Tax Classes & Geo-Rates Calculator"]:::pricingServiceClass
         PROMO_SVC["promotion-service :8093<br/>Coupons, Campaigns & Discount Calculator"]:::pricingServiceClass
-        MEDIA_SVC["media-service :8083<br/>MIME Verification & 6 WebP Variants"]:::pricingServiceClass
+        MEDIA_SVC["media-service :8083<br/>MIME Verification & 3 responsive variants (source + WebP)"]:::pricingServiceClass
     end
 
     subgraph FULFILLMENT ["Fulfillment & Communications Domain"]
@@ -476,7 +476,7 @@ flowchart TB
         end
 
         subgraph RUSTFS_CLUSTER ["RustFS S3 Compatible Storage (:9000/:9001)"]
-            S3_BUCKET["Bucket: ecommerce-media<br/>• Original high-res uploads<br/>• 6 Responsive WebP variants (100w..1440w)<br/>• Presigned PUT/GET URLs"]:::s3Class
+            S3_BUCKET["Bucket: ecommerce-media<br/>• Original high-res uploads<br/>• 3 responsive variants (original/display/thumb), each in the source format and WebP<br/>• Presigned PUT/GET URLs"]:::s3Class
         end
     end
 ```
@@ -489,7 +489,7 @@ flowchart TB
 | **In-Memory Store** | Redis 7.4 Alpine | `6379` | Token bucket rate limiters, Spring Cache `@Cacheable` catalog cache (`product::{id}` 10m, `category::{id}` 30m, `brand::{id}` 30m), temporary SSO auth tickets. |
 | **Message Broker** | Apache Kafka 3.9 | `9092` | KRaft mode (controller + broker combined, zero Zookeeper dependencies). Cluster ID: `MkU3OEVBNTcwNTJENDM2Qk`. |
 | **Search Engine** | Elasticsearch 8.15 | `9200` | Full-text catalog search, autocomplete prefix matching, category filtering, rating sentiment indices. |
-| **Object Storage** | RustFS (S3 API) | `9000` (API)<br/>`9001` (Console) | High-performance Rust-based S3 store. Bucket `ecommerce-media` stores master images + 6 responsive WebP variations (`100w`, `240w`, `480w`, `720w`, `1080w`, `1440w`). |
+| **Object Storage** | RustFS (S3 API) | `9000` (API)<br/>`9001` (Console) | High-performance Rust-based S3 store. Bucket `ecommerce-media` stores the master image + 3 responsive variants (`original`, `display` capped at 1200px, `thumb` capped at 320px), each in the source format and in WebP - 6 objects for a JPEG/PNG upload, 3 for a WebP upload. |
 
 ---
 
@@ -510,4 +510,4 @@ flowchart TB
 | **tax-service** | 8091 | Tax classes, country/state rates, real-time tax calculation | Postgres `taxservice` |: |
 | **promotion-service** | 8093 | Marketing campaigns, coupons, discount reservation & commit | Postgres `promotionservice` |: |
 | **favourite-service** | 8081 | Customer wishlists & saved product bookmarks | Postgres `favouriteservice` |: |
-| **media-service** | 8083 | Multipart upload, magic-byte MIME sniff, 6 WebP variants | Postgres `mediaservice` + RustFS | `product-service` (reference validation) |
+| **media-service** | 8083 | Multipart upload, magic-byte MIME sniff, 3 responsive variants (source format + WebP) | Postgres `mediaservice` + RustFS | `product-service` (reference validation) |

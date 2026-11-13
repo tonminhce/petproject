@@ -28,13 +28,36 @@ public class ObjectStorageAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public S3Client s3Client(StorageProperties props) {
+        requireCredentials(props);
         return S3ClientFactory.s3Client(props);
     }
 
     @Bean
     @ConditionalOnMissingBean
     public S3Presigner s3Presigner(StorageProperties props) {
+        requireCredentials(props);
         return S3ClientFactory.s3Presigner(props);
+    }
+
+    /**
+     * F-008: the object-store credentials are MANDATORY when the storage is
+     * enabled. The library used to default them to {@code rustfsadmin}, so a
+     * deployment that forgot to configure them silently talked to the object
+     * store with a well-known credential. A missing credential is a
+     * misconfiguration, not an outage - it must fail the startup, loudly, and
+     * it must never be replaced by a shipped default.
+     */
+    private static void requireCredentials(StorageProperties props) {
+        if (props.getAccessKey() == null || props.getAccessKey().isBlank()) {
+            throw new IllegalStateException(
+                    "shop.storage.access-key must be configured when shop.storage.enabled=true "
+                            + "(set STORAGE_ACCESS_KEY)");
+        }
+        if (props.getSecretKey() == null || props.getSecretKey().isBlank()) {
+            throw new IllegalStateException(
+                    "shop.storage.secret-key must be configured when shop.storage.enabled=true "
+                            + "(set STORAGE_SECRET_KEY)");
+        }
     }
 
     @Bean

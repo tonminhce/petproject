@@ -7,6 +7,16 @@ import java.util.Map;
 
 /**
  * Configuration for the shared Kafka producer / consumer beans.
+ *
+ * <p>F-003: the {@code shop.kafka.topics.*} block used to carry legacy topic
+ * names ({@code order-events}, {@code payment-events},
+ * {@code notification-events}, {@code inventory-events}) that NOTHING read and
+ * that did not match the topics the publishers actually use
+ * ({@code shop.order.lifecycle.v1}, ...). A configuration property that
+ * claims to name a topic but is never consumed is worse than no property at
+ * all - an operator would set it and see no effect. The real topic names live
+ * in {@link com.shop.common.kafka.contract.KafkaTopicContract} and are
+ * enforced by {@code KafkaTopicContractTest}.</p>
  */
 @ConfigurationProperties(prefix = "shop.kafka")
 public class KafkaProperties {
@@ -16,9 +26,6 @@ public class KafkaProperties {
 
     /** Comma-separated list of {@code host:port} pairs. */
     private String bootstrapServers = "localhost:9092";
-
-    /** Stable topic names used across the platform. */
-    private Topics topics = new Topics();
 
     /** Retry/DLT defaults applied by the shared consumer factory. */
     private Retry retry = new Retry();
@@ -43,14 +50,6 @@ public class KafkaProperties {
 
     public void setBootstrapServers(String bootstrapServers) {
         this.bootstrapServers = bootstrapServers;
-    }
-
-    public Topics getTopics() {
-        return topics;
-    }
-
-    public void setTopics(Topics topics) {
-        this.topics = topics;
     }
 
     public Retry getRetry() {
@@ -106,45 +105,6 @@ public class KafkaProperties {
         return props;
     }
 
-    /** Canonical topic names. */
-    public static class Topics {
-        private String orderEvents = "order-events";
-        private String paymentEvents = "payment-events";
-        private String notificationEvents = "notification-events";
-        private String inventoryEvents = "inventory-events";
-
-        public String getOrderEvents() {
-            return orderEvents;
-        }
-
-        public void setOrderEvents(String orderEvents) {
-            this.orderEvents = orderEvents;
-        }
-
-        public String getPaymentEvents() {
-            return paymentEvents;
-        }
-
-        public void setPaymentEvents(String paymentEvents) {
-            this.paymentEvents = paymentEvents;
-        }
-
-        public String getNotificationEvents() {
-            return notificationEvents;
-        }
-
-        public void setNotificationEvents(String notificationEvents) {
-            this.notificationEvents = notificationEvents;
-        }
-
-        public String getInventoryEvents() {
-            return inventoryEvents;
-        }
-
-        public void setInventoryEvents(String inventoryEvents) {
-            this.inventoryEvents = inventoryEvents;
-        }
-    }
 
     /**
      * Retry/DLT defaults — INTENTIONALLY UNUSED (C20 review finding).

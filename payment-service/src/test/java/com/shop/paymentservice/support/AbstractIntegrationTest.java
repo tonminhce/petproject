@@ -106,6 +106,12 @@ public abstract class AbstractIntegrationTest {
         // Schema is owned by Liquibase — keep Hibernate from validating/mutating it in tests.
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         // common-kafka binds shop.kafka.* (NOT spring.kafka.*).
+        // F-008: common-storage refuses to build an S3 client without
+        // credentials. The receipt storage is faked here (see FakeStorageConfig),
+        // but the S3Client bean is still created, so the test provides dummy
+        // credentials - the endpoint is never contacted.
+        registry.add("shop.storage.access-key", () -> "paymenttest");
+        registry.add("shop.storage.secret-key", () -> "paymenttest");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
         // Literal issuer to keep tests independent of any JWT_ISSUER_URI env var;

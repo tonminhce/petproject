@@ -20,6 +20,7 @@ import com.shop.common.keycloak.client.KeycloakAdminClient;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
 import com.shop.common.logging.LogPerformance;
 import com.shop.common.security.jwt.AuthenticatedUser;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ public class UserServiceImpl implements UserService {
     private final KeycloakTokenClient keycloakTokenClient;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordResetEmailSender passwordResetEmailSender;
+    private final MeterRegistry meterRegistry;
 
     @Override
     @LogPerformance(title = "Register user")
@@ -335,7 +337,12 @@ public class UserServiceImpl implements UserService {
         }
         var userOpt = userRepository.findByEmail(email.trim());
         if (userOpt.isEmpty()) {
-            log.info("Password reset requested for non-existent email: {}", email);
+            // F-057: the log must not tell an attacker (or an operator reading
+            // the log) WHICH address has no account - the two branches write
+            // the SAME line, so the log cannot be used to enumerate accounts.
+            // The counter keeps the case visible to monitoring.
+            meterRegistry.counter("auth.password.reset.request", "outcome", "unknown_account").increment();
+            log.info("Password reset request processed");
             return;
         }
         User user = userOpt.get();
@@ -353,7 +360,10 @@ public class UserServiceImpl implements UserService {
                 .build();
         passwordResetTokenRepository.save(resetToken);
         passwordResetEmailSender.sendResetEmail(user.getEmail(), user.getUsername(), rawToken);
-        log.info("Password reset token generated successfully for user {}", user.getUsername());
+        meterRegistry.counter("auth.password.reset.request", "outcome", "dispatched").increment();
+        // F-057: the same line as the unknown-account branch - the log must not
+        // distinguish an existing account from a non-existent one.
+        log.info("Password reset request processed");
     }
 
     @Override

@@ -178,7 +178,7 @@ The system runs 14 microservices. Each service maintains its own isolated datast
 | **`tax-service`** | `8091` | `taxservice` | Tax classes, jurisdiction tax rates by country, state, and postal code, tax calculation endpoint | Spring Boot 4, PostgreSQL, Liquibase | `http://localhost:8091/actuator/health` |
 | **`promotion-service`** | `8093` | `promotionservice` | Marketing campaigns, percentage and fixed coupons, minimum order constraints, two-phase coupon usage reservation | Spring Boot 4, PostgreSQL, Kafka, Liquibase | `http://localhost:8093/actuator/health` |
 | **`favourite-service`** | `8081` | `favouriteservice` | Customer wishlist management, item add/remove operations, customer-product relationship checks | Spring Boot 4, PostgreSQL, Liquibase | `http://localhost:8081/actuator/health` |
-| **`media-service`** | `8083` | `mediaservice` | Media uploads, magic-byte MIME type validation, generation of 6 WebP responsive variants, RustFS S3 storage | Spring Boot 4, RustFS/S3 SDK, ImageIO/WebP, PostgreSQL | `http://localhost:8083/actuator/health` |
+| **`media-service`** | `8083` | `mediaservice` | Media uploads, magic-byte MIME type validation, generation of 3 responsive variants (original/display/thumb), each in the source format and WebP - 6 objects for a JPEG/PNG upload, 3 for a WebP upload, RustFS S3 storage | Spring Boot 4, RustFS/S3 SDK, ImageIO/WebP, PostgreSQL | `http://localhost:8083/actuator/health` |
 | **`notification-service`** | `8090` | `notificationservice` | Event-driven customer notifications, in-app notification records, HTML email dispatch via SMTP | Spring Boot 4, JavaMailSender, PostgreSQL, Kafka | `http://localhost:8090/actuator/health` |
 
 ---
@@ -265,7 +265,7 @@ flowchart TD
 
 ### Flow 3: Media processing pipeline
 
-`media-service` handles file uploads with magic-byte validation to detect the true MIME type, preventing extension spoofing. It uploads original images to RustFS (S3-compatible object storage), generates 6 responsive WebP variants, stores metadata in PostgreSQL, and issues presigned download URLs.
+`media-service` handles file uploads with magic-byte validation to detect the true MIME type, preventing extension spoofing. It uploads original images to RustFS (S3-compatible object storage), generates 3 responsive variants (original/display/thumb), each in the source format and WebP - 6 objects for a JPEG/PNG upload, 3 for a WebP upload - stores metadata in PostgreSQL, and issues presigned download URLs.
 
 ```mermaid
 sequenceDiagram
@@ -281,9 +281,9 @@ sequenceDiagram
     GW->>MED: Forward multipart binary stream
     MED->>MED: 1. Validate file magic bytes (verify JPEG, PNG, or WebP)
     MED->>RUSTFS: 2. Store original file in 'ecommerce-media/originals/'
-    MED->>MED: 3. Render 6 responsive WebP variants:
-    Note over MED: thumbnail (150px), small (320px), medium (640px),<br/>large (1024px), xlarge (1920px), compressed original
-    MED->>RUSTFS: 4. Upload WebP variant files to S3 bucket
+    MED->>MED: 3. Render 3 responsive variants (original/display/thumb), each in the source format and WebP:
+    Note over MED: original (as uploaded), display (width cap 1200px),<br/>thumb (width cap 320px) - each in the source format and in WebP
+    MED->>RUSTFS: 4. Upload the variant files to S3 bucket (6 objects per JPEG/PNG upload, 3 per WebP upload)
     MED->>DB: 5. Persist media metadata and variant records
     MED-->>Client: 201 Created {mediaId, originalUrl, variants}
     

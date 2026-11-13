@@ -20,12 +20,15 @@ import com.shop.common.keycloak.client.KeycloakAdminClient;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -76,6 +79,13 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordResetEmailSender passwordResetEmailSender;
+
+    /**
+     * A REAL registry (as a spy so Mockito injects it): the service registers
+     * its counters on it, so a mocked registry would hand back a null counter.
+     */
+    @Spy
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @InjectMocks
     private UserServiceImpl userService;
