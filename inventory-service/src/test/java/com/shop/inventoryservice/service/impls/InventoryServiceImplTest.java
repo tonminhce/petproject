@@ -273,6 +273,21 @@ class InventoryServiceImplTest {
     }
 
     @Test
+    void activeReservationCount_countsOnlyLiveReservations() {
+        // F-060: the catalogue asks this count before it soft-deletes a
+        // product. Only PENDING and COMMITTED reservations are LIVE.
+        when(reservationRepository.countByProductIdAndStatusIn(eq(productId), anyList())).thenReturn(3L);
+
+        assertThat(service.activeReservationCount(productId)).isEqualTo(3L);
+
+        org.mockito.ArgumentCaptor<List<ReservationStatus>> statuses =
+            org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(reservationRepository).countByProductIdAndStatusIn(eq(productId), statuses.capture());
+        assertThat(statuses.getValue())
+            .containsExactlyInAnyOrder(ReservationStatus.PENDING, ReservationStatus.COMMITTED);
+    }
+
+    @Test
     void update_throwsBadRequest_whenBodyProductIdMismatch() {
         InventoryUpsertRequest req = new InventoryUpsertRequest(UUID.randomUUID(), 50);
 

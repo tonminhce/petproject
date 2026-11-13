@@ -35,6 +35,8 @@ public final class ApiPaths {
     public static final String RATINGS = API_V1 + "/ratings";
 
     public static final String INTERNAL_PRODUCT_MEDIA_REFERENCES = "/internal/products/media-references";
+    /** Internal, SERVICE-role: live stock reservations of a product (F-060). */
+    public static final String INTERNAL_INVENTORY_RESERVATIONS = "/internal/inventory/reservations";
 
     public static final String BACKOFFICE_RATINGS = API_V1 + "/backoffice/ratings";
     public static final String BACKOFFICE_PRODUCTS = API_V1 + "/backoffice/products";

@@ -30,4 +30,17 @@ public interface InventoryService {
     void releaseCommitted(UUID reservationId);
 
     ReservationResponse getState(UUID reservationId);
+
+    /**
+     * The number of LIVE stock reservations of a product (PENDING or COMMITTED).
+     *
+     * <p>F-060: the catalogue side (product-service) cannot join the
+     * reservations table - the inventory database is separate - so it asks this
+     * service before it soft-deletes a product. Without the answer a product
+     * could leave the catalogue while its stock is reserved or committed, and
+     * the inventory row would survive as an orphan.</p>
+     *
+     * @return 0 when the product has no live reservation
+     */
+    long activeReservationCount(UUID productId);
 }

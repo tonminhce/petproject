@@ -47,6 +47,9 @@ public enum ErrorCode implements ErrorCatalog {
     BRAND_SLUG_EXISTS("PRD-2007", "brand.slug.exists", HttpStatus.CONFLICT),
     CATEGORY_SLUG_EXISTS("PRD-2008", "category.slug.exists", HttpStatus.CONFLICT),
     CATEGORY_CYCLE_DETECTED("PRD-2009", "category.cycle.detected", HttpStatus.CONFLICT),
+    PRODUCT_IN_USE("PRD-2010", "product.in.use", HttpStatus.CONFLICT),
+    PRODUCT_REFERENCE_CHECK_UNAVAILABLE("PRD-2011", "product.reference.check.unavailable",
+            HttpStatus.SERVICE_UNAVAILABLE),
 
     WAREHOUSE_NOT_FOUND("INV-3001", "warehouse.not.found", HttpStatus.NOT_FOUND),
     STOCK_INSUFFICIENT("INV-3002", "stock.insufficient", HttpStatus.CONFLICT),

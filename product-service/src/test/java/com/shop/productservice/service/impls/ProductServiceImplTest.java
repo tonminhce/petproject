@@ -2,6 +2,7 @@ package com.shop.productservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.productservice.client.InventoryReservationClient;
 import com.shop.productservice.client.MediaHeadClient;
 import com.shop.productservice.dto.ProductFilter;
 import com.shop.productservice.dto.request.ProductCreateRequest;
@@ -31,6 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +53,7 @@ class ProductServiceImplTest {
     @Mock ProductEventPublisher publisher;
     @Mock AuditorAware<String> auditorAware;
     @Mock MediaHeadClient mediaHeadClient;
+    @Mock InventoryReservationClient inventoryReservationClient;
     @Mock org.springframework.cache.CacheManager cacheManager;
     @Mock org.springframework.cache.Cache productCache;
     @Mock org.springframework.cache.Cache slugCache;
@@ -69,6 +72,12 @@ class ProductServiceImplTest {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
         });
+        org.mockito.Mockito.lenient().doAnswer(invocation -> {
+            java.util.function.Consumer<org.springframework.transaction.TransactionStatus> callback =
+                invocation.getArgument(0);
+            callback.accept(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
     }
 
     private ProductCreateRequest sampleCreate() {
@@ -235,6 +244,9 @@ class ProductServiceImplTest {
     void delete_evictsOnlyAffectedCacheKeys() {
         Product existing = sampleProduct();
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        // F-060: the delete asks inventory-service whether the product still
+        // has live stock reservations.
+        when(inventoryReservationClient.activeReservationCount(ID)).thenReturn(OptionalLong.of(0));
         when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
         when(cacheManager.getCache("product")).thenReturn(productCache);
         when(cacheManager.getCache("productBySlug")).thenReturn(slugCache);
@@ -249,6 +261,7 @@ class ProductServiceImplTest {
     void delete_softDeletesWithActorAndPublishes() {
         Product existing = sampleProduct();
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
+        when(inventoryReservationClient.activeReservationCount(ID)).thenReturn(OptionalLong.of(0));
         when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
 
         service.delete(ID);

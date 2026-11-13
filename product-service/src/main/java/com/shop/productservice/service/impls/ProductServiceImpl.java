@@ -3,6 +3,7 @@ package com.shop.productservice.service.impls;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
+import com.shop.productservice.client.InventoryReservationClient;
 import com.shop.productservice.client.MediaHeadClient;
 import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.dto.ProductFilter;
@@ -35,6 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 @Service
@@ -48,6 +50,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductEventPublisher publisher;
     private final AuditorAware<String> auditorAware;
     private final MediaHeadClient mediaHeadClient;
+    private final InventoryReservationClient inventoryReservationClient;
     private final CacheManager cacheManager;
     private final TransactionTemplate transactionTemplate;
 
@@ -194,18 +197,55 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Transactional
     public void delete(UUID id) {
-        Product existing = repo.findById(id)
+        // F-060: a product may not leave the catalogue while its stock is
+        // reserved or committed. The reservations live in the inventory
+        // database, so the check is a REMOTE call - and F-066 says a remote
+        // call must not run while a DB transaction (and its pooled connection)
+        // is held open. The existence check runs first so a delete of an
+        // unknown product does not depend on inventory-service.
+        repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
-        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
-        repo.save(existing);
-        var productCache = cacheManager.getCache("product");
-        if (productCache != null) {
-            productCache.evict(id);
+        assertNoLiveStockReservations(id);
+
+        transactionTemplate.executeWithoutResult(status -> {
+            // Re-read inside the transaction: the entity must be the current
+            // one, otherwise the merge would write back a stale snapshot.
+            Product existing = repo.findById(id)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
+            existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
+            repo.save(existing);
+            var productCache = cacheManager.getCache("product");
+            if (productCache != null) {
+                productCache.evict(id);
+            }
+            evictProductSlug(existing.getSlug());
+            publisher.publishDeleted(existing);
+        });
+    }
+
+    /**
+     * F-060 — the delete-time stock guard.
+     *
+     * <p>inventory-service refuses to delete an inventory row that still has
+     * PENDING or COMMITTED reservations. The symmetric guard was missing here:
+     * the product was soft-deleted unconditionally, so the catalogue could
+     * lose a product whose stock was reserved or committed - the checkout
+     * could still commit that reservation for a product that no longer exists
+     * and the reserved stock would never return to the sellable pool.</p>
+     *
+     * <p>Fail-closed: when inventory-service cannot be reached the answer is
+     * UNKNOWN, and an unknown answer must never authorise a delete - the
+     * request fails with PRD-2011 (503) instead.</p>
+     */
+    private void assertNoLiveStockReservations(UUID productId) {
+        OptionalLong activeReservations = inventoryReservationClient.activeReservationCount(productId);
+        if (activeReservations.isEmpty()) {
+            throw BusinessException.of(ErrorCode.PRODUCT_REFERENCE_CHECK_UNAVAILABLE);
         }
-        evictProductSlug(existing.getSlug());
-        publisher.publishDeleted(existing);
+        if (activeReservations.getAsLong() > 0) {
+            throw BusinessException.of(ErrorCode.PRODUCT_IN_USE);
+        }
     }
 
     private void evictProductSlug(String slug) {

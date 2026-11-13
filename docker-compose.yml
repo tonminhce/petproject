@@ -374,6 +374,9 @@ services:
       # Same explicit *_SERVICE_URL + client-credentials pattern as order's
       # tax/promotion, rating's order, and search's product clients.
       MEDIA_SERVICE_URL: http://media-service:8083
+      # F-060: the delete-time stock guard - product-service asks
+      # inventory-service whether the product still has live reservations.
+      INVENTORY_SERVICE_URL: http://inventory-service:8082
       PRODUCT_SERVICE_CLIENT_ID: product-service
       PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token

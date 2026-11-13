@@ -1,5 +1,6 @@
 package com.shop.productservice.service.impls;
 
+import com.shop.productservice.client.InventoryReservationClient;
 import com.shop.productservice.client.MediaHeadClient;
 import com.shop.productservice.constant.ProductStatus;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
@@ -41,6 +42,7 @@ class ProductServiceImplMediaClearTest {
     @Mock ProductEventPublisher publisher;
     @Mock AuditorAware<String> auditorAware;
     @Mock MediaHeadClient mediaHeadClient;
+    @Mock InventoryReservationClient inventoryReservationClient;
     @Mock org.springframework.cache.CacheManager cacheManager;
     @Mock org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
@@ -54,8 +56,8 @@ class ProductServiceImplMediaClearTest {
             return callback.doInTransaction(null);
         });
         service = new ProductServiceImpl(repo, categoryRepo, brandRepo,
-            new ProductMapper(new ModelMapper()), publisher, auditorAware, mediaHeadClient, cacheManager,
-            transactionTemplate);
+            new ProductMapper(new ModelMapper()), publisher, auditorAware, mediaHeadClient,
+            inventoryReservationClient, cacheManager, transactionTemplate);
     }
 
     private Product productWithMedia() {

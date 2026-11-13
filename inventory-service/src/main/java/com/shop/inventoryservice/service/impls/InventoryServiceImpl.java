@@ -113,12 +113,18 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public long activeReservationCount(UUID productId) {
+        return reservationRepository.countByProductIdAndStatusIn(
+            productId, List.of(ReservationStatus.PENDING, ReservationStatus.COMMITTED));
+    }
+
+    @Override
     @Transactional
     public void delete(UUID productId) {
         Inventory existing = inventoryRepository.findByProductId(productId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
-        long active = reservationRepository.countByProductIdAndStatusIn(
-            productId, List.of(ReservationStatus.PENDING, ReservationStatus.COMMITTED));
+        long active = activeReservationCount(productId);
         if (active > 0) {
             throw BusinessException.of(ErrorCode.INVENTORY_IN_USE, productId);
         }

@@ -83,6 +83,14 @@ shop:
       client-id: ${PRODUCT_SERVICE_CLIENT_ID:product-service}
       client-secret: ${PRODUCT_SERVICE_CLIENT_SECRET:changeme}
 
+  # F-060: the delete-time stock guard - product-service asks inventory-service
+  # whether the product still has live (PENDING/COMMITTED) stock reservations.
+  # When inventory-service is unreachable the delete FAILS (PRD-2011): a delete
+  # must never happen on incomplete data.
+  inventory:
+    base-url: ${INVENTORY_SERVICE_URL:http://inventory-service:8082}
+    timeout-ms: 3000
+
   # H-3 reconciliation sweep — periodic re-verification of live product media
   # references against media-service (closes the MediaDeleted consumer's
   # at-most-once window). Fail-safe: media outage skips the cycle untouched.
