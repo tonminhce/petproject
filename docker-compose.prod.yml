@@ -95,12 +95,24 @@ services:
       # env ref in the base file; restated here so rotation is documented).
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # Rotation item (F-078) — the secret of the admin service account. The
+      # realm import substitutes it into the ecommerce-admin client, which
+      # auth-service uses with the client_credentials grant.
+      ADMIN_SERVICE_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET}
+      # Rotation item (F-080) — the password of the seeded ADMIN realm user.
+      # The realm import used to carry the literal "adminpass".
+      KEYCLOAK_ADMIN_USER_PASSWORD: ${KEYCLOAK_ADMIN_USER_PASSWORD}
 
   # ============================================================
   # BACKEND SERVICES — no host ports; audit sink + rotated secrets
   # ============================================================
   auth-service:
     ports: !override []
+    environment:
+      # Rotation item (F-078) — the admin token comes from the service
+      # account of the application realm (client_credentials). The
+      # master-realm admin credential is not used by the services any more.
+      SHOP_KEYCLOAK_ADMIN_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET}
 
   # D6 — @Audited sink (backoffice + ADMIN product mutations)
   product-service:

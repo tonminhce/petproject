@@ -182,13 +182,21 @@ shop:
     server-url: ${KEYCLOAK_SERVER_URL:http://keycloak:8080}
     public-server-url: ${KEYCLOAK_PUBLIC_SERVER_URL:http://localhost:9090}
     realm: ${KEYCLOAK_REALM:ecommerce}
-    client-id: ${KEYCLOAK_CLIENT_ID:shop-backend}
+    # F-079: the default must name a client that exists in the provisioned
+    # realm, otherwise the posture check measures a client that was never
+    # provisioned.
+    client-id: ${KEYCLOAK_CLIENT_ID:ecommerce-client}
     admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
     # F-006: NO credential default in a shared library. A shipped
     # master-realm password is a takeover waiting to happen: the service that
     # actually administers the realm (auth-service) declares these itself and
     # fails fast when they are unset.
+    # F-078: the secret of the admin service account. With it, the admin
+    # token is fetched with the client_credentials grant - no master-realm
+    # administrator credential travels through a password grant, and the
+    # permissions of the token are scoped to the application realm.
+    admin-client-secret: ${ADMIN_SERVICE_CLIENT_SECRET:}
     admin-username: ${KEYCLOAK_ADMIN_USERNAME:}
     admin-password: ${KEYCLOAK_ADMIN_PASSWORD:}
   common:

@@ -4,13 +4,14 @@ import com.shop.common.keycloak.client.KeycloakAdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "shop.keycloak", name = "admin-username")
+@ConditionalOnExpression("'${shop.keycloak.admin-username:}' != '' "
+        + "|| '${shop.keycloak.admin-client-secret:}' != ''")
 public class KeycloakPasswordGrantPostureCheck {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakPasswordGrantPostureCheck.class);
@@ -20,19 +21,31 @@ public class KeycloakPasswordGrantPostureCheck {
 
     public KeycloakPasswordGrantPostureCheck(
             KeycloakAdminClient adminClient,
-            @Value("${shop.keycloak.client-id:shop-backend}") String clientId) {
+            // F-079: the default must name a client that exists in the
+            // provisioned realm. "shop-backend" was never provisioned, so the
+            // posture check measured a client that did not exist.
+            @Value("${shop.keycloak.client-id:ecommerce-client}") String clientId) {
         this.adminClient = adminClient;
         this.clientId = clientId;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void report() {
-        if (!adminClient.hasAdminCredentials()) {
+        if (adminClient.hasServiceAccountCredentials()) {
+            // F-078: the admin path uses the service account of the
+            // application realm (client_credentials). No master-realm
+            // administrator credential travels through a password grant, and
+            // the permissions of the token are scoped to that realm.
+            log.info("SECURITY-POSTURE: the admin path uses the service account of the application realm "
+                    + "(client_credentials). The master-realm password grant is not used for admin calls.");
+        }
+        if (!adminClient.hasAdminCredentials() && !adminClient.hasServiceAccountCredentials()) {
             // F-006: the shared defaults ship no credential any more. Say so
             // explicitly - the admin API is unusable and the ROPC posture
             // cannot be read.
-            log.warn("SECURITY-POSTURE: the master-realm admin credentials "
-                    + "(shop.keycloak.admin-username / admin-password) are not configured - "
+            log.warn("SECURITY-POSTURE: neither the admin service account "
+                    + "(shop.keycloak.admin-client-secret) nor the master-realm admin credentials "
+                    + "(shop.keycloak.admin-username / admin-password) are configured - "
                     + "the admin API is unusable and the ROPC posture cannot be checked.");
             return;
         }

@@ -15,6 +15,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,17 +35,35 @@ public class KeycloakAdminClient {
     private static final Logger log = LoggerFactory.getLogger(KeycloakAdminClient.class);
     private static final String USERNAME = "username";
     private static final String PASSWORD = "password";
+    private static final String CLIENT_CREDENTIALS = "client_credentials";
     private static final String BEARER = "Bearer ";
     private static final ParameterizedTypeReference<Map<String, Object>> MAP_TYPE =
+            new ParameterizedTypeReference<>() {};
+    private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_TYPE =
             new ParameterizedTypeReference<>() {};
 
     private final RestClient restClient;
     private final String adminTokenEndpoint;
     private final String usersEndpoint;
     private final String rolesEndpoint;
+    /**
+     * F-078: the client endpoint of the realm. The grant posture of a client
+     * is a property of the CLIENT - reading it from the users endpoint
+     * answered for a user and reported the grant of a client that does not
+     * exist.
+     */
+    private final String clientsEndpoint;
     private final String adminClientId;
     private final String adminUsername;
     private final String adminPassword;
+    /**
+     * F-078: the secret of the admin service account. When it is set, the
+     * admin token is fetched with the client_credentials grant; the
+     * master-realm password grant is then not used at all.
+     */
+    private final String adminClientSecret;
+    /** F-078: the token endpoint of the application realm - the service account lives there. */
+    private final String serviceAccountTokenEndpoint;
 
     public KeycloakAdminClient(RestClient.Builder restClientBuilder,
                                String adminTokenEndpoint,
@@ -52,13 +72,93 @@ public class KeycloakAdminClient {
                                String adminClientId,
                                String adminUsername,
                                String adminPassword) {
+        this(restClientBuilder, adminTokenEndpoint, usersEndpoint, rolesEndpoint, adminClientId,
+                adminUsername, adminPassword, null, null, null);
+    }
+
+    public KeycloakAdminClient(RestClient.Builder restClientBuilder,
+                               String adminTokenEndpoint,
+                               String usersEndpoint,
+                               String rolesEndpoint,
+                               String adminClientId,
+                               String adminUsername,
+                               String adminPassword,
+                               String adminClientSecret,
+                               String serviceAccountTokenEndpoint) {
+        this(restClientBuilder, adminTokenEndpoint, usersEndpoint, rolesEndpoint, adminClientId,
+                adminUsername, adminPassword, adminClientSecret, serviceAccountTokenEndpoint, null);
+    }
+
+    public KeycloakAdminClient(RestClient.Builder restClientBuilder,
+                               String adminTokenEndpoint,
+                               String usersEndpoint,
+                               String rolesEndpoint,
+                               String adminClientId,
+                               String adminUsername,
+                               String adminPassword,
+                               String adminClientSecret,
+                               String serviceAccountTokenEndpoint,
+                               String clientsEndpoint) {
         this.restClient = restClientBuilder.build();
         this.adminTokenEndpoint = adminTokenEndpoint;
         this.usersEndpoint = usersEndpoint;
         this.rolesEndpoint = rolesEndpoint;
+        this.clientsEndpoint = clientsEndpoint;
         this.adminClientId = adminClientId;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
+        this.adminClientSecret = adminClientSecret;
+        this.serviceAccountTokenEndpoint = serviceAccountTokenEndpoint;
+    }
+
+    /**
+     * Whether the service-account (client_credentials) path is configured
+     * (F-078).
+     */
+    public boolean hasServiceAccountCredentials() {
+        return adminClientSecret != null && !adminClientSecret.isBlank()
+                && serviceAccountTokenEndpoint != null && !serviceAccountTokenEndpoint.isBlank();
+    }
+
+    /**
+     * The admin token of the service account (F-078).
+     *
+     * <p>The client_credentials grant replaces the master-realm password
+     * grant: no administrator credential travels in a plain password grant on
+     * every admin call, and the permissions of the token are scoped to the
+     * application realm instead of the whole installation.</p>
+     */
+    private String getServiceAccountAccessToken() {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add(GRANT_TYPE, CLIENT_CREDENTIALS);
+        form.add(CLIENT_ID, adminClientId);
+        form.add(CLIENT_SECRET, adminClientSecret);
+
+        try {
+            KeycloakTokenResponse response = restClient.post()
+                    .uri(serviceAccountTokenEndpoint)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(KeycloakTokenResponse.class);
+
+            if (response == null || response.accessToken() == null) {
+                throw new KeycloakClientException("Failed to obtain the admin service-account token",
+                        HttpStatus.UNAUTHORIZED);
+            }
+
+            long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
+            cachedToken.set(new CachedAdminToken(response.accessToken(), Instant.now().plusSeconds(ttl)));
+
+            return response.accessToken();
+        } catch (RestClientResponseException e) {
+            log.error("Keycloak service-account token request failed: {}", e.getResponseBodyAsString());
+            throw new KeycloakClientException(
+                    "Service-account token request failed: " + e.getResponseBodyAsString(),
+                    HttpStatus.valueOf(e.getStatusCode().value()),
+                    e
+            );
+        }
     }
 
     /**
@@ -223,18 +323,32 @@ public class KeycloakAdminClient {
      * it - but the platform CAN observe it, so the migration to Authorization
      * Code + PKCE has a measurable signal instead of a memory.</p>
      *
+     * <p>F-079: the grant belongs to the CLIENT, so it is read from the
+     * clients endpoint. The previous implementation appended the client id
+     * to the USERS endpoint: the realm answered 404 for a client id, the
+     * call threw, and the posture check reported the posture as unknown on
+     * every boot - the measurement never observed anything.</p>
+     *
      * @param clientId the Keycloak client id to inspect
      * @return true when the password grant is enabled for that client
      */
     public boolean isDirectAccessGrantEnabled(String clientId) {
         String adminToken = getAdminAccessToken();
         try {
-            Map<String, Object> client = restClient.get()
-                    .uri(usersEndpoint + "/" + clientId)
+            List<Map<String, Object>> clients = restClient.get()
+                    .uri(clientsEndpoint + "?clientId=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8))
                     .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
                     .retrieve()
-                    .body(MAP_TYPE);
-            return client != null && Boolean.TRUE.equals(client.get("directAccessGrantsEnabled"));
+                    .body(LIST_TYPE);
+
+            if (clients == null || clients.isEmpty()) {
+                // A client that does not exist has no posture to report.
+                // Reporting "no ROPC" for it would hide a misconfiguration.
+                throw new KeycloakClientException(
+                        "Keycloak client not found: " + clientId, HttpStatus.NOT_FOUND);
+            }
+
+            return Boolean.TRUE.equals(clients.get(0).get("directAccessGrantsEnabled"));
         } catch (RestClientResponseException e) {
             log.warn("Could not read the grant configuration of Keycloak client {}: {}",
                     clientId, e.getResponseBodyAsString());
@@ -295,6 +409,10 @@ public class KeycloakAdminClient {
             current = cachedToken.get();
             if (current != null && current.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS))) {
                 return current.token();
+            }
+
+            if (hasServiceAccountCredentials()) {
+                return getServiceAccountAccessToken();
             }
 
             MultiValueMap<String, String> form = new LinkedMultiValueMap<>();

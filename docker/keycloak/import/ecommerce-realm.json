@@ -61,7 +61,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "changeme"
+      "secret": "${ORDER_SERVICE_CLIENT_SECRET}"
     },
     {
       "clientId": "rating-service",
@@ -74,7 +74,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "changeme"
+      "secret": "${RATING_SERVICE_CLIENT_SECRET}"
     },
     {
       "clientId": "search-service",
@@ -87,7 +87,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "changeme"
+      "secret": "${SEARCH_SERVICE_CLIENT_SECRET}"
     },
     {
       "clientId": "product-service",
@@ -100,7 +100,7 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "changeme"
+      "secret": "${PRODUCT_SERVICE_CLIENT_SECRET}"
     },
     {
       "clientId": "media-service",
@@ -113,7 +113,20 @@
       "serviceAccountsEnabled": true,
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
-      "secret": "changeme"
+      "secret": "${MEDIA_SERVICE_CLIENT_SECRET}"
+    },
+    {
+      "clientId": "ecommerce-admin",
+      "name": "Ecommerce Admin Service Account",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "secret": "${ADMIN_SERVICE_CLIENT_SECRET}"
     }
   ],
   "users": [
@@ -127,7 +140,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "changeme",
+          "value": "${KEYCLOAK_TEST_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -145,7 +158,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "adminpass",
+          "value": "${KEYCLOAK_ADMIN_USER_PASSWORD}",
           "temporary": false
         }
       ],
@@ -193,6 +206,18 @@
       "realmRoles": [
         "SERVICE"
       ]
+    },
+    {
+      "username": "service-account-ecommerce-admin",
+      "enabled": true,
+      "serviceAccountClientId": "ecommerce-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-realm",
+          "view-clients"
+        ]
+      }
     }
   ]
 }

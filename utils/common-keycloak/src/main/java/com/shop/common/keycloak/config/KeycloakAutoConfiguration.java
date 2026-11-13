@@ -8,6 +8,7 @@ import io.opentelemetry.context.propagation.TextMapSetter;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -70,9 +71,19 @@ public class KeycloakAutoConfiguration {
      * Admin client for user management operations.
      * Only created when admin credentials are configured.
      */
+    /**
+     * The admin client.
+     *
+     * <p>F-078: the bean exists as soon as EITHER the master-realm admin
+     * credential OR the service-account secret is configured. The service
+     * account replaces the password grant on the admin path, and it needs no
+     * administrator credential at all - requiring the admin username would
+     * have kept the deployment on the master-realm password grant.</p>
+     */
     @Bean
     @ConditionalOnMissingBean(KeycloakAdminClient.class)
-    @ConditionalOnProperty(prefix = "shop.keycloak", name = "admin-username")
+    @ConditionalOnExpression("'${shop.keycloak.admin-username:}' != '' "
+            + "|| '${shop.keycloak.admin-client-secret:}' != ''")
     public KeycloakAdminClient keycloakAdminClient(KeycloakProperties properties) {
         return new KeycloakAdminClient(
                 traceAware(RestClient.builder()),
@@ -81,7 +92,10 @@ public class KeycloakAutoConfiguration {
                 properties.rolesEndpoint(),
                 properties.getAdminClientId(),
                 properties.getAdminUsername(),
-                properties.getAdminPassword()
+                properties.getAdminPassword(),
+                properties.getAdminClientSecret(),
+                properties.serviceAccountTokenEndpoint(),
+                properties.clientsEndpoint()
         );
     }
 }

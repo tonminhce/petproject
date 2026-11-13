@@ -85,9 +85,12 @@ controls: the allowlist is defense-in-depth.)
 
 ### Secret rotation (D2): 3 service clients + keycloak admin
 
-Dev secrets (`changeme`) ship in the realm import file and base compose: 
-bootstrap truth only. Prod rotation is one-time per rotation cycle:
-
+Dev secrets (`changeme`) ship in `.env.example` and base compose: bootstrap
+truth only. The REALM IMPORT FILE carries NO secret any more (F-080): every
+client secret and every seeded user password is a `${VAR}` placeholder that
+the realm bootstrap script substitutes from the environment, and the script
+refuses to boot when a required variable is missing. Prod rotation is
+one-time per rotation cycle:
 1. For `order-service`, `rating-service`, `search-service`: generate strong
    secrets; PUT each via the Keycloak admin API
    (`PUT /admin/realms/ecommerce/clients/{id}` → `secret`), service accounts
@@ -102,6 +105,54 @@ bootstrap truth only. Prod rotation is one-time per rotation cycle:
    the same cycle.
 4. Rolling restart: `docker compose ... up -d` re-creates only changed
    services.
+
+### The admin path of auth-service (F-078)
+
+The admin API of auth-service does NOT use the master-realm administrator
+credential any more. It uses the service account of the APPLICATION realm
+(`ecommerce-admin`, `client_credentials`), whose permissions are scoped to
+that realm instead of the whole Keycloak installation:
+
+- `SHOP_KEYCLOAK_ADMIN_CLIENT_SECRET` (= `ADMIN_SERVICE_CLIENT_SECRET`) must
+  be set; it is the ONLY credential the admin path needs.
+- `SHOP_KEYCLOAK_ADMIN_USERNAME` / `SHOP_KEYCLOAK_ADMIN_PASSWORD` stay EMPTY
+  in production. They are the legacy fallback for a deployment without the
+  service account; when the service account is configured, a failure of the
+  `client_credentials` request is surfaced as an error and NEVER falls back
+  to the master-realm password grant.
+- The service account carries exactly `manage-users`, `view-realm` and
+  `view-clients` of the realm-management client. `manage-realm` is NOT among
+  them: it would let the admin path reconfigure the realm.
+
+### The realm bootstrap (F-080, F-081)
+
+The realm template `docker/keycloak/import/ecommerce-realm.json` is bind
+mounted READ-ONLY at `/opt/keycloak/realm-template`. The bootstrap script
+`docker/keycloak/import/entrypoint.sh` substitutes the `${VAR}` placeholders
+and writes the result to the CONTAINER-LOCAL `/opt/keycloak/data/import`,
+which is the directory Keycloak's `--import-realm` reads.
+
+- The substituted realm is NEVER written back into the mounted template. The
+  old in-place write-back persisted the rotated secrets into the repository
+  working tree, ready to be committed (F-081).
+- The script refuses to boot when a required variable is missing AND when a
+  placeholder survived the substitution.
+- The template is checked out with LF line endings (`.gitattributes` pins
+  `*.sh text eol=lf`). With CRLF the containerised `sh` dies with
+  `set: -r: invalid option` before it substitutes anything, and the whole
+  compose stack fails to boot Keycloak (F-081).
+
+### The ROPC posture measurement (F-079)
+
+The posture check reads the grant configuration of a CLIENT through the
+clients endpoint (`/admin/realms/ecommerce/clients?clientId=...`). The
+previous lookup used the users endpoint, so it answered for a user and
+reported the posture of a client that does not exist. A client that cannot
+be found is a `404`, not "ROPC is disabled".
+
+The measured client is `ecommerce-client`, the public client of the realm -
+the default of `shop.keycloak.client-id` names a client the provisioned realm
+actually contains.
 
 ### OTEL_EXPORTER_OTLP_ENDPOINT wiring (D3)
 

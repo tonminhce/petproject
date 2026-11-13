@@ -1,0 +1,22 @@
+# Git line-ending policy.
+#
+# Shell scripts MUST be checked out with LF. The Keycloak bootstrap script
+# (docker/keycloak/import/entrypoint.sh) is bind-mounted into the container
+# and executed by `sh`: with CRLF line endings the shell reads a stray
+# carriage return as part of the command, so the script dies with
+# "set: -r: invalid option" before it ever substitutes the secrets - and the
+# whole compose stack fails to boot Keycloak.
+#
+# `text eol=lf` overrides the local core.autocrlf setting, so the file is LF
+# in every working tree regardless of the platform.
+
+# The rule is deliberately limited to the shell scripts: widening it to the
+# YAML or JSON files would rewrite hundreds of unrelated files and invalidate
+# the source-audit reviews of files that never changed.
+
+*.sh text eol=lf
+
+# Windows batch files are binary for Git's line-ending purposes: the cmd.exe
+# parser needs CRLF and the file must not be rewritten on checkout.
+*.cmd -text
+*.bat -text

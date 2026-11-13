@@ -215,12 +215,18 @@ services:
     container_name: keycloak
     <<: [*restart, *logging]
     # C8 fix — the entrypoint script substitutes per-client client-secrets from
-    # env vars before Keycloak reads the realm JSON, so the "changeme" defaults
-    # baked into the realm file are replaced with secrets injected from the
-    # deployment env (or .env in dev). The script fails fast if any required
-    # var is missing. /opt/keycloak/data/import must remain writable so the
-    # substituted JSON can replace the source.
-    entrypoint: ["sh", "/opt/keycloak/data/import/entrypoint.sh"]
+    # env vars before Keycloak reads the realm JSON, so the placeholders in the
+    # realm file are replaced with secrets injected from the deployment env (or
+    # .env in dev). The script fails fast if any required var is missing.
+    #
+    # F-080 — the realm file carries only environment-variable placeholders,
+    # never a literal secret, so the deployment can actually rotate them.
+    #
+    # F-081 — the template is mounted READ-ONLY at /opt/keycloak/realm-template
+    # and the entrypoint writes the substituted realm to the container-local
+    # /opt/keycloak/data/import. The previous in-place write-back persisted
+    # the rotated secrets into the repository working tree.
+    entrypoint: ["sh", "/opt/keycloak/realm-template/entrypoint.sh"]
     # --hostname pins the issuer claim (iss) to the INTERNAL url so tokens carry
     # iss=http://keycloak:8080/realms/ecommerce regardless of how the client
     # reached Keycloak (host uses localhost:9090). Services validate against the
@@ -237,16 +243,24 @@ services:
       SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:?required}
       PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:?required}
       MEDIA_SERVICE_CLIENT_SECRET: ${MEDIA_SERVICE_CLIENT_SECRET:?required}
+      # F-078: the secret of the admin service account (client_credentials).
+      ADMIN_SERVICE_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET:?required}
       KEYCLOAK_TEST_USER_PASSWORD: ${KEYCLOAK_TEST_USER_PASSWORD:?required}
+      # F-080: the password of the seeded ADMIN realm user. It must come from
+      # the environment: the realm import used to carry the literal
+      # "adminpass", so the account was reachable with a well-known password
+      # in every deployment that did not override it.
+      KEYCLOAK_ADMIN_USER_PASSWORD: ${KEYCLOAK_ADMIN_USER_PASSWORD:?required}
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
       KC_DB_URL_PORT: 5432
       KC_DB_URL_DATABASE: keycloak
       KC_DB_USERNAME: ${POSTGRES_USER}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
-    # Read-write (no `:ro`) because entrypoint rewrites the realm JSON in place.
     volumes:
-      - ./docker/keycloak/import:/opt/keycloak/data/import
+      # Read-only: the template is the source of truth in the repository and
+      # must never be modified by the container (F-081).
+      - ./docker/keycloak/import:/opt/keycloak/realm-template:ro
     ports:
       - "9090:8080"
     depends_on:
@@ -327,6 +341,9 @@ services:
       SHOP_KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
       SHOP_KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       SHOP_KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # F-078: with the secret set, the admin token comes from the service
+      # account (client_credentials) instead of the master-realm password.
+      SHOP_KEYCLOAK_ADMIN_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET}
       # F-054: the password reset email channel. Disabled by default - with no
       # channel the forgot-password endpoint answers 503 AUTH-1010 instead of
       # reporting a reset mail that was never sent.
