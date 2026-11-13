@@ -7,6 +7,18 @@
 #  Only service-specific overrides belong here.
 # =============================================================================
 spring:
+  mail:
+    # the SMTP server itself (host/port/user/password) - F-054
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:25}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
   application:
     name: auth-service
 
@@ -33,6 +45,15 @@ server:
 shop:
   application:
     name: auth-service
+  auth:
+    smtp:
+      # F-054: the password reset email is dispatched over SMTP. Without a
+      # channel the reset request FAILS (503 AUTH-1010) instead of reporting
+      # a success that never happened.
+      enabled: ${AUTH_MAIL_ENABLED:false}
+      # required when enabled - the service refuses to start without them
+      from: ${AUTH_MAIL_FROM:}
+      reset-base-url: ${AUTH_RESET_BASE_URL:}
   security:
     # Auth entrypoints must stay public: sign-up / login / refresh / logout.
     # (actuator, swagger, api-docs are public via common-security platform defaults)
@@ -43,3 +64,11 @@ shop:
       - path: /api/v1/auth/logout
       - path: /api/v1/auth/forgot-password
       - path: /api/v1/auth/reset-password
+
+management:
+  health:
+    # F-054: the SMTP channel only serves the password reset. Its health
+    # indicator must not take the whole auth-service out of rotation - login,
+    # refresh and the user APIs do not need a mailbox.
+    mail:
+      enabled: false

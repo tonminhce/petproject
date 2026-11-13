@@ -327,6 +327,12 @@ services:
       SHOP_KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
       SHOP_KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       SHOP_KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # F-054: the password reset email channel. Disabled by default - with no
+      # channel the forgot-password endpoint answers 503 AUTH-1010 instead of
+      # reporting a reset mail that was never sent.
+      AUTH_MAIL_ENABLED: ${AUTH_MAIL_ENABLED:-false}
+      AUTH_MAIL_FROM: ${AUTH_MAIL_FROM:-}
+      AUTH_RESET_BASE_URL: ${AUTH_RESET_BASE_URL:-http://localhost:3000/reset-password}
       KEYCLOAK_SERVER_URL: http://keycloak:8080
       KEYCLOAK_PUBLIC_SERVER_URL: ${KEYCLOAK_PUBLIC_SERVER_URL}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}

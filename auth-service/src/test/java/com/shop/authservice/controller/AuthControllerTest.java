@@ -5,10 +5,15 @@ import com.shop.authservice.dto.request.LoginRequest;
 import com.shop.authservice.dto.request.RegisterRequest;
 import com.shop.authservice.dto.response.TokenResponse;
 import com.shop.authservice.service.AuthService;
+import com.shop.authservice.dto.request.ForgotPasswordRequest;
 import com.shop.authservice.service.UserService;
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
+import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -17,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(ApiExceptionHandler.class)
 class AuthControllerTest {
 
     @Autowired
@@ -52,6 +59,20 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value("User registered successfully"));
 
         verify(userService).register(any(RegisterRequest.class));
+    }
+
+    @Test
+    void forgotPasswordFailsWhenTheEmailCouldNotBeDispatched() throws Exception {
+        // F-054: the endpoint must not report "a password reset instruction has
+        // been sent" when the dispatch failed.
+        doThrow(BusinessException.of(ErrorCode.AUTH_EMAIL_SEND_FAILED))
+                .when(userService).forgotPassword("alice@example.com");
+
+        mockMvc.perform(post("/api/v1/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ForgotPasswordRequest("alice@example.com"))))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("AUTH-1010"));
     }
 
     @Test

@@ -11,9 +11,11 @@ import com.shop.authservice.entity.Role;
 import com.shop.authservice.entity.User;
 import com.shop.authservice.mapper.UserMapper;
 import com.shop.authservice.repository.PasswordResetTokenRepository;
+import com.shop.authservice.service.PasswordResetEmailSender;
 import com.shop.authservice.repository.RoleRepository;
 import com.shop.authservice.repository.UserRepository;
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.keycloak.client.KeycloakAdminClient;
 import com.shop.common.keycloak.client.KeycloakTokenClient;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +73,9 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
+    private PasswordResetEmailSender passwordResetEmailSender;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -205,6 +210,30 @@ class UserServiceImplTest {
         assertTrue(ex.getMessage().toLowerCase().contains("alice"));
         // and no Keycloak user was created for the loser of the race
         verify(keycloakAdminClient, never()).createUser(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void forgotPasswordFailsWhenTheEmailCannotBeDispatched() {
+        // F-054: a dispatch failure must surface - the caller must not be told
+        // that a reset instruction was sent when it was not.
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(userWithKeycloakAccount()));
+        doThrow(BusinessException.of(ErrorCode.AUTH_EMAIL_SEND_FAILED))
+                .when(passwordResetEmailSender).sendResetEmail(anyString(), anyString(), anyString());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> userService.forgotPassword("alice@example.com"));
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatus());
+    }
+
+    @Test
+    void forgotPasswordDispatchesTheTokenToTheMailbox() {
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(userWithKeycloakAccount()));
+        when(passwordResetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.forgotPassword("alice@example.com");
+
+        verify(passwordResetEmailSender).sendResetEmail(eq("alice@example.com"), eq("alice"), anyString());
     }
 
     @Test
