@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: changelog-005-inventory-outbox-claim-lease.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-006-reservations-order-id-index.yaml
+      relativeToChangelogFile: true

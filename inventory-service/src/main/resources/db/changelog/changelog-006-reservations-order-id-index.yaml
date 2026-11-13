@@ -1,0 +1,25 @@
+databaseChangeLog:
+  # F-015: the reconciliation flow looks reservations up by order id, but the
+  # table only had an index on product_id (and on status+expires_at). A
+  # by-order lookup therefore ran a sequential scan over the whole
+  # reservations table, which grows with every checkout.
+  #
+  # The foreign key to inventory.product_id is NOT added here, on purpose:
+  # deleting an inventory row is legal while only RELEASED/EXPIRED
+  # reservations remain (the delete guard blocks PENDING/COMMITTED only), so a
+  # restricting FK would turn a legal delete into a constraint violation and
+  # would fail the migration on the existing rows. The application already
+  # guarantees the invariant - reserve() loads the inventory row and answers
+  # INVENTORY_NOT_FOUND, so a reservation can never point at a product that
+  # does not exist. Making that guarantee a database constraint needs a
+  # product decision (keep the inventory row as a tombstone, or cascade the
+  # reservation history), which is out of scope for an index migration.
+  - changeSet:
+      id: 006-reservations-order-id-index
+      author: shop-platform
+      changes:
+        - createIndex:
+            tableName: reservations
+            indexName: idx_reservations_order_id
+            columns:
+              - column: { name: order_id }
