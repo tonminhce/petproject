@@ -35,11 +35,11 @@ class RoleControllerTest {
     @Test
     void assignRoleReturnsTrue() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(roleService.assignRole(eq(userId), eq("PM"))).thenReturn(true);
+        when(roleService.assignRole(eq(userId), eq("MANAGER"))).thenReturn(true);
 
         mockMvc.perform(post("/api/v1/roles/users/{userId}/assign", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleName\":\"PM\"}"))
+                        .content("{\"roleName\":\"MANAGER\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(true));
     }
@@ -47,11 +47,11 @@ class RoleControllerTest {
     @Test
     void revokeRoleReturnsFalse() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(roleService.revokeRole(eq(userId), eq("PM"))).thenReturn(false);
+        when(roleService.revokeRole(eq(userId), eq("MANAGER"))).thenReturn(false);
 
         mockMvc.perform(post("/api/v1/roles/users/{userId}/revoke", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"roleName\":\"PM\"}"))
+                        .content("{\"roleName\":\"MANAGER\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(false));
     }
@@ -59,12 +59,12 @@ class RoleControllerTest {
     @Test
     void getUserRolesReturnsRoleNames() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(roleService.getUserRoles(userId)).thenReturn(List.of("ADMIN", "PM"));
+        when(roleService.getUserRoles(userId)).thenReturn(List.of("ADMIN", "MANAGER"));
 
         mockMvc.perform(get("/api/v1/roles/users/{userId}", userId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0]").value("ADMIN"))
-                .andExpect(jsonPath("$.data[1]").value("PM"));
+                .andExpect(jsonPath("$.data[1]").value("MANAGER"));
     }
 
     @Test

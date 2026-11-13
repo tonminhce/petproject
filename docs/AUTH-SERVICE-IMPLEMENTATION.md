@@ -128,7 +128,8 @@ public class SsoProperties {
 ### 3.1 `entity/RoleName.java`
 
 ```java
-public enum RoleName { USER, PM, ADMIN }
+// F-056: exactly the realm roles of docker/keycloak/import/ecommerce-realm.json
+public enum RoleName { USER, ADMIN, MANAGER, SERVICE }
 ```
 
 ### 3.2 `entity/Role.java`
@@ -193,7 +194,9 @@ Creates:
 - `users` table with columns matching `User` entity
 - `roles` table with columns matching `Role` entity
 - `user_role` join table (user_id, role_id)
-- Pre-populate `roles` with `USER`, `PM`, `ADMIN` rows
+- Pre-populate `roles` with `USER`, `PM`, `ADMIN` rows; changeset `006-align-roles-with-realm`
+  then adds `MANAGER` and `SERVICE` (the roles the realm really ships) and drops the local-only
+  `PM`, which the realm does not know - granting it changed nothing at runtime
 
 **Acceptance**: `mvn spring-boot:run` starts without `ddl-auto: validate` errors.
 
@@ -206,8 +209,9 @@ Creates:
 ```java
 public final class RoleConstant {
     public static final String ROLE_USER = "USER";
-    public static final String ROLE_PM = "PM";
     public static final String ROLE_ADMIN = "ADMIN";
+    public static final String ROLE_MANAGER = "MANAGER";
+    public static final String ROLE_SERVICE = "SERVICE";
     public static final String DEFAULT_ROLE = ROLE_USER;
     public static final int ROLE_NAME_MIN_LENGTH = 2;
     public static final int ROLE_NAME_MAX_LENGTH = 60;

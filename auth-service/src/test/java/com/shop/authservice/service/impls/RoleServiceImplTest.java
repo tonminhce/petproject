@@ -40,12 +40,12 @@ class RoleServiceImplTest {
     private RoleServiceImpl roleService;
 
     private UUID userId;
-    private Role pmRole;
+    private Role managerRole;
 
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
-        pmRole = new Role(UUID.randomUUID(), RoleName.PM);
+        managerRole = new Role(UUID.randomUUID(), RoleName.MANAGER);
     }
 
     private User userWithRoles(Role... roles) {
@@ -63,16 +63,16 @@ class RoleServiceImplTest {
 
     @Test
     void findByNameReturnsRole() {
-        when(roleRepository.findByName(RoleName.PM)).thenReturn(Optional.of(pmRole));
+        when(roleRepository.findByName(RoleName.MANAGER)).thenReturn(Optional.of(managerRole));
 
-        assertEquals(pmRole, roleService.findByName(RoleName.PM).orElseThrow());
+        assertEquals(managerRole, roleService.findByName(RoleName.MANAGER).orElseThrow());
     }
 
     @Test
     void findByNameThrowsNotFoundWhenMissing() {
-        when(roleRepository.findByName(RoleName.PM)).thenReturn(Optional.empty());
+        when(roleRepository.findByName(RoleName.MANAGER)).thenReturn(Optional.empty());
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> roleService.findByName(RoleName.PM));
+        BusinessException ex = assertThrows(BusinessException.class, () -> roleService.findByName(RoleName.MANAGER));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
     }
@@ -81,20 +81,20 @@ class RoleServiceImplTest {
     void assignRoleAddsWhenAbsent() {
         User user = userWithRoles();
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(roleRepository.findByName(RoleName.PM)).thenReturn(Optional.of(pmRole));
+        when(roleRepository.findByName(RoleName.MANAGER)).thenReturn(Optional.of(managerRole));
 
-        assertTrue(roleService.assignRole(userId, "PM"));
-        assertTrue(user.getRoles().contains(pmRole));
+        assertTrue(roleService.assignRole(userId, "MANAGER"));
+        assertTrue(user.getRoles().contains(managerRole));
         verify(userRepository).save(user);
     }
 
     @Test
     void assignRoleReturnsFalseWhenAlreadyAssigned() {
-        User user = userWithRoles(pmRole);
+        User user = userWithRoles(managerRole);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(roleRepository.findByName(RoleName.PM)).thenReturn(Optional.of(pmRole));
+        when(roleRepository.findByName(RoleName.MANAGER)).thenReturn(Optional.of(managerRole));
 
-        assertFalse(roleService.assignRole(userId, "PM"));
+        assertFalse(roleService.assignRole(userId, "MANAGER"));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -102,7 +102,7 @@ class RoleServiceImplTest {
     void assignRoleThrowsNotFoundWhenUserMissing() {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> roleService.assignRole(userId, "PM"));
+        BusinessException ex = assertThrows(BusinessException.class, () -> roleService.assignRole(userId, "MANAGER"));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
     }
@@ -110,11 +110,23 @@ class RoleServiceImplTest {
     @Test
     void assignRoleThrowsNotFoundWhenRoleNotInSystem() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(userWithRoles()));
-        when(roleRepository.findByName(RoleName.PM)).thenReturn(Optional.empty());
+        when(roleRepository.findByName(RoleName.MANAGER)).thenReturn(Optional.empty());
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> roleService.assignRole(userId, "MANAGER"));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
+    }
+
+    @Test
+    void assignRoleThrowsBadRequestForTheFictionalPmRole() {
+        // F-056: PM was never a Keycloak realm role - granting it changed
+        // nothing at runtime, so the catalogue no longer accepts it.
+        when(userRepository.findById(userId)).thenReturn(Optional.of(userWithRoles()));
 
         BusinessException ex = assertThrows(BusinessException.class, () -> roleService.assignRole(userId, "PM"));
 
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        verify(roleRepository, never()).findByName(any());
     }
 
     @Test
@@ -128,11 +140,11 @@ class RoleServiceImplTest {
 
     @Test
     void revokeRoleRemovesWhenPresent() {
-        User user = userWithRoles(pmRole);
+        User user = userWithRoles(managerRole);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        assertTrue(roleService.revokeRole(userId, "PM"));
-        assertFalse(user.getRoles().contains(pmRole));
+        assertTrue(roleService.revokeRole(userId, "MANAGER"));
+        assertFalse(user.getRoles().contains(managerRole));
         verify(userRepository).save(user);
     }
 
@@ -140,15 +152,15 @@ class RoleServiceImplTest {
     void revokeRoleReturnsFalseWhenAbsent() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(userWithRoles()));
 
-        assertFalse(roleService.revokeRole(userId, "PM"));
+        assertFalse(roleService.revokeRole(userId, "MANAGER"));
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
     void getUserRolesReturnsRoleNames() {
-        User user = userWithRoles(pmRole);
+        User user = userWithRoles(managerRole);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        assertEquals(List.of("PM"), roleService.getUserRoles(userId));
+        assertEquals(List.of("MANAGER"), roleService.getUserRoles(userId));
     }
 }

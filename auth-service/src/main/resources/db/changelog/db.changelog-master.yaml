@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/changeset/004-password-reset-and-addresses.yaml
   - include:
       file: db/changelog/changeset/005-password-reset-token-version.yaml
+  - include:
+      file: db/changelog/changeset/006-align-roles-with-realm.yaml

@@ -1,0 +1,18 @@
+databaseChangeLog:
+  # TEST-ONLY changelog (auth-service/src/test/resources).
+  #
+  # It applies the changesets that existed before F-056, so the migration can
+  # be exercised against a LEGACY database - one that still holds the
+  # fictional PM role and the user links pointing at it. The real master
+  # changelog is applied afterwards; only changeset 006 is new there, so the
+  # rest is skipped as already applied.
+  - include:
+      file: db/changelog/changeset/001-create-users-and-roles.yaml
+  - include:
+      file: db/changelog/changeset/002-add-soft-delete.yaml
+  - include:
+      file: db/changelog/changeset/003-partial-unique-users.yaml
+  - include:
+      file: db/changelog/changeset/004-password-reset-and-addresses.yaml
+  - include:
+      file: db/changelog/changeset/005-password-reset-token-version.yaml

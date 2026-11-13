@@ -1,0 +1,40 @@
+databaseChangeLog:
+  # F-056: align the local role catalogue with the Keycloak realm.
+  #
+  # The realm (docker/keycloak/import/ecommerce-realm.json) ships the realm
+  # roles ADMIN, USER, MANAGER and SERVICE. The local catalogue only knew
+  # USER, PM and ADMIN:
+  #   - MANAGER could not be granted at all (RoleMapper answered 400), although
+  #     common-security treats MANAGER as a human admin tier (ServiceCallerGuard);
+  #   - SERVICE could not be granted either, although every service-to-service
+  #     call depends on it;
+  #   - PM existed only locally: the realm has no such role, so assigning it
+  #     granted nothing at runtime.
+  #
+  # The changeset is additive for the two roles that are really missing and
+  # removes the fictional one:
+  #   1. insert the MANAGER and SERVICE rows;
+  #   2. drop the user_role links that point at PM and then the PM row itself.
+  #      PM is not a realm role, so it grants no authority: removing the row
+  #      cannot take a permission away. The order matters - the links must go
+  #      first because of the foreign key on user_role.role_id.
+  - changeSet:
+      id: 006-align-roles-with-realm
+      author: shop-platform
+      changes:
+        - insert:
+            tableName: roles
+            columns:
+              - column: { name: id,        valueComputed: "gen_random_uuid()" }
+              - column: { name: role_name, value: "MANAGER" }
+        - insert:
+            tableName: roles
+            columns:
+              - column: { name: id,        valueComputed: "gen_random_uuid()" }
+              - column: { name: role_name, value: "SERVICE" }
+        - delete:
+            tableName: user_role
+            where: "role_id IN (SELECT id FROM roles WHERE role_name = 'PM')"
+        - delete:
+            tableName: roles
+            where: "role_name = 'PM'"
