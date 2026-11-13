@@ -37,6 +37,7 @@ public enum ErrorCode implements ErrorCatalog {
     AUTH_PASSWORD_MANAGED_BY_KEYCLOAK("AUTH-1008", "auth.password.managed.by.keycloak", HttpStatus.BAD_REQUEST),
     AUTH_INVALID_CREDENTIALS("AUTH-1009", "auth.invalid.credentials", HttpStatus.UNAUTHORIZED),
     AUTH_EMAIL_SEND_FAILED("AUTH-1010", "auth.email.send.failed", HttpStatus.SERVICE_UNAVAILABLE),
+    AUDIT_ACTOR_UNAVAILABLE("AUD-9001", "audit.actor.unavailable", HttpStatus.INTERNAL_SERVER_ERROR),
 
     PRODUCT_NOT_FOUND("PRD-2001", "product.not.found", HttpStatus.NOT_FOUND),
     PRODUCT_NAME_EXISTS("PRD-2002", "product.name.exists", HttpStatus.CONFLICT),

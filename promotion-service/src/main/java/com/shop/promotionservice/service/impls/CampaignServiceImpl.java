@@ -1,5 +1,6 @@
 package com.shop.promotionservice.service.impls;
 
+import com.shop.common.core.audit.AuditActor;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.promotionservice.constant.CampaignStatus;
@@ -100,7 +101,14 @@ public class CampaignServiceImpl implements CampaignService {
         campaign.setMaxRedemptions(request.maxRedemptions());
         campaign.setTotalBudget(request.totalBudget());
         campaign.setPerUserLimit(request.perUserLimit() != null ? request.perUserLimit() : 1);
-        applyStatus(campaign, request.status());
+        // F-048: the status is applied ONLY when the request carries one. A
+        // request without a status used to fall into the deactivate branch
+        // (null != ACTIVE), so an admin who only renamed a campaign silently
+        // switched the promotion off. A client that wants to deactivate must
+        // send status=INACTIVE explicitly.
+        if (request.status() != null) {
+            applyStatus(campaign, request.status());
+        }
         return CampaignResponse.from(campaignRepository.save(campaign));
     }
 
@@ -112,7 +120,7 @@ public class CampaignServiceImpl implements CampaignService {
         if (reservationRepository.existsByCampaignIdAndStatusIn(id, COUNTED_STATUSES)) {
             throw BusinessException.of(ErrorCode.CAMPAIGN_IN_USE, campaign.getCode());
         }
-        campaign.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        campaign.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         campaignRepository.save(campaign);
     }
 
@@ -125,7 +133,11 @@ public class CampaignServiceImpl implements CampaignService {
             .map(CampaignUsageResponse::from);
     }
 
-    /** PUT semantics: the status field is authoritative; null normalizes to INACTIVE. */
+    /**
+     * Applies an EXPLICIT status. The caller only invokes this when the
+     * request carries a status - a request without one leaves the current
+     * status untouched (F-048).
+     */
     private void applyStatus(Campaign campaign, CampaignStatus status) {
         if (status == CampaignStatus.ACTIVE) {
             campaign.activate();

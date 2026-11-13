@@ -11,6 +11,7 @@ import com.shop.productservice.repository.ProductRepository;
 import com.shop.productservice.repository.ProductVariantRepository;
 import com.shop.productservice.service.impls.ProductVariantServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.data.domain.AuditorAware;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +38,9 @@ class ProductVariantServiceTest {
     @Mock
     private ProductVariantRepository productVariantRepository;
 
+    @Mock
+    private AuditorAware<String> auditorAware;
+
     private ProductVariantService service;
 
     private final UUID productId = UUID.randomUUID();
@@ -43,7 +48,41 @@ class ProductVariantServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProductVariantServiceImpl(productRepository, productVariantRepository);
+        lenient().when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("admin@example.com"));
+        service = new ProductVariantServiceImpl(productRepository, productVariantRepository, auditorAware);
+    }
+
+    @Test
+    void delete_recordsTheAuthenticatedActor() {
+        when(productRepository.existsById(productId)).thenReturn(true);
+        Product product = Product.builder().id(productId).build();
+        ProductVariant variant = ProductVariant.builder()
+            .id(variantId).product(product).sku("SKU-1").title("Variant 1")
+            .price(BigDecimal.valueOf(100)).quantity(10).build();
+        when(productVariantRepository.findByIdAndProductIdAndDeletedFalse(variantId, productId))
+            .thenReturn(Optional.of(variant));
+        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("admin@example.com"));
+
+        service.delete(productId, variantId);
+
+        assertThat(variant.getDeletedBy()).isEqualTo("admin@example.com");
+        verify(productVariantRepository).save(variant);
+    }
+
+    @Test
+    void delete_failsWithADomainErrorWhenNoActorCanBeResolved() {
+        when(productRepository.existsById(productId)).thenReturn(true);
+        Product product = Product.builder().id(productId).build();
+        ProductVariant variant = ProductVariant.builder()
+            .id(variantId).product(product).sku("SKU-1").title("Variant 1")
+            .price(BigDecimal.valueOf(100)).quantity(10).build();
+        when(productVariantRepository.findByIdAndProductIdAndDeletedFalse(variantId, productId))
+            .thenReturn(Optional.of(variant));
+        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(productId, variantId))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("AUD-9001"));
     }
 
     @Test

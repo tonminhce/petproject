@@ -1,5 +1,6 @@
 package com.shop.favouriteservice.service.impls;
 
+import com.shop.common.core.audit.AuditActor;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
@@ -65,7 +66,7 @@ public class FavouriteServiceImpl implements FavouriteService {
     @Override
     @Transactional
     public void deleteById(UUID id, UUID userId) {
-        String actor = auditorAware.getCurrentAuditor().orElse("system");
+        String actor = AuditActor.require(auditorAware::getCurrentAuditor);
         int affected = repo.softDeleteByIdAndUserId(id, userId, actor);
         if (affected == 0) {
             throw BusinessException.of(ErrorCode.FAVOURITE_NOT_FOUND, id);
@@ -75,7 +76,7 @@ public class FavouriteServiceImpl implements FavouriteService {
     @Override
     @Transactional
     public void deleteByProductId(UUID userId, UUID productId) {
-        String actor = auditorAware.getCurrentAuditor().orElse("system");
+        String actor = AuditActor.require(auditorAware::getCurrentAuditor);
         int affected = repo.softDeleteByUserIdAndProductId(userId, productId, actor);
         if (affected == 0) {
             // FAV-6003 — product-scoped message, do NOT reuse FAV-6001 here.

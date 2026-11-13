@@ -231,7 +231,47 @@ class CampaignServiceTest {
         assertThat(response.status()).isEqualTo(CampaignStatus.ACTIVE);
     }
 
+    @Test
+    @DisplayName("update without a status keeps the campaign ACTIVE (F-048)")
+    void updateWithoutStatusKeepsTheCampaignActive() {
+        Campaign existing = campaign();
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(existing));
+        when(campaignRepository.save(any(Campaign.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+        // a request that renames the campaign and carries NO status
+        CampaignRequest edits = new CampaignRequest(
+            CODE, "Renamed", "PERCENT", new BigDecimal("10.00"),
+            new BigDecimal("50.00"),
+            Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-09-01T00:00:00Z"),
+            100, new BigDecimal("1000.00"), 1, null);
+
+        CampaignResponse response = service.update(campaignId, edits);
+
+        ArgumentCaptor<Campaign> captor = ArgumentCaptor.forClass(Campaign.class);
+        verify(campaignRepository).save(captor.capture());
+        assertThat(captor.getValue().getStatus())
+            .as("a request without a status must not deactivate the campaign")
+            .isEqualTo(CampaignStatus.ACTIVE);
+        assertThat(response.status()).isEqualTo(CampaignStatus.ACTIVE);
+        assertThat(response.name()).isEqualTo("Renamed");
+    }
+
     // --- 3. delete ---
+
+    @Test
+    @DisplayName("delete without a resolvable actor → AUD-9001 (F-049, not a raw NoSuchElementException)")
+    void deleteWithoutAResolvableActorAnswersWithADomainError() {
+        Campaign existing = campaign();
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(existing));
+        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(campaignId))
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("AUD-9001"))
+            .isNotInstanceOf(java.util.NoSuchElementException.class);
+
+        verify(campaignRepository, never()).save(any());
+    }
 
     @Test
     @DisplayName("delete unknown id → CAMPAIGN_NOT_FOUND (PRO-7001)")

@@ -1,5 +1,6 @@
 package com.shop.taxservice.service.impls;
 
+import com.shop.common.core.audit.AuditActor;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.taxservice.dto.request.TaxRateRequest;
@@ -79,7 +80,7 @@ public class TaxRateServiceImpl implements TaxRateService {
             .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
 
         // configuration change must be attributable to a real actor.
-        taxRate.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        taxRate.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         taxRateRepository.save(taxRate);
     }
 

@@ -1,5 +1,6 @@
 package com.shop.productservice.service.impls;
 
+import com.shop.common.core.audit.AuditActor;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.productservice.dto.request.ProductVariantCreateRequest;
@@ -12,6 +13,7 @@ import com.shop.productservice.repository.ProductVariantRepository;
 import com.shop.productservice.service.ProductVariantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final AuditorAware<String> auditorAware;
 
     @Override
     @Transactional(readOnly = true)
@@ -112,7 +115,17 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         ensureProductExists(productId);
         ProductVariant variant = productVariantRepository.findByIdAndProductIdAndDeletedFalse(variantId, productId)
             .orElseThrow(() -> BusinessException.notFound("product.variant.not.found", variantId));
-        variant.markDeleted("system");
+        // F-061/F-049: the actor is resolved through the shared convention
+        // instead of the hard-coded "system", so the audit trail names the
+        // administrator who removed the variant.
+        //
+        // No stock check: the stock lives on the PRODUCT (inventory-service
+        // keys the reservation by product id), not on the variant. Deleting a
+        // variant of a product that still has stock does not orphan the stock
+        // - the product row and its inventory row stay alive - so there is
+        // nothing to guard here. The product-level guard is the delete-time
+        // stock check of ProductServiceImpl.delete() (F-060).
+        variant.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         productVariantRepository.save(variant);
         log.info("Deleted variant {} for product {}", variantId, productId);
     }

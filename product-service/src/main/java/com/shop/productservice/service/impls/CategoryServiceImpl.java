@@ -1,5 +1,6 @@
 package com.shop.productservice.service.impls;
 
+import com.shop.common.core.audit.AuditActor;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.productservice.dto.request.CategoryCreateRequest;
@@ -149,7 +150,7 @@ public class CategoryServiceImpl implements CategoryService {
     public void delete(UUID id) {
         Category existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, id));
-        existing.markDeleted(auditorAware.getCurrentAuditor().orElse("system"));
+        existing.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         repo.save(existing);
         publisher.publishDeleted(existing);
     }

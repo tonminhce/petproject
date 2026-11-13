@@ -180,8 +180,13 @@ class TaxClassServiceImplTest {
         when(taxRateRepository.countByClassId(classId)).thenReturn(0L);
         when(auditorAware.getCurrentAuditor()).thenReturn(Optional.empty());
 
+        // F-049: the unresolvable actor is a DOMAIN error, not a raw
+        // NoSuchElementException (which the API layer turned into an opaque
+        // 500).
         assertThatThrownBy(() -> service.delete(classId))
-            .isInstanceOf(java.util.NoSuchElementException.class);
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("AUD-9001"))
+            .isNotInstanceOf(java.util.NoSuchElementException.class);
 
         verify(taxClassRepository, never()).save(any());
     }

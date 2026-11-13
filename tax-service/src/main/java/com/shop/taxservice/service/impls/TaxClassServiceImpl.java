@@ -1,5 +1,6 @@
 package com.shop.taxservice.service.impls;
 
+import com.shop.common.core.audit.AuditActor;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.taxservice.dto.request.TaxClassRequest;
@@ -75,7 +76,7 @@ public class TaxClassServiceImpl implements TaxClassService {
         }
 
         // delete in promotion-service and the TaxClassServiceImpl contract
-        taxClass.markDeleted(auditorAware.getCurrentAuditor().orElseThrow());
+        taxClass.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         taxClassRepository.save(taxClass);
     }
 
