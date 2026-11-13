@@ -1,5 +1,6 @@
 package com.shop.ratingservice.service;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
@@ -36,7 +37,7 @@ public class RatingEventService {
 
     private static final String AGGREGATE_TYPE = "rating";
     private static final String EVENT_TYPE = "rating.submitted.v1";
-    private static final String TOPIC = "shop.rating.lifecycle.v1";
+    private static final String TOPIC = KafkaTopicContract.SHOP_RATING_LIFECYCLE;
 
     private final RatingRepository ratingRepository;
     private final OutboxEventRepository outboxRepository;

@@ -1,5 +1,6 @@
 package com.shop.shippingservice.outbox;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.shippingservice.entity.Shipment;
 import com.shop.common.core.constants.OutboxStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,7 +20,7 @@ import java.util.UUID;
 public class ShippingEventPublisherImpl implements ShippingEventPublisher {
 
     private static final String AGGREGATE_TYPE = "Shipment";
-    private static final String TOPIC = "shop.shipping.lifecycle.v1";
+    private static final String TOPIC = KafkaTopicContract.SHOP_SHIPPING_LIFECYCLE;
     private static final String EVENT_TYPE_DELIVERED = "shipping.delivered.v1";
 
     private final OutboxEventRepository outboxRepository;

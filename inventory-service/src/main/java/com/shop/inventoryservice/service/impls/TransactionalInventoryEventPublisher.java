@@ -1,5 +1,6 @@
 package com.shop.inventoryservice.service.impls;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.inventoryservice.entity.Inventory;
@@ -35,7 +36,7 @@ import java.util.UUID;
 public class TransactionalInventoryEventPublisher implements InventoryEventPublisher {
 
     private static final String AGGREGATE_TYPE = "Inventory";
-    private static final String TOPIC = "shop.inventory.events.v1";
+    private static final String TOPIC = KafkaTopicContract.SHOP_INVENTORY_EVENTS;
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;

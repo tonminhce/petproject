@@ -1,5 +1,6 @@
 package com.shop.orderservice.kafka;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
@@ -18,7 +19,7 @@ public class PaymentLifecycleConsumer extends BaseKafkaConsumer<String, PaymentL
     }
 
     @KafkaListener(
-            topics = "shop.payment.lifecycle.v1",
+            topics = KafkaTopicContract.SHOP_PAYMENT_LIFECYCLE,
             containerFactory = "paymentListenerFactory",
             groupId = "order-service-payment-group"
     )

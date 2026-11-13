@@ -185,14 +185,19 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 
 ### 2.5 Kafka events
 
-| Topic | Event | Payload |
-|-------|-------|---------|
-| `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }`: sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed |
-| `shop.inventory.events.v1` | `inventory.reserved.v1` / `inventory.committed.v1` / `inventory.released.v1` / `inventory.adjusted.v1` / `inventory.deleted.v1` | `{ eventId, eventType, occurredAt, productId, … }`: via Transactional Outbox (`InventoryOutboxRelay`, break-on-error to preserve per-aggregate ordering). Naming note: inventory uses CloudEvents-style dot.case event types (like `notification.send.v1`), deliberately NOT product's PascalCase: consumers handle exactly one style. Partition key = productId |
-| `shop.category.lifecycle.v1` | `CategoryCreated` / `CategoryUpdated` / `CategoryDeleted` | `{ eventId, eventType, occurredAt, categoryId, slug }`: via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
-| `shop.brand.lifecycle.v1` | `BrandCreated` / `BrandUpdated` / `BrandDeleted` | `{ eventId, eventType, occurredAt, brandId, slug }`: via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle |
+| Topic | Event | Payload | Consumer trong fleet |
+| `shop.product.lifecycle.v1` | `ProductCreated` / `ProductUpdated` / `ProductDeleted` | `{ eventId, eventType, occurredAt, productId, slug, status }`: sent via Transactional Outbox (`outbox_events` table written in same `@Transactional` boundary; `@Scheduled` `OutboxRelay` polls every 5s → publishes to Kafka). Loose coupling: search-service consumes and enriches as needed | search-service
+| `shop.inventory.events.v1` | `inventory.reserved.v1` / `inventory.committed.v1` / `inventory.released.v1` / `inventory.adjusted.v1` / `inventory.deleted.v1` | `{ eventId, eventType, occurredAt, productId, … }`: via Transactional Outbox (`InventoryOutboxRelay`, break-on-error to preserve per-aggregate ordering). Naming note: inventory uses CloudEvents-style dot.case event types (like `notification.send.v1`), deliberately NOT product's PascalCase: consumers handle exactly one style. Partition key = productId | **không có** (fire-and-forget audit)
+| `shop.category.lifecycle.v1` | `CategoryCreated` / `CategoryUpdated` / `CategoryDeleted` | `{ eventId, eventType, occurredAt, categoryId, slug }`: via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle | **không có** (fire-and-forget audit)
+| `shop.brand.lifecycle.v1` | `BrandCreated` / `BrandUpdated` / `BrandDeleted` | `{ eventId, eventType, occurredAt, brandId, slug }`: via Transactional Outbox (shared `OutboxRelay`). PascalCase, same style as product lifecycle | **không có** (fire-and-forget audit)
 
 > **Reference uses different topic** (`product.indexed.v1`): workspace follows the outbox + Kafka envelope pattern from common-kafka. Search-service consumers are decoupled from this event format.
+
+> **Contract chủ đề (F-002).** Mọi topic mà platform publish đều được khai báo đúng một lần trong `utils/common-kafka/src/main/java/com/shop/common/kafka/contract/KafkaTopicContract.java`, kèm chế độ tiêu thụ:
+> * `CONSUMED` - có ít nhất một `@KafkaListener` trong fleet bind vào topic;
+> * `FIRE_AND_FORGET` - **không** có consumer trong fleet, topic phục vụ audit / phân tích ngoài, và phải kèm lý do (luyện đọc service sở hữu dữ liệu theo đường đồng bộ).
+>
+> Bốn topic `shop.inventory.events.v1`, `shop.promotion.lifecycle.v1`, `shop.category.lifecycle.v1`, `shop.brand.lifecycle.v1` thuộc nhóm `FIRE_AND_FORGET`: luồng checkout đọc kho/promotion **đồng bộ** qua `InventoryServiceClient` / `PromotionServiceClient`, còn taxonomy nằm trong cùng service với product. `KafkaTopicContractTest` (utils/common-kafka) chạy trong mỗi lần build: một topic mới không khai báo, một consumer biến mất, hay một topic fire-and-forget mất lý do đều làm build đỏ.
 
 ### 2.6 Cache
 
@@ -203,7 +208,7 @@ All entities extend `AbstractMappedEntity extends SoftDeletable` (from common-co
 | `category` | `category::{id}` | 30 min | `@Cacheable` on `CategoryServiceImpl.findById`; `@CachePut` on `update`; `@CacheEvict(allEntries=true)` on `delete` |
 | `brand` | `brand::{id}` | 30 min | `@Cacheable` on `BrandServiceImpl.findById`; `@CachePut` on `update`; `@CacheEvict(allEntries=true)` on `delete` |
 
-> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName`: cache stale up to 10 min if those are renamed. The `shop.category.lifecycle.v1` / `shop.brand.lifecycle.v1` outbox events now give downstream invalidators the signal; in-service product-cache eviction is deliberately not wired (avoids taxonomy → product coupling inside one service).
+> Caveat: `ProductDetailResponse` denormalizes `categoryTitle`/`brandName`: cache stale up to 10 min if those are renamed. The `shop.category.lifecycle.v1` / `shop.brand.lifecycle.v1` outbox events are published for audit only - **there is no downstream invalidator in this fleet**; in-service product-cache eviction is deliberately not wired (avoids taxonomy → product coupling inside one service). The stale window is a documented, accepted trade-off.
 
 ### 2.7 Service dependencies
 

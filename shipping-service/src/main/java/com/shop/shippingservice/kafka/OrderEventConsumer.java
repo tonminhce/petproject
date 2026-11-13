@@ -1,5 +1,6 @@
 package com.shop.shippingservice.kafka;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
 import com.shop.shippingservice.dto.OrderLifecycleEvent;
 import com.shop.shippingservice.service.ShipmentService;
@@ -18,7 +19,7 @@ public class OrderEventConsumer extends BaseKafkaConsumer<String, OrderLifecycle
 
     // groupId is pinned: it is the consumer's identity, and changing it resets
     // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
-    @KafkaListener(topics = "shop.order.lifecycle.v1", groupId = "shipping-service",
+    @KafkaListener(topics = KafkaTopicContract.SHOP_ORDER_LIFECYCLE, groupId = "shipping-service",
             containerFactory = "shippingListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
 

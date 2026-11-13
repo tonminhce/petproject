@@ -1,5 +1,6 @@
 package com.shop.productservice.kafka;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
@@ -62,7 +63,7 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
     // It stays the service group id on purpose: splitting it from the rating
     // consumer would give this listener a NEW group, which starts at the
     // earliest offset and would replay every media event of the topic.
-    @KafkaListener(topics = "media.lifecycle.v1", groupId = "product-service",
+    @KafkaListener(topics = KafkaTopicContract.MEDIA_LIFECYCLE, groupId = "product-service",
             containerFactory = "mediaListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
         processMessage(rawValue, headers, this::handleContained);

@@ -1,5 +1,6 @@
 package com.shop.productservice.service.impls;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
@@ -34,7 +35,7 @@ import java.util.UUID;
 public class TransactionalCategoryEventPublisher implements CategoryEventPublisher {
 
     private static final String AGGREGATE_TYPE_CATEGORY = "Category";
-    private static final String LIFECYCLE_TOPIC = "shop.category.lifecycle.v1";
+    private static final String LIFECYCLE_TOPIC = KafkaTopicContract.SHOP_CATEGORY_LIFECYCLE;
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;

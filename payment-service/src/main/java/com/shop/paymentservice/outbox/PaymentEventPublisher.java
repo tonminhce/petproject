@@ -1,5 +1,6 @@
 package com.shop.paymentservice.outbox;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.common.core.constants.OutboxStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,7 +20,7 @@ import java.util.UUID;
 public class PaymentEventPublisher {
 
     private static final String AGGREGATE_TYPE = "Payment";
-    private static final String TOPIC = "shop.payment.lifecycle.v1";
+    private static final String TOPIC = KafkaTopicContract.SHOP_PAYMENT_LIFECYCLE;
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;

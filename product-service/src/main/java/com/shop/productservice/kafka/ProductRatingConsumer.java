@@ -1,5 +1,6 @@
 package com.shop.productservice.kafka;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
 import com.shop.productservice.service.ProductRatingService;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -17,7 +18,7 @@ public class ProductRatingConsumer extends BaseKafkaConsumer<String, RatingLifec
 
     // groupId is pinned: it is the consumer's identity, and changing it resets
     // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
-    @KafkaListener(topics = "shop.rating.lifecycle.v1", groupId = "product-service",
+    @KafkaListener(topics = KafkaTopicContract.SHOP_RATING_LIFECYCLE, groupId = "product-service",
             containerFactory = "ratingListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
 

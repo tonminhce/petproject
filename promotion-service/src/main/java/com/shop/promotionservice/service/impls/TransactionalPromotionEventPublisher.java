@@ -1,5 +1,6 @@
 package com.shop.promotionservice.service.impls;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.OutboxStatus;
@@ -36,7 +37,7 @@ import java.util.UUID;
 public class TransactionalPromotionEventPublisher implements PromotionEventPublisher {
 
     private static final String AGGREGATE_TYPE = "Campaign";
-    private static final String TOPIC = "shop.promotion.lifecycle.v1";
+    private static final String TOPIC = KafkaTopicContract.SHOP_PROMOTION_LIFECYCLE;
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;

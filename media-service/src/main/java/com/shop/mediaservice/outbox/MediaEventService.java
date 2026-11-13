@@ -1,5 +1,6 @@
 package com.shop.mediaservice.outbox;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.constants.ApiPaths;
@@ -32,7 +33,7 @@ import java.util.UUID;
 public class MediaEventService {
 
     static final String AGGREGATE_TYPE = "media";
-    static final String TOPIC = "media.lifecycle.v1";
+    static final String TOPIC = KafkaTopicContract.MEDIA_LIFECYCLE;
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;

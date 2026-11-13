@@ -1,5 +1,6 @@
 package com.shop.searchservice.kafka;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
@@ -32,7 +33,7 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
 
     // groupId is pinned: it is the consumer's identity, and changing it resets
     // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
-    @KafkaListener(topics = "shop.product.lifecycle.v1", groupId = "search-service",
+    @KafkaListener(topics = KafkaTopicContract.SHOP_PRODUCT_LIFECYCLE, groupId = "search-service",
             containerFactory = "searchListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
         processMessage(rawValue, headers, this::handleContained);

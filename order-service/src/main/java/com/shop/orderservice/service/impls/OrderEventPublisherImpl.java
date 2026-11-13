@@ -1,5 +1,6 @@
 package com.shop.orderservice.service.impls;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.entity.OrderItem;
@@ -27,7 +28,7 @@ import java.util.UUID;
 public class OrderEventPublisherImpl implements OrderEventPublisher {
 
     private static final String AGGREGATE_TYPE = "Order";
-    private static final String TOPIC = "shop.order.lifecycle.v1";
+    private static final String TOPIC = KafkaTopicContract.SHOP_ORDER_LIFECYCLE;
 
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;

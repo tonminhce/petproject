@@ -255,11 +255,14 @@ flowchart TB
 |---|---|---|---|---|
 | `shop.order.lifecycle.v1` | `order-service` | `orderId` | `order.created.v1`, `order.updated.v1`, `order.cancelled.v1` | **shipping-service**: Creates shipment package on `CONFIRMED`.<br/>**notification-service**: Sends order confirmation email. |
 | `shop.product.lifecycle.v1` | `product-service` | `productId` | `ProductCreated`, `ProductUpdated`, `ProductDeleted` | **search-service**: Upserts or deletes document in Elasticsearch `products` index. |
-| `shop.inventory.events.v1` | `inventory-service` | `productId` | `inventory.reserved.v1`, `committed.v1`, `released.v1`, `adjusted.v1` | **order-service / audit**: Real-time stock visibility. |
-| `shop.payment.lifecycle.v1` | `payment-service` | `orderId` | `payment.captured.v1`, `payment.failed.v1`, `payment.refunded.v1` | **notification-service**: Sends payment receipt / alert.<br/>**order-service**: PaymentLifecycleConsumer auto-confirms order on `payment.captured.v1`. |
-| `shop.shipping.events.v1` | `shipping-service` | `orderId` | `shipping.dispatched.v1`, `shipping.delivered.v1` | **order-service**: Auto-transitions order status to `DELIVERED`.<br/>**notification-service**: Sends tracking code to customer. |
-| `shop.rating.events.v1` | `rating-service` | `productId` | `RatingCreated`, `RatingUpdated`, `RatingApproved`, `RatingRejected` | **product-service**: Recomputes avg score & review count.<br/>**search-service**: Updates BM25 search score & indexes review. |
-| `shop.media.lifecycle.v1` | `media-service` | `mediaId` | `MediaDeleted` | **product-service**: Cleans up referenced image URLs. |
+| `shop.inventory.events.v1` | `inventory-service` | `productId` | `inventory.reserved.v1`, `inventory.committed.v1`, `inventory.released.v1`, `inventory.adjusted.v1`, `inventory.deleted.v1`, `inventory.low_stock.v1` | **không có consumer trong fleet** (fire-and-forget audit): order-service đọc kho **đồng bộ** qua `InventoryServiceClient`. Xem `KafkaTopicContract`. |
+| `shop.payment.lifecycle.v1` | `payment-service` | `orderId` | `payment.captured.v1`, `payment.failed.v1`, `payment.refunded.v1` | **order-service**: PaymentLifecycleConsumer auto-confirms order on `payment.captured.v1`. |
+| `shop.shipping.lifecycle.v1` | `shipping-service` | `shipmentId` | `shipping.delivered.v1` | **order-service**: Auto-transitions order status to `DELIVERED`. |
+| `shop.rating.lifecycle.v1` | `rating-service` | `ratingId` | `rating.submitted.v1` | **product-service**: Recomputes avg score & review count. |
+| `media.lifecycle.v1` | `media-service` | `mediaId` | `MediaDeleted` | **product-service**: Cleans up referenced image URLs. |
+| `shop.promotion.lifecycle.v1` | `promotion-service` | `campaignId` | `promotion.reserved.v1`, `promotion.committed.v1`, `promotion.released.v1` | **không có consumer trong fleet** (fire-and-forget audit): order-service đọc promotion **đồng bộ** qua `PromotionServiceClient`. |
+| `shop.category.lifecycle.v1` | `product-service` | `categoryId` | `CategoryCreated`, `CategoryUpdated`, `CategoryDeleted` | **không có consumer trong fleet** (fire-and-forget audit). |
+| `shop.brand.lifecycle.v1` | `product-service` | `brandId` | `BrandCreated`, `BrandUpdated`, `BrandDeleted` | **không có consumer trong fleet** (fire-and-forget audit). |
 
 ---
 
