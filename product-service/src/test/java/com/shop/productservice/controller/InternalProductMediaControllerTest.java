@@ -25,13 +25,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Security matrix + wire contract for the H-4 internal reference-count
- * endpoint: SERVICE token only. Anonymous → 401 (resource-server chain);
- * USER/ADMIN tokens → 403 — deliberately denied even to admins, an internal
- * machine endpoint is not for humans; SERVICE → 200 with
- * {@code {mediaId, referenceCount}} over the fleet ApiResponse envelope.
- */
 @WebMvcTest(value = InternalProductMediaController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -64,8 +57,6 @@ class InternalProductMediaControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
-    // --- security matrix ---
-
     @Test
     void referenceCount_noAuth_returns401() throws Exception {
         mockMvc.perform(get(ApiPaths.INTERNAL_PRODUCT_MEDIA_REFERENCES + "/{mediaId}", MEDIA_ID))
@@ -89,8 +80,6 @@ class InternalProductMediaControllerTest {
 
         verifyNoInteractions(productMediaService);
     }
-
-    // --- SERVICE token: the wire contract ---
 
     @Test
     void referenceCount_serviceRole_returns200WithCount() throws Exception {

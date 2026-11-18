@@ -15,12 +15,6 @@ import org.slf4j.MDC;
 
 import java.util.Arrays;
 
-/**
- * AOP aspect for {@link LogPerformance} and {@link Loggable} annotations.
- * <p>Registered as a bean by {@link com.shop.common.logging.config.LoggingAutoConfiguration}
- * — NOT via {@code @Component} — so it is discovered regardless of the service's
- * component-scan base package.</p>
- */
 @Aspect
 public class LoggerAspect {
 

@@ -6,13 +6,6 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * 1 — Does NOT extend {@code AbstractMappedEntity} (which extends
- * {@code SoftDeletable} requiring `deleted` column). Order items are hard-deleted
- * with their parent Order via {@code ON DELETE CASCADE} on the FK.
- * <p>If we extended AbstractMappedEntity, {@code ddl-auto: validate} would fail at
- * boot because the {@code order_items} table has no audit/soft-delete columns.</p>
- */
 @Entity
 @Table(name = "order_items")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -41,5 +34,5 @@ public class OrderItem {
     private BigDecimal lineTotal;
 
     @Column(name = "reservation_id")
-    private UUID reservationId;  // nullable — populated after stock reservation
+    private UUID reservationId;
 }

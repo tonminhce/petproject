@@ -16,14 +16,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Dumb upsert/delete of the FULL-snapshot product document behind the
- * {@link IndexProvisioner#ALIAS} alias (spec D1/D2): the payload is copied
- * as-is, no recompute, no source lookups.
- * <p>Status handling is BIDIRECTIONAL (F1): an ACTIVE payload upserts the
- * doc, any non-ACTIVE payload deletes it — which covers every transition
- * including DRAFT re-published to ACTIVE.</p>
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

@@ -48,7 +48,6 @@ public class Product extends AbstractMappedEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    // image is DERIVED at mapping time (canonicalPath) — never stored.
     @Column(name = "media_id")
     private UUID mediaId;
 
@@ -58,12 +57,9 @@ public class Product extends AbstractMappedEntity {
     @Column(length = 50)
     private String dimensions;
 
-    // events by ProductRatingService, never recomputed here.
     @Column(name = "avg_rating", precision = 3, scale = 2)
     private BigDecimal avgRating;
 
-    // @Builder.Default: Lombok builders must produce 0 (never null) or every
-    // plain insert would violate the NOT NULL column.
     @Builder.Default
     @Column(name = "rating_count", nullable = false)
     private Integer ratingCount = 0;

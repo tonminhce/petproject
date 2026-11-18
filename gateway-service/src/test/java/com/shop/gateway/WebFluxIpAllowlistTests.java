@@ -98,17 +98,6 @@ class WebFluxIpAllowlistTests {
         WIRE_MOCK.verify(0, anyRequestedFor(urlMatching("/api/v1/backoffice/.*")));
     }
 
-    /**
-     * Pins the post-H28 contract (commit {@code 90cea14} — "fix(gateway):
-     * prevent forwarded IP allowlist spoofing"): the entry selected for the
-     * allowlist check is the one just before the trusted-proxy tail of the
-     * X-Forwarded-For chain, not the leftmost entry. With one trusted proxy
-     * hop, {@code "8.8.8.8, 10.42.0.7"} resolves the client to {@code 10.42.0.7}
-     * (matching {@code 10.0.0.0/8}) — even though a naive "first XFF entry"
-     * read would have picked {@code 8.8.8.8} and blocked the request. The
-     * leftmost entry must never be decisive; treating it as authoritative
-     * is the spoofing vector H28 closed.
-     */
     @Test
     void rightmostTrustedForwardedEntryIsDecisive() {
         client.get().uri("/api/v1/backoffice/products")
@@ -138,7 +127,7 @@ class WebFluxIpAllowlistTests {
 
     @Test
     void actuatorHealthBypassesTheAllowlist() {
-        // Liveness probes come from the orchestrator, not an office IP
+
         client.get().uri("/actuator/health/liveness")
                 .header("X-Forwarded-For", "8.8.8.8")
                 .exchange()

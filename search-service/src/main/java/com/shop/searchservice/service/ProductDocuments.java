@@ -11,12 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Shared D3 document mapping — the single source of the 14-field product
- * document shape indexed behind the {@code products} alias. Both ingestion
- * paths converge here: the Kafka consumer ({@link ProductLifecycleEvent}) and
- * the reindex stream ({@link ProductBackofficeClient.ProductSnapshot}).
- */
 @Slf4j
 public final class ProductDocuments {
 
@@ -55,7 +49,7 @@ public final class ProductDocuments {
         document.put("avgRating", avgRating);
         document.put("ratingCount", ratingCount);
         document.put("status", status);
-        // is serialized as an ISO-8601 string, which the `date` mapping accepts.
+
         document.put("updatedAt", updatedAt != null ? updatedAt.toString() : null);
         return document;
     }

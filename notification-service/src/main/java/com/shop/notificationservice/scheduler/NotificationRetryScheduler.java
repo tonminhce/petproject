@@ -17,22 +17,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Bounded retry poller for failed/stuck notification deliveries. The
- * previous design had a single send attempt and no recovery: any transient
- * SMTP outage permanently lost the notification. This scheduler walks the
- * claim queue ({@code FAILED_RETRYABLE} past its backoff window, stale
- * {@code SENDING} rows whose heartbeat elapsed — the crash-mid-send recovery
- * path — and legacy {@code FAILED} rows) and re-invokes {@link
- * NotificationDeliveryService#deliver}.
- * <p>PESSIMISTIC claim: candidates are locked, flipped to {@code SENDING}
- * with a fresh heartbeat, and committed in ONE short transaction BEFORE any
- * send — the SMTP call itself never runs inside a transaction, so row locks
- * are never held across network I/O. Exceeding the attempt budget
- * ({@code shop.notification.retry.max-attempts}) transitions the row to
- * {@code FAILED_PERMANENT} — terminal, observable via
- * {@code notification_failed_permanent_total}.</p>
- */
 @Component
 @Slf4j
 public class NotificationRetryScheduler {
@@ -63,7 +47,6 @@ public class NotificationRetryScheduler {
         this.batchSize = batchSize;
     }
 
-    // recovery in prod); ITs pin it high so the poller never races test bodies.
     @Scheduled(fixedDelayString = "${shop.notification.retry.poll-ms:60000}",
             initialDelayString = "${shop.notification.retry.initial-delay-ms:0}")
     public void poll() {
@@ -87,12 +70,6 @@ public class NotificationRetryScheduler {
         }
     }
 
-    /**
-     * Claim tx: lock candidates pessimistically, flip to SENDING with a fresh
-     * heartbeat ({@code now + stale-sending-seconds}), commit. A crashed
-     * instance's SENDING rows become claimable again once their heartbeat
-     * elapses — bounded duplicate-send risk, no silent loss.
-     */
     private List<Notification> claim(Instant now) {
         return transactionTemplate.execute(status -> {
             List<Notification> candidates = repository.findRetryCandidates(

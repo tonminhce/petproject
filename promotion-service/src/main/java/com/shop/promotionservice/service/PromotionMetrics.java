@@ -9,22 +9,6 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Micrometer-backed observability surface for promotion-service — mirrors
- * inventory-service's {@code InventoryMetrics} so outbox health is visible
- * the same way across the event-producing services (no Redis cache gauges:
- * promotion-service has no cache tier).
- * <p>Meters:
- * <ul>
- *   <li>{@code promotion.events.published} — counter tagged with
- *       {@code event_type}; incremented from
- *       {@code TransactionalPromotionEventPublisher.save()}.</li>
- *   <li>{@code promotion.outbox.relay.duration} — timer; recorded from
- *       {@code PromotionOutboxRelay} in a {@code finally} block.</li>
- *   <li>{@code promotion.outbox.pending.count} — gauge backed by an
- *       {@link AtomicInteger} updated by {@code PromotionOutboxRelay}.</li>
- * </ul>
- */
 @Component
 public class PromotionMetrics {
 

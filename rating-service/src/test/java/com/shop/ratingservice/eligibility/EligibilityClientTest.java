@@ -124,7 +124,6 @@ class EligibilityClientTest {
         assertThat(failingClosed()).isFalse();
     }
 
-    /** Fail-closed contract: ANY client failure must surface as false, never a raw throw. */
     private boolean failingClosed() {
         try {
             return client.isEligible(USER_ID, PRODUCT_ID);

@@ -48,8 +48,6 @@ class NotificationWriterTest {
                 .build();
     }
 
-    // ---- insert -------------------------------------------------------
-
     @Test
     void writerIsAnnotatedAsRepositoryNotService() {
         assertThat(NotificationWriter.class.isAnnotationPresent(Repository.class))
@@ -79,8 +77,6 @@ class NotificationWriterTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    // ---- claim (markSending) ------------------------------------------
-
     @Test
     void markSending_fromPending_claimsRowWithHeartbeat() {
         Notification n = row(NotificationStatus.PENDING);
@@ -109,7 +105,7 @@ class NotificationWriterTest {
     @Test
     void markSending_fromStaleSending_reclaimsRow() {
         Notification n = row(NotificationStatus.SENDING);
-        n.setNextRetryAt(NOW.minusSeconds(1)); // heartbeat elapsed
+        n.setNextRetryAt(NOW.minusSeconds(1));
         when(repository.findById(n.getId())).thenReturn(Optional.of(n));
 
         boolean claimed = writer.markSending(n.getId(), NOW.plusSeconds(900), NOW);
@@ -122,7 +118,7 @@ class NotificationWriterTest {
     @Test
     void markSending_fromFreshSending_rejected() {
         Notification n = row(NotificationStatus.SENDING);
-        n.setNextRetryAt(NOW.plusSeconds(900)); // another instance's live heartbeat
+        n.setNextRetryAt(NOW.plusSeconds(900));
         when(repository.findById(n.getId())).thenReturn(Optional.of(n));
 
         boolean claimed = writer.markSending(n.getId(), NOW.plusSeconds(1800), NOW);
@@ -155,8 +151,6 @@ class NotificationWriterTest {
 
         assertThat(writer.markSending(UUID.randomUUID(), NOW.plusSeconds(900), NOW)).isFalse();
     }
-
-    // ---- settle (markSent) --------------------------------------------
 
     @Test
     void markSent_fromSending_writesSentAndClearsRetryFields() {
@@ -193,8 +187,6 @@ class NotificationWriterTest {
         assertThat(writer.markSent(UUID.randomUUID())).isFalse();
     }
 
-    // ---- settle (markRetryable) ---------------------------------------
-
     @Test
     void markRetryable_recordsAttemptBackoffAndError() {
         Notification n = row(NotificationStatus.SENDING);
@@ -230,8 +222,6 @@ class NotificationWriterTest {
         assertThat(n.getStatus()).isEqualTo(NotificationStatus.SENT);
         verify(repository, never()).save(any());
     }
-
-    // ---- settle (markPermanent) ---------------------------------------
 
     @Test
     void markPermanent_recordsStatusAndErrorAndIncrementsCounter() {

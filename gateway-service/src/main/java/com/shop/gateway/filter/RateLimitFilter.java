@@ -14,27 +14,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-/**
- * Per-IP token buckets for the two edge scopes:
- * backoffice prefixes and the search prefix. Other paths are unlimited.
- *
- * <p>F-034: the buckets are held in Redis, so every gateway replica meters a
- * client against the same budget. The previous in-process bucket4j cache
- * multiplied the effective limit by the replica count — with four replicas a
- * single client could make 4 x 10 backoffice requests per minute, which is
- * exactly the abuse the backoffice limit exists to stop.</p>
- *
- * <p>A rejected request gets the fleet 429 envelope plus
- * {@code X-RateLimit-Remaining: 0}, a passed request is tagged with the
- * remaining tokens for debuggability (§4.4).
- * <p>Scope lookup happens on the percent-DECODED path and a percent-encoded
- * request whose decoded form falls into a scope is still metered, then
- * rejected with the fleet 400 envelope (raw &ne; decoded — see
- * {@link RequestPathGuard}; route predicates would decode it to the scoped
- * route, so raw-only matching would let one encoded character bypass the
- * limiter entirely). Matrix-variable paths (N-R1) are rejected before scope
- * lookup — the {@code ;} suffix defeats the prefix match itself.</p>
- */
 public final class RateLimitFilter implements GlobalFilter, Ordered {
 
     static final String REMAINING_HEADER = "X-RateLimit-Remaining";

@@ -36,11 +36,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6): one mutating backoffice campaign endpoint
- * exercised through the {@code AuditAspect}. Collection POST has no path
- * variable, so the audit line carries {@code resourceId: null}.
- */
 @WebMvcTest(value = BackofficeCampaignController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

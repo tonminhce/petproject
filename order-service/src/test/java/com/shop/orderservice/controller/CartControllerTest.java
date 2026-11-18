@@ -48,7 +48,7 @@ class CartControllerTest {
         Jwt jwt = Jwt.withTokenValue("test").header("alg", "none")
             .subject(userId.toString())
             .claim("preferred_username", "alice").build();
-        // FIX: 2-arg ctor with Collections.emptyList() authorities — 1-arg ctor leaves authenticated=false
+
         SecurityContextHolder.getContext().setAuthentication(
             new JwtAuthenticationToken(jwt, Collections.emptyList()));
     }
@@ -116,8 +116,6 @@ class CartControllerTest {
             .andExpect(status().isOk());
     }
 
-    // --- F-028: the guest cart id is a bearer capability ---
-
     @Test
     void mergeCart_returns200_whenTheIdIsPresentedInTheHeader() throws Exception {
         when(cartService.mergeCart(any(UUID.class), any(UUID.class))).thenReturn(sampleCart());
@@ -132,15 +130,11 @@ class CartControllerTest {
 
     @Test
     void mergeCart_returns400_whenTheIdOnlyComesFromTheQueryString() throws Exception {
-        // A capability that came out of an access log, a proxy log, the
-        // browser history or a Referer header is exactly what an attacker
-        // would have. The header is what proves the caller holds it.
+
         mockMvc.perform(post("/api/v1/carts/merge")
                 .param("guestCartId", UUID.randomUUID().toString()))
             .andExpect(status().isBadRequest())
-            // the rejection has to say WHICH rule was broken, otherwise a
-            // different refusal (the mismatch rule) would pass this test
-            // while the header rule was silently gone.
+
             .andExpect(jsonPath("$.message")
                 .value(org.hamcrest.Matchers.containsString("must be sent in the X-Guest-Cart-Id header")));
 
@@ -161,8 +155,7 @@ class CartControllerTest {
 
     @Test
     void mergeCart_returns400_whenTheGuestCartIdIsNotAUuid() throws Exception {
-        // A short or sequential id would make every guest cart in the shop
-        // enumerable to any caller who guessed the next value.
+
         mockMvc.perform(post("/api/v1/carts/merge")
                 .header("X-Guest-Cart-Id", "1"))
             .andExpect(status().isBadRequest());
@@ -172,9 +165,7 @@ class CartControllerTest {
 
     @Test
     void guestCartEndpoints_return400_whenTheGuestCartIdIsNotAUuid() throws Exception {
-        // the guest path only applies to an ANONYMOUS caller; an
-        // authenticated one is served from its own cart and the guest id is
-        // ignored.
+
         SecurityContextHolder.clearContext();
 
         mockMvc.perform(get("/api/v1/carts/me")

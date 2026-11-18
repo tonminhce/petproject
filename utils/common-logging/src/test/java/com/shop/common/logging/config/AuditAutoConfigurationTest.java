@@ -12,11 +12,6 @@ import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Conditional wiring for the audit stack: both beans by default, nothing when
- * {@code shop.audit.enabled=false}, and a user-supplied writer wins over the
- * default bounded one.
- */
 class AuditAutoConfigurationTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()

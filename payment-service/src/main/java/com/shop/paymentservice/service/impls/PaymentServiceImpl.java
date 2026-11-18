@@ -78,25 +78,13 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             return PaymentResponse.from(writer.insertIsolated(payment));
         } catch (DataIntegrityViolationException ex) {
-            // Lost the same-key race: the unique index is the final arbiter.
-            // The raw constraint violation must never surface as a 500.
+
             Payment winner = repository.findByIdempotencyKey(req.idempotencyKey())
                     .orElseThrow(() -> ex);
             return replay(winner, req);
         }
     }
 
-    /**
-     * The replay of an idempotent create.
-     *
-     * <p>The key identifies the REQUEST, not the payment. Handing back the
-     * payment of another request would tell the caller that it created a
-     * payment for its own order while the money is bound to a different one:
-     * the capture then targets the wrong payment, the confirm gate of the real
-     * order fails closed, and a paid order is auto-cancelled. The stored
-     * payload is therefore compared before the replay is handed out, and a
-     * difference is a conflict (PAY-5003).</p>
-     */
     private PaymentResponse replay(Payment payment, CreatePaymentRequest req) {
         if (!samePayload(payment, req)) {
             log.warn("Idempotency key {} reused with a different payload (stored order {} amount {}, requested order {} amount {}) - refusing the replay",
@@ -106,7 +94,6 @@ public class PaymentServiceImpl implements PaymentService {
         return PaymentResponse.from(payment);
     }
 
-    /** The payment row stores the immutable payload, so it IS the request fingerprint. */
     private boolean samePayload(Payment payment, CreatePaymentRequest req) {
         return Objects.equals(payment.getOrderId(), req.orderId())
                 && Objects.equals(payment.getUserId(), req.userId())

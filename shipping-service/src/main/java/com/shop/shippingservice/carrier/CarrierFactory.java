@@ -8,9 +8,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Registry and factory for carrier adapters supporting multi-carrier dispatch (Open-Closed Principle).
- */
 public class CarrierFactory {
 
     private final Map<String, CarrierAdapter> carriers = new ConcurrentHashMap<>();

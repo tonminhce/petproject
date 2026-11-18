@@ -20,20 +20,14 @@ final class MediaFormats {
     private MediaFormats() {
     }
 
-    /** MIME type of a canonical format, e.g. {@code jpeg -> image/jpeg}. */
     static String contentTypeOf(String format) {
         return CONTENT_TYPES.get(format);
     }
 
-    /** Object-key extension of a canonical format, e.g. {@code jpeg -> jpg}. */
     static String extOf(String format) {
         return EXTENSIONS.get(format);
     }
 
-    /**
-     * Canonical format name for a declared MIME type (lower-cased subtype,
-     * e.g. {@code image/jpeg -> jpeg}) or {@code null} when not allowed.
-     */
     static String formatOfContentType(String contentType) {
         if (contentType == null) {
             return null;
@@ -47,10 +41,6 @@ final class MediaFormats {
         };
     }
 
-    /**
-     * Magic-byte sniff of the file head — {@code jpeg|png|webp}, or
-     * {@code null} when the bytes match no allowed format (corrupt file).
-     */
     static String sniff(byte[] head) {
         if (head == null || head.length < 12) {
             return null;

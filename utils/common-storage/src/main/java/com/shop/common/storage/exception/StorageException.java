@@ -1,8 +1,5 @@
 package com.shop.common.storage.exception;
 
-/**
- * Unchecked wrapper for any failure raised while talking to the object store.
- */
 public class StorageException extends RuntimeException {
 
     public StorageException(String message) {

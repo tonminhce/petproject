@@ -23,14 +23,6 @@ public class PaymentWriter {
         return repository.saveAndFlush(payment);
     }
 
-    /**
-     * The insert in its OWN transaction.
-     *
-     * <p>A lost same-key race aborts the PostgreSQL transaction of the caller
-     * (a failed statement poisons it), so the winner has to be re-read in a
-     * fresh one - the order-service IdempotencyService resolves the same race
-     * the same way.</p>
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment insertIsolated(Payment payment) {
         return repository.saveAndFlush(payment);
@@ -61,11 +53,6 @@ public class PaymentWriter {
         return eventRepository.saveAndFlush(event);
     }
 
-    /**
-     * Generic event save used by the retry scheduler and the webhook entry
-     * path. The caller is expected to have set all fields (status, retryCount,
-     * nextRetryAt, lastError) before calling.
-     */
     @Transactional
     public PaymentEvent saveEvent(PaymentEvent event) {
         return eventRepository.saveAndFlush(event);

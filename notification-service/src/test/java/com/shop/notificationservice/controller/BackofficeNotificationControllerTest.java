@@ -64,8 +64,6 @@ class BackofficeNotificationControllerTest {
             Instant.parse("2026-08-30T08:00:00Z"));
     }
 
-    // --- ADMIN happy paths ---
-
     @Test
     void list_admin_returns200WithPagedNotifications() throws Exception {
         when(notificationService.findAllByOrderId(isNull(), any(Pageable.class)))
@@ -128,8 +126,6 @@ class BackofficeNotificationControllerTest {
         verify(notificationService).findAllByOrderId(orderId, PageRequest.of(1, 5));
     }
 
-    // --- security matrix ---
-
     @Test
     void list_noAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/backoffice/notifications"))
@@ -159,8 +155,6 @@ class BackofficeNotificationControllerTest {
                     .authorities(createAuthorityList("ROLE_USER"))))
             .andExpect(status().isForbidden());
     }
-
-    // --- business error-code mapping ---
 
     @Test
     void get_unknownNotification_returns404WithNtf9001() throws Exception {

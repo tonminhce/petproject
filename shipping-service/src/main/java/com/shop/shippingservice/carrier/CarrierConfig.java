@@ -10,11 +10,6 @@ import java.util.List;
 @Configuration
 public class CarrierConfig {
 
-    /**
-     * Multi-carrier aware: selects the carrier matching
-     * {@code shop.shipping.carrier} as the primary injection target.
-     * Falls back to the first registered adapter if no match is found.
-     */
     @Bean
     @Primary
     public CarrierAdapter primary(List<CarrierAdapter> all,

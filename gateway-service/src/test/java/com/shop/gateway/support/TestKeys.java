@@ -19,10 +19,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Test-only JWKS/JWT helper: generates an RSA key the gateway can validate
- * against and mints signed tokens with realm roles.
- */
 public final class TestKeys {
 
     public static final String JWKS_PATH = "/realms/test/protocol/openid-connect/certs";
@@ -51,18 +47,11 @@ public final class TestKeys {
                 .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
                 .claim("realm_access", Map.of("roles", realmRoles))
 
-                // so 'azp' (the client the token was issued to) is the only
-                // usable client discriminator. The gateway's reactive decoder
-                // validates it - a test token must carry it like a real one.
                 .claim("azp", "ecommerce-client")
                 .build();
         return signed(key, claims);
     }
 
-    /**
-     * Minimal OIDC discovery document so the gateway's issuer-uri decoder can
-     * resolve the JWKS from the WireMock instance.
-     */
     public static String oidcConfigurationJson(String issuer, String jwksUri) {
         return "{\"issuer\":\"" + issuer + "\","
                 + "\"jwks_uri\":\"" + jwksUri + "\"}";

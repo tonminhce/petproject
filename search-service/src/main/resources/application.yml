@@ -15,9 +15,6 @@ shop:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: search-service
-      # F-018 (P1): a consumer group must replay the events it missed.
-      # 'latest' silently skipped everything published while the group had no
-      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
 
   services:
@@ -27,7 +24,7 @@ shop:
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${SEARCH_SERVICE_CLIENT_ID:search-service}
-      client-secret: ${SEARCH_SERVICE_CLIENT_SECRET:changeme}
+      client-secret: ${SEARCH_SERVICE_CLIENT_SECRET:}
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}

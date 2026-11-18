@@ -23,17 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * One uploaded image: content-addressed by SHA-256 (unique — duplicate
- * uploads resolve to the existing row, never a second object), the declared
- * content type of the ORIGINAL, and the original byte size. Variants are the
- * six D2 renders (original/display/thumb × original-format/WebP) owned
- * cascade-all so media + variants commit in one transaction LAST, after all
- * S3 objects are already durable.
- * <p>The id is application-assigned: object keys are {@code {mediaId}/…} (D1),
- * so the UUID must exist BEFORE the S3 writes. {@link Persistable} tells
- * Spring Data a pre-set id is still a NEW entity (persist, not merge).</p>
- */
 @Entity
 @Table(name = "medias")
 @SQLRestriction("deleted = false")
@@ -56,7 +45,6 @@ public class Media extends AbstractMappedEntity implements Persistable<UUID> {
     @Builder.Default
     private List<MediaVariant> variants = new ArrayList<>();
 
-    /** New-ness is tracked outside the DB — every loaded/persisted row is not new. */
     @Transient
     @Builder.Default
     private transient boolean isNew = true;

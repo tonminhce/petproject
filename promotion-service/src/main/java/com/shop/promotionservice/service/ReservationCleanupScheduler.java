@@ -16,21 +16,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-/**
- * Background jobs:
- * <ol>
- *   <li>{@link #releaseAllExpiredReservations()} - flips PENDING reservations
- *       whose TTL elapsed to EXPIRED. Without it, per-user/campaign quotas stay
- *       consumed by dead holds (quota counts are by-status, so the flip is the
- *       release). Unlike inventory's sweep there are NO stock rows to adjust,
- *       NO cache to evict and NO events to publish — only the status changes.
- *       Runs in BATCHES (never loads the whole backlog) with one transaction
- *       per batch so a mid-cycle failure leaves earlier successful batches
- *       committed (status flips are idempotent — the next cycle resumes).</li>
- *   <li>{@link #purgeOldTerminalReservations()} - retention purge for terminal
- *       RELEASED/EXPIRED rows older than the retention window.</li>
- * </ol>
- */
 @Component
 @Slf4j
 public class ReservationCleanupScheduler {
@@ -54,18 +39,10 @@ public class ReservationCleanupScheduler {
         this.reservationRepository = reservationRepository;
         this.campaignRepository = campaignRepository;
         this.eventPublisher = eventPublisher;
-        // A16: each batch is its own transaction. A failure mid-cycle rolls back
-        // The original single-@Transactional + try/catch-inside was wrong (the
-        // catch swallowed the exception so the outer tx COMMITTED partial work;
+
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
 
-    /**
-     * The first run is delayed by one interval instead of firing at context
-     * startup (same reasoning as the inventory sweep). A startup-time sweep
-     * competes with the first application requests and, in an integration
-     * test, with the other test classes that share the same database.
-     */
     @Scheduled(fixedDelayString = "${shop.promotion.reservation-cleanup-interval-ms:60000}",
                initialDelayString = "${shop.promotion.reservation-cleanup-initial-delay-ms:60000}")
     public void releaseAllExpiredReservations() {
@@ -80,8 +57,7 @@ public class ReservationCleanupScheduler {
                     if (batch.isEmpty()) {
                         return null;
                     }
-                    // another writer already transitioned (a concurrent commit()
-                    // COMMITTED redemption can never be reverted to EXPIRED.
+
                     Instant now = Instant.now();
                     int expired = 0;
                     for (CouponUsageReservation reservation : batch) {
@@ -91,8 +67,7 @@ public class ReservationCleanupScheduler {
                             continue;
                         }
                         expired++;
-                        // release path, in the same transaction. Without it,
-                        // was never released (the inventory sweep already does
+
                         reservation.setReleasedAt(now);
                         campaignRepository.findById(reservation.getCampaignId()).ifPresent(campaign ->
                                 eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name()));
@@ -109,7 +84,7 @@ public class ReservationCleanupScheduler {
                 log.info("Expired-reservation sweep expired {} reservation(s)", expiredCounter.get());
             }
         } catch (Exception ex) {
-            // safe because status flips are idempotent.
+
             log.error("Expired-reservation sweep failed at batch boundary - will retry next cycle", ex);
         }
     }

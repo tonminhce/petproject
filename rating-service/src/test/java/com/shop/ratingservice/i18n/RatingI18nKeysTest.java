@@ -10,10 +10,6 @@ import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Spec D7 — all five RTG-11xxx message keys must exist in BOTH bundles
- * (common-spring is on the classpath as a dependency jar).
- */
 class RatingI18nKeysTest {
 
     private static final List<String> KEYS = List.of(

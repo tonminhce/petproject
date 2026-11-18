@@ -12,66 +12,25 @@ import java.util.HexFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Webhook signature verifier for the payment fleet.
- * <h3>H8 + H27 — Stripe-style signature scheme</h3>
- * Two on-the-wire shapes are accepted:
- * <ol>
- *   <li><b>Stripe-style header</b> — {@code "t=<unix_seconds>,v1=<hex_hmac>"}.
- *       The signed payload is {@code "<t>.<raw_body>"} and {@code v1} is the
- *       lowercase hex HMAC-SHA256 of that string under the webhook secret. This
- *       is the canonical shape Stripe ships — and the fleet uses the same shape
- *       for its non-Stripe providers so a single verifier covers the fleet.</li>
- *   <li><b>Bare 64-char lowercase hex</b> — the legacy HMAC over {@code raw_body}
- *       alone. Kept because {@code sha256=} prefix is optional per the plan (the
- *       {@code sha256=} prefix is the bug being fixed — anything other than the
- *       two accepted shapes above is rejected).</li>
- * </ol>
- * <p>The Stripe-style variant <b>also</b> enforces H27 timestamp/replay
- * protection: when the supplied header carries a {@code t=...} component, the
- * verifier rejects the request unless {@code |now - t| <= TOLERANCE_SECONDS}
- * (default 5 min, overridable). The {@link #verify(String, byte[], String, Clock)}
- * overload lets a caller pin the clock in tests for deterministic expiry
- * scenarios without exposing the clock globally.</p>
- * <p>Rejection is all-or-nothing — the verifier never partial-accepts a
- * malformed header. The compare is constant-time
- * ({@link MessageDigest#isEqual(byte[], byte[])}) to defeat timing oracles.</p>
- */
 public final class WebhookSignatureVerifier {
 
     private static final Logger log = LoggerFactory.getLogger(WebhookSignatureVerifier.class);
 
     private static final String HMAC_SHA256 = "HmacSHA256";
     private static final int SHA256_HEX_LENGTH = 64;
-    private static final long DEFAULT_TOLERANCE_SECONDS = 300L;  // 5 min — Stripe default
+    private static final long DEFAULT_TOLERANCE_SECONDS = 300L;
 
     private WebhookSignatureVerifier() {
     }
 
-    /**
-     * Back-compat entrypoint — clock-based timestamp tolerance is enforced
-     * when the supplied header carries a {@code t=} component. Uses
-     * {@link Clock#systemUTC()} for the now comparison.
-     */
     public static boolean verify(String secret, byte[] rawBody, String signatureHeader) {
         return verify(secret, rawBody, signatureHeader, Clock.systemUTC());
     }
 
-    /**
-     * Back-compat entrypoint with an explicit timestamp (epoch seconds) — used
-     * by callers that have already parsed the {@code t=} component off the
-     * header and want the verifier to apply H27 tolerance against that
-     * declared instant. {@code -1} means "no timestamp supplied" and skips the
-     * tolerance check (the bare-hex branch).
-     */
     public static boolean verify(String secret, byte[] rawBody, String signatureHeader, long declaredTimestampSeconds) {
         return verifyInternal(secret, rawBody, signatureHeader, declaredTimestampSeconds, Clock.systemUTC());
     }
 
-    /**
-     * Test seam — caller pins the clock so expiry / replay cases are
-     * deterministic.
-     */
     public static boolean verify(String secret, byte[] rawBody, String signatureHeader, Clock clock) {
         return verifyInternal(secret, rawBody, signatureHeader, -1L, clock);
     }
@@ -87,18 +46,17 @@ public final class WebhookSignatureVerifier {
 
         StripeHeader stripe = parseStripeHeader(signatureHeader);
         if (stripe != null) {
-            // We trust the wire timestamp over the caller's declared value when both exist
-            // because the wire is the attacker-controlled surface.
+
             long wireTs = stripe.timestampSeconds;
             if (!withinTolerance(wireTs, clock)) {
                 return false;
             }
-            // If the caller also passed a declaredTimestamp, it must match the wire (defence in depth).
+
             if (declaredTimestampSeconds >= 0 && declaredTimestampSeconds != wireTs) {
                 return false;
             }
             String signedPayload = wireTs + "." + new String(rawBody, StandardCharsets.UTF_8);
-            // not that it is hexadecimal. HexFormat.parseHex throws
+
             byte[] provided;
             try {
                 provided = HexFormat.of().parseHex(stripe.v1Hex);
@@ -120,13 +78,6 @@ public final class WebhookSignatureVerifier {
         }
     }
 
-    /**
-     * Parse {@code "t=<long>,v1=<hex>"} or {@code "t=<long>,v1=<hex>,..."} (extra
-     * schemes appended by the provider are tolerated — only the {@code t} and
-     * {@code v1} components are consumed). Returns {@code null} when the
-     * header doesn't carry the Stripe scheme — caller then tries the bare-hex
-     * branch.
-     */
     private static StripeHeader parseStripeHeader(String header) {
         if (header.indexOf("t=") != 0) {
             return null;
@@ -142,11 +93,11 @@ public final class WebhookSignatureVerifier {
                 try {
                     timestamp = Long.parseLong(value);
                 } catch (NumberFormatException nfe) {
-                    return null;  // malformed t= component — reject the whole header
+                    return null;
                 }
             } else if ("v1".equals(key)) {
                 if (value.length() != SHA256_HEX_LENGTH) {
-                    return null;  // v1 must be the full 64-char hex
+                    return null;
                 }
                 v1 = value;
             }

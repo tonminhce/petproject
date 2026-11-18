@@ -46,7 +46,7 @@ class OrderControllerTest {
     void seedAuth() {
         Jwt jwt = Jwt.withTokenValue("test").header("alg", "none")
             .subject(userId.toString()).claim("preferred_username", "alice").build();
-        // FIX: 2-arg ctor with Collections.emptyList() authorities — 1-arg ctor leaves authenticated=false
+
         SecurityContextHolder.getContext().setAuthentication(
             new JwtAuthenticationToken(jwt, Collections.emptyList()));
     }
@@ -115,8 +115,7 @@ class OrderControllerTest {
 
     @Test
     void createOrder_rejectsIdempotencyKeyOver64Chars() throws Exception {
-        // idempotency_keys.key is varchar(64) — a longer header must be a 400 from
-        // the guard, not a DB constraint violation (review M5).
+
         mockMvc.perform(post("/api/v1/orders")
                 .header("Idempotency-Key", "k".repeat(65))
                 .contentType(MediaType.APPLICATION_JSON)

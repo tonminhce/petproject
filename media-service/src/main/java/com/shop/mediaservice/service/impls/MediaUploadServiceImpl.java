@@ -66,7 +66,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             throw BusinessException.of(ErrorCode.MEDIA_TYPE_NOT_ALLOWED);
         }
 
-        // 2. magic bytes must exist and agree with the declared type (400)
         String sniffed = MediaFormats.sniff(headBytes(file));
         if (sniffed == null || !sniffed.equals(format)) {
             log.warn("Upload rejected: declared '{}' but magic bytes say '{}' (corrupt or lying upload)",
@@ -81,14 +80,9 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             throw BusinessException.of(ErrorCode.MEDIA_TOO_LARGE);
         }
 
-        // F-062: the source is materialised ONCE and digested in the same
-        // pass - the previous code read the multipart stream for the magic
-        // bytes, materialised it again for the digest and again for every
-        // ImageIO stream.
         SourceBytes sourceBytes = readAllAndDigest(file);
         byte[] source = sourceBytes.bytes();
 
-        // 4. SHA-256 dedup — BEFORE any S3 write (D1)
         String sha256 = sourceBytes.sha256();
         var existing = mediaRepository.findBySha256(sha256);
         if (existing.isPresent()) {
@@ -97,20 +91,18 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             return toResponse(existing.get(), true);
         }
 
-        // 5. metadata audit log (M1) — inspect, log, never store
         metadataInspector.inspect(source);
 
         List<VariantRenderer.Render> renders;
         try {
             renders = renderer.render(source, format, properties.displayWidth(), properties.thumbWidth());
         } catch (VariantRenderer.ImageTooLargeException e) {
-            // F-062: the image is valid, but decoding it would exceed the
-            // memory budget of the service - that is a 413, not a 415.
+
             log.warn("Upload rejected: {} (budget {} bytes)", e.getMessage(), properties.maxDecodedHeapBytes());
             metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
             throw BusinessException.of(ErrorCode.MEDIA_TOO_LARGE);
         } catch (VariantRenderer.InvalidImageException e) {
-            // is the honest answer, not "corrupt file" (Task-3 review ruling)
+
             log.warn("Upload rejected: magic-valid '{}' bytes are not decodable — {}", format, e.getMessage());
             metrics.recordUpload(MediaMetrics.OUTCOME_REJECTED);
             throw BusinessException.of(ErrorCode.MEDIA_TYPE_NOT_ALLOWED);
@@ -153,7 +145,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 .sizeBytes(source.length)
                 .build();
         variants.forEach(variant -> {
-            variant.setMedia(media); // owning side — mappedBy needs the FK set
+            variant.setMedia(media);
             media.getVariants().add(variant);
         });
         try {
@@ -168,7 +160,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                     saved.getId(), sha256, saved.getVariants().size(), source.length);
             return toResponse(saved, false);
         } catch (DataIntegrityViolationException race) {
-            // Concurrent duplicate upload won the unique index — keep THEIR
+
             log.info("Dedup race lost for sha256={} — resolving to the winner's media", sha256);
             purgeOrphans(writtenKeys);
             Media winner = mediaRepository.findBySha256(sha256)
@@ -191,12 +183,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         }
     }
 
-    /**
-     * Reads the multipart stream ONCE and digests it in the same pass.
-     *
-     * <p>F-062: the source used to be materialised more than once (the magic
-     * bytes, the digest and every ImageIO stream over the same bytes).</p>
-     */
     private SourceBytes readAllAndDigest(MultipartFile file) {
         MessageDigest digest = sha256Digest();
         try (InputStream in = new DigestInputStream(file.getInputStream(), digest)) {
@@ -217,7 +203,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         }
     }
 
-    /** The source bytes and their digest. */
     private record SourceBytes(byte[] bytes, String sha256) {
     }
 

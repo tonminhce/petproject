@@ -1,6 +1,3 @@
-// Mock payment provider — payment-service spec D2/D10.
-// Simulates an external PSP: capture/refund requests trigger a delayed,
-// HMAC-SHA256-signed CAPTURED/REFUNDED webhook back to payment-service.
 'use strict';
 
 const http = require('http');
@@ -11,7 +8,6 @@ const SECRET = process.env.PAYMENT_WEBHOOK_SECRET || 'local-test-secret';
 const TARGET = new URL(process.env.PAYMENT_SERVICE_URL || 'http://payment-service:8085');
 const WEBHOOK_PATH = '/api/v1/webhooks/payments/mock';
 
-// paymentId -> { orderId?, amount?, currency? } seeded from capture/refund bodies
 const payments = new Map();
 
 function send(res, code, body) {

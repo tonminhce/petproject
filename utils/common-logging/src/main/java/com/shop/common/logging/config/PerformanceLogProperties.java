@@ -2,17 +2,11 @@ package com.shop.common.logging.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Configuration for the AOP performance logging aspect ({@link com.shop.common.logging.LogPerformance}).
- * <p>Bound from {@code shop.web.logging.performance.*}.</p>
- */
 @ConfigurationProperties(prefix = "shop.web.logging.performance")
 public class PerformanceLogProperties {
 
-    /** Enable the {@link com.shop.common.logging.LogPerformance} / {@link com.shop.common.logging.Loggable} aspect. */
     private boolean enabled = true;
 
-    /** Only log when execution exceeds this threshold. Fast calls stay silent. */
     private long thresholdMs = 50L;
 
     public boolean isEnabled() {

@@ -54,12 +54,6 @@ public class InventoryServiceImpl implements InventoryService {
             page.getTotalElements());
     }
 
-    /**
-     * Cache-aside read — populated here, invalidated by
-     * {@code InventoryCacheService.evictAfterCommit} on every write path
-     * (create/update/delete/reserve/commit/release), so a hot read never
-     * outlives the write that stale-dated it.
-     */
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "inventory", key = "#productId")
@@ -87,13 +81,13 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public InventoryResponse update(UUID productId, InventoryUpsertRequest request) {
         if (request.productId() != null && !request.productId().equals(productId)) {
-            // Body productId (if present) must agree with the path — never silently
+
             throw BusinessException.badRequest("inventory.product.id.mismatch", request.productId(), productId);
         }
         Inventory existing = inventoryRepository.findByProductId(productId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
         if (request.availableQuantity() != null) {
-            // reservations/orders oversell. Caller must release or commit reservations first.
+
             int reserved = existing.getReservedQuantity() == null ? 0 : existing.getReservedQuantity();
             if (request.availableQuantity() < reserved) {
                 throw BusinessException.badRequest(
@@ -136,11 +130,10 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public ReservationResponse reserve(UUID productId, ReserveRequest request) {
-        // path had a TOCTOU window: two concurrent reserves could both observe
-        // Postgres serializes via the row lock — concurrent requests can never
+
         int updated = inventoryRepository.atomicReserve(productId, request.quantity());
         if (updated == 0) {
-            // tell us which side failed). The find is rare-path only; the hot
+
             inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
             throw BusinessException.of(ErrorCode.STOCK_INSUFFICIENT, productId);
@@ -168,7 +161,7 @@ public class InventoryServiceImpl implements InventoryService {
     public void commit(UUID reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
-        // Idempotent retry: a retried commit after a timeout must succeed (hardening spec §7.1)
+
         if (r.getStatus() == ReservationStatus.COMMITTED) {
             log.info("Reservation {} already committed (idempotent retry)", reservationId);
             return;
@@ -206,7 +199,7 @@ public class InventoryServiceImpl implements InventoryService {
     public void release(UUID reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
-        // Idempotent: quota already returned — safe no-op (hardening spec §7.1)
+
         if (r.getStatus() == ReservationStatus.RELEASED
             || r.getStatus() == ReservationStatus.EXPIRED) {
             log.info("Reservation {} already terminalized (idempotent retry)", reservationId);
@@ -235,19 +228,12 @@ public class InventoryServiceImpl implements InventoryService {
         cacheService.evictAfterCommit(r.getProductId());
     }
 
-    /**
-     * ⚠️ Hardening spec §7.2 — half-commit rollback. COMMITTED → RELEASED
-     * with restock: commit() already moved the quantity out of
-     * {@code reservedQuantity} and deducted {@code availableQuantity}, so
-     * releasing a committed reservation credits the stock back instead of
-     * freeing the hold.
-     */
     @Override
     @Transactional
     public void releaseCommitted(UUID reservationId) {
         Reservation r = reservationRepository.findById(reservationId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId));
-        // Idempotent retry: quota already restored — safe no-op (hardening spec §7.2)
+
         if (r.getStatus() == ReservationStatus.RELEASED
             || r.getStatus() == ReservationStatus.EXPIRED) {
             log.info("Reservation {} already terminalized (idempotent retry)", reservationId);

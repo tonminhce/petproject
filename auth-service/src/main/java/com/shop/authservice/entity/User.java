@@ -22,7 +22,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-// A9: uniqueness on user_name / email / phone_number is enforced by PARTIAL unique
+
 @SQLRestriction("deleted = false")
 public class User extends SoftDeletable {
 

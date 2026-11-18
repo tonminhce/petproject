@@ -37,7 +37,6 @@ public class StripeHealthIndicator implements HealthIndicator {
         return health;
     }
 
-    /** Test seam — expires the probe cache so the next call hits Stripe again. */
     void forceCacheExpiryForTest() {
         cachedAt = 0L;
     }

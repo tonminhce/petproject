@@ -40,13 +40,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6 + R3 veto): one mutating endpoint per backoffice
- * tax controller plus the SERVICE-gated calculation endpoint (all live in
- * this service) exercised through the {@code AuditAspect} — proving the
- * distinct action/resourceType pairs, the path-variable resourceId on the
- * idempotent {id} route, and the service-actor discrimination on calculate.
- */
 @WebMvcTest(value = {BackofficeTaxClassController.class, BackofficeTaxRateController.class,
         TaxCalculationController.class},
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})

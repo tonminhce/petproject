@@ -90,9 +90,7 @@ class StripeWebhookIT {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        // F-008: common-storage refuses to build an S3 client without
-        // credentials (the receipt storage is faked here, but the S3Client
-        // bean is still created).
+
         registry.add("shop.storage.access-key", () -> "paymenttest");
         registry.add("shop.storage.secret-key", () -> "paymenttest");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
@@ -100,7 +98,7 @@ class StripeWebhookIT {
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
-        // THE point of this suite: the REAL stripe provider wiring.
+
         registry.add("shop.payment.provider", () -> "stripe");
         registry.add("shop.payment.webhook.secret", () -> "it-webhook-secret");
         registry.add("shop.payment.stripe.secret-key", () -> "sk_test_it_no_network");
@@ -131,7 +129,6 @@ class StripeWebhookIT {
         }
     }
 
-    /** Same posture as AbstractIntegrationTest — no S3/RustFS is ever contacted. */
     static final class InMemoryObjectStorageService implements ObjectStorageService {
 
         private final Map<String, byte[]> objects = new ConcurrentHashMap<>();
@@ -298,7 +295,7 @@ class StripeWebhookIT {
         Payment payment = createPendingPayment();
         byte[] signed = stripeSucceededBody("evt_it_tamper", payment.getId().toString());
         byte[] tampered = stripeSucceededBody("evt_it_tamper", payment.getId().toString());
-        tampered[tampered.length - 4] = '9'; // corrupts the amount AND the JSON structure
+        tampered[tampered.length - 4] = '9';
 
         ResponseEntity<String> response = postStripeWebhook(tampered, signedStripeHeader(signed, STRIPE_WHSEC));
 
@@ -343,9 +340,6 @@ class StripeWebhookIT {
                     any(com.stripe.param.PaymentIntentCreateParams.class), any(com.stripe.net.RequestOptions.class)))
                     .thenReturn(intent);
 
-            // Duplicate idempotency-key create — same contract as POST
-            // /api/v1/payments, both funnel into PaymentServiceImpl.create
-            // (fleet ITs are service-layer and skip the filter chain).
             CreatePaymentRequest request = new CreatePaymentRequest(
                     UUID.randomUUID(), new BigDecimal("98.00"), "USD", idempotencyKey);
             PaymentResponse first = paymentService.create(request);
@@ -354,13 +348,11 @@ class StripeWebhookIT {
             assertThat(second.id()).isEqualTo(first.id());
             assertThat(paymentRepository.findAll()).filteredOn(
                     p -> idempotencyKey.equals(p.getIdempotencyKey())).hasSize(1);
-            // Create never calls the provider — zero SDK calls so far.
+
             paymentIntentStatic.verify(() -> PaymentIntent.create(
                     any(com.stripe.param.PaymentIntentCreateParams.class),
                     any(com.stripe.net.RequestOptions.class)), times(0));
 
-            // One capture → exactly ONE PaymentIntent.create carrying the
-            // payments.idempotency_key (spec D2).
             paymentService.capture(first.id());
             paymentIntentStatic.verify(() -> PaymentIntent.create(
                     any(com.stripe.param.PaymentIntentCreateParams.class),

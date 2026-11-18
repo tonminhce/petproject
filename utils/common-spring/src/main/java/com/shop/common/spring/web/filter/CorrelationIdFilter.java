@@ -14,14 +14,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Propagates {@code X-Correlation-Id} / {@code X-Request-Id} headers across services
- * by storing them in {@link MDC} and echoing them back to the caller.
- * <p>Ordered first so every downstream log line — including ones from the Spring
- * Security filter chain — carries the ids.</p>
- * <p>Wired via {@code WebAutoConfiguration}, not via {@code @Component},
- * so it can be disabled with {@code shop.web.correlation.enabled=false}.</p>
- */
 public final class CorrelationIdFilter extends OncePerRequestFilter implements Ordered {
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";

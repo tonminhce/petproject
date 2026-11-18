@@ -30,11 +30,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Security matrix + wire contract for POST /api/v1/backoffice/search/reindex
- * (spec D5): class @PreAuthorize ADMIN, optional {@code {dryRun:boolean}} body,
- * 409 SRH-12001 while another reindex holds the in-process lock.
- */
 @WebMvcTest(value = BackofficeSearchController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -60,8 +55,6 @@ class BackofficeSearchControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
-    // --- security matrix ---
-
     @Test
     void reindex_noAuth_returns401() throws Exception {
         mockMvc.perform(post("/api/v1/backoffice/search/reindex"))
@@ -77,8 +70,6 @@ class BackofficeSearchControllerTest {
 
         verifyNoInteractions(reindexService);
     }
-
-    // --- happy paths ---
 
     @Test
     void reindex_noBody_runsFullReindex() throws Exception {
@@ -123,8 +114,6 @@ class BackofficeSearchControllerTest {
 
         verify(reindexService).reindex(true);
     }
-
-    // --- error mapping ---
 
     @Test
     void reindex_alreadyRunning_returns409WithSrh12001() throws Exception {

@@ -33,6 +33,13 @@ spec:
               value: "6379"
             - name: CORS_ALLOWED_ORIGIN_PATTERNS
               value: "https://shop.example.com"
+            - name: ADMIN_IP_ALLOWLIST
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: ADMIN_IP_ALLOWLIST
+            - name: GATEWAY_REQUIRE_ADMIN_IP_ALLOWLIST
+              value: "true"
           resources:
             requests:
               cpu: 500m

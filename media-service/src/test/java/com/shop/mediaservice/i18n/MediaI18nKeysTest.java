@@ -10,11 +10,6 @@ import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Spec D6 — every MED-12xxx message key this task's pipeline can surface
- * (invalid/too-large/type-not-allowed/storage-unavailable) must exist in BOTH
- * bundles (common-spring is on the classpath as a dependency jar).
- */
 class MediaI18nKeysTest {
 
     private static final List<String> KEYS = List.of(

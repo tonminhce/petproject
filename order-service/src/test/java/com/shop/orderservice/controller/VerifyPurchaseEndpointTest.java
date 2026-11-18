@@ -34,12 +34,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Security matrix for GET /api/v1/orders/verify-purchase — the SERVICE-facing
- * rating-eligibility probe consumed by rating-service. Endpoint is @PreAuthorize
- * hasAnyRole('SERVICE','ADMIN'); ineligible purchases are an EMPTY page (200),
- * never a 404.
- */
 @WebMvcTest(value = OrderController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -81,8 +75,6 @@ class VerifyPurchaseEndpointTest {
     private String url() {
         return "/api/v1/orders/verify-purchase?userId=" + userId + "&productId=" + productId;
     }
-
-    // --- authorized roles ---
 
     @Test
     void verifyPurchase_serviceRole_returns200WithItems() throws Exception {
@@ -133,8 +125,6 @@ class VerifyPurchaseEndpointTest {
         org.mockito.Mockito.verify(orderService).findDeliveredItemsByUserAndProduct(
             eq(userId), eq(productId), eq(PageRequest.of(1, com.shop.common.core.constants.PageableConstant.MAX_PAGE_SIZE)));
     }
-
-    // --- security matrix ---
 
     @Test
     void verifyPurchase_customerRole_returns403() throws Exception {

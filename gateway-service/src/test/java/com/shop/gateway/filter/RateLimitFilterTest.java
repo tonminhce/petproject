@@ -26,11 +26,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * The edge limiter is fleet-wide (F-034), so the filter is exercised against
- * a REAL Redis: the bucket the filter meters is the one every gateway replica
- * would share.
- */
 class RateLimitFilterTest {
 
     private static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
@@ -51,10 +46,6 @@ class RateLimitFilterTest {
         redis = new ReactiveStringRedisTemplate(connectionFactory);
     }
 
-    /**
-     * The buckets live in Redis, so every case starts with an empty database —
-     * otherwise the cases would share the budget of the same client.
-     */
     @BeforeEach
     void flushBuckets() {
         redis.getConnectionFactory().getReactiveConnection()

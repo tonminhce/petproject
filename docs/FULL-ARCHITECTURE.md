@@ -1,6 +1,6 @@
 # Petproject Microservices Platform: Master Architecture Blueprint
 
-> **System Overview**: Production-grade e-commerce microservices platform built with **Java 25 (OpenJDK / Temurin)** and **Spring Boot 4.1.1**, managed as a Maven reactor of 23 modules (14 microservices + 8 common shared libraries + parent aggregator).  
+> **System Overview**: Production-grade e-commerce microservices platform built with **Java 25 (OpenJDK / Temurin)** and **Spring Boot 4.1.1**, managed as a Maven reactor of 16 modules (14 microservices, the `utils` aggregator and the parent aggregator) with 7 common shared libraries inside `utils/`.  
 > **Key Infrastructure**: Keycloak 26 (OAuth2/OIDC), PostgreSQL 16 (12 isolated service DBs + Keycloak DB), Redis 7.4 (Caching & Token Bucket Rate Limiting), Apache Kafka 3.9 (KRaft mode, no Zookeeper), Elasticsearch 8.15 (Catalog search & autocomplete), RustFS (High-performance S3-compatible media storage).
 
 ---
