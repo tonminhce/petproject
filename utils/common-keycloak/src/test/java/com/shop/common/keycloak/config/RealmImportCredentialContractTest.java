@@ -165,6 +165,25 @@ class RealmImportCredentialContractTest {
     }
 
     @Test
+    @DisplayName("the bootstrap script refuses to boot when a secret still carries a published placeholder")
+    void theBootstrapScriptRefusesToBootWhenASecretStillCarriesAPublishedPlaceholder() throws IOException {
+        String script = Files.readString(ENTRYPOINT);
+
+        assertThat(script)
+                .as("the rotation guard must exist")
+                .contains("KEYCLOAK_REQUIRE_ROTATED_SECRETS");
+        assertThat(script)
+                .as("the published development placeholders must be denied")
+                .contains("changeme")
+                .contains("adminpass");
+
+        String prodOverlay = Files.readString(REPO_ROOT.resolve("docker-compose.prod.yml"));
+        assertThat(prodOverlay)
+                .as("the production overlay must enable the rotation guard")
+                .contains("KEYCLOAK_REQUIRE_ROTATED_SECRETS");
+    }
+
+    @Test
     @DisplayName("the compose deployment mounts the realm template read-only")
     void theComposeDeploymentMountsTheRealmTemplateReadOnly() throws IOException {
         String compose = Files.readString(REPO_ROOT.resolve("docker-compose.yml"));

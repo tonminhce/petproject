@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ratingservice}
     username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:admin}
+    password: ${POSTGRES_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -40,4 +40,4 @@ shop:
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${RATING_SERVICE_CLIENT_ID:rating-service}
-      client-secret: ${RATING_SERVICE_CLIENT_SECRET:changeme}
+      client-secret: ${RATING_SERVICE_CLIENT_SECRET:}

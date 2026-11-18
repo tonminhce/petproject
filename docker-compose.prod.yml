@@ -102,6 +102,10 @@ services:
       # Rotation item (F-080) — the password of the seeded ADMIN realm user.
       # The realm import used to carry the literal "adminpass".
       KEYCLOAK_ADMIN_USER_PASSWORD: ${KEYCLOAK_ADMIN_USER_PASSWORD}
+      # The realm bootstrap refuses to boot when a secret or a seeded user
+      # password still carries a development placeholder published in this
+      # repository ("changeme", "adminpass", ...).
+      KEYCLOAK_REQUIRE_ROTATED_SECRETS: "true"
 
   # ============================================================
   # BACKEND SERVICES — no host ports; audit sink + rotated secrets

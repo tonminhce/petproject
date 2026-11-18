@@ -55,6 +55,7 @@ public abstract class AbstractIntegrationTest {
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
+        registry.add("shop.media.keycloak.client-secret", () -> "producttest");
     }
 
     @Autowired

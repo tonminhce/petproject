@@ -27,7 +27,7 @@ shop:
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${SEARCH_SERVICE_CLIENT_ID:search-service}
-      client-secret: ${SEARCH_SERVICE_CLIENT_SECRET:changeme}
+      client-secret: ${SEARCH_SERVICE_CLIENT_SECRET:}
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}

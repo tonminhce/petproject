@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mediaservice}
     username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:admin}
+    password: ${POSTGRES_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -66,7 +66,7 @@ shop:
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:9090/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${MEDIA_SERVICE_CLIENT_ID:media-service}
-      client-secret: ${MEDIA_SERVICE_CLIENT_SECRET:changeme}
+      client-secret: ${MEDIA_SERVICE_CLIENT_SECRET:}
 
 media:
   bucket: ${STORAGE_BUCKET:media}

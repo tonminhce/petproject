@@ -96,6 +96,7 @@ public abstract class AbstractOrderServiceIT {
         r.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
         r.add("shop.services.product.url", () -> "http://localhost:" + productServer.port());
         r.add("shop.services.inventory.url", () -> "http://localhost:" + inventoryServer.port());
+        r.add("shop.services.keycloak.client-secret", () -> "ordertest");
 
         r.add("shop.services.tax.enabled", () -> "true");
         r.add("shop.services.tax.url", () -> "http://localhost:" + taxServer.port());

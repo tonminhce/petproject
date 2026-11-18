@@ -14,7 +14,7 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/productservice}
     # docker-compose injects POSTGRES_USER / POSTGRES_PASSWORD via the pg-creds anchor.
     username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:admin}
+    password: ${POSTGRES_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -81,7 +81,7 @@ shop:
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${PRODUCT_SERVICE_CLIENT_ID:product-service}
-      client-secret: ${PRODUCT_SERVICE_CLIENT_SECRET:changeme}
+      client-secret: ${PRODUCT_SERVICE_CLIENT_SECRET:}
 
   # F-060: the delete-time stock guard - product-service asks inventory-service
   # whether the product still has live (PENDING/COMMITTED) stock reservations.

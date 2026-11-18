@@ -1,6 +1,7 @@
 package com.shop.searchservice.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.shop.common.core.security.ClientCredentialsGuard;
 import com.shop.searchservice.config.ShopServicesProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -32,6 +33,7 @@ public class ServiceTokenProvider {
         this.tokenUrl = kc.tokenUrl();
         this.clientId = kc.clientId();
         this.clientSecret = kc.clientSecret();
+        ClientCredentialsGuard.requireConfigured(this.clientId, this.clientSecret);
     }
 
     public String getToken() {
