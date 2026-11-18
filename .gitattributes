@@ -10,6 +10,11 @@
 
 * text=auto eol=lf
 
+# The shell scripts are executed by 'sh' inside the Keycloak container. The
+# global rule already covers them; the explicit rule documents that they must
+# never be rewritten with CRLF.
+*.sh text eol=lf
+
 # Windows batch files are binary for Git's line-ending purposes: the cmd.exe
 # parser needs CRLF and the file must not be rewritten on checkout.
 *.cmd -text

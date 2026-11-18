@@ -1,25 +1,15 @@
-# =============================================================================
-#  product-service — Product catalog (products, categories, brands).
-#  Reads/writes Postgres, caches hot reads in Redis, and publishes lifecycle
-#  events to Kafka through a transactional outbox.
-#
-#  Platform-wide defaults live in `common-spring/application.yml` (inherited).
-#  Only service-specific overrides belong here.
-# =============================================================================
 spring:
   application:
     name: product-service
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/productservice}
-    # docker-compose injects POSTGRES_USER / POSTGRES_PASSWORD via the pg-creds anchor.
     username: ${POSTGRES_USER:admin}
     password: ${POSTGRES_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      # Schema is owned by Liquibase — never let Hibernate mutate it.
       ddl-auto: validate
     open-in-view: false
 
@@ -30,42 +20,28 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
-      # Empty means "no AUTH" — the compose Redis runs with --requirepass.
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
   cache:
     type: redis
     redis:
-      # Global cache config — overridden per-cache in CacheConfig (@EnableCaching). CacheConfig
-      # is the single source of truth for product/productBySlug TTL and null-caching. The defaults
-      # here only apply to any cache not registered by CacheConfig (defensive).
       time-to-live: 600000          # 10 min
       cache-null-values: false
       use-key-prefix: true
 
 server:
-  # Override the common-spring default 8080 (compose maps 8086:8086).
   port: ${SERVER_PORT:8086}
 
 shop:
   kafka:
-    # common-kafka binds `shop.kafka.*` (KafkaProperties) — NOT `spring.kafka.*`.
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
-      # Durability over throughput: the outbox relay must not lose events.
       acks: all
       retries: 3
     consumer:
-      # First consumer: rating lifecycle events (spec D5). Mirrors shipping's
-      # consumer block style.
       group-id: product-service
-      # F-018 (P1): a consumer group must replay the events it missed.
-      # 'latest' silently skipped everything published while the group had no
-      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
   security:
-    # Catalog reads are anonymous; writes stay authenticated.
-    # (actuator, swagger, api-docs are public via common-security platform defaults)
     public-paths:
       - method: GET
         path: /api/v1/products/**
@@ -73,8 +49,6 @@ shop:
         path: /api/v1/categories/**
       - method: GET
         path: /api/v1/brands/**
-  # Media-service client (media epic spec D5 Option C write-time gate).
-  # base-url env-backed with the compose-era in-network default.
   media:
     base-url: ${MEDIA_SERVICE_URL:http://media-service:8083}
     timeout-ms: 3000
@@ -83,17 +57,10 @@ shop:
       client-id: ${PRODUCT_SERVICE_CLIENT_ID:product-service}
       client-secret: ${PRODUCT_SERVICE_CLIENT_SECRET:}
 
-  # F-060: the delete-time stock guard - product-service asks inventory-service
-  # whether the product still has live (PENDING/COMMITTED) stock reservations.
-  # When inventory-service is unreachable the delete FAILS (PRD-2011): a delete
-  # must never happen on incomplete data.
   inventory:
     base-url: ${INVENTORY_SERVICE_URL:http://inventory-service:8082}
     timeout-ms: 3000
 
-  # H-3 reconciliation sweep — periodic re-verification of live product media
-  # references against media-service (closes the MediaDeleted consumer's
-  # at-most-once window). Fail-safe: media outage skips the cycle untouched.
   product:
     media-sweep:
       enabled: ${SHOP_PRODUCT_MEDIA_SWEEP_ENABLED:true}

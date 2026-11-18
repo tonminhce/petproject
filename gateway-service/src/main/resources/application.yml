@@ -1,17 +1,6 @@
 server:
   port: 8080
   shutdown: graceful
-  # F-031 (P1): the gateway MUST resolve the client IP itself.
-  #
-  # With 'framework', Spring Boot registers a ForwardedHeaderTransformer that
-  # rewrites the request remote address from the client-supplied X-Forwarded-For
-  # header, taking the LEFTMOST entry - a value the caller controls. Both the
-  # admin IP allowlist (ClientIpResolver) and the anonymous per-IP rate-limit
-  # bucket (RateLimitKeyResolver) read that address when
-  # gateway.rate-limit.trusted-proxy-hops is 0, which is the shipped default in
-  # docker-compose.yml and .env.example. With 'none' the transformer is not
-  # registered and the gateway resolves the client from the raw
-  # X-Forwarded-For chain using the configured trusted-proxy hop count.
   forward-headers-strategy: none
 
 spring:
@@ -36,28 +25,14 @@ spring:
 
 shop:
   security:
-    # shop.security.* binds SecurityProperties; common-security's
-    # SecurityAutoConfiguration is servlet-only — this block is bindable
-    # but has no runtime effect on gateway (WebFlux). The gateway module
-    # uses its own `gateway.public-endpoints` block (lines below) consumed
-    # by GatewayProperties + SecurityConfig in this module.
     public-paths:
       - path: /api/v1/auth/**
 
 gateway:
   keycloak-issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
   security:
-    # F-032 (P1) / F-040 — the reactive edge validates the token's client
-    # identity. The provisioned Keycloak realm emits NO 'aud' claim (no audience
-    # mapper, no client scopes), so the 'azp' claim - the client the token was
-    # issued to - is the only usable discriminator. These are the client ids the
-    # realm can issue; narrow this per deployment with
-    # GATEWAY_EXPECTED_CLIENT_IDS.
     expected-client-ids: ${GATEWAY_EXPECTED_CLIENT_IDS:ecommerce-client,order-service,rating-service,search-service,product-service,media-service}
   cors-allowed-origin-patterns:
-    # C9 fix — wildcard `*` with allowCredentials=true is rejected by browsers
-    # AND is a fleet-wide security foot-gun. Refuse to boot unless the deployer
-    # provides an explicit allow-list (e.g. `http://localhost:3000`).
     - ${CORS_ALLOWED_ORIGIN_PATTERNS:?CORS_ALLOWED_ORIGIN_PATTERNS must be set explicitly}
   public-endpoints:
     - /actuator/health
@@ -89,38 +64,19 @@ gateway:
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:100}
     burst-capacity: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:200}
     requested-tokens: ${GATEWAY_RATE_LIMIT_REQUESTED_TOKENS:1}
-    # F-031 (P1): trust exactly ONE X-Forwarded-For hop by default - the
-    # reverse proxy / LB that the deployment mandates in front of the gateway.
-    # A value of 0 makes the resolver fall back to the socket address, which
-    # behind a proxy is the PROXY's address: every anonymous client then shares
-    # one rate-limit bucket, and the admin allowlist evaluates the proxy's
-    # address instead of the caller's. The gateway refuses to start when this
-    # is 0 while a forwarded-header strategy other than 'none' is active.
     trusted-proxy-hops: ${GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS:1}
     global:
       enabled: ${GATEWAY_GLOBAL_RATE_LIMIT_ENABLED:true}
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}
       burst-capacity: ${GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY:4000}
       requested-tokens: ${GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS:1}
-  # D4 — the edge scopes (backoffice + search). F-034: the buckets live in
-  # Redis, so the numbers below are the budget of the WHOLE gateway fleet and
-  # not of a single replica (with in-process buckets 4 replicas meant 4 x the
-  # configured limit). The bucket keeps the token-bucket semantics: the
-  # capacity is the requests-per-minute value and the refill rate is that
-  # value per minute.
   edge-rate-limit:
     enabled: ${GATEWAY_EDGE_RATE_LIMIT_ENABLED:true}
     backoffice-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_BACKOFFICE_RPM:10}
     search-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_SEARCH_RPM:60}
-  # D5 — backoffice IP allowlist. ABSENT/empty = INACTIVE; PRESENT = deny-by-default.
-  # Comma-separated CIDRs, e.g. "203.0.113.0/24,198.51.100.7/32"
   admin-ip-allowlist:
     cidrs: ${ADMIN_IP_ALLOWLIST:}
-    # F-035: when true, an empty ADMIN_IP_ALLOWLIST stops the gateway at
-    # startup instead of leaving the backoffice open to every origin. The
-    # production compose file sets it.
     required: ${GATEWAY_REQUIRE_ADMIN_IP_ALLOWLIST:false}
-  # Optional per-service target overrides (tests / tooling); keyed by service name
   route-targets:
     overrides: {}
 

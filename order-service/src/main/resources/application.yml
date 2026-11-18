@@ -35,9 +35,6 @@ shop:
     producer: { acks: all, retries: 3 }
     consumer:
       group-id: order-service
-      # F-018 (P1): a consumer group must replay the events it missed.
-      # 'latest' silently skipped everything published while the group had no
-      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
   security:
     public-paths:
@@ -79,11 +76,8 @@ order:
     retention-cron: "0 0 3 * * *"
   cleanup:
     idempotency-cron: "0 0 4 * * *"
-    # Phase 8 reserved — no scheduler consumes these yet (cart/order purge schedulers
-    # ship with payment + refund flows). Declared here so ops sees the planned knobs.
     expired-cart-days: 7
     cancelled-order-days: 90
   reconciliation:
-    # Stuck-PENDING sweep (hardening §6) — env-overridable for ops tuning.
     interval-ms: ${ORDER_RECONCILIATION_INTERVAL_MS:300000}
     stuck-minutes: ${ORDER_RECONCILIATION_STUCK_MINUTES:30}

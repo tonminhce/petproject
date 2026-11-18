@@ -23,18 +23,9 @@ shop:
   kafka:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      # A13: payment-service has no consumer today, but pin group + offset to the
-      # fleet-safe defaults now so any future listener doesn't fall back to the
-      # common `shop-service` / `earliest` defaults (silent data loss + replay).
       group-id: ${SHOP_KAFKA_CONSUMER_GROUP:payment-service}
-      # F-018 (P1): a consumer group must replay the events it missed.
-      # 'latest' silently skipped everything published while the group had no
-      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
 
-  # common-storage auto-config creates the S3 client + ensures the bucket at
-  # startup; point it at RustFS in compose (see docker-compose payment stanza).
-  # Key defaults mirror StorageProperties so no-env local runs still boot.
   storage:
     endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
     access-key: ${STORAGE_ACCESS_KEY:}
@@ -42,17 +33,10 @@ shop:
     bucket: ${STORAGE_BUCKET:shop-payments}
 
   payment:
-    # C5 (spec §3) — provider activation is env-driven. Mock stays the default
-    # (compose injects SHOP_PAYMENT_PROVIDER=mock explicitly); stripe is opt-in.
     provider: ${SHOP_PAYMENT_PROVIDER:mock}
     webhook:
-      # C3/C10 — fail-fast: a blank webhook secret means every legitimate
-      # carrier webhook would 401. Compose must inject this var from secrets.
       secret: ${PAYMENT_WEBHOOK_SECRET:?PAYMENT_WEBHOOK_SECRET must be set}
     stripe:
-      # C5 — blank defaults are intentional: the StripeProvider bean is
-      # @ConditionalOnProperty(provider=stripe) and fail-fasts on a blank key
-      # when actually selected (D10), so the mock default never trips these.
       secret-key: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:}
       webhook-secret: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:}
       api-version: "2024-06-20"

@@ -1,14 +1,4 @@
-# ============================================================
-# E-commerce Microservices - Docker Compose
-# ============================================================
-# Build images locally first:    mvn jib:dockerBuild
-# Start all services:            docker compose up -d
-# Start only infrastructure:     docker compose up -d postgres redis kafka elasticsearch keycloak rustfs
-# ============================================================
 
-# ------------------------------------------------------------
-# YAML Anchors (DRY) - merged into services via `<<:` keys
-# ------------------------------------------------------------
 x-restart: &restart
   restart: unless-stopped
   pull_policy: never
@@ -35,13 +25,6 @@ x-healthcheck-defaults: &hc-defaults
 
 services:
 
-  # ============================================================
-  # INFRASTRUCTURE
-  # ============================================================
-
-  # ----- PostgreSQL -----
-  # Single instance hosts Keycloak + all 12 service databases
-  # (per-service DBs are created by docker/postgres/init/create-all-databases.sql)
   postgres:
     image: postgres:16-alpine
     container_name: postgres
@@ -64,7 +47,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Redis -----
   redis:
     image: redis:7.4-alpine
     container_name: redis
@@ -82,9 +64,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Kafka (KRaft mode - no Zookeeper needed) -----
-  # KRaft (KIP-500) combines controller+broker roles, simplifies ops
-  # Single-node cluster: replication factors pinned to 1
   kafka:
     image: apache/kafka:3.9.0
     container_name: kafka
@@ -114,23 +93,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Elasticsearch (single-node, security on with dev credentials) -----
-  # H34 — xpack security is now ENABLED for dev so the search client must
-  # present BASIC auth. We KEEP HTTP (xpack.security.http.ssl.enabled=false)
-  # because the TLS cert dance is not appropriate for the docker-compose
-  # single-node dev topology (would require shipping a CA + cert pair, and
-  # the fleet's own reverse proxy / LB is the only place TLS belongs — see
-  # docs/PRODUCTION-READINESS.md §4.x). Production overlay (docker-compose
-  # .prod.yml) MUST flip ssl.enabled=true with a real cert; the same BASIC
-  # creds work over HTTPS without code changes.
-  #
-  # Built-in `elastic` superuser is bootstrapped via ELASTIC_PASSWORD so the
-  # container actually boots under xpack security (ES 8.x refuses to start
-  # without it). The application client (search-service) authenticates as a
-  # separate admin user created on first boot via the entrypoint hook; its
-  # credentials flow in via ES_ADMIN_USERNAME / ES_ADMIN_PASSWORD so they can
-  # be rotated independently of the bootstrap password (mirrors the H-10
-  # rustfs dev-creds precedent).
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: elasticsearch
@@ -140,39 +102,25 @@ services:
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
       - xpack.security.http.ssl.client_authentication=none
-      # Bootstrap password for the built-in `elastic` superuser (ES 8.x
-      # requires this to be set when security is on). Read from
-      # ES_ADMIN_PASSWORD in .env so the bootstrap and application creds
-      # stay in lockstep — operators rotate both at once.
       - ELASTIC_PASSWORD=${ES_ADMIN_PASSWORD}
       - ES_ADMIN_PASSWORD=${ES_ADMIN_PASSWORD}
       - ES_ADMIN_USERNAME=${ES_ADMIN_USERNAME}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
-      # First-boot provisioning: create the application admin user with the
-      # superuser role. ES runs this after the security layer is up; the
-      # built-in `elastic` user is the actor.
       - cluster.routing.allocation.disk.threshold_enabled=false
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
         set -euo pipefail
-        # Provision the application admin user BEFORE the node opens its
-        # HTTP port so the first search-service request finds the user
-        # already in the security index.
         /usr/share/elasticsearch/bin/elasticsearch-users useradd \
           "$${ES_ADMIN_USERNAME}" \
           -p "$${ES_ADMIN_PASSWORD}" \
           -r superuser || true
-        # Hand off to the standard entrypoint (single-node bootstrap).
         exec /usr/local/bin/docker-entrypoint.sh eswrapper
     ports:
       - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      # Authenticated BASIC — anonymous reads are no longer accepted. We
-      # use -u for the bootstrap user (ES_ADMIN_USERNAME defaults to
-      # `elastic` in .env.example) and tolerate HTTP for dev.
       test: ["CMD-SHELL", "curl -fsS -u ${ES_ADMIN_USERNAME}:${ES_ADMIN_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
       interval: 15s
       timeout: 10s
@@ -180,9 +128,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- RustFS (S3-compatible object storage for media) -----
-  # Pinned (H-10): 1.0.0-rc.5 is upstream's newest published tag (Docker Hub,
-  # verified 2026-09-02) — no stable 1.x tag exists yet; revisit on release.
   rustfs:
     image: rustfs/rustfs:1.0.0-rc.5
     container_name: rustfs
@@ -207,49 +152,22 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Keycloak (Identity Provider) -----
-  # Stores realm in Postgres; --import-realm auto-loads ecommerce-realm.json
-  # start_period: 90s because Keycloak boot is slow on first start
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: keycloak
     <<: [*restart, *logging]
-    # C8 fix — the entrypoint script substitutes per-client client-secrets from
-    # env vars before Keycloak reads the realm JSON, so the placeholders in the
-    # realm file are replaced with secrets injected from the deployment env (or
-    # .env in dev). The script fails fast if any required var is missing.
-    #
-    # F-080 — the realm file carries only environment-variable placeholders,
-    # never a literal secret, so the deployment can actually rotate them.
-    #
-    # F-081 — the template is mounted READ-ONLY at /opt/keycloak/realm-template
-    # and the entrypoint writes the substituted realm to the container-local
-    # /opt/keycloak/data/import. The previous in-place write-back persisted
-    # the rotated secrets into the repository working tree.
     entrypoint: ["sh", "/opt/keycloak/realm-template/entrypoint.sh"]
-    # --hostname pins the issuer claim (iss) to the INTERNAL url so tokens carry
-    # iss=http://keycloak:8080/realms/ecommerce regardless of how the client
-    # reached Keycloak (host uses localhost:9090). Services validate against the
-    # same url AND fetch JWKS from it — reachable via container DNS.
     command: start-dev --http-port=8080 --hostname=http://keycloak:8080 --import-realm
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN must be set}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
-      # C8 — fail-fast on any missing client secret / test user password.
-      # Provide these via .env (dev) or secrets store (prod); the realm-import
-      # entrypoint will refuse to boot if any are blank.
       ORDER_SERVICE_CLIENT_SECRET: ${ORDER_SERVICE_CLIENT_SECRET:?required}
       RATING_SERVICE_CLIENT_SECRET: ${RATING_SERVICE_CLIENT_SECRET:?required}
       SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:?required}
       PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:?required}
       MEDIA_SERVICE_CLIENT_SECRET: ${MEDIA_SERVICE_CLIENT_SECRET:?required}
-      # F-078: the secret of the admin service account (client_credentials).
       ADMIN_SERVICE_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET:?required}
       KEYCLOAK_TEST_USER_PASSWORD: ${KEYCLOAK_TEST_USER_PASSWORD:?required}
-      # F-080: the password of the seeded ADMIN realm user. It must come from
-      # the environment: the realm import used to carry the literal
-      # "adminpass", so the account was reachable with a well-known password
-      # in every deployment that did not override it.
       KEYCLOAK_ADMIN_USER_PASSWORD: ${KEYCLOAK_ADMIN_USER_PASSWORD:?required}
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
@@ -258,8 +176,6 @@ services:
       KC_DB_USERNAME: ${POSTGRES_USER}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # Read-only: the template is the source of truth in the repository and
-      # must never be modified by the container (F-081).
       - ./docker/keycloak/import:/opt/keycloak/realm-template:ro
     ports:
       - "9090:8080"
@@ -275,11 +191,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ============================================================
-  # GATEWAY (Spring Cloud Gateway - new)
-  # ============================================================
-  # Single entry point on :8080. Routes traffic to backend services
-  # via container DNS names. Validates JWTs against Keycloak.
   gateway-service:
     image: gateway-service:latest
     container_name: gateway-service
@@ -291,9 +202,6 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      # C9 — fail-fast on missing CORS allow-list. The yml default no longer
-      # silently substitutes `*`. Provide via .env for dev (e.g.
-      # CORS_ALLOWED_ORIGIN_PATTERNS=http://localhost:3000,http://localhost:5173).
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:?required}
       GATEWAY_RATE_LIMIT_ENABLED: ${GATEWAY_RATE_LIMIT_ENABLED:-true}
       GATEWAY_RATE_LIMIT_REPLENISH_RATE: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:-100}
@@ -315,11 +223,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ============================================================
-  # BACKEND MICROSERVICES (Jib local builds - <service>:latest)
-  # ============================================================
-
-  # ----- Auth Service -----
   auth-service:
     image: auth-service:latest
     container_name: auth-service
@@ -328,9 +231,6 @@ services:
       - "8088:8088"
     environment:
       <<: [*jwt, *pg-creds]
-      # SHOP_* overrides force-bypass common-spring YAML placeholder resolution
-      # (which does not propagate env vars into shop.* namespace at startup).
-      # Use INTERNAL Keycloak URL (container DNS) so JWT decoder can fetch JWKS.
       SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
       SHOP_KEYCLOAK_SERVER_URL: http://keycloak:8080
       SHOP_KEYCLOAK_PUBLIC_SERVER_URL: ${KEYCLOAK_PUBLIC_SERVER_URL}
@@ -341,12 +241,7 @@ services:
       SHOP_KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
       SHOP_KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       SHOP_KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      # F-078: with the secret set, the admin token comes from the service
-      # account (client_credentials) instead of the master-realm password.
       SHOP_KEYCLOAK_ADMIN_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET}
-      # F-054: the password reset email channel. Disabled by default - with no
-      # channel the forgot-password endpoint answers 503 AUTH-1010 instead of
-      # reporting a reset mail that was never sent.
       AUTH_MAIL_ENABLED: ${AUTH_MAIL_ENABLED:-false}
       AUTH_MAIL_FROM: ${AUTH_MAIL_FROM:-}
       AUTH_RESET_BASE_URL: ${AUTH_RESET_BASE_URL:-http://localhost:3000/reset-password}
@@ -373,7 +268,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Product Service -----
   product-service:
     image: product-service:latest
     container_name: product-service
@@ -387,18 +281,11 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # Media epic D5 — Option C write-time media existence gate (MediaHeadClient).
-      # Same explicit *_SERVICE_URL + client-credentials pattern as order's
-      # tax/promotion, rating's order, and search's product clients.
       MEDIA_SERVICE_URL: http://media-service:8083
-      # F-060: the delete-time stock guard - product-service asks
-      # inventory-service whether the product still has live reservations.
       INVENTORY_SERVICE_URL: http://inventory-service:8082
       PRODUCT_SERVICE_CLIENT_ID: product-service
       PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
-      # Force-bypass common-spring YAML placeholder resolution (see auth-service note).
-      # Use INTERNAL Keycloak URL (container DNS) so JWT decoder can fetch JWKS.
       SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
     depends_on:
       postgres:
@@ -413,7 +300,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Order Service (Kafka producer/consumer) -----
   order-service:
     image: order-service:latest
     container_name: order-service
@@ -448,7 +334,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Payment Service (Kafka producer/consumer) -----
   payment-service:
     image: payment-service:latest
     container_name: payment-service
@@ -459,14 +344,8 @@ services:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # C5 — mock stays the default; Stripe is opt-in via env (see .env.example).
       SHOP_PAYMENT_PROVIDER: ${SHOP_PAYMENT_PROVIDER:-mock}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?required}
-      # To activate Stripe:
-      # - SHOP_PAYMENT_PROVIDER=stripe
-      # - SHOP_PAYMENT_STRIPE_SECRET_KEY=sk_test_xxx
-      # - SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET=whsec_xxx
-      # Receipt storage on RustFS (same env style as media-service; dedicated bucket)
       STORAGE_ENDPOINT: http://rustfs:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
@@ -484,9 +363,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Mock Payment Provider (spec D2/D10) -----
-  # Simulates an external PSP: capture/refund calls trigger HMAC-signed
-  # CAPTURED/REFUNDED webhooks back into payment-service.
   mock-payment-provider:
     build: ./mock-services/mock-payment-provider
     container_name: mock-payment-provider
@@ -503,7 +379,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Shipping Service -----
   shipping-service:
     image: shipping-service:latest
     container_name: shipping-service
@@ -529,7 +404,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Inventory Service -----
   inventory-service:
     image: inventory-service:latest
     container_name: inventory-service
@@ -556,7 +430,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Favourite Service -----
   favourite-service:
     image: favourite-service:latest
     container_name: favourite-service
@@ -575,8 +448,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Media Service (RustFS object storage; ingress-only — reached via
-  # gateway :8080, ServiceRoute MEDIA; NO host port published even in dev) -----
   media-service:
     image: media-service:latest
     container_name: media-service
@@ -586,22 +457,15 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mediaservice
-      # Outbox relay publishes shop.media.lifecycle.v1 — must reach the
-      # in-network broker (yml default is localhost for local runs).
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_ENDPOINT: http://rustfs:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
-      # D1 — private bucket `media` (default); MEDIA_* knobs per spec §4.3.
       STORAGE_BUCKET: ${STORAGE_BUCKET:-media}
       MEDIA_MAX_UPLOAD: ${MEDIA_MAX_UPLOAD:-10MB}
-      # F-062: the decoded-memory budget of the upload path
       MEDIA_MAX_DECODED_BYTES: ${MEDIA_MAX_DECODED_BYTES:-64MB}
       MEDIA_PRESIGN_TTL: ${MEDIA_PRESIGN_TTL:-7d}
       MEDIA_PURGE_GRACE: ${MEDIA_PURGE_GRACE:-30d}
-      # H-4 — purge reference gate: client_credentials for media's
-      # product-reference client (media-service confidential client in the
-      # realm import). Same explicit pattern as product's media client.
       MEDIA_SERVICE_CLIENT_ID: media-service
       MEDIA_SERVICE_CLIENT_SECRET: ${MEDIA_SERVICE_CLIENT_SECRET:?required}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
@@ -618,7 +482,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Tax Service -----
   tax-service:
     image: tax-service:latest
     container_name: tax-service
@@ -637,7 +500,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Promotion Service -----
   promotion-service:
     image: promotion-service:latest
     container_name: promotion-service
@@ -647,8 +509,6 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotionservice
-      # Outbox relay publishes shop.promotion.lifecycle.v1 — must reach the
-      # in-network broker (yml default is localhost for local runs).
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       postgres:
@@ -659,7 +519,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Rating Service (Kafka producer via outbox relay) -----
   rating-service:
     image: rating-service:latest
     container_name: rating-service
@@ -669,14 +528,8 @@ services:
     environment:
       <<: [*jwt, *pg-creds]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ratingservice
-      # Outbox relay publishes shop.rating.lifecycle.v1 — must reach the
-      # in-network broker (yml default is localhost for local runs).
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # Eligibility verify-purchase call into order-service (same explicit
-      # *_SERVICE_URL pattern as order's tax/promotion/payment clients).
       ORDER_SERVICE_URL: http://order-service:8084
-      # Client-credentials for the eligibility call (same default style as
-      # ORDER_SERVICE_CLIENT_ID/SECRET in order-service's stanza).
       RATING_SERVICE_CLIENT_ID: rating-service
       RATING_SERVICE_CLIENT_SECRET: ${RATING_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
@@ -691,7 +544,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Search Service (Elasticsearch + Kafka) -----
   search-service:
     image: search-service:latest
     container_name: search-service
@@ -703,14 +555,8 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: ${ES_ADMIN_USERNAME}
       ELASTICSEARCH_PASSWORD: ${ES_ADMIN_PASSWORD}
-      # Catalog event consumer binds shop.kafka — must reach the in-network
-      # broker (yml default is localhost for local runs).
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # Product catalog client for reindex (same explicit *_SERVICE_URL pattern
-      # as order's tax/promotion and rating's order clients).
       PRODUCT_SERVICE_URL: http://product-service:8086
-      # Client-credentials for the reindex call (same default style as
-      # RATING_SERVICE_CLIENT_ID/SECRET in rating-service's stanza).
       SEARCH_SERVICE_CLIENT_ID: search-service
       SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:-}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
@@ -725,7 +571,6 @@ services:
     networks:
       - ecommerce-network
 
-  # ----- Notification Service (Kafka consumer + SMTP) -----
   notification-service:
     image: notification-service:latest
     container_name: notification-service
@@ -751,9 +596,6 @@ services:
     networks:
       - ecommerce-network
 
-# ============================================================
-# NETWORKS & VOLUMES
-# ============================================================
 networks:
   ecommerce-network:
     driver: bridge

@@ -223,6 +223,7 @@ class RealmImportCredentialContractTest {
                 .exists();
         assertThat(Files.readString(attributes))
                 .as("the shell scripts must be checked out with LF")
+                .contains("* text=auto eol=lf")
                 .contains("*.sh text eol=lf");
     }
 }
