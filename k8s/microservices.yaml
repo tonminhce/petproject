@@ -591,23 +591,6 @@ spec:
                 secretKeyRef:
                   name: shop-system-secrets
                   key: POSTGRES_PASSWORD
-            - name: SEARCH_SERVICE_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: shop-system-secrets
-                  key: SEARCH_SERVICE_CLIENT_SECRET
-            - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/ratingservice"
-            - name: SPRING_DATASOURCE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: shop-system-secrets
-                  key: POSTGRES_USER
-            - name: SPRING_DATASOURCE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: shop-system-secrets
-                  key: POSTGRES_PASSWORD
             - name: RATING_SERVICE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:

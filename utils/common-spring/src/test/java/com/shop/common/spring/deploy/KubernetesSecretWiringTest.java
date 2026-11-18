@@ -82,6 +82,65 @@ class KubernetesSecretWiringTest {
     }
 
     @Test
+    @DisplayName("a deployment only requests the client secret of its own service")
+    void aDeploymentOnlyRequestsTheClientSecretOfItsOwnService() throws IOException {
+        String manifest = microservicesManifest();
+
+        List<String> offenders = new ArrayList<>();
+        int scanned = 0;
+        for (String service : services(manifest)) {
+            String body = body(manifest, service);
+            Matcher matcher = Pattern.compile(
+                    "- name: ([A-Z0-9_]*CLIENT_SECRET)\\R(?:.*\\R){0,4}?\\s+key: ([A-Z0-9_]+)")
+                    .matcher(body);
+            while (matcher.find()) {
+                scanned++;
+                String envName = matcher.group(1);
+                String secretKey = matcher.group(2);
+                if (!envName.equals(secretKey)) {
+                    offenders.add(service + " -> " + envName + " reads the secret key " + secretKey);
+                }
+                if (!envName.startsWith(service.toUpperCase().replace('-', '_') + "_")) {
+                    offenders.add(service + " -> requests the foreign credential " + envName);
+                }
+            }
+        }
+
+        assertThat(scanned)
+                .as("the scan must actually find the client secret wirings")
+                .isGreaterThan(0);
+        assertThat(offenders)
+                .as("a deployment must not hold the credential of another service")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("a deployment declares no environment variable twice")
+    void aDeploymentDeclaresNoEnvironmentVariableTwice() throws IOException {
+        String manifest = microservicesManifest();
+
+        List<String> offenders = new ArrayList<>();
+        for (String service : services(manifest)) {
+            String body = body(manifest, service);
+            List<String> names = new ArrayList<>();
+            Matcher matcher = Pattern.compile("(?m)^            - name: ([A-Z0-9_]+)\\R").matcher(body);
+            while (matcher.find()) {
+                names.add(matcher.group(1));
+            }
+            Set<String> seen = new LinkedHashSet<>();
+            for (String name : names) {
+                if (!seen.add(name)) {
+                    offenders.add(service + " -> " + name + " is declared twice");
+                }
+            }
+        }
+
+        assertThat(offenders)
+                .as("a duplicated environment entry hides which value actually reaches the process")
+                .isEmpty();
+    }
+
+    @Test
     @DisplayName("the gateway deployment takes the admin IP allowlist from the secret")
     void theGatewayDeploymentTakesTheAdminIpAllowlistFromTheSecret() throws IOException {
         Path repoRoot = findRepoRoot();

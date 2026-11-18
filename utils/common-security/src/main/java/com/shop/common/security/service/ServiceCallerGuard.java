@@ -19,8 +19,8 @@ public class ServiceCallerGuard {
     public void requireCaller(String... allowedClientIds) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-
-            return;
+            log.warn("Rejected a service call without any authentication context");
+            throw BusinessException.of(ErrorCode.FORBIDDEN, "caller is not authenticated");
         }
         if (!authentication.isAuthenticated()) {
             throw BusinessException.of(ErrorCode.FORBIDDEN, "caller is not authenticated");
