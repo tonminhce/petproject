@@ -82,8 +82,15 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setKeycloakUserId(keycloakUserId);
-        User saved = userRepository.save(user);
-        return userMapper.toResponse(saved);
+        try {
+            User saved = userRepository.save(user);
+            return userMapper.toResponse(saved);
+        } catch (RuntimeException e) {
+
+            rollbackKeycloakUser(keycloakUserId);
+            rollbackLocalUser(user.getId());
+            throw e;
+        }
     }
 
     private BusinessException conflictForDuplicate(DataIntegrityViolationException e, RegisterRequest request) {

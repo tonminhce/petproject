@@ -174,6 +174,25 @@ class UserServiceImplTest {
     }
 
     @Test
+    void registerRemovesTheOrphanKeycloakUserWhenTheFinalSaveFails() {
+        RegisterRequest req = registerRequest();
+        when(userRepository.existsByUsername("alice")).thenReturn(false);
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(userRepository.existsByPhone("0901234567")).thenReturn(false);
+        when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder", "Passw0rd", List.of("USER")))
+                .thenReturn("kc-123");
+        when(roleRepository.findByNameIn(any())).thenReturn(Set.of(userRole));
+        when(userMapper.toEntity(req)).thenReturn(newUser());
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.save(any(User.class))).thenThrow(new RuntimeException("db down"));
+
+        assertThrows(RuntimeException.class, () -> userService.register(req));
+
+        verify(keycloakAdminClient).deleteUser("kc-123");
+        verify(userRepository).deleteById(userId);
+    }
+
+    @Test
     void registerRemovesTheLocalRowWhenTheKeycloakUserCannotBeCreated() {
 
         RegisterRequest req = registerRequest();
