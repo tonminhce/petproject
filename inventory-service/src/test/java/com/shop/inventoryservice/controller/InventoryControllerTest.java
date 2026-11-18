@@ -11,6 +11,7 @@ import com.shop.inventoryservice.dto.response.ReservationResponse;
 import com.shop.inventoryservice.constant.ReservationStatus;
 import com.shop.inventoryservice.service.InventoryService;
 import com.shop.inventoryservice.service.ReservationService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -18,10 +19,16 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -43,6 +50,23 @@ class InventoryControllerTest {
 
     private final UUID productId = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private final UUID reservationId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(String clientId) {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .claim("sub", clientId)
+                .claim("azp", clientId)
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(60))
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_SERVICE"))));
+    }
 
     @Test
     void findById_returns200WithApiResponse() throws Exception {
@@ -70,6 +94,7 @@ class InventoryControllerTest {
 
     @Test
     void reserve_returnsCreated() throws Exception {
+        authenticateAs("order-service");
         ReserveRequest req = new ReserveRequest(5, null);
         ReservationResponse resp = new ReservationResponse(
             reservationId, productId, 5, ReservationStatus.PENDING,
@@ -81,6 +106,27 @@ class InventoryControllerTest {
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.reservationId").value(reservationId.toString()));
+    }
+
+    @Test
+    void reserve_fromAnotherService_returns403() throws Exception {
+        authenticateAs("media-service");
+        ReserveRequest req = new ReserveRequest(5, null);
+
+        mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(req)))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reserve_withoutAnAuthenticatedCaller_returns403() throws Exception {
+        ReserveRequest req = new ReserveRequest(5, null);
+
+        mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(req)))
+            .andExpect(status().isForbidden());
     }
 
     @Test
@@ -96,6 +142,7 @@ class InventoryControllerTest {
 
     @Test
     void commit_returns200() throws Exception {
+        authenticateAs("order-service");
         mockMvc.perform(post("/api/v1/inventory/reservations/{reservationId}/commit", reservationId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true));
@@ -103,6 +150,7 @@ class InventoryControllerTest {
 
     @Test
     void release_returns200() throws Exception {
+        authenticateAs("order-service");
         mockMvc.perform(post("/api/v1/inventory/reservations/{reservationId}/release", reservationId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true));

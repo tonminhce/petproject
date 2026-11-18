@@ -203,12 +203,34 @@ start_services() {
     fi
 }
 
+# Read a value from the env file that drives the stack.
+env_value() {
+    local key="$1"
+    local value=""
+    if [ -f "${ENV_FILE}" ]; then
+        value=$(grep -E "^${key}=" "${ENV_FILE}" | head -1 | cut -d= -f2- \
+            | sed -e 's/[[:space:]]*#.*$//' -e 's/[[:space:]]*$//')
+    fi
+    printf '%s' "${value}"
+}
+
 # ============================================================
 # Print final summary: URLs and follow-up commands
 # ============================================================
 print_summary() {
     local gateway_url="http://localhost:8080"
     local keycloak_url="http://localhost:8080"
+
+    # The credentials are read from the env file that actually drives the
+    # stack. Printing a hard-coded pair would tell the operator a password
+    # that is not the one in force.
+    local pg_user pg_password redis_password kc_user kc_password storage_key
+    pg_user=$(env_value POSTGRES_USER)
+    pg_password=$(env_value POSTGRES_PASSWORD)
+    redis_password=$(env_value REDIS_PASSWORD)
+    kc_user=$(env_value KEYCLOAK_ADMIN)
+    kc_password=$(env_value KEYCLOAK_ADMIN_PASSWORD)
+    storage_key=$(env_value STORAGE_ACCESS_KEY)
 
     printf '\n'
     printf '%b╔════════════════════════════════════════════════════════════════╗%b\n' "${GREEN}" "${NC}"
@@ -218,12 +240,12 @@ print_summary() {
 
     printf '%bService URLs:%b\n' "${BOLD}" "${NC}"
     printf '  %bGateway%b             %s\n' "${CYAN}" "${NC}" "${gateway_url}"
-    printf '  %bKeycloak Admin%b      %s  (admin / admin)\n' "${CYAN}" "${NC}" "${keycloak_url}"
-    printf '  %bPostgreSQL%b          localhost:5432  (admin / admin)\n' "${CYAN}" "${NC}"
-    printf '  %bRedis%b               localhost:6379  (password: admin)\n' "${CYAN}" "${NC}"
+    printf '  %bKeycloak Admin%b      %s  (%s / %s)\n' "${CYAN}" "${NC}" "${keycloak_url}" "${kc_user:-<not set>}" "${kc_password:-<not set>}"
+    printf '  %bPostgreSQL%b          localhost:5432  (%s / %s)\n' "${CYAN}" "${NC}" "${pg_user:-<not set>}" "${pg_password:-<not set>}"
+    printf '  %bRedis%b               localhost:6379  (password: %s)\n' "${CYAN}" "${NC}" "${redis_password:-<not set>}"
     printf '  %bKafka%b               localhost:9092\n' "${CYAN}" "${NC}"
     printf '  %bElasticsearch%b       localhost:9200\n' "${CYAN}" "${NC}"
-    printf '  %bRustFS (S3 API)%b     localhost:9000  (admin / admin)\n' "${CYAN}" "${NC}"
+    printf '  %bRustFS (S3 API)%b     localhost:9000  (access key: %s)\n' "${CYAN}" "${NC}" "${storage_key:-<not set>}"
     printf '  %bRustFS Console%b      localhost:9001\n' "${CYAN}" "${NC}"
     printf '\n'
 
