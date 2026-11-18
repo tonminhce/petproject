@@ -1,0 +1,726 @@
+{
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/service/ProductSearchService.java:43-46",
+        "IndexProvisioner.java:76",
+        "ProductSearchService.java:45",
+        "OutboxRelay.java:245",
+        "ReindexServiceImpl.java:35-36"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Out-of-order Kafka events silently overwrite newer Elasticsearch state"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "search-service/pom.xml:36-40",
+        "pom.xml:55",
+        "pom.xml:206-207",
+        "config/ElasticsearchConfig.java:28-48"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Elasticsearch client dependency drift"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java:27"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Mutable, non-volatile pagination state on a singleton scheduled bean"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/search/IndexProvisioner.java:72",
+        "ProductSearchIngestionIT.java:110"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Money stored as an IEEE-754 double in the search index"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "product-service/.../entity/Product.java:38-39",
+        "promotion-service/.../entity/CouponUsageReservation.java:52-55",
+        "promotion-service/.../entity/Campaign.java:36",
+        "tax-service/.../service/TaxCalculator.java:13-16",
+        "rating-service/.../entity/Rating.java:40"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No currency on any money field in the fleet"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/resources/db/changelog/changelog-006-product-variants.yaml:7"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Product-variant changes emit no lifecycle event"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "promotion-service/src/main/java/com/shop/promotionservice/repository/CouponUsageReservationRepository.java:24-31",
+        "promotion-service/src/main/java/com/shop/promotionservice/service/impls/CampaignReservationServiceImpl.java:88-103",
+        "changelog-001-initial-schema.yaml:118-123",
+        "entity/Campaign.java:58-61",
+        "ReservationRetryServiceImpl.java:72-88",
+        "ReserveFlowIT.java:274-327",
+        "entity/Campaign.java:45-52"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Promotion quotas are enforced by a racy read-then-write COUNT"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/service/impls/ReindexServiceImpl.java:49"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Reindex lock is in-process only"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/entity/OutboxEvent.java:18-55",
+        "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java:73-84",
+        "OutboxRelayRecoveryIT.java:183-188",
+        "OutboxRelay.java:119-124"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Product outbox claim lease piggy-backs on the `updated_at` audit column"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/.../service/OutboxRelay.java:119",
+        "product-service/.../service/OutboxRetentionScheduler.java:36-37",
+        "rating-service/.../outbox/OutboxRetentionScheduler.java:34-35",
+        "promotion-service/.../service/OutboxRetentionScheduler.java:30-31",
+        "outbox/OutboxEventRepository.java:55-58",
+        "outbox/MediaOutboxRetentionScheduler.java:37-42",
+        "OutboxRelay.java:222",
+        "OutboxRetentionScheduler.java:36-37",
+        "entity/OutboxEvent.java:18-55",
+        "outbox/OutboxEvent.java:53-54",
+        "OutboxRetentionScheduler.java:34-35",
+        "entity/OutboxEvent.java:82"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`FAILED` outbox rows are terminal in product, rating and promotion (no replay, no DEAD aging)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "media-service/src/main/resources/application.yml:71-81",
+        "VariantRendererMemoryBudgetTest.java:17-21"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No concurrency admission control on the media decode path"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "media-service/src/main/resources/application.yml:71-81",
+        "media-service/src/main/java/com/shop/mediaservice/service/impls/MediaQueryServiceImpl.java:40-64",
+        "product-service/.../config/CacheConfig.java:62-68",
+        "media-service/src/test/java/com/shop/mediaservice/storage/ProvisioningIT.java:51-58"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "7-day presigned-URL TTL for catalogue images"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/search/IndexProvisioner.java:38-56"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No Elasticsearch mapping-version gate"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/security/ServiceTokenProvider.java:59",
+        "security/ServiceTokenProvider.java:61-85",
+        "client/ProductBackofficeClient.java:45"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Unbounded `synchronized` in the search service token provider"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "media-service/src/main/java/com/shop/mediaservice/storage/BucketBootstrap.java:24-48",
+        "BucketBootstrapTest.java:52-60",
+        "BucketBootstrapTest.java:73-80"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Bucket ACL is asserted once at startup only"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "promotion-service/src/main/java/com/shop/promotionservice/service/impls/CampaignReservationServiceImpl.java:54-134",
+        "ReserveFlowIT.java:167-270"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Reservation gates are an if/else chain"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRelay.java:26",
+        "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRetentionScheduler.java:23",
+        "MediaOutboxRetentionScheduler.java:23",
+        "MediaOutboxRelayTest.java:41-45",
+        "MediaOutboxRelayTest.java:187-203",
+        "MediaOutboxIT.java:285-306",
+        "MediaOutboxRetentionIT.java:74-100"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`FAILED` media outbox rows are re-published every 2 seconds for 7 days"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "rating-service/.../service/RatingEventService.java:39",
+        "ProductSearchConsumer.java:55-60"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Inconsistent event-naming convention across producers"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "rating-service/src/main/java/com/shop/ratingservice/service/RatingEventService.java:54-58",
+        "product-service/src/main/java/com/shop/productservice/service/ProductRatingService.java:25-38",
+        "ProductRatingServiceTest.java:119-130",
+        "RatingServiceImpl.java:64-67"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The rating aggregate snapshot can be stale under concurrent reviews"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "rating-service/src/main/java/com/shop/ratingservice/entity/Rating.java:47",
+        "rating-service/src/main/java/com/shop/ratingservice/service/impls/RatingServiceImpl.java:80",
+        "RatingEventService.java:79",
+        "RatingServiceImpl.java:49-52"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`Rating.verified` is stored but never enforced on the read path"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-21 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "tax-service/src/main/java/com/shop/taxservice/service/TaxCalculator.java:13-16"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Tax rounding regime is neither documented nor configurable"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-22 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "TaxCalculationController.java:30"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The pricing contract has no net/gross declaration"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-23 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "notification-service/src/main/java/com/shop/notificationservice/scheduler/NotificationRetryScheduler.java:67",
+        "product-service/.../service/OutboxRetentionScheduler.java:11-18"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No retention purge for the `notifications` table"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-24 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "media-service/.../outbox/MediaOutboxRetentionScheduler.java:24",
+        "promotion-service/.../service/impls/CampaignReservationServiceImpl.java:46",
+        "OutboxRelayTest.java:71-74",
+        "MediaOutboxRelayTest.java:75-78",
+        "NotificationServiceImpl.java:40-53"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`@Value`-injected configuration fields are non-final on singletons"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for CAT-25 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "CAT-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "promotion-service/src/main/java/com/shop/promotionservice/repository/CouponUsageReservationRepository.java:68-74",
+        "promotion-service/src/main/java/com/shop/promotionservice/entity/CouponUsageReservation.java:73-76",
+        "CouponUsageReservation.java:73-76",
+        "CouponUsageReservationRepository.java:53-67",
+        "TransactionalProductEventPublisher.java:99",
+        "ProductRatingOutboxIntegrationTest.java:35-74",
+        "OutboxRelayIntegrationTest.java:59-61",
+        "OutboxEventRepository.java:35-39",
+        "ProductOutboxClaimConcurrencyIT.java:56-185",
+        "OutboxEventRepository.java:53-56",
+        "OutboxRelay.java:191",
+        "OutboxRelayRecoveryIT.java:68-85"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`CouponUsageReservation.@Version` is hand-bumped inside a JPQL string"
+    }
+  ],
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md",
+  "topic": "catalog-search-media"
+}

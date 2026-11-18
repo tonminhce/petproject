@@ -1,0 +1,820 @@
+{
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity CRITICAL. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 5,
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/filter/ClientIpResolver.java:16-30",
+        "gateway-service/src/main/resources/application.yml:99",
+        "docker-compose.prod.yml:62",
+        "docker-compose.prod.yml:46-48",
+        "docker-compose.prod.yml:24-28",
+        "k8s/ingress.yaml:6",
+        "config/GatewaySecurityPostureValidator.java:74-81",
+        "docker-compose.prod.yml:25-26"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The trusted-proxy hop count is an index into an attacker-controlled header; the transport peer is never verified"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity CRITICAL. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 5,
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/filter/ClientIpResolver.java:25-29",
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:92-94",
+        "gateway-service/src/main/java/com/shop/gateway/filter/RateLimitFilter.java:80"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "A non-literal `X-Forwarded-For` entry becomes the rate-limit key: per-request bucket bypass, unbounded Redis key growth, and blocking DNS on the event loop"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:102-108",
+        "RedisEdgeRateLimiter.java:95-108",
+        "RedisEdgeRateLimiter.java:102-108"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Contradictory Redis-outage semantics across the three limiters, and the in-code justification is factually wrong"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java:20-21",
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitProperties.java:16-17",
+        "k8s/gateway-service.yaml:10"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The \"global\" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:90-91"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The edge bucket computes its refill from the **gateway JVM clock** while the framework buckets use the **Redis server clock**"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/config/RoutesConfig.java:37-43",
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java:50",
+        "gateway-service/src/main/java/com/shop/gateway/filter/RateLimitFilter.java:84"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Two to three serialised Redis round trips per request, and rejected traffic still burns the fleet-wide budget"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "filter/GatewayErrorResponseWriter.java:47-64",
+        "utils/common-core/.../ErrorCode.java:27",
+        "GlobalRateLimitFilter.java:61-62",
+        "config/SecurityConfig.java:20-27"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Inconsistent 429 contract: empty body from L1, duplicate `X-RateLimit-Remaining`, a `-1` sentinel leaked to clients, and no `Retry-After`"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/filter/FilterOrder.java:15",
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java:56-59",
+        "filter/FilterOrderTest.java:10-21",
+        "WebFluxRouteTests.java:178-191",
+        "filter/FilterOrder.java:12-15"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`GlobalRateLimitFilter` and `AdminIpAllowlistFilter` share the same order value; the documented \"IP allowlist first\" contract is not enforced"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/config/LazyReactiveJwtDecoder.java:35-56",
+        "gateway-service/src/main/java/com/shop/gateway/config/GatewayJwtSecurityConfig.java:60-64",
+        "config/LazyReactiveJwtDecoder.java:14-23"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The lazy JWT decoder performs a blocking OIDC discovery + JWKS fetch **on the event loop** at first decode"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/filter/AdminIpAllowlistFilter.java:106-121",
+        "filter/AdminIpAllowlistFilter.java:84"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The \"literal IP\" guard in the admin allowlist accepts non-IP strings, so `InetAddress.getByName` performs a DNS lookup on the event loop"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "k8s/gateway-service.yaml:30-32",
+        "docker-compose.yml:72",
+        "filter/AdminIpAllowlistProperties.java:27-29",
+        "config/GatewaySecurityPostureValidator.java:109-111",
+        "application.yml:122",
+        "k8s/gateway-service.yaml:8",
+        "docker-compose.prod.yml:58-59"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The Kubernetes deployment points at a Redis that no manifest in this repo defines, sets no Redis password, and leaves the admin allowlist inactive"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The edge limiter's two Redis keys have no hash tag ⇒ `CROSSSLOT` failure in Redis Cluster"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/config/SecurityConfig.java:44-46",
+        "application.yml:62-86",
+        "filter/RateLimitFilter.java:109-117"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Unauthenticated requests are not metered by any gateway limiter (401 is returned before the limiters run)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:92-94",
+        "docker-compose.yml:72",
+        "RedisEdgeRateLimiter.java:66"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "/ — No bound on the number of rate-limit keys, and the shared Redis has no memory policy"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "ratelimit/RedisEdgeRateLimiter.java:92-94",
+        "filter/ClientIpResolver.java:25-29",
+        "RateLimitKeyResolver.java:64-66"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Inconsistent key spaces between the layers ⇒ an authenticated client gets up to 3× the configured budget; IPv4/IPv6 spellings are separate buckets"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:66-70"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The edge bucket's TTL is refreshed on rejected requests, so an abuser's keys never expire and the key set only grows"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RateLimitProperties.java:15-21",
+        "gateway-service/src/main/java/com/shop/gateway/filter/EdgeRateLimitProperties.java:23-27",
+        "application.yml:87-114",
+        "docker-compose.yml:297"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`replenishRate` (tokens per **second**) and `requestsPerMinute` (requests per **minute**) live under two similarly named property namespaces"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "filter/RateLimitFilter.java:92-95",
+        "ratelimit/GlobalRateLimitFilter.java:61-68"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No `Retry-After` header on any 429"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "pom.xml:49",
+        "pom.xml:42",
+        "pom.xml:80-81",
+        "gateway-service/pom.xml:37-40",
+        "docker-compose.yml:279-282"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The root POM comment \"gateway migrated to Apache APISIX\" is false and misleads every future reader"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/config/GatewaySecurityPostureValidator.java:114-127"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The \"fail-fast\" posture validator never verifies that the peer is a trusted proxy"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-21 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/test/java/com/shop/gateway/ratelimit/RateLimitKeyResolverTest.java:80-85",
+        "WebFluxRateLimitTests.java:179-181"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`RateLimitKeyResolver` is unit-tested against a **mocked** exchange, so a framework regression would silently switch every L1 key to an IP key"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-22 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/config/GatewayJwtSecurityConfig.java:49-55",
+        "gateway-service/src/main/resources/application.yml:30",
+        "application.yml:48",
+        "config/GatewayProperties.java:14-15"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Two independent issuer properties can drift; the one the decoder actually uses is not the one the gateway validates"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-23 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "config/GatewayJwtSecurityConfig.java:61-64",
+        "TestKeys.java:36-40"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No explicit JWT algorithm pinning"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-24 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "GatewayErrorResponseWriter.java:90-115"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "/INFO — The caller-supplied `X-Correlation-Id` is echoed into the error envelope without validation"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-25 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "filter/ratelimit/AbstractRateLimiter.java:50-62",
+        "config/RoutesConfig.java:34"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "(latent) — `AbstractRateLimiter`'s configuration map is a plain `HashMap` written from the event thread and read from request threads"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-26 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-26",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Duplicate/ambiguous `X-RateLimit-Remaining` header (merged with GW-07 above as the header part)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-27 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-27",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "config/RoutesConfig.java:31-48",
+        "GatewayRateLimitContextTest.java:70-72"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No circuit breaker and no bulkhead anywhere in the gateway"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-28 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-28",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:132-140",
+        "filter/RateLimitFilter.java:81-84"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`RedisEdgeRateLimiter.requestsPerMinute(String)` is dead code"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for GW-29 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "GW-29",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "filter/RateLimitFilter.java:109-117",
+        "application.yml:62-86",
+        "RedisEdgeRateLimiter.java:45-109",
+        "RedisEdgeRateLimiter.java:95-99",
+        "RateLimitKeyResolver.java:36-44",
+        "RateLimitKeyResolver.java:20-21",
+        "application.yml:4-15",
+        "GatewaySecurityPostureValidator.java:114-127",
+        "SecurityConfig.java:52-63",
+        "GatewaySecurityPostureValidator.java:60-71",
+        "GatewayJwtSecurityConfig.java:83-94",
+        "application.yml:56"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "INFO — Scope/bypass asymmetry between the IP allowlist and the edge rate limiter"
+    }
+  ],
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md",
+  "topic": "gateway-redis"
+}

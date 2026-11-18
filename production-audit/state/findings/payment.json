@@ -1,0 +1,600 @@
+{
+  "topic": "payment",
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/payment-service.md",
+  "findings": [
+    {
+      "id": "PAY-01",
+      "title": "Capture marks CAPTURED while no money moved; Stripe intent uses confirm=false and discards client_secret",
+      "severity": "CRITICAL",
+      "priority": 5,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:54-63",
+        "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:127-135",
+        "payment-service/src/main/java/com/shop/paymentservice/dto/PaymentResponse.java:10-20"
+      ],
+      "business_risk": "Orders are confirmed as paid with zero funds transferred. Revenue is silently lost and every downstream fulfilment step assumes a valid capture.",
+      "technical_risk": "StripePaymentIntent is created with setConfirm(false) so it stays requires_payment_method. ProviderResult carries only an id and an accepted flag, so client_secret is discarded and the intent can never be confirmed. PaymentServiceImpl sets status CAPTURED and publishes payment.captured.v1.",
+      "current_implementation": "capture() creates an unconfirmed PaymentIntent and returns accepted=true; the service transitions PENDING to CAPTURED.",
+      "target_implementation": "Either confirm the intent server-side with a configured payment method and verify the intent status, or return the client_secret to the caller and only transition to CAPTURED after a verified provider confirmation event.",
+      "design_pattern": "Strategy",
+      "acceptance_criteria": [
+        "A payment is only CAPTURED when a provider-verified confirmation exists for the exact amount and currency",
+        "The client_secret is either used to confirm or returned to the client, never discarded",
+        "An unconfirmed intent must not publish payment.captured.v1"
+      ],
+      "happy_path_tests": [
+        "Capture with a confirmed provider intent stores CAPTURED and publishes payment.captured.v1 exactly once"
+      ],
+      "edge_case_tests": [
+        "Capture when the provider returns an unconfirmed intent leaves the payment PENDING",
+        "Capture when the confirmed amount differs from the stored amount is rejected"
+      ],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [
+        "E2E-05 payment happy path asserts the provider recorded a captured amount matching the order total"
+      ],
+      "independent_verifier": "audit-payment",
+      "notes": "Independently re-verified in source: setConfirm(false) at StripeProvider.java:57 and ProviderResult without client_secret."
+    },
+    {
+      "id": "PAY-02",
+      "title": "Unknown provider name silently falls back to the default provider so a refund can succeed against the wrong PSP",
+      "severity": "CRITICAL",
+      "priority": 6,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderFactory.java:34-43",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java:38-46",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/MockProvider.java:19-26"
+      ],
+      "business_risk": "A refund for a non-default provider can be reported as successful without any money returning to the customer, because MockProvider always accepts.",
+      "technical_risk": "PaymentProviderFactory.getProvider returns the default provider when the requested name is unknown, so a typo, a disabled provider bean, or a provider name persisted under a previous configuration routes the PSP call to the wrong provider. PaymentServiceImpl.refund then sets REFUNDED because ProviderResult.accepted is true.",
+      "current_implementation": "getProvider falls back to getDefaultProvider for an unknown name; MockProvider.capture and MockProvider.refund always return accepted=true.",
+      "target_implementation": "Reject an unknown provider with PAYMENT_PROVIDER_REJECTED. Remove the silent fallback. Make MockProvider conditional so it cannot silently back a production payment.",
+      "design_pattern": "Factory Method",
+      "acceptance_criteria": [
+        "An unknown provider name is rejected, never routed to another provider",
+        "The mock provider is absent unless explicitly enabled for the active profile",
+        "A refund cannot reach REFUNDED without an accepted result from the provider that owns the original intent"
+      ],
+      "happy_path_tests": [
+        "Refund through the owning provider reaches REFUNDED"
+      ],
+      "edge_case_tests": [
+        "Refund of a payment whose provider is not registered is rejected with PAYMENT_PROVIDER_REJECTED",
+        "Refund of a mock payment while the mock provider is disabled is rejected"
+      ],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [
+        "E2E-08 refund scenario asserts the refund was performed by the provider that owns the payment"
+      ],
+      "independent_verifier": "audit-payment",
+      "notes": "Independently re-verified in source: PaymentProviderFactory.getProvider fallback and MockProvider unconditional acceptance."
+    },
+    {
+      "id": "PAY-03",
+      "title": "State machine allows self-transitions so a re-processed webhook publishes a duplicate payment.captured.v1",
+      "severity": "HIGH",
+      "priority": 20,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/PaymentStateMachine.java:26-28",
+        "payment-service/src/main/java/com/shop/paymentservice/service/PaymentWriter.java:74-81"
+      ],
+      "business_risk": "Duplicate lifecycle events cause downstream services to fulfil or notify twice.",
+      "technical_risk": "The transition table includes the identity transition, and PaymentWriter publishes the lifecycle event unconditionally after every save, so the same event type is emitted again for a state that did not change.",
+      "current_implementation": "CAPTURED to CAPTURED is an allowed transition and every save publishes an event.",
+      "target_implementation": "Reject identity transitions in the state machine and publish a lifecycle event only when the status actually changed.",
+      "design_pattern": "State",
+      "acceptance_criteria": [
+        "A transition to the current status is rejected",
+        "Exactly one payment.captured.v1 exists per capture"
+      ],
+      "happy_path_tests": ["Capture publishes exactly one payment.captured.v1"],
+      "edge_case_tests": ["Re-processing a duplicate webhook publishes no second payment.captured.v1"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-05 duplicate webhook asserts a single capture event"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-04",
+      "title": "Webhook dedup key includes the attacker-controlled provider path segment so one signed body replays across provider labels",
+      "severity": "HIGH",
+      "priority": 18,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:32",
+        "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:112"
+      ],
+      "business_risk": "An attacker holding one valid signature can replay the same payment event under every provider label and multiply the effect of one legitimate callback.",
+      "technical_risk": "The dedup identity is built from the request path provider segment, which is not part of the signed payload for the bare-hex providers, so the same body under a different provider label produces a different dedup key and bypasses the processed-event check.",
+      "current_implementation": "The provider name from the URL path participates in the dedup key.",
+      "target_implementation": "Derive the dedup identity only from the signed content and the provider identity bound to the verifying secret.",
+      "design_pattern": "Idempotent Consumer",
+      "acceptance_criteria": [
+        "The same signed body replayed under a different provider label is rejected as a duplicate",
+        "The dedup identity is derived from signed material only"
+      ],
+      "happy_path_tests": ["A valid webhook is processed once"],
+      "edge_case_tests": ["The same body replayed under a second provider label is rejected as a duplicate"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-05 invalid webhook signature and duplicate webhook scenarios"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-05",
+      "title": "Webhook retry scheduler has no claim lease so two replicas replay the same event concurrently",
+      "severity": "HIGH",
+      "priority": 22,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/scheduler/WebhookRetryScheduler.java:61-74",
+        "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxEventRepository.java:35-37"
+      ],
+      "business_risk": "Duplicate provider callbacks and duplicate lifecycle events under horizontal scaling.",
+      "technical_risk": "The retry query selects pending webhook rows without a claim or lease, unlike the outbox repository which uses a claim lease. Two replicas select the same rows and process them concurrently.",
+      "current_implementation": "Unclaimed select of pending webhook rows.",
+      "target_implementation": "Claim the rows with a lease column and a conditional update, or use SELECT FOR UPDATE SKIP LOCKED inside a transaction.",
+      "design_pattern": "Reservation",
+      "acceptance_criteria": [
+        "Two replicas never process the same webhook event concurrently",
+        "A crashed claim is reclaimed after the lease expires"
+      ],
+      "happy_path_tests": ["A pending webhook is retried once"],
+      "edge_case_tests": ["A failed claim is retried after the lease expires"],
+      "concurrency_tests": ["Two concurrent retry schedulers process disjoint webhook sets"],
+      "integration_e2e_coverage": ["E2E-11 consumer restart and duplicate delivery scenarios"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-06",
+      "title": "No Saga compensation: a webhook that arrives after order cancellation captures the payment and never refunds it",
+      "severity": "HIGH",
+      "priority": 15,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:183-215"
+      ],
+      "business_risk": "A cancelled order whose payment confirms afterwards leaves the customer charged with no automatic refund.",
+      "technical_risk": "The webhook handler checks no order state and there is no Kafka consumer in payment-service, so nothing reconciles a late capture against a cancelled order.",
+      "current_implementation": "The webhook handler transitions the payment to CAPTURED regardless of the order status.",
+      "target_implementation": "Consume the order lifecycle topic, and on a late capture for a cancelled order emit a compensation refund.",
+      "design_pattern": "Saga",
+      "acceptance_criteria": [
+        "A capture for a cancelled order triggers an automatic refund",
+        "The compensation is recorded in a durable ledger"
+      ],
+      "happy_path_tests": ["A capture for a live order confirms the order"],
+      "edge_case_tests": ["A capture for a cancelled order refunds the payment"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-05 payment callback after cancellation"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-07",
+      "title": "Global unique index on idempotency_key contradicts the per-user scoped repository lookup",
+      "severity": "HIGH",
+      "priority": 24,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/resources/db/changelog/changelog-001-payments.yaml:37",
+        "payment-service/src/main/resources/db/changelog/changelog-006-payment-user-id.yaml:19-23",
+        "payment-service/src/main/java/com/shop/paymentservice/repository/PaymentRepository.java:24"
+      ],
+      "business_risk": "Two different users can collide on an idempotency key and block each other's payment, and a scoped lookup can miss an existing row.",
+      "technical_risk": "The base changelog creates a global unique index on idempotency_key while a later changelog adds a user id and the repository looks the key up per user. The unique constraint and the lookup scope disagree.",
+      "current_implementation": "Global unique index, per-user lookup.",
+      "target_implementation": "Make the unique constraint match the lookup scope, for example unique on user_id plus idempotency_key, and align the index name.",
+      "design_pattern": "Repository",
+      "acceptance_criteria": [
+        "The unique constraint matches the repository lookup scope",
+        "Two users may reuse the same idempotency key",
+        "The same user reusing a key returns the original payment"
+      ],
+      "happy_path_tests": ["Reusing a key with the same payload returns the original payment"],
+      "edge_case_tests": ["Two different users using the same key create two payments"],
+      "concurrency_tests": ["Two concurrent requests with the same key and user create one payment"],
+      "integration_e2e_coverage": ["E2E-05 duplicate checkout"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-08",
+      "title": "Stripe intent id is never persisted so refunds depend on the eventually consistent Search API",
+      "severity": "HIGH",
+      "priority": 26,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:116-125"
+      ],
+      "business_risk": "Refunds fail intermittently, leaving customers unrefunded.",
+      "technical_risk": "capture returns the intent id but it is not stored on the payment row, so refund must look the intent up by metadata through the Stripe Search API, which is eventually consistent and therefore usually misses a freshly created intent.",
+      "current_implementation": "Refund looks the intent up via Stripe Search by payment metadata.",
+      "target_implementation": "Persist the provider intent id on the payment row at creation and use it for refunds.",
+      "design_pattern": "Repository",
+      "acceptance_criteria": [
+        "The provider intent id is stored with the payment",
+        "Refund uses the stored intent id"
+      ],
+      "happy_path_tests": ["Refund succeeds immediately after capture without any search delay"],
+      "edge_case_tests": ["Refund reports a not-found intent as an explicit provider error"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-08 refund happy path"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-09",
+      "title": "Provider failure mapping conflates a declined card with an unknown outcome so a Stripe timeout is reported as a definitive rejection",
+      "severity": "HIGH",
+      "priority": 28,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:76-81",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:67-71"
+      ],
+      "business_risk": "A payment whose intent was actually created is reported as failed, so the order fails while the customer is charged.",
+      "technical_risk": "ApiConnectionException is mapped to accepted=false and surfaced as PAY-5008. The IdempotencyException branch returns a fabricated identifier built from the idempotency key instead of the real intent id.",
+      "current_implementation": "All Stripe exceptions other than CardException map to a rejection.",
+      "target_implementation": "Distinguish a definitive decline from an indeterminate outcome, and on an indeterminate outcome reconcile by idempotency key rather than inventing an identifier.",
+      "design_pattern": "Specification",
+      "acceptance_criteria": [
+        "A timeout is reported as an indeterminate outcome, not a decline",
+        "No fabricated provider identifier is returned"
+      ],
+      "happy_path_tests": ["A confirmed capture reports success"],
+      "edge_case_tests": ["A timeout leaves the payment in a retryable state and never reports a definitive decline"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-05 payment failure and timeout recovery"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-10",
+      "title": "The provider call happens inside the database transaction with no client timeout",
+      "severity": "HIGH",
+      "priority": 30,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:120-137"
+      ],
+      "business_risk": "A slow provider stalls database connections and degrades the whole service.",
+      "technical_risk": "capture and refund are @Transactional and invoke the PSP inside the transaction. No Stripe client timeout is configured, so a stalled provider holds the connection and the transaction open.",
+      "current_implementation": "PSP call inside the transactional method.",
+      "target_implementation": "Move the provider call outside the transaction and configure explicit connect and read timeouts.",
+      "design_pattern": "Adapter",
+      "acceptance_criteria": [
+        "The provider call is not executed while a database transaction is open",
+        "A configured client timeout bounds the provider call"
+      ],
+      "happy_path_tests": ["A successful capture commits exactly one row"],
+      "edge_case_tests": ["A provider timeout leaves the database transaction bounded and releases the connection"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-11",
+      "title": "The REST capture and refund path bypasses the payment state machine and never sets refunded_amount",
+      "severity": "MEDIUM",
+      "priority": 40,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:132-133",
+        "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:152-153",
+        "payment-service/src/main/java/com/shop/paymentservice/service/PaymentStateMachine.java"
+      ],
+      "business_risk": "Two entry points enforce different rules, so an illegal transition reachable through REST is not blocked.",
+      "technical_risk": "The state machine is only consulted from the webhook path. The REST path assigns the status directly and never populates refunded_amount, which breaks partial refund accounting.",
+      "current_implementation": "REST path sets the status directly.",
+      "target_implementation": "Route every transition through the state machine and record refunded_amount.",
+      "design_pattern": "State",
+      "acceptance_criteria": [
+        "All transitions go through the state machine",
+        "refunded_amount is updated on every refund"
+      ],
+      "happy_path_tests": ["A refund records the refunded amount"],
+      "edge_case_tests": ["An illegal REST transition is rejected"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-12",
+      "title": "Optimistic lock failures after a provider side effect surface as a server error",
+      "severity": "MEDIUM",
+      "priority": 42,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:120-137"
+      ],
+      "business_risk": "The customer is charged but the API returns a failure, so they retry and may be charged twice.",
+      "technical_risk": "The provider side effect is not coordinated with the optimistic version check on the payment row. A concurrent update makes the commit fail after the money already moved.",
+      "current_implementation": "Provider call and optimistic save in one transaction.",
+      "target_implementation": "Persist the provider intent before the guarded transition and make the transition retry-safe.",
+      "design_pattern": "Optimistic Locking",
+      "acceptance_criteria": [
+        "A concurrent modification does not leave a charged but failed payment",
+        "The API reports a retryable error rather than a server error"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": ["A stale version returns a retryable conflict"],
+      "concurrency_tests": ["Two concurrent captures of one payment produce one capture and one retryable conflict"],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-13",
+      "title": "The bare-hex signature branch has no timestamp and no nonce so signed webhooks replay forever",
+      "severity": "MEDIUM",
+      "priority": 44,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentSignatureVerifier.java:112-120"
+      ],
+      "business_risk": "A captured provider callback can be replayed indefinitely.",
+      "technical_risk": "Only the Stripe branch enforces a timestamp tolerance. The bare-hex branch compares an HMAC over the body with no freshness check and no nonce.",
+      "current_implementation": "Bare-hex HMAC comparison without freshness.",
+      "target_implementation": "Require a signed timestamp and enforce the tolerance on every provider branch.",
+      "design_pattern": "Specification",
+      "acceptance_criteria": [
+        "Every provider branch rejects a body whose timestamp is outside the tolerance"
+      ],
+      "happy_path_tests": ["A fresh signed body is accepted"],
+      "edge_case_tests": ["A stale signed body is rejected"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-05 invalid webhook signature"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-14",
+      "title": "One webhook secret is shared by all non-Stripe providers",
+      "severity": "MEDIUM",
+      "priority": 46,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/resources/application.yml:48-51"
+      ],
+      "business_risk": "A payload signed for one provider is valid for every other provider.",
+      "technical_risk": "A single shared secret is configured for all non-Stripe providers, so the secret does not bind to a provider identity.",
+      "current_implementation": "One secret for every non-Stripe provider.",
+      "target_implementation": "Configure a distinct secret per provider and bind the secret to the provider identity.",
+      "design_pattern": "Specification",
+      "acceptance_criteria": [
+        "A signature valid for one provider is rejected for another"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": ["A cross-provider signature is rejected"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-15",
+      "title": "VNPay multiplies the amount by 100 unconditionally and neither provider ever contacts the PSP",
+      "severity": "MEDIUM",
+      "priority": 38,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java:41",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java:42"
+      ],
+      "business_risk": "A 100x overcharge on VND for every VNPay payment.",
+      "technical_risk": "VNPay multiplies the amount by 100 regardless of the currency while VNPay is a zero-decimal currency, and MoMo truncates with longValue. Neither provider contacts the external PSP and the redirect URL is discarded.",
+      "current_implementation": "Fixed multipliers with no PSP integration.",
+      "target_implementation": "Use the currency-unit rules already present in StripeCurrencyUnits and either integrate the PSP or remove the provider from the selectable set.",
+      "design_pattern": "Strategy",
+      "acceptance_criteria": [
+        "Zero-decimal currencies are not multiplied",
+        "A provider that is not integrated is not selectable in production"
+      ],
+      "happy_path_tests": ["A VND amount is converted with the correct unit factor"],
+      "edge_case_tests": ["A two-decimal currency is not multiplied"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-16",
+      "title": "No currency validation and no currency comparison on the webhook path",
+      "severity": "MEDIUM",
+      "priority": 48,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:195-198"
+      ],
+      "business_risk": "A payment may be confirmed for a currency the order was not priced in.",
+      "technical_risk": "No currency whitelist or normalisation exists on the create path and the webhook path compares amounts without comparing currencies.",
+      "current_implementation": "Currency is a free string.",
+      "target_implementation": "Validate against an explicit supported-currency set and compare currency on the webhook path.",
+      "design_pattern": "Specification",
+      "acceptance_criteria": [
+        "An unsupported currency is rejected at creation",
+        "The webhook path rejects a currency mismatch"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": ["An unsupported currency is rejected"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-17",
+      "title": "Zero-decimal currencies silently round the amount and then fail the webhook amount check",
+      "severity": "MEDIUM",
+      "priority": 50,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeCurrencyUnits.java:18-21",
+        "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:195-198"
+      ],
+      "business_risk": "A legitimate capture is rejected as an amount mismatch for zero-decimal currencies.",
+      "technical_risk": "HALF_UP rounding is applied to the minor-unit conversion, and the webhook compares the rounded value against the stored amount.",
+      "current_implementation": "Rounded minor units compared against the unrounded stored amount.",
+      "target_implementation": "Compare in the same unit on both sides and define a rounding policy that is symmetric.",
+      "design_pattern": "Specification",
+      "acceptance_criteria": [
+        "A zero-decimal currency capture is accepted when the amount matches after the documented conversion"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": ["A zero-decimal currency capture is accepted"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-18",
+      "title": "Outbox rows parked as FAILED are never purged",
+      "severity": "MEDIUM",
+      "priority": 55,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java"
+      ],
+      "business_risk": "The outbox table grows without bound and slows every publish query.",
+      "technical_risk": "The retention scheduler removes published rows but leaves FAILED rows, which accumulate indefinitely.",
+      "current_implementation": "Only successful rows are purged.",
+      "target_implementation": "Purge or archive failed rows once they exceed the retention window.",
+      "design_pattern": "Reconciliation Sweeper",
+      "acceptance_criteria": [
+        "Failed rows older than the retention window are purged"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": ["A recent failed row is not purged before the window elapses"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-19",
+      "title": "No production caller creates or captures a payment",
+      "severity": "MEDIUM",
+      "priority": 34,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
+      ],
+      "business_risk": "The checkout flow can never reach a paid order, so the end-to-end purchase lifecycle cannot complete.",
+      "technical_risk": "No first-party production component calls the payment create or capture entry point, so the confirm gate can never pass.",
+      "current_implementation": "The payment API exists but is not wired into the checkout flow.",
+      "target_implementation": "Wire the checkout saga to create and capture the payment, or document the external caller contract and add the missing consumer.",
+      "design_pattern": "Saga",
+      "acceptance_criteria": [
+        "A checkout creates a payment and captures it",
+        "The order reaches a paid state"
+      ],
+      "happy_path_tests": ["Checkout creates and captures a payment"],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": ["E2E-12 complete purchase lifecycle"],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-20",
+      "title": "The default provider is chosen non-deterministically when the configured provider is absent",
+      "severity": "LOW",
+      "priority": 70,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java:38-46",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderFactory.java:46-52"
+      ],
+      "business_risk": "Behaviour changes between restarts when the configuration is incomplete.",
+      "technical_risk": "The primary bean falls back to all.get(0) and the factory falls back to the first entry of a ConcurrentHashMap, whose iteration order is unspecified.",
+      "current_implementation": "Fallback to an unspecified provider.",
+      "target_implementation": "Fail fast when the configured provider is not registered.",
+      "design_pattern": "Factory Method",
+      "acceptance_criteria": ["An unresolvable default provider fails startup"],
+      "happy_path_tests": [],
+      "edge_case_tests": ["A missing configured provider fails fast"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-21",
+      "title": "The public webhook endpoint has no body size limit and no service level rate limit",
+      "severity": "LOW",
+      "priority": 72,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/resources/application.yml:65-67"
+      ],
+      "business_risk": "Resource exhaustion on a publicly reachable endpoint.",
+      "technical_risk": "The webhook path accepts a raw body of unbounded size and the service exposes no rate limit of its own.",
+      "current_implementation": "No size or rate constraint.",
+      "target_implementation": "Bound the accepted body size and apply a service level rate limit.",
+      "design_pattern": "Bulkhead",
+      "acceptance_criteria": ["An oversized body is rejected before parsing"],
+      "happy_path_tests": [],
+      "edge_case_tests": ["An oversized body is rejected"],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-22",
+      "title": "Dead code in the webhook event service and an unreachable status value",
+      "severity": "LOW",
+      "priority": 80,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java"
+      ],
+      "business_risk": "None directly; the dead paths mislead future maintenance.",
+      "technical_risk": "markEventFailed, insert, existsByProviderAndProviderEventId and the TERMINAL_WEBHOOK_STATES constant are unreachable.",
+      "current_implementation": "Unused methods and constants.",
+      "target_implementation": "Remove the dead code.",
+      "design_pattern": "",
+      "acceptance_criteria": ["No unused webhook event methods or constants remain"],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-23",
+      "title": "The Stripe api-version property is inert and always reports drift",
+      "severity": "LOW",
+      "priority": 82,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeHealthIndicator.java"
+      ],
+      "business_risk": "The health indicator always reports drift and hides real health signals.",
+      "technical_risk": "The configured api version is never compared against the SDK constant 2023-10-16.",
+      "current_implementation": "The configured version is compared against a value that is not the SDK constant.",
+      "target_implementation": "Compare against the SDK constant or remove the check.",
+      "design_pattern": "",
+      "acceptance_criteria": ["The health indicator reports drift only on a real version mismatch"],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    },
+    {
+      "id": "PAY-24",
+      "title": "Unused imports in the provider classes",
+      "severity": "LOW",
+      "priority": 85,
+      "affected_service": "payment-service",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java",
+        "payment-service/src/main/java/com/shop/paymentservice/provider/CodProvider.java"
+      ],
+      "business_risk": "None; noise that hides real problems.",
+      "technical_risk": "Suppressed unused imports remain in five provider classes.",
+      "current_implementation": "Unused imports retained.",
+      "target_implementation": "Remove the unused imports.",
+      "design_pattern": "",
+      "acceptance_criteria": ["No unused import remains in the provider classes"],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "independent_verifier": "audit-payment"
+    }
+  ]
+}

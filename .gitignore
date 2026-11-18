@@ -167,7 +167,16 @@ scratch/
 .env.sonar
 
 # --- production-audit harness artefacts -------------------------------------
-# The audit harness, its state, its reports and its build logs are local
-# working artefacts, not product source. They stay on disk for the audit
-# trail but are not tracked.
-production-audit/
+# The harness, its control manifests, its task and findings ledgers, its
+# architecture decisions, its reports and its run evidence are tracked first
+# party assets: they are the deliverable of the production audit and they are
+# covered by the no-comment source policy. Only the reproducible build and
+# test logs stay untracked; every log has a recorded command and exit code.
+production-audit/runs/**/test-results/*.log
+production-audit/runs/**/e2e-results/*.log
+production-audit/runs/**/benchmarks/*.log
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+production-audit/state/*.lock

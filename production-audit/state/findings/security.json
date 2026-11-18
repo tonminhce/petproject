@@ -1,0 +1,875 @@
+{
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "auth-service/src/main/java/com/shop/authservice/controller/UserController.java:36",
+        "auth-service/src/main/java/com/shop/authservice/controller/UserController.java:51",
+        "utils/common-security/src/main/java/com/shop/common/security/jwt/AuthenticatedUser.java:39-46",
+        "auth-service/src/main/java/com/shop/authservice/entity/User.java:29-32",
+        "auth-service/src/main/java/com/shop/authservice/entity/User.java:63-64",
+        "auth-service/src/main/resources/db/changelog/changeset/004-password-reset-and-addresses.yaml:59-64",
+        "auth-service/src/main/resources/db/changelog/changeset/001-create-users-and-roles.yaml:32-34",
+        "utils/common-spring/.../ApiExceptionHandler.java:196-208",
+        "auth-service/.../UserServiceImpl.java:317-323"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "auth-service resolves the JWT subject against a DIFFERENT primary-key space"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/controller/OrderController.java:81-92",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:447-452",
+        "order-service/src/main/java/com/shop/orderservice/repository/OrderItemRepository.java:21-30",
+        "utils/common-spring/src/main/resources/application.yml:158",
+        "docker/keycloak/import/ecommerce-realm.json:170-209",
+        "rating-service/.../eligibility/EligibilityClient.java:51-60",
+        "inventory-service/.../InventoryController.java:87",
+        "payment-service/.../PaymentController.java:43",
+        "promotion-service/.../PromotionReservationController.java:39"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Cross-service IDOR: `verify-purchase` accepts an arbitrary `userId` with no principal cross-check"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "docker-compose.yml:253",
+        "docker-compose.yml:236-237",
+        "docker/keycloak/import/ecommerce-realm.json:151-168",
+        "docker/keycloak/import/ecommerce-realm.json:132-150",
+        "auth-service/.../RoleServiceImpl.java:24-34"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Committed literal credentials in `.env.example` for accounts the deployment *requires*"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:158-159",
+        "utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:126-134",
+        "utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java:38-52",
+        "gateway-service/src/main/resources/application.yml:56"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No `aud` validation fleet-wide; a single shared `azp` allow-list for every service"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "docker/keycloak/import/ecommerce-realm.json:35-39",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakTokenClient.java:53-64",
+        "auth-service/src/main/java/com/shop/authservice/health/KeycloakPasswordGrantPostureCheck.java:53-59",
+        "docker/keycloak/import/ecommerce-realm.json:41-51"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The platform's own login is the deprecated ROPC grant, on a public client, with no MFA binding"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/dto/KeycloakTokenResponse.java:14",
+        "auth-service/.../dto/response/TokenResponse.java:12-17",
+        "docker-compose.yml:214"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Token and session lifetimes are not pinned in the realm and are not asserted anywhere"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "auth-service/src/main/java/com/shop/authservice/dto/request/ResetPasswordRequest.java:9-11",
+        "auth-service/src/main/java/com/shop/authservice/dto/request/RegisterRequest.java:18-22",
+        "auth-service/src/main/java/com/shop/authservice/dto/request/ChangePasswordRequest.java:11-15",
+        "auth-service/src/main/resources/application.yml:66"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Password-reset accepts a weaker password than registration"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "auth-service/src/main/java/com/shop/authservice/exception/AuthExceptionHandler.java:21-28",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakTokenClient.java:170-177",
+        "KeycloakTokenClient.java:171"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The Keycloak error body is relayed to the client on non-401 auth failures"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/webhook/WebhookSignatureVerifier.java:18-34",
+        "shipping-service/src/main/java/com/shop/shippingservice/service/impls/WebhookEventServiceImpl.java:59-65",
+        "shipping-service/src/main/java/com/shop/shippingservice/webhook/CarrierWebhookController.java:22-29",
+        "shipping-service/src/main/resources/application.yml:47-48",
+        "WebhookEventServiceImpl.java:77-82"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The shipping webhook verifier has no replay window"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        ".github/workflows/ci.yml:24-28",
+        "pom.xml:377-385",
+        "pom.xml:66",
+        "pom.xml:373"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "CI runs no SCA, no SAST and no secret scan; the OWASP plugin is bound to a phase CI never reaches"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:135-143",
+        "utils/common-spring/src/main/resources/application.yml:141-158",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakProperties.java:32",
+        "BaseSecurityConfig.java:126-134"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The `verified-purchase` client discriminator is the fleet-wide `azp` list, and `azp` is absent for user tokens"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/main/resources/application.yml:62-86",
+        "gateway-service/src/main/java/com/shop/gateway/config/SecurityConfig.java:44-46",
+        "order-service/src/main/resources/application.yml:43-45",
+        "CartController.java:134-143"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Gateway edge permits `/api/v1/carts/**`, `/api/v1/ratings/**` and `/api/v1/medias/**` anonymously"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/dto/request/CartItemUpdateRequest.java:8",
+        "inventory-service/src/main/java/com/shop/inventoryservice/dto/request/InventoryUpsertRequest.java:10",
+        "inventory-service/src/main/java/com/shop/inventoryservice/dto/request/ReserveRequest.java:9",
+        "product-service/src/main/java/com/shop/productservice/dto/request/ProductCreateRequest.java:30-35",
+        "product-service/src/main/java/com/shop/productservice/dto/request/ProductVariantCreateRequest.java:21-26",
+        "promotion-service/src/main/java/com/shop/promotionservice/dto/request/CampaignRequest.java:25-27",
+        "inventory-service/.../InventoryController.java:87"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Unbounded / zero-allowed quantity and amount fields"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/dto/request/SearchRequest.java:25-29"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`SearchRequest` accepts unbounded/negative price and rating filters"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/dto/request/OrderReturnCreateRequest.java:15-17",
+        "payment-service/.../dto/CreatePaymentRequest.java:14",
+        "order-service/.../service/impls/OrderReturnServiceImpl.java:66"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`OrderReturnCreateRequest.refundAmount` has no scale bound"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "ProductVariantCreateRequest.java:21-22",
+        "ProductVariantUpdateRequest.java:16-17"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ProductCreateRequest.priceUnit` / `weight` have no scale bound"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "auth-service/src/main/java/com/shop/authservice/service/impls/UserServiceImpl.java:334-367",
+        "auth-service/.../UserServiceImplForgotPasswordLoggingTest.java:93-120"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`forgot-password` leaks account existence through response latency"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "pom.xml:55",
+        "pom.xml:206-207",
+        "docker-compose.yml:135",
+        "search-service/pom.xml:89"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Elasticsearch client major version (9.x) vs server (8.15.0)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-logging/.../AuditActorResolver.java:16-19",
+        "UserServiceImpl.java:317-323"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`UUID.fromString(jwt.sub)` throws on a service-account token"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/service/ServiceCallerGuard.java:28-34"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ServiceCallerGuard.requireCaller` fails open when the security context is empty"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-21 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java:414-416",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakProperties.java:36-42",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakAutoConfiguration.java:83-99"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The Keycloak master-realm password grant remains reachable as a fallback"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-22 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "docker-compose.yml:302",
+        "gateway-service/src/main/resources/application.yml:99",
+        "gateway-service/src/main/java/com/shop/gateway/filter/ClientIpResolver.java:16-24",
+        "gateway-service/src/main/java/com/shop/gateway/config/GatewaySecurityPostureValidator.java:114-127",
+        "docker-compose.prod.yml:62",
+        "docker-compose.prod.yml:24-28",
+        "AdminIpAllowlistFilter.java:84-88"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS` defaults to 0 in the base compose"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-23 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "docker-compose.yml:234",
+        "docker-compose.prod.yml:24-28",
+        "utils/common-security/.../BaseSecurityConfig.java:52-89",
+        "utils/common-spring/src/main/resources/application.yml:183"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No HTTPS enforcement, no HSTS and no CSP at the application layer"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-24 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:116-124",
+        "payment-service/.../entity/Payment.java:50"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Stripe search query built by string concatenation"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-25 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierShipmentClient.java:56-62"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Carrier request body built by string concatenation"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-26 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-26",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "docker/keycloak/import/ecommerce-realm.json:35",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakTokenClient.java:59-61"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "A client secret is configured for a **public** Keycloak client"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-27 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-27",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "auth-service/src/main/resources/application.yml:60-66",
+        "utils/common-security/.../config/BaseSecurityConfig.java:73-79",
+        "BaseSecurityConfig.java:74-77",
+        "auth-service/src/test/resources/security-filter-chain-fixture.yml:25-26"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`auth-service` public-path rules are method-agnostic"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-28 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-28",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "HANDOFF.md:31"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Seeded credential pairs are documented in tracked markdown"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-29 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-29",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "auth-service/src/main/java/com/shop/authservice/dto/request/RegisterRequest.java:36-37",
+        "auth-service/src/main/java/com/shop/authservice/dto/request/UpdateUserRequest.java:21-22",
+        "auth-service/src/main/java/com/shop/authservice/entity/User.java:60-61"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The `avatar` URL is persisted and returned but never validated against internal destinations"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SEC-30 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SEC-30",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "docker-compose.yml:187",
+        "BaseSecurityConfig.java:83",
+        "SecurityConfig.java:46",
+        "utils/common-spring/pom.xml:20-22",
+        "BaseSecurityConfig.java:124-125",
+        "auth-service/.../UserServiceImpl.java:247-266",
+        "auth-service/.../UserServiceImplTest.java:467-531",
+        "auth-service/.../RoleServiceImpl.java:68",
+        "auth-service/.../RoleServiceImplTest.java:110-152",
+        "auth-service/.../UserServiceImpl.java:391",
+        "auth-service/.../repository/PasswordResetTokenRepository.java:31-34",
+        "auth-service/.../repository/PasswordResetTokenConsumptionTest.java:139-180"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The object store is a release candidate and the CI image digests are unpinned"
+    }
+  ],
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md",
+  "topic": "security"
+}

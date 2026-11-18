@@ -1,0 +1,589 @@
+{
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "product-service/.../repository/OutboxEventRepository.java:37-39",
+        "inventory-service/.../repository/OutboxEventRepository.java:39-41",
+        "media-service/.../outbox/OutboxEventRepository.java:42-44",
+        "rating-service/.../outbox/OutboxEventRepository.java:37-39",
+        "promotion-service/.../repository/OutboxEventRepository.java:39-41",
+        "shipping-service/.../outbox/OutboxEventRepository.java:37-39",
+        "order-service/.../repository/OutboxEventRepository.java:38",
+        "payment-service/.../outbox/OutboxEventRepository.java:37",
+        "OutboxRelay.java:129-131",
+        "MediaOutboxRelay.java:126-128",
+        "ProductOutboxClaimConcurrencyIT.java:39",
+        "InventoryOutboxClaimConcurrencyTest.java:121"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "6 of 8 outbox relays serialise: a second replica publishes nothing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentOutboxRelay.java:153-162",
+        "OrderOutboxRelay.java:166",
+        "MediaOutboxRelay.java:163",
+        "RatingOutboxRelay.java:151",
+        "ShippingOutboxRelay.java:161",
+        "PromotionOutboxRelay.java:166",
+        "InventoryOutboxRelay.java:165",
+        "PaymentOutboxRelay.java:142",
+        "order-service/.../kafka/PaymentLifecycleConsumer.java:31",
+        "utils/common-kafka/.../producer/OutboxBatchOrdering.java:12-14",
+        "OutboxBatchOrdering.java:17-20"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "payment-service relay has no per-aggregate ordering barrier"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaConsumer.java:20-22",
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaConsumer.java:49-50",
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:113-118",
+        "BaseKafkaConsumer.java:111-116",
+        "BaseKafkaListenerConfig.java:88-89",
+        "BaseKafkaConsumerDeadLetterTest.java:83-94",
+        "KafkaProperties.java:109-127"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`BaseKafkaConsumer` / `KafkaProperties` javadoc contradicts the code on poison handling"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:128-150"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`shop.kafka.retry.*` is bindable but has zero effect"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/kafka/MediaLifecycleListenerConfig.java:33-43",
+        "RatingLifecycleListenerConfig.java:21-25"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "product-service's media listener has no error handler, hence no DLT"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "docker-compose.yml:110",
+        "docker-compose.yml:89-108",
+        "OrderOutboxRelay.java:222-223"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No topic provisioning anywhere in the repo"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/.../repository/OutboxEventRepository.java:78",
+        "payment-service/.../outbox/OutboxEventRepository.java:84",
+        "product-service/.../entity/OutboxEvent.java:18",
+        "utils/common-core/.../AbstractMappedEntity.java:22-24",
+        "payment-service/.../outbox/OutboxEvent.java:58-60",
+        "order-service/.../entity/OutboxEvent.java:56-57",
+        "media-service/.../outbox/OutboxEvent.java:59-60",
+        "MediaOutboxRelay.java:121"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "product-service and payment-service use the generic `updated_at` column as the claim lease"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "search-service/src/main/java/com/shop/searchservice/kafka/SearchListenerConfig.java:21-24",
+        "NotificationListenerConfig.java:17-19",
+        "BaseKafkaListenerConfig.java:90-92"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "search-service's DLT depends on an optional bean and fails open"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "notification-service/.../service/impls/NotificationServiceImpl.java:102-113",
+        "NotificationServiceImpl.java:57-60",
+        "OrderEventPublisherImpl.java:83"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "notification-service's dedup key silently depends on the event id being a parseable UUID"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "TransactionalProductEventPublisher.java:68-90",
+        "MediaEventService.java:61-71",
+        "RatingEventService.java:72-82",
+        "ShippingEventPublisherImpl.java:40-50",
+        "TransactionalPromotionEventPublisher.java:47-83",
+        "MediaEventService.java:60"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Producer payloads are untyped maps; the schema is not compile-time checked"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-core/.../OutboxStatus.java:20",
+        "OrderOutboxRelay.java:220-227"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`FAILED` outbox rows are never purged in 7 of 8 services"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "media-service/.../outbox/MediaOutboxRetentionScheduler.java:32",
+        "payment-service/.../outbox/OutboxRetentionScheduler.java:83-84",
+        "PaymentOutboxRelay.java:199-212"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`DEAD` rows are never purged (media-service) and payment's `DEAD` purge is unreachable code"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/.../entity/OutboxEvent.java:19-20",
+        "OrderEventPublisherImpl.java:83"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`outbox_events.event_id` UNIQUE protects against nothing but UUID collisions"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "ProductRatingService.java:11-15",
+        "ProductMediaService.java:52",
+        "ProductSearchService.java:43-46",
+        "TransactionalProductEventPublisher.java:68-90"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The snapshot discipline that makes idempotency work is unenforced (latent  if a delta event is ever introduced)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:99-106",
+        "KafkaProperties.java:99-106"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`enable.auto.commit=false` is inherited from a framework default, not asserted by fleet code"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/.../impls/OrderServiceImpl.java:263-265"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "order-service's non-transactional fallback paths would break atomicity if the tx manager were absent"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaAutoConfiguration.java:49-63",
+        "utils/common-kafka/.../serialization/JsonKafkaSerializer.java:14-18",
+        "KafkaAutoConfiguration.java:98-101",
+        "SearchListenerConfig.java:22",
+        "BaseKafkaConsumer.java:98-101",
+        "KafkaAutoConfiguration.java:38-41",
+        "KafkaAutoConfiguration.java:49-63"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The legacy double-encoding `KafkaTemplate` is still registered and is the default type-match"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/replay/DeadLetterReplayService.java:105"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "DLT replay drops the original headers (including `traceparent`)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:99-106",
+        "order-service/.../impls/OrderServiceImpl.java:317-379"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "No `max.poll.interval.ms` is configured for any listener"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for KAF-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "KAF-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/replay/DeadLetterReplayService.java:64-127",
+        "BaseKafkaConsumerDeadLetterTest.java:83-94",
+        "BaseKafkaConsumer.java:96-101"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The DLT replay endpoint is disabled in every service: the DLT is a write-only bucket"
+    }
+  ],
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md",
+  "topic": "kafka-outbox"
+}

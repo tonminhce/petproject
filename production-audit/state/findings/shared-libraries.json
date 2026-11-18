@@ -1,0 +1,2088 @@
+{
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java:402-449"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "KeycloakAdminClient.java:118-121",
+        "KeycloakAdminClientServiceAccountTest.java:139-155"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KeycloakAdminClient` silently falls back to the master-realm *password* grant"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "BaseSecurityConfigJwtDecoderLazyTest.java:12-36"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`LazyJwtDecoder` builds **N** decoders under concurrent first-request load (javadox guarantee is false)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "LazyJwtDecoder.java:62-78"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`LazyJwtDecoder` performs a synchronous OIDC discovery on the **request** thread with no negative cache"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "DeadLetterReplayServiceTest.java:85-112"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`DeadLetterReplayService.replay()` re-reads the whole DLT on every invocation and re-publishes already-replayed records"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "DeadLetterReplayService.java:104-123"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`DeadLetterReplayService.replay()` commits the offset of a record it **failed** to republish"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "DeadLetterReplayService.java:105",
+        "KafkaMessagePublisher.java:239-246"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`DeadLetterReplayService` blocks forever on a hung broker and loses trace context"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "org/springframework/boot/jackson/autoconfigure/JacksonAutoConfiguration.java:518",
+        "Jackson2ObjectMapperAutoConfiguration.java:27-29"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`BaseKafkaConsumer.WIRE_MAPPER` is a bare `ObjectMapper` that rejects unknown properties"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "BaseKafkaConsumer.java:47-51",
+        "BaseKafkaConsumer.java:111-116",
+        "BaseKafkaConsumerTypedBindTest.java:70-78",
+        "BaseKafkaConsumerDeadLetterTest.java:84-94"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`BaseKafkaConsumer` javadoc contradicts its code about DLT routing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/serialization/JsonKafkaDeserializer.java:33-43",
+        "BaseKafkaListenerConfig.java:109-111"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`JsonKafkaDeserializer` throws `RuntimeException`, which defeats the `ErrorHandlingDeserializer` DLT contract"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/serialization/JsonKafkaSerializer.java:48-58",
+        "KafkaAutoConfiguration.java:53-56"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`JsonKafkaSerializer` silently degrades a failed serialization to a **non-JSON** payload"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:98-106"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KafkaProperties.buildConsumerProperties()` leaves critical consumer settings to framework defaults"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "KafkaProperties.java:226-228",
+        "BaseKafkaListenerConfig.java:48-59",
+        "KafkaListenerGroupIdContractTest.java:36-62"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KafkaProperties.ConsumerConfig.groupId` default is a **fleet-wide** shared identity"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "application.yml:106"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`CorrelationIdFilter` trusts an unvalidated client-supplied header and writes it into the MDC"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "application.yml:47"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`RequestUtils.getClientIp()` trusts client-supplied proxy headers unconditionally"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/HttpLoggingFilter.java:64-74",
+        "WebAutoConfiguration.java:36-42"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`HttpLoggingFilter` buffers the **entire** response body in heap per request"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "ApiExceptionHandlerConstraintLeakTest.java:20-48"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ApiExceptionHandler` echoes the raw exception message for two request-shape errors"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakTokenClient.java:146-160"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KeycloakTokenClient.verifyCredentials()` cannot distinguish \"wrong password\" from \"Keycloak is down\""
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java:262-280"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KeycloakAdminClient.updateUserEnabled()` can leave live sessions after a successful disable"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java:570-593"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`KeycloakAdminClient.buildUserPayload()` hard-codes `emailVerified=true`"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-21 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-core/src/main/java/com/shop/common/core/util/DateTimeUtils.java:26-35"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`DateTimeUtils` cache eviction is a check-then-act race with a whole-cache flush"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-22 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "BoundedAsyncAuditEventWriterTest.java:77-110"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`BoundedAsyncAuditEventWriter` silently discards audit events under back-pressure"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-23 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-logging/src/main/java/com/shop/common/logging/audit/AuditActorResolver.java:44-49",
+        "AuditActorResolverTest.java:101-109"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`AuditActorResolver` treats an `AnonymousAuthenticationToken` as an authenticated caller"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-24 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/service/ServiceCallerGuard.java:27-37",
+        "BaseSecurityConfig.java:83"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ServiceCallerGuard.requireCaller()` **fails open** for an unauthenticated caller"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-25 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "JwtRolesConverter.java:36-46"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ServiceCallerGuard` lets any holder of a realm ADMIN/MANAGER role bypass the client check entirely"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-26 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-26",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`AuthenticatedUser.from(Jwt)` takes its authorities from the ambient context, not from the argument"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-27 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-27",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java:120-131"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`SecurityProperties` null-guards `expectedAudiences` but not `expectedClientIds`"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-28 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-28",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-storage/src/main/java/com/shop/common/storage/config/ObjectStorageAutoConfiguration.java:63-72"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ObjectStorageAutoConfiguration` performs a **network call inside a `@Bean` method**"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-29 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-29",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-storage/src/main/java/com/shop/common/storage/service/S3ObjectStorageService.java:110-124"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`S3ObjectStorageService.download()` buffers up to 50 MB per call"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-30 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-30",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "CommonLibraryStarterTests.java:73-76",
+        "SecurityAutoConfiguration.java:29",
+        "KeycloakAutoConfiguration.java:85-86",
+        "KafkaProperties.java:25",
+        "KafkaAutoConfiguration.java:45",
+        "StorageProperties.java:29",
+        "ObjectStorageAutoConfiguration.java:24",
+        "WebAutoConfiguration.java:30-31"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Five `CommonProperties` toggles are dead configuration"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-31 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-31",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`Messages` is a static global facade"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-32 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-32",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "Messages.java:63-73",
+        "KafkaMessagePublisher.java:165-222",
+        "TracingAutoConfiguration.java:77-122",
+        "TracingAutoConfigurationTest.java:176-187",
+        "TracingAutoConfigurationTest.java:70-84",
+        "AuditEvent.java:42-81",
+        "AuditEventTest.java:46-55",
+        "ModelMapperAutoConfiguration.java:27-35",
+        "org/modelmapper/internal/TypeMapStore.java:35",
+        "S3ObjectStorageService.java:35-36",
+        "KeycloakAutoConfiguration.java:43-45",
+        "BoundedAsyncAuditEventWriter.java:148-158"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`common-core`'s `Messages.fromBundle` uses `ResourceBundle.getBundle`, whose default-locale fallback can leak a wrong locale"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java:402-449"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`synchronized (this)` on a shared bean, held across a network call"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "KeycloakAdminClient.java:118-121",
+        "KeycloakAdminClientServiceAccountTest.java:139-155"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "silent downgrade from the service-account grant to the master-realm password grant"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/replay/DeadLetterReplayService.java:73",
+        "DeadLetterReplayServiceTest.java:109-111"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "DLT replay is not resumable and re-publishes already-replayed records"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaConsumer.java:39-40",
+        "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/Jackson2ObjectMapperAutoConfiguration.java:27-29",
+        "org/springframework/boot/jackson/autoconfigure/JacksonAutoConfiguration.java:518",
+        "BaseKafkaConsumerTypedBindTest.java:80-90"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the Kafka consumer mapper rejects unknown properties, unlike every HTTP boundary"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/CorrelationIdFilter.java:39-43",
+        "application.yml:106",
+        "common-core/.../ApiResponse.java:61-63",
+        "AuditAspect.java:65-66"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "an unvalidated client header is written into the MDC and echoed back"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/web/util/RequestUtils.java:12-18",
+        "application.yml:47",
+        "HttpLoggingFilter.java:81"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "client IP resolved from spoofable headers, with a local-address bypass primitive"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/HttpLoggingFilter.java:64-66",
+        "WebAutoConfiguration.java:36-42"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "unbounded per-request response buffering"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-24 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/service/ServiceCallerGuard.java:27-37",
+        "SecurityAutoConfiguration.java:35-39",
+        "BaseSecurityConfig.java:83",
+        "ObjectStorageAutoConfiguration.java:50-61"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ServiceCallerGuard` fails open for an unauthenticated caller"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-28 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-28",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-storage/src/main/java/com/shop/common/storage/config/ObjectStorageAutoConfiguration.java:63-72",
+        "S3ClientFactory.java:30-37",
+        "S3ObjectStorageService.java:51-72"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "a network call inside a `@Bean` method, with a startup race"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-33 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-33",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakAutoConfiguration.java:62"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Keycloak clients bypass the application-configured `RestClient.Builder`"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-34 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-34",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/replay/DeadLetterReplayEndpoint.java:10",
+        "KafkaAutoConfiguration.java:88-94",
+        "DeadLetterReplayService.java:96-105",
+        "SecurityAutoConfiguration.java:31"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the DLT-replay actuator endpoint has no authorization"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-35 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-35",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:87-92"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "a listener factory without a recoverer silently drops records"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-36 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-36",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:98-106"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the shared consumer configuration pins none of the commit/isolation semantics"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-37 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-37",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:158",
+        "BaseSecurityConfig.java:135-143"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "LazyJwtDecoder.java:80-95"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`LazyJwtDecoder` builds more than one decoder under concurrent load"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "LazyJwtDecoder.java:62-66"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "a failed pre-warm turns every request into a synchronous IdP discovery"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "DeadLetterReplayService.java:104-123"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the replay commits the offset of a record it failed to republish"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "DeadLetterReplayService.java:105",
+        "KafkaMessagePublisher.java:239-246"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the replay blocks without a timeout and loses the trace context"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "BaseKafkaConsumer.java:47-51",
+        "BaseKafkaConsumerTypedBindTest.java:70-78",
+        "BaseKafkaConsumerDeadLetterTest.java:84-94"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the `BaseKafkaConsumer` javadoc contradicts the code on DLT routing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "JsonKafkaDeserializer.java:38-42"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`JsonKafkaDeserializer` throws the wrong exception type for the DLT contract"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "JsonKafkaSerializer.java:53-57",
+        "KafkaAutoConfiguration.java:53-56"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the serializer silently writes a non-JSON payload on failure"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "KafkaProperties.java:226-228",
+        "BaseKafkaListenerConfig.java:48-59",
+        "KafkaListenerGroupIdContractTest.java:36-62"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the shared consumer-group default is a fleet-wide trap"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "BaseSecurityConfig.java:127-133",
+        "BaseSecurityConfigAudienceValidationTest.java:38-43"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the `aud` validator rejects the scalar form that RFC 7519 permits"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "ApiExceptionHandler.java:104-115",
+        "ApiExceptionHandlerConstraintLeakTest.java:20-48"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "two exception messages are echoed to the client verbatim"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "KeycloakTokenClient.java:146-160"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "\"invalid credentials\" is indistinguishable from \"IdP down\""
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "KeycloakAdminClient.java:262-280"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "disabling a user can leave live sessions behind"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "KeycloakAdminClient.java:570-593"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "user creation hard-codes `emailVerified=true` and `temporary=false`"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-22 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "BoundedAsyncAuditEventWriter.java:47-49",
+        "BoundedAsyncAuditEventWriterTest.java:77-110"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the audit trail discards events under back-pressure with no alert"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-25 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "ServiceCallerGuard.java:18",
+        "JwtRolesConverter.java:36-46"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "a realm ADMIN/MANAGER role bypasses the client allow-list"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-26 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-26",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "AuthenticatedUser.java:35-47"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`AuthenticatedUser.from(jwt)` mixes two principals"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-29 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-29",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "S3ObjectStorageService.java:110"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`download()` buffers up to 50 MB per concurrent call"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-30 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-30",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "CommonProperties.java:35-43",
+        "CommonLibraryStarterTests.java:73-76",
+        "KafkaProperties.java:25",
+        "KafkaAutoConfiguration.java:45"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "five `shop.common.*` toggles are dead configuration"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-38 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-38",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "CorsAutoConfigurer.java:31-33"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the CORS source bean cannot be overridden"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-39 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-39",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "SecurityProperties.java:113-117",
+        "CorsAutoConfigurer.java:42-45",
+        "application.yml:165-169",
+        "SharedDefaultsSecurityTest.java:47-62"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the CORS code default is a wildcard origin"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-40 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-40",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "HttpLoggingFilter.java:123-132"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the body masker only understands JSON"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-41 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-41",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:20-22"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "the shared defaults activate the `dev` profile"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-21 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "DateTimeUtils.java:31-33"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`DateTimeUtils` cache eviction is a check-then-act flush"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-23 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "AuditActorResolver.java:44-49"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`isAuthenticated()` is `true` for an anonymous token"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-27 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-27",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "SecurityProperties.java:120-131",
+        "BaseSecurityConfig.java:135"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`expectedClientIds` has no null guard"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-31 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-31",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`Messages` is a static global facade"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-32 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-32",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "Messages.java:63-73"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`ResourceBundle.getBundle` default-locale fallback disagrees with the Spring path"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-42 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-42",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "KafkaProperties.java:109-127",
+        "KafkaPropertiesProducerDefaultsTest.java:31"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "dead retry configuration, and a test name that overstates the guarantee"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-43 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-43",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "JsonKafkaSerializer.java:31",
+        "KafkaAutoConfiguration.java:51-57",
+        "KafkaAutoConfiguration.java:28-41"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "a deprecated-for-removal serializer is still the default value serializer"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-44 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-44",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "BaseSecurityConfig.java:136",
+        "JpaAuditingAutoConfiguration.java:59-61",
+        "JpaAuditingAutoConfiguration.java:68",
+        "JpaAuditingAutoConfigurationTest.java:37-45",
+        "JpaAuditingAutoConfigurationTest.java:37-58"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "truncated/garbled comments indicate partially-reverted edits"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for SL-45 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "SL-45",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "KeycloakAdminClient.java:68-112",
+        "KeycloakTokenClient.java:33-43",
+        "KeycloakProperties.java:100-111",
+        "ObjectStorageAutoConfiguration.java:50-61",
+        "application.yml:199-201",
+        "StoragePropertiesCredentialsTest.java:21-55",
+        "SharedDefaultsSecurityTest.java:31-45",
+        "RealmImportCredentialContractTest.java:88-149",
+        "application.yml:55-60",
+        "ServerErrorDefaultsTest.java:40-71",
+        "ApiExceptionHandlerConstraintLeakTest.java:20-71",
+        "AuditAspectTest.java:89-109"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "constructor-overload explosion instead of a builder"
+    }
+  ],
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md",
+  "topic": "shared-libraries"
+}

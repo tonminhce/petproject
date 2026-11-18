@@ -1,0 +1,44 @@
+{
+  "revision": "a2b6e6fc336f42f851166cab0cf0d1bba42db12f (baseline) + working tree",
+  "suites": {
+    "baseline": {
+      "command": "./mvnw -B -ntp -T1C clean verify",
+      "duration_seconds": 644,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "infrastructure": "Testcontainers PostgreSQL 16 and confluentinc/cp-kafka:7.6.0",
+      "log": "/tmp/dsh-baseline-verify.log",
+      "modules": 23,
+      "revision": "a2b6e6fc336f42f851166cab0cf0d1bba42db12f",
+      "skipped": 0,
+      "status": "PASS",
+      "tests_run": 1913,
+      "updated_at": "2026-11-18T13:32:07Z"
+    },
+    "build": {
+      "command": "./mvnw -B -ntp clean verify",
+      "duration_seconds": 674,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "infrastructure": "Testcontainers PostgreSQL 16 and confluentinc/cp-kafka:7.6.0",
+      "log": "/tmp/dsh-full-verify.log",
+      "modules": 23,
+      "revision": "a2b6e6fc336f42f851166cab0cf0d1bba42db12f (baseline) + working tree",
+      "skipped": 0,
+      "status": "PASS",
+      "tests_run": 1931,
+      "updated_at": "2026-11-18T14:15:37Z"
+    },
+    "comments": {
+      "equivalence_diverged": 0,
+      "prohibited_comments": 0,
+      "scanned_files": 1141,
+      "status": "PASS",
+      "suite": "comments",
+      "updated_at": "2026-11-18T14:03:49Z"
+    }
+  },
+  "updated_at": "2026-11-18T14:15:37Z"
+}

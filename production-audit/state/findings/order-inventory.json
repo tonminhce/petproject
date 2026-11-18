@@ -1,0 +1,844 @@
+{
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "inventory-service/src/main/java/com/shop/inventoryservice/dto/request/ReserveRequest.java:8-11",
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java:138-164",
+        "inventory-service/src/main/resources/db/changelog/changelog-001-initial-schema.yaml:39-72",
+        "inventory-service/src/main/resources/db/changelog/changelog-006-reservations-order-id-index.yaml:21-24",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:190-198",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:234-254",
+        "inventory-service/src/main/resources/application.yml:67",
+        "order-service/src/main/resources/application.yml:51-53",
+        "InventoryServiceImpl.java:185-191"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The inventory `reserve` API is not idempotent: duplicate holds and 900-second orphan holds"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-02 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity HIGH. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/OrderCommitCoordinator.java:133-139",
+        "order-service/src/main/java/com/shop/orderservice/service/OrderCommitCoordinator.java:142-153",
+        "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java:180-196",
+        "order-service/src/main/java/com/shop/orderservice/service/CompensationFailureService.java:58-82",
+        "OrderCreateSaga.java:246-249",
+        "OrderServiceImpl.java:284-290",
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java:246-269",
+        "ReservationCleanupScheduler.java:67-68",
+        "CompensationFailureLedgerIT.java:40-108"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "A failed `releaseCommitted` in the confirm-compensation path is dropped: no ledger, no retry, stock permanently consumed"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-03 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:190-198",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:219-226",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:199-217",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderEventPublisherImpl.java:96-100"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "A failure of the saga's final transaction leaks every stock reservation"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-04 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:229-231",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyServiceImpl.java:116-124",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:159-165",
+        "IdempotencyServiceImpl.java:134"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`idempotencyService.complete()` failing after the order is committed frees the key and lets a retry create a second order"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-05 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyServiceImpl.java:68",
+        "order-service/src/main/java/com/shop/orderservice/controller/OrderController.java:35",
+        "order-service/src/test/java/com/shop/orderservice/controller/OrderControllerTest.java:107-114"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The duplicate-checkout protection is opt-in: a checkout without an `Idempotency-Key` header gets none"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-06 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java:102-111",
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java:125-129",
+        "inventory-service/.../service/ReservationCleanupSchedulerTest.java:103-123"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The expiry sweep publishes a spurious `inventory.released.v1` for reservations it did not claim"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-07 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java:198-206",
+        "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java:212-224",
+        "order-service/src/main/java/com/shop/orderservice/constant/OrderStatus.java:4-6",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderStatusServiceImpl.java:16-22"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The reconciliation scheduler bypasses the order state machine"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-08 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java:156-159",
+        "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java:198-206",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:334-345",
+        "order-service/src/main/java/com/shop/orderservice/config/PaymentGateValidator.java:39-46"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The reconciliation auto-confirm bypasses the captured-payment gate"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-09 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/entity/Cart.java:11-27",
+        "Order.java:108-111",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/CartServiceImpl.java:81-82",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/CartServiceImpl.java:197-201",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:132-134",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:223-224"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`Cart` has no `@Version`: the cart subtotal is a lost update"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-10 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/CompensationFailureService.java:90-92",
+        "order-service/src/main/java/com/shop/orderservice/service/CompensationFailureService.java:94-97",
+        "order-service/src/main/java/com/shop/orderservice/service/CompensationFailureService.java:98-117",
+        "order-service/.../application.yml:52",
+        "utils/common-spring/src/main/resources/application.yml:32",
+        "application.yml:34",
+        "OrderServiceImpl.java:190-200"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`CompensationFailureService.retryPending` performs up to 50 sequential HTTP calls inside a single transaction"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-11 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java:123-134",
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/InventoryServiceImpl.java:141",
+        "inventory-service/src/main/resources/db/changelog/changelog-006-reservations-order-id-index.yaml:7-16"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`InventoryServiceImpl.delete()`'s active-reservation guard is a check-then-act"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-12 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderReturnServiceImpl.java:155-161",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderReturnServiceImpl.java:163",
+        "order-service/src/main/java/com/shop/orderservice/entity/OrderReturn.java:27-70"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The refund gateway is called before the state is persisted: a DB failure makes the return re-reviewable and the refund repeatable"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-13 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/client/ProductServiceClient.java:36-38",
+        "order-service/src/main/java/com/shop/orderservice/config/CacheConfig.java:21",
+        "inventory-service/.../config/CacheConfig.java:27",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:183-185"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The `productPrice` cache is never invalidated: up to 10 minutes of stale checkout pricing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-14 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderReturnServiceImpl.java:55-60",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderReturnServiceImpl.java:62-68",
+        "order-service/src/main/java/com/shop/orderservice/entity/OrderReturn.java:27-70",
+        "order-service/src/main/java/com/shop/orderservice/entity/Order.java:108-111"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The return flow's cumulative-refund and pending-return checks are unlocked read-modify-write"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-15 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/CompensationFailureService.java:58-66",
+        "order-service/src/main/resources/db/changelog/changelog-010-failed-compensations.yaml:32-42",
+        "CompensationFailureLedgerIT.java:57-70"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`failed_compensations` has no uniqueness on `(reservation_id, kind)`"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-16 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyKeyCleanupScheduler.java:19-28",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OutboxRetentionScheduler.java:25-35",
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/OutboxRetentionScheduler.java:26-38",
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/ReservationCleanupScheduler.java:132-144"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "Three retention schedulers perform unbounded bulk DELETEs in a single transaction"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-17 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "inventory-service/src/main/java/com/shop/inventoryservice/repository/OutboxEventRepository.java:37-41",
+        "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxClaimConcurrencyTest.java:176-178",
+        "order-service/.../repository/OutboxEventRepository.java:36-38",
+        "OrderOutboxClaimConcurrencyIT.java:120-183"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The inventory outbox claim shape serialises every relay pod on the head row"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-18 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "inventory-service/src/main/java/com/shop/inventoryservice/repository/InventoryRepository.java:39-44",
+        "InventoryServiceImpl.java:141"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`atomicReserve` lacks `flushAutomatically = true` (a latent trap)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-19 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java:190-198",
+        "order-service/src/main/resources/application.yml:51-53"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The create saga reserves N lines sequentially (N × timeout, N simultaneous holds)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-20 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/OrderCommitCoordinator.java:115-118",
+        "order-service/src/main/java/com/shop/orderservice/service/OrderCommitCoordinator.java:142-144",
+        "order-service/src/test/java/com/shop/orderservice/service/ConfirmOrchestrationIT.java:235-280",
+        "OrderCommitCoordinator.java:142-144"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The \"LIFO\" compensation order is not deterministic under the parallel commit fan-out"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-21 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "inventory-service/src/main/java/com/shop/inventoryservice/service/impls/ReservationServiceImpl.java:26-27"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The inventory retry budget is 3 attempts with a 50 ms base backoff"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-22 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/PricingServiceImpl.java:54-61",
+        "order-service/src/main/java/com/shop/orderservice/service/OrderCommitCoordinator.java:45-52",
+        "order-service/src/main/java/com/shop/orderservice/config/RestClientConfig.java:79-82"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The static fan-out executors use unbounded queues against a 50-connection-per-route HTTP pool"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-23 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/client/ProductServiceClient.java:38-49",
+        "OrderCreateSaga.java:165-168"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "A 5xx from product-service escapes as a raw exception (surfaced as a 500, not a 503)"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-24 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/controller/OrderStatusController.java:25"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`OrderStatusController.ship`/`deliver` have no per-order authorization"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-25 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/OrderReconciliationScheduler.java:113-115"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The reconciliation sweeper decides on a stale detached snapshot"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-26 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-26",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/repository/CartRepository.java:33-34",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/GuestCartCleanupScheduler.java:28-49",
+        "order-service/src/main/java/com/shop/orderservice/controller/CartController.java:157-159",
+        "GuestCartCleanupScheduler.java:25-26"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "`GuestCartCleanupScheduler` purges active carts of real users and is unbounded"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-27 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-27",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity LOW. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 70,
+      "severity": "LOW",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:488-498",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:516"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The tracking abuse brake under-counts under concurrency"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-28 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-28",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "inventory-service/src/main/resources/application.yml:68-73",
+        "ReservationCleanupScheduler.java:60",
+        "order-service/src/main/resources/application.yml:86-89",
+        "OrderReconciliationScheduler.java:88",
+        "inventory-service/src/main/resources/application.yml:66-73",
+        "order-service/src/main/resources/application.yml:71-89"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "INFO — YAML/code drift on three scheduler knobs"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for OI-29 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md no longer reproduces"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "business_risk": "",
+      "concurrency_tests": [],
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [],
+      "id": "OI-29",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Extracted from production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md. Severity MEDIUM. Read the report section for the full root-cause analysis and the proposed fix before implementing.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/constant/ReturnStatus.java:4-8",
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderReturnServiceImpl.java:155-161",
+        "inventory-service/src/main/java/com/shop/inventoryservice/repository/InventoryRepository.java:39-44",
+        "entity/Inventory.java:58-59",
+        "entity/Reservation.java:76-79",
+        "InventoryRepository.java:59-63",
+        "ReservationRepository.java:46-51"
+      ],
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "INFO — `ReturnStatus.APPROVED` is a dead state and the return flow has no transition table"
+    }
+  ],
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md",
+  "topic": "order-inventory"
+}

@@ -1,0 +1,49 @@
+{
+  "concurrency": {
+    "description": "concurrency and multi-instance scenarios",
+    "include_integration": true,
+    "patterns": [
+      "*Concurrency*Test",
+      "*Concurrency*IT",
+      "*Race*Test",
+      "*Parallel*Test"
+    ]
+  },
+  "edge": {
+    "description": "edge and negative scenarios",
+    "include_integration": false,
+    "patterns": [
+      "*Edge*Test",
+      "*Negative*Test",
+      "*Validation*Test",
+      "*Boundary*Test"
+    ]
+  },
+  "happy": {
+    "description": "happy path business scenarios",
+    "exclude": [
+      "*Edge*",
+      "*Negative*",
+      "*Concurrency*",
+      "*Race*"
+    ],
+    "include_integration": false,
+    "patterns": [
+      "*Test"
+    ]
+  },
+  "integration": {
+    "description": "integration tests against real infrastructure",
+    "include_integration": true,
+    "patterns": [
+      "*IT"
+    ]
+  },
+  "unit": {
+    "description": "surefire unit tests",
+    "include_integration": false,
+    "patterns": [
+      "*Test"
+    ]
+  }
+}
