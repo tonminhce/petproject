@@ -73,7 +73,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .subject(draft.subject())
                 .body(draft.body())
                 .payload(payload(event))
-                // claiming, the retry poller picks the PENDING row up.
                 .nextRetryAt(draft.known() ? Instant.now() : null)
                 .build();
         Notification saved;
@@ -94,11 +93,6 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    /**
-     * Parses the event identifier at the Kafka trust boundary. Invalid payloads
-     * are poison messages: log and acknowledge them rather than retrying a
-     * value that can never produce a valid notification row.
-     */
     private UUID parseEventId(OrderLifecycleEvent event) {
         if (event == null || event.eventId() == null || event.eventId().isBlank()) {
             log.warn("Skipping notification event with missing eventId");

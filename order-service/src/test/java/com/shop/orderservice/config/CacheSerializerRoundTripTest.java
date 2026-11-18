@@ -10,13 +10,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Regression guard for review finding the {@code productPrice} cache
- * serializer must carry polymorphic type information. A serializer without
- * default typing writes no {@code @class} hint, so a cache HIT deserializes to
- * a {@code LinkedHashMap} and the {@code @Cacheable} proxy throws
- * {@code ClassCastException} on the second read of the same product.
- */
 class CacheSerializerRoundTripTest {
 
     @Test
@@ -42,7 +35,6 @@ class CacheSerializerRoundTripTest {
         byte[] bytes = serializer.serialize(
             new ProductSnapshot(UUID.randomUUID(), "X", BigDecimal.ONE));
 
-        // The @class hint is what makes polymorphic deserialization possible.
         assertThat(new String(bytes))
             .contains("@class")
             .contains("ProductSnapshot");
@@ -50,14 +42,9 @@ class CacheSerializerRoundTripTest {
 
     @Test
     void productPriceSerializer_doesNotMutateProvidedObjectMapper() throws Exception {
-        // Regression guard for re-review finding 1: GenericJackson2JsonRedisSerializer
-        // builder MUTATES the mapper it receives (setDefaultTyping + NullValue module).
-        // The mapper handed in must be a private copy — if the shared Boot ObjectMapper
-        // were mutated, every MVC record request body would fail deserialization with
-        // InvalidTypeIdException and every record response would gain an "@class" field.
-        ObjectMapper shared = new ObjectMapper();  // stands in for the Boot bean
+        ObjectMapper shared = new ObjectMapper();
 
-        CacheConfig.productPriceSerializer(shared);  // must NOT touch `shared`
+        CacheConfig.productPriceSerializer(shared);
 
         byte[] appJson = shared.writeValueAsBytes(
             new ProductSnapshot(UUID.randomUUID(), "App", BigDecimal.ONE));

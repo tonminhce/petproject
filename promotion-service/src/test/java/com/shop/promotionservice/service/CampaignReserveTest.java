@@ -31,19 +31,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Task 6 — reserve validation chain (spec §5.1) + version-touch race guard
- * (§5.2). Unit tests: mocked repos, frozen Clock, real DiscountCalculator.
- * Gate order is load-bearing: NOT_FOUND → NOT_ACTIVE → MIN_ORDER → PER_USER
- * → MAX_REDEMPTIONS → BUDGET.
- */
 @ExtendWith(MockitoExtension.class)
 class CampaignReserveTest {
 
     private static final Instant NOW = Instant.parse("2026-08-30T10:00:00Z");
     private static final long TTL_SECONDS = 900L;
     private static final String CODE = "SAVE10";
-    /** Spec §5.1 "PENDING, CONFIRMED" — CONFIRMED is COMMITTED in the landed UsageStatus enum. */
     private static final List<UsageStatus> COUNTED_STATUSES =
         List.of(UsageStatus.PENDING, UsageStatus.COMMITTED);
 
@@ -142,7 +135,6 @@ class CampaignReserveTest {
         verifyNoInteractions(eventPublisher);
     }
 
-    // --- 1. unknown / deleted code → PRO-7001 (@SQLRestriction hides deleted) ---
 
     @Test
     @DisplayName("unknown code → CAMPAIGN_NOT_FOUND (PRO-7001)")
@@ -157,7 +149,6 @@ class CampaignReserveTest {
         verifyNoInteractions(reservationRepository, eventPublisher);
     }
 
-    // --- 2. INACTIVE / before starts_at / after ends_at → PRO-7004 ---
 
     @Test
     @DisplayName("INACTIVE campaign → CAMPAIGN_NOT_ACTIVE (PRO-7004)")
@@ -195,7 +186,6 @@ class CampaignReserveTest {
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7004"));
     }
 
-    // --- 3. orderAmount < min_order_amount → PRO-7005 (null min → skip) ---
 
     @Test
     @DisplayName("orderAmount below min_order_amount → MIN_ORDER_AMOUNT_NOT_MET (PRO-7005)")
@@ -211,7 +201,6 @@ class CampaignReserveTest {
         verifyNoInteractions(reservationRepository, eventPublisher);
     }
 
-    // --- 4. per-user limit → PRO-7006 (per_user_limit=0 → skip check) ---
 
     @Test
     @DisplayName("user at per_user_limit → PER_USER_LIMIT_EXCEEDED (PRO-7006)")
@@ -243,7 +232,6 @@ class CampaignReserveTest {
             any(), any(), any());
     }
 
-    // --- 5. max_redemptions reached → PRO-7007 ---
 
     @Test
     @DisplayName("max_redemptions reached (PENDING+COMMITTED count) → BUDGET_EXHAUSTED (PRO-7007)")
@@ -262,14 +250,12 @@ class CampaignReserveTest {
         verifyNoInteractions(eventPublisher);
     }
 
-    // --- 6. budget exceeded → PRO-7007 ---
 
     @Test
     @DisplayName("sumDiscount(PENDING+COMMITTED) + newDiscount > total_budget → BUDGET_EXHAUSTED (PRO-7007)")
     void budgetExceededThrowsBudgetExhausted() {
         Campaign campaign = baseCampaign().totalBudget(new BigDecimal("100.00")).build();
         when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(campaign));
-        // 199.99 x 10% = 20.00 new discount; 80.01 held + 20.00 > 100.00
         when(reservationRepository.sumDiscountByCampaignIdAndStatusIn(campaignId, COUNTED_STATUSES))
             .thenReturn(new BigDecimal("80.01"));
 
@@ -292,7 +278,6 @@ class CampaignReserveTest {
         assertThat(response).isNotNull();
     }
 
-    // --- 7. happy path: frozen amounts, PENDING row, ttl expiry, version-touch, event ---
 
     @Test
     @DisplayName("happy: saves PENDING row frozen at now+ttl, touches campaign version, publishes, returns frozen amounts")
@@ -302,11 +287,9 @@ class CampaignReserveTest {
 
         ReservationResponse response = service.reserve(CODE, request("199.99"));
 
-        // version-touch race guard (§5.2): campaign marked dirty at `now`, flushed
         assertThat(campaign.getUpdatedAt()).isEqualTo(NOW);
         verify(campaignRepository).saveAndFlush(same(campaign));
 
-        // counts consulted with exactly PENDING+COMMITTED
         verify(reservationRepository).countByCampaignIdAndUserIdAndStatusIn(
             campaignId, userId, COUNTED_STATUSES);
 
@@ -337,7 +320,7 @@ class CampaignReserveTest {
     @Test
     @DisplayName("null min_order_amount / max_redemptions / total_budget → all caps skipped")
     void nullCapsAreSkipped() {
-        Campaign campaign = activeCampaign(); // min/max/budget all null
+        Campaign campaign = activeCampaign();
         stubHappyPath(campaign);
 
         ReservationResponse response = service.reserve(CODE, request("0.01"));

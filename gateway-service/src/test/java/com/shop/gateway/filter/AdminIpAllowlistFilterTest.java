@@ -238,9 +238,6 @@ class AdminIpAllowlistFilterTest {
 
     @Test
     void aPathThatMerelyStartsWithAPublicPrefixIsNotBypassed() {
-        // "/api/v1/ratings-admin" is NOT a child of "/api/v1/ratings": a bare
-        // prefix match would hand it the public bypass and let it reach the
-        // backoffice without the allowlist.
         var filter = new AdminIpAllowlistFilter(
                 new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, ipResolver);
 

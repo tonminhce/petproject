@@ -30,19 +30,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * Purge unit proofs with a STUBBED reference checker — the stub controls
- * behavior. H-4 replaced the always-true Noop default with the real
- * {@code ProductMediaReferenceChecker} (product-service count over HTTP), so
- * the stubbed-false path proves the purge path works (grace boundary — a row
- * at EXACTLY the grace horizon is purgeable, the repo's {@code <=} query is
- * IT-proven in {@code MediaPurgeIT}; referenced-skip logs WARN + leaves
- * objects/rows for the NEXT cycle; unreferenced purge is objects-then-rows in
- * order; one failing media never aborts the batch). A checker that THROWS is
- * fail-safe REFERENCED for that row only — WARN + skip, and the cycle
- * continues with the next candidate (the real checker maps its own outages to
- * "referenced" already; this covers anything outside that contract).
- */
 @ExtendWith(MockitoExtension.class)
 class MediaPurgeJobTest {
 
@@ -109,8 +96,6 @@ class MediaPurgeJobTest {
     @Test
     @DisplayName("inside the grace window the job never even sees the row (cutoff math)")
     void purge_insideGrace_rowIsNotACandidate() {
-        // a row deleted_at = now − grace + 60s is OLDER than no cutoff the job
-        // can compute: cutoff = now′ − grace < deleted_at for now′ ≈ now
         when(mediaRepository.findPurgeableIds(any())).thenReturn(List.of());
 
         job.purge();
@@ -129,12 +114,10 @@ class MediaPurgeJobTest {
         candidate(MEDIA_A, MEDIA_A + "/original.jpg");
         when(referenceChecker.isReferenced(MEDIA_A)).thenReturn(true, false);
 
-        // cycle 1: referenced → skipped, nothing deleted
         job.purge();
         verifyNoInteractions(storage);
         verify(mediaRepository, never()).deleteIncludingDeleted(MEDIA_A);
 
-        // cycle 2: reference gone → purge proceeds
         job.purge();
         verify(storage).delete(BUCKET, MEDIA_A + "/original.jpg");
         verify(mediaRepository).deleteIncludingDeleted(MEDIA_A);
@@ -164,10 +147,8 @@ class MediaPurgeJobTest {
 
         assertThatCode(() -> job.purge()).doesNotThrowAnyException();
 
-        // A: checker blew up → never touched (fail-safe keep, retried next cycle)
         verify(storage, never()).delete(BUCKET, MEDIA_A + "/original.jpg");
         verify(mediaRepository, never()).deleteIncludingDeleted(MEDIA_A);
-        // B: next candidate still processed — the cycle did not abort
         verify(storage).delete(BUCKET, MEDIA_B + "/original.jpg");
         verify(mediaRepository).deleteIncludingDeleted(MEDIA_B);
     }
@@ -184,7 +165,7 @@ class MediaPurgeJobTest {
 
         assertThatCode(() -> job.purge()).doesNotThrowAnyException();
 
-        verify(mediaRepository, never()).deleteIncludingDeleted(MEDIA_A); // A stays for next cycle
+        verify(mediaRepository, never()).deleteIncludingDeleted(MEDIA_A);
         verify(storage).delete(BUCKET, MEDIA_B + "/display.webp");
         verify(mediaRepository).deleteIncludingDeleted(MEDIA_B);
     }

@@ -12,46 +12,6 @@ import org.springframework.validation.annotation.Validated;
 import java.net.URI;
 import java.util.List;
 
-/**
- * Security configuration bound from {@code shop.security.*}.
- * <p>Each service can override any field via {@code application.yml} or
- * environment variables (e.g. {@code SHOP_SECURITY_ISSUER_URI}). Defaults are
- * safe but deliberately conservative — JWT validation is on, CSRF is off, the
- * session is stateless, and CORS only allows the configured origins.</p>
- *
- * @param enabled            master switch — when {@code false} the autoconfiguration
- *                           backs off so a service can wire its own security stack
- * @param issuerUri          Keycloak realm issuer URI used to resolve the JWK set
- * @param csrfDisabled       whether to disable CSRF protection (recommended for
- *                           stateless JWT resource servers)
- * @param statelessSession   whether to force {@code SessionCreationPolicy.STATELESS}
- * @param publicPaths        service-specific allow-list merged with platform defaults;
- *                           each {@link EndpointRule} binds an optional {@link HttpMethod}
- *                           and a required path string
- * @param expectedAudiences  optional list of JWT {@code aud} values this service
- *                           will accept. C1 — without this list a token issued
- *                           for client A is honoured by service B (cross-client
- *                           horizontal privilege escalation). Set to the
- *                           {@code clientId}(s) whose tokens should reach THIS
- *                           service. Empty list = no aud check (legacy/dev only).
- *
- *                           IMPORTANT (measured against the provisioned Keycloak
- *                           26 realm, production-audit finding F-040): the
- *                           shipped realm has NO audience mapper and NO client
- *                           scopes, so the access tokens it issues carry NO
- *                           {@code aud} claim at all - only {@code azp}. Enabling
- *                           this list against that realm would reject EVERY
- *                           token (the validator requires a non-empty aud list).
- *                           Use {@code expectedClientIds} (the {@code azp}
- *                           claim) unless an audience mapper has been added to
- *                           the realm first.
- * @param expectedClientIds  optional list of client ids this service accepts.
- *                           The check reads the {@code azp} claim (the client
- *                           the token was actually issued to), which is the only
- *                           client discriminator the provisioned realm emits.
- *                           Empty list = no client check (legacy/dev only).
- * @param cors               CORS sub-configuration
- */
 @Validated
 @ConfigurationProperties(prefix = "shop.security")
 public record SecurityProperties(
@@ -65,10 +25,6 @@ public record SecurityProperties(
         @Valid @DefaultValue Cors cors
 ) {
 
-    /**
-     * Method+path rule for a public endpoint. A {@code null} {@code method}
-     * means "any HTTP method"; the {@code path} must be non-blank.
-     */
     public record EndpointRule(HttpMethod method, String path) {
         public EndpointRule {
             if (path == null || path.isBlank()) {
@@ -77,10 +33,6 @@ public record SecurityProperties(
         }
     }
 
-    /**
-     * CORS sub-properties. Kept as a nested record so callers can override
-     * CORS without restating the security block.
-     */
     @Validated
     public record Cors(
             @DefaultValue("true") boolean enabled,
@@ -89,27 +41,21 @@ public record SecurityProperties(
             List<@NotBlank String> allowedHeaders,
             List<@NotBlank String> exposedHeaders,
             @DefaultValue("false") boolean allowCredentials,
-            // F-007: @Min(0) and @Positive contradicted each other - @Positive
-            // already implies > 0, and a max-age of 0 ("do not cache the
-            // preflight") is a legitimate CORS configuration. One rule: >= 0.
             @DefaultValue("3600") @Min(0) long maxAgeSeconds
     ) {
 
-        /** Default methods applied when none are configured explicitly. */
         public List<String> resolvedAllowedMethods() {
             return (allowedMethods == null || allowedMethods.isEmpty())
                     ? List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                     : allowedMethods;
         }
 
-        /** Default headers applied when none are configured explicitly. */
         public List<String> resolvedAllowedHeaders() {
             return (allowedHeaders == null || allowedHeaders.isEmpty())
                     ? List.of("*")
                     : allowedHeaders;
         }
 
-        /** Origin patterns applied when none are configured explicitly. */
         public List<String> resolvedAllowedOriginPatterns() {
             return (allowedOriginPatterns == null || allowedOriginPatterns.isEmpty())
                     ? List.of("*")
@@ -117,7 +63,6 @@ public record SecurityProperties(
         }
     }
 
-    /** Convenience constructor used by Spring Boot's relaxed binding. */
     public SecurityProperties {
         if (publicPaths == null) {
             publicPaths = List.of();
@@ -130,17 +75,10 @@ public record SecurityProperties(
         }
     }
 
-    /** Issuer URI parsed as a {@link URI}; throws if malformed. */
     public URI parsedIssuerUri() {
         return URI.create(issuerUri);
     }
 
-    /**
-     * Platform-wide endpoints that are always public — actuator health/info,
-     * OpenAPI documentation, and the OAuth2 handshake endpoints used by the
-     * browser during the redirect dance. Keep this list narrow: any new entry
-     * here is anonymous-accessible across the entire fleet.
-     */
     public static final class PlatformDefaults {
         public static final List<String> PUBLIC_PATHS = List.of(
                 "/actuator/health",

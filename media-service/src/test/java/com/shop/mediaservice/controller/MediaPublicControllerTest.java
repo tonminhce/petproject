@@ -37,14 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Security + wire contract for the public read surface (spec D3): GET is
- * P2-6 (no @PreAuthorize — chain enforces authentication) and answers 302
- * with the presigned Location; HEAD is the existence check WITHOUT presign.
- * The full presign matrix (variant × format) verifies controller→service
- * forwarding; resolution logic itself is unit-covered in
- * {@code MediaQueryServiceImplTest}.
- */
 @WebMvcTest(value = MediaPublicController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -67,7 +59,6 @@ class MediaPublicControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
-    // --- security matrix (P2-6: authenticated edge, no role requirement) ---
 
     @Test
     void get_noAuth_returns401() throws Exception {
@@ -85,7 +76,6 @@ class MediaPublicControllerTest {
         verifyNoInteractions(mediaQueryService);
     }
 
-    // --- presign matrix: every variant × format → 302 Location ---
 
     @ParameterizedTest(name = "GET variant={0} format={1} → 302 Location presigned")
     @CsvSource({
@@ -123,7 +113,6 @@ class MediaPublicControllerTest {
         verify(mediaQueryService).resolve(MEDIA_ID, "display", "auto");
     }
 
-    // --- error propagation ---
 
     @Test
     void get_unknownVariant_propagates404Med12004() throws Exception {
@@ -149,7 +138,6 @@ class MediaPublicControllerTest {
             .andExpect(jsonPath("$.code").value("MED-12006"));
     }
 
-    // --- HEAD: existence check WITHOUT presign ---
 
     @Test
     void head_existingMedia_answers200WithoutPresigning() throws Exception {

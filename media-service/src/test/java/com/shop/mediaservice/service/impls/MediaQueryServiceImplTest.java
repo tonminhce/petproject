@@ -55,7 +55,6 @@ class MediaQueryServiceImplTest {
                 mediaRepository, storage, new MediaMetrics(registry), properties);
     }
 
-    // --- fixtures ---
 
     private Media media(MediaVariant... rows) {
         Media media = Media.builder().id(MEDIA_ID).sha256("a".repeat(64)).contentType("image/jpeg").build();
@@ -89,7 +88,6 @@ class MediaQueryServiceImplTest {
         return counter == null ? 0.0 : counter.count();
     }
 
-    // --- format resolution: auto prefers WebP, falls back to original format ---
 
     @Test
     @DisplayName("auto → WebP row when stored")
@@ -132,7 +130,6 @@ class MediaQueryServiceImplTest {
         verifyNoInteractions(storage);
     }
 
-    // --- variant selection ---
 
     @Test
     @DisplayName("each variant name resolves to its own row; default variant is display")
@@ -145,14 +142,12 @@ class MediaQueryServiceImplTest {
         assertThat(queryService.resolve(MEDIA_ID, "original", "auto")).isEqualTo(originalUrl);
         assertThat(queryService.resolve(MEDIA_ID, "thumb", "webp")).isEqualTo(thumbUrl);
 
-        // null variant → display; null format → auto
         assertThat(queryService.resolve(MEDIA_ID, null, null)).isEqualTo(displayUrl);
         assertThat(presignCounter("display")).isEqualTo(1.0);
         assertThat(presignCounter("thumb")).isEqualTo(1.0);
         assertThat(presignCounter("original")).isEqualTo(1.0);
     }
 
-    // --- 404 family ---
 
     @Test
     @DisplayName("unknown variant name → 404 MED-12004, storage never touched")
@@ -185,7 +180,6 @@ class MediaQueryServiceImplTest {
                         ex -> assertThat(ex.getErrorCode()).isEqualTo("MED-12004"));
     }
 
-    // --- storage failure → 503 MED-12006 ---
 
     @Test
     @DisplayName("storage presign failure → 503 MED-12006")
@@ -199,11 +193,9 @@ class MediaQueryServiceImplTest {
                     assertThat(ex.getErrorCode()).isEqualTo("MED-12006");
                     assertThat(ex.getStatus().value()).isEqualTo(503);
                 });
-        // failures are NOT counted as presigns
         assertThat(presignCounter("display")).isZero();
     }
 
-    // --- exists: no presign, no storage ---
 
     @Test
     void exists_isARepositoryLookupWithoutStorage() {
@@ -213,7 +205,6 @@ class MediaQueryServiceImplTest {
         verifyNoInteractions(storage);
     }
 
-    // --- TTL pass-through ---
 
     @Test
     void resolve_usesConfiguredPresignTtl() throws Exception {
@@ -223,7 +214,6 @@ class MediaQueryServiceImplTest {
         verify(storage).presignedGetUrl(BUCKET, MEDIA_ID + "/display.webp", TTL);
     }
 
-    // --- H-5 bucket unification: reads presign against media.bucket explicitly ---
 
     @Test
     @DisplayName("presign goes through the 3-arg bucket-qualified overload with media.bucket")
@@ -231,7 +221,6 @@ class MediaQueryServiceImplTest {
         stored(row("display", "webp"));
         queryService.resolve(MEDIA_ID, "display", "auto");
 
-        // the properties record's bucket value — NOT defaultBucket() — drives the read
         verify(storage).presignedGetUrl(BUCKET, MEDIA_ID + "/display.webp", TTL);
         verify(storage, never()).presignedGetUrl(MEDIA_ID + "/display.webp", TTL);
         verify(storage, never()).defaultBucket();

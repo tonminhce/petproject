@@ -5,10 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * Capacity guard for all requests that pass through a gateway instance set.
- * The bucket is shared by every gateway node through Redis.
- */
 @Validated
 @ConfigurationProperties(prefix = "gateway.rate-limit.global")
 public record GlobalRateLimitProperties(

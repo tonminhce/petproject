@@ -90,7 +90,6 @@ class DeadLetterReplayServiceTest {
                 broker.getBrokersAsString(), "shop");
         String deadLetterTopic = awaitDeadLetterTopic();
 
-        // The record is dead-lettered first.
         assertThat(await(() -> consumeOne(deadLetterTopic), Duration.ofSeconds(30)))
                 .as("the poison record must reach the dead-letter topic")
                 .isNotNull();
@@ -102,16 +101,11 @@ class DeadLetterReplayServiceTest {
         assertThat(result.failed()).isZero();
         assertThat(result.replayedTopics()).contains(TOPIC);
 
-        // The replay put the record back on the topic it came from, so the
-        // original topic now carries the payload twice. The replayed copy is
-        // still poisonous - it is dead-lettered again - which is exactly why
-        // the replay is a bounded, operator-driven action and never automatic.
         assertThat(countOnTopic(TOPIC, POISON, Duration.ofSeconds(30)))
                 .as("the replayed record must be republished on its original topic")
                 .isGreaterThanOrEqualTo(2);
     }
 
-    /** The dead-letter topic is created by the recoverer, so it appears a moment later. */
     private String awaitDeadLetterTopic() throws InterruptedException {
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
         while (System.nanoTime() < deadline) {
@@ -121,7 +115,6 @@ class DeadLetterReplayServiceTest {
                     return topic;
                 }
             } catch (Exception ignored) {
-                // the broker may not list the topic yet
             }
             Thread.sleep(250L);
         }

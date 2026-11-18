@@ -8,24 +8,9 @@ import lombok.Setter;
 
 import java.time.Instant;
 
-/**
- * Marker mixin for soft-delete-aware entities.
- * <p>Entities that extend this class gain:
- * <ul>
- *   <li>{@code deleted} — boolean flag (column name {@code deleted})</li>
- *   <li>{@code deletedAt} — instant when the soft-delete happened</li>
- *   <li>{@code deletedBy} — optional actor id (string, flexible across Keycloak id / UUID / email)</li>
- * </ul>
- * <p>The actual filter ("ignore rows where deleted = true") is applied per-entity via
- * Hibernate's {@code @SQLRestriction} in each subclass. This base class only holds
- * the columns + getters/setters for the soft-delete lifecycle.
- * <p>Why a base class and not a Hibernate {@code @Filter}? Hibernate filters require explicit
- * {@code enableFilter} on every session — easy to forget. An annotation on the entity forces
- * the filter to be active on every query without any caller-side setup.
- */
 @MappedSuperclass
 @Getter
-@Setter(AccessLevel.PROTECTED)  // subclasses + same package can set; outside code should use markDeleted()/markRestored()
+@Setter(AccessLevel.PROTECTED)
 public abstract class SoftDeletable {
 
     @Column(name = "deleted", nullable = false)
@@ -37,14 +22,12 @@ public abstract class SoftDeletable {
     @Column(name = "deleted_by", length = 255)
     private String deletedBy;
 
-    /** Atomic operation: mark soft-deleted with actor + timestamp. Prefer this over direct setters. */
     public void markDeleted(String deletedBy) {
         this.deleted = true;
         this.deletedAt = Instant.now();
         this.deletedBy = deletedBy;
     }
 
-    /** Atomic operation: restore from soft-deleted state. Prefer this over direct setters. */
     public void markRestored() {
         this.deleted = false;
         this.deletedAt = null;

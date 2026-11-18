@@ -27,16 +27,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The stranded-claim recovery must be part of the RELAY, not just a
- * repository method that happens to exist.
- *
- * <p>These tests drive {@code OutboxRelay.relay()} - the real entry
- * point - so a regression that un-wires the sweep fails here rather than in
- * production. The broker side is the real Kafka container, so the ordering
- * assertion is measured against the real producer configuration
- * ({@code acks=all}, idempotence, {@code max.in.flight=1}).</p>
- */
 class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
 
     @DynamicPropertySource
@@ -68,7 +58,6 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aRowStrandedInSending_isRecoveredAndPublishedByTheRelay() {
         String topic = uniqueTopic();
         OutboxEvent stranded = seed(topic, "{\"product\":\"stranded\"}", OutboxStatus.SENDING);
-        // The crash happened a long time ago: the claim lease has expired.
         ageClaim(stranded.getId(), Instant.now().minusSeconds(3600));
 
         relay.relay();
@@ -112,8 +101,6 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
 
     @Test
     void eventsOfOneProduct_arePublishedInProductionOrder() {
-        // Same aggregate, three events: the consumer must see them in the
-        // order they were produced (id order) - the product event order depends on it.
         String topic = uniqueTopic();
         UUID aggregate = UUID.randomUUID();
         seedWithAggregate(topic, aggregate, "{\"seq\":1}");
@@ -131,11 +118,6 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
         return "shop.product.relaytest." + UUID.randomUUID().toString().replace("-", "");
     }
 
-    /**
-     * Read {@code expected} records from the topic, in the order the broker
-     * delivered them. A fresh consumer group with {@code earliest} sees every
-     * record the relay published for this topic.
-     */
     private List<String> consumed(String topic, int expected) {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -180,12 +162,6 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
         return event;
     }
 
-    /**
-     * Age the claim past the lease. This service's outbox row has no
-     * dedicated claim column - the relay's claim is what refreshes
-     * {@code updated_at} (the entity carries {@code @LastModifiedDate}), so
-     * ageing the claim means ageing that column.
-     */
     private void ageClaim(Long id, Instant when) {
         new TransactionTemplate(txManager)
                 .executeWithoutResult(tx -> entityManager.createNativeQuery(

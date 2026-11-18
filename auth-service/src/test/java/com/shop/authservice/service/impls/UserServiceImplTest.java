@@ -80,10 +80,6 @@ class UserServiceImplTest {
     @Mock
     private PasswordResetEmailSender passwordResetEmailSender;
 
-    /**
-     * A REAL registry (as a spy so Mockito injects it): the service registers
-     * its counters on it, so a mocked registry would hand back a null counter.
-     */
     @Spy
     private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
@@ -163,10 +159,6 @@ class UserServiceImplTest {
 
     @Test
     void registerDoesNotCreateAKeycloakUserWhenTheLocalInsertFails() {
-        // F-050: the local row is inserted first, so the unique index arbitrates
-        // a concurrent registration. When the insert fails, NO Keycloak user has
-        // been created - there is nothing to roll back, and no orphan with the
-        // taken username is left behind.
         RegisterRequest req = registerRequest();
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
@@ -182,8 +174,6 @@ class UserServiceImplTest {
 
     @Test
     void registerRemovesTheLocalRowWhenTheKeycloakUserCannotBeCreated() {
-        // The compensation now runs the other way round: the local row must not
-        // keep the username hostage when the identity provider refused the user.
         RegisterRequest req = registerRequest();
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
@@ -201,8 +191,6 @@ class UserServiceImplTest {
 
     @Test
     void registerAnswersAConcurrentDuplicateWithTheCatalogueConflict() {
-        // The unique index is the arbiter of the race; the loser must get
-        // AUTH_USERNAME_EXISTS, not a raw constraint violation.
         RegisterRequest req = registerRequest();
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
@@ -218,14 +206,11 @@ class UserServiceImplTest {
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatus());
         assertTrue(ex.getMessage().toLowerCase().contains("alice"));
-        // and no Keycloak user was created for the loser of the race
         verify(keycloakAdminClient, never()).createUser(any(), any(), any(), any(), any());
     }
 
     @Test
     void forgotPasswordFailsWhenTheEmailCannotBeDispatched() {
-        // F-054: a dispatch failure must surface - the caller must not be told
-        // that a reset instruction was sent when it was not.
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(userWithKeycloakAccount()));
         doThrow(BusinessException.of(ErrorCode.AUTH_EMAIL_SEND_FAILED))
                 .when(passwordResetEmailSender).sendResetEmail(anyString(), anyString(), anyString());
@@ -248,11 +233,6 @@ class UserServiceImplTest {
 
     @Test
     void resetPasswordRejectsASecondRedemptionOfTheSameToken() {
-        // F-053: the token is consumed with a conditional update before the
-        // password is changed. When another redemption won the race, the
-        // consumption affects no row and the password must stay untouched -
-        // otherwise the second redemption would silently replace the password
-        // the owner had just chosen.
         when(passwordResetTokenRepository.findByTokenHashAndUsedFalse(anyString()))
                 .thenReturn(Optional.of(resetToken()));
         when(userRepository.findById(userId)).thenReturn(Optional.of(userWithKeycloakAccount()));
@@ -351,7 +331,6 @@ class UserServiceImplTest {
         assertEquals("Password changed successfully", result);
         verify(keycloakAdminClient).resetUserPassword("kc-123", "Newpass1", false);
 
-        // revoked; Keycloak's reset-password endpoint does not end them.
         verify(keycloakAdminClient).logoutUser("kc-123");
     }
 
@@ -457,12 +436,7 @@ class UserServiceImplTest {
         assertEquals("alice", page.getContent().get(0).username());
     }
 
-    // ------------------------------------------------------------------
 
-    // MANAGER must NOT be assignable through the public sign-up endpoint,
-    // even when the request payload sends them. The whitelist only keeps
-    // {USER}; anything else is silently dropped.
-    // ------------------------------------------------------------------
 
     @Test
     void registerStripsDisallowedRolesFromRequest() {
@@ -479,8 +453,6 @@ class UserServiceImplTest {
 
         userService.register(req);
 
-        // Only USER survives the whitelist — ADMIN and SERVICE are stripped
-        // before the call to Keycloak and before resolveRoles().
         verify(keycloakAdminClient).createUser("alice", "alice@example.com",
                 "Alice Wonder", "Passw0rd", List.of("USER"));
         verify(roleRepository).findByNameIn(List.of(RoleName.USER));
@@ -489,7 +461,6 @@ class UserServiceImplTest {
     @Test
     void registerEmptyRolesDefaultsToUser() {
         RegisterRequest req = registerRequest();
-        // no roles set
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);
@@ -512,8 +483,6 @@ class UserServiceImplTest {
         when(userRepository.existsByUsername("alice")).thenReturn(false);
         when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(userRepository.existsByPhone("0901234567")).thenReturn(false);
-        // The privileged roles are dropped, but the base USER role is applied -
-        // Keycloak gets USER and the local DB gets the USER role row.
         when(keycloakAdminClient.createUser("alice", "alice@example.com", "Alice Wonder",
                 "Passw0rd", List.of("USER")))
                 .thenReturn("kc-123");
@@ -530,11 +499,6 @@ class UserServiceImplTest {
                 anyString(), eq(List.of()));
     }
 
-    // ------------------------------------------------------------------
-    // A5 — page/size clamp in findAllUsers. Caller-supplied page=-1 or
-    // size=0 used to leak through to PageRequest.of and throw
-    // IllegalArgumentException → 500. Now both are clamped to safe bounds.
-    // ------------------------------------------------------------------
 
     @Test
     void findAllUsersClampsSizeAt100() {

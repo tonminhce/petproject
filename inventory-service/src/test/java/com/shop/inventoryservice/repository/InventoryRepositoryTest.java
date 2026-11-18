@@ -29,13 +29,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Mirrors product-service's / favourite-service's {@code @DataJpaTest} slice:
- * Testcontainers Postgres + real Liquibase schema, covering the repository
- * behaviours the reservation lifecycle depends on — {@code @Version} optimistic
- * locking, the expired-reservation sweep query, retention bulk deletes, and the
- * active-reservation count that guards {@code delete()}.
- */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -55,7 +48,6 @@ class InventoryRepositoryTest {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.liquibase.change-log",
                 () -> "classpath:db/changelog/db.changelog-master.yaml");
-        // Liquibase owns the schema; Hibernate must NOT validate before Liquibase runs.
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 
@@ -141,15 +133,11 @@ class InventoryRepositoryTest {
         UUID id = saved.getId();
         em.clear();
 
-        // Current writer bumps the row to version 1…
         Inventory current = em.find(Inventory.class, id);
         current.setAvailableQuantity(90);
         em.flush();
         em.clear();
 
-        // …while a stale writer still holds version 0. The stale write goes
-        // through the REPOSITORY (not the raw EntityManager) so Spring Data's
-        // exception translation applies — exactly like production.
         Inventory stale = em.find(Inventory.class, id);
         em.detach(stale);
         stale.setVersion(0L);
@@ -163,9 +151,9 @@ class InventoryRepositoryTest {
     void expiredSweepQuery_matchesOnlyPendingAndExpired() {
         UUID productId = UUID.randomUUID();
         Instant now = Instant.now();
-        persistReservation(productId, ReservationStatus.PENDING, now.minusSeconds(1800), now.minusSeconds(60));   // match
-        persistReservation(productId, ReservationStatus.PENDING, now.minusSeconds(60), now.plusSeconds(900));      // not expired
-        persistReservation(productId, ReservationStatus.COMMITTED, now.minusSeconds(1800), now.minusSeconds(60));  // wrong status
+        persistReservation(productId, ReservationStatus.PENDING, now.minusSeconds(1800), now.minusSeconds(60));
+        persistReservation(productId, ReservationStatus.PENDING, now.minusSeconds(60), now.plusSeconds(900));
+        persistReservation(productId, ReservationStatus.COMMITTED, now.minusSeconds(1800), now.minusSeconds(60));
 
         List<Reservation> matched = reservationRepository.findByStatusAndExpiresAtBefore(
             ReservationStatus.PENDING, now, PageRequest.of(0, 50));
@@ -193,9 +181,9 @@ class InventoryRepositoryTest {
     void reservationRetention_deletesOnlyExpiredBeforeCutoff() {
         UUID productId = UUID.randomUUID();
         Instant now = Instant.now();
-        persistReservation(productId, ReservationStatus.EXPIRED, now.minusSeconds(31L * 24 * 3600), now.minusSeconds(30L * 24 * 3600)); // purge
-        persistReservation(productId, ReservationStatus.EXPIRED, now, now.minusSeconds(60));                                          // too recent
-        persistReservation(productId, ReservationStatus.PENDING, now.minusSeconds(31L * 24 * 3600), now.minusSeconds(60));            // wrong status
+        persistReservation(productId, ReservationStatus.EXPIRED, now.minusSeconds(31L * 24 * 3600), now.minusSeconds(30L * 24 * 3600));
+        persistReservation(productId, ReservationStatus.EXPIRED, now, now.minusSeconds(60));
+        persistReservation(productId, ReservationStatus.PENDING, now.minusSeconds(31L * 24 * 3600), now.minusSeconds(60));
 
         int deleted = reservationRepository.deleteByStatusAndCreatedAtBefore(
             ReservationStatus.EXPIRED, now.minusSeconds(30L * 24 * 3600));
@@ -207,9 +195,9 @@ class InventoryRepositoryTest {
     @Test
     void outboxRetention_deletesOnlySentBeforeCutoff() {
         Instant now = Instant.now();
-        persistOutbox(OutboxStatus.SENT, now.minusSeconds(8L * 24 * 3600));    // purge
-        persistOutbox(OutboxStatus.SENT, now.minusSeconds(3600));              // too recent
-        persistOutbox(OutboxStatus.PENDING, now.minusSeconds(8L * 24 * 3600)); // wrong status
+        persistOutbox(OutboxStatus.SENT, now.minusSeconds(8L * 24 * 3600));
+        persistOutbox(OutboxStatus.SENT, now.minusSeconds(3600));
+        persistOutbox(OutboxStatus.PENDING, now.minusSeconds(8L * 24 * 3600));
 
         int deleted = outboxEventRepository.deleteByStatusAndSentAtBefore(
             OutboxStatus.SENT, now.minusSeconds(7L * 24 * 3600));

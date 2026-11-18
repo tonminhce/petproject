@@ -33,11 +33,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Full-stack edge matrix (no Docker): the 12 backoffice routes proxy to a
- * WireMock target; no-token -> 401, user-token -> 403 envelope, admin-token
- * -> 200. The IP allowlist env is ABSENT here — D5 semantics say INACTIVE.
- */
 @SpringBootTest(
         classes = {GatewayServiceApplication.class, WebFluxRouteTests.WireMockProps.class},
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -147,8 +142,6 @@ class WebFluxRouteTests {
 
     @Test
     void ipAllowlistEnvAbsentMeansInactive() {
-        // This context runs without ADMIN_IP_ALLOWLIST: a plain (non-forwarded,
-        // loopback) request must reach the role gate and pass with ADMIN.
         client.get().uri("/api/v1/backoffice/products/1")
                 .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
                 .exchange()
@@ -206,17 +199,11 @@ class WebFluxRouteTests {
             return registry -> {
                 registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> ISSUER);
                 registry.add("gateway.keycloak-issuer-uri", () -> ISSUER);
-                // Redis-backed limiters are out of scope here (no Docker); the
-                // bucket4j edge scopes under test stay enabled.
                 registry.add("gateway.rate-limit.enabled", () -> "false");
-                // the routing test is not a rate-limit test: the edge limiter
-                // needs a Redis (F-034) and is covered by
-                // WebFluxRateLimitTests instead
                 registry.add("gateway.edge-rate-limit.enabled", () -> "false");
                 registry.add("gateway.rate-limit.global.enabled", () -> "false");
                 registry.add("gateway.edge-rate-limit.backoffice-requests-per-minute", () -> "100");
                 registry.add("gateway.edge-rate-limit.search-requests-per-minute", () -> "60");
-                // Point the route table at the WireMock target
                 Map.<String, java.util.function.Supplier<Object>>of(
                                 "gateway.route-targets.overrides.rating-service", WIRE_MOCK::baseUrl,
                                 "gateway.route-targets.overrides.product-service", WIRE_MOCK::baseUrl,

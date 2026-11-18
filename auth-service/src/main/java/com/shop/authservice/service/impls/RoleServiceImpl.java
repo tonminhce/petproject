@@ -18,21 +18,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * The role administration of auth-service.
- *
- * <p>F-075: the Keycloak realm is the only place that decides what a token
- * carries. This service used to write the LOCAL role table only, so the
- * admin role API answered 200 while the user's next token still carried no
- * ADMIN - the operator believed a privilege had been granted that never
- * reached the authorization layer.</p>
- *
- * <p>Both operations now touch the realm first and the local mirror second:
- * the mirror may only claim what the realm already granted. The remote call
- * runs OUTSIDE the database transaction (the F-066 lesson: a remote call
- * must not hold a pooled connection open), and only the short local write
- * holds a transaction.</p>
- */
 @Service
 public class RoleServiceImpl implements RoleService {
 
@@ -62,9 +47,6 @@ public class RoleServiceImpl implements RoleService {
         RoleName name = RoleMapper.toRoleName(roleName);
         AssignmentTarget target = loadAssignmentTarget(userId, name);
 
-        // The realm first, and ALWAYS: the assignment is idempotent there, and
-        // repeating it repairs a mirror that drifted away from the realm (a
-        // role granted through the Keycloak console, for example).
         keycloakAdminClient.assignRealmRole(target.keycloakUserId(), name.name());
 
         Boolean changed = transactionTemplate.execute(status -> {
@@ -103,7 +85,6 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    // A1: auth-service yml has open-in-view: false and User.roles is LAZY. Without a tx
     @Transactional(readOnly = true)
     public List<String> getUserRoles(UUID id) {
         User user = userRepository.findById(id)
@@ -114,10 +95,6 @@ public class RoleServiceImpl implements RoleService {
         return roleNames;
     }
 
-    /**
-     * Reads the user and the role in one short transaction - the roles
-     * collection is LAZY, so it cannot be read outside a transaction.
-     */
     private AssignmentTarget loadAssignmentTarget(UUID userId, RoleName name) {
         AssignmentTarget target = transactionTemplate.execute(status -> {
             User user = userRepository.findById(userId)
@@ -146,11 +123,6 @@ public class RoleServiceImpl implements RoleService {
         return target;
     }
 
-    /**
-     * The realm user id. Without it there is no Keycloak account to change,
-     * so the operation cannot be carried out - it must fail loudly instead
-     * of pretending the role was granted.
-     */
     private String keycloakUserId(User user) {
         String keycloakUserId = user.getKeycloakUserId();
         if (keycloakUserId == null || keycloakUserId.isBlank()) {

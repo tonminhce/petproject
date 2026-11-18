@@ -13,57 +13,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-078: the realm ships the admin service account.
- *
- * <p>The admin path of auth-service uses the service account of the
- * application realm (client_credentials) instead of the master-realm
- * password grant. The realm import is the contract that makes this possible:
- * it must ship the confidential client, the placeholder for its secret and
- * the service account with the realm-management client roles.</p>
- *
- * <p>Three properties are asserted beyond the existence:</p>
- * <ul>
- *   <li>the secret is a placeholder - a shipped default secret would be a
- *       takeover waiting to happen (the F-006 lesson);</li>
- *   <li>the service account does NOT carry the SERVICE realm role. That role
- *       is a super-role across the whole fleet (F-041): the admin service
- *       account needs realm management, not the fleet-wide service
- *       authority;</li>
- *   <li>the client carries {@code fullScopeAllowed=true} and the service
- *       account carries exactly the realm-management roles the admin path
- *       needs. Keycloak 26 authorizes an admin operation through
- *       {@code ClientAdapter.hasScope}, which returns true for a role only
- *       when the client has the full scope allowed OR the role is an explicit
- *       client scope mapping. With {@code fullScopeAllowed=false} and no
- *       scope mapping the token carried NO realm-management role at all and
- *       every admin operation answered 403 - the grant was issued and the
- *       service account could do nothing with it.</li>
- * </ul>
- */
 class AdminServiceAccountRealmContractTest {
 
     private static final Path REALM_FILE = realmFile();
 
-    /**
-     * The realm-management roles the admin path of auth-service needs.
-     *
-     * <p>Proven against Keycloak 26 by replaying every admin operation of
-     * {@code KeycloakAdminClient} against a live realm:</p>
-     * <ul>
-     *   <li>{@code manage-users} - create / read / update a user, reset the
-     *       password, log out, and read or write the realm role mappings;</li>
-     *   <li>{@code view-realm} - read a realm role (the role lookup that
-     *       precedes every role assignment);</li>
-     *   <li>{@code view-clients} - read the configuration of a client (the
-     *       ROPC posture measurement, F-079).</li>
-     * </ul>
-     *
-     * <p>{@code manage-realm} is deliberately NOT among them: it would let
-     * the service account reconfigure the realm. It was proven that with it
-     * the account can change the realm configuration (HTTP 204), and without
-     * it that operation is refused (HTTP 403).</p>
-     */
     private static final List<String> REQUIRED_MANAGEMENT_ROLES =
             List.of("manage-users", "view-realm", "view-clients");
 
@@ -115,11 +68,6 @@ class AdminServiceAccountRealmContractTest {
         }
 
         assertThat(client).as("the realm must ship the ecommerce-admin client").isNotNull();
-        // Keycloak 26 authorizes an admin operation through
-        // ClientAdapter.hasScope. With fullScopeAllowed=false and no explicit
-        // client scope mapping the role is NOT in the scope of the client, the
-        // token carries no realm-management role, and every admin operation
-        // answers 403.
         assertThat(client.path("fullScopeAllowed").asBoolean())
                 .as("the realm-management roles of the service account are only effective with the full scope")
                 .isTrue();
@@ -161,16 +109,6 @@ class AdminServiceAccountRealmContractTest {
                 .doesNotContain("realm-admin");
     }
 
-    /**
-     * F-079: the default client id of the shared configuration must name a
-     * client that the provisioned realm actually contains.
-     *
-     * <p>The default was {@code shop-backend}, a client that is never
-     * provisioned. The ROPC posture measurement therefore asked Keycloak for
-     * the configuration of a client that did not exist. Combined with the
-     * wrong endpoint (F-079) the posture of the platform was never actually
-     * measured.</p>
-     */
     @Test
     @DisplayName("the default client id names a client the provisioned realm contains")
     void theDefaultClientIdNamesAProvisionedClient() throws IOException {
@@ -186,10 +124,6 @@ class AdminServiceAccountRealmContractTest {
                 .isIn(provisioned);
     }
 
-    /**
-     * F-079: the shared default properties and the shared application.yml must
-     * agree on the client id, and it must be the provisioned one.
-     */
     @Test
     @DisplayName("the shared application.yml defaults to the provisioned public client")
     void theSharedApplicationYmlDefaultsToTheProvisionedPublicClient() throws IOException {

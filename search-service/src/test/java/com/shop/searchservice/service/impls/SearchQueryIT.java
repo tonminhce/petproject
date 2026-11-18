@@ -27,13 +27,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Query behavior over the REAL Elasticsearch container (spec D5): relevance,
- * filters, every sort incl. the F3 branching rules, pagination/cap, browse,
- * the P2-6 auth posture and the search_queries_total meter. Docs are seeded
- * through {@link ProductSearchService} — the same ingestion path the consumer
- * uses — so query assertions always run against production-shaped documents.
- */
 @AutoConfigureMockMvc
 class SearchQueryIT extends AbstractSearchIntegrationTest {
 
@@ -106,7 +99,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         return meter == null ? 0.0d : meter.count();
     }
 
-    // --- relevance ---
 
     @Test
     @DisplayName("q relevance: title match ranks above description match")
@@ -117,7 +109,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(result).containsExactly(P1, P2);
     }
 
-    // --- filters ---
 
     @Test
     @DisplayName("brandId filter narrows to the brand's products")
@@ -157,7 +148,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(result).containsExactlyInAnyOrder(P1, P4);
     }
 
-    // --- sorts ---
 
     @Test
     @DisplayName("sort=price_asc orders by price ascending")
@@ -195,7 +185,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(result).containsExactly(P5, P4, P3, P2, P1);
     }
 
-    // --- F3 sort branching ---
 
     @Test
     @DisplayName("F3: q present + no sort param orders by relevance")
@@ -224,7 +213,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(result).containsExactly(P5, P4, P3, P2, P1);
     }
 
-    // --- browse + pagination ---
 
     @Test
     @DisplayName("F3 browse: empty q + no sort returns all docs in newest order")
@@ -265,7 +253,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         assertThat(page.content()).hasSize(5);
     }
 
-    // --- controller (HTTP + security posture) ---
 
     @Test
     @DisplayName("P2-6 edge: unauthenticated request is rejected with 401")
@@ -297,7 +284,6 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
             .andExpect(jsonPath("$.data.totalElements").value(5));
     }
 
-    // --- meter ---
 
     @Test
     @DisplayName("search_queries_total increments once per query with the resolved sort tag")

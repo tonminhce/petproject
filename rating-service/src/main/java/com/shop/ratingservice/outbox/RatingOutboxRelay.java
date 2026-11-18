@@ -19,41 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Drains {@code outbox_events} and publishes each PENDING row to Kafka,
- * keyed by the product id so every rating of one product lands on one
- * partition.
- *
- * <p>The relay runs in three phases so the row lock is never held across a
- * Kafka publish:</p>
- * <ol>
- *   <li><b>claim</b> - a short transaction per row takes the row lock
- *       (PESSIMISTIC_WRITE + SKIP LOCKED), moves the row to SENDING, stamps
- *       the claim time and commits. The lock is released before any publish
- *       happens, so a second relay instance can claim a different row
- *       immediately instead of waiting behind the publish.</li>
- *   <li><b>publish</b> - the whole batch is published outside any
- *       transaction through
- *       {@link KafkaMessagePublisher#publishBatch(List, long, java.util.concurrent.TimeUnit)},
- *       which fires the sends in parallel and waits on a bounded latch. The
- *       relay's wall-clock budget becomes roughly the slowest single
- *       publish instead of the sum of all of them.</li>
- *   <li><b>mark</b> - a short transaction per row records the outcome: SENT
- *       when the broker acked that record, otherwise the retry counter
- *       advances and the row returns to PENDING (or is parked as FAILED once
- *       the retry budget is spent).</li>
- * </ol>
- *
- * <p>Per-product ordering is preserved by two rules. The batch is published
- * in claim order (ascending id), and a record that failed blocks the records
- * behind it OF THE SAME PRODUCT only - they are retried after the failed one
- * succeeds, so a consumer never sees a later rating of a product before an
- * earlier one. Other products keep flowing.</p>
- *
- * <p>The SENDING state has a recovery path: the stale sweep at the start of
- * every tick returns rows whose claim lease expired to PENDING, so a crash
- * between the claim and the publish costs a retry, not the event.</p>
- */
 @Component
 @Slf4j
 public class RatingOutboxRelay {
@@ -71,15 +36,9 @@ public class RatingOutboxRelay {
     @Value("${shop.rating.outbox.publish-timeout-ms:5000}")
     private long publishTimeoutMs;
 
-    /**
-     * How long a claimed (SENDING) row may stay unpublished before the
-     * recovery sweep reclaims it. Must comfortably exceed the publish
-     * timeout so a slow in-flight publish is never mistaken for a crash.
-     */
     @Value("${shop.rating.outbox.claim-lease-ms:60000}")
     private long claimLeaseMs;
 
-    /** {@code last_error} is a varchar(1000) - the stored message is truncated to fit. */
     private static final int MAX_ERROR_LENGTH = 1000;
 
     public RatingOutboxRelay(OutboxEventRepository outboxRepo,
@@ -92,18 +51,14 @@ public class RatingOutboxRelay {
 
     @Scheduled(fixedDelayString = "${shop.rating.outbox.poll-millis:2000}", initialDelayString = "${shop.rating.outbox.poll-millis:2000}")
     public void relay() {
-        // Phase 0 - recover the rows a previous crash stranded in SENDING.
         recoverStrandedClaims();
 
-        // Phase 1 - claim up to batchSize rows, each in its own short
-        // transaction. The row lock is taken and released here; no publish
-        // happens while it is held.
         List<Long> claimedIds = new ArrayList<>();
         for (int drained = 0; drained < batchSize; drained++) {
             Long claimed = transactionTemplate.execute(tx -> {
                 Optional<OutboxEvent> locked = outboxRepo.claimOnePending(OutboxStatus.PENDING);
                 if (locked.isEmpty()) {
-                    return null;  // nothing pending (or all locked by peers) - stop
+                    return null;
                 }
                 OutboxEvent event = locked.get();
                 event.setStatus(OutboxStatus.SENDING);
@@ -121,7 +76,6 @@ public class RatingOutboxRelay {
             return;
         }
 
-        // Phase 2 - publish the batch outside any transaction, in claim order.
         List<OutboxEvent> rows = orderById(new ArrayList<>(outboxRepo.findAllById(claimedIds)));
         List<OutboxMessage> messages = new ArrayList<>(rows.size());
         List<String> keys = new ArrayList<>(rows.size());
@@ -145,12 +99,8 @@ public class RatingOutboxRelay {
                 outcome == null ? 0 : outcome.success(),
                 outcome != null && outcome.completed());
 
-        // A record that failed blocks the records behind it OF THE SAME
-        // PRODUCT: they must be retried after it succeeds, so the consumer
-        // never sees a later rating of a product before an earlier one.
         boolean[] markable = OutboxBatchOrdering.markableAsSent(keys, delivered);
 
-        // Phase 3 - mark each row by its own outcome.
         for (int i = 0; i < rows.size(); i++) {
             final OutboxEvent row = rows.get(i);
             final boolean sent = markable[i];
@@ -159,21 +109,8 @@ public class RatingOutboxRelay {
         }
     }
 
-    /**
-     * Returns events stranded in the SENDING state to the claimable set.
-     *
-     * <p>A crash between the claim commit and the publish leaves the row in
-     * SENDING, which no other code path touches: it is not PENDING, so the
-     * claim never picks it up, and the event is lost silently. The reclaim
-     * uses the row's claim time against the claim lease. Rows that have
-     * already exhausted their retry budget are parked as FAILED for an
-     * operator instead of being retried forever.</p>
-     */
     private void recoverStrandedClaims() {
         Instant cutoff = Instant.now().minusMillis(claimLeaseMs);
-        // The reclaim is a bulk (@Modifying) JPQL update - Hibernate requires
-        // an active transaction for it, so the sweep runs inside its own
-        // short transaction.
         Integer reclaimed = transactionTemplate.execute(tx -> outboxRepo.reclaimStaleSending(
                 OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,
                 cutoff, maxRetries,
@@ -185,11 +122,9 @@ public class RatingOutboxRelay {
     }
 
     private void markFinalState(OutboxEvent event, boolean published, String error) {
-        // Re-read under the row's write lock so a concurrent recovery sweep
-        // cannot move the row between the read and the write.
         OutboxEvent e = outboxRepo.findByIdForUpdate(event.getId()).orElse(null);
         if (e == null || e.getStatus() != OutboxStatus.SENDING) {
-            return;  // the sweep already moved this row; skip.
+            return;
         }
         if (published) {
             e.setStatus(OutboxStatus.SENT);
@@ -211,19 +146,6 @@ public class RatingOutboxRelay {
         outboxRepo.save(e);
     }
 
-    /**
-     * The publish order must be the claim order.
-     *
-     * <p>{@code findAllById} returns the rows in whatever order the database
-     * produced, which is NOT the id order. Two events of one product would
-     * then reach the consumer in an arbitrary order - a consumer could see a
-     * later rating before an earlier one. Sorting by id restores the
-     * production order: the claim always takes the lowest pending id, so
-     * ascending id IS the production order.</p>
-     *
-     * @param rows the claimed rows, in arbitrary order
-     * @return the same rows, sorted by ascending id
-     */
     static List<OutboxEvent> orderById(List<OutboxEvent> rows) {
         rows.sort(Comparator.comparing(OutboxEvent::getId));
         return rows;

@@ -15,14 +15,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.servlet.HandlerMapping;
 
-/**
- * Registers the {@link AuditAspect} and the bounded {@link AuditEventWriter}
- * behind the {@link com.shop.common.logging.audit.Audited} annotation.
- * <p>Activated when AspectJ and the audit integrations (security context +
- * servlet request plumbing) are on the classpath and
- * {@code shop.audit.enabled} is not explicitly {@code false}. The writer bean
- * is overridden by supplying your own {@link AuditEventWriter}.</p>
- */
 @AutoConfiguration
 @ConditionalOnClass({Aspect.class, SecurityContextHolder.class, Jwt.class,
         RequestContextHolder.class, HandlerMapping.class})

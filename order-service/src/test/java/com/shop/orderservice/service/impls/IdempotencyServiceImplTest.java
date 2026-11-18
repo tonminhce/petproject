@@ -34,11 +34,8 @@ class IdempotencyServiceImplTest {
     @Mock ObjectMapper objectMapper;
     @Mock PlatformTransactionManager transactionManager;
 
-    // Manual construction: the TTL is constructor-injected (review nit 8), and
-    // @InjectMocks would leave the primitive parameter at 0.
     IdempotencyServiceImpl service;
 
-    /** H-6 — idempotency rows are string-keyed by the caller label (actor). */
     private final String actor = UUID.randomUUID().toString();
     private final String key = "test-key";
     private final String requestHash = "abc123";
@@ -50,14 +47,10 @@ class IdempotencyServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new IdempotencyServiceImpl(repository, objectMapper, transactionManager, 24L);
-        // The impl builds a REQUIRES_NEW TransactionTemplate over this manager;
-        // this stub makes the template execute its callback inline and treat the
-        // "transaction" as new, so the production code path runs unmodified.
         lenient().when(transactionManager.getTransaction(any()))
             .thenReturn(new SimpleTransactionStatus());
     }
 
-    // ---------- begin ----------
 
     @Test
     void begin_nullKeyReturnsEmpty() {
@@ -73,14 +66,14 @@ class IdempotencyServiceImplTest {
 
         Optional<OrderResponse> result = service.begin(key, actor, requestHash);
 
-        assertThat(result).isEmpty();  // owner — proceed with saga
+        assertThat(result).isEmpty();
         ArgumentCaptor<IdempotencyKey> captor = ArgumentCaptor.forClass(IdempotencyKey.class);
         verify(repository).saveAndFlush(captor.capture());
         IdempotencyKey saved = captor.getValue();
         assertThat(saved.getActor()).isEqualTo(actor);
         assertThat(saved.getKey()).isEqualTo(key);
         assertThat(saved.getRequestHash()).isEqualTo(requestHash);
-        assertThat(saved.getResponseStatus()).isEqualTo(0);  // in-flight
+        assertThat(saved.getResponseStatus()).isEqualTo(0);
         assertThat(saved.getExpiresAt()).isAfter(saved.getCreatedAt());
     }
 
@@ -93,17 +86,17 @@ class IdempotencyServiceImplTest {
         Optional<OrderResponse> result = service.begin(key, actor, requestHash);
 
         assertThat(result).isPresent();
-        assertThat(result.get()).isEqualTo(response);  // REPLAY — return cached
+        assertThat(result.get()).isEqualTo(response);
     }
 
     @Test
     void begin_collisionWithDifferentPayloadThrows409() {
-        IdempotencyKey existing = completedRow("abc");  // different hash
+        IdempotencyKey existing = completedRow("abc");
         when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));  // DUPLICATE_REQUEST
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));
     }
 
     @Test
@@ -113,15 +106,12 @@ class IdempotencyServiceImplTest {
 
         assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));  // DUPLICATE_REQUEST
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));
     }
 
-    // ---------- begin: lost-race handling (review I1) ----------
 
     @Test
     void begin_lostRace_replaysCompletedWinner() throws Exception {
-        // 1st read: empty (winner's insert not visible yet) → our insert hits the
-        // unique composite PK → re-read finds the completed winner → REPLAY.
         when(repository.findByActorAndKey(actor, key))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.of(completedRow(requestHash)));
@@ -160,7 +150,6 @@ class IdempotencyServiceImplTest {
             .isSameAs(dive);
     }
 
-    // ---------- complete ----------
 
     @Test
     void complete_updatesExistingRow() throws Exception {
@@ -185,7 +174,6 @@ class IdempotencyServiceImplTest {
         verifyNoInteractions(repository);
     }
 
-    // ---------- abort ----------
 
     @Test
     void abort_deletesInFlightRowWithMatchingHash() {
@@ -199,8 +187,6 @@ class IdempotencyServiceImplTest {
 
     @Test
     void abort_neverDeletesRowWithDifferentHash() {
-        // Defense-in-depth for review I1: a row belonging to a different payload
-        // (or a different racing execution) must never be deleted by ours.
         IdempotencyKey otherPayload = inFlightRow("other-hash");
         when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(otherPayload));
 
@@ -219,7 +205,6 @@ class IdempotencyServiceImplTest {
         verify(repository, never()).delete(any(IdempotencyKey.class));
     }
 
-    // ---------- helpers ----------
 
     private IdempotencyKey inFlightRow(String hash) {
         return IdempotencyKey.builder()

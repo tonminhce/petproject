@@ -1,10 +1,4 @@
 databaseChangeLog:
-  # A compensation (release the stock reservation of a failed checkout) that
-  # fails was swallowed: the order row is deleted right after, so nothing in
-  # the order-service referenced the orphaned hold any more. The only way back
-  # was inventory-service's TTL sweep - up to 900 seconds of unavailable
-  # stock, with a log line as the only trace. This table is that trace and the
-  # work list of the retry.
   - changeSet:
       id: 010-create-failed-compensations
       author: shop-platform

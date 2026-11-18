@@ -83,7 +83,6 @@ public class CategoryServiceImpl implements CategoryService {
         }
         Category category = mapper.toEntity(request);
         if (request.parentId() != null) {
-            // a row already in this category's future chain. Without this check
             assertNoCycle(null, request.parentId());
             Category parent = repo.findById(request.parentId())
                 .orElseThrow(() -> BusinessException.of(ErrorCode.CATEGORY_NOT_FOUND, request.parentId()));
@@ -115,15 +114,6 @@ public class CategoryServiceImpl implements CategoryService {
         return mapper.toResponse(saved);
     }
 
-    /**
-     * Verify that linking {@code categoryId} under {@code newParentId}
-     * would not form a cycle. {@code categoryId} is null for {@code create}
-     * (the new node has no descendants yet) and non-null for {@code update}.
-     * <p>Walks up the parent chain from {@code newParentId} bounded by
-     * {@link #MAX_PARENT_DEPTH} so a corrupt chain can't trigger an unbounded
-     * load. Returns silently on a healthy tree; throws {@code CYCLE_DETECTED}
-     * otherwise.</p>
-     */
     private void assertNoCycle(UUID categoryId, UUID newParentId) {
         if (newParentId == null) {
             return;

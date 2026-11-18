@@ -119,7 +119,6 @@ class OrderCreateSagaTest {
 
         OrderResponse resp = saga.execute(userId, new OrderCreateRequest(null, "SAVE10"), "h13-persist-key");
 
-        // Persist-early: ZERO-amount PENDING row inserted BEFORE pricing
         org.mockito.InOrder seq = inOrder(orderRepository, pricingService);
         seq.verify(orderRepository).save(any(Order.class));
         seq.verify(pricingService).calculate(any(), eq(userId), anyList(), eq("SAVE10"));
@@ -131,7 +130,6 @@ class OrderCreateSagaTest {
         assertThat(saveSnapshots.get(1).getPromotionReservationId()).isEqualTo(promoReservationId);
 
         verify(idempotencyService).complete(eq("h13-persist-key"), eq(userId.toString()), any(), eq(201));
-        // The mapped response (whatever it is) was returned; the saga doesn't filter.
         assertThat(resp).isNull();
     }
 
@@ -151,7 +149,6 @@ class OrderCreateSagaTest {
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));
 
-        // Compensation: every reservation release attempted; promotion release attempted
         verify(promotionClient, times(1)).release(promoReservationId);
         verify(orderEventPublisher, never()).publishCreated(any(), anyList());
         verify(idempotencyService, never()).complete(any(), any(), any(), any(Integer.class));
@@ -160,9 +157,6 @@ class OrderCreateSagaTest {
     @Test
     void outerRollbackEvictsInnerWork_transactionTemplateCommitsThenRollsBack() {
 
-        // real Template.commit() → rollback() cycle exercises the proxy's
-        // tx boundary; a self-invocation regression (no proxy) would skip
-        // the rollback because nothing was started.
         TransactionTemplate template = new TransactionTemplate(txManager);
         when(txManager.getTransaction(any())).thenReturn(txStatus);
         doAnswer(inv -> { throw new RuntimeException("simulated downstream failure"); })
@@ -172,8 +166,6 @@ class OrderCreateSagaTest {
             template.executeWithoutResult(s -> saga.execute(userId, new OrderCreateRequest(null, "SAVE10"), "h13-tx-key")))
             .isInstanceOf(RuntimeException.class);
 
-        // TransactionTemplate must have rolled back — the saga's writes never
-        // become visible because the simulated failure throws BEFORE commit.
         verify(txManager).getTransaction(any());
         verify(txManager).rollback(txStatus);
         verify(txManager, never()).commit(txStatus);
@@ -194,13 +186,9 @@ class OrderCreateSagaTest {
                         secondProductId, new ProductSnapshot(secondProductId, "Widget", BigDecimal.TEN)),
                 promoReservationId));
 
-        // the first reservation succeeds, the second one fails -> compensation.
-        // The saga iterates the pricing snapshots, so the order of the two
-        // products is not the order of the cart: the stub is call-count based.
         when(stockReservationService.reserve(any(), any()))
             .thenReturn(reservationId)
             .thenThrow(new StockReservationFailedException(secondProductId, null));
-        // ... and the compensation of the first reservation fails as well
         doThrow(new RuntimeException("inventory down")).when(stockReservationService).release(any());
 
         assertThatThrownBy(() ->
@@ -208,8 +196,6 @@ class OrderCreateSagaTest {
             .isInstanceOf(BusinessException.class);
 
         verify(stockReservationService).release(reservationId);
-        // the failure is recorded, so the hold is recoverable instead of being
-        // orphaned until the inventory TTL sweep
         verify(compensationFailureService).record(any(), eq(reservationId),
             eq(com.shop.orderservice.entity.FailedCompensation.KIND_RESERVATION_RELEASE), any());
     }

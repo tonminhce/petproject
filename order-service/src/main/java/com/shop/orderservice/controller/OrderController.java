@@ -33,7 +33,6 @@ public class OrderController {
     public ApiResponse<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        // The idempotency_keys.key column is varchar(64) — reject longer headers with
         if (idempotencyKey != null && idempotencyKey.length() > 64) {
             throw BusinessException.badRequest("order.idempotency.key.tooLong", 64);
         }

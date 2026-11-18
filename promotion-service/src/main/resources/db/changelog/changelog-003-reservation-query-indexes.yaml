@@ -1,6 +1,4 @@
 databaseChangeLog:
-  # Supports campaign-wide quota and budget queries filtering by campaign and status.
-  # PostgreSQL uses equality predicates on both leading columns efficiently.
   - changeSet:
       id: 003-reservation-campaign-status-index
       author: shop-platform

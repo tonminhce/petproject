@@ -63,8 +63,6 @@ class AuthControllerTest {
 
     @Test
     void forgotPasswordFailsWhenTheEmailCouldNotBeDispatched() throws Exception {
-        // F-054: the endpoint must not report "a password reset instruction has
-        // been sent" when the dispatch failed.
         doThrow(BusinessException.of(ErrorCode.AUTH_EMAIL_SEND_FAILED))
                 .when(userService).forgotPassword("alice@example.com");
 

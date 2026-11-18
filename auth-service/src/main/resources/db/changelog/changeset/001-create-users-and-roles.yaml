@@ -1,5 +1,4 @@
 databaseChangeLog:
-  # ---- roles table ----
   - changeSet:
       id: 001-create-roles
       author: shop-platform
@@ -20,7 +19,6 @@ databaseChangeLog:
                     nullable: false
                     unique: true
 
-  # ---- users table ----
   - changeSet:
       id: 001-create-users
       author: shop-platform
@@ -70,7 +68,6 @@ databaseChangeLog:
                   constraints:
                     unique: true
 
-  # ---- user_role join table ----
   - changeSet:
       id: 001-create-user-role-join
       author: shop-platform
@@ -93,7 +90,6 @@ databaseChangeLog:
                     foreignKeyName: fk_user_role_role
                     references: roles(id)
 
-  # ---- seed canonical roles ----
   - changeSet:
       id: 001-seed-roles
       author: shop-platform

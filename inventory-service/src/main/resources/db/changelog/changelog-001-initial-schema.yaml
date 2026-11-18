@@ -1,8 +1,5 @@
 databaseChangeLog:
 
-  # ===========================================================================
-  #  001-create-inventory
-  # ===========================================================================
   - changeSet:
       id: 001-create-inventory
       author: shop-platform
@@ -33,9 +30,6 @@ databaseChangeLog:
             columns:
               - column: { name: product_id }
 
-  # ===========================================================================
-  #  002-create-reservations
-  # ===========================================================================
   - changeSet:
       id: 002-create-reservations
       author: shop-platform
@@ -71,9 +65,6 @@ databaseChangeLog:
               - column: { name: status }
               - column: { name: expires_at }
 
-  # ===========================================================================
-  #  003-create-outbox-events
-  # ===========================================================================
   - changeSet:
       id: 003-create-outbox-events
       author: shop-platform

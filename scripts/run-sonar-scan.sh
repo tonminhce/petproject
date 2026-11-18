@@ -6,7 +6,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ENV_FILE="$REPO_ROOT/.env.sonar"
 if [ -f "$ENV_FILE" ]; then
-    # shellcheck disable=SC1090
     source "$ENV_FILE"
 fi
 

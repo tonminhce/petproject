@@ -15,13 +15,6 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Sets up the platform-wide {@link MessageSource} and bridges it into the static
- * {@link Messages} helper so non-Spring contexts (exception constructors, etc.) can
- * resolve i18n keys with the same locale resolution rules as MVC handlers.
- * <p>Also publishes an {@link AcceptHeaderLocaleResolver} so the locale is picked from the
- * incoming {@code Accept-Language} header instead of {@code Locale.getDefault()}.</p>
- */
 @AutoConfiguration
 @EnableConfigurationProperties(I18nProperties.class)
 public class I18nAutoConfiguration {
@@ -54,11 +47,6 @@ public class I18nAutoConfiguration {
         return resolver;
     }
 
-    /**
-     * Wires the static {@link Messages} facade after all singletons are ready.
-     * Taking {@code MessageSource} as a parameter lets Spring inject whichever bean
-     * exists in the context — ours or a custom override — with no circular dependency.
-     */
     @Bean
     public SmartInitializingSingleton i18nStaticBridge(MessageSource messageSource) {
         return () -> Messages.setMessageSource(messageSource);

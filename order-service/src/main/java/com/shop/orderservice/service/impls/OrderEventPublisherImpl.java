@@ -72,8 +72,6 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
         Map<String, Object> data = new HashMap<>();
         data.put("orderId", order.getId());
         data.put("cancelledAt", order.getCancelledAt() != null ? order.getCancelledAt().toString() : Instant.now().toString());
-        // Hardcode false + TODO for Phase 8 (payment-service) to wire real refund state.
-        // Original condition `status == CANCELLED && total != null` was ALWAYS true.
         data.put("refunded", false);
         save(order.getId(), "order.cancelled.v1", data);
     }

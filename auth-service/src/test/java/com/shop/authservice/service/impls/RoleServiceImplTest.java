@@ -38,14 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * F-075: the admin role API must reach the Keycloak realm.
- *
- * <p>The realm is the only place that decides what a token carries. The
- * service used to write the local mirror only, so the endpoint answered 200
- * while the user's next token still carried no ADMIN: the operator believed
- * a privilege had been granted that never reached the authorization layer.</p>
- */
 @ExtendWith(MockitoExtension.class)
 class RoleServiceImplTest {
 
@@ -63,11 +55,6 @@ class RoleServiceImplTest {
     private UUID userId;
     private Role managerRole;
 
-    /**
-     * A transaction template that runs the callback without a real
-     * transaction: the test is about the ORDER of the realm call and the
-     * local write, not about the JDBC transaction itself.
-     */
     private static final PlatformTransactionManager NO_TX = new PlatformTransactionManager() {
         @Override
         public TransactionStatus getTransaction(TransactionDefinition definition) {
@@ -76,12 +63,10 @@ class RoleServiceImplTest {
 
         @Override
         public void commit(TransactionStatus status) {
-            // nothing to commit
         }
 
         @Override
         public void rollback(TransactionStatus status) {
-            // nothing to roll back
         }
     };
 
@@ -225,8 +210,6 @@ class RoleServiceImplTest {
 
         assertThat(roleService.assignRole(userId, "MANAGER")).isFalse();
 
-        // the realm is still called: the assignment is idempotent there and
-        // repairs a mirror that drifted away from the realm
         verify(keycloakAdminClient).assignRealmRole("kc-123", "MANAGER");
         verify(userRepository, never()).save(any(User.class));
     }
@@ -259,7 +242,6 @@ class RoleServiceImplTest {
     @Test
     @DisplayName("assignRole throws bad request for the fictional PM role")
     void assignRoleThrowsBadRequestForTheFictionalPmRole() {
-        // the catalogue rejects PM before any repository is touched
         assertThatThrownBy(() -> roleService.assignRole(userId, "PM"))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));

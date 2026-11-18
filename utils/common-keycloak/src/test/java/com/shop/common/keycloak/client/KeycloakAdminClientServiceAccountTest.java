@@ -20,17 +20,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/**
- * F-078: the admin token comes from a service account, not from a
- * master-realm password grant.
- *
- * <p>The admin client used the {@code password} grant against the master
- * realm on every admin call: the master-realm administrator credential
- * travelled in a plain password grant, and the permissions of the token
- * covered the whole Keycloak installation. With a configured service-account
- * secret the client uses {@code client_credentials} against the application
- * realm instead.</p>
- */
 class KeycloakAdminClientServiceAccountTest {
 
     private static final String MASTER_TOKEN_ENDPOINT = "http://keycloak/realms/master/protocol/openid-connect/token";
@@ -38,7 +27,6 @@ class KeycloakAdminClientServiceAccountTest {
     private static final String USERS_ENDPOINT = "http://keycloak/admin/realms/ecommerce/users";
     private static final String ROLES_ENDPOINT = "http://keycloak/admin/realms/ecommerce/roles";
 
-    /** The form body of the last token request. */
     private final AtomicReference<String> tokenRequestBody = new AtomicReference<>();
 
     private RestClient.Builder builder;
@@ -48,8 +36,6 @@ class KeycloakAdminClientServiceAccountTest {
     void setUp() {
         builder = RestClient.builder()
                 .requestInterceptor((request, body, execution) -> {
-                    // only the token request matters - the other calls of the
-                    // admin client carry no grant
                     if (request.getURI().getPath().contains("token")) {
                         tokenRequestBody.set(body instanceof byte[] bytes
                                 ? new String(bytes, StandardCharsets.UTF_8)
@@ -148,9 +134,6 @@ class KeycloakAdminClientServiceAccountTest {
         assertThatThrownBy(() -> client.assignRealmRole("kc-123", "MANAGER"))
                 .isInstanceOf(KeycloakClientException.class);
 
-        // The master realm must not be contacted at all: a silent fallback
-        // would put the master-realm administrator credential back on the
-        // wire after the migration to the service account.
         server.verify();
     }
 
@@ -160,7 +143,6 @@ class KeycloakAdminClientServiceAccountTest {
         KeycloakAdminClient client = new KeycloakAdminClient(builder, MASTER_TOKEN_ENDPOINT, USERS_ENDPOINT,
                 ROLES_ENDPOINT, "ecommerce-admin", "", "", "s3cret", REALM_TOKEN_ENDPOINT);
 
-        // exactly one token request
         server.expect(requestTo(REALM_TOKEN_ENDPOINT))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"access_token\":\"service-token\",\"expires_in\":300}",

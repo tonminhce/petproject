@@ -18,9 +18,6 @@ class ApiExceptionHandlerConstraintLeakTest {
 
     @Test
     void dataIntegrityViolationReturnsGenericInternalErrorMessageNoDbLeak() {
-        // Simulated Hibernate path: SqlIntegrityConstraintViolationException
-        // -> ConstraintViolationException -> DataIntegrityViolationException
-        // The cause's message contains a real schema detail we must NOT echo.
         SQLException sql = new SQLException(
                 "ERROR: duplicate key value violates unique constraint \"users_username_key\""
                         + "\n  Detail: Key (username)=(admin) already exists.",
@@ -49,8 +46,6 @@ class ApiExceptionHandlerConstraintLeakTest {
 
     @Test
     void dataIntegrityViolationDoesNotSurfaceCheckConstraintTypeDetail() {
-        // Postgres/MySQL check-constraint failures leak the type, the table, the
-        // column, and the failed boolean expression — strip all of that.
         SQLException sql = new SQLException(
                 "ERROR: new row for relation \"payment_events\" violates check constraint"
                         + " \"ck_payment_events_status\"\n"

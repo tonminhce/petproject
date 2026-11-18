@@ -44,7 +44,6 @@ class NotificationDeliveryServiceTest {
 
     @BeforeEach
     void setUp() {
-        // maxAttempts=3 so the exhaustion path is reachable at attempt 3.
         delivery = new NotificationDeliveryService(repository, writer, sender,
                 new NotificationRetryPolicy(3, 300), new NotificationFailureClassifier(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
@@ -105,7 +104,7 @@ class NotificationDeliveryServiceTest {
 
     @Test
     void transientFailureBeyondMaxAttempts_isPermanent() {
-        Notification n = sendingRow(2); // attempt 3 == maxAttempts
+        Notification n = sendingRow(2);
         when(repository.findById(ID)).thenReturn(Optional.of(n));
         doThrow(new IllegalStateException("still down")).when(sender).send(n);
 

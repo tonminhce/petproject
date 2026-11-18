@@ -28,12 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.Mockito.verify;
 
-/**
- * Payload-parity pins for the outbox envelope (spec D2, binding contract):
- * every field name and value of the JSON snapshot, the exact key set (no
- * extras), envelope/eventType stability, and null-safety for never-rated
- * products without brand/category relations.
- */
 @ExtendWith(MockitoExtension.class)
 class TransactionalProductEventPublisherTest {
 
@@ -178,9 +172,6 @@ class TransactionalProductEventPublisherTest {
 
     @Test
     void publishUpdated_mediaIdPresent_imageUrlIsDerivedCanonicalPath_17NamesUnchanged() throws Exception {
-        // Media epic spec D5: same 17-name contract, new imageUrl VALUE SOURCE —
-        // the derived canonical path replaces the stored free-string when the
-        // product references a media.
         Product p = fullProduct();
         p.setMediaId(MEDIA_ID);
 

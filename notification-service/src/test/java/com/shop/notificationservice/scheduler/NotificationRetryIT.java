@@ -35,10 +35,6 @@ class NotificationRetryIT extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void retryProps(DynamicPropertyRegistry registry) {
-        // Deterministic retry backoff for the IT; the STARTUP immediate run of
-        // @Scheduled(fixedDelay) is harmless (only leftover rows exist, all
-        // settled or inside their backoff window), and the NEXT scheduled run
-        // is an hour out — manual poll(now) calls drive every scenario here.
         registry.add("shop.notification.retry.backoff-base-seconds", () -> "1");
         registry.add("shop.notification.retry.poll-ms", () -> "3600000");
         registry.add("shop.notification.retry.initial-delay-ms", () -> "3600000");
@@ -86,9 +82,8 @@ class NotificationRetryIT extends AbstractIntegrationTest {
         assertThat(afterFail.getStatus()).isEqualTo(NotificationStatus.FAILED_RETRYABLE);
         assertThat(afterFail.getRetryCount()).isEqualTo(1);
         assertThat(afterFail.getLastError()).contains("smtp-down");
-        assertThat(afterFail.getNextRetryAt()).isAfter(t0); // backoff scheduled
+        assertThat(afterFail.getNextRetryAt()).isAfter(t0);
 
-        // Advance past the 1s backoff window; the retry succeeds.
         retryScheduler.poll(t0.plusSeconds(10));
 
         Notification afterRetry = notificationRepository.findById(n.getId()).orElseThrow();
@@ -101,7 +96,6 @@ class NotificationRetryIT extends AbstractIntegrationTest {
     @Test
     void poll_staleSendingRow_isReclaimed() {
         Instant t0 = Instant.now();
-        // Heartbeat elapsed → the crash-mid-send recovery path.
         Notification n = newRow(NotificationStatus.SENDING, 2, t0.minusSeconds(60));
 
         retryScheduler.poll(t0);

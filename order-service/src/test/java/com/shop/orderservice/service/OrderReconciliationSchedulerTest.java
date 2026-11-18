@@ -31,16 +31,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * OrderReconciliationScheduler unit tests — hardening §6, task 12 scenarios 1-5.
- * State-poll failure routes to the mixed/alert path — never auto-decide.
- * "Failure" is ANY exception from the poll: BusinessException
- * (404→RESERVATION_NOT_FOUND, promotion 4xx→SERVICE_UNAVAILABLE fallback) and
- * transport errors (ResourceAccessException/RestClientException from 5xx or
- * timeouts). Null reservation ids are not-applicable,
- * never mixed. Empty applicable set → mixed (nothing verifiable — no automatic
- * decision, needs human eyes).
- */
 @ExtendWith(MockitoExtension.class)
 class OrderReconciliationSchedulerTest {
 
@@ -86,7 +76,6 @@ class OrderReconciliationSchedulerTest {
         when(orderItemRepository.findByOrderId(order.getId())).thenReturn(List.of(items));
     }
 
-    /** Scenario 1 — all applicable COMMITTED → CONFIRMED + confirmedAt + status-changed event. */
     @Test
     void allCommitted_confirmsOrder_publishesStatusChanged() {
         Order order = stuckOrder(promoId);
@@ -107,7 +96,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isZero();
     }
 
-    /** Scenario 2 — all terminal (RELEASED/EXPIRED) → CANCELLED + cancelled event, nothing released. */
     @Test
     void allTerminal_cancelsOrder_publishesCancelled() {
         Order order = stuckOrder(promoId);
@@ -124,13 +112,11 @@ class OrderReconciliationSchedulerTest {
         assertThat(saved.getValue().getCancelledAt()).isNotNull();
         verify(eventPublisher).publishCancelled(order);
         verify(eventPublisher, never()).publishStatusChanged(any());
-        // terminal already — reconciliation must not call release/commit on either client
         verify(promotionClient, never()).release(any());
         verify(inventoryClient, never()).release(any());
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isZero();
     }
 
-    /** Scenario 3 — mixed states → untouched + order.reconciliation.mixed counter. */
     @Test
     void mixed_leavesOrderUntouched_incrementsMixedCounter() {
         Order order = stuckOrder(promoId);
@@ -148,7 +134,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
     }
 
-    /** Scenario 4a — inventory state-poll 404 (INV-3003) → mixed path, never auto-decide. */
     @Test
     void inventoryStatePoll404_routesToMixed_neverDecides() {
         Order order = stuckOrder(promoId);
@@ -165,7 +150,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
     }
 
-    /** Scenario 4c — inventory transport failure (5xx/timeout → ResourceAccessException) → mixed path. */
     @Test
     void inventoryStatePollTransportFailure_routesToMixed_neverDecides() {
         Order order = stuckOrder(promoId);
@@ -183,11 +167,9 @@ class OrderReconciliationSchedulerTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
     }
 
-    /** Scenario 4b — promotion state-poll 4xx (client maps to SERVICE_UNAVAILABLE) → mixed path. */
     @Test
     void promotionStatePoll4xx_serviceUnavailable_routesToMixed() {
         Order order = stuckOrder(promoId);
-        // promotion is polled before items — neither item repo nor inventory is reached
         when(orderRepository.findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), any(Instant.class), any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(List.of(order));
         when(promotionClient.getReservationState(promoId))
@@ -201,7 +183,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
     }
 
-    /** Scenario 5 — recent PENDING orders are excluded by the cutoff passed to the finder. */
     @Test
     void usesStuckMinutesCutoff_andEmptyCandidatesPollNothing() {
         Instant before = Instant.now();
@@ -212,18 +193,16 @@ class OrderReconciliationSchedulerTest {
 
         ArgumentCaptor<Instant> cutoff = ArgumentCaptor.forClass(Instant.class);
         verify(orderRepository).findByStatusAndCreatedAtBefore(eq(OrderStatus.PENDING), cutoff.capture(), any(org.springframework.data.domain.Pageable.class));
-        // cutoff ≈ now - 30 min (stuckMinutes=30), computed between `before` and the assertion
         Instant expectedFloor = before.minusSeconds(30 * 60 + 5);
         Instant expectedCeiling = Instant.now().minusSeconds(30 * 60 - 5);
         assertThat(cutoff.getValue()).isBetween(expectedFloor, expectedCeiling);
         verifyNoInteractions(promotionClient, inventoryClient, eventPublisher, orderItemRepository);
     }
 
-    /** D5 analog — null promotionReservationId / null item reservationIds are not-applicable. */
     @Test
     void nullReservationIds_skipped_notMixed_confirmsOnRemainingApplicable() {
-        Order order = stuckOrder(null);           // no promotion reservation
-        givenCandidates(order, item(null), item(r1));  // first item legacy (no reservation)
+        Order order = stuckOrder(null);
+        givenCandidates(order, item(null), item(r1));
         when(inventoryClient.getReservationState(r1)).thenReturn(new ReservationStateResponse("COMMITTED"));
 
         scheduler.reconcileStuckOrders();
@@ -236,7 +215,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isZero();
     }
 
-    /** Empty applicable set (nothing verifiable) → no automatic decision, mixed/alert path. */
     @Test
     void noApplicableReservations_routesToMixed() {
         Order order = stuckOrder(null);
@@ -248,7 +226,6 @@ class OrderReconciliationSchedulerTest {
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(1.0);
     }
 
-    /** Gauge registered exactly once at construction; supplier re-reads per scrape. */
     @Test
     void stuckGauge_registeredOnce_reflectsCount() {
         assertThat(meterRegistry.find("order.commit.stuck").gauge()).isNotNull();
@@ -260,16 +237,10 @@ class OrderReconciliationSchedulerTest {
             .thenReturn(1L);
         scheduler.invalidateStuckCountCache();
         assertThat(meterRegistry.get("order.commit.stuck").gauge().value()).isEqualTo(1.0);
-        scheduler.registerStuckGauge();  // second call must not duplicate the meter
+        scheduler.registerStuckGauge();
         assertThat(meterRegistry.get("order.commit.stuck").gauges().size()).isEqualTo(1);
     }
 
-    /**
-     * One candidate throwing must not abort the sweep. The item-repo hiccup happens
-     * inside the poll — since fix round 1 ANY poll failure (incl. unexpected ones)
-     * routes to the mixed path, so both candidates land there; the sweep-loop outer
-     * catch remains for failures outside the poll (tx/event publish).
-     */
     @Test
     void unexpectedErrorOnOneOrder_doesNotAbortSweep() {
         Order bad = Order.builder().id(UUID.randomUUID()).status(OrderStatus.PENDING).build();
@@ -280,7 +251,6 @@ class OrderReconciliationSchedulerTest {
         when(orderItemRepository.findByOrderId(good.getId())).thenReturn(List.of(item(null)));
 
         assertThatCode(scheduler::reconcileStuckOrders).doesNotThrowAnyException();
-        // both orders processed — neither auto-decided, both routed to mixed/alert
         assertThat(meterRegistry.counter("order.reconciliation.mixed").count()).isEqualTo(2.0);
         verify(orderRepository, never()).save(any());
     }

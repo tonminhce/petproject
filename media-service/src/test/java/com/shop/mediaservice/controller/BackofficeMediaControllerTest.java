@@ -34,13 +34,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Security matrix + wire contract for /api/v1/backoffice/medias (spec D3):
- * class @PreAuthorize ADMIN, multipart POST → 201 created / 200
- * duplicate:true (dedup passthrough), DELETE → soft delete with 404/409
- * MED-code propagation. Multipart goes through the real MVC multipart
- * resolution — the network-layer proof lives in {@code MediaControllerIT}.
- */
 @WebMvcTest(value = BackofficeMediaController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -78,7 +71,6 @@ class BackofficeMediaControllerTest {
                 "/api/v1/medias/" + MEDIA_ID, List.of(), duplicate);
     }
 
-    // --- security matrix ---
 
     @Test
     void upload_noAuth_returns401() throws Exception {
@@ -112,7 +104,6 @@ class BackofficeMediaControllerTest {
         verifyNoInteractions(lifecycleService);
     }
 
-    // --- upload: 201 created / 200 duplicate ---
 
     @Test
     void upload_newMedia_viaRealMultipart_returns201Created() throws Exception {
@@ -145,7 +136,6 @@ class BackofficeMediaControllerTest {
             .andExpect(jsonPath("$.data.duplicate").value(true));
     }
 
-    // --- delete: happy path + MED-code propagation ---
 
     @Test
     void delete_admin_returns200() throws Exception {

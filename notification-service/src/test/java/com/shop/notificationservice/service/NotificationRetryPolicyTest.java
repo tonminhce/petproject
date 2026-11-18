@@ -38,8 +38,6 @@ class NotificationRetryPolicyTest {
 
     @Test
     void hugeLegacyAttemptCount_doesNotOverflow() {
-        // Legacy/backfilled rows can carry arbitrary retry_count values; the
-        // backoff multiplication must stay a sane positive number.
         long backoff = policy.backoffSeconds(50);
 
         assertThat(backoff).isPositive();

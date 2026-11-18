@@ -1,11 +1,5 @@
 databaseChangeLog:
 
-  # ===========================================================================
-  #  categories — created FIRST so products can point a FK at it.
-  #  Self-referencing tree: parent_id NULL means "root".
-  #  audit columns (created_at/updated_at) use CURRENT_TIMESTAMP defaults so
-  #  inserts don't fail if @EnableJpaAuditing hasn't kicked in yet.
-  # ===========================================================================
   - changeSet:
       id: 001-create-categories
       author: shop-platform
@@ -39,8 +33,6 @@ databaseChangeLog:
             referencedColumnNames: id
             onDelete: RESTRICT
 
-        # Partial unique index: a slug may be reused once the old row is soft-deleted.
-        # Liquibase's createIndex has no `where` attribute, so raw SQL it is.
         - sql:
             sql: >-
               CREATE UNIQUE INDEX idx_categories_slug_unique_active
@@ -52,9 +44,6 @@ databaseChangeLog:
             columns:
               - column: { name: parent_id }
 
-  # ===========================================================================
-  #  brands — created before products (FK target).
-  # ===========================================================================
   - changeSet:
       id: 001-create-brands
       author: shop-platform
@@ -85,9 +74,6 @@ databaseChangeLog:
               CREATE UNIQUE INDEX idx_brands_slug_unique_active
               ON brands (slug) WHERE deleted = false
 
-  # ===========================================================================
-  #  products — after categories + brands so both FKs resolve.
-  # ===========================================================================
   - changeSet:
       id: 001-create-products
       author: shop-platform
@@ -137,8 +123,6 @@ databaseChangeLog:
             referencedColumnNames: id
             onDelete: RESTRICT
 
-        # slug + sku stay unique among live rows only — soft-deleted rows must not
-        # block a re-create with the same natural key.
         - sql:
             sql: >-
               CREATE UNIQUE INDEX idx_products_slug_unique_active
@@ -173,11 +157,6 @@ databaseChangeLog:
             columns:
               - column: { name: deleted }
 
-  # ===========================================================================
-  #  outbox_events — transactional outbox for product lifecycle events.
-  #  Carries the soft-delete columns because the entity extends
-  #  AbstractMappedEntity (which extends SoftDeletable); they stay false.
-  # ===========================================================================
   - changeSet:
       id: 001-create-outbox-events
       author: shop-platform
@@ -210,7 +189,6 @@ databaseChangeLog:
               - column: { name: deleted_at,     type: timestamp }
               - column: { name: deleted_by,     type: varchar(255) }
 
-        # Poller query: WHERE status = 'PENDING' ORDER BY id.
         - createIndex:
             tableName: outbox_events
             indexName: idx_outbox_status

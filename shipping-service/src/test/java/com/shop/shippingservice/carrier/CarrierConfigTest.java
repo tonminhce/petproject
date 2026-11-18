@@ -19,7 +19,6 @@ class CarrierConfigTest {
     void manualIsActiveByDefaultAndResolvesAsPrimary() {
         contextRunner.run(ctx -> {
             assertThat(ctx).hasBean("manualCarrierAdapter");
-            // Noop requires explicit property, so not loaded here
             assertThat(ctx).doesNotHaveBean("noopCarrierAdapter");
             assertThat(ctx.getBean(CarrierAdapter.class)).isSameAs(ctx.getBean("manualCarrierAdapter"));
             assertThat(ctx.getBean(CarrierAdapter.class).carrier()).isEqualTo(Carrier.MANUAL);
@@ -43,13 +42,10 @@ class CarrierConfigTest {
                 .withUserConfiguration(CarrierConfig.class, ManualCarrierAdapter.class, ExtraAdapterConfig.class)
                 .run(ctx -> {
                     assertThat(ctx).hasNotFailed();
-                    // Primary resolves to manual (default property)
                     assertThat(ctx.getBean(CarrierAdapter.class).carrier()).isEqualTo(Carrier.MANUAL);
-                    // Factory contains both adapters
                     CarrierFactory factory = ctx.getBean(CarrierFactory.class);
                     assertThat(factory.getCarrier(Carrier.MANUAL).carrier()).isEqualTo(Carrier.MANUAL);
                     assertThat(factory.getCarrier(Carrier.GHN).carrier()).isEqualTo(Carrier.GHN);
-                    // Dynamic string resolution (OCP)
                     assertThat(factory.getCarrier("ghn").carrier()).isEqualTo(Carrier.GHN);
                     assertThat(factory.getCarrier("manual").carrier()).isEqualTo(Carrier.MANUAL);
                     assertThat(factory.getCarrier("unknown_carrier")).isSameAs(factory.getDefaultCarrier());

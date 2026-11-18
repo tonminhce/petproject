@@ -79,7 +79,6 @@ public class FavouriteServiceImpl implements FavouriteService {
         String actor = AuditActor.require(auditorAware::getCurrentAuditor);
         int affected = repo.softDeleteByUserIdAndProductId(userId, productId, actor);
         if (affected == 0) {
-            // FAV-6003 — product-scoped message, do NOT reuse FAV-6001 here.
             throw BusinessException.of(ErrorCode.FAVOURITE_PRODUCT_NOT_FOUND, productId);
         }
     }

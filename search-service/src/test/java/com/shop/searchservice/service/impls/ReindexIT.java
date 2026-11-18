@@ -35,12 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-/**
- * Full reindex over real Elasticsearch with WireMock-backed product-service
- * (spec D5): paged ACTIVE stream → bulk into products-v{n+1} → atomic alias
- * swap → old indices deleted. Covers dryRun (counts only), the 409 in-process
- * lock, and mid-stream source failure (503, alias untouched).
- */
 class ReindexIT extends AbstractSearchIntegrationTest {
 
     static final WireMockServer productServer = new WireMockServer(0);
@@ -49,7 +43,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
     static {
         productServer.start();
         keycloakServer.start();
-        // ServiceTokenProvider's client_credentials token endpoint (cached after first fetch).
         keycloakServer.stubFor(post(urlMatching("/realms/.*/protocol/openid-connect/token"))
             .willReturn(okJson(
                 "{\"access_token\":\"dummy-jwt\",\"expires_in\":3600,\"token_type\":\"Bearer\"}")));
@@ -92,12 +85,9 @@ class ReindexIT extends AbstractSearchIntegrationTest {
 
         client.indices().refresh(r -> r.index("products"));
 
-        // alias points ONLY at the new generation
         assertThat(aliasIndices()).containsExactly(newIndex);
-        // every superseded index (including v1 from provisioning) is gone
         assertThat(generationIndices()).containsExactly(newIndex);
 
-        // docs queryable via the alias with the FULL D3 field set
         Map<String, Object> doc = docViaAlias(p1);
         assertThat(doc)
             .containsEntry("id", p1.toString())
@@ -115,7 +105,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
         assertThat(((Number) doc.get("avgRating")).doubleValue()).isEqualTo(4.50d);
         assertThat(((Number) doc.get("ratingCount")).intValue()).isEqualTo(12);
 
-        // source paging used page/size/status exactly (size = the 200 cap)
         productServer.verify(getRequestedFor(
             urlEqualTo("/api/v1/backoffice/products?page=0&size=200&status=ACTIVE")));
         productServer.verify(getRequestedFor(
@@ -142,7 +131,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
     @DisplayName("second concurrent call is rejected with 409 SRH-12001 (in-process lock)")
     void concurrentSecondCallReturns409() throws Exception {
         stubPage(0, true, 1, snapshotJson(UUID.randomUUID(), "Slow Phone"));
-        // make page 0 slow so the first reindex is provably inside the lock
         productServer.stubFor(get(urlEqualTo("/api/v1/backoffice/products?page=0&size=200&status=ACTIVE"))
             .willReturn(okJson(pageJson(0, 1, true, snapshotJson(UUID.randomUUID(), "Slow Phone")))
                 .withFixedDelay(800)));
@@ -150,7 +138,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             Future<ReindexResponse> first = executor.submit(() -> reindexService.reindex(false));
-            // page-0 request served ⇒ thread A holds the lock
             await().atMost(java.time.Duration.ofSeconds(5)).untilAsserted(() ->
                 assertThat(productServer.getAllServeEvents()).hasSize(1));
 
@@ -183,7 +170,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
     @DisplayName("orphan index from a failed run is skipped (max+1) and reaped by the next success")
     void orphanFromFailedRunIsSkippedAndReapedByNextSuccess() throws Exception {
         int beforeMax = maxGeneration();
-        // failing run leaves an orphan at v(beforeMax+1)
         stubPage(0, false, 2, snapshotJson(UUID.randomUUID(), "iPhone 15"));
         productServer.stubFor(get(urlEqualTo("/api/v1/backoffice/products?page=1&size=200&status=ACTIVE"))
             .willReturn(serverError()));
@@ -191,7 +177,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
             .isInstanceOf(BusinessException.class);
         assertThat(maxGeneration()).isEqualTo(beforeMax + 1);
 
-        // next successful run skips the orphan number and reaps it post-swap
         productServer.resetAll();
         stubPage(0, true, 1, snapshotJson(UUID.randomUUID(), "iPhone 15"));
 
@@ -202,9 +187,6 @@ class ReindexIT extends AbstractSearchIntegrationTest {
         assertThat(aliasIndices()).containsExactly(response.indexName());
     }
 
-    // ------------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------------
 
     private static final String PAGE_URI = "/api/v1/backoffice/products?page=%d&size=200&status=ACTIVE";
 

@@ -21,9 +21,6 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 def esc(text):
     return saxutils.escape(str(text), {'"': "&quot;", "'": "&apos;"}).replace("\n", "&#xa;")
 
-# -------------------------------------------------------------------------
-# DIAGRAM 1: SYSTEM LANDSCAPE & HIGH-LEVEL ARCHITECTURE (.mmd & .drawio)
-# -------------------------------------------------------------------------
 
 def generate_landscape_mermaid():
     mmd = """%% System Landscape Architecture — Petproject Microservices Platform
@@ -407,9 +404,6 @@ def generate_landscape_drawio():
         f.write(xml.strip())
     print("Generated system-landscape-architecture.drawio")
 
-# -------------------------------------------------------------------------
-# DIAGRAM 2: ASYNCHRONOUS EVENT-DRIVEN & TRANSACTIONAL OUTBOX ARCHITECTURE
-# -------------------------------------------------------------------------
 
 def generate_event_driven_mermaid():
     mmd = """%% Event-Driven Architecture & Transactional Outbox Pattern
@@ -716,9 +710,6 @@ def generate_event_driven_drawio():
         f.write(xml.strip())
     print("Generated event-driven-messaging-architecture.drawio")
 
-# -------------------------------------------------------------------------
-# DIAGRAM 3: END-TO-END ORDER FULFILLMENT SAGA (SEQUENCE DIAGRAM)
-# -------------------------------------------------------------------------
 
 def generate_order_saga_mermaid():
     mmd = """%% End-to-End E-Commerce Order Fulfillment Saga Lifecycle
@@ -921,9 +912,6 @@ def generate_order_saga_drawio():
         f.write(xml.strip())
     print("Generated e2e-order-fulfillment-saga.drawio")
 
-# -------------------------------------------------------------------------
-# DIAGRAM 4: GATEWAY SECURITY & TWO-LAYER RATE LIMITING
-# -------------------------------------------------------------------------
 
 def generate_gateway_security_mermaid():
     mmd = """%% Gateway Security, Filter Chain & Two-Layer Rate Limiting Architecture
@@ -1130,9 +1118,6 @@ def generate_gateway_security_drawio():
         f.write(xml.strip())
     print("Generated gateway-security-rate-limit.drawio")
 
-# -------------------------------------------------------------------------
-# DIAGRAM 5: DATA ARCHITECTURE, STORAGE & DEPLOYMENT TOPOLOGY
-# -------------------------------------------------------------------------
 
 def generate_data_topology_mermaid():
     mmd = """%% Data Stores, Storage Architecture & Deployment Topology

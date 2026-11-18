@@ -101,7 +101,6 @@ class ProductRatingServiceTest {
     @Test
     void apply_publishesProductUpdatedWithTheSavedEntityReturnedByRepoSave() {
 
-        // persisted instance (audit fields filled), not the pre-save detached one.
         Product managed = product();
         Product saved = product();
         saved.setTitle("SAVED-INSTANCE");
@@ -143,9 +142,6 @@ class ProductRatingServiceTest {
 
     @Test
     void apply_nullAvgRating_copiedAsIs() {
-        // Defensive decision: producer always sends avgRating; if a null ever
-        // arrives we copy it verbatim (column is nullable per spec D5) — no
-        // guard, no branching, dumb copy all the way down.
         Product p = product();
         p.setAvgRating(new BigDecimal("4.50"));
         p.setRatingCount(2);

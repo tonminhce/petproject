@@ -16,19 +16,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Retry failed shipping webhooks. See
- * {@code payment-service/.../scheduler/WebhookRetryScheduler.java} for the design
- * rationale; this scheduler mirrors it against the shipment_events table.
- * <p>Per-event transaction via {@link TransactionTemplate} (see sibling).
- * {@code shipment_webhook_failed_permanent_total} counter on terminal failures.</p>
- */
 @Component
 @Slf4j
 public class WebhookRetryScheduler {
 
     private static final int MAX_ATTEMPTS = 6;
-    private static final long BASE_BACKOFF_SECONDS = 300L; // 5 minutes
+    private static final long BASE_BACKOFF_SECONDS = 300L;
 
     private final ShipmentEventRepository eventRepository;
     private final WebhookEventService webhookEventService;

@@ -1,10 +1,5 @@
 databaseChangeLog:
 
-  # ===========================================================================
-  #  carts — one ACTIVE cart per user. The uniqueness is partial
-  #  (WHERE deleted = false) so clearCart's soft-delete doesn't block the next
-  #  cart for the same user.
-  # ===========================================================================
   - changeSet:
       id: 001-create-carts
       author: shop-platform
@@ -28,15 +23,11 @@ databaseChangeLog:
               - column: { name: deleted_at, type: timestamp }
               - column: { name: deleted_by, type: varchar(255) }
 
-        # Liquibase's createIndex silently drops `where`, so raw SQL it is.
         - sql:
             sql: >-
               CREATE UNIQUE INDEX idx_carts_user_active
               ON carts (user_id) WHERE deleted = false
 
-  # ===========================================================================
-  #  cart_items — product_title + unit_price are display snapshots.
-  # ===========================================================================
   - changeSet:
       id: 001-create-cart-items
       author: shop-platform
@@ -71,10 +62,6 @@ databaseChangeLog:
               - column: { name: cart_id }
               - column: { name: product_id }
 
-  # ===========================================================================
-  #  orders — soft-delete is admin/GDPR only; cancel just sets status +
-  #  cancelled_at (spec §5.3).
-  # ===========================================================================
   - changeSet:
       id: 001-create-orders
       author: shop-platform
@@ -120,17 +107,11 @@ databaseChangeLog:
               - column: { name: status }
               - column: { name: created_at }
 
-        # Partial (non-unique) lookup index — coupon usage counting only spans
-        # live orders. Raw SQL because createIndex ignores `where`.
         - sql:
             sql: >-
               CREATE INDEX idx_orders_coupon_active
               ON orders (coupon_code) WHERE deleted = false
 
-  # ===========================================================================
-  #  order_items — hard-deleted with the parent order (CASCADE).
-  #  reservation_id is nullable: set once inventory reserves, used on cancel.
-  # ===========================================================================
   - changeSet:
       id: 001-create-order-items
       author: shop-platform
@@ -165,9 +146,6 @@ databaseChangeLog:
             columns:
               - column: { name: order_id }
 
-  # ===========================================================================
-  #  outbox_events — transactional outbox; aggregate_id = order id.
-  # ===========================================================================
   - changeSet:
       id: 001-create-outbox-events
       author: shop-platform
@@ -193,7 +171,6 @@ databaseChangeLog:
               - column: { name: sent_at,        type: timestamp }
               - column: { name: last_error,     type: varchar(1000) }
 
-        # Poller query: WHERE status = 'PENDING' ORDER BY id.
         - createIndex:
             tableName: outbox_events
             indexName: idx_outbox_status
@@ -206,9 +183,6 @@ databaseChangeLog:
             columns:
               - column: { name: aggregate_id }
 
-  # ===========================================================================
-  #  idempotency_keys — composite PK (user_id, key), rev 2 fix O-N5.
-  # ===========================================================================
   - changeSet:
       id: 001-create-idempotency-keys
       author: shop-platform
@@ -229,7 +203,6 @@ databaseChangeLog:
             columnNames: user_id, key
             constraintName: pk_idempotency_keys
 
-        # Sweeper: DELETE WHERE expires_at < now().
         - createIndex:
             tableName: idempotency_keys
             indexName: idx_idempotency_expires_at

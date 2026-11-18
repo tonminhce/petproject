@@ -51,7 +51,6 @@ class ShippingDeliveredConsumerTest {
         return e;
     }
 
-    /** The LEGACY pre-R1 wire: payload String JSON-string-encoded by JsonKafkaSerializer (H-1 tolerance). */
     private String doubleEncodedToken(ShippingDeliveredEvent event) throws JsonProcessingException {
         return objectMapper.writeValueAsString(objectMapper.writeValueAsString(event));
     }

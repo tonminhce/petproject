@@ -26,7 +26,6 @@ class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
 
     @DynamicPropertySource
     static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
-        // keep the @Scheduled relay idle so it cannot drain the rows under test
         registry.add("shop.media.outbox.poll-millis", () -> "3600000");
     }
 
@@ -35,7 +34,6 @@ class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
 
     @BeforeEach
     void clearDueRows() {
-        // leftover due rows from other tests would win the MIN(id) claim race
         outboxRepo.deleteAll(outboxRepo.findByStatusInOrderByIdAsc(DUE, PageRequest.of(0, 10_000)));
     }
 
@@ -64,14 +62,13 @@ class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
         AtomicReference<Optional<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
         AtomicReference<Optional<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
 
-        // A claims the head row and HOLDS the row lock (tx open) while B claims concurrently.
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
                     claimA.set(outboxRepo.claimOneDue(DUE));
                     aClaimed.countDown();
                     try {
-                        bLockedOut.await(10, TimeUnit.SECONDS); // hold the lock for B's attempt
+                        bLockedOut.await(10, TimeUnit.SECONDS);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
@@ -106,12 +103,9 @@ class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        // A claimed the head row
         assertThat(claimA.get()).isPresent();
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(rowId);
-        // While A's lock was held, B got an EMPTY claim — never the same row (SKIP LOCKED)
         assertThat(claimBWhileLocked.get()).isEmpty();
-        // After A committed, the still-due row is claimable again — progress resumes
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(rowId);
 
         outboxRepo.deleteById(rowId);
@@ -171,12 +165,8 @@ class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        // A claimed the head row (MIN id)
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        // B locked out entirely — even though row2 is free, the MIN-subquery claim
-        // shape serializes on the head row (see claimOneDue javadoc)
         assertThat(claimBWhileLocked.get()).isEmpty();
-        // After A committed, row1 is re-claimable; row2 was never touched
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
         assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
 

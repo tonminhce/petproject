@@ -16,24 +16,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Bootstrap smoke IT — proves the Task-12 harness boots the full
- * shipping-service context against real infrastructure: Testcontainers
- * PostgreSQL + Kafka up, Liquibase changelog applied (business tables +
- * Liquibase bookkeeping present), the {@code shippingListenerFactory}
- * consumer wiring present with a live listener container so
- * {@code OrderEventConsumer} can attach, the manual carrier adapter active,
- * and the reconciliation scheduler bean present.
- *
- * <p>Container/property bootstrap lives entirely in
- * {@link AbstractIntegrationTest}; this class only asserts.</p>
- *
- * <p>{@code @DirtiesContext}: this context runs a live
- * {@code OrderEventConsumer} in group {@code shipping-service}. Closing it
- * after the class stops that consumer from competing for the topic's single
- * partition while later flow ITs run — flow scenarios must be processed by
- * the flow context's own listener.</p>
- */
 @DirtiesContext
 class ShippingBootstrapIT extends AbstractIntegrationTest {
 
@@ -57,7 +39,6 @@ class ShippingBootstrapIT extends AbstractIntegrationTest {
             "select table_name from information_schema.tables where table_schema = 'public'",
             String.class);
 
-        // Business tables from changelog-001/-002 + Liquibase bookkeeping.
         assertThat(tables).contains(
             "shipments",
             "shipment_events",

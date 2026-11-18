@@ -67,7 +67,7 @@ public class ProductMapper {
 
     public Product toEntity(ProductCreateRequest request) {
         Product p = modelMapper.map(request, Product.class);
-        p.setId(null);   // force identity insert even if request carried an id
+        p.setId(null);
         return p;
     }
 
@@ -89,11 +89,6 @@ public class ProductMapper {
         if (request.dimensions()  != null) target.setDimensions(request.dimensions());
     }
 
-    /**
-     * Media epic spec D5 — derived display image, computed at mapping time
-     * (never stored): mediaId present → media canonicalPath
-     * {@code /api/v1/medias/{id}}; else legacy free-text imageUrl.
-     */
     private String resolveImage(Product product) {
         return product.getMediaId() != null
             ? ApiPaths.MEDIAS + "/" + product.getMediaId()

@@ -16,11 +16,6 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-spring</artifactId>
         </dependency>
-        <!-- test-jar brings in TestSecurityConfig + other shared test helpers
-             so integration tests can @Import com.shop.common.spring.test.* without
-             duplicating the stub JwtDecoder (which would force a real Keycloak
-             JWKS fetch at startup). Version is inherited from the parent pom's
-             <dependencyManagement> entry. -->
         <dependency>
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-spring</artifactId>
@@ -28,13 +23,10 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-        <!-- common-kafka is <optional> in common-spring → declare it explicitly to get
-             KafkaMessagePublisher + the shop.kafka.* binding used by the outbox relay. -->
         <dependency>
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-kafka</artifactId>
         </dependency>
-        <!-- Audit aspect: @Audited on the ADMIN-gated product mutations. -->
         <dependency>
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-logging</artifactId>
@@ -47,8 +39,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
-        <!-- Boot 4 modularised autoconfigure: RedisCacheManagerBuilderCustomizer +
-             spring.cache.* live in spring-boot-cache, not in starter-data-redis. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
@@ -134,8 +124,6 @@
             <artifactId>awaitility</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Media-service HTTP stub for the Option C write-time gate IT
-             (media epic spec D5) — same standalone jar as search/order/gateway. -->
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
@@ -158,9 +146,6 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
-                        <!-- Same single-phase convention as media-service: the
-                             full-context ITs (*IT) live in src/test/java and
-                             must run with `mvn test`. -->
                         <include>**/*IT.java</include>
                     </includes>
                 </configuration>

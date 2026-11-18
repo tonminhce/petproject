@@ -20,20 +20,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * The admin cancellation of a SHIPPED order (H12).
- *
- * <p>The transition is deliberately allowed (carrier loss, fraud, recall), so
- * the cancellation has to do the work the state change promises: the refund
- * must be driven by the platform and leave a record. It used to be a bare
- * status change - CANCELLED, no refund, no return record - while the goods
- * were still in transit.</p>
- *
- * <p>The return row is created REQUESTED: the refund is then driven by the
- * existing admin review of the return, exactly once, and the stock is NOT
- * moved back - the parcel is in transit, and putting it back on sale would
- * sell goods that may still be delivered.</p>
- */
 class OrderShippedCancellationIT extends AbstractOrderServiceIT {
 
     @Autowired
@@ -65,7 +51,7 @@ class OrderShippedCancellationIT extends AbstractOrderServiceIT {
 
     @Test
     void theCancellationCreatesTheReturnThatDrivesTheRefund() {
-        orderService.cancelOrder(orderId, adminId, /*isAdmin*/ true);
+        orderService.cancelOrder(orderId, adminId,  true);
 
         Order cancelled = orderRepository.findById(orderId).orElseThrow();
         assertThat(cancelled.getStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -81,9 +67,9 @@ class OrderShippedCancellationIT extends AbstractOrderServiceIT {
 
     @Test
     void aSecondCancellationOfTheSameOrderIsRefusedWhileTheReturnIsPending() {
-        orderService.cancelOrder(orderId, adminId, /*isAdmin*/ true);
+        orderService.cancelOrder(orderId, adminId,  true);
 
-        assertThatThrownBy(() -> orderService.cancelOrder(orderId, adminId, /*isAdmin*/ true))
+        assertThatThrownBy(() -> orderService.cancelOrder(orderId, adminId,  true))
                 .isInstanceOf(BusinessException.class);
 
         assertThat(orderReturnRepository.findByOrderId(orderId)).hasSize(1);

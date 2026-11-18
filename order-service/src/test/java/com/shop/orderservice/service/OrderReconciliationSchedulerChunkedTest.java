@@ -62,7 +62,7 @@ class OrderReconciliationSchedulerChunkedTest {
         scheduler = new OrderReconciliationScheduler(
             orderRepository, orderItemRepository, promotionClient, inventoryClient,
             orderEventPublisher, confirmMetrics, txTemplate,
-            /*stuckMinutes*/ 30L, /*batchSize*/ BATCH
+             30L,  BATCH
         );
         ReflectionTestUtils.invokeMethod(scheduler, "registerStuckGauge");
 
@@ -78,19 +78,14 @@ class OrderReconciliationSchedulerChunkedTest {
 
     @Test
     void hundredStuckOrdersResolvedInTwoBatches() {
-        // Two consecutive chunks: 50, then 50. Mockito's chain returns the
-        // first batch on first call and the second on the next.
         List<Order> firstBatch = stuckOrders(BATCH);
         List<Order> secondBatch = stuckOrders(BATCH);
         when(orderRepository.findByStatusAndCreatedAtBefore(any(), any(), any()))
             .thenReturn(firstBatch, secondBatch);
 
-        // First batch
         scheduler.reconcileStuckOrders();
-        // Second batch
         scheduler.reconcileStuckOrders();
 
-        // The Pageable passed to the repository was a "page 0 of size 50".
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageCaptor =
             ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
         verify(orderRepository, times(2))
@@ -98,10 +93,6 @@ class OrderReconciliationSchedulerChunkedTest {
         pageCaptor.getAllValues().forEach(page ->
             assertThat(page.getPageSize()).isEqualTo(BATCH));
 
-        // All 100 orders were reconciled (auto-confirmed via COMPLETED state).
-        // The parallel fan-out runs them on the executor; we verify that
-        // each order's status save fired — proves the chunk reached the
-        // reconcile() body.
         verify(orderRepository, atLeast(TOTAL_STUCK)).save(any(Order.class));
     }
 

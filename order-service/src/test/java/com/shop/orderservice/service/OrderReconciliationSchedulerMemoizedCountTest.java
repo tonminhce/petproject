@@ -26,14 +26,11 @@ class OrderReconciliationSchedulerMemoizedCountTest {
         when(orderRepository.countByStatusAndCreatedAtBefore(ArgumentMatchers.any(), ArgumentMatchers.any()))
             .thenReturn(42L);
 
-        // Stub supplier that mimics the gauge supplier shape — the
-        // MemoizedCount takes a LongSupplier and stores the last value.
         MemoizedCount memoized = new MemoizedCount(10_000L, () ->
             orderRepository.countByStatusAndCreatedAtBefore(
                 com.shop.orderservice.constant.OrderStatus.PENDING,
                 java.time.Instant.now()));
 
-        // 100 consecutive reads must hit the DB exactly once.
         for (int i = 0; i < 100; i++) {
             assertThat(memoized.get()).isEqualTo(42L);
         }
@@ -53,20 +50,13 @@ class OrderReconciliationSchedulerMemoizedCountTest {
                 java.time.Instant.now()));
 
         assertThat(memoized.get()).isEqualTo(1L);
-        // Within TTL — still cached.
         assertThat(memoized.get()).isEqualTo(1L);
-        // After TTL — refresh.
         Thread.sleep(80L);
         assertThat(memoized.get()).isEqualTo(2L);
         verify(orderRepository, times(2))
             .countByStatusAndCreatedAtBefore(ArgumentMatchers.any(), ArgumentMatchers.any());
     }
 
-    // The MemoizedCount helper is a private static inner class of
-    // OrderReconciliationScheduler. We re-declare a copy here for the test
-    // because the original is package-private to the scheduler. Both
-    // implementations use the same single-check + double-checked locking
-    // pattern; the test pins the behaviour, not the visibility.
     private static final class MemoizedCount {
         private final long ttlNanos;
         private final java.util.function.LongSupplier supplier;

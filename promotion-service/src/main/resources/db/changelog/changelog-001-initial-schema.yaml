@@ -1,14 +1,5 @@
 databaseChangeLog:
 
-  # ===========================================================================
-  #  001-create-campaign
-  #  20 columns: id + 12 business + 4 audit (AbstractMappedEntity)
-  #              + 3 soft-delete (SoftDeletable: deleted, deleted_at, deleted_by)
-  #  CHECK constraints + partial unique index are raw SQL (Liquibase createTable
-  #  / createIndex have no CHECK / WHERE support) — same pattern as
-  #  favourite-service's partial unique index.
-  #  No seed data (spec §6).
-  # ===========================================================================
   - changeSet:
       id: 001-create-campaign
       author: shop-platform
@@ -48,19 +39,11 @@ databaseChangeLog:
         - sql:
             sql: ALTER TABLE campaign ADD CONSTRAINT ck_campaign_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 
-        # Partial unique: same code may be reused after soft-delete (spec §3).
-        # Liquibase's createIndex has no `where` attribute, so raw SQL.
         - sql:
             sql: >-
               CREATE UNIQUE INDEX uk_campaign_code_live
               ON campaign (code) WHERE deleted = false
 
-  # ===========================================================================
-  #  002-create-coupon-usage-reservation
-  #  Hard-lifecycle rows (NO soft delete / audit columns — D10): terminal rows
-  #  purged after 30 days by the retention job. One reservation per order
-  #  (uk_cur_order_id — spec §3).
-  # ===========================================================================
   - changeSet:
       id: 002-create-coupon-usage-reservation
       author: shop-platform
@@ -95,7 +78,6 @@ databaseChangeLog:
         - sql:
             sql: ALTER TABLE coupon_usage_reservation ADD CONSTRAINT ck_cur_status CHECK (status IN ('PENDING', 'COMMITTED', 'RELEASED', 'EXPIRED'))
 
-        # Per-user limit check: count PENDING+COMMITTED per (user, campaign) (D4).
         - createIndex:
             tableName: coupon_usage_reservation
             indexName: idx_cur_user_campaign_status
@@ -104,7 +86,6 @@ databaseChangeLog:
               - column: { name: campaign_id }
               - column: { name: status }
 
-        # TTL sweep: find PENDING past expires_at in batches (mirror inventory).
         - createIndex:
             tableName: coupon_usage_reservation
             indexName: idx_cur_status_expires
@@ -112,9 +93,6 @@ databaseChangeLog:
               - column: { name: status }
               - column: { name: expires_at }
 
-        # One reservation per order — order-service reconciliation polls by
-        # reservation id; this unique index backs the "any usage for this
-        # order?" query (spec §3).
         - createIndex:
             tableName: coupon_usage_reservation
             indexName: uk_cur_order_id

@@ -51,8 +51,6 @@
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-kafka</artifactId>
         </dependency>
-        <!-- Audit aspect: @Audited on the backoffice shipment mutations. Declared
-             explicitly — the transitive copy via common-spring is an accident. -->
         <dependency>
             <groupId>com.shop.microservices</groupId>
             <artifactId>common-logging</artifactId>
@@ -132,10 +130,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- *IT classes are full-context Testcontainers suites and must
-                 run with the default `mvn test` lifecycle: keep the default surefire
-                 includes and add the IT pattern (they don't live under src/it/java,
-                 so the root `it` profile's failsafe binding never activates here). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

@@ -25,12 +25,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Order tracking is unauthenticated by design - a customer who has not
- * signed in yet must be able to follow their order - so the gate has to
- * carry the weight: the order's tracking TOKEN (a random capability) or,
- * for callers that have no token yet, the phone number.
- */
 @WebMvcTest(OrderTrackingController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(ApiExceptionHandler.class)
@@ -65,8 +59,6 @@ class OrderTrackingControllerTest {
 
     @Test
     void trackOrder_success_withTrackingToken() throws Exception {
-        // The token is a random capability: it authorises the lookup on its
-        // own, so no phone number is needed.
         String token = UUID.randomUUID().toString();
         when(orderService.trackOrder(eq(orderId), eq(token), isNull())).thenReturn(response());
 
@@ -86,8 +78,6 @@ class OrderTrackingControllerTest {
 
     @Test
     void trackOrder_returns404_whenTheTokenIsWrong() throws Exception {
-        // A wrong token and a wrong phone produce the SAME error, so the
-        // endpoint is not an oracle for which half was wrong.
         when(orderService.trackOrder(eq(orderId), any(), isNull()))
                 .thenThrow(com.shop.common.core.exception.BusinessException.of(
                         com.shop.common.core.exception.ErrorCode.ORDER_NOT_FOUND, orderId));

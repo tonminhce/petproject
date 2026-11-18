@@ -55,10 +55,8 @@ class InventoryServiceImplReserveConcurrencyTest {
     void setUp() {
         service = new InventoryServiceImpl(inventoryRepository, reservationRepository,
             mapper, publisher, cacheService);
-        // Stub the fresh-load the service does after atomicReserve success.
         when(inventoryRepository.findByProductId(productId))
             .thenReturn(Optional.of(inventoryWith(initialAvailable, 0)));
-        // atomicReserve always succeeds in this test (capacity is plenty).
         when(inventoryRepository.atomicReserve(eq(productId), eq(qtyPerReserve)))
             .thenReturn(1);
         lenient().when(reservationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -103,17 +101,13 @@ class InventoryServiceImplReserveConcurrencyTest {
         assertThat(done.await(10, TimeUnit.SECONDS)).isTrue();
         exec.shutdown();
 
-        // Every reserve hit the atomic UPDATE exactly once.
         verify(inventoryRepository, times(concurrent))
             .atomicReserve(eq(productId), eq(qtyPerReserve));
-        // No failures (capacity is plenty for 50 × 1).
         assertThat(failures.get()).isZero();
     }
 
     @Test
     void insufficientCapacityAtomicReserveReturnsZero_andServiceRejects() {
-        // Capacity guard: when atomicReserve returns 0, the service must
-        // surface a domain error (STOCK_INSUFFICIENT) — not silently succeed.
         when(inventoryRepository.atomicReserve(eq(productId), eq(qtyPerReserve)))
             .thenReturn(0);
 

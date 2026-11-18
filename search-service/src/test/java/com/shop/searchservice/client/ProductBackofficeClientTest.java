@@ -89,7 +89,6 @@ class ProductBackofficeClientTest {
         assertThat(snapshot.brandName()).isEqualTo("Apple");
         assertThat(snapshot.status()).isEqualTo("ACTIVE");
         assertThat(snapshot.updatedAt()).isEqualTo("2026-08-31T10:15:30Z");
-        // §4(5): unknown wire fields tolerated
         assertThat(snapshot.ratingCount()).isEqualTo(2);
         server.verify();
     }

@@ -58,7 +58,6 @@ class MediaOutboxRetentionSchedulerTest {
         verify(outboxRepository).deleteByStatusAndSentAtBefore(eq(OutboxStatus.SENT), sentCutoff.capture());
         ArgumentCaptor<Instant> deadCutoff = ArgumentCaptor.forClass(Instant.class);
         verify(outboxRepository).ageDeadFailedBefore(deadCutoff.capture());
-        // both passes measure the SAME window: cutoff ≈ now − 7 days
         assertThat(sentCutoff.getValue()).isEqualTo(deadCutoff.getValue());
         assertThat(sentCutoff.getValue())
                 .isAfterOrEqualTo(before.minus(7, java.time.temporal.ChronoUnit.DAYS).minusSeconds(60))
@@ -86,7 +85,6 @@ class MediaOutboxRetentionSchedulerTest {
 
         assertThatCode(() -> scheduler.retain()).doesNotThrowAnyException();
 
-        // the SENT pass failed before the DEAD pass ran — no partial aging, no meter
         verify(outboxRepository, never()).ageDeadFailedBefore(any(Instant.class));
         assertThat(deadMeter()).isZero();
     }

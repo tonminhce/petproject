@@ -1,20 +1,7 @@
 #!/usr/bin/env bash
-#
-# stop-docker.sh - Stop the e-commerce microservices stack
-#
-# Usage:
-#   ./stop-docker.sh                  Stop containers, KEEP volumes and images
-#   ./stop-docker.sh --volumes        Stop containers, REMOVE named volumes (data loss!)
-#   ./stop-docker.sh -v               Alias for --volumes
-#   ./stop-docker.sh --images         Also remove built service images
-#
-# Default is non-destructive: containers stop but volumes persist.
 
 set -euo pipefail
 
-# ============================================================
-# Colors
-# ============================================================
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
@@ -22,29 +9,19 @@ readonly CYAN='\033[0;36m'
 readonly BOLD='\033[1m'
 readonly NC='\033[0m'
 
-# ============================================================
-# Constants
-# ============================================================
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 readonly ENV_FILE="${SCRIPT_DIR}/.env"
 
-# Flag state
 REMOVE_VOLUMES=0
 REMOVE_IMAGES=0
 
-# ============================================================
-# Logging
-# ============================================================
 log_info()    { printf '%b[i]%b %s\n' "${CYAN}"   "${NC}" "$*"; }
 log_step()    { printf '%b[*]%b %s\n' "${BOLD}"   "${NC}" "$*"; }
 log_success() { printf '%b[+]%b %s\n' "${GREEN}"  "${NC}" "$*"; }
 log_warning() { printf '%b[!]%b %s\n' "${YELLOW}" "${NC}" "$*"; }
 log_error()   { printf '%b[x]%b %s\n' "${RED}"    "${NC}" "$*" >&2; }
 
-# ============================================================
-# Usage
-# ============================================================
 usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -60,15 +37,12 @@ Options:
 Default: stop containers only, keep volumes and images (safe).
 
 Examples:
-  $(basename "$0")                  # Safe stop (keep data)
-  $(basename "$0") --volumes        # Wipe volumes - destructive!
-  $(basename "$0") -v --images      # Full cleanup
+  $(basename "$0")
+  $(basename "$0") --volumes
+  $(basename "$0") -v --images
 EOF
 }
 
-# ============================================================
-# Argument parsing
-# ============================================================
 parse_args() {
     while (($#)); do
         case "$1" in
@@ -102,14 +76,10 @@ parse_args() {
     done
 }
 
-# ============================================================
-# Confirmation prompt (skipped if non-interactive)
-# ============================================================
 confirm() {
     local prompt=$1
     local reply
 
-    # Non-interactive (CI) → assume NO unless FORCE=1
     if [[ ! -t 0 ]]; then
         if [[ "${FORCE:-0}" == "1" ]]; then
             log_warning "Non-interactive + FORCE=1 → proceeding with '${prompt}'"
@@ -126,9 +96,6 @@ confirm() {
     esac
 }
 
-# ============================================================
-# docker compose down wrapper
-# ============================================================
 stop_stack() {
     if [[ ! -f "${COMPOSE_FILE}" ]]; then
         log_error "docker-compose.yml not found at: ${COMPOSE_FILE}"
@@ -154,10 +121,6 @@ stop_stack() {
     fi
 }
 
-# ============================================================
-# Remove service images (only if --images requested and stack
-# didn't already remove them)
-# ============================================================
 remove_images_if_requested() {
     if (( ! REMOVE_IMAGES )); then
         return 0
@@ -171,14 +134,10 @@ remove_images_if_requested() {
     )
 
     log_step "Removing built service images..."
-    # docker rmi is tolerant of missing ones; ignore failures
     docker rmi "${images[@]}" >/dev/null 2>&1 || true
     log_success "Service images removed (or already gone)"
 }
 
-# ============================================================
-# Main
-# ============================================================
 main() {
     parse_args "$@"
 

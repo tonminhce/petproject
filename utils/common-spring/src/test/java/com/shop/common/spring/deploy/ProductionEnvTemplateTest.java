@@ -17,27 +17,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-036: the production environment template must cover every variable the
- * production stack REQUIRES.
- *
- * <p>The compose stack resolves a variable in three shapes:</p>
- * <ul>
- *   <li>{@code ${VAR}} / {@code ${VAR:?message}} - the operator MUST provide
- *       it; the stack refuses to start otherwise;</li>
- *   <li>{@code ${VAR:-default}} / {@code ${VAR-default}} - the stack falls
- *       back to a default;</li>
- *   <li>{@code ${VAR:?message}} with an empty value - also a startup
- *       failure.</li>
- * </ul>
- *
- * <p>{@code .env.prod.example} is the template the operator copies. A
- * variable that the stack demands but the template does not mention is a
- * deployment that fails at startup with a message about a variable the
- * operator was never told about - exactly what happened with
- * {@code CORS_ALLOWED_ORIGIN_PATTERNS}, which the gateway requires and the
- * template omitted.</p>
- */
 class ProductionEnvTemplateTest {
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([A-Z0-9_]+)([:?-][^}]*)?}");
@@ -94,7 +73,6 @@ class ProductionEnvTemplateTest {
                 .doesNotContain("*");
     }
 
-    /** The variables a compose file demands (no default value). */
     private static Set<String> requiredVariables(String compose) {
         Set<String> required = new LinkedHashSet<>();
         Matcher matcher = PLACEHOLDER.matcher(compose);
@@ -109,7 +87,6 @@ class ProductionEnvTemplateTest {
         return required;
     }
 
-    /** The variable names the template declares (commented lines count). */
     private static Set<String> declaredVariables(String template) {
         Set<String> declared = new LinkedHashSet<>();
         Matcher matcher = Pattern.compile("^\\s*#?\\s*([A-Z0-9_]+)\\s*=", Pattern.MULTILINE).matcher(template);
@@ -119,14 +96,12 @@ class ProductionEnvTemplateTest {
         return declared;
     }
 
-    /** The value the template declares for a variable (empty when it is absent). */
     private static String valueOf(String template, String variable) {
         Matcher matcher = Pattern.compile("^\\s*#?\\s*" + Pattern.quote(variable) + "\\s*=\\s*(.*)$",
                 Pattern.MULTILINE).matcher(template);
         return matcher.find() ? matcher.group(1).trim() : "";
     }
 
-    /** The reactor root: the directory that holds the modules and the parent pom. */
     private static Path findRepoRoot() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {

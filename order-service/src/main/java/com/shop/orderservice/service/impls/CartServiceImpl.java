@@ -37,8 +37,6 @@ public class CartServiceImpl implements CartService {
     private final CartMapper cartMapper;
 
     @Override
-    // P0-3 — NOT @Transactional(readOnly=true). getOrCreateCart may INSERT for new users;
-    // readOnly connection would reject INSERT → 500 on first GET. This is a write (auto-create).
     @Transactional
     public CartResponse getMyCart(UUID userId) {
         Cart cart = getOrCreateCart(userId);
@@ -90,7 +88,7 @@ public class CartServiceImpl implements CartService {
         CartItem item = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId));
         if (!item.getCartId().equals(cart.getId())) {
-            throw BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId);  // hide cross-user
+            throw BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId);
         }
         if (request.quantity() == 0) {
             cartItemRepository.delete(item);
@@ -113,7 +111,7 @@ public class CartServiceImpl implements CartService {
         CartItem item = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId));
         if (!item.getCartId().equals(cart.getId())) {
-            throw BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId);  // hide cross-user
+            throw BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId);
         }
         cartItemRepository.delete(item);
         cart.setSubtotal(calculateSubtotal(cart));
@@ -184,10 +182,6 @@ public class CartServiceImpl implements CartService {
                 .subtotal(BigDecimal.ZERO)
                 .build());
         } catch (DataIntegrityViolationException ex) {
-            // ponytail: concurrent first-GET race — another request won the INSERT.
-            // Re-fetch the winner instead of bubbling 500. Unique index on user_id
-            // (active cart) is the actual source of truth; application-side locking
-            // would just shift the race.
             return cartRepository.findByUserIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new IllegalStateException(
                     "Cart race: PK conflict but row not found", ex));

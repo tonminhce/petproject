@@ -7,7 +7,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.time.Clock;
 
-// poll silently no-ops without it (fleet convention: order-service et al.).
 @EnableScheduling
 @SpringBootApplication
 public class NotificationServiceApplication {

@@ -1,24 +1,7 @@
 #!/usr/bin/env bash
-#
-# start-docker.sh - Build images and start the e-commerce microservices stack
-#
-# Workflow:
-#   1. Verify Docker daemon is running
-#   2. Verify .env file exists
-#   3. Build all service images via `mvn jib:dockerBuild`
-#   4. Start infrastructure (postgres, redis, kafka, elasticsearch, keycloak, rustfs)
-#   5. Wait for infrastructure to become healthy
-#   6. Start all 14 application services
-#   7. Wait for gateway-service to become healthy
-#   8. Print service URLs and follow-up commands
-#
-# Idempotent: safe to re-run; existing containers are recreated.
 
 set -euo pipefail
 
-# ============================================================
-# ANSI colors (readonly; emit via printf)
-# ============================================================
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
@@ -27,9 +10,6 @@ readonly CYAN='\033[0;36m'
 readonly BOLD='\033[1m'
 readonly NC='\033[0m'
 
-# ============================================================
-# Constants
-# ============================================================
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 readonly ENV_FILE="${SCRIPT_DIR}/.env"
@@ -50,18 +30,12 @@ readonly HEALTH_TIMEOUT=180
 readonly HEALTH_INTERVAL=5
 readonly MVN_BUILD_TIMEOUT=1800
 
-# ============================================================
-# Logging helpers
-# ============================================================
 log_info()    { printf '%b[i]%b %s\n' "${CYAN}"   "${NC}" "$*"; }
 log_step()    { printf '%b[*]%b %s\n' "${BLUE}"   "${NC}" "$*"; }
 log_success() { printf '%b[+]%b %s\n' "${GREEN}"  "${NC}" "$*"; }
 log_warning() { printf '%b[!]%b %s\n' "${YELLOW}" "${NC}" "$*"; }
 log_error()   { printf '%b[x]%b %s\n' "${RED}"    "${NC}" "$*" >&2; }
 
-# ============================================================
-# Trap: print message on unexpected exit
-# ============================================================
 on_error() {
     local exit_code=$?
     log_error "Script aborted (exit ${exit_code}). Some containers may still be starting."
@@ -70,9 +44,6 @@ on_error() {
 }
 trap on_error ERR
 
-# ============================================================
-# Prerequisite checks
-# ============================================================
 check_docker() {
     if ! command -v docker >/dev/null 2>&1; then
         log_error "docker CLI not found in PATH"
@@ -82,7 +53,6 @@ check_docker() {
         log_error "Docker daemon is not running. Start Docker Desktop and try again."
         exit 1
     fi
-    # Verify Compose v2 plugin (not legacy docker-compose)
     if ! docker compose version >/dev/null 2>&1; then
         log_error "Docker Compose v2 plugin missing. Install Docker Desktop 4.13+ or compose-plugin."
         exit 1
@@ -113,18 +83,11 @@ check_maven() {
     fi
 }
 
-# ============================================================
-# Build all 14 service images via Jib (idempotent - uses layers)
-# ============================================================
 build_images() {
     log_step "Building 14 service images with 'mvn jib:dockerBuild' (this may take several minutes)..."
 
-    # Build from project root so Jib picks up all modules.
-    # utils module has jib.skip=true so it won't produce one.
     cd "${SCRIPT_DIR}"
 
-    # Note: `timeout` is GNU coreutils and not on macOS by default.
-    # We rely on Maven's own internal timeouts for the build phase.
     if ! "${MVN}" -q -DskipTests jib:dockerBuild; then
         log_error "Image build failed. Run 'mvn jib:dockerBuild' manually for details."
         exit 1
@@ -133,10 +96,6 @@ build_images() {
     log_success "All service images built"
 }
 
-# ============================================================
-# Start infrastructure first (idempotent: docker compose up -d
-# will recreate existing containers)
-# ============================================================
 start_infrastructure() {
     log_step "Starting infrastructure: ${INFRA_SERVICES[*]}"
 
@@ -148,9 +107,6 @@ start_infrastructure() {
     fi
 }
 
-# ============================================================
-# Wait until all listed services are healthy (or timeout)
-# ============================================================
 wait_for_healthy() {
     local label=$1
     shift
@@ -165,7 +121,6 @@ wait_for_healthy() {
         pending=0
 
         for svc in "${targets[@]}"; do
-            # state can be: running, healthy, unhealthy, exited, ...
             local state
             state=$(docker inspect --format='{{.State.Health.Status}}' "${svc}" 2>/dev/null || echo "missing")
             if [[ "${state}" != "healthy" ]]; then
@@ -189,9 +144,6 @@ wait_for_healthy() {
     return 1
 }
 
-# ============================================================
-# Start all 14 application services
-# ============================================================
 start_services() {
     log_step "Starting application services: ${SERVICES[*]}"
 
@@ -203,9 +155,6 @@ start_services() {
     fi
 }
 
-# ============================================================
-# Print final summary: URLs and follow-up commands
-# ============================================================
 print_summary() {
     local gateway_url="http://localhost:8080"
     local keycloak_url="http://localhost:8080"
@@ -247,9 +196,6 @@ print_summary() {
     printf '\n'
 }
 
-# ============================================================
-# Main
-# ============================================================
 main() {
     printf '%b============================================================%b\n' "${BOLD}" "${NC}"
     printf '%b E-commerce Microservices - Docker Stack Starter%b\n' "${BOLD}" "${NC}"

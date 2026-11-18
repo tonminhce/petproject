@@ -28,11 +28,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6): the reindex backoffice endpoint exercised
- * through the {@code AuditAspect} — no path variable, so the emitted audit
- * line carries {@code resourceId: null}.
- */
 @WebMvcTest(value = BackofficeSearchController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

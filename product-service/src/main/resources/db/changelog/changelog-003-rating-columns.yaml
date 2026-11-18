@@ -1,12 +1,5 @@
 databaseChangeLog:
 
-  # ===========================================================================
-  #  Denormalized rating stars (spec D5): product-service's first Kafka
-  #  consumer dumb-copies the avgRating/ratingCount snapshot carried by
-  #  rating lifecycle events (topic shop.rating.lifecycle.v1) onto these
-  #  columns — no recompute, no rating-service client. avg_rating is nullable
-  #  per spec; rating_count is NOT NULL, defaulting to zero (no ratings yet).
-  # ===========================================================================
   - changeSet:
       id: 003-add-rating-columns
       author: shop-platform

@@ -14,20 +14,8 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-003: the shared Kafka configuration must not carry topic names that
- * nothing consumes.
- *
- * <p>{@code shop.kafka.topics.*} used to expose {@code order-events},
- * {@code payment-events}, {@code notification-events} and
- * {@code inventory-events} - names that no publisher ever wrote to and no
- * listener ever read. A configuration property that claims to name a topic
- * but is dead is worse than no property at all: an operator would set it and
- * see no effect, and the real topic names lived somewhere else entirely.</p>
- */
 class KafkaPropertiesTopicsRemovedTest {
 
-    /** The legacy names that the dead block used to carry. */
     private static final List<String> LEGACY_TOPIC_NAMES = List.of(
             "order-events", "payment-events", "notification-events", "inventory-events");
 
@@ -54,7 +42,6 @@ class KafkaPropertiesTopicsRemovedTest {
                 .isEmpty();
     }
 
-    /** Every production source and every application configuration of the fleet. */
     private static List<Path> configurationAndProductionSources(Path repoRoot) throws IOException {
         List<Path> files = new ArrayList<>();
         try (Stream<Path> modules = Files.list(repoRoot)) {
@@ -89,7 +76,6 @@ class KafkaPropertiesTopicsRemovedTest {
         }
     }
 
-    /** The reactor root: the directory that holds the modules and the parent pom. */
     private static Path findRepoRoot() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {

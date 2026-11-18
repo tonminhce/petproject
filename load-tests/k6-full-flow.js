@@ -4,14 +4,14 @@ import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
 
 export const options = {
   stages: [
-    { duration: '30s', target: 20 },   // Ramp up to 20 users
-    { duration: '1m', target: 50 },    // Ramp up to 50 users
-    { duration: '2m', target: 100 },   // High load: 100 concurrent checkout users
-    { duration: '30s', target: 0 },    // Ramp down
+    { duration: '30s', target: 20 },
+    { duration: '1m', target: 50 },
+    { duration: '2m', target: 100 },
+    { duration: '30s', target: 0 },
   ],
   thresholds: {
-    http_req_failed: ['rate<0.01'],    // Error rate must be less than 1%
-    http_req_duration: ['p(95)<500'],  // 95% of requests must complete below 500ms
+    http_req_failed: ['rate<0.01'],
+    http_req_duration: ['p(95)<500'],
   },
 };
 
@@ -25,7 +25,6 @@ export default function () {
     },
   };
 
-  // 1. Browse Catalog
   const catalogRes = http.get(`${BASE_URL}/api/v1/products?page=0&size=10`, params);
   check(catalogRes, {
     'catalog status is 200': (r) => r.status === 200,
@@ -33,7 +32,6 @@ export default function () {
 
   sleep(1);
 
-  // 2. Add item to cart
   const cartPayload = JSON.stringify({
     productId: '00000000-0000-0000-0000-000000000001',
     quantity: 1,
@@ -46,7 +44,6 @@ export default function () {
 
   sleep(1);
 
-  // 3. Checkout (Order Create Saga with Isolated DB Transactions)
   const idempotencyKey = `k6-${uuidv4()}`;
   const checkoutPayload = JSON.stringify({
     recipientName: 'Load Tester',
@@ -73,7 +70,6 @@ export default function () {
     const orderId = orderData ? orderData.id : null;
 
     if (orderId) {
-      // 4. Create Payment via Multi-Provider Factory (e.g. COD / VNPay)
       const paymentPayload = JSON.stringify({
         orderId: orderId,
         amount: orderData.total || 90.0,

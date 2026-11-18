@@ -24,9 +24,6 @@ shop:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: shipping-service
-      # F-018 (P1): a consumer group must replay the events it missed.
-      # 'latest' silently skipped everything published while the group had no
-      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
 
   shipping:
@@ -34,8 +31,6 @@ shop:
     auto-deliver-days: ${SHIPMENT_AUTO_DELIVER_DAYS:7}
     notify-threshold-hours: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:72}
     webhook:
-      # C3/C10 — fail-fast per-carrier. A blank secret would 401 every legit
-      # webhook. Inject via compose secrets.
       secrets:
         GHN: ${SHIPMENT_WEBHOOK_SECRET_GHN:?SHIPMENT_WEBHOOK_SECRET_GHN must be set}
         GHTK: ${SHIPMENT_WEBHOOK_SECRET_GHTK:?SHIPMENT_WEBHOOK_SECRET_GHTK must be set}

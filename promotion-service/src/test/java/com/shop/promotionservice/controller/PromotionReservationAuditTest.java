@@ -36,14 +36,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6 + R3 veto): the SERVICE-gated coupon-reservation
- * mutations exercised through the {@code AuditAspect} — machine actors land
- * as actor type {@code service} with the client id. The reserve route keys on
- * the {@code code} path variable, which by design (spec D6 — slugs/titles
- * never become resourceId) leaves {@code resourceId} null while the event
- * still records who reserved what code.
- */
 @WebMvcTest(value = PromotionReservationController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

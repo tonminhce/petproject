@@ -1,12 +1,5 @@
 databaseChangeLog:
 
-  # ===========================================================================
-  #  002-promotion-outbox
-  #  Transactional outbox (spec §5.5) — table definition mirrored EXACTLY from
-  #  inventory-service's changelog-001 (003-create-outbox-events changeset):
-  #  hard-delete lifecycle PENDING → SENT/FAILED, no soft delete (deliberate
-  #  divergence from product-service — do not "align").
-  # ===========================================================================
   - changeSet:
       id: 002-promotion-outbox
       author: shop-platform

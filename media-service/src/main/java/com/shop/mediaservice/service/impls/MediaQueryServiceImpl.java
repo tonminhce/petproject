@@ -68,12 +68,6 @@ public class MediaQueryServiceImpl implements MediaQueryService {
         return mediaRepository.existsById(mediaId);
     }
 
-    /**
-     * Format resolution: {@code auto} prefers the WebP render and falls back
-     * to the original-format render; {@code webp} requires the WebP row.
-     * Any other format value is a bad request by contract (the controller
-     * enum-binds {@code auto|webp}) — treated as {@code auto} defensively.
-     */
     private Optional<MediaVariant> pickVariantRow(Media media, String variantName, String formatName) {
         List<MediaVariant> rows = media.getVariants().stream()
                 .filter(v -> variantName.equals(v.getVariant()))

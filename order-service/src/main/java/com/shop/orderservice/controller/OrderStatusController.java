@@ -14,11 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-/**
- * Admin / service-to-service status transitions. Authorization is endpoint-level
- * ({@code SERVICE or ADMIN}); the service layer only enforces the state machine,
- * so no per-call role inspection is needed here.
- */
 @RestController
 @RequestMapping(ApiPaths.ORDERS)
 @RequiredArgsConstructor
@@ -47,7 +42,7 @@ public class OrderStatusController {
     }
 
     private static String resolveActor() {
-        AuthenticatedUser.requireCurrent();  // fail fast when unauthenticated (401 semantics preserved)
+        AuthenticatedUser.requireCurrent();
         AuditActorResolver.Actor actor = AuditActorResolver.resolve();
         return AuditEvent.ACTOR_TYPE_SERVICE.equals(actor.type())
             ? "service:" + actor.id()

@@ -35,12 +35,6 @@ public class RatingServiceImpl implements RatingService {
 
     @Override
     public RatingResponse submit(UUID jwtUserId, RatingSubmitRequest request) {
-        // F-066: the eligibility check is a REMOTE call. It used to run inside
-        // the @Transactional method, so a slow order-service held a pooled DB
-        // connection and an open transaction for the whole round trip (3-5s
-        // timeouts) - a burst against a degraded order-service exhausts the
-        // pool and stalls unrelated requests. The check now runs before the
-        // transaction is opened; only the local write is transactional.
         ratingRepository.findByUserIdAndProductIdAndDeletedFalse(jwtUserId, request.productId())
                 .ifPresent(existing -> {
                     throw BusinessException.of(ErrorCode.RATING_ALREADY_EXISTS);
@@ -61,8 +55,6 @@ public class RatingServiceImpl implements RatingService {
                     .hidden(false)
                     .build();
 
-            // NIT #1: flush REQUIRED before record() — the snapshot aggregate JPQL
-            // only sees this row once it is flushed in the current transaction.
             Rating saved = ratingRepository.saveAndFlush(rating);
             ratingEventService.record(saved, RatingAction.CREATED);
             return RatingResponse.from(saved);
@@ -91,7 +83,6 @@ public class RatingServiceImpl implements RatingService {
         rating.setComment(request.comment());
         rating.setEditedAt(Instant.now());
 
-        // NIT #1: flush REQUIRED before record() — same discipline as submit.
         Rating saved = ratingRepository.saveAndFlush(rating);
         ratingEventService.record(saved, RatingAction.UPDATED);
         return RatingResponse.from(saved);
@@ -112,7 +103,6 @@ public class RatingServiceImpl implements RatingService {
         rating.setHiddenBy(adminId);
         rating.setHiddenReason(reason);
 
-        // NIT #1: flush REQUIRED before record() — the snapshot aggregate must
         Rating saved = ratingRepository.saveAndFlush(rating);
         ratingEventService.record(saved, RatingAction.HIDDEN);
         return RatingResponse.from(saved);
@@ -130,7 +120,6 @@ public class RatingServiceImpl implements RatingService {
 
         rating.setHidden(false);
 
-        // NIT #1: flush REQUIRED before record() — same discipline as hide.
         Rating saved = ratingRepository.saveAndFlush(rating);
         ratingEventService.record(saved, RatingAction.UNHIDDEN);
         return RatingResponse.from(saved);

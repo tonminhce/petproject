@@ -78,8 +78,6 @@ class ConfirmOrchestrationWebMvcTest {
 
     @Test
     void confirm_serviceToken_passesServiceLabelFromAzp() throws Exception {
-        // KC26 machine token shape: sub = service-account UUID, azp = client id,
-        // ROLE_SERVICE authority (matches the endpoint's SERVICE-or-ADMIN gate).
         Jwt serviceJwt = Jwt.withTokenValue("svc").header("alg", "none")
             .subject("00000000-0000-0000-0000-00000000f3a1")
             .claim("azp", "fulfillment-service").build();
@@ -109,7 +107,6 @@ class ConfirmOrchestrationWebMvcTest {
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
 
-        // envelope timestamp differs per call by design — the replayed PAYLOAD must be identical
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         assertThat(mapper.readTree(second).get("data"))
             .isEqualTo(mapper.readTree(first).get("data"));

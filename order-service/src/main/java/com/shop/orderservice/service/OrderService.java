@@ -16,12 +16,6 @@ public interface OrderService {
 
     OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin);
 
-    /**
-     * Confirm a PENDING order (admin / service-to-service). {@code actor} is the
-     * caller label resolved by token shape (H-6): ADMIN → sub, SERVICE →
-     * {@code service:<azp>} — stored verbatim on idempotency rows so machine
-     * callers are never misattributed to a service-account UUID.
-     */
     OrderResponse confirmOrder(UUID orderId, String actor, String idempotencyKey);
     OrderResponse shipOrder(UUID orderId);
     OrderResponse deliverOrder(UUID orderId);
@@ -31,18 +25,7 @@ public interface OrderService {
     Page<OrderResponse> findMyOrders(UUID userId, Pageable pageable);
     Page<OrderResponse> findAll(OrderStatus status, Pageable pageable);
 
-    /** SERVICE-facing rating-eligibility probe (rating-service epic Task 7). */
     Page<OrderItemResponse> findDeliveredItemsByUserAndProduct(UUID userId, UUID productId, Pageable pageable);
 
-    /** Public guest tracking by order ID and matching recipient phone number. */
-    /**
-     * Looks up an order for tracking.
-     *
-     * @param orderId       the order
-     * @param trackingToken the per-order tracking capability; when present it
-     *                       authorises the lookup on its own
-     * @param phoneNumber   the legacy secondary factor, used only when no
-     *                       tracking token is presented
-     */
     OrderTrackingResponse trackOrder(UUID orderId, String trackingToken, String phoneNumber);
 }

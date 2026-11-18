@@ -45,15 +45,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Slice test for the backoffice campaign CRUD endpoints (spec §4.2).
- *
- * <p>Mirrors {@link PromotionReservationControllerTest}: REAL security chain from
- * common-security ({@code SecurityAutoConfiguration} + resource-server chain), so
- * the class-level ADMIN gate is actually enforced — anonymous → 401, SERVICE/USER
- * → 403, ADMIN → through. JWTs seeded via {@code jwt()}; {@link JwtDecoder} mocked
- * (no JWKS fetch). Error assertions on stable error-code strings only.
- */
 @WebMvcTest(value = BackofficeCampaignController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -100,7 +91,6 @@ class BackofficeCampaignControllerTest {
             """;
     }
 
-    // --- ADMIN happy paths ---
 
     @Test
     void list_admin_returns200WithPagedCampaigns() throws Exception {
@@ -222,7 +212,6 @@ class BackofficeCampaignControllerTest {
             .andExpect(jsonPath("$.data.content[0].reservedAt").exists());
     }
 
-    // --- security matrix ---
 
     @Test
     void list_noAuth_returns401() throws Exception {
@@ -248,7 +237,6 @@ class BackofficeCampaignControllerTest {
             .andExpect(status().isForbidden());
     }
 
-    // --- validation (400 ERR-0422-V) ---
 
     @Test
     void create_missingCode_returns400WithValidationCode() throws Exception {
@@ -295,7 +283,6 @@ class BackofficeCampaignControllerTest {
             .andExpect(jsonPath("$.code").value("ERR-0422-V"));
     }
 
-    // --- business error-code mapping ---
 
     @Test
     void create_duplicateCode_returns409WithPro7002() throws Exception {

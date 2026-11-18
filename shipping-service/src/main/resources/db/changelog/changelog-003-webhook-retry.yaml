@@ -1,7 +1,4 @@
 databaseChangeLog:
-  # C3 — webhook retry support. Same shape as payment-service/changelog-003.
-  # Backfills historical FAILED rows on shipment_events so the new retry
-  # scheduler can re-process them.
   - changeSet:
       id: 003-webhook-retry-fields
       author: shop-platform

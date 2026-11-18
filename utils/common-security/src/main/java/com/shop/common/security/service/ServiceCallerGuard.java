@@ -14,22 +14,11 @@ public class ServiceCallerGuard {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceCallerGuard.class);
 
-    /** The realm roles that act as a human administrator rather than a service. */
     private static final List<String> HUMAN_ADMIN_ROLES = List.of("ADMIN", "MANAGER");
 
-    /**
-     * Assert that the current caller is one of the allowed service clients.
-     *
-     * @param allowedClientIds client ids permitted to invoke this operation
-     * @throws BusinessException with {@link ErrorCode#FORBIDDEN} when the caller
-     *         is neither an administrator nor an allowed service client
-     */
     public void requireCaller(String... allowedClientIds) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-            // No authentication at all: the endpoint's own @PreAuthorize is the
-            // authority on whether the request may proceed, and the guard only
-            // binds an AUTHENTICATED service caller to its owner.
             return;
         }
         if (!authentication.isAuthenticated()) {
@@ -50,7 +39,6 @@ public class ServiceCallerGuard {
         }
     }
 
-    /** The {@code azp} claim - the client the token was issued to. */
     public String clientIdOf(Authentication authentication) {
         if (authentication instanceof JwtAuthenticationToken jwtAuthentication) {
             return jwtAuthentication.getToken().getClaimAsString("azp");

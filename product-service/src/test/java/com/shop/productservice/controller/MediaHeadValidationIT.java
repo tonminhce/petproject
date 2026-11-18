@@ -44,14 +44,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Option C write-time gate end-to-end over REAL HTTP (media epic spec D5):
- * backoffice create with a mediaId HEAD-checks media-service through the live
- * {@code MediaHeadClient} (WireMock-backed media + client-credentials token
- * stub). 200 → accepted and persisted; 404 → rejected MED-12004 (404, common
- * i18n message); media down/5xx → write fails MED-12006 (503). A product must
- * never be persisted against an unverified media reference.
- */
 @AutoConfigureTestRestTemplate
 class MediaHeadValidationIT extends AbstractIntegrationTest {
 
@@ -61,7 +53,6 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
     static {
         mediaServer.start();
         keycloakServer.start();
-        // ServiceTokenProvider's client_credentials token endpoint (cached after first fetch).
         keycloakServer.stubFor(post(urlMatching("/realms/.*/protocol/openid-connect/token"))
             .willReturn(okJson(
                 "{\"access_token\":\"dummy-jwt\",\"expires_in\":3600,\"token_type\":\"Bearer\"}")));
@@ -92,7 +83,6 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
     @Autowired
     private OutboxEventRepository outboxRepository;
 
-    /** Token → Jwt stub: realm_access roles drive {@code hasRole('ADMIN')} (MediaControllerIT precedent). */
     @TestConfiguration(proxyBeanMethods = false)
     static class ItJwtConfig {
 
@@ -221,7 +211,6 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
             .as("no media call for null mediaId").isEmpty();
     }
 
-    // --- H-2: explicit clearMediaId on PUT ---
 
     @Test
     @DisplayName("PUT clearMediaId=true → media_id cleared end-to-end, legacy fallback, no extra HEAD call")
@@ -247,7 +236,6 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
             .isEqualTo("http://legacy.example/ip15.png");
         Product fresh = productRepository.findById(productId).orElseThrow();
         assertThat(fresh.getMediaId()).isNull();
-        // exactly ONE media call overall — the create-time gate; a clear never re-verifies
         assertThat(mediaServer.getServeEvents().getRequests()).hasSize(1);
         List<OutboxEvent> updates = outboxRepository.findAll().stream()
             .filter(r -> "ProductUpdated".equals(r.getEventType())).toList();
@@ -275,8 +263,6 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
         JsonNode json = readBody(resp.getBody());
         assertThat(json.get("code").asText()).isEqualTo("ERR-0422-V");
 
-        // raw template "{product.media.clear.conflict}" would not contain this
-        // fragment — both bundles render "mediaClearConsistent: clearMediaId=true …").
         assertThat(json.get("errors").get(0).asText())
             .contains("mediaClearConsistent")
             .contains("clearMediaId=true");
@@ -284,7 +270,6 @@ class MediaHeadValidationIT extends AbstractIntegrationTest {
             .as("conflicting body must not touch the stored reference").isEqualTo(mediaId);
     }
 
-    // --- helpers ---
 
     private JsonNode readBody(String raw) {
         try {

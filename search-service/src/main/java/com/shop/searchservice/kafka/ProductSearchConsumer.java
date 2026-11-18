@@ -9,17 +9,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.stereotype.Component;
 
-/**
- * Product lifecycle consumer (search spec D1 — primary consumer of
- * {@code shop.product.lifecycle.v1}). Wire contract (R1 + H-1): producers
- * publish JSON-as-String via {@code KafkaMessagePublisher} (product
- * OutboxRelay path), so records arrive SINGLE-ENCODED UTF-8 JSON (search spec
- * §4.2 unwrap-once contract). The raw value is parsed once and, when textual
- * (a LEGACY double-encoded token — a JSON string token wrapping the event
- * JSON, from pre-R1 producers), unwrapped and parsed again before binding to
- * {@link ProductLifecycleEvent}; both shapes bind. Malformed bytes (poison
- * records) are contained at parse time — never a listener throw.
- */
 @Component
 public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
 
@@ -31,16 +20,12 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
         this.objectMapper = objectMapper;
     }
 
-    // groupId is pinned: it is the consumer's identity, and changing it resets
-    // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
     @KafkaListener(topics = KafkaTopicContract.SHOP_PRODUCT_LIFECYCLE, groupId = "search-service",
             containerFactory = "searchListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
         processMessage(rawValue, headers, this::handleContained);
     }
 
-    // Ack-always poison posture (product-service ProductRatingConsumer
-    // precedent): the listener method must never throw — a handler failure is
     private void handleContained(String rawValue) {
         ProductLifecycleEvent event;
         try {
@@ -63,7 +48,6 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
     private ProductLifecycleEvent decode(String rawValue) throws Exception {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
-            // Legacy double-encoded wire (pre-R1): an old producer
             node = objectMapper.readTree(node.textValue());
         }
         return objectMapper.treeToValue(node, ProductLifecycleEvent.class);

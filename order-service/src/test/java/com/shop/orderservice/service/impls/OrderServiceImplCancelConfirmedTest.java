@@ -71,7 +71,7 @@ class OrderServiceImplCancelConfirmedTest {
         ));
         when(orderMapper.toResponse(any(Order.class), any())).thenReturn(null);
 
-        service.cancelOrder(orderId, adminId, /*isAdmin*/ true);
+        service.cancelOrder(orderId, adminId,  true);
 
         verify(stockReservationService, times(1)).releaseCommitted(reservationId);
         verify(stockReservationService, never()).release(any(UUID.class));
@@ -89,7 +89,7 @@ class OrderServiceImplCancelConfirmedTest {
             .build();
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> service.cancelOrder(orderId, userId, /*isAdmin*/ false))
+        assertThatThrownBy(() -> service.cancelOrder(orderId, userId,  false))
             .isInstanceOf(BusinessException.class);
 
         verify(stockReservationService, never()).releaseCommitted(any(UUID.class));
@@ -115,7 +115,7 @@ class OrderServiceImplCancelConfirmedTest {
         ));
         when(orderMapper.toResponse(any(Order.class), any())).thenReturn(null);
 
-        service.cancelOrder(orderId, userId, /*isAdmin*/ false);
+        service.cancelOrder(orderId, userId,  false);
 
         verify(stockReservationService, times(1)).release(reservationId);
         verify(stockReservationService, never()).releaseCommitted(any(UUID.class));

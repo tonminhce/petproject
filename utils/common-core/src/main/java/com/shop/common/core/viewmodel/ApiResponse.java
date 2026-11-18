@@ -7,19 +7,6 @@ import org.slf4j.MDC;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Unified response envelope returned by every endpoint in the platform.
- * Fields with {@code null} values are omitted from the JSON payload.
- *
- * @param success   outcome flag — {@code true} for 2xx, {@code false} for error responses
- * @param code      stable application code (e.g. {@code "AUTH-1001"}) or {@code "OK"} for success
- * @param message   human-readable, locale-aware summary
- * @param data      response payload (omitted on error)
- * @param errors    list of field-level / detail errors (omitted on success)
- * @param path      request URI that produced this response
- * @param traceId   correlation id propagated via MDC for distributed tracing
- * @param timestamp ISO-8601 instant the response was built
- */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
         boolean success,

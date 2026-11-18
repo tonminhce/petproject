@@ -16,17 +16,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Client-credentials token cache for outbound service-to-service calls.
- * <p>Obtains an access token from Keycloak via the {@code client_credentials}
- * grant and caches it in-memory, refreshing 30 seconds before expiry. Used by
- * outbound HTTP clients (e.g. {@code MediaHeadClient}) to attach a
- * {@code Bearer} token when calling downstream services.</p>
- * <p>Local to product-service deliberately (rating/search precedent) —
- * keycloak {@code token-url / client-id / client-secret} live in
- * {@link MediaClientProperties.Keycloak} (not the auth-owned
- * {@code shop.keycloak}). See order-service Task 2 P0-7b rationale.</p>
- */
 @Component
 @Slf4j
 public class ServiceTokenProvider {
@@ -54,10 +43,6 @@ public class ServiceTokenProvider {
         this.clientSecret = kc.clientSecret();
     }
 
-    /**
-     * Returns a valid (non-near-expiry) access token, refreshing the cache
-     * synchronously when needed. Thread-safe: only one refresh runs at a time.
-     */
     public String getToken() {
         CachedToken current = cache.get();
         Instant cutoff = Instant.now().plusSeconds(REFRESH_SKEW_SECONDS);

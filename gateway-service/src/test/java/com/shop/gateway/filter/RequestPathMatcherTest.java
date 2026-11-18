@@ -21,7 +21,6 @@ class RequestPathMatcherTest {
 
     @Test
     void aPathThatOnlySharesThePrefixTextDoesNotMatch() {
-        // the whole point: a sibling route must not inherit the bypass
         assertThat(RequestPathMatcher.matchesPrefix("/api/v1/ratings-admin", "/api/v1/ratings")).isFalse();
         assertThat(RequestPathMatcher.matchesPrefix("/api/v1/ratingsadmin", "/api/v1/ratings")).isFalse();
         assertThat(RequestPathMatcher.matchesPrefix("/api/v1/auth-internal", "/api/v1/auth")).isFalse();

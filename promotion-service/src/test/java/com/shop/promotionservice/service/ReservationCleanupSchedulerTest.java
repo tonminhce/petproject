@@ -30,21 +30,6 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-/**
- * Task 11 — TTL sweep + retention purge (spec §5.4). Mirrors payment's
- * WebhookRetrySchedulerTest: a no-op PlatformTransactionManager stub, because
- * the assertions are about batch semantics, not transaction propagation
- * (verified by integration tests on a real DB). A16 shape: one transaction
- * per batch (TransactionTemplate), no persistence-context flush/clear — a
- * mid-cycle failure rolls back only the failing batch and terminates.
- *
- * <p>The sweep now CLAIMS each row with a conditional UPDATE
- * ({@code status = PENDING} -> {@code status = EXPIRED}) instead of flipping
- * the status on a dirty-checked entity. A row that another writer already
- * transitioned affects zero rows and is skipped, so a COMMITTED redemption can
- * never be reverted to EXPIRED (which would stop it being counted against the
- * per-user limit and the campaign budget).</p>
- */
 @ExtendWith(MockitoExtension.class)
 class ReservationCleanupSchedulerTest {
 
@@ -59,7 +44,6 @@ class ReservationCleanupSchedulerTest {
         PlatformTransactionManager txManager = new PlatformTransactionManager() {
             @Override
             public TransactionStatus getTransaction(TransactionDefinition definition) {
-                // No-op — TransactionTemplate needs a non-null status to commit.
                 return new SimpleTransactionStatus(true);
             }
             @Override
@@ -69,7 +53,6 @@ class ReservationCleanupSchedulerTest {
         };
         scheduler = new ReservationCleanupScheduler(
                 reservationRepository, campaignRepository, eventPublisher, txManager);
-        // @Value fields are not injected outside Spring - set explicitly
         ReflectionTestUtils.setField(scheduler, "batchSize", 500);
         ReflectionTestUtils.setField(scheduler, "retentionDays", 30);
     }
@@ -101,12 +84,10 @@ class ReservationCleanupSchedulerTest {
 
         scheduler.releaseAllExpiredReservations();
 
-        // dirty-checked entity, so the sweep must claim every candidate.
         verify(reservationRepository).claimForExpiry(
             eq(first.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class));
         verify(reservationRepository).claimForExpiry(
             eq(second.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class));
-        // batched: drain until the page comes back empty
         verify(reservationRepository, times(2)).findByStatusAndExpiresAtBefore(
             eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500)));
     }
@@ -118,7 +99,6 @@ class ReservationCleanupSchedulerTest {
                 eq(UsageStatus.PENDING), any(Instant.class), eq(PageRequest.of(0, 500))))
             .thenReturn(List.of(raced))
             .thenReturn(List.of());
-        // The claim lost the race - the row is no longer PENDING.
         when(reservationRepository.claimForExpiry(
                 eq(raced.getId()), eq(UsageStatus.PENDING), eq(UsageStatus.EXPIRED), any(Instant.class)))
             .thenReturn(0);
@@ -206,7 +186,6 @@ class ReservationCleanupSchedulerTest {
             eq(List.of(UsageStatus.RELEASED, UsageStatus.EXPIRED)),
             cutoff.capture(), eq(PageRequest.of(0, 500)));
         Instant value = cutoff.getAllValues().get(0);
-        // cutoff = now - retentionDays(30)
         assertThat(value).isAfter(before.minus(31, ChronoUnit.DAYS));
         assertThat(value).isBefore(before.minus(29, ChronoUnit.DAYS));
         verify(reservationRepository).deleteAllInBatch(List.of(oldReleased));

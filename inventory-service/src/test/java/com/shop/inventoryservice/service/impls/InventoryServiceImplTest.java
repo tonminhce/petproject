@@ -123,9 +123,6 @@ class InventoryServiceImplTest {
 
         assertThat(result.quantity()).isEqualTo(5);
 
-        // by the service; the atomic UPDATE on the inventory row owns the
-        // authoritative count. Verify the SQL update was issued with the right
-        // quantity, and the published event carries the request quantity.
         verify(inventoryRepository).atomicReserve(productId, req.quantity());
         ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
         verify(publisher).publishReserved(eq(inventory), reservationCaptor.capture());
@@ -140,7 +137,6 @@ class InventoryServiceImplTest {
     void reserve_throwsStockInsufficient() {
         ReserveRequest req = new ReserveRequest(999, null);
 
-        // The disambiguation find returns the inventory, so STOCK_INSUFFICIENT wins.
         when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(0);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
 
@@ -171,8 +167,6 @@ class InventoryServiceImplTest {
 
     @Test
     void commit_throwsWhenWrongWayTerminal() {
-        // COMMITTED is now an idempotent no-op (hardening §7.1) — wrong-way
-        // terminal states must still be rejected.
         reservation.setStatus(ReservationStatus.RELEASED);
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
 
@@ -208,8 +202,6 @@ class InventoryServiceImplTest {
 
         service.releaseCommitted(reservationId);
 
-        // §7.2 half-commit rollback: commit() moved the quantity out of both
-        // counters, so release credits it back to available (not reserved).
         assertThat(inventory.getAvailableQuantity()).isEqualTo(100);
         assertThat(inventory.getReservedQuantity()).isEqualTo(5);
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RELEASED);
@@ -274,8 +266,6 @@ class InventoryServiceImplTest {
 
     @Test
     void activeReservationCount_countsOnlyLiveReservations() {
-        // F-060: the catalogue asks this count before it soft-deletes a
-        // product. Only PENDING and COMMITTED reservations are LIVE.
         when(reservationRepository.countByProductIdAndStatusIn(eq(productId), anyList())).thenReturn(3L);
 
         assertThat(service.activeReservationCount(productId)).isEqualTo(3L);
@@ -315,12 +305,6 @@ class InventoryServiceImplTest {
         verify(inventoryRepository, never()).save(any());
     }
 
-    // -----------------------------------------------------------------
-    // Cache-invariants: every write path that touches Inventory must drop the
-    // cached entry via InventoryCacheService.evictAfterCommit. These tests are
-    // the regression net — if a new write method is added and forgets the evict,
-    // the suite goes red.
-    // -----------------------------------------------------------------
 
     @Test
     void create_evictsCacheAfterCommit() {
@@ -372,9 +356,6 @@ class InventoryServiceImplTest {
 
     @Test
     void commit_evictsCacheAfterCommit() {
-        // The reservation holds 5 units, so the inventory must actually be
-        // holding them: a commit that subtracts from a reserved counter of 0
-        // would drive the counter negative.
         inventory.setReservedQuantity(5);
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
@@ -401,7 +382,6 @@ class InventoryServiceImplTest {
 
     @Test
     void commit_rejectsNegativeStockOutcome() {
-        // reserved_quantity is 0 while the reservation claims 5 units.
         when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
 

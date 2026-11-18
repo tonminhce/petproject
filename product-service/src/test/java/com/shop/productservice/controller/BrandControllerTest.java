@@ -20,9 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(BrandController.class)
 @AutoConfigureMockMvc(addFilters = false)
-// Mirrors ProductControllerTest: without the handler, BusinessException/
-// validation failures would surface as raw 500s instead of the ApiResponse
-// error envelope.
 @Import(ApiExceptionHandler.class)
 class BrandControllerTest {
 

@@ -11,15 +11,6 @@ import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * The decoded-memory budget of the upload path (F-062).
- *
- * <p>The guard used to be expressed in pixels: 8192 x 8192 were allowed,
- * which is 268 MB of {@code BufferedImage} for a single upload - concurrent
- * uploads turned that into a heap-exhaustion outage instead of a rejected
- * upload. The guard is now expressed in decoded bytes: the pixels (4 bytes
- * each) plus the source bytes, because both are held at the same time.</p>
- */
 class VariantRendererMemoryBudgetTest {
 
     private static final int WIDTH = 800;
@@ -33,7 +24,6 @@ class VariantRendererMemoryBudgetTest {
     }
 
     private long decodedBytes(final byte[] source) {
-        // 4 bytes per pixel of the decoded image
         return (long) WIDTH * HEIGHT * 4L + source.length;
     }
 
@@ -63,7 +53,6 @@ class VariantRendererMemoryBudgetTest {
     @DisplayName("the source bytes count towards the budget")
     void theSourceBytesCountTowardsTheBudget() {
         byte[] source = TestImages.jpeg(WIDTH, HEIGHT);
-        // the budget covers the pixels alone - the source pushes it over
         long pixelsOnly = (long) WIDTH * HEIGHT * 4L;
 
         assertThatThrownBy(() -> renderer(pixelsOnly)

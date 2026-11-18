@@ -69,15 +69,12 @@ class RatingEventServiceTest {
         OutboxEvent event = captor.getValue();
 
         assertThat(event.getAggregateType()).isEqualTo("rating");
-        // Spec D4: aggregateId = productId — it doubles as the Kafka
-        // partition key (per-product ordering); the relay keys on it.
         assertThat(event.getAggregateId()).isEqualTo(productId);
         assertThat(event.getEventType()).isEqualTo("rating.submitted.v1");
         assertThat(event.getTopic()).isEqualTo("shop.rating.lifecycle.v1");
         assertThat(event.getStatus()).isEqualTo(OutboxStatus.PENDING);
         assertThat(event.getRetryCount()).isZero();
 
-        // Spec D4 — exactly these 13 fields, verbatim names.
         JsonNode json = objectMapper.readTree(event.getPayload());
         assertThat(json.size()).isEqualTo(13);
         assertThat(UUID.fromString(json.get("eventId").textValue()).toString()).isEqualTo(event.getEventId());
@@ -92,8 +89,6 @@ class RatingEventServiceTest {
         assertThat(json.get("action").textValue()).isEqualTo("CREATED");
         assertThat(json.get("visible").booleanValue()).isTrue();
         assertThat(json.get("avgRating").decimalValue()).isEqualByComparingTo("4.50");
-        // Scale is a write-side guarantee — JSON numbers are scale-free on
-        // re-parse (Jackson strips trailing zeroes), so assert the raw text.
         assertThat(event.getPayload()).contains("\"avgRating\":4.50");
         assertThat(json.get("ratingCount").intValue()).isEqualTo(1);
     }
@@ -118,8 +113,6 @@ class RatingEventServiceTest {
 
     @Test
     void record_doubleValuedAggregate_scalesHalfUp() throws Exception {
-        // Hibernate may hand back AVG over an integral column as a Double —
-        // must still normalize to scale-2 HALF_UP.
         when(ratingRepository.findAggregateByProductId(productId))
                 .thenReturn(List.<Object[]>of(new Object[]{4.3333333333d, 3L}));
         Rating rating = rating(4, true, false);
@@ -135,8 +128,6 @@ class RatingEventServiceTest {
 
     @Test
     void record_hidden_payloadCarriesHiddenActionAndInvisibleFlag() throws Exception {
-        // Snapshot excludes the hidden row itself — aggregate reflects the
-        // remaining visible ratings (T5 carry-over gap test).
         when(ratingRepository.findAggregateByProductId(productId))
                 .thenReturn(List.<Object[]>of(new Object[]{new BigDecimal("4.0"), 2L}));
         Rating rating = rating(5, true, true);
@@ -152,7 +143,6 @@ class RatingEventServiceTest {
 
     @Test
     void record_withNullAggregateAverage_writesZeroAverageInsteadOfFailing() throws Exception {
-        // PostgreSQL returns (NULL, 0) for an aggregate over zero visible rows.
         when(ratingRepository.findAggregateByProductId(productId))
                 .thenReturn(List.<Object[]>of(new Object[]{null, 0L}));
         Rating rating = rating(5, true, true);

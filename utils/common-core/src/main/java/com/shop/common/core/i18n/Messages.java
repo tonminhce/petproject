@@ -9,22 +9,6 @@ import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
-/**
- * Static i18n facade used from non-Spring contexts (exception constructors, utility code).
- * <p>Resolution order:</p>
- * <ol>
- *   <li>Spring-managed {@link MessageSource} if it has been installed via {@link #setMessageSource}.
- *       This is the path that runs at request time — it uses the locale resolver,
- *       respects cached bundles, and supports nested fallbacks.</li>
- *   <li>A {@link ResourceBundle} loaded from {@code messages/messages_*.properties} on the
- *       classpath — used during early bootstrap, in unit tests, and from non-web modules.</li>
- *   <li>The raw {@code messageKey} when nothing else matches, so error responses always
- *       contain <em>something</em> instead of crashing the handler.</li>
- * </ol>
- * <p>Format placeholders use {@link MessageFormat} {@code {0}} indexed syntax — the same
- * syntax Spring's {@code MessageSource} understands so templates are interpreted identically
- * on both lookup paths.</p>
- */
 public final class Messages {
 
     private static final String BUNDLE_BASENAME = "messages.messages";
@@ -34,7 +18,6 @@ public final class Messages {
     private Messages() {
     }
 
-    /** Installed by Spring at bootstrap; {@code null} means fall back to a classpath bundle. */
     public static void setMessageSource(MessageSource source) {
         messageSource = source;
     }

@@ -79,7 +79,6 @@ class StorefrontRatingControllerTest {
             {"rating":%d,"comment":"Edited comment, still decent value"}""".formatted(rating);
     }
 
-    // --- anonymous ---
 
     @Test
     void list_noAuth_returns401() throws Exception {
@@ -95,7 +94,6 @@ class StorefrontRatingControllerTest {
             .andExpect(status().isUnauthorized());
     }
 
-    // --- list ---
 
     @Test
     void list_returns200WithPageMapping() throws Exception {
@@ -116,7 +114,6 @@ class StorefrontRatingControllerTest {
         verify(ratingService).findVisibleByProductId(productId, 0, 20);
     }
 
-    // --- submit ---
 
     @Test
     void submit_returns201WithRating() throws Exception {
@@ -134,7 +131,6 @@ class StorefrontRatingControllerTest {
         verify(ratingService).submit(eq(userId), any(RatingSubmitRequest.class));
     }
 
-    // --- edit ---
 
     @Test
     void edit_returns200WithUpdatedRating() throws Exception {

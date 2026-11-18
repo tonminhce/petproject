@@ -18,17 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Category twin of {@link TransactionalProductEventPublisher}: writes one
- * {@link OutboxEvent} row per category lifecycle action in the SAME
- * {@code @Transactional} boundary as the entity write (catalog taxonomy is now
- * observable downstream — audit item: "Category/Brand lifecycle is silent").
- * The shared {@link com.shop.productservice.service.OutboxRelay} drains PENDING
- * rows regardless of aggregate type, so no relay change is needed.
- * <p>Deliberately NOT {@code @Transactional} — see the product publisher's
- * javadoc: participating in the caller's transaction is what makes entity
- * change + outbox row atomic.</p>
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

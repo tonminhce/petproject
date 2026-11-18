@@ -6,7 +6,7 @@ export const options = {
   scenarios: {
     hikari_pool_stress: {
       executor: 'constant-arrival-rate',
-      rate: 200,             // 200 order checkouts per second
+      rate: 200,
       timeUnit: '1s',
       duration: '1m',
       preAllocatedVUs: 50,
@@ -14,8 +14,8 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_failed: ['rate<0.02'],    // Max 2% failure under peak load
-    http_req_duration: ['p(95)<800'],  // 95% of orders completed under 800ms
+    http_req_failed: ['rate<0.02'],
+    http_req_duration: ['p(95)<800'],
   },
 };
 
