@@ -31,9 +31,9 @@
 
 ## 1. System Overview and Catalog of 14 Microservices and Infrastructure
 
-The **Petproject Microservices Platform** is organized as a **Maven Reactor Multi-Module project with 23 modules**:
+The **Petproject Microservices Platform** is organized as a **Maven Reactor Multi-Module project with 23 Maven projects**: 16 reactor modules (the root POM, the `utils` aggregator and the 14 services) plus the 7 shared libraries inside `utils/`:
 - **14 independent microservices**, each dedicated to a distinct business domain.
-- **8 shared platform libraries (`utils/`)** standardizing exception handling, security, Kafka messaging, logging, and object storage.
+- **7 shared platform libraries (`utils/`)** standardizing exception handling, security, Kafka messaging, logging, Keycloak access and object storage.
 - **1 root aggregator POM**.
 
 All services follow the **Database-per-Service pattern**. They do not share physical database tables and communicate via REST clients (wrapped in Resilience4j circuit breakers) and Apache Kafka in KRaft mode.
@@ -741,31 +741,43 @@ The architecture specification was compiled into standalone interactive visual a
 
 - **Specification source**: [`petproject-platform.architecture.json`](./petproject-platform.architecture.json)
 - **Interactive visualization**: [`petproject-platform.html`](./petproject-platform.html)
-- **Publication size**: 777.6 KB (Standalone HTML containing vector SVG graphics, light and dark theme switcher, component filtering, and PNG/SVG export tools).
+- **Publication size**: 774.7 KiB (793,264 bytes - standalone HTML containing vector SVG graphics, light and dark theme switcher, component filtering, and PNG/SVG export tools).
 
-### Quality Verification Receipt:
+### Artifact Identity
+
+The hashes below identify the files that are actually committed. A contract test
+(`ArchitectureArtifactHashContractTest`) recomputes them, so a regenerated
+artifact cannot silently drift away from the document.
+
 ```json
 {
-  "command": "deliver",
-  "type": "architecture",
-  "specificationSha256": "037284d9afa57b868e8ea110c4546d50a0c663c60b0cd3f22d67b2101f54800d",
-  "artifactSha256": "4b31d3ef6981b5f5858f2f2fb188c3442cf0ec69fb3ed36f77e20cfe9deadfbd",
-  "validation": {
-    "checksPassed": 9,
-    "checkCount": 9,
-    "compositionProfile": "showcase",
-    "compositionStatus": "pass",
-    "errors": 0,
-    "warnings": 0
-  }
+  "specification": "petproject-platform.architecture.json",
+  "specificationSha256": "09be95ee12bd36af3e9ef6d638607af6feda6e3ae09934f245acd0db65a5d8ee",
+  "artifact": "petproject-platform.html",
+  "artifactSha256": "209fcc3eb18b52934841098279f62977c2e748e1d79a1885290ca541571d6403",
+  "artifactBytes": 793264
 }
 ```
+
+### Verification Status
+
+**The interactive diagram has NOT been visually verified.** The only check
+receipt committed for it,
+[`petproject-platform.visual-check.json`](./petproject-platform.visual-check.json),
+records `status: skipped` with the diagnostic "Chrome or Chromium is
+unavailable" and `visualReview: pending`: the browser rendering of the
+artifact was never inspected. The receipt also predates the current files, so
+its recorded hashes describe artifacts that are no longer in the repository.
+
+No validation pass can be claimed for the committed files. The tooling that
+produced the original receipt is not part of this repository, so re-running the
+visual check is an action for whoever owns that tool.
 
 ---
 
 ## 7. Archify Interactive Showcase Diagrams Directory
 
-Three standalone interactive diagrams provide zoomable, searchable architectural models (9 of 9 validation checks passed, 0 errors, 0 warnings):
+Three standalone interactive diagrams provide zoomable, searchable architectural models. Their visual verification is **pending** - see the verification status in section 6:
 
 | Diagram | Type | Specification JSON | Standalone HTML | Highlights |
 |---|:---:|---|---|---|
