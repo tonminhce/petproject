@@ -34,31 +34,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Slice test for the promotion reservation endpoints (spec §4.1).
- *
- * <p>Mirrors inventory {@code ReservationStateEndpointTest} (hardening epic):
- * exercises the REAL security chain imported from {@code common-security}
- * ({@code SecurityAutoConfiguration} → {@code @EnableMethodSecurity} +
- * resource-server chain) so the SERVICE/ADMIN role gate is actually enforced:
- * SERVICE role → 2xx, anonymous → 401, USER role → 403 (@PreAuthorize).
- *
- * <p>JWTs are seeded via {@code SecurityMockMvcRequestPostProcessors.jwt()};
- * the {@link JwtDecoder} is mocked so no JWKS fetch happens at context startup.
- * Error assertions use the stable error-code string, never the localized message.
- */
 @WebMvcTest(value = PromotionReservationController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
 @Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class PromotionReservationControllerTest {
 
-    /**
-     * The @WebMvcTest slice does not include Boot's security autoconfiguration,
-     * so {@code HttpSecurity} (needed by {@code BaseSecurityConfig}) would be
-     * missing. {@code @EnableWebSecurity} supplies it — matching what Boot
-     * registers in the production app.
-     */
     @TestConfiguration(proxyBeanMethods = false)
     @EnableWebSecurity
     static class TestWebSecurityConfig {

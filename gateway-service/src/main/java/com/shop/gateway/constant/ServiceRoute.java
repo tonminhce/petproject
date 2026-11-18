@@ -72,18 +72,10 @@ public enum ServiceRoute {
         return ApiPaths.resourcePath(resource);
     }
 
-    /**
-     * Route prefix without the trailing {@code /**} wildcard, e.g.
-     * {@code /api/v1/backoffice/ratings} — used by the edge filters for
-     * scope and role-gate matching.
-     */
     public String prefix() {
         return ApiPaths.API_V1_PREFIX + "/" + resource;
     }
 
-    /**
-     * True for the D1 backoffice edge routes that require the ADMIN realm role.
-     */
     public boolean backoffice() {
         return resource.startsWith(BACKOFFICE_RESOURCE_PREFIX);
     }

@@ -28,10 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/**
- * <p>Each endpoint declares its required role explicitly. This keeps the security
- * policy local to the operation and avoids a redundant class-level guard.</p>
- */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_PRODUCTS)
 @RequiredArgsConstructor
@@ -59,12 +55,6 @@ public class BackofficeProductController {
         return ApiResponse.ok(productService.create(request), "Product created successfully");
     }
 
-    /**
-     * Partial update (ruling H-2 media-reference semantics): fields present in
-     * the body overwrite their current value; absent/null fields keep it. See
-     * storefront ProductController (removed) for the full doc-comment — kept
-     * here in case backoffice editing needs the contract.
-     */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Audited(action = "product.update", resourceType = "product")

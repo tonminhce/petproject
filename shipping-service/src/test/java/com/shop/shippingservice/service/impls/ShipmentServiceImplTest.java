@@ -161,8 +161,6 @@ class ShipmentServiceImplTest {
                 .build();
     }
 
-    // --- backoffice: assignTracking ---
-
     @Test
     void assignTracking_createdManualShipment_setsTrackingAdvancesAndStampsUpdate() {
         Shipment shipment = shipment(Carrier.MANUAL, ShipmentStatus.CREATED);
@@ -228,8 +226,6 @@ class ShipmentServiceImplTest {
 
         verify(writer, never()).save(any());
     }
-
-    // --- backoffice: transition / fail / retry ---
 
     @Test
     void transition_legalTarget_advancesViaFsm() {
@@ -341,8 +337,6 @@ class ShipmentServiceImplTest {
                 .extracting("errorCode")
                 .isEqualTo("SHP-10003");
     }
-
-    // --- backoffice: findAll filter routing ---
 
     @Test
     void findAll_unfiltered_usesNewestFirstFinder() {

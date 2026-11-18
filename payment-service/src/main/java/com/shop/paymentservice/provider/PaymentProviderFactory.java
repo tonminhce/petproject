@@ -9,9 +9,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Registry and factory for payment providers supporting multi-provider dispatch.
- */
 public class PaymentProviderFactory {
 
     private final Map<String, PaymentProvider> providers = new ConcurrentHashMap<>();

@@ -62,8 +62,6 @@ class SearchControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
-    // --- anonymous ---
-
     @Test
     void search_noAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/search"))
@@ -71,8 +69,6 @@ class SearchControllerTest {
 
         verifyNoInteractions(searchQueryService);
     }
-
-    // --- happy path ---
 
     @Test
     void search_returns200WithPageShapeAndDefaultParams() throws Exception {
@@ -126,8 +122,6 @@ class SearchControllerTest {
         assertThat(forwarded.page()).isEqualTo(2);
         assertThat(forwarded.size()).isEqualTo(50);
     }
-
-    // --- validation ---
 
     @Test
     void search_qOver200Chars_returns400WithErr0422V() throws Exception {
@@ -185,8 +179,6 @@ class SearchControllerTest {
 
         verifyNoInteractions(searchQueryService);
     }
-
-    // --- ES-down mapping ---
 
     @Test
     void search_esDown_returns503WithSrh12002() throws Exception {

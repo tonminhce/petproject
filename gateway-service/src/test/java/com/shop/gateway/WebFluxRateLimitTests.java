@@ -36,10 +36,6 @@ class WebFluxRateLimitTests {
 
     private static final RSAKey JWK = TestKeys.rsaKey();
 
-    /**
-     * F-034: the edge limiter is fleet-wide, so the gateway needs a Redis to
-     * meter against. The container is started once for the whole class.
-     */
     static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
             .withExposedPorts(6379);
 
@@ -159,7 +155,6 @@ class WebFluxRateLimitTests {
                 .expectStatus().isOk()
                 .expectHeader().valueEquals("X-RateLimit-Remaining", "1");
 
-        // Fresh IP -> its own bucket with a full budget
         client.get().uri("/api/v1/backoffice/products")
                 .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
                 .header("X-Forwarded-For", "203.0.113.12")

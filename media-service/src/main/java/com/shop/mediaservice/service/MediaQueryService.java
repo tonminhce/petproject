@@ -8,21 +8,7 @@ public interface MediaQueryService {
     String DEFAULT_VARIANT = "display";
     String DEFAULT_FORMAT = "auto";
 
-    /**
-     * Presigned GET URL for one stored variant render (expiry
-     * {@code media.presign-ttl}). Increments {@code media_presigned_total}
-     * tagged with the resolved variant.
-     *
-     * @throws com.shop.common.core.exception.BusinessException
-     *         404 MED-12004 (unknown media/variant/format-row) or
-     *         503 MED-12006 (object storage unavailable)
-     */
     URL resolve(UUID mediaId, String variant, String format);
 
-    /**
-     * True when the media row exists and is NOT soft-deleted. Deliberately
-     * does NOT presign or touch object storage — the existence check must
-     * stay cheap and storage-independent.
-     */
     boolean exists(UUID mediaId);
 }

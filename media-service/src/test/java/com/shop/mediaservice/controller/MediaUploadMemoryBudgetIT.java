@@ -30,15 +30,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The decoded-memory budget of the upload path (F-062).
- *
- * <p>The budget of this suite is 1 MB: an 800 x 600 image decodes to
- * 800 x 600 x 4 = 1.9 MB, so it is rejected - BEFORE it is decoded, so the
- * service never allocates the pixels. With the old pixel guard (8192 x 8192
- * = 268 MB) the very same upload was accepted and the heap spike was the
- * outage.</p>
- */
 @AutoConfigureTestRestTemplate
 class MediaUploadMemoryBudgetIT extends AbstractMediaIntegrationTest {
 
@@ -74,12 +65,7 @@ class MediaUploadMemoryBudgetIT extends AbstractMediaIntegrationTest {
     @Test
     @DisplayName("an upload above the decoded-memory budget → 413 MED-12002")
     void anUploadAboveTheBudgetIsRejected() throws Exception {
-        // A size that no other IT suite uses: media-service dedupes by
-        // sha256, and the shared Postgres already holds the deterministic
-        // 800x600 image of the other suites - a dedup hit answers 200
-        // without ever decoding the image. The width was drawn from
-        // 800..849, so it could land exactly on 800 and hit that image
-        // (the suite failed with 200 instead of 413 when it did).
+
         int width = 1200 + Math.abs(UUID.randomUUID().hashCode() % 400);
         ResponseEntity<String> response = upload(TestImages.jpeg(width, 601));
 

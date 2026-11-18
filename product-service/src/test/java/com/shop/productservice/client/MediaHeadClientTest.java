@@ -28,11 +28,6 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/**
- * Option C write-time existence-check client (media epic spec D5): 200 → true,
- * 404 → false, ANY other failure → MED-12006 503 (the write must fail, never
- * silently accept an unverified reference).
- */
 @ExtendWith(MockitoExtension.class)
 class MediaHeadClientTest {
 

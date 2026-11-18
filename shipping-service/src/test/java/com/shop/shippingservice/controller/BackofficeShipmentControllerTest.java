@@ -64,8 +64,6 @@ class BackofficeShipmentControllerTest {
             Instant.parse("2026-08-29T08:00:00Z"));
     }
 
-    // --- ADMIN happy paths ---
-
     @Test
     void list_admin_returns200WithPagedShipments() throws Exception {
         when(shipmentService.findAll(isNull(), isNull(), isNull(), any(Pageable.class)))
@@ -181,8 +179,6 @@ class BackofficeShipmentControllerTest {
         verify(shipmentService).retry(shipmentId);
     }
 
-    // --- filter params routed to service ---
-
     @Test
     void list_adminWithStatusFilter_passesFiltersToService() throws Exception {
         when(shipmentService.findAll(eq(ShipmentStatus.IN_TRANSIT), isNull(), isNull(), any(Pageable.class)))
@@ -237,8 +233,6 @@ class BackofficeShipmentControllerTest {
 
         verify(shipmentService).findAll(isNull(), isNull(), eq(orderId), eq(PageRequest.of(2, 20)));
     }
-
-    // --- security matrix ---
 
     @Test
     void list_noAuth_returns401() throws Exception {
@@ -307,8 +301,6 @@ class BackofficeShipmentControllerTest {
                 .content("{\"status\": \"IN_TRANSIT\"}"))
             .andExpect(status().isForbidden());
     }
-
-    // --- business error-code mapping ---
 
     @Test
     void get_unknownShipment_returns404WithShp10001() throws Exception {

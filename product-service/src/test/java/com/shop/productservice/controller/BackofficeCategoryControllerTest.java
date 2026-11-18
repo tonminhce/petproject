@@ -65,8 +65,6 @@ class BackofficeCategoryControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
-    // --- ADMIN happy paths ---
-
     @Test
     void create_admin_returns200() throws Exception {
         when(categoryService.create(any())).thenReturn(response());
@@ -103,8 +101,6 @@ class BackofficeCategoryControllerTest {
         verify(categoryService).delete(ID);
     }
 
-    // --- validation ---
-
     @Test
     void create_withInvalidDto_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/backoffice/categories")
@@ -118,12 +114,9 @@ class BackofficeCategoryControllerTest {
         verifyNoInteractions(categoryService);
     }
 
-    // --- business error-code mapping ---
-
     @Test
     void update_cycleDetected_returns409WithPrd20009() throws Exception {
 
-        // the mapped i18n key lives in the common bundles (EN+VI).
         when(categoryService.update(eq(ID), any()))
             .thenThrow(BusinessException.of(ErrorCode.CATEGORY_CYCLE_DETECTED));
 
@@ -135,8 +128,6 @@ class BackofficeCategoryControllerTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.code").value("PRD-2009"));
     }
-
-    // --- security matrix ---
 
     @Test
     void create_customerRole_returns403() throws Exception {

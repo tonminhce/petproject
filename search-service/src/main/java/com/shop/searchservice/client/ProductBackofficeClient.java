@@ -19,13 +19,6 @@ import org.springframework.web.client.RestClientException;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * <p>Error posture — retry-free fail-fast: ANY failure (non-2xx, timeout,
- * malformed/empty body) aborts immediately as SRH-12002 (503). A partial
- * reindex source is never a benign answer — the caller (ReindexService) aborts
- * WITHOUT touching the alias. There is no retry loop: the endpoint is
- * idempotent and the operation is re-runnable.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -41,12 +34,6 @@ public class ProductBackofficeClient {
 
     private final ServiceTokenProvider serviceTokenProvider;
 
-    /**
-     * Fetches one ACTIVE-products page from the backoffice list.
-     *
-     * @throws BusinessException SRH-12002 (503) on any failure — never a raw
-     *                         downstream exception
-     */
     public PageResponse<ProductSnapshot> fetchPage(int page, int size) {
         try {
             ApiResponse<PageResponse<ProductSnapshot>> resp = restClient.get()
@@ -69,11 +56,6 @@ public class ProductBackofficeClient {
         }
     }
 
-    /**
-     * The reindex source row — the {@code ProductDetailResponse} wire shape
-     * (priceUnit/categoryTitle field names verbatim, §4(5) unknown-field
-     * tolerance). {@code ProductDocuments} adapts it to the D3 doc shape.
-     */
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record ProductSnapshot(
         UUID id,

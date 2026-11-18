@@ -11,17 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-/**
- * <p>product-service had no retention scheduler at all, so its
- * {@code outbox_events} table grew by one row per product / brand / category
- * mutation forever. Every other event-producing service in the fleet
- * (inventory, promotion, media, payment, shipping, order) purges SENT rows
- * after seven days; this service was the outlier and its repository did not
- * even have the delete method.</p>
- * <p>Only SENT rows are purged. PENDING rows are the relay's backlog, FAILED
- * rows need a manual root cause before deletion, and DEAD rows are the
- * explicit "parked for an operator" state.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

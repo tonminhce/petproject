@@ -189,9 +189,6 @@ class TraceparentHeaderExtractionTest {
             return kafkaListenerContainerFactory();
         }
 
-        // contract only needs the record headers + span context, so the wire
-        // payload is not bound to a DTO here). The publish path of this test
-        // is unchanged (single-encoded JSON — tolerated wire).
         @KafkaListener(id = "trace-test", topics = TOPIC, containerFactory = "traceTestFactory")
         void onRecord(ConsumerRecord<String, String> record) {
             SpanContext current = Span.fromContext(Context.current()).getSpanContext();

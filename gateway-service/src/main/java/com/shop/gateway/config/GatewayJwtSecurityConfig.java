@@ -16,28 +16,6 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The gateway is the edge, so it is the place where a token minted for
- * the wrong client must be rejected. Before this configuration the gateway
- * relied on Spring Boot's reactive auto-configuration, whose default validator
- * chain is issuer + timestamp only:
- * <ul>
- *   <li>the gateway depends only on {@code common-core}, not {@code common-security},
- *       so the servlet-only {@code BaseSecurityConfig} (issuer + timestamp +
- *       audience) never applied to it;</li>
- *   <li>no {@code JwtDecoder} bean existed in the gateway, so Boot's
- *       {@code ReactiveJwtDecoder} was used and the audience check was absent
- *       entirely. A token issued to any client in the realm was accepted at the
- *       edge.</li>
- * </ul>
- * <p>The validator reads the {@code azp} claim, because the
- * provisioned realm emits no {@code aud} claim at all (measured against
- * Keycloak 26: user tokens carry {@code azp=ecommerce-client}, service tokens
- * carry {@code azp=<service-client>}, and {@code aud} is absent for every
- * token type). An {@code aud} validator is still wired when the operator
- * configures it, so the control becomes usable as soon as an audience mapper
- * is added to the realm.</p>
- */
 @Configuration(proxyBeanMethods = false)
 public class GatewayJwtSecurityConfig {
 
@@ -96,9 +74,6 @@ public class GatewayJwtSecurityConfig {
         return new DelegatingOAuth2TokenValidator<>(validators);
     }
 
-    /**
-     * Narrow helper so the test suite can assert the chain without a live IdP.
-     */
     static OAuth2TokenValidator<Jwt> validatorFor(GatewayJwtProperties properties, String issuerUri) {
         GatewayJwtSecurityConfig config = new GatewayJwtSecurityConfig(properties, issuerUri);
         return config.buildValidatorChain();

@@ -19,19 +19,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 
     List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
 
-    /**
-     * Claim a single PENDING row with a row-level write lock so that
-     * concurrent relay instances running in multiple pods can't pick the same
-     * row and double-publish to Kafka. Postgres returns the row only if no
-     * other transaction holds the lock (FOR UPDATE SKIP LOCKED); the doomed
-     * "lost update" pattern that the previous design had on `status = PENDING`
-     * is gone. Single-instance deployments still work — only the locked-out
-     * instance sees an empty result.
-     * <p>The query hint {@code jakarta.persistence.lock.timeout = -2} is the
-     * Hibernate/Spring portable form of SKIP LOCKED. The method returns
-     * {@code Optional} so callers must check presence — an empty list here is
-     * the "another pod grabbed it" signal.</p>
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
     Optional<OutboxEvent> findFirstByStatusOrderByIdAsc(OutboxStatus status);
@@ -40,15 +27,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
         return findFirstByStatusOrderByIdAsc(status);
     }
 
-    /**
-     * Re-reads a row under its write lock for the mark phase.
-     * <p>The mark phase must be a compare-and-set: read the row, check it is
-     * still SENDING, then write the new status. Without the lock the
-     * recovery sweep could move the row from SENDING to PENDING between the
-     * read and the write, and the mark would then flip a row that another
-     * relay instance may already have re-claimed — a double publish that
-     * the row state said was impossible.</p>
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
     @Query("SELECT e FROM OutboxEvent e WHERE e.id = :id")
@@ -58,24 +36,10 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
     int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 
-    /** H11 — purge DEAD rows older than the aging window. */
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.updatedAt < :cutoff")
     int deleteByStatusAndUpdatedAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 
-    /**
-     * Recovers events stranded in the SENDING state.
-     * <p>The relay claims a row by moving it to SENDING and committing, then
-     * publishes it outside that transaction. If the process dies between the
-     * two steps the row stays SENDING forever: it is no longer PENDING, so
-     * the claim never picks it up again, and nothing else in the service
-     * touches it. The event is silently lost with no alarm.</p>
-     * <p>This statement returns a stale SENDING row to PENDING so it is
-     * re-claimed, unless it has already burned its retry budget, in which
-     * case it is parked as FAILED for an operator. {@code updatedAt} is the
-     * claim timestamp (the entity carries {@code @UpdateTimestamp}), so the
-     * cutoff is the claim lease.</p>
-     */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE OutboxEvent e SET "
          + "e.status = CASE WHEN e.retryCount + 1 >= :maxRetries THEN :failed ELSE :pending END, "

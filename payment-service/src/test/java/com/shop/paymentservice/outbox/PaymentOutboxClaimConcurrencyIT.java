@@ -23,7 +23,7 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
-        // keep the @Scheduled relay idle so it cannot drain the rows under test
+
         registry.add("shop.payment.outbox.poll-millis", () -> "3600000");
     }
 
@@ -32,7 +32,7 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void clearPendingRows() {
-        // leftover PENDING rows from other tests would win the MIN(id) claim race
+
         outboxRepo.deleteAll(outboxRepo.findByStatusOrderByIdAsc(
             OutboxStatus.PENDING, PageRequest.of(0, 10_000)));
     }
@@ -62,14 +62,13 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         AtomicReference<Optional<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
         AtomicReference<Optional<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
 
-        // A claims the head row and HOLDS the row lock (tx open) while B claims concurrently.
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
                     claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
                     aClaimed.countDown();
                     try {
-                        bLockedOut.await(10, TimeUnit.SECONDS); // hold the lock for B's attempt
+                        bLockedOut.await(10, TimeUnit.SECONDS);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
@@ -104,12 +103,11 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        // A claimed the head row
         assertThat(claimA.get()).isPresent();
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(rowId);
-        // While A's lock was held, B got an EMPTY claim — never the same row (SKIP LOCKED)
+
         assertThat(claimBWhileLocked.get()).isEmpty();
-        // After A committed, the still-PENDING row is claimable again — progress resumes
+
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(rowId);
 
         outboxRepo.deleteById(rowId);
@@ -169,11 +167,10 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        // A claimed the head row
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        // B claims the next available row (row2) concurrently because SKIP LOCKED skips row1
+
         assertThat(claimBWhileLocked.get().map(OutboxEvent::getId)).contains(row2);
-        // After A committed, row1 is re-claimable
+
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
         assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
 

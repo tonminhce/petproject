@@ -60,8 +60,7 @@ class FavouriteControllerTest {
                 .subject(userId.toString())
                 .claim("preferred_username", "alice")
                 .build();
-        // Use the 2-arg ctor — the 1-arg ctor leaves authenticated=false, which
-        // makes AuthenticatedUser.current() return Optional.empty.
+
         SecurityContextHolder.getContext().setAuthentication(
                 new JwtAuthenticationToken(jwt, Collections.emptyList()));
     }

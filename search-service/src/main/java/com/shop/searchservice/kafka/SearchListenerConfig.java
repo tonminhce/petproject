@@ -9,11 +9,6 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 
-/**
- * Listener container factory for the product lifecycle topic (search spec D1).
- * Uses {@link BaseKafkaListenerConfig} for raw-string deserialization, W3C trace
- * extraction, retry error handling, and optional DLT recovery.
- */
 @EnableKafka
 @Configuration
 public class SearchListenerConfig extends BaseKafkaListenerConfig<String> {

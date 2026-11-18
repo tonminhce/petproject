@@ -16,6 +16,11 @@
 
 *.sh text eol=lf
 
+# Java sources are pinned to LF as well. The local core.autocrlf=true would
+# otherwise rewrite every source file with CRLF on checkout, which changes the
+# content hash the source-audit ledger uses to invalidate stale reviews.
+*.java text eol=lf
+
 # Windows batch files are binary for Git's line-ending purposes: the cmd.exe
 # parser needs CRLF and the file must not be rewritten on checkout.
 *.cmd -text

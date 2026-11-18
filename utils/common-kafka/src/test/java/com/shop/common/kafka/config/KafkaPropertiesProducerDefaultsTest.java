@@ -16,7 +16,7 @@ class KafkaPropertiesProducerDefaultsTest {
         assertThat(producer)
                 .containsEntry("compression.type", "lz4")
                 .containsEntry("enable.idempotence", true);
-        // batch.size and linger.ms are non-zero ints; assert presence and a sane value.
+
         assertThat(producer.get("batch.size")).isInstanceOf(Integer.class);
         assertThat((Integer) producer.get("batch.size"))
                 .as("batch.size default — pinned to amortise network round-trips")
@@ -32,8 +32,6 @@ class KafkaPropertiesProducerDefaultsTest {
         KafkaProperties props = new KafkaProperties();
         Map<String, Object> producer = props.buildProducerProperties();
 
-        // acks=all + enable.idempotence=true + max.in.flight.requests.per.connection=1
-        // is the canonical exactly-once-per-attempt recipe for the fleet.
         assertThat(producer).containsEntry("acks", "all");
         assertThat(producer).containsEntry("enable.idempotence", true);
         assertThat(producer)
@@ -42,10 +40,7 @@ class KafkaPropertiesProducerDefaultsTest {
 
     @Test
     void producerDefaultsKeepStringKeySerializer() {
-        // Wire contract pin (R1): the producer properties must continue to
-        // advertise a String key serializer (the value serializer is added
-        // downstream by KafkaAutoConfiguration.stringKafkaTemplate so the
-        // typed <String,String> wire stays single-encoded JSON).
+
         KafkaProperties props = new KafkaProperties();
         Map<String, Object> producer = props.buildProducerProperties();
 

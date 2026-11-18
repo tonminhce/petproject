@@ -73,8 +73,7 @@ class StripeHealthIndicatorTest {
 
     @Test
     void balanceReachableButAccountLookupFails_staysUpWithoutAccountId() throws Exception {
-        // The balance probe is the liveness signal; the account id is
-        // best-effort detail and must not flip the indicator on its own.
+
         balanceStatic.when(() -> Balance.retrieve(any(RequestOptions.class)))
                 .thenReturn(balance(true));
         accountStatic.when(() -> Account.retrieve(any(RequestOptions.class)))
@@ -89,8 +88,7 @@ class StripeHealthIndicatorTest {
 
     @Test
     void healthProbesAreCachedWithinTtl() throws Exception {
-        // Health checks can fire every few seconds — every probe must NOT be
-        // a Stripe API call (rate limits). One call serves probes within TTL.
+
         balanceStatic.when(() -> Balance.retrieve(any(RequestOptions.class)))
                 .thenReturn(balance(false));
         Account account = new Account();

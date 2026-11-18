@@ -6,10 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-/**
- * Gateway-wide token-bucket defaults. RedisRateLimiter applies these values
- * independently for each client key and route id.
- */
 @Validated
 @ConfigurationProperties(prefix = "gateway.rate-limit")
 public record RateLimitProperties(

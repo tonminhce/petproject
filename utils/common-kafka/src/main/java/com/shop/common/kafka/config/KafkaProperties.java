@@ -5,35 +5,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Configuration for the shared Kafka producer / consumer beans.
- *
- * <p>F-003: the {@code shop.kafka.topics.*} block used to carry legacy topic
- * names ({@code order-events}, {@code payment-events},
- * {@code notification-events}, {@code inventory-events}) that NOTHING read and
- * that did not match the topics the publishers actually use
- * ({@code shop.order.lifecycle.v1}, ...). A configuration property that
- * claims to name a topic but is never consumed is worse than no property at
- * all - an operator would set it and see no effect. The real topic names live
- * in {@link com.shop.common.kafka.contract.KafkaTopicContract} and are
- * enforced by {@code KafkaTopicContractTest}.</p>
- */
 @ConfigurationProperties(prefix = "shop.kafka")
 public class KafkaProperties {
 
-    /** Toggle the shared Kafka helpers. Default: {@code true}. */
     private boolean enabled = true;
 
-    /** Comma-separated list of {@code host:port} pairs. */
     private String bootstrapServers = "localhost:9092";
 
-    /** Retry/DLT defaults applied by the shared consumer factory. */
     private Retry retry = new Retry();
 
-    /** Producer-side defaults. */
     private ProducerConfig producer = new ProducerConfig();
 
-    /** Consumer-side defaults. */
     private ConsumerConfig consumer = new ConsumerConfig();
 
     public boolean isEnabled() {
@@ -76,7 +58,6 @@ public class KafkaProperties {
         this.consumer = consumer;
     }
 
-    /** Build the standard producer config map consumed by {@code DefaultKafkaProducerFactory}. */
     public Map<String, Object> buildProducerProperties() {
         Map<String, Object> props = new HashMap<>();
         props.put("bootstrap.servers", bootstrapServers);
@@ -84,10 +65,7 @@ public class KafkaProperties {
         props.put("retries", producer.getRetries());
         props.put("max.in.flight.requests.per.connection", 1);
         props.put("key.serializer", org.apache.kafka.common.serialization.StringSerializer.class.getName());
-        // batching, a small linger window, lz4 compression, and idempotent
-        // exactly-once-per-attempt delivery without per-service config. The
-        // wire contract (R1, single-encoded JSON-string via KafkaMessagePublisher)
-        // is unaffected — these knobs only govern batching + broker-side dedup.
+
         props.put("enable.idempotence", producer.isEnableIdempotence());
         props.put("compression.type", producer.getCompressionType());
         props.put("batch.size", producer.getBatchSizeBytes());
@@ -95,7 +73,6 @@ public class KafkaProperties {
         return props;
     }
 
-    /** Build the standard consumer config map consumed by {@code DefaultKafkaConsumerFactory}. */
     public Map<String, Object> buildConsumerProperties() {
         Map<String, Object> props = new HashMap<>();
         props.put("bootstrap.servers", bootstrapServers);
@@ -105,31 +82,10 @@ public class KafkaProperties {
         return props;
     }
 
-
-    /**
-     * Retry/DLT defaults — INTENTIONALLY UNUSED (C20 review finding).
-     * <p>The fleet's listener factory uses a raw-String value deserializer
-     * ({@link org.apache.kafka.common.serialization.StringDeserializer}, see
-     * {@code BaseKafkaListenerConfig}). That deserializer never throws on
-     * poison bytes, and {@code BaseKafkaConsumer}-derived listeners follow the
-     * "ack-always poison posture" — exceptions inside the handler are caught,
-     * logged, and the offset still advances. Combined, neither deserialize
-     * failures nor handler failures ever reach a {@code CommonErrorHandler}
-     * that could trigger retry / DLT routing.</p>
-     * <p>This block is kept for two reasons:</p>
-     * <ol>
-     *   <li>Future listeners that drop the ack-always posture (e.g. async
-     *       processing with a true DLT) can wire these values without a
-     *       config change.</li>
-     *   <li>Documented fleet precedent so reviewers don't re-flag this as
-     *       dead config drift.</li>
-     * </ol>
-     */
     public static class Retry {
-        /** Delay between retry attempts, in milliseconds. */
+
         private long backoffMs = 6_000L;
 
-        /** Total attempts before routing the record to the DLT. */
         private int maxAttempts = 4;
 
         public long getBackoffMs() {
@@ -149,28 +105,16 @@ public class KafkaProperties {
         }
     }
 
-    /** Producer-side defaults. */
     public static class ProducerConfig {
         private String acks = "all";
         private int retries = 3;
 
-        /**
-         * Exactly-once-per-attempt delivery on producer failover.
-         * Combined with {@code acks=all} and {@code max.in.flight.requests.
-         * per.connection=1} (pinned at the build site), this is the canonical
-         * fleet recipe.
-         */
         private boolean enableIdempotence = true;
 
         private String compressionType = "lz4";
 
         private int batchSizeBytes = 32 * 1024;
 
-        /**
-         * Linger window in milliseconds. A small (5 ms) wait lets the
-         * producer coalesce synchronous outbox sends without adding latency
-         * a human caller would notice.
-         */
         private int lingerMs = 5;
 
         public String getAcks() {
@@ -222,7 +166,6 @@ public class KafkaProperties {
         }
     }
 
-    /** Consumer-side defaults. */
     public static class ConsumerConfig {
         private String groupId = "shop-service";
         private String autoOffsetReset = "earliest";

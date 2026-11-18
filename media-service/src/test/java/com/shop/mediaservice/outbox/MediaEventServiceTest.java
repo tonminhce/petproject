@@ -66,8 +66,7 @@ class MediaEventServiceTest {
         OutboxEvent event = captor.getValue();
 
         assertThat(event.getAggregateType()).isEqualTo("media");
-        // Spec D4: aggregateId = mediaId — it doubles as the Kafka partition
-        // key (per-media partition ordering); the relay keys on it.
+
         assertThat(event.getAggregateId()).isEqualTo(mediaId);
         assertThat(event.getEventType()).isEqualTo("MediaCreated");
         assertThat(event.getTopic()).isEqualTo("media.lifecycle.v1");
@@ -76,7 +75,6 @@ class MediaEventServiceTest {
         assertThat(event.getSentAt()).isNull();
         assertThat(event.getLastError()).isNull();
 
-        // Spec D4 — exactly these 7 fields, verbatim names, nothing extra/missing.
         JsonNode json = objectMapper.readTree(event.getPayload());
         assertThat(json.size()).isEqualTo(7);
         assertThat(json.fieldNames())
@@ -90,7 +88,6 @@ class MediaEventServiceTest {
         assertThat(json.get("contentType").textValue()).isEqualTo("image/jpeg");
         assertThat(json.get("canonicalPath").textValue()).isEqualTo("/api/v1/medias/" + mediaId);
 
-        // variants: array of T2 MediaVariantResponse-shaped objects — exactly 5 fields each
         JsonNode variants = json.get("variants");
         assertThat(variants.isArray()).isTrue();
         assertThat(variants.size()).isEqualTo(2);

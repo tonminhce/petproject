@@ -32,13 +32,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6 + R3 veto): the SERVICE-gated status
- * transitions (class-level {@code SERVICE or ADMIN} gate) exercised through
- * the {@code AuditAspect} — service-fulfillment actors must appear as actor
- * type {@code service} with the client id, giving the order lifecycle a
- * complete insider-threat trail.
- */
 @WebMvcTest(value = OrderStatusController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

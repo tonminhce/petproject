@@ -36,20 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The reset token is single-use (F-053).
- *
- * <p>The token used to carry only a {@code used} flag: {@code resetPassword()}
- * read the row with {@code used = false}, changed the Keycloak password and
- * only then set the flag. Two concurrent redemptions both passed the read,
- * both changed the password and the last writer silently replaced the
- * password the owner had just chosen.</p>
- *
- * <p>The consumption is now a conditional update
- * ({@code used = true ... where used = false}), so only one redemption can win.
- * This test proves it against a real PostgreSQL - the row lock, not a mock,
- * is what makes the second redemption observe {@code used = true}.</p>
- */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -72,23 +58,12 @@ class PasswordResetTokenConsumptionTest {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
-        // Liquibase owns the schema - the changelog (including the F-053
-        // version column) is therefore exercised by this test as well.
+
         registry.add("spring.liquibase.change-log",
                 () -> "classpath:db/changelog/db.changelog-master.yaml");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 
-    /**
-     * Liquibase owns the schema, so the changelog (including the F-053 version
-     * column) is exercised by this test as well.
-     *
-     * <p>The bean is declared in a nested {@code @TestConfiguration} on
-     * purpose: a {@code @Configuration} class inside the scanned application
-     * package would be picked up by every Spring context of the module - the
-     * security filter chain test deliberately runs without a DataSource and
-     * would fail on the missing bean.</p>
-     */
     @TestConfiguration(proxyBeanMethods = false)
     static class LiquibaseTestConfig {
 
@@ -116,15 +91,14 @@ class PasswordResetTokenConsumptionTest {
     @BeforeEach
     void seedToken() {
         tokenHash = "hash-" + UUID.randomUUID();
-        // the reset token references a user (foreign key), so the owner has to
-        // exist before the token can be seeded
+
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         User owner = userRepository.saveAndFlush(User.builder()
                 .fullName("Alice Wonder")
                 .username("alice-" + suffix)
                 .email("alice-" + suffix + "@example.com")
                 .gender("female")
-                // the entity validates the phone (10-11 digits, ^0[0-9]{9,10}$)
+
                 .phone("09" + String.format("%08d", Math.abs(UUID.randomUUID().hashCode() % 100_000_000L)))
                 .build());
         PasswordResetToken token = PasswordResetToken.builder()

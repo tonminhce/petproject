@@ -64,8 +64,6 @@ class BackofficePaymentControllerTest {
             Instant.parse("2026-08-30T08:00:00Z"));
     }
 
-    // --- ADMIN happy paths ---
-
     @Test
     void list_admin_returns200WithPagedPayments() throws Exception {
         when(paymentService.findAllByOrderId(isNull(), any(Pageable.class)))
@@ -148,8 +146,6 @@ class BackofficePaymentControllerTest {
         verify(paymentService).findAllByOrderId(isNull(), eq(PageRequest.of(0, 200)));
     }
 
-    // --- security matrix ---
-
     @Test
     void list_noAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/backoffice/payments"))
@@ -179,8 +175,6 @@ class BackofficePaymentControllerTest {
                     .authorities(createAuthorityList("ROLE_USER"))))
             .andExpect(status().isForbidden());
     }
-
-    // --- business error-code mapping ---
 
     @Test
     void get_unknownPayment_returns404WithPay5002() throws Exception {

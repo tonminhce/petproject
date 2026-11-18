@@ -25,16 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Background jobs:
- * <ol>
- *   <li>{@link #releaseAllExpiredReservations()} - releases stock held by PENDING
- *       reservations whose TTL elapsed. Runs in BATCHES with per-batch transaction
- *       boundaries to avoid holding long row locks.</li>
- *   <li>{@link #purgeOldExpiredReservations()} - retention purge for terminal
- *       EXPIRED rows.</li>
- * </ol>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -49,13 +39,6 @@ public class ReservationCleanupScheduler {
     @Value("${inventory.reservation-cleanup-batch-size:500}")
     private int batchSize;
 
-    /**
-     * The first run is delayed by one interval instead of firing at context
-     * startup. A startup-time sweep competes with the first application
-     * requests (and, in an integration test, with the other test classes that
-     * share the same database), and it removes the "a background job inserts an
-     * outbox row while another test is asserting on the outbox table" race.
-     */
     @Scheduled(fixedDelayString = "${inventory.reservation-cleanup-interval-ms:60000}",
                initialDelayString = "${inventory.reservation-cleanup-initial-delay-ms:60000}")
     public void releaseAllExpiredReservations() {
@@ -85,20 +68,6 @@ public class ReservationCleanupScheduler {
         }
     }
 
-    /**
-     * Release the hold of every expired reservation in the batch.
-     * <p>Each row is CLAIMED with a conditional UPDATE
-     * ({@code status = PENDING} -> {@code status = EXPIRED}) before any stock is
-     * moved. A row that another writer already transitioned (a concurrent
-     * {@code commit()}, or a competing sweep) affects zero rows and is skipped,
-     * so a committed reservation can never be flipped back to EXPIRED and the
-     * stock counters are decremented exactly once per reservation.</p>
-     * <p>The inventory decrement itself is an atomic guarded UPDATE
-     * ({@code reservedQuantity >= qty}), so the counter can never go negative
-     * and a double release cannot over-credit stock. The previous
-     * {@code Math.max(0, ...)} clamp silently masked exactly that inconsistency;
-     * a short balance is now logged as an error for an operator instead.</p>
-     */
     private void releaseBatch(List<Reservation> batch) {
         Map<UUID, Integer> claimedByProduct = new LinkedHashMap<>();
         for (Reservation reservation : batch) {
@@ -116,12 +85,10 @@ public class ReservationCleanupScheduler {
                         + "the reserved counter is lower than the claimed holds. "
                         + "Stock accounting needs manual reconciliation.", quantity, productId);
             }
-            // Same invariant as the service-layer write paths: any mutation to
-            // Inventory.reservedQuantity must drop the cached entry, otherwise a
+
             cacheService.evictAfterCommit(productId);
         });
 
-        // one outbox row per expired reservation, in the same transaction as the
         for (Reservation reservation : batch) {
             inventoryRepository.findByProductId(reservation.getProductId()).ifPresent(inventory -> {
                 publisher.publishReleased(inventory, reservation, "PENDING");

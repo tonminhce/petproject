@@ -17,15 +17,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/**
- * F-079: the grant posture is a property of the CLIENT.
- *
- * <p>{@code isDirectAccessGrantEnabled} appended the client id to the USERS
- * endpoint. The realm answered 404 for a client id, the call threw, and the
- * posture check reported the posture as unknown on every boot: the
- * measurement never observed anything, so the migration away from ROPC had
- * no signal.</p>
- */
 class KeycloakAdminClientGrantPostureTest {
 
     private static final String TOKEN_ENDPOINT = "http://keycloak/realms/master/protocol/openid-connect/token";
@@ -89,8 +80,6 @@ class KeycloakAdminClientGrantPostureTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // Reporting "no ROPC" for a client that does not exist would hide the
-        // misconfiguration behind a reassuring posture.
         assertThatThrownBy(() -> client.isDirectAccessGrantEnabled("does-not-exist"))
                 .isInstanceOfSatisfying(KeycloakClientException.class, ex ->
                         assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND));

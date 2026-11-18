@@ -36,20 +36,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The purge GRACE BOUNDARY + H-4 REFERENCE GATE proven against the real stack:
- * real Postgres (the {@code deleted_at <= now − grace} SQL itself), real MinIO
- * objects, and the REAL {@code ProductMediaReferenceChecker} chain — the
- * checker's product call goes over live HTTP to WireMock (product-service
- * internal reference-count endpoint + client-credentials token stub), exactly
- * like production.
- *
- * <p>Contract: count 0 → purge runs (objects + rows hard-deleted); count &gt; 0
- * → skip + WARN (objects/rows survive, retried next cycle); product UNREACHABLE
- * → fail-safe skip + WARN for THAT media, and the cycle continues with the
- * next candidate. A row deleted exactly at the grace horizon is purgeable, a
- * row inside the window survives.</p>
- */
 class MediaPurgeIT extends AbstractMediaIntegrationTest {
 
     static final WireMockServer productServer = new WireMockServer(0);
@@ -59,7 +45,7 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
     static void startStubs() {
         productServer.start();
         keycloakServer.start();
-        // media's ServiceTokenProvider client_credentials endpoint (cached after first fetch)
+
         keycloakServer.stubFor(post(urlMatching("/realms/.*/protocol/openid-connect/token"))
             .willReturn(okJson(
                 "{\"access_token\":\"dummy-jwt\",\"expires_in\":3600,\"token_type\":\"Bearer\"}")));
@@ -105,8 +91,7 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
     @BeforeEach
     void wipe() {
         productServer.resetAll();
-        // native DELETE — @SQLRestriction hides soft-deleted rows from bulk
-        // JPQL too, so deleteAllInBatch would leave them behind
+
         jdbcTemplate.update("DELETE FROM media_variants");
         jdbcTemplate.update("DELETE FROM medias");
         while (true) {
@@ -136,7 +121,6 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
         List<String> keysA = mediaRepository.findObjectKeysByMediaId(UUID.fromString(idA));
         List<String> keysB = mediaRepository.findObjectKeysByMediaId(UUID.fromString(idB));
 
-        // both EXACTLY at the grace horizon (purgeable if the gate is green)
         stampAtGraceHorizon(idA);
         stampAtGraceHorizon(idB);
         stubReferenceCount(idA, 0);
@@ -144,13 +128,12 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
 
         purgeJob.purge();
 
-        // A: zero live references → objects hard-deleted, rows gone
         keysA.forEach(key -> assertThat(storage.exists(key)).as("A object %s purged", key).isFalse());
         assertThat(mediaRepository.existsIncludingDeleted(UUID.fromString(idA))).isFalse();
-        // B: still referenced → everything survives for the next cycle
+
         keysB.forEach(key -> assertThat(storage.exists(key)).as("B object %s kept", key).isTrue());
         assertThat(mediaRepository.existsIncludingDeleted(UUID.fromString(idB))).isTrue();
-        // the gate consulted product for BOTH candidates over real HTTP
+
         productServer.verify(com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
             urlEqualTo(ApiPaths.INTERNAL_PRODUCT_MEDIA_REFERENCES + "/" + idA)));
         productServer.verify(com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(
@@ -167,17 +150,16 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
 
         stampAtGraceHorizon(idA);
         stampAtGraceHorizon(idB);
-        // A: product outage (connection reset) — cannot PROVE unreferenced
+
         productServer.stubFor(get(urlEqualTo(ApiPaths.INTERNAL_PRODUCT_MEDIA_REFERENCES + "/" + idA))
             .willReturn(aResponse().withFault(com.github.tomakehurst.wiremock.http.Fault.CONNECTION_RESET_BY_PEER)));
         stubReferenceCount(idB, 0);
 
         purgeJob.purge();
 
-        // A: fail-safe keep — objects/rows survive, retried next cycle
         keysA.forEach(key -> assertThat(storage.exists(key)).as("A object %s kept", key).isTrue());
         assertThat(mediaRepository.existsIncludingDeleted(UUID.fromString(idA))).isTrue();
-        // B: the cycle completed — next candidate purged normally
+
         keysB.forEach(key -> assertThat(storage.exists(key)).as("B object %s purged", key).isFalse());
         assertThat(mediaRepository.existsIncludingDeleted(UUID.fromString(idB))).isFalse();
     }
@@ -198,17 +180,15 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
         stubReferenceCount(idA, 0);
         stubReferenceCount(idB, 0);
         Duration grace = properties.purgeGrace();
-        // A: deleted 60s AGO relative to the horizon → inside the grace, skips
+
         jdbcTemplate.update("UPDATE medias SET deleted_at = ? WHERE id = ?",
                 Timestamp.from(Instant.now().minus(grace).plusSeconds(60)), UUID.fromString(idA));
-        // B: deleted EXACTLY at the horizon when stamped (the job's cutoff is
-        // computed later, so B is at-or-past it — the <= boundary purges it)
+
         jdbcTemplate.update("UPDATE medias SET deleted_at = ? WHERE id = ?",
                 Timestamp.from(Instant.now().minus(grace)), UUID.fromString(idB));
 
         purgeJob.purge();
 
-        // B: objects hard-deleted, media row gone, variant rows cascaded
         keysB.forEach(key -> assertThat(storage.exists(key)).as("B object %s purged", key).isFalse());
         assertThat(mediaRepository.existsIncludingDeleted(UUID.fromString(idB))).isFalse();
         Integer variantRowsB = jdbcTemplate.queryForObject(
@@ -216,7 +196,6 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
                 Integer.class, idB);
         assertThat(variantRowsB).isZero();
 
-        // A: inside grace — objects remain, rows remain, purgeable next cycle
         keysA.forEach(key -> assertThat(storage.exists(key)).as("A object %s kept", key).isTrue());
         assertThat(mediaRepository.existsIncludingDeleted(UUID.fromString(idA))).isTrue();
         Integer variantRowsA = jdbcTemplate.queryForObject(
@@ -249,9 +228,7 @@ class MediaPurgeIT extends AbstractMediaIntegrationTest {
         var file = new org.springframework.mock.web.MockMultipartFile(
                 "file", "img." + format, contentType, bytes);
         Media media = mediaRepository.findById(uploadService.upload(file).id()).orElseThrow();
-        // F-063: the delete path consults the reference checker, so the
-        // fixture reports "no live reference" before the soft delete. The
-        // cases re-stub the counts afterwards for the purge phase.
+
         stubReferenceCount(media.getId().toString(), 0);
         lifecycleService.softDelete(media.getId());
         return media.getId().toString();

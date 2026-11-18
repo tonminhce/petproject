@@ -11,10 +11,6 @@ import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.util.Optional;
 
-/**
- * Uses the authenticated subject when available and falls back to the client
- * IP for public endpoints such as login and sign-up.
- */
 public final class RateLimitKeyResolver implements KeyResolver {
 
     private static final String USER_KEY_PREFIX = "user:";

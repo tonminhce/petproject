@@ -21,17 +21,6 @@ import org.springframework.web.client.RestClient;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * Promotion client for the confirm-hardening reserve/commit flow (hardening §2).
- * Mirrors {@link InventoryServiceClient}: per-call Authorization header from
- * {@link ServiceTokenProvider} — promotion endpoints are SERVICE-role.
- * <p>Error mapping: {@code reserve()} 4xx → ORDER_PROMOTION_INVALID (user-facing
- * coupon problem); {@code commit}/{@code release}/{@code releaseCommitted} 4xx →
- * rethrow the remote {@code ApiResponse.code} as a matching {@link ErrorCode}
- * when it resolves (RESERVATION_* codes must stay distinguishable for the
- * coordinator), otherwise SERVICE_UNAVAILABLE. 5xx always fails closed with
- * SERVICE_UNAVAILABLE.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -42,7 +31,7 @@ public class PromotionServiceClient {
     @Qualifier("promotionRestClient")
     private final RestClient restClient;
 
-    private final ServiceTokenProvider serviceTokenProvider;   // SERVICE-role token
+    private final ServiceTokenProvider serviceTokenProvider;
 
     private static final ParameterizedTypeReference<ApiResponse<PromotionReserveResponse>> RESERVE_RESPONSE =
         new ParameterizedTypeReference<>() {};
@@ -53,10 +42,6 @@ public class PromotionServiceClient {
     private static final ParameterizedTypeReference<ApiResponse<Void>> ERROR_BODY =
         new ParameterizedTypeReference<>() {};
 
-    /**
-     * Called by {@link com.shop.orderservice.service.impls.PricingServiceImpl} BEFORE invoking
-     * {@code reserve()} — if false and user provided a couponCode, we reject with 400 (P1-5 fix).
-     */
     public boolean isEnabled() {
         return props.promotion().isEnabled();
     }
@@ -64,7 +49,7 @@ public class PromotionServiceClient {
     @CircuitBreaker(name = "promotionService")
     public PromotionReserveResponse reserve(PromotionReserveRequest request) {
         if (!props.promotion().isEnabled()) {
-            // Caller (PricingService) should have already rejected user-supplied coupon when
+
             return new PromotionReserveResponse(null, BigDecimal.ZERO, request.orderAmount());
         }
         try {
@@ -129,13 +114,6 @@ public class PromotionServiceClient {
         }
     }
 
-    /**
-     * Rethrows a remote 4xx as a {@link BusinessException} carrying the remote
-     * {@code ApiResponse.code} when it resolves to a known {@link ErrorCode}
-     * (e.g. RESERVATION_* codes — the coordinator must be able to distinguish
-     * NOT_FOUND from INVALID_STATE). Falls back to SERVICE_UNAVAILABLE when the
-     * body or the code cannot be parsed.
-     */
     private BusinessException remoteBusinessException(HttpClientErrorException ex) {
         try {
             ApiResponse<Void> error = ex.getResponseBodyAs(ERROR_BODY);

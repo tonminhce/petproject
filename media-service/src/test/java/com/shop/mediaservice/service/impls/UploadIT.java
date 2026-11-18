@@ -73,7 +73,7 @@ class UploadIT extends AbstractMediaIntegrationTest {
     @BeforeEach
     void resetStorageAndMetrics() {
         mediaRepository.deleteAllInBatch();
-        // wipe every object so per-test object-count asserts are exact
+
         List<String> keys;
         do {
             keys = listAllKeys();
@@ -89,8 +89,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         FlakyStorage.writes = 0;
         FlakyMedia.failSaveAndFlush = false;
     }
-
-    // --- happy path: one test per allowed format ---
 
     @ParameterizedTest(name = "upload {0} → 6 variants, widths capped, WebP present, objects stored")
     @CsvSource({
@@ -109,7 +107,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(response.sizeBytes()).isEqualTo(source.length);
         assertThat(response.canonicalPath()).isEqualTo("/api/v1/medias/" + response.id());
 
-        // A WebP SOURCE collapses the two formats — 3 distinct rows then.
         int expectedFormats = "webp".equals(format) ? 1 : 2;
         assertThat(response.variants()).hasSize(3 * expectedFormats);
         assertThat(response.variants()).extracting(MediaVariantResponse::variant)
@@ -137,8 +134,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(displayWidth).isEqualTo(properties.displayWidth());
         assertThat(thumbWidth).isEqualTo(properties.thumbWidth());
 
-        // every object exists in MinIO, has the advertised byte size, and
-        // decodes as the real format at the advertised width
         for (MediaVariantResponse variant : response.variants()) {
             StorageObject object = storage.download(BUCKET, variant.objectKey());
             assertThat(object.contentLength()).isEqualTo(variant.bytes());
@@ -151,7 +146,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
             assertThat(decoded.getWidth()).isEqualTo(variant.width());
         }
 
-        // media row + variant rows committed
         var saved = mediaRepository.findById(response.id()).orElseThrow();
         assertThat(saved.getVariants()).hasSize(3 * expectedFormats);
         assertThat(saved.getVariants()).extracting(MediaVariant::getObjectKey)
@@ -176,12 +170,10 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(stored).isNotEqualTo(source);
     }
 
-    // --- validation failures ---
-
     @Test
     @DisplayName("oversize upload → 413 MED-12002, nothing stored")
     void oversizeUpload_returns413Med12002() {
-        long oversize = properties.maxUploadBytes() + 512 * 1024; // 10.5MB, passes magic+type first
+        long oversize = properties.maxUploadBytes() + 512 * 1024;
         byte[] bytes = TestImages.jpegMagicOfSize(oversize);
 
         assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", bytes)))
@@ -212,13 +204,13 @@ class UploadIT extends AbstractMediaIntegrationTest {
     @Test
     @DisplayName("corrupt magic bytes → 400 MED-12001 (junk, and lying declared type)")
     void corruptMagicBytes_returns400Med12001() {
-        // junk that matches no allowed magic
+
         assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", TestImages.nonImageBytes())))
                 .isInstanceOfSatisfying(BusinessException.class, ex -> {
                     assertThat(ex.getErrorCode()).isEqualTo("MED-12001");
                     assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
                 });
-        // valid PNG magic but declared as jpeg — a lying upload is corrupt input
+
         assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", TestImages.png(64, 64))))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                         assertThat(ex.getErrorCode()).isEqualTo("MED-12001"));
@@ -226,8 +218,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(mediaRepository.count()).isZero();
         assertThat(counter(MediaMetrics.OUTCOME_REJECTED) - rejectedCount).isEqualTo(2.0);
     }
-
-    // --- dedup ---
 
     @Test
     @DisplayName("same bytes uploaded twice → second returns existing id, duplicate:true, no new objects")
@@ -244,19 +234,17 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(second.id()).isEqualTo(first.id());
         assertThat(second.duplicate()).isTrue();
         assertThat(second.sha256()).isEqualTo(first.sha256());
-        assertThat(listAllKeys().size()).isEqualTo(objectsAfterFirst); // zero new objects
+        assertThat(listAllKeys().size()).isEqualTo(objectsAfterFirst);
         assertThat(mediaRepository.count()).isEqualTo(1);
         assertThat(counter(MediaMetrics.OUTCOME_DUPLICATE) - duplicateCount).isEqualTo(1.0);
         assertThat(counter(MediaMetrics.OUTCOME_CREATED) - createdCount).isEqualTo(1.0);
     }
 
-    // --- M1 EXIF/GPS strip proof ---
-
     @Test
     @DisplayName("JPEG with EXIF+GPS: stored original decodes with NO metadata directories")
     void exifAndGpsAreStrippedFromStoredOriginal() throws Exception {
         byte[] crafted = TestImages.jpegWithExifAndGps(1600, 900);
-        // sanity: the fixture really carries EXIF + GPS before the pipeline
+
         Metadata before = ImageMetadataReader.readMetadata(new ByteArrayInputStream(crafted));
         assertThat(before.getDirectoriesOfType(ExifIFD0Directory.class)).isNotEmpty();
         assertThat(before.getDirectoriesOfType(GpsDirectory.class)).isNotEmpty();
@@ -268,19 +256,17 @@ class UploadIT extends AbstractMediaIntegrationTest {
             Metadata after = ImageMetadataReader.readMetadata(new ByteArrayInputStream(stored));
             assertThat(after.getDirectoriesOfType(ExifIFD0Directory.class)).isEmpty();
             assertThat(after.getDirectoriesOfType(GpsDirectory.class)).isEmpty();
-            // still a decodable full-resolution image
+
             var image = ImageIO.read(new ByteArrayInputStream(stored));
             assertThat(image).isNotNull();
             assertThat(image.getWidth()).isEqualTo(1600);
         }
     }
 
-    // --- orphan cleanup on injected storage failure ---
-
     @Test
     @DisplayName("storage fails on the 2nd object write → 503 MED-12006, orphans purged, no media row")
     void storageFailureMidUploadPurgesOrphansAndPersistsNothing() {
-        FlakyStorage.failAfter = 1; // original written, first variant write fails
+        FlakyStorage.failAfter = 1;
         byte[] source = TestImages.jpeg(1200, 800);
 
         assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", source)))
@@ -289,7 +275,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
                     assertThat(ex.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
                 });
 
-        // every object the pipeline managed to write was deleted again
         assertThat(FlakyStorage.writtenKeys).isNotEmpty();
         for (String key : FlakyStorage.writtenKeys) {
             assertThat(storage.exists(key)).as("orphan %s purged", key).isFalse();
@@ -299,14 +284,12 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(counter(MediaMetrics.OUTCOME_REJECTED) - rejectedCount).isEqualTo(1.0);
     }
 
-    // --- undecodable but magic-valid (Task-3 reclassification) ---
-
     @Test
     @DisplayName("magic-valid but undecodable upload → 415 MED-12003 (not a decodable image), nothing stored")
     void undecodableButMagicValid_returns415Med12003() {
         byte[] head = new byte[32];
         head[0] = (byte) 0xFF; head[1] = (byte) 0xD8; head[2] = (byte) 0xFF; head[3] = (byte) 0xE0;
-        head[4] = 0x00; head[5] = 0x02; // invalid APP0 segment length — no codec can read the body
+        head[4] = 0x00; head[5] = 0x02;
         for (int i = 6; i < head.length; i++) {
             head[i] = 'x';
         }
@@ -321,8 +304,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThat(listAllKeys()).isEmpty();
         assertThat(counter(MediaMetrics.OUTCOME_REJECTED) - rejectedCount).isEqualTo(1.0);
     }
-
-    // --- no-upscale (D2 downscale-only contract) ---
 
     @Test
     @DisplayName("small image: no upscaling — display/thumb keep the original dims, no padding")
@@ -340,7 +321,7 @@ class UploadIT extends AbstractMediaIntegrationTest {
                     .as("%s variant of a %dx%d image is NOT upscaled", variant.variant(), width, height)
                     .isEqualTo(width);
         }
-        // the rendered bytes are exactly the original dims — no padding, no scaling
+
         for (MediaVariantResponse variant : response.variants()) {
             StorageObject object = storage.download(BUCKET, variant.objectKey());
             byte[] stored;
@@ -354,8 +335,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         }
     }
 
-    // --- persist failure after the S3 writes (orphan purge path) ---
-
     @Test
     @DisplayName("persist failure after S3 writes → objects purged (S3 delete attempted), no media row")
     void persistFailure_purgesOrphans_noRow() throws Exception {
@@ -365,15 +344,11 @@ class UploadIT extends AbstractMediaIntegrationTest {
         assertThatThrownBy(() -> uploadService.upload(multipart("image/jpeg", source)))
                 .isInstanceOf(RuntimeException.class);
 
-        // the row never persisted, and the storage-side orphan cleanup ran:
-        // every key the pipeline wrote was deleted again
         assertThat(FlakyStorage.writtenKeys).isNotEmpty();
         assertThat(FlakyStorage.deletedKeys).containsExactlyInAnyOrderElementsOf(FlakyStorage.writtenKeys);
         assertThat(listAllKeys()).isEmpty();
         assertThat(mediaRepository.count()).isZero();
     }
-
-    // --- helpers ---
 
     private MultipartFile multipart(String contentType, byte[] bytes) {
         return new MockMultipartFile("file", "upload", contentType, bytes);
@@ -403,7 +378,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         return keys;
     }
 
-    /** Test-only storage wrapper: pass-through until {@code failAfter} writes, then outage. */
     @TestConfiguration(proxyBeanMethods = false)
     static class FlakyStorageConfig {
 
@@ -494,7 +468,6 @@ class UploadIT extends AbstractMediaIntegrationTest {
         }
     }
 
-    /** Test-only media-repository wrapper: persist failure while the flag is set. */
     @TestConfiguration(proxyBeanMethods = false)
     static class FlakyMediaConfig {
 

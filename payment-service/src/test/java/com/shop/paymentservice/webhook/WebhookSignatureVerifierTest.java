@@ -99,10 +99,6 @@ class WebhookSignatureVerifierTest {
         assertTrue(WebhookSignatureVerifier.verify(SECRET, RAW_BODY, signature));
     }
 
-    // ========================================================================
-
-    // ========================================================================
-
     private static String hmacHexOf(String secret, String signedPayload) {
         return hmacHex(secret, signedPayload.getBytes(StandardCharsets.UTF_8));
     }
@@ -111,7 +107,6 @@ class WebhookSignatureVerifierTest {
         return "t=" + timestamp + ",v1=" + hexSignature;
     }
 
-    /** Case 1 (H8): Stripe-format header with correct HMAC over `t.body` is verified. */
     @Test
     void validStripeSignatureIsVerified() {
         long ts = java.time.Instant.now().getEpochSecond();
@@ -123,7 +118,6 @@ class WebhookSignatureVerifierTest {
         assertTrue(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, ts));
     }
 
-    /** Case 2 (H8): bare 64-char hex (no scheme prefix) is still accepted — sha256 prefix optional. */
     @Test
     void sha256OnlyBareHexIsVerified() {
         String signature = hmacHex(SECRET, RAW_BODY);
@@ -131,24 +125,18 @@ class WebhookSignatureVerifierTest {
         assertTrue(WebhookSignatureVerifier.verify(SECRET, RAW_BODY, signature));
     }
 
-    /** Case 3 (H8): Stripe header missing the v1= component is rejected. */
     @Test
     void v1MissingStripeHeaderIsRejected() {
         long ts = java.time.Instant.now().getEpochSecond();
         byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
-        String header = "t=" + ts;  // no v1=
+        String header = "t=" + ts;
 
         assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, ts));
     }
 
-    // ========================================================================
-
-    // ========================================================================
-
-    /** H27: a timestamp far in the past (>5 min) is rejected even with a correct v1. */
     @Test
     void expiredStripeSignatureIsRejected() {
-        long expiredTs = java.time.Instant.now().getEpochSecond() - 600L;  // 10 min ago
+        long expiredTs = java.time.Instant.now().getEpochSecond() - 600L;
         byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
         String signedPayload = expiredTs + "." + new String(utf8Body, StandardCharsets.UTF_8);
         String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
@@ -157,10 +145,9 @@ class WebhookSignatureVerifierTest {
         assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, expiredTs));
     }
 
-    /** H27: a timestamp far in the future (>5 min) is rejected even with a correct v1. */
     @Test
     void futureStripeSignatureIsRejected() {
-        long futureTs = java.time.Instant.now().getEpochSecond() + 600L;  // 10 min ahead
+        long futureTs = java.time.Instant.now().getEpochSecond() + 600L;
         byte[] utf8Body = "{\"x\":\"y\"}".getBytes(StandardCharsets.UTF_8);
         String signedPayload = futureTs + "." + new String(utf8Body, StandardCharsets.UTF_8);
         String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
@@ -177,10 +164,8 @@ class WebhookSignatureVerifierTest {
         String hex = hmacHex(SECRET, signedPayload.getBytes(StandardCharsets.UTF_8));
         String header = stripeHeader(now, hex);
 
-        // First send — within window
         assertTrue(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, now));
 
-        // Replay after window — verifier no longer trusts the timestamp
         long wayLater = now + 600L;
         assertFalse(WebhookSignatureVerifier.verify(SECRET, utf8Body, header, wayLater));
     }

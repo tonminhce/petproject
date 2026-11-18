@@ -23,7 +23,6 @@ public class OrderConfirmMetrics {
         registry.counter("order.confirm.attempts").increment();
     }
 
-    /** Call once from scheduler config (task 12) — registers the supplier, re-read per scrape. */
     public Gauge stuckGauge(Supplier<Number> value) {
         return Gauge.builder("order.commit.stuck", value).register(registry);
     }

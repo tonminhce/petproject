@@ -70,8 +70,6 @@ class RatingServiceImplModerationTest {
                 .build();
     }
 
-    // --- hide ---
-
     @Test
     void hide_setsAuditTrio_recordsHiddenEventAfterFlush() {
         Rating rating = visibleRating();
@@ -85,8 +83,6 @@ class RatingServiceImplModerationTest {
         assertThat(rating.getHiddenBy()).isEqualTo(adminId);
         assertThat(rating.getHiddenReason()).isEqualTo("Abusive comment");
 
-        // NIT #1: flush lands before record() so the snapshot aggregate sees
-        // the hidden row (count drops).
         InOrder inOrder = inOrder(ratingRepository, ratingEventService);
         inOrder.verify(ratingRepository).saveAndFlush(any(Rating.class));
         inOrder.verify(ratingEventService).record(any(Rating.class), eq(RatingAction.HIDDEN));
@@ -132,8 +128,6 @@ class RatingServiceImplModerationTest {
         verify(ratingRepository, never()).saveAndFlush(any(Rating.class));
         verifyNoInteractions(ratingEventService);
     }
-
-    // --- unhide ---
 
     @Test
     void unhide_clearsHidden_retainsAuditTrio_recordsUnhiddenAfterFlush() {

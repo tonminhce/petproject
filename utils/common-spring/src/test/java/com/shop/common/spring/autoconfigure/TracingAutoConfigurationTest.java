@@ -124,7 +124,6 @@ class TracingAutoConfigurationTest {
         }
     }
 
-    /** R1 — an arbitrary RestClient.Builder bean is enriched with no wiring of its own. */
     @Test
     void beanPostProcessorEnrichesArbitraryRestClientBuilderBean() {
         runner.withUserConfiguration(PlainBuilderConfig.class).run(ctx -> {
@@ -172,7 +171,6 @@ class TracingAutoConfigurationTest {
         }
     }
 
-    /** R1 — a builder that already carries the interceptor is NOT double-instrumented. */
     @Test
     void beanPostProcessorIsIdempotentWhenInterceptorPreAdded() {
         runner.withUserConfiguration(PreLoadedBuilderConfig.class).run(ctx -> {
@@ -186,12 +184,6 @@ class TracingAutoConfigurationTest {
         });
     }
 
-    /**
-     * Fleet boot proof — services that do not carry {@code spring-boot-restclient}
-     * on their runtime classpath (test-scope only) must still start the tracing
-     * configuration: outer-class introspection must not touch the guarded nested
-     * RestClient wiring.
-     */
     @Test
     void bootsWithoutSpringBootRestclientOnClasspath() {
         ClassLoader parent = getClass().getClassLoader();

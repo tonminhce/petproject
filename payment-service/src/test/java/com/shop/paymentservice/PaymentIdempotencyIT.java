@@ -23,16 +23,6 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * The idempotency contract of the payment create.
- *
- * <p>An idempotency key identifies the REQUEST, not the payment. Replaying the
- * payment of another request told the caller that it had created a payment for
- * its own order while the money was bound to a different one: the capture then
- * targeted the wrong payment, the confirm gate of the real order failed closed
- * and the paid order was auto-cancelled. A key reused with a different payload
- * must be a CONFLICT, never a silent replay.</p>
- */
 class PaymentIdempotencyIT extends AbstractIntegrationTest {
 
     @Autowired
@@ -67,7 +57,6 @@ class PaymentIdempotencyIT extends AbstractIntegrationTest {
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo("PAY-5003"));
 
-        // the original payment is untouched
         Payment stored = paymentRepository.findById(first.id()).orElseThrow();
         assertThat(stored.getOrderId()).isEqualTo(orderId);
         assertThat(rowsFor(key)).hasSize(1);
@@ -100,10 +89,6 @@ class PaymentIdempotencyIT extends AbstractIntegrationTest {
                 .isInstanceOf(BusinessException.class);
     }
 
-    /**
-     * Two concurrent creates with the same key must not produce two payments -
-     * and neither of them may see a raw constraint violation (a 500).
-     */
     @Test
     void twoConcurrentCreatesWithTheSameKeyProduceOnePayment() throws Exception {
         UUID orderId = UUID.randomUUID();

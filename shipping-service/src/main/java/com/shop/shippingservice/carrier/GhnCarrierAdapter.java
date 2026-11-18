@@ -11,20 +11,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * <p>Previously this adapter never contacted GHN. It derived a tracking number
- * locally from the order id ({@code "GHN" + first 10 hex chars of the order
- * id}) and returned it as if the carrier had issued it, while the injected API
- * token and shop id were never used. The shipment was therefore unknown to the
- * carrier, the tracking number was predictable, and the reconciliation
- * scheduler auto-delivered the phantom shipment after seven days - so the order
- * reached DELIVERED for a parcel that was never handed over.</p>
- * <p>Now the adapter calls the real create-shipment endpoint and stores the
- * tracking number the carrier issued. If the endpoint is not configured, the
- * application context FAILS AT STARTUP with
- * {@link ErrorCode#CARRIER_NOT_CONFIGURED} rather than silently fabricating
- * shipments.</p>
- */
 @Component
 @ConditionalOnProperty(name = "shop.shipping.carrier", havingValue = "ghn")
 @Slf4j

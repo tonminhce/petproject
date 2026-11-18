@@ -25,8 +25,7 @@ class WebhookRetryIndexIT extends AbstractIntegrationTest {
 
     @Test
     void compositeIndexColumnsAreStatusAndNextRetryAt() {
-        // pg_indexes is the simplest authoritative source; the
-        // indexdef column is the canonical CREATE INDEX statement.
+
         List<String> defs = jdbc.queryForList(
             "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_webhook_retry_status_next'",
             String.class
@@ -35,8 +34,7 @@ class WebhookRetryIndexIT extends AbstractIntegrationTest {
         String def = defs.get(0).toLowerCase();
         assertThat(def).contains("status");
         assertThat(def).contains("next_retry_at");
-        // Order matters: the WHERE clause of the retry scheduler walks (status, next_retry_at)
-        // so the leftmost column is the equality predicate and the rightmost is the range.
+
         int statusPos = def.indexOf("status");
         int nextPos = def.indexOf("next_retry_at");
         assertThat(statusPos).isLessThan(nextPos);

@@ -44,9 +44,7 @@ class FavouriteServiceImplTest {
     private final UUID productId = UUID.randomUUID();
 
     private Favourite sampleFavourite() {
-        // Note: no `.createdAt(...)` here — createdAt lives on AbstractMappedEntity
-        // (superclass) which is NOT @SuperBuilder. Subclass @Builder only exposes
-        // subclass fields. Auditing auto-fills createdAt via JpaAuditingEntityListener.
+
         return Favourite.builder()
                 .id(favouriteId)
                 .userId(userId)

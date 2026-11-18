@@ -68,7 +68,6 @@ class NotificationServiceImplTest {
         return createdEvent(EVENT_ID.toString(), "order.created.v1");
     }
 
-    /** Variant used by tests that need to override {@code eventId} or {@code eventType}. */
     private OrderLifecycleEvent createdEvent(String eventId, String eventType) {
         return new OrderLifecycleEvent(
                 eventId,
@@ -113,7 +112,6 @@ class NotificationServiceImplTest {
 
         assertThat(inserted.getStatus()).isEqualTo(NotificationStatus.PENDING);
 
-        // instance dies between insert and claim).
         assertThat(inserted.getNextRetryAt()).isNotNull();
         assertThat(inserted.getChannel()).isEqualTo(NotificationChannel.LOG);
         assertThat(inserted.getSubject()).isEqualTo("Order " + ORDER_ID + " created");
@@ -232,13 +230,11 @@ class NotificationServiceImplTest {
         CountDownLatch firstInsertHeld = new CountDownLatch(1);
 
         when(repository.existsByEventId(EVENT_ID)).thenReturn(false);
-        // First insert blocks on the latch so the other threads pile up
-        // inside insert() too — exactly the race window the unique index
-        // exists to catch.
+
         when(writer.insert(any(Notification.class))).thenAnswer(inv -> {
             int attempt = insertAttempts.incrementAndGet();
             if (attempt == 1) {
-                // hold the winning insert open until the losers have all tried
+
                 firstInsertHeld.await(5, TimeUnit.SECONDS);
                 return savedNotification();
             }
@@ -261,7 +257,7 @@ class NotificationServiceImplTest {
                     service.handle(createdEvent());
                 }));
             }
-            // give the losers time to enter insert() and fail
+
             Thread.sleep(200);
             firstInsertHeld.countDown();
             for (Future<?> f : futures) {
@@ -275,8 +271,7 @@ class NotificationServiceImplTest {
                 .as("every thread attempted insert inside the race window")
                 .isEqualTo(parallelism);
         verify(delivery, times(1)).deliver(NOTIFICATION_ID);
-        // markSending only ran for the winning thread; the rest saw no
-        // inserted row to claim.
+
         verify(writer, times(1)).markSending(eq(NOTIFICATION_ID), any(), any());
     }
 

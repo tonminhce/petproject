@@ -34,7 +34,7 @@ public class TaxServiceClient {
     @CircuitBreaker(name = "taxService")
     public TaxCalculateResponse calculate(TaxCalculateRequest request) {
         if (!props.tax().isEnabled()) {
-            // MVP default: tax disabled → return 0 (fail-closed only when enabled and down)
+
             return new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO);
         }
         try {

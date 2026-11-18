@@ -16,14 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Storefront product search (spec D5). Deliberately NOT annotated with
- * {@code @PreAuthorize} (fleet precedent P2-6, {@code OrderController} /
- * {@code StorefrontRatingController}): Keycloak users may lack an explicit
- * USER realm role, which would surface as an unhelpful 403. The fleet filter
- * chain still enforces authentication on this edge-routed path — anonymous
- * callers get 401.
- */
 @RestController
 @RequestMapping(ApiPaths.SEARCH)
 @RequiredArgsConstructor

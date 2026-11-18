@@ -57,9 +57,7 @@ class AuditActorResolverTest {
 
     @Test
     void kc26MachineTokenShapeResolvesToAuthorizedPartyNotUser() {
-        // Final-review F3: the KC26 live probe proved client_credentials tokens
-        // carry clientId=None, azp=<client>, sub=<service-account-uuid> — the
-        // sub must not mislabel the machine caller as a user.
+
         login(Map.of(
                 "sub", "b7c1f9a2-1111-4c3d-8e2f-9a8b7c6d5e4f",
                 "azp", "order-service",
@@ -74,8 +72,7 @@ class AuditActorResolverTest {
 
     @Test
     void interactiveUserTokenWithAzpStillResolvesToSubject() {
-        // azp names the authorized party on USER tokens too — only the absence
-        // of a session marker makes it a service identity.
+
         login(Map.of(
                 "sub", "3f6d2f4e-8e7a-4a1b-9c0d-123456789abc",
                 "azp", "ecommerce-client",

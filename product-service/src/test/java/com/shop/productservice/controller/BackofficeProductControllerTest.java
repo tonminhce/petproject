@@ -50,23 +50,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Security matrix for GET /api/v1/backoffice/products — the SERVICE+ADMIN
- * paged full-snapshot list that search-service reindex streams from (F2 STEP
- * 0, verify-purchase-added-to-order precedent). The response must carry the
- * FULL detail mapping — the storefront summary is NOT acceptable for the
- * reindex source (missing brandName/categoryTitle/updatedAt/description).
- *
- * <p>C13 fix — the ADMIN-gated human CRUD (POST/PUT/DELETE) moved here from
- * the storefront ProductController; its binding/validation/audit-expectation
- * tests migrated with it and target the backoffice path.</p>
- */
 @WebMvcTest(value = BackofficeProductController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-// I18nAutoConfiguration = the fleet MessageSource (messages/messages EN+VI) —
-// the WebMvcTest slice otherwise ships Boot's empty basename-"messages" bean,
-// so the H-2 constraint's {product.media.clear.conflict} could not interpolate.
+
 @Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, I18nAutoConfiguration.class})
 class BackofficeProductControllerTest {
 
@@ -81,7 +68,6 @@ class BackofficeProductControllerTest {
 
     private static final UUID ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    /** Every snapshot field the reindex (spec D2/D3) needs, populated. */
     private ProductDetailResponse sample() {
         return new ProductDetailResponse(
             ID, "iPhone 15", "iphone-15", "Apple smartphone", "IP15-001",
@@ -108,8 +94,6 @@ class BackofficeProductControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
-    // --- authorized ---
-
     @Test
     void findAll_serviceRole_returns200() throws Exception {
         when(productService.findAllDetail(any(ProductFilter.class), any(Pageable.class)))
@@ -128,7 +112,7 @@ class BackofficeProductControllerTest {
         mockMvc.perform(get("/api/v1/backoffice/products").with(admin()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            // FULL field coverage — every D2 snapshot field must survive the wire
+
             .andExpect(jsonPath("$.data.content[0].id").value(ID.toString()))
             .andExpect(jsonPath("$.data.content[0].title").value("iPhone 15"))
             .andExpect(jsonPath("$.data.content[0].slug").value("iphone-15"))
@@ -162,8 +146,6 @@ class BackofficeProductControllerTest {
             refEq(new ProductFilter(null, null, ProductStatus.ACTIVE)),
             refEq(PageRequest.of(3, com.shop.common.core.constants.PageableConstant.MAX_PAGE_SIZE)));
     }
-
-    // --- C13: ADMIN write surface migrated from the storefront controller ---
 
     @Test
     void create_withInvalidDto_returns400() throws Exception {
@@ -199,9 +181,7 @@ class BackofficeProductControllerTest {
 
     @Test
     void create_unknownMediaId_mapsTo404WithMed12004AndCommonI18nMessage() throws Exception {
-        // Media epic spec D5/D6: the write-time gate rejects with MED-12004 —
-        // the code is defined in common-core and the message resolves from the
-        // COMMON i18n bundle (media.not_found) — no product-local key needed.
+
         when(productService.create(any()))
             .thenThrow(BusinessException.of(ErrorCode.MEDIA_NOT_FOUND));
 
@@ -219,8 +199,6 @@ class BackofficeProductControllerTest {
             .andExpect(jsonPath("$.code").value("MED-12004"))
             .andExpect(jsonPath("$.message").value("Media not found"));
     }
-
-    // --- H-2: explicit clearMediaId on PUT (binding + validation) ---
 
     @Test
     void update_clearMediaIdTrue_bindsExplicitClearToService() throws Exception {
@@ -267,10 +245,6 @@ class BackofficeProductControllerTest {
     @Test
     void update_clearFlagTogetherWithMediaId_conflictingInput_rejected400() throws Exception {
 
-        // validation rejects it on the common 400 channel (ERR-0422-V) with
-        // the interpolated i18n message (both bundle texts name the flag; the
-        // rendered locale depends on the request — see ProductI18nKeysTest
-        // pinning the EN+VI keys).
         mockMvc.perform(put("/api/v1/backoffice/products/{id}", ID)
                 .with(admin())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -289,8 +263,6 @@ class BackofficeProductControllerTest {
         verify(productService).update(eq(ID), captor.capture());
         return captor.getValue();
     }
-
-    // --- security matrix ---
 
     @Test
     void findAll_customerRole_returns403() throws Exception {
