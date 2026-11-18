@@ -4,6 +4,7 @@ import com.shop.authservice.dto.request.AddressCreateRequest;
 import com.shop.authservice.dto.request.AddressUpdateRequest;
 import com.shop.authservice.dto.response.AddressResponse;
 import com.shop.authservice.service.AddressService;
+import com.shop.authservice.service.UserService;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.security.jwt.AuthenticatedUser;
 import jakarta.validation.Valid;
@@ -30,17 +31,18 @@ import java.util.UUID;
 public class AddressController {
 
     private final AddressService addressService;
+    private final UserService userService;
 
     @GetMapping
     public ApiResponse<List<AddressResponse>> getMyAddresses() {
-        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
+        UUID userId = userService.resolvePlatformUserId(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(addressService.getUserAddresses(userId));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<AddressResponse> createAddress(@Valid @RequestBody AddressCreateRequest request) {
-        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
+        UUID userId = userService.resolvePlatformUserId(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(addressService.createAddress(userId, request), "Address created successfully");
     }
 
@@ -48,20 +50,20 @@ public class AddressController {
     public ApiResponse<AddressResponse> updateAddress(
             @PathVariable UUID id,
             @Valid @RequestBody AddressUpdateRequest request) {
-        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
+        UUID userId = userService.resolvePlatformUserId(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(addressService.updateAddress(userId, id, request), "Address updated successfully");
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAddress(@PathVariable UUID id) {
-        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
+        UUID userId = userService.resolvePlatformUserId(AuthenticatedUser.requireCurrent().id());
         addressService.deleteAddress(userId, id);
     }
 
     @PutMapping("/{id}/default")
     public ApiResponse<AddressResponse> setDefaultAddress(@PathVariable UUID id) {
-        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
+        UUID userId = userService.resolvePlatformUserId(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(addressService.setDefaultAddress(userId, id), "Default address updated successfully");
     }
 }

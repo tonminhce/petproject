@@ -1,15 +1,20 @@
 package com.shop.gateway.ratelimit;
 
 import com.shop.gateway.filter.EdgeRateLimitProperties;
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.SocketOptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -86,5 +91,52 @@ class RedisEdgeRateLimiterTest {
         Thread.sleep(1_500L);
         var afterRefill = limiter.acquire("SEARCH", "198.51.100.5", 60).block();
         assertThat(afterRefill.allowed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("the refill is computed from the Redis clock and never from the gateway clock")
+    void theRefillIsComputedFromTheRedisClock() {
+        assertThat(RedisEdgeRateLimiter.TOKEN_BUCKET_SCRIPT).contains("redis.call('TIME')");
+        assertThat(RedisEdgeRateLimiter.TOKEN_BUCKET_SCRIPT).doesNotContain("now = tonumber(ARGV");
+    }
+
+    @Test
+    @DisplayName("a bucket stored in the past refills against the Redis clock")
+    void aBucketStoredInThePastRefillsAgainstTheRedisClock() {
+        var properties = new EdgeRateLimitProperties(true, 60, 60);
+        var limiter = limiter(properties);
+        var redisNow = redis.getConnectionFactory().getReactiveConnection()
+                .serverCommands().time(java.util.concurrent.TimeUnit.SECONDS).block();
+
+        redis.opsForValue().set("gateway:edge-rate-limit:SEARCH:198.51.100.9:tokens", "0").block();
+        redis.opsForValue()
+                .set("gateway:edge-rate-limit:SEARCH:198.51.100.9:timestamp", Long.toString(redisNow - 60))
+                .block();
+
+        var decision = limiter.acquire("SEARCH", "198.51.100.9", 60).block();
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.remaining()).isEqualTo(59);
+    }
+
+    @Test
+    @DisplayName("an unreachable Redis is reported as an outage instead of an error")
+    void anUnreachableRedisIsReportedAsAnOutage() {
+        var clientConfiguration = LettuceClientConfiguration.builder()
+                .clientOptions(ClientOptions.builder()
+                        .socketOptions(SocketOptions.builder().connectTimeout(Duration.ofMillis(500)).build())
+                        .build())
+                .build();
+        var connectionFactory = new LettuceConnectionFactory(
+                new RedisStandaloneConfiguration("127.0.0.1", 1), clientConfiguration);
+        connectionFactory.afterPropertiesSet();
+        var unreachableRedis = new ReactiveStringRedisTemplate(connectionFactory);
+        var limiter = new RedisEdgeRateLimiter(unreachableRedis, new EdgeRateLimitProperties(true, 10, 60));
+
+        var decision = limiter.acquire("SEARCH", "198.51.100.9", 10).block();
+
+        assertThat(decision).isNotNull();
+        assertThat(decision.isOutage()).isTrue();
+        assertThat(decision.allowed()).isFalse();
     }
 }

@@ -7,7 +7,9 @@ import com.shop.gateway.filter.ClientIpResolver;
 import com.shop.gateway.filter.EdgeRateLimitProperties;
 import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import com.shop.gateway.filter.RateLimitFilter;
+import com.shop.gateway.filter.TrustedProxyPolicy;
 import com.shop.gateway.ratelimit.EdgeRateLimiter;
+import com.shop.gateway.ratelimit.RateLimitOutageGuard;
 import com.shop.gateway.ratelimit.RateLimitProperties;
 import com.shop.gateway.ratelimit.RedisEdgeRateLimiter;
 import org.springframework.context.annotation.Bean;
@@ -19,8 +21,13 @@ import tools.jackson.databind.ObjectMapper;
 public class EdgeFiltersConfiguration {
 
     @Bean
-    public ClientIpResolver clientIpResolver(final RateLimitProperties properties) {
-        return new ClientIpResolver(properties.trustedProxyHops());
+    public TrustedProxyPolicy trustedProxyPolicy(final TrustedProxyProperties properties) {
+        return new TrustedProxyPolicy(properties.cidrs(), properties.hops());
+    }
+
+    @Bean
+    public ClientIpResolver clientIpResolver(final TrustedProxyPolicy trustedProxyPolicy) {
+        return new ClientIpResolver(trustedProxyPolicy);
     }
 
     @Bean
@@ -45,8 +52,9 @@ public class EdgeFiltersConfiguration {
     public RateLimitFilter edgeRateLimitFilter(final EdgeRateLimitProperties properties,
                                                final GatewayErrorResponseWriter errorResponseWriter,
                                                final ClientIpResolver clientIpResolver,
-                                               final EdgeRateLimiter edgeRateLimiter) {
-        return new RateLimitFilter(properties, errorResponseWriter, clientIpResolver, edgeRateLimiter);
+                                               final EdgeRateLimiter edgeRateLimiter,
+                                               final RateLimitOutageGuard outageGuard) {
+        return new RateLimitFilter(properties, errorResponseWriter, clientIpResolver, edgeRateLimiter, outageGuard);
     }
 
     @Bean

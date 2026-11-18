@@ -22,6 +22,8 @@ public interface UserService {
 
     UserResponse findById(UUID userId);
 
+    UUID resolvePlatformUserId(String identityProviderUserId);
+
     UserResponse findByUsername(String userName);
 
     Page<UserResponse> findAllUsers(int page, int size, String sortBy, String sortOrder);

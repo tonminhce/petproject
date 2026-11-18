@@ -182,6 +182,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UUID resolvePlatformUserId(String identityProviderUserId) {
+        return userRepository.findByKeycloakUserId(identityProviderUserId)
+                .map(User::getId)
+                .orElseThrow(() -> BusinessException.notFound("auth.user.not.found.for.user.id", identityProviderUserId));
+    }
+
+    @Override
     @LogPerformance(title = "List users")
     @Transactional(readOnly = true)
     public Page<UserResponse> findAllUsers(int page, int size, String sortBy, String sortOrder) {

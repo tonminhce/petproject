@@ -1,7 +1,10 @@
 package com.shop.gateway.config;
 
 import com.shop.gateway.constant.ServiceRoute;
+import com.shop.gateway.filter.GatewayErrorResponseWriter;
+import com.shop.gateway.ratelimit.RateLimitOutageGuard;
 import com.shop.gateway.ratelimit.RateLimitProperties;
+import com.shop.gateway.ratelimit.RouteRateLimitFilter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
@@ -13,19 +16,25 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RoutesConfig {
 
-    private final RateLimiter rateLimiter;
+    private final RateLimiter<?> rateLimiter;
     private final KeyResolver keyResolver;
     private final RateLimitProperties rateLimitProperties;
     private final RouteTargetProperties routeTargetProperties;
+    private final GatewayErrorResponseWriter errorResponseWriter;
+    private final RateLimitOutageGuard outageGuard;
 
     public RoutesConfig(@Qualifier("gatewayRateLimiter") final RateLimiter<?> rateLimiter,
                         final KeyResolver keyResolver,
                         final RateLimitProperties rateLimitProperties,
-                        final RouteTargetProperties routeTargetProperties) {
+                        final RouteTargetProperties routeTargetProperties,
+                        final GatewayErrorResponseWriter errorResponseWriter,
+                        final RateLimitOutageGuard outageGuard) {
         this.rateLimiter = rateLimiter;
         this.keyResolver = keyResolver;
         this.rateLimitProperties = rateLimitProperties;
         this.routeTargetProperties = routeTargetProperties;
+        this.errorResponseWriter = errorResponseWriter;
+        this.outageGuard = outageGuard;
     }
 
     @Bean
@@ -35,11 +44,8 @@ public class RoutesConfig {
             routesBuilder.route(route.id(), spec -> {
                 final var routeSpec = spec.path(route.path());
                 if (rateLimitProperties.enabled()) {
-                    routeSpec.filters(filters -> filters.requestRateLimiter(config -> config
-                            .setRateLimiter(rateLimiter)
-                            .setKeyResolver(keyResolver)
-                            .setDenyEmptyKey(true)
-                            .setEmptyKeyStatus("429")));
+                    routeSpec.filters(filters -> filters.filter(new RouteRateLimitFilter(
+                            route.id(), rateLimiter, keyResolver, rateLimitProperties, errorResponseWriter, outageGuard)));
                 }
                 return routeSpec.uri(routeTargetProperties.resolve(route.serviceName(), route.uri()));
             });

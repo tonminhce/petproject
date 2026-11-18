@@ -11,6 +11,8 @@ import com.shop.inventoryservice.dto.response.ReservationResponse;
 import com.shop.inventoryservice.constant.ReservationStatus;
 import com.shop.inventoryservice.service.InventoryService;
 import com.shop.inventoryservice.service.ReservationService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -18,10 +20,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import com.shop.common.security.service.ServiceCallerGuard;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -43,6 +49,27 @@ class InventoryControllerTest {
 
     private final UUID productId = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private final UUID reservationId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+    @BeforeEach
+    void authenticateOrderServiceCaller() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(orderServiceToken(), List.of()));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private static Jwt orderServiceToken() {
+        return Jwt.withTokenValue("inventory-controller-test-token")
+                .header("alg", "none")
+                .subject("00000000-0000-0000-0000-00000000b001")
+                .claim("azp", "order-service")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(300))
+                .build();
+    }
 
     @Test
     void findById_returns200WithApiResponse() throws Exception {
@@ -81,6 +108,16 @@ class InventoryControllerTest {
                 .content(new ObjectMapper().writeValueAsString(req)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.reservationId").value(reservationId.toString()));
+    }
+
+    @Test
+    void reserve_withoutAnAuthenticatedCallerIsRejected() throws Exception {
+        SecurityContextHolder.clearContext();
+
+        mockMvc.perform(post("/api/v1/inventory/{productId}/reserve", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(new ReserveRequest(5, null))))
+            .andExpect(status().isUnauthorized());
     }
 
     @Test

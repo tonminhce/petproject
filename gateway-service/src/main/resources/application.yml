@@ -59,12 +59,15 @@ gateway:
     - /api/v1/carts
     - /api/v1/carts/**
     - /api/v1/orders/track
+  trusted-proxy:
+    cidrs: ${GATEWAY_TRUSTED_PROXY_CIDRS:}
+    hops: ${GATEWAY_TRUSTED_PROXY_HOPS:0}
   rate-limit:
     enabled: ${GATEWAY_RATE_LIMIT_ENABLED:true}
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:100}
     burst-capacity: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:200}
     requested-tokens: ${GATEWAY_RATE_LIMIT_REQUESTED_TOKENS:1}
-    trusted-proxy-hops: ${GATEWAY_RATE_LIMIT_TRUSTED_PROXY_HOPS:1}
+    outage-policy: ${GATEWAY_RATE_LIMIT_OUTAGE_POLICY:FAIL_CLOSED}
     global:
       enabled: ${GATEWAY_GLOBAL_RATE_LIMIT_ENABLED:true}
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}

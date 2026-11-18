@@ -32,7 +32,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "server.forward-headers-strategy=NONE",
-                "gateway.rate-limit.trusted-proxy-hops=1"
+                "gateway.trusted-proxy.cidrs=127.0.0.0/8",
+                "gateway.trusted-proxy.hops=1"
         })
 class WebFluxIpAllowlistTests {
 

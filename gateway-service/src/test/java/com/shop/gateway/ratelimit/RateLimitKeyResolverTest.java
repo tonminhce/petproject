@@ -1,5 +1,7 @@
 package com.shop.gateway.ratelimit;
 
+import com.shop.gateway.filter.ClientIpResolver;
+import com.shop.gateway.filter.TrustedProxyPolicy;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -19,9 +21,13 @@ import static org.mockito.Mockito.when;
 
 class RateLimitKeyResolverTest {
 
+    private final ClientIpResolver peerOnlyResolver = new ClientIpResolver(new TrustedProxyPolicy(List.of(), 0));
+    private final ClientIpResolver trustedProxyResolver =
+            new ClientIpResolver(new TrustedProxyPolicy(List.of("10.0.0.0/8"), 1));
+
     @Test
     void authenticatedRequestUsesStableUserKey() {
-        var resolver = new RateLimitKeyResolver(0);
+        var resolver = new RateLimitKeyResolver(peerOnlyResolver);
         var exchange = exchangeWith(
                 MockServerHttpRequest.get("/api/v1/products")
                         .remoteAddress(new InetSocketAddress("192.0.2.10", 8080))
@@ -33,7 +39,7 @@ class RateLimitKeyResolverTest {
 
     @Test
     void anonymousRequestUsesRemoteIpKey() {
-        var resolver = new RateLimitKeyResolver(0);
+        var resolver = new RateLimitKeyResolver(peerOnlyResolver);
         var exchange = exchangeWith(
                 MockServerHttpRequest.get("/api/v1/auth/login")
                         .remoteAddress(new InetSocketAddress("192.0.2.10", 8080))
@@ -45,7 +51,7 @@ class RateLimitKeyResolverTest {
 
     @Test
     void anonymousAuthenticationTokenUsesRemoteIpKey() {
-        var resolver = new RateLimitKeyResolver(0);
+        var resolver = new RateLimitKeyResolver(peerOnlyResolver);
         var exchange = exchangeWith(
                 MockServerHttpRequest.get("/api/v1/auth/login")
                         .remoteAddress(new InetSocketAddress("192.0.2.10", 8080))
@@ -58,9 +64,9 @@ class RateLimitKeyResolverTest {
 
     @Test
     void trustedForwardedRequestUsesClientIp() {
-        var resolver = new RateLimitKeyResolver(1);
+        var resolver = new RateLimitKeyResolver(trustedProxyResolver);
         var request = MockServerHttpRequest.get("/api/v1/auth/login")
-                .remoteAddress(new InetSocketAddress("203.0.113.10", 8080))
+                .remoteAddress(new InetSocketAddress("10.0.0.1", 8080))
                 .header("X-Forwarded-For", "192.0.2.10")
                 .build();
         var exchange = exchangeWith(request, Mono.<Principal>empty());
@@ -69,8 +75,32 @@ class RateLimitKeyResolverTest {
     }
 
     @Test
+    void forgedForwardedHeaderFromAnUntrustedPeerUsesThePeerAddress() {
+        var resolver = new RateLimitKeyResolver(trustedProxyResolver);
+        var request = MockServerHttpRequest.get("/api/v1/auth/login")
+                .remoteAddress(new InetSocketAddress("203.0.113.10", 8080))
+                .header("X-Forwarded-For", "192.0.2.10")
+                .build();
+        var exchange = exchangeWith(request, Mono.<Principal>empty());
+
+        assertThat(resolver.resolve(exchange).block()).isEqualTo("ip:203.0.113.10");
+    }
+
+    @Test
+    void nonLiteralForwardedHeaderFromATrustedPeerUsesThePeerAddress() {
+        var resolver = new RateLimitKeyResolver(trustedProxyResolver);
+        var request = MockServerHttpRequest.get("/api/v1/auth/login")
+                .remoteAddress(new InetSocketAddress("10.0.0.1", 8080))
+                .header("X-Forwarded-For", "attacker.example")
+                .build();
+        var exchange = exchangeWith(request, Mono.<Principal>empty());
+
+        assertThat(resolver.resolve(exchange).block()).isEqualTo("ip:10.0.0.1");
+    }
+
+    @Test
     void requestWithoutIdentityOrRemoteAddressHasNoKey() {
-        var resolver = new RateLimitKeyResolver(0);
+        var resolver = new RateLimitKeyResolver(peerOnlyResolver);
         var exchange = exchangeWith(
                 MockServerHttpRequest.get("/api/v1/auth/login").build(), Mono.<Principal>empty());
 

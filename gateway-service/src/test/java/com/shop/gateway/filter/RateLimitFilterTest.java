@@ -1,7 +1,9 @@
 package com.shop.gateway.filter;
 
 import com.shop.gateway.ratelimit.EdgeRateLimiter;
+import com.shop.gateway.ratelimit.RateLimitOutageGuard;
 import com.shop.gateway.ratelimit.RedisEdgeRateLimiter;
+import com.shop.gateway.ratelimit.RedisOutagePolicy;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -35,7 +38,9 @@ class RateLimitFilterTest {
 
     private final GatewayFilterChain chain = mock(GatewayFilterChain.class);
     private final GatewayErrorResponseWriter errorWriter = new GatewayErrorResponseWriter(new ObjectMapper());
-    private final ClientIpResolver ipResolver = new ClientIpResolver(1);
+    private final ClientIpResolver ipResolver = new ClientIpResolver(new TrustedProxyPolicy(List.of(), 0));
+    private final RateLimitOutageGuard outageGuard =
+            new RateLimitOutageGuard(RedisOutagePolicy.FAIL_CLOSED, errorWriter);
 
     @BeforeAll
     static void startRedis() {
@@ -54,7 +59,7 @@ class RateLimitFilterTest {
     }
 
     private RateLimitFilter filter(final EdgeRateLimitProperties properties) {
-        return new RateLimitFilter(properties, errorWriter, ipResolver, edgeLimiter(properties));
+        return new RateLimitFilter(properties, errorWriter, ipResolver, edgeLimiter(properties), outageGuard);
     }
 
     private EdgeRateLimiter edgeLimiter(final EdgeRateLimitProperties properties) {
@@ -63,21 +68,18 @@ class RateLimitFilterTest {
 
     @Test
     void backofficeBurstExceedingLimitYields429EnvelopeAndZeroRemainingHeader() throws Exception {
-        when(chain.filter(any())).thenAnswer(invocation -> {
-            var exchange = invocation.getArgument(0, ServerWebExchange.class);
-            exchange.getResponse().setStatusCode(HttpStatus.OK);
-            return Mono.empty();
-        });
+        stubChainOk();
         var filter = filter(new EdgeRateLimitProperties(true, 3, 60));
 
         MockServerWebExchange last = null;
         for (int i = 0; i < 4; i++) {
-            last = exchange("/api/v1/backoffice/products", "203.0.113.7");
+            last = exchange("/api/v1/backoffice/products", "203.0.113.7", null);
             filter.filter(last, chain).block();
         }
 
         assertThat(last.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(last.getResponse().getHeaders().getFirst(RateLimitFilter.REMAINING_HEADER)).isEqualTo("0");
+        assertThat(last.getResponse().getHeaders().getFirst("Retry-After")).isEqualTo("20");
         var json = new ObjectMapper().readTree(last.getResponse().getBodyAsString().block());
         assertThat(json.get("success").asBoolean()).isFalse();
         assertThat(json.get("code").asText()).isEqualTo("ERR-0429");
@@ -90,7 +92,7 @@ class RateLimitFilterTest {
         stubChainOk();
         var filter = filter(new EdgeRateLimitProperties(true, 3, 60));
 
-        var first = exchange("/api/v1/backoffice/products", "203.0.113.7");
+        var first = exchange("/api/v1/backoffice/products", "203.0.113.7", null);
         filter.filter(first, chain).block();
 
         assertThat(first.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -102,11 +104,11 @@ class RateLimitFilterTest {
         stubChainOk();
         var filter = filter(new EdgeRateLimitProperties(true, 1, 2));
 
-        var first = exchange("/api/v1/search?q=shoes", "203.0.113.7");
+        var first = exchange("/api/v1/search?q=shoes", "203.0.113.7", null);
         filter.filter(first, chain).block();
-        var second = exchange("/api/v1/search?q=shoes", "203.0.113.7");
+        var second = exchange("/api/v1/search?q=shoes", "203.0.113.7", null);
         filter.filter(second, chain).block();
-        var third = exchange("/api/v1/search?q=shoes", "203.0.113.7");
+        var third = exchange("/api/v1/search?q=shoes", "203.0.113.7", null);
         filter.filter(third, chain).block();
 
         assertThat(first.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -120,24 +122,56 @@ class RateLimitFilterTest {
         var filter = filter(new EdgeRateLimitProperties(true, 1, 1));
 
         for (int i = 0; i < 10; i++) {
-            var exchange = exchange("/api/v1/products", "203.0.113.7");
+            var exchange = exchange("/api/v1/products", "203.0.113.7", null);
             filter.filter(exchange, chain).block();
             assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
         }
     }
 
     @Test
-    void bucketsAreIsolatedPerIp() {
+    void bucketsAreIsolatedPerPeerAddress() {
         stubChainOk();
         var filter = filter(new EdgeRateLimitProperties(true, 1, 1));
 
-        var firstIp = exchange("/api/v1/backoffice/products", "203.0.113.7");
+        var firstIp = exchange("/api/v1/backoffice/products", "203.0.113.7", null);
         filter.filter(firstIp, chain).block();
-        var secondIp = exchange("/api/v1/backoffice/products", "203.0.113.8");
+        var secondIp = exchange("/api/v1/backoffice/products", "203.0.113.8", null);
         filter.filter(secondIp, chain).block();
 
         assertThat(firstIp.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(secondIp.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void forgedForwardedHeaderCannotSelectAnotherBucket() {
+        stubChainOk();
+        var filter = filter(new EdgeRateLimitProperties(true, 2, 60));
+
+        var first = exchange("/api/v1/backoffice/products", "203.0.113.7", null);
+        filter.filter(first, chain).block();
+        var forged = exchange("/api/v1/backoffice/products", "203.0.113.7", "10.42.0.7");
+        filter.filter(forged, chain).block();
+        var third = exchange("/api/v1/backoffice/products", "203.0.113.7", "198.51.100.9");
+        filter.filter(third, chain).block();
+
+        assertThat(first.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(forged.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(third.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @Test
+    void nonLiteralForwardedEntriesDoNotCreateNewBucketKeys() {
+        stubChainOk();
+        var filter = filter(new EdgeRateLimitProperties(true, 2, 60));
+
+        for (int index = 0; index < 5; index++) {
+            var exchange = exchange("/api/v1/backoffice/products", "203.0.113.7", "attacker-" + index + ".example");
+            filter.filter(exchange, chain).block();
+        }
+
+        var keys = redis.keys("gateway:edge-rate-limit:*").collectList().block();
+        assertThat(keys).hasSize(2);
+        assertThat(keys).allSatisfy(key -> assertThat(key).contains("gateway:edge-rate-limit:BACKOFFICE:203.0.113.7:"));
     }
 
     @Test
@@ -146,7 +180,7 @@ class RateLimitFilterTest {
         var filter = filter(new EdgeRateLimitProperties(false, 1, 1));
 
         for (int i = 0; i < 5; i++) {
-            var exchange = exchange("/api/v1/backoffice/products", "203.0.113.7");
+            var exchange = exchange("/api/v1/backoffice/products", "203.0.113.7", null);
             filter.filter(exchange, chain).block();
             assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.OK);
         }
@@ -239,22 +273,19 @@ class RateLimitFilterTest {
         });
     }
 
-    private MockServerWebExchange exchange(String path, String forwardedFor) {
+    private MockServerWebExchange exchange(String path, String peerAddress, String forwardedFor) {
         var request = MockServerHttpRequest.get("http://gateway.local" + path)
-                .remoteAddress(new InetSocketAddress(101));
+                .remoteAddress(new InetSocketAddress(peerAddress, 101));
         if (forwardedFor != null) {
             request.header("X-Forwarded-For", forwardedFor);
         }
         return MockServerWebExchange.from(request.build());
     }
 
-    private MockServerWebExchange encodedExchange(String rawPath, String forwardedFor) {
+    private MockServerWebExchange encodedExchange(String rawPath, String peerAddress) {
         var request = MockServerHttpRequest.method(org.springframework.http.HttpMethod.GET,
                         java.net.URI.create("http://gateway.local" + rawPath))
-                .remoteAddress(new InetSocketAddress(101));
-        if (forwardedFor != null) {
-            request.header("X-Forwarded-For", forwardedFor);
-        }
+                .remoteAddress(new InetSocketAddress(peerAddress, 101));
         return MockServerWebExchange.from(request.build());
     }
 }

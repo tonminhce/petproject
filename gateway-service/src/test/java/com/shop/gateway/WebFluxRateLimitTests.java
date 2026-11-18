@@ -10,6 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistrar;
@@ -72,6 +75,17 @@ class WebFluxRateLimitTests {
                 .baseUrl("http://localhost:" + port)
                 .responseTimeout(Duration.ofSeconds(10))
                 .build();
+        flushRateLimitBuckets();
+    }
+
+    private void flushRateLimitBuckets() {
+        var factory = new LettuceConnectionFactory(
+                new RedisStandaloneConfiguration(REDIS.getHost(), REDIS.getFirstMappedPort()));
+        factory.afterPropertiesSet();
+        ReactiveRedisConnectionFactory connectionFactory = factory;
+        var connection = connectionFactory.getReactiveConnection();
+        connection.serverCommands().flushDb().block();
+        factory.destroy();
     }
 
     @Test
@@ -91,6 +105,7 @@ class WebFluxRateLimitTests {
                 .expectStatus().isEqualTo(429)
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectHeader().valueEquals("X-RateLimit-Remaining", "0")
+                .expectHeader().valueEquals("Retry-After", "20")
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false)
                 .jsonPath("$.code").isEqualTo("ERR-0429")
@@ -124,6 +139,7 @@ class WebFluxRateLimitTests {
                 .exchange()
                 .expectStatus().isEqualTo(429)
                 .expectHeader().valueEquals("X-RateLimit-Remaining", "0")
+                .expectHeader().valueEquals("Retry-After", "12")
                 .expectBody()
                 .jsonPath("$.code").isEqualTo("ERR-0429");
     }
@@ -140,7 +156,7 @@ class WebFluxRateLimitTests {
     }
 
     @Test
-    void bucketsAreIsolatedPerClientIp() {
+    void theForgedForwardedHeaderSharesTheBucketOfThePeerAddress() {
         client.get().uri("/api/v1/backoffice/products")
                 .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
                 .header("X-Forwarded-For", "203.0.113.11")
@@ -160,7 +176,26 @@ class WebFluxRateLimitTests {
                 .header("X-Forwarded-For", "203.0.113.12")
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().valueEquals("X-RateLimit-Remaining", "2");
+                .expectHeader().valueEquals("X-RateLimit-Remaining", "0");
+    }
+
+    @Test
+    void aForgedForwardedHeaderCannotOpenANewBucket() {
+        for (int i = 1; i <= 3; i++) {
+            client.get().uri("/api/v1/backoffice/products")
+                    .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
+                    .header("X-Forwarded-For", "10.42.0." + i)
+                    .exchange()
+                    .expectStatus().isOk();
+        }
+
+        client.get().uri("/api/v1/backoffice/products")
+                .header(HttpHeaders.AUTHORIZATION, ADMIN_TOKEN)
+                .header("X-Forwarded-For", "10.42.0.4")
+                .exchange()
+                .expectStatus().isEqualTo(429)
+                .expectHeader().valueEquals("X-RateLimit-Remaining", "0")
+                .expectHeader().valueEquals("Retry-After", "20");
     }
 
     @TestConfiguration

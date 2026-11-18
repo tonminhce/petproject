@@ -15,11 +15,13 @@ import java.util.Map;
 public final class GatewayErrorResponseWriter {
 
     static final String RATE_LIMITED_MESSAGE_EN = "Too many requests. Please slow down.";
+    static final String SERVICE_UNAVAILABLE_MESSAGE_EN = "The rate limiter is unavailable. Please retry later.";
     static final String ACCESS_DENIED_MESSAGE_EN = "You do not have permission to access this resource.";
     static final String BAD_REQUEST_MESSAGE_EN = "Malformed request path.";
 
     private static final Map<ErrorCode, String> EN_MESSAGES = Map.of(
             ErrorCode.TOO_MANY_REQUESTS, RATE_LIMITED_MESSAGE_EN,
+            ErrorCode.SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE_MESSAGE_EN,
             ErrorCode.ACCESS_DENIED, ACCESS_DENIED_MESSAGE_EN,
             ErrorCode.BAD_REQUEST, BAD_REQUEST_MESSAGE_EN);
 
@@ -32,6 +34,26 @@ public final class GatewayErrorResponseWriter {
     }
 
     public Mono<Void> write(final ServerWebExchange exchange, final ErrorCode errorCode) {
+        return writeEnvelope(exchange, errorCode);
+    }
+
+    public Mono<Void> writeRateLimited(final ServerWebExchange exchange, final int retryAfterSeconds) {
+        applyRateLimitHeaders(exchange, retryAfterSeconds);
+        return writeEnvelope(exchange, ErrorCode.TOO_MANY_REQUESTS);
+    }
+
+    public Mono<Void> writeServiceUnavailable(final ServerWebExchange exchange, final int retryAfterSeconds) {
+        applyRateLimitHeaders(exchange, retryAfterSeconds);
+        return writeEnvelope(exchange, ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
+    private void applyRateLimitHeaders(final ServerWebExchange exchange, final int retryAfterSeconds) {
+        final var headers = exchange.getResponse().getHeaders();
+        headers.set(RateLimitHeaders.REMAINING, "0");
+        headers.set(RateLimitHeaders.RETRY_AFTER, Integer.toString(Math.max(1, retryAfterSeconds)));
+    }
+
+    private Mono<Void> writeEnvelope(final ServerWebExchange exchange, final ErrorCode errorCode) {
         final var response = exchange.getResponse();
         response.setStatusCode(errorCode.getHttpStatus());
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);

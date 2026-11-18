@@ -16,6 +16,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Optional;
 
 public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
 
@@ -83,19 +84,16 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isAllowed(final String clientIp) {
-        if (!isLiteralAddress(clientIp)) {
+        final Optional<String> canonical = LiteralIpAddress.canonicalize(clientIp);
+        if (canonical.isEmpty()) {
             return false;
         }
         try {
-            final InetAddress address = InetAddress.getByName(clientIp);
+            final InetAddress address = InetAddress.getByName(canonical.get());
             return rules.stream().anyMatch(rule -> rule.matches(new InetSocketAddress(address, 0)));
         } catch (final UnknownHostException e) {
             return false;
         }
-    }
-
-    private static boolean isLiteralAddress(final String value) {
-        return value.matches("[0-9a-fA-F.:]+");
     }
 
     private static IpSubnetFilterRule parseCidr(final String cidr) {

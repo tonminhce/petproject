@@ -31,7 +31,7 @@ class AdminIpAllowlistFilterTest {
     void setUp() {
         chain = mock(GatewayFilterChain.class);
         errorWriter = new GatewayErrorResponseWriter(new ObjectMapper());
-        ipResolver = new ClientIpResolver(1);
+        ipResolver = new ClientIpResolver(new TrustedProxyPolicy(List.of("127.0.0.0/8"), 1));
         when(chain.filter(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> {
             var exchange = invocation.getArgument(0, ServerWebExchange.class);
             exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.OK);
@@ -89,6 +89,19 @@ class AdminIpAllowlistFilterTest {
 
         assertThat(exchange.getResponse().getStatusCode())
                 .isEqualTo(org.springframework.http.HttpStatus.OK);
+    }
+
+    @Test
+    void forgedForwardedHeaderFromAnUntrustedPeerIsIgnored() {
+        var untrustedPeerResolver = new ClientIpResolver(new TrustedProxyPolicy(List.of("10.0.0.0/8"), 1));
+        var filter = new AdminIpAllowlistFilter(
+                new AdminIpAllowlistProperties(List.of("203.0.113.0/24")), errorWriter, untrustedPeerResolver);
+        var exchange = exchange("/api/v1/backoffice/products", "203.0.113.7");
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -285,7 +298,7 @@ class AdminIpAllowlistFilterTest {
 
     private MockServerWebExchange exchange(String path, String forwardedFor) {
         var request = MockServerHttpRequest.get("http://gateway.local" + path)
-                .remoteAddress(new InetSocketAddress(101));
+                .remoteAddress(new InetSocketAddress("127.0.0.1", 101));
         if (forwardedFor != null) {
             request.header("X-Forwarded-For", forwardedFor);
         }
@@ -295,7 +308,7 @@ class AdminIpAllowlistFilterTest {
     private MockServerWebExchange encodedExchange(String rawPath, String forwardedFor) {
         var request = MockServerHttpRequest.method(org.springframework.http.HttpMethod.GET,
                         java.net.URI.create("http://gateway.local" + rawPath))
-                .remoteAddress(new InetSocketAddress(101));
+                .remoteAddress(new InetSocketAddress("127.0.0.1", 101));
         if (forwardedFor != null) {
             request.header("X-Forwarded-For", forwardedFor);
         }

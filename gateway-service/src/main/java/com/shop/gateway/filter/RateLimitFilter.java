@@ -4,6 +4,7 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.gateway.constant.ServiceRoute;
 import com.shop.gateway.ratelimit.EdgeRateLimitDecision;
 import com.shop.gateway.ratelimit.EdgeRateLimiter;
+import com.shop.gateway.ratelimit.RateLimitOutageGuard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -16,7 +17,7 @@ import java.util.List;
 
 public final class RateLimitFilter implements GlobalFilter, Ordered {
 
-    static final String REMAINING_HEADER = "X-RateLimit-Remaining";
+    static final String REMAINING_HEADER = RateLimitHeaders.REMAINING;
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
@@ -28,16 +29,19 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
     private final GatewayErrorResponseWriter errorResponseWriter;
     private final ClientIpResolver clientIpResolver;
     private final EdgeRateLimiter rateLimiter;
+    private final RateLimitOutageGuard outageGuard;
     private final List<String> backofficePrefixes;
 
     public RateLimitFilter(final EdgeRateLimitProperties properties,
                            final GatewayErrorResponseWriter errorResponseWriter,
                            final ClientIpResolver clientIpResolver,
-                           final EdgeRateLimiter rateLimiter) {
+                           final EdgeRateLimiter rateLimiter,
+                           final RateLimitOutageGuard outageGuard) {
         this.properties = properties;
         this.errorResponseWriter = errorResponseWriter;
         this.clientIpResolver = clientIpResolver;
         this.rateLimiter = rateLimiter;
+        this.outageGuard = outageGuard;
         this.backofficePrefixes = ServiceRoute.backofficeRoutes().map(ServiceRoute::prefix).toList();
     }
 
@@ -61,16 +65,19 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
                 ? properties.backofficeRequestsPerMinute()
                 : properties.searchRequestsPerMinute();
         return rateLimiter.acquire(scope.name(), clientIp, requestsPerMinute)
-                .flatMap(decision -> applyDecision(exchange, chain, decision, rawPath));
+                .flatMap(decision -> applyDecision(exchange, chain, decision, rawPath, requestsPerMinute));
     }
 
     private Mono<Void> applyDecision(final ServerWebExchange exchange,
                                       final GatewayFilterChain chain,
                                       final EdgeRateLimitDecision decision,
-                                      final String rawPath) {
+                                      final String rawPath,
+                                      final int requestsPerMinute) {
+        if (decision.isOutage()) {
+            return outageGuard.handle(exchange, retryAfterSeconds(requestsPerMinute), () -> chain.filter(exchange));
+        }
         if (!decision.allowed()) {
-            exchange.getResponse().getHeaders().set(REMAINING_HEADER, "0");
-            return errorResponseWriter.write(exchange, ErrorCode.TOO_MANY_REQUESTS);
+            return errorResponseWriter.writeRateLimited(exchange, retryAfterSeconds(requestsPerMinute));
         }
         exchange.getResponse().getHeaders().set(REMAINING_HEADER, Long.toString(decision.remaining()));
         if (RequestPathGuard.isEncoded(rawPath)) {
@@ -83,6 +90,10 @@ public final class RateLimitFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return FilterOrder.RATE_LIMIT;
+    }
+
+    private int retryAfterSeconds(final int requestsPerMinute) {
+        return (int) Math.max(1, Math.ceil(60.0d / requestsPerMinute));
     }
 
     private Scope scopeFor(final String path) {

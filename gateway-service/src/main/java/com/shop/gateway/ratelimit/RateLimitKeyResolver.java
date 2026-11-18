@@ -1,32 +1,23 @@
 package com.shop.gateway.ratelimit;
 
+import com.shop.gateway.filter.ClientIpResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
-import org.springframework.cloud.gateway.support.ipresolver.XForwardedRemoteAddressResolver;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.net.InetSocketAddress;
 import java.security.Principal;
-import java.util.Optional;
 
 public final class RateLimitKeyResolver implements KeyResolver {
 
     private static final String USER_KEY_PREFIX = "user:";
     private static final String IP_KEY_PREFIX = "ip:";
 
-    private final int trustedProxyHops;
-    private final Optional<XForwardedRemoteAddressResolver> forwardedAddressResolver;
+    private final ClientIpResolver clientIpResolver;
 
-    public RateLimitKeyResolver(final int trustedProxyHops) {
-        if (trustedProxyHops < 0) {
-            throw new IllegalArgumentException("trustedProxyHops must be >= 0");
-        }
-        this.trustedProxyHops = trustedProxyHops;
-        this.forwardedAddressResolver = trustedProxyHops == 0
-                ? Optional.empty()
-                : Optional.of(XForwardedRemoteAddressResolver.maxTrustedIndex(trustedProxyHops));
+    public RateLimitKeyResolver(final ClientIpResolver clientIpResolver) {
+        this.clientIpResolver = clientIpResolver;
     }
 
     @Override
@@ -47,17 +38,10 @@ public final class RateLimitKeyResolver implements KeyResolver {
     }
 
     private Mono<String> resolveIpKey(final ServerWebExchange exchange) {
-        InetSocketAddress remoteAddress = forwardedAddressResolver
-                .map(resolver -> resolver.resolve(exchange))
-                .orElseGet(() -> exchange.getRequest().getRemoteAddress());
-
-        return Mono.justOrEmpty(remoteAddress)
-                .map(this::hostAddress)
-                .filter(host -> !host.isBlank())
-                .map(host -> IP_KEY_PREFIX + host);
-    }
-
-    private String hostAddress(final InetSocketAddress address) {
-        return address.getAddress() == null ? address.getHostString() : address.getAddress().getHostAddress();
+        final String address = clientIpResolver.resolve(exchange);
+        if (address.isBlank() || ClientIpResolver.UNKNOWN_IP.equals(address)) {
+            return Mono.empty();
+        }
+        return Mono.just(IP_KEY_PREFIX + address);
     }
 }

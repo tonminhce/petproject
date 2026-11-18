@@ -2,8 +2,10 @@ package com.shop.common.security.service;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.common.security.jwt.JwtClaimExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -18,12 +20,7 @@ public class ServiceCallerGuard {
 
     public void requireCaller(String... allowedClientIds) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return;
-        }
-        if (!authentication.isAuthenticated()) {
-            throw BusinessException.of(ErrorCode.FORBIDDEN, "caller is not authenticated");
-        }
+        requireEstablishedPrincipal(authentication);
         if (hasHumanAdminRole(authentication)) {
             return;
         }
@@ -41,9 +38,24 @@ public class ServiceCallerGuard {
 
     public String clientIdOf(Authentication authentication) {
         if (authentication instanceof JwtAuthenticationToken jwtAuthentication) {
-            return jwtAuthentication.getToken().getClaimAsString("azp");
+            return JwtClaimExtractor.authorizedParty(jwtAuthentication.getToken());
         }
         return null;
+    }
+
+    private void requireEstablishedPrincipal(Authentication authentication) {
+        if (authentication == null) {
+            log.warn("Rejected a service call with an empty security context");
+            throw BusinessException.of(ErrorCode.UNAUTHORIZED, "caller is not authenticated");
+        }
+        if (!authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            log.warn("Rejected a service call from an unauthenticated principal");
+            throw BusinessException.of(ErrorCode.UNAUTHORIZED, "caller is not authenticated");
+        }
+        if (authentication.getPrincipal() == null) {
+            log.warn("Rejected a service call whose authentication carries no principal");
+            throw BusinessException.of(ErrorCode.UNAUTHORIZED, "caller has no principal");
+        }
     }
 
     private boolean hasHumanAdminRole(Authentication authentication) {

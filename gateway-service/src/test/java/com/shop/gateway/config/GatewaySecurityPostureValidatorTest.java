@@ -1,7 +1,6 @@
 package com.shop.gateway.config;
 
 import com.shop.gateway.filter.AdminIpAllowlistProperties;
-import com.shop.gateway.ratelimit.RateLimitProperties;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -15,8 +14,8 @@ class GatewaySecurityPostureValidatorTest {
         return new GatewayProperties("http://keycloak:8080/realms/ecommerce", corsPatterns, List.of("/actuator/health"));
     }
 
-    private RateLimitProperties rateLimit(int trustedProxyHops) {
-        return new RateLimitProperties(true, 100, 200, 1, trustedProxyHops);
+    private TrustedProxyProperties trustedProxy(final int hops, final List<String> cidrs) {
+        return new TrustedProxyProperties(cidrs, hops);
     }
 
     private AdminIpAllowlistProperties allowlist(List<String> cidrs) {
@@ -25,7 +24,8 @@ class GatewaySecurityPostureValidatorTest {
 
     @Test
     void wildcardCorsOriginIsRejected() {
-        var validator = new GatewaySecurityPostureValidator(properties(List.of("*")), rateLimit(1), allowlist(List.of()), "none", false);
+        var validator = validator(properties(List.of("*")), trustedProxy(0, List.of()),
+                allowlist(List.of()), "none", false);
         assertThatThrownBy(validator::validate)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("allowCredentials");
@@ -33,39 +33,38 @@ class GatewaySecurityPostureValidatorTest {
 
     @Test
     void explicitCorsOriginListIsAccepted() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(1), allowlist(List.of()), "none", false);
-        validator.validate();
+        validator(trustedProxy(0, List.of()), "none", false).validate();
     }
 
     @Test
-    void zeroTrustedProxyHopsWithForwardedHeaderStrategyIsRejected() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(0), allowlist(List.of()), "framework", false);
+    void forwardedHeaderStrategyIsRejected() {
+        var validator = validator(trustedProxy(0, List.of()), "framework", false);
         assertThatThrownBy(validator::validate)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("trusted-proxy-hops");
+                .hasMessageContaining("forward-headers-strategy");
     }
 
     @Test
     void zeroTrustedProxyHopsWithNoneStrategyIsAccepted() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(0), allowlist(List.of()), "none", false);
-        validator.validate();
+        validator(trustedProxy(0, List.of()), "none", false).validate();
     }
 
     @Test
-    void oneTrustedProxyHopIsAccepted() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(1), allowlist(List.of()), "none", false);
-        validator.validate();
+    void trustedProxyHopsRequireATrustedProxyAllowlist() {
+        var validator = validator(trustedProxy(1, List.of()), "none", false);
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("trusted-proxy.cidrs");
+    }
+
+    @Test
+    void oneTrustedProxyHopWithATrustedProxyAllowlistIsAccepted() {
+        validator(trustedProxy(1, List.of("10.0.0.0/8")), "none", false).validate();
     }
 
     @Test
     void anEmptyAdminIpAllowlistIsRejectedWhenTheDeploymentRequiresIt() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(1),
-                allowlist(List.of()), "none", true);
+        var validator = validator(trustedProxy(1, List.of("10.0.0.0/8")), "none", true);
         assertThatThrownBy(validator::validate)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("ADMIN_IP_ALLOWLIST");
@@ -73,17 +72,29 @@ class GatewaySecurityPostureValidatorTest {
 
     @Test
     void aConfiguredAdminIpAllowlistIsAcceptedWhenTheDeploymentRequiresIt() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(1),
-                allowlist(List.of("203.0.113.0/24")), "none", true);
-        validator.validate();
+        validator(properties(List.of("http://localhost:3000")), trustedProxy(1, List.of("10.0.0.0/8")),
+                allowlist(List.of("203.0.113.0/24")), "none", true).validate();
     }
 
     @Test
     void anEmptyAdminIpAllowlistIsOnlyWarnedAboutWhenTheDeploymentDoesNotRequireIt() {
-        var validator = new GatewaySecurityPostureValidator(
-                properties(List.of("http://localhost:3000")), rateLimit(1),
-                allowlist(List.of()), "none", false);
-        validator.validate();
+        validator(trustedProxy(1, List.of("10.0.0.0/8")), "none", false).validate();
+    }
+
+    private GatewaySecurityPostureValidator validator(final TrustedProxyProperties trustedProxyProperties,
+                                                      final String forwardHeadersStrategy,
+                                                      final boolean requireAdminIpAllowlist) {
+        return validator(properties(List.of("http://localhost:3000")), trustedProxyProperties,
+                allowlist(List.of()), forwardHeadersStrategy, requireAdminIpAllowlist);
+    }
+
+    private GatewaySecurityPostureValidator validator(final GatewayProperties gatewayProperties,
+                                                      final TrustedProxyProperties trustedProxyProperties,
+                                                      final AdminIpAllowlistProperties adminIpAllowlistProperties,
+                                                      final String forwardHeadersStrategy,
+                                                      final boolean requireAdminIpAllowlist) {
+        return new GatewaySecurityPostureValidator(
+                gatewayProperties, trustedProxyProperties,
+                adminIpAllowlistProperties, forwardHeadersStrategy, requireAdminIpAllowlist);
     }
 }

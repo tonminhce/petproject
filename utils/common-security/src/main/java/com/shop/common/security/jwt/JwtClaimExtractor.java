@@ -14,12 +14,17 @@ public final class JwtClaimExtractor {
     static final String CLAIM_FAMILY_NAME = "family_name";
     static final String CLAIM_FULL_NAME = "name";
     static final String CLAIM_ROLES = "realm_access";
+    static final String CLAIM_AUTHORIZED_PARTY = "azp";
 
     private JwtClaimExtractor() {
     }
 
     public static String subject(Jwt jwt) {
         return jwt.getSubject();
+    }
+
+    public static String authorizedParty(Jwt jwt) {
+        return stringClaim(jwt, CLAIM_AUTHORIZED_PARTY).orElse("");
     }
 
     public static String email(Jwt jwt) {

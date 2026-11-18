@@ -33,7 +33,7 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<UserResponse> updateCurrentUser(
             @Valid @RequestBody UpdateUserRequest request) {
-        UUID userId = UUID.fromString(AuthenticatedUser.requireCurrent().id());
+        UUID userId = userService.resolvePlatformUserId(AuthenticatedUser.requireCurrent().id());
         return ApiResponse.ok(userService.update(userId, request));
     }
 
@@ -48,7 +48,7 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<Void> deleteCurrentUser() {
         AuthenticatedUser current = AuthenticatedUser.requireCurrent();
-        UUID userId = UUID.fromString(current.id());
+        UUID userId = userService.resolvePlatformUserId(current.id());
         userService.delete(userId, current.username());
         return ApiResponse.message("User deleted successfully");
     }

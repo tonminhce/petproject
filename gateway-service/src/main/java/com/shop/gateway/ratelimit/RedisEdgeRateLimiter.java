@@ -8,7 +8,6 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import reactor.core.publisher.Mono;
 
-import java.time.Instant;
 import java.util.List;
 
 public final class RedisEdgeRateLimiter implements EdgeRateLimiter {
@@ -17,11 +16,11 @@ public final class RedisEdgeRateLimiter implements EdgeRateLimiter {
 
     private static final String KEY_PREFIX = "gateway:edge-rate-limit:";
 
-    private static final String TOKEN_BUCKET_SCRIPT = """
+    static final String TOKEN_BUCKET_SCRIPT = """
             local capacity = tonumber(ARGV[1])
             local rate = tonumber(ARGV[2])
-            local now = tonumber(ARGV[3])
-            local requested = tonumber(ARGV[4])
+            local requested = tonumber(ARGV[3])
+            local now = tonumber(redis.call('TIME')[1])
 
             local stored = redis.call('get', KEYS[1])
             local refreshed = redis.call('get', KEYS[2])
@@ -63,24 +62,25 @@ public final class RedisEdgeRateLimiter implements EdgeRateLimiter {
     @Override
     public Mono<EdgeRateLimitDecision> acquire(final String scope, final String clientIp, final int requestsPerMinute) {
         final double rate = requestsPerMinute / 60.0d;
-        final long now = Instant.now().getEpochSecond();
         final List<String> keys = List.of(
                 KEY_PREFIX + scope + ":" + clientIp + ":tokens",
                 KEY_PREFIX + scope + ":" + clientIp + ":timestamp");
         return redis.execute(TOKEN_BUCKET, keys,
                         Integer.toString(requestsPerMinute),
                         Double.toString(rate),
-                        Long.toString(now),
                         "1")
                 .next()
                 .map(this::toDecision)
-                .doOnError(error -> log.error("Edge rate limiter failed for scope {} - the budget of this "
-                        + "client cannot be metered", scope, error));
+                .defaultIfEmpty(EdgeRateLimitDecision.outage())
+                .onErrorResume(error -> {
+                    log.error("Edge rate limiter unavailable for scope {}", scope, error);
+                    return Mono.just(EdgeRateLimitDecision.outage());
+                });
     }
 
     private EdgeRateLimitDecision toDecision(final List<?> result) {
         if (result == null || result.size() < 2) {
-            return EdgeRateLimitDecision.rejected();
+            return EdgeRateLimitDecision.outage();
         }
         final boolean allowed = asLong(result.get(0)) == 1L;
         final long remaining = asLong(result.get(1));

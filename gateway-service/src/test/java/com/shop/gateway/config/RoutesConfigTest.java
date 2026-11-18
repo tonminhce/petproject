@@ -1,14 +1,17 @@
 package com.shop.gateway.config;
 
+import com.shop.gateway.filter.GatewayErrorResponseWriter;
+import com.shop.gateway.ratelimit.RateLimitOutageGuard;
 import com.shop.gateway.ratelimit.RateLimitProperties;
+import com.shop.gateway.ratelimit.RedisOutagePolicy;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webflux.autoconfigure.WebFluxProperties;
-import org.springframework.cloud.gateway.filter.factory.RequestRateLimiterGatewayFilterFactory;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
 import org.springframework.cloud.gateway.handler.predicate.PathRoutePredicateFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 
@@ -19,11 +22,7 @@ class RoutesConfigTest {
 
     @Test
     void registersRateLimiterOnEveryBackendRoute() {
-        var rateLimiter = mock(RateLimiter.class);
-        var keyResolver = mock(KeyResolver.class);
-        var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
-        var routeLocator = createRoutes(rateLimiterFactory, rateLimiter, keyResolver,
-                new RateLimitProperties(true, 100, 200, 1, 0));
+        var routeLocator = createRoutes(new RateLimitProperties(true, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED));
 
         var routes = routeLocator.getRoutes().collectList().block();
 
@@ -33,11 +32,7 @@ class RoutesConfigTest {
 
     @Test
     void canDisableRateLimiterWithoutRemovingRoutes() {
-        var rateLimiter = mock(RateLimiter.class);
-        var keyResolver = mock(KeyResolver.class);
-        var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
-        var routeLocator = createRoutes(rateLimiterFactory, rateLimiter, keyResolver,
-                new RateLimitProperties(false, 100, 200, 1, 0));
+        var routeLocator = createRoutes(new RateLimitProperties(false, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED));
 
         var routes = routeLocator.getRoutes().collectList().block();
 
@@ -47,11 +42,7 @@ class RoutesConfigTest {
 
     @Test
     void registersAllTwelveBackofficeRoutesWithTargetUris() {
-        var rateLimiter = mock(RateLimiter.class);
-        var keyResolver = mock(KeyResolver.class);
-        var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
-        var routeLocator = createRoutes(rateLimiterFactory, rateLimiter, keyResolver,
-                new RateLimitProperties(false, 100, 200, 1, 0));
+        var routeLocator = createRoutes(new RateLimitProperties(false, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED));
 
         var routes = routeLocator.getRoutes().collectList().block();
 
@@ -92,11 +83,7 @@ class RoutesConfigTest {
 
     @Test
     void mediaRoutesUsePluralPredicateAndMediaServiceTarget() {
-        var rateLimiter = mock(RateLimiter.class);
-        var keyResolver = mock(KeyResolver.class);
-        var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
-        var routeLocator = createRoutes(rateLimiterFactory, rateLimiter, keyResolver,
-                new RateLimitProperties(false, 100, 200, 1, 0));
+        var routeLocator = createRoutes(new RateLimitProperties(false, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED));
 
         var routes = routeLocator.getRoutes().collectList().block();
 
@@ -112,11 +99,8 @@ class RoutesConfigTest {
 
     @Test
     void targetUriOverrideWinsOverDefaultServiceUri() {
-        var rateLimiter = mock(RateLimiter.class);
-        var keyResolver = mock(KeyResolver.class);
-        var rateLimiterFactory = new RequestRateLimiterGatewayFilterFactory(rateLimiter, keyResolver);
-        var routeLocator = createRoutes(rateLimiterFactory, rateLimiter, keyResolver,
-                new RateLimitProperties(false, 100, 200, 1, 0),
+        var routeLocator = createRoutes(
+                new RateLimitProperties(false, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED),
                 Map.of("rating-service", "http://localhost:12345"));
 
         var routes = routeLocator.getRoutes().collectList().block();
@@ -127,31 +111,28 @@ class RoutesConfigTest {
         var untouched = routes.stream()
                 .filter(route -> route.getId().equals("backoffice-products"))
                 .findFirst().orElseThrow();
+
         assertThat(overridden.getUri().toString()).isEqualTo("http://localhost:12345");
         assertThat(untouched.getUri().toString()).isEqualTo("http://product-service:8086");
     }
 
     private org.springframework.cloud.gateway.route.RouteLocator createRoutes(
-            RequestRateLimiterGatewayFilterFactory rateLimiterFactory,
-            RateLimiter rateLimiter,
-            KeyResolver keyResolver,
             RateLimitProperties properties) {
-        return createRoutes(rateLimiterFactory, rateLimiter, keyResolver, properties, Map.of());
+        return createRoutes(properties, Map.of());
     }
 
     private org.springframework.cloud.gateway.route.RouteLocator createRoutes(
-            RequestRateLimiterGatewayFilterFactory rateLimiterFactory,
-            RateLimiter rateLimiter,
-            KeyResolver keyResolver,
             RateLimitProperties properties,
             Map<String, String> targetOverrides) {
         try (var context = new AnnotationConfigApplicationContext()) {
-            context.registerBean(RequestRateLimiterGatewayFilterFactory.class, () -> rateLimiterFactory);
             context.registerBean(PathRoutePredicateFactory.class,
                     () -> new PathRoutePredicateFactory(new WebFluxProperties()));
             context.refresh();
-            return new RoutesConfig(rateLimiter, keyResolver, properties,
-                    new RouteTargetProperties(targetOverrides))
+            var errorResponseWriter = new GatewayErrorResponseWriter(new ObjectMapper());
+            return new RoutesConfig(mock(RateLimiter.class), mock(KeyResolver.class), properties,
+                    new RouteTargetProperties(targetOverrides),
+                    errorResponseWriter,
+                    new RateLimitOutageGuard(RedisOutagePolicy.FAIL_CLOSED, errorResponseWriter))
                     .gatewayRoutes(new RouteLocatorBuilder(context));
         }
     }

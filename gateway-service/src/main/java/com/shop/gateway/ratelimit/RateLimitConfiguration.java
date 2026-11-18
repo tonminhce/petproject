@@ -1,5 +1,6 @@
 package com.shop.gateway.ratelimit;
 
+import com.shop.gateway.filter.ClientIpResolver;
 import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
@@ -30,8 +31,14 @@ public class RateLimitConfiguration {
     }
 
     @Bean
-    public KeyResolver gatewayRateLimitKeyResolver(final RateLimitProperties properties) {
-        return new RateLimitKeyResolver(properties.trustedProxyHops());
+    public KeyResolver gatewayRateLimitKeyResolver(final ClientIpResolver clientIpResolver) {
+        return new RateLimitKeyResolver(clientIpResolver);
+    }
+
+    @Bean
+    public RateLimitOutageGuard rateLimitOutageGuard(final RateLimitProperties properties,
+                                                     final GatewayErrorResponseWriter errorResponseWriter) {
+        return new RateLimitOutageGuard(properties.outagePolicy(), errorResponseWriter);
     }
 
     @Bean
@@ -39,7 +46,9 @@ public class RateLimitConfiguration {
             @Qualifier("globalRateLimiter") final RateLimiter<?> rateLimiter,
             final RateLimitProperties rateLimitProperties,
             final GlobalRateLimitProperties globalRateLimitProperties,
-            final GatewayErrorResponseWriter errorResponseWriter) {
-        return new GlobalRateLimitFilter(rateLimiter, rateLimitProperties, globalRateLimitProperties, errorResponseWriter);
+            final GatewayErrorResponseWriter errorResponseWriter,
+            final RateLimitOutageGuard outageGuard) {
+        return new GlobalRateLimitFilter(rateLimiter, rateLimitProperties, globalRateLimitProperties,
+                errorResponseWriter, outageGuard);
     }
 }

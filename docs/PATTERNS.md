@@ -303,3 +303,137 @@ without `SKIP LOCKED`, or processing them outside the claim tx.
    ./scripts/run-sonar-scan.sh
    ```
 5. **In your commits** cite the rule (e.g., `R2 (H32)`) in the commit body.
+
+---
+
+## R13. A payment is captured only on a confirmed provider outcome
+
+**Rule:**
+- `ProviderResult` carries an explicit outcome: `CONFIRMED`, `REQUIRES_CONFIRMATION`,
+  `REJECTED` or `INDETERMINATE`. A two-field boolean cannot express a payment that
+  exists but still awaits client confirmation, and that ambiguity is how an order was
+  confirmed as paid while no money had moved.
+- `accepted()` is true only for `CONFIRMED`.
+- A payment reaches `CAPTURED` only on a `CONFIRMED` result, and only that transition
+  publishes the capture lifecycle event.
+- A provider timeout is `INDETERMINATE`, never `REJECTED`. An indeterminate outcome
+  raises a retryable error so the caller can retry, and it never marks the payment
+  captured or failed.
+
+**Why:** A Stripe intent created with confirmation disabled is a real intent that the
+client must confirm with the client secret. Treating the creation as a capture both
+loses the revenue and lies to every downstream fulfilment step.
+
+**Citation:**
+- Stripe PaymentIntent confirmation: https://docs.stripe.com/payments/payment-intents
+- Stripe idempotent requests: https://docs.stripe.com/api/idempotent_requests
+
+**Failure mode caught:** A capture path that assigns `CAPTURED` from the result of a
+provider call that only created an intent.
+
+---
+
+## R14. An unknown payment provider is rejected, never substituted
+
+**Rule:**
+- The provider registry rejects an unknown or blank provider name with the domain
+  error. It never falls back to another provider.
+- A test-double provider is registered only when it is the configured provider, so it
+  cannot silently back a production payment.
+- The primary provider bean fails fast at startup when the configured provider is not
+  registered, rather than falling back to an arbitrary provider.
+- A refund addresses the provider that owns the original intent, using the stored
+  provider intent identifier.
+
+**Why:** A refund that executes against the wrong provider and is then marked
+`REFUNDED` returns no money to the customer while the order says it did.
+
+**Failure mode caught:** A factory that returns the default provider for an unknown
+name, combined with a provider whose every call succeeds.
+
+---
+
+## R15. The rate-limit identity comes from the transport peer
+
+**Rule:**
+- The client address is the transport peer address. A forwarding header is consulted
+  only through an explicit trusted proxy allowlist that is configuration driven.
+- When the trusted proxy configuration is absent, no forwarding header is trusted.
+- A value that enters a rate-limit key is validated as a literal address. A value that
+  is not a literal address is discarded, and the peer address is used instead.
+- No request-supplied value may trigger a name resolution.
+
+**Why:** Indexing into a forwarding header by a hop count lets the client choose its
+own rate-limit bucket and its own allowlist verdict. Resolving a non-literal entry
+blocks the reactor event loop and produces a fresh budget per request.
+
+**Citation:**
+- Spring Cloud Gateway forwarded headers:
+  https://docs.spring.io/spring-cloud-gateway/reference/webflux/globalfilters.html
+- OWASP HTTP headers: https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
+
+**Failure mode caught:** A client address derived from an index into a client supplied
+header, with no trusted proxy allowlist.
+
+---
+
+## R16. An authorization guard fails closed
+
+**Rule:**
+- A guard that cannot prove the caller raises. An empty security context is a
+  rejection, not a pass.
+- A caller that acts on behalf of another user presents an authorised-party identity
+  that the platform has bound to that user. A request parameter alone never
+  authorizes a cross-user read.
+- An administrator may act for any user; that is an explicit role check, not a default.
+
+**Why:** A guard that returns when the context is empty is an allow-by-default
+primitive, and it was used on an endpoint that exposes another user's order data.
+
+**Failure mode caught:** A guard whose happy path is "no context, no objection".
+
+---
+
+## R17. The platform user is resolved by the external identity
+
+**Rule:**
+- The identity provider identifier is the only key that resolves a platform user.
+  The generated primary key is an internal surrogate and is never taken from a token
+  claim.
+- A repository lookup by the external identifier exists for every path that starts
+  from an authenticated principal.
+
+**Why:** Two identifier spaces used interchangeably made the self-service profile and
+address surfaces unable to resolve a row, because the token subject and the generated
+primary key are different values.
+
+**Failure mode caught:** `UUID.fromString(token.getSubject())` passed into a lookup by
+the generated primary key.
+
+---
+
+## R18. The Kafka consumer mapper follows the wire contract
+
+**Rule:**
+- The consumer object mapper is configured like the application mapper, so an additive
+  change to an event contract does not break the consumers of that contract.
+- Every listener factory has a dead-letter recoverer. A factory without a recoverer
+  logs the record and skips it, which loses the event without any dead-letter record.
+- The shared consumer configuration pins the commit semantics explicitly rather than
+  inheriting a framework default.
+- The dead-letter replay endpoint requires an administrative role and validates the
+  requested topic against the topic contract. The replay keeps its committed offsets,
+  so a record is published once in total.
+
+**Why:** The default recoverer logs the failed record after the retries are exhausted.
+Without a recoverer the record is simply skipped. And a consumer that rejects unknown
+properties turns one additive field into a poison record for every consumer of that
+event.
+
+**Citation:**
+- Spring Kafka error handling:
+  https://docs.spring.io/spring-kafka/reference/kafka/annotation-error-handling.html
+- Spring Kafka topic contract enforcement is already enforced by `KafkaTopicContractTest`.
+
+**Failure mode caught:** A bare `new ObjectMapper()` on the consumer path, and a
+listener factory built without a recoverer.
