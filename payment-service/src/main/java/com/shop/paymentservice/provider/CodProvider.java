@@ -16,11 +16,11 @@ public class CodProvider implements PaymentProvider {
 
     @Override
     public ProviderResult capture(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
-        return new ProviderResult("cod_capture_" + paymentId, true);
+        return ProviderResult.confirmed("cod_capture_" + paymentId);
     }
 
     @Override
     public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        return new ProviderResult("cod_refund_" + paymentId, true);
+        return ProviderResult.confirmed("cod_refund_" + paymentId);
     }
 }

@@ -108,13 +108,11 @@ class PaymentOutboxStrandedClaimIT extends AbstractIntegrationTest {
                 Instant.now().minusSeconds(60), 10, "lease expired");
         entityManager.clear();
 
-        // The publish is still in flight - the recovery must not touch it.
         assertThat(reclaimed).isZero();
         assertThat(outboxRepo.findById(row.getId()).orElseThrow().getStatus())
                 .isEqualTo(OutboxStatus.SENDING);
     }
 
-    /** Age the claim past the lease; {@code @UpdateTimestamp} would overwrite it on save. */
     private void ageClaim(Long id, Instant when) {
         entityManager.createNativeQuery("UPDATE outbox_events SET updated_at = ?1 WHERE id = ?2")
                 .setParameter(1, when)

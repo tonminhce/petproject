@@ -43,7 +43,6 @@ class WebhookRetrySchedulerTest {
         PlatformTransactionManager txManager = new PlatformTransactionManager() {
             @Override
             public TransactionStatus getTransaction(TransactionDefinition definition) {
-                // No-op — TransactionTemplate needs a non-null status to commit.
                 return new SimpleTransactionStatus(true);
             }
             @Override
@@ -68,7 +67,7 @@ class WebhookRetrySchedulerTest {
 
     @Test
     void exponentialBackoffStopsAtMaxAttemptsAndIncrementsCounter() {
-        PaymentEvent event = newRetryable(5); // one attempt away from the cap
+        PaymentEvent event = newRetryable(5);
 
         doThrow(new RuntimeException("simulated downstream failure"))
             .when(webhookEventService).retry(any(PaymentEvent.class));
@@ -76,7 +75,6 @@ class WebhookRetrySchedulerTest {
 
         scheduler.replayOne(event);
 
-        // The 6th attempt should fail and tip the row to FAILED_PERMANENT.
         assertThat(event.getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_PERMANENT);
         assertThat(event.getRetryCount()).isEqualTo(6);
         assertThat(event.getNextRetryAt()).isNotNull();
@@ -90,14 +88,9 @@ class WebhookRetrySchedulerTest {
     void successfulReplayTransitionsToProcessedAndDoesNotIncrementCounter() {
         PaymentEvent event = newRetryable(1);
 
-        // Simulate the service flipping the status to PROCESSED (writer.completeWithEvent does this).
         doNothing().when(webhookEventService).retry(event);
-        // Because the production code path leaves PROCESSED already, the scheduler's
-        // defensive setStatus shouldn't fire — but we still allow the save call.
         when(eventRepository.save(any(PaymentEvent.class))).thenAnswer(inv -> {
             PaymentEvent arg = inv.getArgument(0);
-            // The service's retry() call left status as PROCESSED — replicate that here
-            // so the defensive branch in the scheduler isn't triggered.
             if (!PaymentEvent.STATUS_PROCESSED.equals(arg.getStatus())) {
                 arg.setStatus(PaymentEvent.STATUS_PROCESSED);
             }
@@ -115,14 +108,13 @@ class WebhookRetrySchedulerTest {
 
     @Test
     void alreadyAtMaxAttemptsMarksFailedPermanentImmediately() {
-        PaymentEvent event = newRetryable(6); // already at the cap
+        PaymentEvent event = newRetryable(6);
 
         when(eventRepository.save(any(PaymentEvent.class))).thenAnswer(inv -> inv.getArgument(0));
 
         scheduler.replayOne(event);
 
         assertThat(event.getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_PERMANENT);
-        // The webhook service must NOT be called — we're already past the cap.
         verify(webhookEventService, times(0)).retry(any(PaymentEvent.class));
         verify(eventRepository, times(1)).save(event);
 

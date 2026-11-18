@@ -1,6 +1,5 @@
 databaseChangeLog:
 
-  # H11 — outbox retention purge needs wall-clock timestamps on every row.
 
   - changeSet:
       id: 005-outbox-retention-timestamps

@@ -1,6 +1,7 @@
 package com.shop.paymentservice.provider;
 
 import com.shop.paymentservice.config.PaymentStripeProperties;
+import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.CardException;
 import com.stripe.exception.IdempotencyException;
 import com.stripe.exception.StripeException;
@@ -13,7 +14,6 @@ import com.stripe.param.RefundCreateParams;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -51,8 +51,9 @@ public class StripeProvider implements PaymentProvider {
 
     @Override
     public ProviderResult capture(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
+        long minorUnits = toMinorUnits(amount, currency);
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                .setAmount(toMinorUnits(amount, currency))
+                .setAmount(minorUnits)
                 .setCurrency(currency.toLowerCase(Locale.ROOT))
                 .setConfirm(false)
                 .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
@@ -63,56 +64,119 @@ public class StripeProvider implements PaymentProvider {
                 .build();
         try {
             PaymentIntent intent = PaymentIntent.create(params, stripeOptions(idempotencyKey));
-            return new ProviderResult(intent.getId(), true);
+            return captureOutcome(intent, minorUnits, currency);
         } catch (IdempotencyException e) {
-
-            // original intent; the adapter treats it as success, never an error.
-            log.info("Stripe replayed cached intent for idempotency key {} — treating as accepted", idempotencyKey);
-            return new ProviderResult("idempotent-" + idempotencyKey, true);
+            log.info("Stripe replayed a cached intent for idempotency key {} - the capture outcome is unknown",
+                    idempotencyKey);
+            return ProviderResult.indeterminate("idempotency-conflict");
         } catch (CardException e) {
             log.warn("Stripe card decline (paymentId={}, code={}, declineCode={})",
                     paymentId, e.getCode(), e.getDeclineCode());
-            return new ProviderResult(e.getCode() == null ? "card-error" : e.getCode(), false);
+            return ProviderResult.rejected(e.getCode() == null ? "card-error" : e.getCode());
+        } catch (ApiConnectionException e) {
+            log.error("Stripe connection failure on capture (paymentId={}) - the capture outcome is unknown",
+                    paymentId, e);
+            return ProviderResult.indeterminate("stripe-error-" + e.getClass().getSimpleName());
         } catch (StripeException e) {
             log.error("Stripe API error on capture (paymentId={}, code={}, requestId={})",
                     paymentId, e.getCode(), e.getRequestId(), e);
-            return new ProviderResult("stripe-error-"
-                    + (e.getCode() == null ? e.getClass().getSimpleName() : e.getCode()), false);
+            String eventId = "stripe-error-" + (e.getCode() == null ? e.getClass().getSimpleName() : e.getCode());
+            return isDefinitiveClientError(e)
+                    ? ProviderResult.rejected(eventId)
+                    : ProviderResult.indeterminate(eventId);
         }
     }
 
     @Override
     public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        try {
-            PaymentIntent original = findIntentByLocalPaymentId(paymentId);
-            if (original == null) {
-                return new ProviderResult("stripe-error-intent-not-found", false);
-            }
+        return refund(paymentId, amount, idempotencyKey, null);
+    }
 
+    @Override
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
+        try {
+            PaymentIntent original = resolveIntent(paymentId, providerIntentId);
+            if (original == null) {
+                return ProviderResult.rejected("stripe-error-intent-not-found");
+            }
+            long refundMinorUnits = toMinorUnits(amount, original.getCurrency());
             String refundKey = "refund-" + idempotencyKey + "-" + amount.toPlainString();
             RefundCreateParams params = RefundCreateParams.builder()
                     .setPaymentIntent(original.getId())
-                    .setAmount(toMinorUnits(amount, original.getCurrency()))
+                    .setAmount(refundMinorUnits)
                     .build();
             Refund refund = Refund.create(params, stripeOptions(refundKey));
-            return new ProviderResult(refund.getId(), true);
+            return refundOutcome(refund, refundMinorUnits);
         } catch (IdempotencyException e) {
-            log.info("Stripe replayed cached refund for idempotency key {} — treating as accepted", idempotencyKey);
-            return new ProviderResult("idempotent-" + idempotencyKey, true);
+            log.info("Stripe replayed a cached refund for idempotency key {} - the refund outcome is unknown",
+                    idempotencyKey);
+            return ProviderResult.indeterminate("idempotency-conflict");
+        } catch (CardException e) {
+            log.warn("Stripe declined the refund (paymentId={}, code={})", paymentId, e.getCode());
+            return ProviderResult.rejected(e.getCode() == null ? "card-error" : e.getCode());
+        } catch (ApiConnectionException e) {
+            log.error("Stripe connection failure on refund (paymentId={}) - the refund outcome is unknown",
+                    paymentId, e);
+            return ProviderResult.indeterminate("stripe-error-" + e.getClass().getSimpleName());
         } catch (StripeException e) {
             log.error("Stripe API error on refund (paymentId={}, code={}, requestId={})",
                     paymentId, e.getCode(), e.getRequestId(), e);
-            return new ProviderResult("stripe-error-"
-                    + (e.getCode() == null ? e.getClass().getSimpleName() : e.getCode()), false);
+            String eventId = "stripe-error-" + (e.getCode() == null ? e.getClass().getSimpleName() : e.getCode());
+            return isDefinitiveClientError(e)
+                    ? ProviderResult.rejected(eventId)
+                    : ProviderResult.indeterminate(eventId);
         }
     }
 
-    /**
-     * The port hands us only the LOCAL payment id — the Stripe intent id was
-     * never persisted (no provider-reference column). The intent was created
-     * with {@code metadata[payment_id]} at capture time, so the deterministic
-     * way back is the Stripe Search API (no 24h idempotency-cache race).
-     */
+    private ProviderResult captureOutcome(PaymentIntent intent, long expectedMinorUnits, String currency) {
+        String intentId = intent.getId();
+        String status = intent.getStatus() == null ? "" : intent.getStatus().toLowerCase(Locale.ROOT);
+        return switch (status) {
+            case "succeeded" -> confirmedCapture(intent, intentId, expectedMinorUnits, currency);
+            case "requires_payment_method", "requires_confirmation", "requires_action" ->
+                    ProviderResult.requiresConfirmation(intentId, intent.getClientSecret());
+            case "canceled" -> ProviderResult.rejected("intent-canceled");
+            default -> ProviderResult.indeterminate("intent-status-" + intent.getStatus());
+        };
+    }
+
+    private ProviderResult confirmedCapture(PaymentIntent intent, String intentId, long expectedMinorUnits,
+                                            String currency) {
+        Long reportedAmount = intent.getAmount();
+        if (reportedAmount == null || reportedAmount.longValue() != expectedMinorUnits) {
+            return ProviderResult.rejected("amount-mismatch");
+        }
+        String reportedCurrency = intent.getCurrency();
+        if (reportedCurrency == null || !reportedCurrency.equalsIgnoreCase(currency)) {
+            return ProviderResult.rejected("currency-mismatch");
+        }
+        return ProviderResult.confirmed(intentId);
+    }
+
+    private ProviderResult refundOutcome(Refund refund, long expectedMinorUnits) {
+        String status = refund.getStatus() == null ? "" : refund.getStatus().toLowerCase(Locale.ROOT);
+        if ("succeeded".equals(status)) {
+            Long reportedAmount = refund.getAmount();
+            if (reportedAmount == null || reportedAmount.longValue() != expectedMinorUnits) {
+                return ProviderResult.rejected("amount-mismatch");
+            }
+            return ProviderResult.confirmed(refund.getId());
+        }
+        if ("failed".equals(status) || "canceled".equals(status)) {
+            return ProviderResult.rejected("refund-" + status);
+        }
+        return ProviderResult.indeterminate("refund-status-" + refund.getStatus());
+    }
+
+    private PaymentIntent resolveIntent(UUID paymentId, String providerIntentId) throws StripeException {
+        if (providerIntentId != null && !providerIntentId.isBlank()) {
+            return PaymentIntent.retrieve(providerIntentId, RequestOptions.builder()
+                    .setApiKey(properties.secretKey())
+                    .build());
+        }
+        return findIntentByLocalPaymentId(paymentId);
+    }
+
     private PaymentIntent findIntentByLocalPaymentId(UUID paymentId) throws StripeException {
         PaymentIntentSearchParams searchParams = PaymentIntentSearchParams.builder()
                 .setQuery("metadata['payment_id']:'" + paymentId + "'")
@@ -122,6 +186,11 @@ public class StripeProvider implements PaymentProvider {
                 .setApiKey(properties.secretKey())
                 .build())
             .getData().stream().findFirst().orElse(null);
+    }
+
+    private boolean isDefinitiveClientError(StripeException e) {
+        Integer status = e.getStatusCode();
+        return status != null && status >= 400 && status < 500;
     }
 
     private RequestOptions stripeOptions(String idempotencyKey) {

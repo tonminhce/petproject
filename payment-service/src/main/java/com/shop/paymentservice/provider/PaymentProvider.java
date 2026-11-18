@@ -11,6 +11,51 @@ public interface PaymentProvider {
 
     ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey);
 
-    record ProviderResult(String providerEventId, boolean accepted) {
+    default ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
+        return refund(paymentId, amount, idempotencyKey);
+    }
+
+    enum Outcome {
+        CONFIRMED,
+        REQUIRES_CONFIRMATION,
+        REJECTED,
+        INDETERMINATE
+    }
+
+    record ProviderResult(String providerEventId, Outcome outcome, String clientSecret) {
+
+        public ProviderResult {
+            if (outcome == null) {
+                outcome = Outcome.INDETERMINATE;
+            }
+        }
+
+        public ProviderResult(String providerEventId, boolean accepted) {
+            this(providerEventId, accepted ? Outcome.CONFIRMED : Outcome.REJECTED, null);
+        }
+
+        public ProviderResult(String providerEventId, Outcome outcome) {
+            this(providerEventId, outcome, null);
+        }
+
+        public boolean accepted() {
+            return outcome == Outcome.CONFIRMED;
+        }
+
+        public static ProviderResult confirmed(String providerEventId) {
+            return new ProviderResult(providerEventId, Outcome.CONFIRMED, null);
+        }
+
+        public static ProviderResult requiresConfirmation(String providerEventId, String clientSecret) {
+            return new ProviderResult(providerEventId, Outcome.REQUIRES_CONFIRMATION, clientSecret);
+        }
+
+        public static ProviderResult rejected(String providerEventId) {
+            return new ProviderResult(providerEventId, Outcome.REJECTED, null);
+        }
+
+        public static ProviderResult indeterminate(String providerEventId) {
+            return new ProviderResult(providerEventId, Outcome.INDETERMINATE, null);
+        }
     }
 }

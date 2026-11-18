@@ -13,16 +13,8 @@ public interface PaymentEventRepository extends JpaRepository<PaymentEvent, UUID
 
     boolean existsByProviderAndProviderEventId(String provider, String providerEventId);
 
-    /**
-     * Used by the dedup path to distinguish "already PROCESSED" (skip) from
-     * "FAILED_RETRYABLE — let the scheduler pick it up again" (fall through).
-     */
     Optional<PaymentEvent> findFirstByProviderAndProviderEventId(String provider, String providerEventId);
 
-    /**
-     * Pull a batch of events whose retry window has elapsed, ordered oldest
-     * first so a stuck event doesn't starve siblings.
-     */
     List<PaymentEvent> findByStatusAndNextRetryAtLessThanEqualOrderByNextRetryAtAsc(
             String status, Instant cutoff, Pageable pageable);
 }

@@ -9,9 +9,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Registry and factory for payment providers supporting multi-provider dispatch.
- */
 public class PaymentProviderFactory {
 
     private final Map<String, PaymentProvider> providers = new ConcurrentHashMap<>();
@@ -20,38 +17,37 @@ public class PaymentProviderFactory {
     public PaymentProviderFactory(List<PaymentProvider> providerList, String defaultProviderName) {
         if (providerList != null) {
             for (PaymentProvider p : providerList) {
-                String name = (p != null && p.name() != null) ? p.name().toUpperCase(Locale.ROOT) : "MOCK";
-                if (p != null) {
-                    this.providers.put(name, p);
+                if (p == null || p.name() == null || p.name().isBlank()) {
+                    continue;
                 }
+                this.providers.put(p.name().trim().toUpperCase(Locale.ROOT), p);
             }
         }
-        this.defaultProviderName = (defaultProviderName != null && !defaultProviderName.isBlank())
-                ? defaultProviderName.toUpperCase(Locale.ROOT)
-                : "MOCK";
+        this.defaultProviderName = defaultProviderName == null
+                ? ""
+                : defaultProviderName.trim().toUpperCase(Locale.ROOT);
     }
 
     public PaymentProvider getProvider(String providerName) {
         if (providerName == null || providerName.isBlank()) {
-            return getDefaultProvider();
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED,
+                    "A payment provider name is required");
         }
-        PaymentProvider p = providers.get(providerName.trim().toUpperCase(Locale.ROOT));
-        if (p == null) {
-            return getDefaultProvider();
+        PaymentProvider provider = providers.get(providerName.trim().toUpperCase(Locale.ROOT));
+        if (provider == null) {
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED,
+                    "Payment provider is not registered: " + providerName);
         }
-        return p;
+        return provider;
     }
 
     public PaymentProvider getDefaultProvider() {
         PaymentProvider defaultProvider = providers.get(defaultProviderName);
-        if (defaultProvider != null) {
-            return defaultProvider;
+        if (defaultProvider == null) {
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED,
+                    "Default payment provider is not registered: " + defaultProviderName);
         }
-        if (!providers.isEmpty()) {
-            return providers.values().iterator().next();
-        }
-        throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED,
-                "No payment providers configured in the system");
+        return defaultProvider;
     }
 
     public Map<String, PaymentProvider> getAllProviders() {

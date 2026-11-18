@@ -60,11 +60,10 @@ class BackofficePaymentControllerTest {
     private PaymentResponse sampleResponse() {
         return new PaymentResponse(
             paymentId, orderId, new BigDecimal("98.00"), "USD",
-            PaymentStatus.CAPTURED, PaymentStatus.PENDING, "mock", "rcpt_12345",
+            PaymentStatus.CAPTURED, PaymentStatus.PENDING, "mock", "pi_9001", "pi_secret_9001", "rcpt_12345",
             Instant.parse("2026-08-30T08:00:00Z"));
     }
 
-    // --- ADMIN happy paths ---
 
     @Test
     void list_admin_returns200WithPagedPayments() throws Exception {
@@ -148,7 +147,6 @@ class BackofficePaymentControllerTest {
         verify(paymentService).findAllByOrderId(isNull(), eq(PageRequest.of(0, 200)));
     }
 
-    // --- security matrix ---
 
     @Test
     void list_noAuth_returns401() throws Exception {
@@ -180,7 +178,6 @@ class BackofficePaymentControllerTest {
             .andExpect(status().isForbidden());
     }
 
-    // --- business error-code mapping ---
 
     @Test
     void get_unknownPayment_returns404WithPay5002() throws Exception {

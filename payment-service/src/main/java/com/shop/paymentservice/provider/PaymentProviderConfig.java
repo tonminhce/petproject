@@ -30,25 +30,23 @@ public class PaymentProviderConfig {
         }
     }
 
-    /**
-     * Multi-provider aware: selects the provider matching
-     * {@code shop.payment.provider} as the primary injection target.
-     * Falls back to the first registered provider if no match is found.
-     */
     @Bean
     @Primary
     public PaymentProvider primary(List<PaymentProvider> all,
-            @Value("${shop.payment.provider:mock}") String defaultProviderName) {
-        String normalized = defaultProviderName.toUpperCase(Locale.ROOT);
+            @Value("${shop.payment.provider:}") String defaultProviderName) {
+        String normalized = defaultProviderName == null
+                ? ""
+                : defaultProviderName.trim().toUpperCase(Locale.ROOT);
         return all.stream()
                 .filter(p -> p.name() != null && p.name().toUpperCase(Locale.ROOT).equals(normalized))
                 .findFirst()
-                .orElse(all.get(0));
+                .orElseThrow(() -> new IllegalStateException(
+                        "Configured payment provider is not registered: " + defaultProviderName));
     }
 
     @Bean
     public PaymentProviderFactory paymentProviderFactory(List<PaymentProvider> all,
-            @Value("${shop.payment.provider:mock}") String defaultProviderName) {
+            @Value("${shop.payment.provider:}") String defaultProviderName) {
         return new PaymentProviderFactory(all, defaultProviderName);
     }
 }

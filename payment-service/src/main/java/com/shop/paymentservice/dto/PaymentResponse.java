@@ -15,6 +15,8 @@ public record PaymentResponse(
         PaymentStatus status,
         PaymentStatus previousStatus,
         String provider,
+        String providerIntentId,
+        String clientSecret,
         String receiptKey,
         Instant createdAt
 ) {
@@ -28,6 +30,8 @@ public record PaymentResponse(
                 payment.getStatus(),
                 payment.getPreviousStatus(),
                 payment.getProvider(),
+                payment.getProviderIntentId(),
+                payment.getClientSecret(),
                 payment.getReceiptKey(),
                 payment.getCreatedAt());
     }

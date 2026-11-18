@@ -23,7 +23,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 
 class StripeProviderTest {
 
@@ -56,11 +58,12 @@ class StripeProviderTest {
         intent.setStatus(status);
         intent.setClientSecret("pi_secret_client");
         intent.setCurrency("usd");
+        intent.setAmount(9800L);
         return intent;
     }
 
     @Test
-    void captureSucceededIntent_isAccepted_withIntentIdAsProviderEvent() throws Exception {
+    void captureSucceededIntent_isConfirmed_withIntentIdAsProviderEvent() throws Exception {
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class))).thenReturn(intent("pi_1", "succeeded"));
 
@@ -68,22 +71,38 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isTrue();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
         assertThat(result.providerEventId()).isEqualTo("pi_1");
     }
 
     @Test
-    void captureRequiresActionIntent_isAccepted_scaCompletesViaWebhook() throws Exception {
+    void captureSucceededIntentWithAnotherAmount_isRejected() throws Exception {
+        PaymentIntent mismatched = intent("pi_amount", "succeeded");
+        mismatched.setAmount(5000L);
+        paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
+                any(RequestOptions.class))).thenReturn(mismatched);
 
-        // client_secret is consumed by Stripe.js on the client (Phase 9), the
-        // lifecycle completes when payment_intent.succeeded arrives by webhook.
+        PaymentProvider.ProviderResult result = provider.capture(
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
+        assertThat(result.providerEventId()).isEqualTo("amount-mismatch");
+    }
+
+    @Test
+    void captureRequiresActionIntent_requiresClientConfirmation_andCarriesTheClientSecret() throws Exception {
+
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class))).thenReturn(intent("pi_2", "requires_action"));
 
         PaymentProvider.ProviderResult result = provider.capture(
                 PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
-        assertThat(result.accepted()).isTrue();
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REQUIRES_CONFIRMATION);
         assertThat(result.providerEventId()).isEqualTo("pi_2");
+        assertThat(result.clientSecret()).isEqualTo("pi_secret_client");
 
         ArgumentCaptor<PaymentIntentCreateParams> params = ArgumentCaptor.forClass(PaymentIntentCreateParams.class);
         paymentIntentStatic.verify(() -> PaymentIntent.create(params.capture(), any(RequestOptions.class)));
@@ -104,15 +123,11 @@ class StripeProviderTest {
         assertThat(params.getValue().getCurrency()).isEqualTo("usd");
         assertThat(params.getValue().getMetadata()).containsEntry("payment_id", PAYMENT_ID.toString());
         assertThat(opts.getValue().getIdempotencyKey()).isEqualTo(IDEMPOTENCY_KEY);
-        // Spec D1 — the stripe-java SDK itself pins the Stripe-Version header
-        // (Stripe.API_VERSION is final in 24.x); no per-request override exists.
         assertThat(opts.getValue().getApiKey()).isEqualTo("sk_test_123");
     }
 
     @Test
     void captureVndAmountIsZeroDecimal_noConversion() throws Exception {
-        // spec §8 — V1 currency VND is zero-decimal on Stripe: 100000 VND must
-        // be sent as 100000 minor units, not 10000000.
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class))).thenReturn(intent("pi_vnd", "requires_confirmation"));
 
@@ -125,9 +140,8 @@ class StripeProviderTest {
     }
 
     @Test
-    void captureIdempotencyConflict_returnsCachedIntentAsAccepted() throws Exception {
+    void captureIdempotencyConflict_isIndeterminate_andCarriesNoFabricatedIntentId() throws Exception {
 
-        // the adapter treats it as success, never an error.
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class)))
                 .thenThrow(new IdempotencyException("idempotency conflict", "req_1", "idempotency_error", 400));
@@ -135,8 +149,9 @@ class StripeProviderTest {
         PaymentProvider.ProviderResult result = provider.capture(
                 PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
-        assertThat(result.accepted()).isTrue();
-        assertThat(result.providerEventId()).isNotBlank();
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
+        assertThat(result.providerEventId()).isEqualTo("idempotency-conflict");
     }
 
     @Test
@@ -151,11 +166,12 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
         assertThat(result.providerEventId()).isEqualTo("card_declined");
     }
 
     @Test
-    void captureStripeInfrastructureError_mapsToRejected() throws Exception {
+    void captureStripeTimeout_isIndeterminate_notRejected() throws Exception {
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class)))
                 .thenThrow(new ApiConnectionException("network down"));
@@ -164,6 +180,7 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
         assertThat(result.providerEventId()).startsWith("stripe-error-");
     }
 
@@ -178,6 +195,7 @@ class StripeProviderTest {
         Refund created = new Refund();
         created.setId("re_1");
         created.setStatus("succeeded");
+        created.setAmount(9800L);
         refundStatic.when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
                 .thenReturn(created);
 
@@ -185,6 +203,7 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isTrue();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
         assertThat(result.providerEventId()).isEqualTo("re_1");
 
         ArgumentCaptor<RefundCreateParams> params = ArgumentCaptor.forClass(RefundCreateParams.class);
@@ -193,6 +212,33 @@ class StripeProviderTest {
         assertThat(params.getValue().getPaymentIntent()).isEqualTo("pi_orig");
         assertThat(params.getValue().getAmount()).isEqualTo(9800L);
         assertThat(opts.getValue().getIdempotencyKey()).isEqualTo("refund-" + IDEMPOTENCY_KEY + "-98.00");
+    }
+
+    @Test
+    void refundUsesTheStoredProviderIntentId_withoutSearch() throws Exception {
+        PaymentIntent stored = intent("pi_stored", "succeeded");
+        paymentIntentStatic.when(() -> PaymentIntent.retrieve(eq("pi_stored"), any(RequestOptions.class)))
+                .thenReturn(stored);
+
+        Refund created = new Refund();
+        created.setId("re_stored");
+        created.setStatus("succeeded");
+        created.setAmount(9800L);
+        refundStatic.when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
+                .thenReturn(created);
+
+        PaymentProvider.ProviderResult result = provider.refund(
+                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, "pi_stored");
+
+        assertThat(result.accepted()).isTrue();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
+        assertThat(result.providerEventId()).isEqualTo("re_stored");
+
+        ArgumentCaptor<RefundCreateParams> params = ArgumentCaptor.forClass(RefundCreateParams.class);
+        refundStatic.verify(() -> Refund.create(params.capture(), any(RequestOptions.class)));
+        assertThat(params.getValue().getPaymentIntent()).isEqualTo("pi_stored");
+        paymentIntentStatic.verify(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
+                any(RequestOptions.class)), never());
     }
 
     @Test
@@ -206,11 +252,12 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
         refundStatic.verifyNoInteractions();
     }
 
     @Test
-    void refundStripeError_mapsToRejected() throws Exception {
+    void refundStripeTimeout_isIndeterminate_notRejected() throws Exception {
         PaymentIntent original = intent("pi_orig", "succeeded");
         PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
         matches.setData(List.of(original));
@@ -223,10 +270,11 @@ class StripeProviderTest {
                 PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
     }
 
     @Test
-    void refundIdempotencyConflict_returnsCachedRefundAsAccepted() throws Exception {
+    void refundIdempotencyConflict_isIndeterminate_andCarriesNoFabricatedRefundId() throws Exception {
         PaymentIntent original = intent("pi_orig", "succeeded");
         PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
         matches.setData(List.of(original));
@@ -238,8 +286,9 @@ class StripeProviderTest {
         PaymentProvider.ProviderResult result = provider.refund(
                 PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
 
-        assertThat(result.accepted()).isTrue();
-        assertThat(result.providerEventId()).isEqualTo("idempotent-" + IDEMPOTENCY_KEY);
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
+        assertThat(result.providerEventId()).isEqualTo("idempotency-conflict");
     }
 
     @Test

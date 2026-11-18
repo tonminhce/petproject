@@ -44,10 +44,10 @@ public class MoMoProvider implements PaymentProvider {
                     + "&partnerCode=" + partnerCode;
             String signature = hmacSHA256(secretKey, rawSignature);
             log.info("Created MoMo transaction with signature for payment {}", paymentId);
-            return new ProviderResult("momo_" + orderId, true);
+            return ProviderResult.confirmed("momo_" + orderId);
         } catch (Exception ex) {
             log.error("Failed to generate MoMo transaction for payment {}", paymentId, ex);
-            return new ProviderResult("MOMO_FAILED", false);
+            return ProviderResult.rejected("MOMO_FAILED");
         }
     }
 
@@ -55,7 +55,7 @@ public class MoMoProvider implements PaymentProvider {
     public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
         String refundRef = "momo_rf_" + UUID.randomUUID().toString().substring(0, 8);
         log.info("Created MoMo refund transaction {} for payment {}", refundRef, paymentId);
-        return new ProviderResult(refundRef, true);
+        return ProviderResult.confirmed(refundRef);
     }
 
     public static String hmacSHA256(String key, String data) {

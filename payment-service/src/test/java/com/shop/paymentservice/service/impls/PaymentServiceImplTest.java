@@ -6,7 +6,9 @@ import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
 import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
+import com.shop.paymentservice.provider.MockProvider;
 import com.shop.paymentservice.provider.PaymentProvider;
+import com.shop.paymentservice.provider.PaymentProviderFactory;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.service.PaymentWriter;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -117,8 +120,9 @@ class PaymentServiceImplTest {
     void capture_pendingPayment_callsProviderWithPaymentFields() {
         Payment pending = payment(PaymentStatus.PENDING);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(provider.name()).thenReturn("mock");
         when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
-                .thenReturn(new PaymentProvider.ProviderResult("mock-evt-1", true));
+                .thenReturn(PaymentProvider.ProviderResult.confirmed("mock-evt-1"));
         when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentResponse result = service.capture(PAYMENT_ID);
@@ -130,14 +134,73 @@ class PaymentServiceImplTest {
         assertThat(result.status()).isEqualTo(PaymentStatus.CAPTURED);
         assertThat(pending.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
         assertThat(pending.getPreviousStatus()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(pending.getProviderIntentId()).isEqualTo("mock-evt-1");
+    }
+
+    @Test
+    void capture_requiresConfirmation_keepsPaymentPendingAndStoresIntentIdAndClientSecret() {
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(provider.name()).thenReturn("mock");
+        when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
+                .thenReturn(PaymentProvider.ProviderResult.requiresConfirmation("pi_1", "pi_secret_1"));
+        when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PaymentResponse result = service.capture(PAYMENT_ID);
+
+        assertThat(result.status()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(result.providerIntentId()).isEqualTo("pi_1");
+        assertThat(result.clientSecret()).isEqualTo("pi_secret_1");
+        assertThat(pending.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        assertThat(pending.getPreviousStatus()).isNull();
+        assertThat(pending.getProviderIntentId()).isEqualTo("pi_1");
+        assertThat(pending.getClientSecret()).isEqualTo("pi_secret_1");
+        verify(writer).save(pending);
+        verify(writer, never()).publishLifecycleEvent(any(Payment.class), any(String.class));
+    }
+
+    @Test
+    void capture_indeterminate_throwsRetryableErrorAndLeavesThePaymentPending() {
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(provider.name()).thenReturn("mock");
+        when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
+                .thenReturn(PaymentProvider.ProviderResult.indeterminate("stripe-timeout"));
+
+        assertThatThrownBy(() -> service.capture(PAYMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> {
+                    BusinessException failure = (BusinessException) e;
+                    assertThat(failure.getErrorCode()).isEqualTo(ErrorCode.SERVICE_UNAVAILABLE.getCode());
+                    assertThat(failure.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                });
+        assertThat(pending.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verifyNoInteractions(writer);
+    }
+
+    @Test
+    void capture_paymentOfAnUnregisteredProvider_isRejectedAndNeverFallsBackToTheDefaultProvider() {
+        PaymentProviderFactory factory = new PaymentProviderFactory(List.of(new MockProvider()), "mock");
+        PaymentServiceImpl serviceWithFactory = new PaymentServiceImpl(repository, writer, provider, factory);
+        Payment pending = payment(PaymentStatus.PENDING);
+        pending.setProvider("absent-psp");
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+
+        assertThatThrownBy(() -> serviceWithFactory.capture(PAYMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_PROVIDER_REJECTED.getCode()));
+        verifyNoInteractions(provider);
+        verifyNoInteractions(writer);
     }
 
     @Test
     void capture_providerRejected_throwsPaymentProviderRejected() {
         Payment pending = payment(PaymentStatus.PENDING);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+        when(provider.name()).thenReturn("mock");
         when(provider.capture(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY))
-                .thenReturn(new PaymentProvider.ProviderResult("card_declined", false));
+                .thenReturn(PaymentProvider.ProviderResult.rejected("card_declined"));
 
         assertThatThrownBy(() -> service.capture(PAYMENT_ID))
                 .isInstanceOf(BusinessException.class)
@@ -161,13 +224,14 @@ class PaymentServiceImplTest {
     void refund_capturedPayment_callsProvider() {
         Payment captured = payment(PaymentStatus.CAPTURED);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
-        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY))
-                .thenReturn(new PaymentProvider.ProviderResult("mock-evt-2", true));
+        when(provider.name()).thenReturn("mock");
+        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null))
+                .thenReturn(PaymentProvider.ProviderResult.confirmed("mock-evt-2"));
         when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentResponse result = service.refund(PAYMENT_ID);
 
-        verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+        verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null);
         verify(writer).save(captured);
         verify(writer).publishLifecycleEvent(captured, "payment.refunded.v1");
         assertThat(result.id()).isEqualTo(PAYMENT_ID);
@@ -177,11 +241,28 @@ class PaymentServiceImplTest {
     }
 
     @Test
+    void refund_capturedPayment_passesTheStoredProviderIntentIdToTheOwningProvider() {
+        Payment captured = payment(PaymentStatus.CAPTURED);
+        captured.setProviderIntentId("pi_stored_1");
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
+        when(provider.name()).thenReturn("mock");
+        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, "pi_stored_1"))
+                .thenReturn(PaymentProvider.ProviderResult.confirmed("mock-evt-3"));
+        when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PaymentResponse result = service.refund(PAYMENT_ID);
+
+        verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, "pi_stored_1");
+        assertThat(result.status()).isEqualTo(PaymentStatus.REFUNDED);
+    }
+
+    @Test
     void refund_providerRejected_throwsPaymentProviderRejected() {
         Payment captured = payment(PaymentStatus.CAPTURED);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
-        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY))
-                .thenReturn(new PaymentProvider.ProviderResult("refund_failed", false));
+        when(provider.name()).thenReturn("mock");
+        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null))
+                .thenReturn(PaymentProvider.ProviderResult.rejected("refund_failed"));
 
         assertThatThrownBy(() -> service.refund(PAYMENT_ID))
                 .isInstanceOf(BusinessException.class)
@@ -190,7 +271,25 @@ class PaymentServiceImplTest {
         verifyNoInteractions(writer);
     }
 
-    // --- backoffice read API ---
+    @Test
+    void refund_providerIndeterminate_throwsRetryableErrorAndLeavesThePaymentCaptured() {
+        Payment captured = payment(PaymentStatus.CAPTURED);
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
+        when(provider.name()).thenReturn("mock");
+        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null))
+                .thenReturn(PaymentProvider.ProviderResult.indeterminate("stripe-timeout"));
+
+        assertThatThrownBy(() -> service.refund(PAYMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> {
+                    BusinessException failure = (BusinessException) e;
+                    assertThat(failure.getErrorCode()).isEqualTo(ErrorCode.SERVICE_UNAVAILABLE.getCode());
+                    assertThat(failure.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                });
+        assertThat(captured.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
+        verifyNoInteractions(writer);
+    }
+
 
     @Test
     void findAllByOrderId_nullOrderId_delegatesToUnfilteredNewestFirstFinder() {

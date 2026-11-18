@@ -72,9 +72,6 @@
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot4</artifactId>
         </dependency>
-        <!-- C5 Task 1 — official Stripe SDK behind the PaymentProvider port
-             (spec D1): API versioning, error mapping (StripeException hierarchy)
-             and webhook signature verification (Webhook.constructEvent). -->
         <dependency>
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
@@ -142,10 +139,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- Task 13 — *IT classes are full-context Testcontainers suites and must
-                 run with the default `mvn test` lifecycle: keep the default surefire
-                 includes and add the IT pattern (they don't live under src/it/java,
-                 so the root `it` profile's failsafe binding never activates here). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

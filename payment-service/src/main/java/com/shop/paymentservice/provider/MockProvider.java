@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(name = "shop.payment.provider", havingValue = "mock")
 public class MockProvider implements PaymentProvider {
 
     @Override
@@ -16,11 +17,11 @@ public class MockProvider implements PaymentProvider {
 
     @Override
     public ProviderResult capture(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
-        return new ProviderResult("mock-" + UUID.randomUUID(), true);
+        return ProviderResult.confirmed("mock-" + UUID.randomUUID());
     }
 
     @Override
     public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        return new ProviderResult("mock-" + UUID.randomUUID(), true);
+        return ProviderResult.confirmed("mock-" + UUID.randomUUID());
     }
 }

@@ -9,20 +9,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The publish order of a claimed batch is the production order.
- * <p>This is a pure unit test on purpose. The end-to-end ordering assertion
- * lives in {@code PaymentOutboxRelayRecoveryIT}, but there the database
- * happens to return the rows in id order most of the time, so it cannot
- * prove the relay sorts them. This test feeds the relay the pathological
- * case directly — rows in a scrambled order — and asserts the invariant that
- * actually matters: the batch is published in ascending id order, because
- * the claim always takes the lowest pending id, so ascending id IS the
- * production order.</p>
- * <p>Without the sort, two events for one aggregate could reach the consumer
- * in the wrong order (a "refunded" event before the "captured" event it
- * compensates), leaving the consumer with the wrong final state.</p>
- */
 class PaymentOutboxRelayOrderTest {
 
     @Test

@@ -1,0 +1,28 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 009-provider-intent-reference
+      author: production-audit
+      changes:
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: provider_intent_id
+                  type: varchar(255)
+              - column:
+                  name: client_secret
+                  type: varchar(255)
+
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_provider_intent_id
+            columns:
+              - column: { name: provider_intent_id }
+
+        - createIndex:
+            tableName: payments
+            indexName: idx_payments_provider_intent
+            columns:
+              - column: { name: provider }
+              - column: { name: provider_intent_id }

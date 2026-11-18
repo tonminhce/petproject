@@ -47,9 +47,25 @@ public class PaymentServiceImpl implements PaymentService {
         this(repository, writer, defaultProvider, null);
     }
 
-    private PaymentProvider resolveProvider(String requestedProvider) {
-        if (providerFactory != null && requestedProvider != null && !requestedProvider.isBlank()) {
+    private PaymentProvider resolveProviderForNewPayment(String requestedProvider) {
+        if (requestedProvider == null || requestedProvider.isBlank()) {
+            return defaultProvider;
+        }
+        return resolveRegisteredProvider(requestedProvider);
+    }
+
+    private PaymentProvider resolveRegisteredProvider(String requestedProvider) {
+        if (requestedProvider == null || requestedProvider.isBlank()) {
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED,
+                    "A payment provider name is required");
+        }
+        if (providerFactory != null) {
             return providerFactory.getProvider(requestedProvider);
+        }
+        String wiredProviderName = defaultProvider.name();
+        if (wiredProviderName == null || !wiredProviderName.equalsIgnoreCase(requestedProvider.trim())) {
+            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED,
+                    "Payment provider is not registered: " + requestedProvider);
         }
         return defaultProvider;
     }
@@ -64,7 +80,7 @@ public class PaymentServiceImpl implements PaymentService {
             return replay(existing.get(), req);
         }
 
-        PaymentProvider provider = resolveProvider(req.provider());
+        PaymentProvider provider = resolveProviderForNewPayment(req.provider());
 
         Payment payment = Payment.builder()
                 .orderId(req.orderId())
@@ -78,25 +94,12 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             return PaymentResponse.from(writer.insertIsolated(payment));
         } catch (DataIntegrityViolationException ex) {
-            // Lost the same-key race: the unique index is the final arbiter.
-            // The raw constraint violation must never surface as a 500.
             Payment winner = repository.findByIdempotencyKey(req.idempotencyKey())
                     .orElseThrow(() -> ex);
             return replay(winner, req);
         }
     }
 
-    /**
-     * The replay of an idempotent create.
-     *
-     * <p>The key identifies the REQUEST, not the payment. Handing back the
-     * payment of another request would tell the caller that it created a
-     * payment for its own order while the money is bound to a different one:
-     * the capture then targets the wrong payment, the confirm gate of the real
-     * order fails closed, and a paid order is auto-cancelled. The stored
-     * payload is therefore compared before the replay is handed out, and a
-     * difference is a conflict (PAY-5003).</p>
-     */
     private PaymentResponse replay(Payment payment, CreatePaymentRequest req) {
         if (!samePayload(payment, req)) {
             log.warn("Idempotency key {} reused with a different payload (stored order {} amount {}, requested order {} amount {}) - refusing the replay",
@@ -106,7 +109,6 @@ public class PaymentServiceImpl implements PaymentService {
         return PaymentResponse.from(payment);
     }
 
-    /** The payment row stores the immutable payload, so it IS the request fingerprint. */
     private boolean samePayload(Payment payment, CreatePaymentRequest req) {
         return Objects.equals(payment.getOrderId(), req.orderId())
                 && Objects.equals(payment.getUserId(), req.userId())
@@ -123,17 +125,34 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.PENDING) {
             throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus());
         }
-        PaymentProvider provider = resolveProvider(payment.getProvider());
+        PaymentProvider provider = resolveRegisteredProvider(payment.getProvider());
         ProviderResult result =
                 provider.capture(payment.getId(), payment.getAmount(), payment.getCurrency(), payment.getIdempotencyKey());
-        if (!result.accepted()) {
-            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
-        }
+        return switch (result.outcome()) {
+            case CONFIRMED -> captureConfirmed(payment, result);
+            case REQUIRES_CONFIRMATION -> awaitClientConfirmation(payment, result);
+            case INDETERMINATE -> throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, result.providerEventId());
+            case REJECTED -> throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
+        };
+    }
+
+    private PaymentResponse captureConfirmed(Payment payment, ProviderResult result) {
         payment.setPreviousStatus(PaymentStatus.PENDING);
         payment.setStatus(PaymentStatus.CAPTURED);
+        if (result.providerEventId() != null && !result.providerEventId().isBlank()) {
+            payment.setProviderIntentId(result.providerEventId());
+        }
         Payment saved = writer.save(payment);
         writer.publishLifecycleEvent(saved, "payment.captured.v1");
         return PaymentResponse.from(saved);
+    }
+
+    private PaymentResponse awaitClientConfirmation(Payment payment, ProviderResult result) {
+        if (result.providerEventId() != null && !result.providerEventId().isBlank()) {
+            payment.setProviderIntentId(result.providerEventId());
+        }
+        payment.setClientSecret(result.clientSecret());
+        return PaymentResponse.from(writer.save(payment));
     }
 
     @Override
@@ -143,12 +162,18 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
         }
-        PaymentProvider provider = resolveProvider(payment.getProvider());
-        ProviderResult result =
-                provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey());
-        if (!result.accepted()) {
-            throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
-        }
+        PaymentProvider provider = resolveRegisteredProvider(payment.getProvider());
+        ProviderResult result = provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey(),
+                payment.getProviderIntentId());
+        return switch (result.outcome()) {
+            case CONFIRMED -> refundConfirmed(payment);
+            case INDETERMINATE -> throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, result.providerEventId());
+            case REQUIRES_CONFIRMATION, REJECTED ->
+                    throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
+        };
+    }
+
+    private PaymentResponse refundConfirmed(Payment payment) {
         payment.setPreviousStatus(PaymentStatus.CAPTURED);
         payment.setStatus(PaymentStatus.REFUNDED);
         Payment saved = writer.save(payment);

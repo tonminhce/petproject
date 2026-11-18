@@ -51,9 +51,6 @@ class PaymentStripePropertiesTest {
 
     @Test
     void apiVersionDriftFromSdkConstantIsDetected() {
-        // Spec D1 — the SDK pins the wire version (final Stripe.API_VERSION in
-        // 24.x); a configured pin that drifts must be surfaced, never silently
-        // accepted. Compare against the real SDK constant, not a literal.
         String sdkVersion = com.stripe.Stripe.API_VERSION;
         PaymentStripeProperties drifted = new PaymentStripeProperties(
                 "sk_test_123", "whsec_123", "1900-01-01", false);
@@ -63,7 +60,6 @@ class PaymentStripePropertiesTest {
                 "", "whsec_123", "1900-01-01", false);
         assertThat(drifted.isVersionDriftedFromSdk()).isTrue();
         assertThat(aligned.isVersionDriftedFromSdk()).isFalse();
-        // Under the mock default no Stripe call exists — drift is irrelevant.
         assertThat(blankKey.isVersionDriftedFromSdk()).isFalse();
     }
 

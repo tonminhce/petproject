@@ -15,6 +15,7 @@ public record WebhookPayload(
         BigDecimal amount,
         String currency,
         String status,
-        String providerEventId
+        String providerEventId,
+        String providerIntentId
 ) {
 }

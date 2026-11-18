@@ -46,10 +46,10 @@ public class VNPayProvider implements PaymentProvider {
             String secureHash = hmacSHA512(hashSecret, rawData);
             String paymentUrl = vnpayUrl + "?" + rawData + "&vnp_SecureHash=" + secureHash;
             log.info("Generated VNPay payment redirect URL for payment {}", paymentId);
-            return new ProviderResult(vnpTxnRef, true);
+            return ProviderResult.confirmed(vnpTxnRef);
         } catch (Exception ex) {
             log.error("Failed to generate VNPay transaction for payment {}", paymentId, ex);
-            return new ProviderResult("VNPAY_FAILED", false);
+            return ProviderResult.rejected("VNPAY_FAILED");
         }
     }
 
@@ -57,7 +57,7 @@ public class VNPayProvider implements PaymentProvider {
     public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
         String refundRef = "vnp_rf_" + UUID.randomUUID().toString().substring(0, 8);
         log.info("Created VNPay refund transaction {} for payment {}", refundRef, paymentId);
-        return new ProviderResult(refundRef, true);
+        return ProviderResult.confirmed(refundRef);
     }
 
     public static String hmacSHA512(String key, String data) {
