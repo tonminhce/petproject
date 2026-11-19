@@ -42,3 +42,13 @@ This project is indexed by GitNexus as **petproject** (16217 symbols, 38633 rela
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Tool-Call Hygiene
+
+The harness parses every tool call as JSON, so a raw double quote, a stray backslash
+or a newline inside a `command` or `pattern` value fails the whole turn. The full
+rules live in the user-global `~/.dsh/AGENTS.md`; the short version: prefer the
+native `read` / `grep` / `glob` / `edit` tools, never emit a double quote, a
+backslash or a newline inside a `bash` command, keep each command to one simple
+step, and on a JSON tool-call error resend the identical payload.
+

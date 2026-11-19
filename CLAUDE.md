@@ -63,3 +63,9 @@ g fresh # re-analyze the index
 - **MUST run quality gate before committing:** Run `./mvnw -T1C -pl <changed-module> validate` (Checkstyle in `config/checkstyle.xml`) and `./mvnw -T1C -pl utils/common-spring test` (see `docs/PATTERNS.md`).
 - **Fleet Quality Gate:** Run `./mvnw -T1C validate` to check the entire repository.
 - **SonarQube Quality Gate:** Run `./scripts/run-sonar-scan.sh` against local SonarQube Community Build.
+
+## Tool-Call Hygiene
+
+See `AGENTS.md` § Tool-Call Hygiene. A raw `"` inside a `bash` command breaks the
+tool-call JSON and fails the whole turn.
+
