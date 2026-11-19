@@ -27,11 +27,48 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Realm-import acceptance IT (production-readiness task 8): boots the SAME
+ * Keycloak image/compose command ({@code quay.io/keycloak/keycloak:26.0},
+ * {@code start-dev --import-realm}) in a FRESH container (no persistent volume —
+ * {@code --import-realm} skips import when the realm already exists), mounts the
+ * ACTUAL {@code docker/keycloak/import/ecommerce-realm.json} from the repo, and
+ * proves end-to-end that the import renders AND the service-account grants work:
+ * the confidential clients exist with service accounts enabled, each obtains a
+ * client_credentials token whose JWT claims identify the service account
+ * (preferred_username = service-account-&lt;clientId&gt;, sub = that service
+ * account's user id) AND carries the SERVICE realm role (final-review F2 —
+ * without it every SERVICE-gated internal endpoint 403s machine callers), and
+ * the public frontend client is DENIED that grant.
+ *
+ * <p>F-080: the realm file carries NO literal secret any more — every secret
+ * is a {@code ${VAR}} placeholder that the bootstrap script substitutes from
+ * the environment. The test mounts the REAL {@code entrypoint.sh} and asserts
+ * that the RENDERED secret equals the substituted value and NOT the
+ * placeholder, so a realm that would boot with a well-known secret fails
+ * here.</p>
+ *
+ * <p>Client ids/secrets are parsed from the mounted JSON file — nothing is
+ * duplicated here, so a realm-config drift fails this IT.</p>
+ *
+ * <p>SINGLETON LIFECYCLE — fleet pattern (see order-service
+ * {@code AbstractOrderServiceIT}): containers start once per JVM in a static
+ * initializer and are never stopped; the surefire fork's exit (plus Ryuk) reaps
+ * them. Docker required — plain {@code mvn test} runs this class via the module's
+ * surefire {@code *IT.java} include (order/search convention), so CI-less
+ * environments without Docker surface a clean container-start failure rather than
+ * a silent skip.</p>
+ */
 class KeycloakRealmImportIT {
 
     private static final String IMAGE = "quay.io/keycloak/keycloak:26.0";
     private static final String REALM = "ecommerce";
-
+    /**
+     * F-081: the template is mounted READ-ONLY at a path that is NOT the
+     * directory Keycloak imports from, exactly as in the compose deployment.
+     * The bootstrap script writes the substituted realm to the container-local
+     * import directory instead of overwriting the mounted source.
+     */
     private static final String TEMPLATE_CONTAINER_DIR = "/opt/keycloak/realm-template";
     private static final String IMPORT_CONTAINER_PATH = TEMPLATE_CONTAINER_DIR + "/ecommerce-realm.json";
     private static final String ENTRYPOINT_CONTAINER_PATH = TEMPLATE_CONTAINER_DIR + "/entrypoint.sh";
@@ -42,6 +79,11 @@ class KeycloakRealmImportIT {
         .connectTimeout(Duration.ofSeconds(10))
         .build();
 
+    /**
+     * The secrets the bootstrap script substitutes. They differ from every
+     * well-known literal, so a realm that shipped one would fail the
+     * assertions below.
+     */
     private static final Map<String, String> SUBSTITUTED_SECRETS = Map.of(
         "ORDER_SERVICE_CLIENT_SECRET", "it-order-secret",
         "RATING_SERVICE_CLIENT_SECRET", "it-rating-secret",
@@ -52,24 +94,32 @@ class KeycloakRealmImportIT {
         "KEYCLOAK_TEST_USER_PASSWORD", "it-test-user-password",
         "KEYCLOAK_ADMIN_USER_PASSWORD", "it-admin-user-password");
 
+    /** The real realm file, located above the module dir (works from repo root or module cwd). */
     private static final Path REALM_FILE = locateRealmImportFile();
     private static final Path ENTRYPOINT_FILE = locateEntryPointFile();
     private static final JsonNode REALM_JSON = parseUnchecked(readFile(REALM_FILE));
     private static final List<String> CONFIDENTIAL_CLIENT_IDS = confidentialClientIds(REALM_JSON);
     private static final String PUBLIC_CLIENT_ID = publicClientId(REALM_JSON);
-
+    /** The admin client of the application realm (F-078). */
     private static final String ADMIN_CLIENT_ID = "ecommerce-admin";
 
     @SuppressWarnings("resource")
     static final GenericContainer<?> keycloak = new GenericContainer<>(DockerImageName.parse(IMAGE))
         .withExposedPorts(8080)
-
+        // Same command as the compose keycloak service minus --hostname (that pins
+        // iss to the internal DNS name for inter-container calls; a mapped-port test
+        // talks to Keycloak the way an external client does, on the default host).
+        // F-080: the REAL bootstrap script runs here, exactly as in the
+        // compose deployment. It substitutes the secrets from the environment
+        // before Keycloak reads the realm file.
         .withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("sh", ENTRYPOINT_CONTAINER_PATH))
         .withCommand("start-dev", "--http-port=8080", "--import-realm")
-
+        // KC 26 bootstrap admin (compose uses the legacy KEYCLOAK_* aliases of these).
         .withEnv("KC_BOOTSTRAP_ADMIN_USERNAME", ADMIN_USER)
         .withEnv("KC_BOOTSTRAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
-
+        // F-080: the bootstrap script substitutes the secrets. Running the REAL
+        // script is the point of the test - the realm that boots here is the
+        // realm the deployment boots.
         .withEnv("ORDER_SERVICE_CLIENT_SECRET", SUBSTITUTED_SECRETS.get("ORDER_SERVICE_CLIENT_SECRET"))
         .withEnv("RATING_SERVICE_CLIENT_SECRET", SUBSTITUTED_SECRETS.get("RATING_SERVICE_CLIENT_SECRET"))
         .withEnv("SEARCH_SERVICE_CLIENT_SECRET", SUBSTITUTED_SECRETS.get("SEARCH_SERVICE_CLIENT_SECRET"))
@@ -80,7 +130,9 @@ class KeycloakRealmImportIT {
         .withEnv("KEYCLOAK_ADMIN_USER_PASSWORD", SUBSTITUTED_SECRETS.get("KEYCLOAK_ADMIN_USER_PASSWORD"))
         .withCopyFileToContainer(MountableFile.forHostPath(REALM_FILE), IMPORT_CONTAINER_PATH)
         .withCopyFileToContainer(MountableFile.forHostPath(ENTRYPOINT_FILE, 0755), ENTRYPOINT_CONTAINER_PATH)
-
+        // The realm endpoint answering 200 IS the import-applied proof (Keycloak 26
+        // import concern from task 1 review): a fresh container only serves
+        // /realms/ecommerce after --import-realm rendered the file.
         .waitingFor(Wait.forHttp("/realms/" + REALM).forStatusCode(200));
 
     static {
@@ -125,7 +177,9 @@ class KeycloakRealmImportIT {
             .as("client %s serviceAccountsEnabled", clientId).isTrue();
         assertThat(matches.get(0).path("publicClient").asBoolean())
             .as("client %s confidential", clientId).isFalse();
-
+        // F-080: the imported secret is the SUBSTITUTED value, not the
+        // placeholder and not a well-known literal. The bootstrap script is
+        // what makes the rotation effective.
         String rendered = matches.get(0).path("secret").asText();
         assertThat(rendered)
             .as("client %s imported secret must not be the unsubstituted placeholder", clientId)
@@ -136,6 +190,7 @@ class KeycloakRealmImportIT {
             .isEqualTo(expectedSecret(clientId));
     }
 
+    /** The secret the bootstrap script renders for a client. */
     private static String expectedSecret(String clientId) {
         String placeholder = clientNodes(REALM_JSON).stream()
             .filter(c -> clientId.equals(c.path("clientId").asText()))
@@ -159,7 +214,9 @@ class KeycloakRealmImportIT {
         assertThat(token).as("access_token issued").isNotBlank();
 
         JsonNode claims = jwtClaims(token);
-
+        // KC 26: sub is the service-account USER's id (UUID); the service-account-
+        // <clientId> identity lives in preferred_username. Prove sub ownership by
+        // matching it against the client's actual service-account user via admin API.
         assertThat(claims.path("preferred_username").asText()).isEqualTo("service-account-" + clientId);
         assertThat(claims.path("sub").asText()).isNotBlank();
         Response saUser = send(HttpRequest.newBuilder(URI.create(
@@ -208,6 +265,11 @@ class KeycloakRealmImportIT {
             .as("OAuth error code present").isNotBlank();
     }
 
+    /**
+     * F-078: the admin path of auth-service uses the service account of the
+     * APPLICATION realm. The token must carry the realm-management roles the
+     * admin path needs - and NOT the fleet-wide SERVICE role.
+     */
     @Test
     void adminClient_serviceAccountTokenCarriesTheRealmManagementRoles() {
         Response r = postForm("/realms/" + REALM + "/protocol/openid-connect/token",
@@ -239,6 +301,11 @@ class KeycloakRealmImportIT {
             .doesNotContain("SERVICE");
     }
 
+    /**
+     * F-078/F-080: the admin client must actually be ABLE to perform the
+     * admin operation the auth-service role API performs - a token that is
+     * issued but carries no effective permission is not a working grant.
+     */
     @Test
     void adminClient_serviceAccountTokenCanManageAUser() {
         Response token = postForm("/realms/" + REALM + "/protocol/openid-connect/token",
@@ -271,11 +338,19 @@ class KeycloakRealmImportIT {
         return CONFIDENTIAL_CLIENT_IDS.stream();
     }
 
+    /**
+     * The service clients that carry the fleet-wide SERVICE realm role.
+     * The admin client (F-078) is deliberately NOT among them: it manages the
+     * realm, it does not call the fleet.
+     */
     static Stream<String> serviceClients() {
         return CONFIDENTIAL_CLIENT_IDS.stream()
             .filter(id -> !ADMIN_CLIENT_ID.equals(id));
     }
 
+    // ----- helpers -----
+
+    /** Internal UUID of an imported client, via the admin API. */
     private static String clientIdOf(String clientId) {
         Response r = send(HttpRequest.newBuilder(
                 URI.create(base() + "/admin/realms/" + REALM + "/clients?clientId=" + clientId))
@@ -343,7 +418,7 @@ class KeycloakRealmImportIT {
                 ids.add(c.path("clientId").asText());
             }
         });
-
+        // 5 service clients + the admin client of the application realm (F-078).
         assertThat(ids).as("realm JSON declares the 5 service clients and the admin client").hasSize(6);
         return ids;
     }
@@ -368,6 +443,7 @@ class KeycloakRealmImportIT {
             "docker/keycloak/import/ecommerce-realm.json not found above " + System.getProperty("user.dir"));
     }
 
+    /** The real bootstrap script that substitutes the secrets (F-080). */
     private static Path locateEntryPointFile() {
         for (Path dir = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
              dir != null; dir = dir.getParent()) {

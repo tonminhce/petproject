@@ -11,6 +11,20 @@ import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
+/**
+ * <p>The GHN and GHTK adapters previously never contacted their carrier: they
+ * derived a tracking number locally from the order id and returned it as if the
+ * carrier had issued it. The API token fields were injected and never used. The
+ * result was a shipment no carrier knew about, carrying a predictable tracking
+ * number, which the reconciliation scheduler then auto-delivered after seven
+ * days - so the order reached DELIVERED for a parcel that was never shipped.</p>
+ * <p>This client performs the real call. The request and response shapes are
+ * carrier-specific, so the tracking-number location is configurable per carrier
+ * ({@code shop.shipping.<carrier>.tracking-json-path}). If the endpoint is not
+ * configured, or the response does not carry a tracking number, the adapter
+ * fails loudly with {@link ErrorCode#CARRIER_NOT_CONFIGURED} instead of
+ * fabricating a shipment.</p>
+ */
 @Component
 @Slf4j
 public class CarrierShipmentClient {
@@ -23,6 +37,19 @@ public class CarrierShipmentClient {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Create a shipment with the carrier and return the tracking number it
+     * issued.
+     *
+     * @param carrier    carrier label, used for logging and for the error code
+     * @param endpoint   fully configured create-shipment endpoint
+     * @param apiToken   carrier API token
+     * @param shopId     carrier shop/account id (may be null)
+     * @param orderId    the order the shipment belongs to
+     * @param trackingJsonPath dot-separated path to the tracking number in the
+     *                        carrier response, e.g. {@code data.tracking_number}
+     * @return the carrier-issued tracking number
+     */
     public String createShipment(String carrier, String endpoint, String apiToken, String shopId,
                                  UUID orderId, String trackingJsonPath) {
         try {

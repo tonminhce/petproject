@@ -189,7 +189,8 @@ class AdminRoleGateFilterTest {
     }
 
     private Authentication authWithRoles(List<String> roles) {
-
+        // 2-arg constructor: Security 7 marks only authority-backed tokens authenticated,
+        // mirroring what JwtReactiveAuthenticationManager puts into the context
         var authorities = roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();

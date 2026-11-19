@@ -17,6 +17,20 @@ import org.springframework.web.client.RestClientException;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Payment client for the confirm-path payment-captured gate (order-wiring D1).
+ * Mirrors {@link InventoryServiceClient}/{@link PromotionServiceClient}: per-call
+ * Authorization header from {@link ServiceTokenProvider} — the payment list
+ * endpoint is SERVICE-role.
+ * <p>Error posture — fail-closed: ANY failure (non-2xx, timeout, malformed body)
+ * maps to {@code Optional.empty()} instead of a thrown exception; the confirm
+ * guard turns that into ORD-4012. The raw downstream exception never leaves this
+ * class (logged instead). This differs deliberately from {@link TaxServiceClient},
+ * which throws SERVICE_UNAVAILABLE/ORDER_TAX_CALCULATION_FAILED: there is no
+ * benign "proceed" answer for a payment we could not verify, so the empty result
+ * plus the caller-side guard carries the same fail-closed semantics with one
+ * single mapped code at the seam.</p>
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -34,10 +48,23 @@ public class PaymentServiceClient {
 
     private final ServiceTokenProvider serviceTokenProvider;
 
+    /**
+     * Called by the confirm path before the commit coordinator runs — when false,
+     * the payment-captured guard is bypassed entirely (existing behavior).
+     */
     public boolean isEnabled() {
         return props.payment().isEnabled();
     }
 
+    /**
+     * The captured payment of an order, if there is one.
+     *
+     * <p>The payment-service owns the answer (its dedicated captured-payment
+     * endpoint): the paged list endpoint could not answer it, because a
+     * captured payment beyond the first page is invisible to a caller that
+     * reads one page - and the gate fails closed, so the order could never be
+     * confirmed and was auto-cancelled while the customer had paid.</p>
+     */
     @CircuitBreaker(name = "paymentService")
     public Optional<PaymentStatusSnapshot> findCapturedByOrderId(UUID orderId) {
         try {
@@ -52,7 +79,7 @@ public class PaymentServiceClient {
             PaymentStatusSnapshot payment = resp.data();
             return STATUS_CAPTURED.equals(payment.status()) ? Optional.of(payment) : Optional.empty();
         } catch (HttpClientErrorException.NotFound ex) {
-
+            // no captured payment for this order - a normal answer, not a failure
             return Optional.empty();
         } catch (RestClientException ex) {
             log.error("Payment status lookup failed for order {} — failing closed", orderId, ex);

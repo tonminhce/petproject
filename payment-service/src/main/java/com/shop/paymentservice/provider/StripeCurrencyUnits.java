@@ -14,11 +14,13 @@ public final class StripeCurrencyUnits {
     private StripeCurrencyUnits() {
     }
 
+    /** Major-unit BigDecimal (payment row) → Stripe minor-unit long. */
     public static long toMinor(BigDecimal amount, String currency) {
         int digits = minorUnitDigits(currency);
         return amount.movePointRight(digits).setScale(0, RoundingMode.HALF_UP).longValueExact();
     }
 
+    /** Stripe minor-unit long (webhook payload) → major-unit BigDecimal. */
     public static BigDecimal fromMinor(Long minor, String currency) {
         if (minor == null) {
             return null;

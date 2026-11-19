@@ -50,6 +50,7 @@ public class OutboxEvent {
     @Column(name = "last_error", length = 1000)
     private String lastError;
 
+    /** H11 — outbox retention needs a wall-clock timestamp on every row. */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

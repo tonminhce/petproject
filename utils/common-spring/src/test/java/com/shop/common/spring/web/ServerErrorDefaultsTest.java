@@ -16,6 +16,15 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * The shared error defaults must not echo internal exception text.
+ *
+ * <p>{@code server.error.include-message=always} only affects the errors that
+ * never reach the platform handler (filter-chain failures, unmapped MVC errors)
+ * - and there it echoes SQL fragments, host names and class names straight to
+ * the client. The handler itself already emits the curated message: a generic
+ * one for 5xx, a detailed one for 4xx client errors.</p>
+ */
 class ServerErrorDefaultsTest {
 
     @SuppressWarnings("unchecked")

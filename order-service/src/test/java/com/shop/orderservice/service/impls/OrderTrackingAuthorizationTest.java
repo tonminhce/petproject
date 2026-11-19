@@ -34,6 +34,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The gate of the unauthenticated order-tracking endpoint.
+ *
+ * <p>The tracking token is a random capability issued with the order, so it
+ * authorises the lookup on its own. The phone number stays as the legacy
+ * secondary factor, but it is a weak one - low entropy, often known to third
+ * parties, and the order id leaks routinely - so that path counts the wrong
+ * numbers and locks the order out of it after a few failures.</p>
+ */
 @ExtendWith(MockitoExtension.class)
 class OrderTrackingAuthorizationTest {
 
@@ -58,7 +67,7 @@ class OrderTrackingAuthorizationTest {
 
     @BeforeEach
     void setUp() {
-
+        // only the tests that reach the response need the line items
         lenient().when(orderItemRepository.findByOrderId(any())).thenReturn(List.of());
     }
 
@@ -87,7 +96,7 @@ class OrderTrackingAuthorizationTest {
 
         assertThat(response.orderId()).isEqualTo(orderId);
         assertThat(response.recipientName()).isEqualTo("Alice");
-
+        // no failure bookkeeping on the phone path
         verify(orderRepository, never()).save(any());
     }
 
@@ -139,6 +148,7 @@ class OrderTrackingAuthorizationTest {
                 .isNotNull()
                 .isAfter(Instant.now());
 
+        // and the lock actually holds: the correct phone is refused too
         assertThatThrownBy(() -> service.trackOrder(orderId, null, "0912345678"))
                 .isInstanceOf(BusinessException.class);
     }

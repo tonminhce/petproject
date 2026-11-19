@@ -11,6 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+/**
+ * Purges SENT outbox rows older than the retention window - without this the
+ * table grows unbounded (one row per domain event forever). FAILED rows are
+ * NOT purged: they need manual root-cause before deletion (ops runbook).
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j

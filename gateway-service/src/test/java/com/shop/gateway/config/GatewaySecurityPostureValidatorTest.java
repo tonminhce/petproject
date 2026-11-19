@@ -49,7 +49,9 @@ class GatewaySecurityPostureValidatorTest {
 
     @Test
     void zeroTrustedProxyHopsWithNoneStrategyIsAccepted() {
-
+        // The gateway resolves the client IP itself from the raw
+        // X-Forwarded-For chain; with no trusted proxy the socket address is
+        // the only meaningful value.
         var validator = new GatewaySecurityPostureValidator(
                 properties(List.of("http://localhost:3000")), rateLimit(0), allowlist(List.of()), "none", false);
         validator.validate();
@@ -64,7 +66,9 @@ class GatewaySecurityPostureValidatorTest {
 
     @Test
     void anEmptyAdminIpAllowlistIsRejectedWhenTheDeploymentRequiresIt() {
-
+        // F-035: the production compose declares the allowlist mandatory - an
+        // empty ADMIN_IP_ALLOWLIST must then stop the gateway at startup
+        // instead of leaving the backoffice open to every origin.
         var validator = new GatewaySecurityPostureValidator(
                 properties(List.of("http://localhost:3000")), rateLimit(1),
                 allowlist(List.of()), "none", true);
@@ -83,7 +87,7 @@ class GatewaySecurityPostureValidatorTest {
 
     @Test
     void anEmptyAdminIpAllowlistIsOnlyWarnedAboutWhenTheDeploymentDoesNotRequireIt() {
-
+        // A local sandbox has no office CIDR - the gateway must still start.
         var validator = new GatewaySecurityPostureValidator(
                 properties(List.of("http://localhost:3000")), rateLimit(1),
                 allowlist(List.of()), "none", false);

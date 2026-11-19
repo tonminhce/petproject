@@ -17,6 +17,8 @@ public class OrderEventConsumer extends BaseKafkaConsumer<String, OrderLifecycle
         this.notificationService = notificationService;
     }
 
+    // groupId is pinned: it is the consumer's identity, and changing it resets
+    // the committed offsets and replays the topic (see BaseKafkaListenerConfig)
     @KafkaListener(topics = KafkaTopicContract.SHOP_ORDER_LIFECYCLE, groupId = "notification-service",
             containerFactory = "notificationListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {

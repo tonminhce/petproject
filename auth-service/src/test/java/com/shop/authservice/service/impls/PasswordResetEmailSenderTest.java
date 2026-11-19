@@ -16,6 +16,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The password reset email really leaves the process (F-054).
+ *
+ * <p>The previous sender only logged the dispatch, so the endpoint reported
+ * "a password reset instruction has been sent" while no message ever left the
+ * process.</p>
+ */
 class PasswordResetEmailSenderTest {
 
     @Test

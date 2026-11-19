@@ -30,13 +30,62 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Integration test for the real Spring Security filter chain wired by
+ * {@code common-security} (see {@code SecurityAutoConfiguration} and
+ * {@code BaseSecurityConfig}). Unlike {@code AuthControllerTest} /
+ * {@code UserControllerTest} / {@code RoleControllerTest}, which use
+ * {@code @WebMvcTest} with {@code @AutoConfigureMockMvc(addFilters = false)},
+ * this test exercises the actual filter chain end-to-end against
+ * {@link MockMvc}.
+ *
+ * <h3>What this test covers</h3>
+ * <ol>
+ *   <li>Platform-default public paths ({@code /actuator/health}) bypass auth.</li>
+ *   <li>Service-specific public paths ({@code /api/v1/auth/**}) bypass auth
+ *       for any HTTP method (POST login / sign-up reach the controller).</li>
+ *   <li>Protected paths ({@code /api/v1/users/me}) require authentication —
+ *       anonymous access returns 401, valid JWT (via
+ *       {@code SecurityMockMvcRequestPostProcessors.jwt()}) returns 200.</li>
+ *   <li>Method-scoped authorization: POST to a path that has no controller
+ *       handler is not silently permitted; the chain still rejects anonymous
+ *       callers before the dispatcher resolves a handler.</li>
+ * </ol>
+ *
+ * <h3>Why exclude JPA / Liquibase autoconfiguration</h3>
+ * <p>{@code UserService} and {@code AuthService} are mocked with
+ * {@link MockitoBean}, so their JPA / Keycloak dependencies are never
+ * resolved. The remaining {@code @Service} / {@code @Component} beans
+ * (exception handler, mappers, etc.) still load, so the security
+ * filter chain and controller layer are wired exactly as in production.
+ * DataSource / Hibernate / Liquibase autoconfigurations are excluded to
+ * keep the test self-contained without a running PostgreSQL or
+ * pre-applied schema.</p>
+ *
+ * <h3>Why mock {@link JwtDecoder}</h3>
+ * <p>{@code BaseSecurityConfig#jwtDecoder()} builds a
+ * {@code NimbusJwtDecoder.withIssuerLocation(...)} which performs a network
+ * call to the Keycloak realm's JWK set at context-startup time. Replacing
+ * it with a mock keeps the test hermetic. {@code with(jwt())} injects a
+ * pre-built {@code JwtAuthenticationToken} into the
+ * {@code SecurityContext}, so the resource-server filter accepts the
+ * request without ever calling the decoder.</p>
+ */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
                 "shop.security.issuer-uri=http://localhost:9999/realms/test",
-
+                // No datasource → no EntityManagerFactory; common-spring's
+                // JpaAuditingAutoConfiguration would otherwise register an eager
+                // jpaMappingContext that fails with "JPA metamodel must not be
+                // empty". Same opt-out contract as common-spring's
+                // CommonLibraryStarterTests (fleet-hardening T4 carry).
                 "shop.jpa.auditing.enabled=false",
-
+                // Strip JPA / datasource / liquibase autoconfigs so the
+                // test does not require a running PostgreSQL. The
+                // mocked services (@MockitoBean UserService etc.)
+                // replace every bean that would otherwise try to
+                // connect to the database.
                 "spring.autoconfigure.exclude="
                         + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
                         + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
@@ -153,6 +202,16 @@ class SecurityFilterChainIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Method-scoped EndpointRule (GET-only) matches the request, so the filter
+     * chain permits it. {@code UserController.getCurrentUser} has
+     * {@code @PreAuthorize("isAuthenticated()")} which then rejects the anonymous
+     * caller with {@code AuthorizationDeniedException} → 403. Contrast with S4
+     * (DELETE → 401): if the rule had NOT matched the GET, both S4 and S8
+     * would return 401, so the 401/403 split is the proof the
+     * {@code if (rule.method() != null)} branch in {@code BaseSecurityConfig}
+     * was exercised.
+     */
     @Test
     @DisplayName("S8: GET /api/v1/users/me without auth → 403")
     void getCurrentUserMatchesMethodScopedPublicRuleWithoutAuth() throws Exception {

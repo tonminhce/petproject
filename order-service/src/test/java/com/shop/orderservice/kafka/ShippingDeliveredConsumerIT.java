@@ -30,6 +30,21 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * Shipping-delivered consumer against the REAL Kafka wire (R1 + H-1): this IT
+ * publishes through the SAME production path as shipping-service's
+ * {@code ShippingOutboxRelay} — the context {@link KafkaMessagePublisher} (R1
+ * single-encode: the outbox payload STRING forwarded as raw UTF-8 bytes), so
+ * records arrive SINGLE-ENCODED UTF-8 JSON. Under the previous
+ * {@code JsonDeserializer} wiring real records failed value deserialization
+ * before the listener ever ran — the fleet's shipping→order delivered
+ * transition silently dropped every event; with the H-1 String base the event
+ * binds directly and SHIPPED orders transition to DELIVERED. One pin keeps
+ * the LEGACY double-encoded shape (a JSON string token wrapping the event
+ * JSON, from pre-R1 producers) accepted — H-1 defense-in-depth for
+ * in-flight/retained records. Poison tokens and unknown orders are contained
+ * ack-skips — the partition keeps advancing.
+ */
 class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
 
     private static final String TOPIC = "shop.shipping.lifecycle.v1";
@@ -52,6 +67,14 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
     @org.springframework.beans.factory.annotation.Value("${shop.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    /**
+     * The order-service base leaves the KafkaProperties default in place —
+     * pin {@code earliest} like the shipping/notification IT bases so the
+     * listener consumes this IT's records deterministically from offset 0 of
+     * the fresh container topic (prod runs {@code latest} via application.yml;
+     * the class-level @DynamicPropertySource here only affects this IT's
+     * context).
+     */
     @DynamicPropertySource
     static void kafkaEarliest(DynamicPropertyRegistry r) {
         r.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
@@ -75,10 +98,12 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
         return orderRepository.save(order);
     }
 
+    /** Publishes EXACTLY like ShippingOutboxRelay: payload String via the fleet KafkaMessagePublisher (R1 single-encode). */
     private void publishExactlyLikeRelay(String payloadJson, UUID orderId) {
         kafkaMessagePublisher.publish(TOPIC, orderId.toString(), payloadJson);
     }
 
+    /** Publishes the pre-R1 legacy wire: a JSON string token wrapping the event JSON (H-1 in-flight tolerance). */
     private void publishLegacyDoubleEncoded(String payloadJson, UUID orderId) {
         try {
             kafkaMessagePublisher.publish(TOPIC, orderId.toString(),
@@ -88,6 +113,7 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
         }
     }
 
+    /** Mirrors ShippingEventPublisherImpl.publishDelivered. */
     private String deliveredPayload(String eventId, UUID orderId) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("eventId", eventId);
@@ -121,7 +147,8 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
             assertThat(fresh.getStatus()).as("delivered transition applied").isEqualTo(OrderStatus.DELIVERED);
             assertThat(fresh.getDeliveredAt()).isNotNull();
         });
-
+        // publishStatusChanged emitted an order.updated.v1 outbox row in the
+        // same transaction (existence only — the scheduled relay may drain it).
         await().atMost(AWAIT).untilAsserted(() ->
             assertThat(outboxEventRepository.findAll().stream()
                 .filter(r -> "order.updated.v1".equals(r.getEventType()))
@@ -135,6 +162,9 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
         Order order = shippedOrder();
         publishLegacyDoubleEncoded(deliveredPayload(UUID.randomUUID().toString(), order.getId()), order.getId());
 
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 shape that
+        // in-flight/retained records may still carry.
         ConsumerRecord<String, String> record = awaitRecord(TOPIC, order.getId().toString());
         assertThat(record).as("record on %s with key=orderId", TOPIC).isNotNull();
         JsonNode token = readTree(record.value());
@@ -145,6 +175,7 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("shipping.delivered.v1");
         assertThat(unwrapped.get("orderId").textValue()).isEqualTo(order.getId().toString());
 
+        // ...and the legacy double-encoded record is actually ingested.
         await().atMost(AWAIT).untilAsserted(() ->
             assertThat(orderRepository.findById(order.getId()).orElseThrow().getStatus())
                 .as("legacy double-encoded delivered event must still apply")
@@ -177,6 +208,8 @@ class ShippingDeliveredConsumerIT extends AbstractOrderServiceIT {
                 .as("marker delivered — partition advanced past the unknown-order record")
                 .isEqualTo(OrderStatus.DELIVERED));
     }
+
+    // --- helpers ---
 
     private JsonNode readTree(String raw) {
         try {

@@ -19,6 +19,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Writes one {@link OutboxEvent} row per domain action in the SAME
+ * {@code @Transactional} boundary as the inventory change. The relay
+ * ({@code InventoryOutboxRelay}) drains the table to Kafka.
+ * <p>Event contract: topic {@code shop.inventory.events.v1}, event types in
+ * dot.case ({@code inventory.reserved.v1}, …) — a deliberate CloudEvents-style
+ * contract (same style as {@code notification.send.v1}), NOT a typo of
+ * product-service's PascalCase {@code shop.product.lifecycle.v1} /
+ * {@code ProductCreated}. Both are registered in docs/SERVICE-CATALOG.md; any
+ * consumer handles exactly one of the two styles.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -33,7 +44,8 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
 
     @Override
     public void publishReserved(Inventory inventory, Reservation reservation) {
-
+        // HashMap + null-guard: Map.of throws NPE on null values. orderId is
+        // OPTIONAL (spec 4.4) — reserving without an orderId is a mainline flow.
         Map<String, Object> data = new HashMap<>();
         data.put("productId", inventory.getProductId());
         data.put("reservationId", reservation.getId());
@@ -66,7 +78,7 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
         if (reservation.getOrderId() != null) {
             data.put("orderId", reservation.getOrderId());
         }
-
+        // (restock) without a separate event type.
         data.put("previousStatus", previousStatus);
         save(inventory, "inventory.released.v1", data);
     }
@@ -99,7 +111,7 @@ public class TransactionalInventoryEventPublisher implements InventoryEventPubli
         OutboxEvent event = new OutboxEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setAggregateType(AGGREGATE_TYPE);
-        event.setAggregateId(inventory.getProductId());
+        event.setAggregateId(inventory.getProductId());   // Kafka partition key
         event.setEventType(eventType);
         event.setTopic(TOPIC);
 

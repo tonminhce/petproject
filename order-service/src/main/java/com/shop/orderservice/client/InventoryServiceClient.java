@@ -21,6 +21,12 @@ import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
+/**
+ * 5 — unwraps the ApiResponse envelope into the typed payload.
+ * 3 — attaches a per-call Authorization header from {@link ServiceTokenProvider}:
+ * only this client needs a token (product GET is a public path; tax/promotion are
+ * disabled in the MVP).
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -28,7 +34,7 @@ public class InventoryServiceClient {
 
     @Qualifier("inventoryRestClient")
     private final RestClient restClient;
-    private final ServiceTokenProvider serviceTokenProvider;
+    private final ServiceTokenProvider serviceTokenProvider;   // P0-7 — SERVICE-role token
 
     private static final ParameterizedTypeReference<ApiResponse<ReservationResponse>> RESERVE_RESPONSE =
         new ParameterizedTypeReference<>() {};
@@ -41,7 +47,8 @@ public class InventoryServiceClient {
         try {
             ApiResponse<ReservationResponse> resp = restClient.post()
                 .uri("/api/v1/inventory/{productId}/reserve", productId)
-
+                // P0-7 — reserve requires the SERVICE role (inventory §4.2); a missing
+                // header would fail with 401 before anything else is checked.
                 .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
                 .body(request)
                 .retrieve()
@@ -49,7 +56,7 @@ public class InventoryServiceClient {
             return resp.data().reservationId();
         } catch (HttpClientErrorException ex) {
             log.warn("Inventory reserve failed for product {}: {}", productId, ex.getMessage());
-
+            // exception instead of surfacing a 500 (review M7).
             if (ex.getStatusCode() == HttpStatus.CONFLICT || ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new StockReservationFailedException(productId, ex);
             }
@@ -60,6 +67,13 @@ public class InventoryServiceClient {
     private static final ParameterizedTypeReference<ApiResponse<Void>> ERROR_BODY =
         new ParameterizedTypeReference<>() {};
 
+    /**
+     * Confirm-side commit (hardening §5.2) — mirrors PromotionServiceClient's
+     * lifecycleCall error mapping: 4xx is rethrown as the parsed remote
+     * {@code ApiResponse.code} when it resolves to a known {@link ErrorCode}
+     * (RESERVATION_* codes must stay distinguishable for the coordinator —
+     * spec D4), otherwise SERVICE_UNAVAILABLE; 5xx always fails closed.
+     */
     public void commit(UUID reservationId) {
         try {
             restClient.post()
@@ -76,6 +90,15 @@ public class InventoryServiceClient {
         }
     }
 
+    /**
+     * Releases a stock reservation.
+     *
+     * <p>The failure is reported to the caller: it used to be swallowed here
+     * ("best-effort"), which made an orphaned hold invisible - the caller saw
+     * a success, the order row was deleted right after and the only way back
+     * was inventory-service's TTL sweep. The caller records the failure in the
+     * compensation ledger and the retry releases the hold.</p>
+     */
     public void release(UUID reservationId) {
         try {
             restClient.post()

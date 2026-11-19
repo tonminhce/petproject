@@ -75,6 +75,8 @@ class BackofficeRatingControllerTest {
             {"reason":"%s"}""".formatted(reason);
     }
 
+    // --- ADMIN happy paths ---
+
     @Test
     void hide_admin_returns200WithHiddenRating() throws Exception {
         when(ratingService.hide(eq(ratingId), eq(adminId), eq("Abusive comment")))
@@ -106,6 +108,8 @@ class BackofficeRatingControllerTest {
         verify(ratingService).unhide(eq(ratingId), eq(adminId));
     }
 
+    // --- validation ---
+
     @Test
     void hide_blankReason_returns400WithErr0422V() throws Exception {
         mockMvc.perform(post("/api/v1/backoffice/ratings/{id}/hide", ratingId)
@@ -132,6 +136,8 @@ class BackofficeRatingControllerTest {
 
         verifyNoInteractions(ratingService);
     }
+
+    // --- security matrix ---
 
     @Test
     void hide_customerRole_returns403() throws Exception {
@@ -170,6 +176,8 @@ class BackofficeRatingControllerTest {
 
         verifyNoInteractions(ratingService);
     }
+
+    // --- business error-code mapping ---
 
     @Test
     void hide_unknownRating_returns404WithRtg11002() throws Exception {

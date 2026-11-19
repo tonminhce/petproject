@@ -57,6 +57,8 @@ class CartServiceImplTest {
         return new CartResponse(cartId, userId, List.of(), BigDecimal.ZERO, null, null);
     }
 
+    // ---------- getMyCart ----------
+
     @Test
     void getMyCart_autoCreatesForNewUser() {
         when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.empty());
@@ -76,8 +78,8 @@ class CartServiceImplTest {
     void getMyCart_raceLost_returnsWinner() {
         Cart winner = Cart.builder().id(cartId).userId(userId).subtotal(BigDecimal.ZERO).build();
         when(cartRepository.findByUserIdAndDeletedFalse(userId))
-            .thenReturn(Optional.empty())
-            .thenReturn(Optional.of(winner));
+            .thenReturn(Optional.empty())                    // first call (pre-save) misses
+            .thenReturn(Optional.of(winner));                // second call (post-conflict) returns winner
         when(cartRepository.save(any(Cart.class)))
             .thenThrow(new org.springframework.dao.DataIntegrityViolationException("unique constraint"));
         when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of());
@@ -96,8 +98,10 @@ class CartServiceImplTest {
         CartResponse result = service.getMyCart(userId);
 
         assertThat(result).isNotNull();
-        verify(cartRepository, never()).save(any(Cart.class));
+        verify(cartRepository, never()).save(any(Cart.class));  // no auto-create
     }
+
+    // ---------- addItem ----------
 
     @Test
     void addItem_addsNewLine() {
@@ -137,7 +141,7 @@ class CartServiceImplTest {
 
         service.addItem(userId, new CartItemAddRequest(productId, 2));
 
-        assertThat(existing.getQuantity()).isEqualTo(5);
+        assertThat(existing.getQuantity()).isEqualTo(5);  // 3 + 2
         verify(cartItemRepository).save(existing);
     }
 
@@ -147,10 +151,13 @@ class CartServiceImplTest {
         when(productClient.getProduct(productId)).thenReturn(snapshot);
         when(cartItemRepository.findByCartIdAndProductId(cartId, productId)).thenReturn(Optional.empty());
 
+        // 100 > MAX_QUANTITY_PER_LINE (99)
         assertThatThrownBy(() -> service.addItem(userId, new CartItemAddRequest(productId, 100)))
             .isInstanceOf(BusinessException.class);
         verify(cartItemRepository, never()).save(any(CartItem.class));
     }
+
+    // ---------- updateItem ----------
 
     @Test
     void updateItem_zeroQuantityRemovesItem() {
@@ -184,10 +191,12 @@ class CartServiceImplTest {
         verify(cartItemRepository, never()).delete(any(CartItem.class));
     }
 
+    // ---------- removeItem ----------
+
     @Test
     void removeItem_throwsOnCrossUser() {
         CartItem otherUsersItem = CartItem.builder()
-            .id(cartItemId).cartId(otherCartId)
+            .id(cartItemId).cartId(otherCartId)  // belongs to a different cart
             .productId(productId).productTitle("Widget")
             .unitPrice(new BigDecimal("9.99")).quantity(1)
             .build();
@@ -196,7 +205,7 @@ class CartServiceImplTest {
 
         assertThatThrownBy(() -> service.removeItem(userId, cartItemId))
             .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4006"));
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4006"));  // hide existence
         verify(cartItemRepository, never()).delete(any(CartItem.class));
     }
 
@@ -216,6 +225,8 @@ class CartServiceImplTest {
         verify(cartItemRepository).delete(item);
         verify(cartRepository).save(cart);
     }
+
+    // ---------- clearCart ----------
 
     @Test
     void clearCart_marksCartDeleted() {

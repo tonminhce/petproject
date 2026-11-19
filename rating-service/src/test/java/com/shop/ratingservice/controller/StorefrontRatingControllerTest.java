@@ -79,6 +79,8 @@ class StorefrontRatingControllerTest {
             {"rating":%d,"comment":"Edited comment, still decent value"}""".formatted(rating);
     }
 
+    // --- anonymous ---
+
     @Test
     void list_noAuth_returns401() throws Exception {
         mockMvc.perform(get("/api/v1/ratings").param("productId", productId.toString()))
@@ -92,6 +94,8 @@ class StorefrontRatingControllerTest {
                 .content(submitBody()))
             .andExpect(status().isUnauthorized());
     }
+
+    // --- list ---
 
     @Test
     void list_returns200WithPageMapping() throws Exception {
@@ -112,6 +116,8 @@ class StorefrontRatingControllerTest {
         verify(ratingService).findVisibleByProductId(productId, 0, 20);
     }
 
+    // --- submit ---
+
     @Test
     void submit_returns201WithRating() throws Exception {
         when(ratingService.submit(eq(userId), any(RatingSubmitRequest.class))).thenReturn(response());
@@ -127,6 +133,8 @@ class StorefrontRatingControllerTest {
 
         verify(ratingService).submit(eq(userId), any(RatingSubmitRequest.class));
     }
+
+    // --- edit ---
 
     @Test
     void edit_returns200WithUpdatedRating() throws Exception {

@@ -37,6 +37,20 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * End-to-end ingestion contract over real Kafka + ES containers: records are
+ * produced through the SAME path production uses — {@link KafkaMessagePublisher}
+ * over a StringSerializer ×2 template (the {@code stringKafkaTemplate}
+ * semantics of product's {@code OutboxRelay}, R1) — so the payload String
+ * lands SINGLE-ENCODED UTF-8 JSON on the wire. The live
+ * {@code search-service} group binds single-encoded events directly and must
+ * unwrap-once (spec §4.2) the LEGACY double-encoded shape (a JSON string
+ * token wrapping the event JSON) that pre-R1 in-flight records may still
+ * carry — pinned by the legacy-wire test. The helper previously used a
+ * {@code JsonKafkaSerializer} double-encoding template — a wire production
+ * no longer emits. Poison records must never stall the partition — each
+ * negative case proves progression via a marker product event sent after.
+ */
 class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
 
     private static final String TOPIC = "shop.product.lifecycle.v1";
@@ -60,7 +74,9 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-
+        // The R1 production path: KafkaMessagePublisher over StringSerializer
+        // ×2 (stringKafkaTemplate semantics) — the payload String is forwarded
+        // as raw UTF-8 bytes, single-encoded JSON on the wire.
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
         kafkaMessagePublisher = new KafkaMessagePublisher(producerTemplate);
@@ -103,6 +119,9 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
 
         sendLegacyDoubleEncoded(productId, payload(productId, "ProductCreated", "ACTIVE"));
 
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 wire that
+        // in-flight records may still carry.
         ConsumerRecord<String, String> record = awaitRecord(productId);
         assertThat(record).as("record on %s", TOPIC).isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
@@ -111,6 +130,7 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("ProductCreated");
         assertThat(unwrapped.get("productId").textValue()).isEqualTo(productId.toString());
 
+        // ...and the legacy double-encoded record is actually ingested.
         Map<String, Object> doc = awaitDocIndexed(productId);
         assertThat(doc)
             .containsEntry("id", productId.toString())
@@ -275,6 +295,7 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         return payload;
     }
 
+    /** Publishes through the R1 production path: single-encoded JSON on the wire. */
     private void send(UUID productId, Map<String, Object> payload) {
         try {
             kafkaMessagePublisher.publish(TOPIC, productId.toString(),
@@ -284,6 +305,10 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         }
     }
 
+    /**
+     * Publishes the pre-R1 legacy wire: a JSON string token wrapping the event
+     * JSON (H-1 tolerance pin for in-flight records from pre-R1 producers).
+     */
     private void sendLegacyDoubleEncoded(UUID productId, Map<String, Object> payload) {
         try {
             String payloadJson = objectMapper.writeValueAsString(payload);
@@ -312,6 +337,7 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         }
     }
 
+    /** Raw readback (StringDeserializer) to prove the actual wire shape. */
     private ConsumerRecord<String, String> awaitRecord(UUID key) {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

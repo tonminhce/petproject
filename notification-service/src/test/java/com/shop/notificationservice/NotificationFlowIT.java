@@ -42,6 +42,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 
+/**
+ * Notification flow over the REAL fleet inbound wire (R1 + H-1): order
+ * lifecycle records are produced through the SAME path production uses —
+ * {@link KafkaMessagePublisher} over a StringSerializer ×2 template (the
+ * {@code stringKafkaTemplate} semantics of order-service's
+ * {@code OrderOutboxRelay}) — so the payload String lands SINGLE-ENCODED
+ * UTF-8 JSON on the wire. The consumer unwraps-once at the
+ * {@code BaseKafkaConsumer} boundary and also tolerates the legacy
+ * double-encoded shape (a JSON string token wrapping the event JSON) that
+ * pre-R1 in-flight records may still carry — pinned by test 8. The helper
+ * previously used a {@code JsonKafkaSerializer} double-encoding template —
+ * a wire production no longer emits.
+ */
 class NotificationFlowIT extends AbstractIntegrationTest {
 
     private static final String TOPIC = "shop.order.lifecycle.v1";
@@ -67,7 +80,9 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-
+        // The R1 production path: KafkaMessagePublisher over StringSerializer
+        // ×2 (stringKafkaTemplate semantics) — the payload String is forwarded
+        // as raw UTF-8 bytes, single-encoded JSON on the wire.
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
         kafkaMessagePublisher = new KafkaMessagePublisher(producerTemplate);
@@ -182,6 +197,9 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         sendLegacyDoubleEncoded(event);
         Notification row = awaitRowWithStatus(event.eventId(), NotificationStatus.SENT);
 
+        // Wire proof on the real topic: the record value is a JSON string
+        // token wrapping the event JSON — the pre-R1 wire that in-flight
+        // records may still carry; the unwrap-once boundary accepts it.
         ConsumerRecord<String, String> record = awaitRecord(TOPIC, event.orderId().toString());
         assertThat(record).as("record on %s with key=orderId", TOPIC).isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
@@ -191,10 +209,12 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         assertThat(unwrapped.get("orderId").textValue()).isEqualTo(event.orderId().toString());
     }
 
+    /** H26 — OrderLifecycleEvent is a Java record; construction goes through the canonical ctor. */
     private OrderLifecycleEvent createdEvent(UUID orderId, UUID userId, List<Map<String, Object>> items) {
         return createdEvent(orderId, userId, items, "order.created.v1", "NEW", null, null, null);
     }
 
+    /** Variant for tests that need to override eventType/status/transitionedAt/cancelledAt/refunded. */
     private OrderLifecycleEvent createdEvent(UUID orderId, UUID userId, List<Map<String, Object>> items,
                                              String eventType, String status,
                                              Instant transitionedAt, Instant cancelledAt, Boolean refunded) {
@@ -215,6 +235,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
                 items);
     }
 
+    /** Publishes through the R1 production path: single-encoded JSON on the wire. */
     private void send(OrderLifecycleEvent event) {
         try {
             sendRaw(objectMapper.writeValueAsString(event), event.orderId().toString());
@@ -223,6 +244,10 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         }
     }
 
+    /**
+     * Publishes the pre-R1 legacy wire: a JSON string token wrapping the event
+     * JSON (H-1 tolerance pin for in-flight records from pre-R1 producers).
+     */
     private void sendLegacyDoubleEncoded(OrderLifecycleEvent event) {
         try {
             String payloadJson = objectMapper.writeValueAsString(event);
@@ -251,6 +276,16 @@ class NotificationFlowIT extends AbstractIntegrationTest {
             .toList();
     }
 
+    /**
+     * Wait until the row reaches a terminal status.
+     *
+     * <p>{@link #awaitRow} only waits for the row to EXIST. A row is inserted
+     * with status PENDING and updated to its terminal status once the sender
+     * has run, so asserting the terminal status straight after awaitRow is a
+     * race - the assertion can observe the intermediate PENDING row. This
+     * variant polls until the expected status is reached (or the timeout
+     * expires), which is what the status assertions actually mean.</p>
+     */
     private Notification awaitRowWithStatus(String eventId, NotificationStatus expected) {
         List<Notification> found = new ArrayList<>();
         await().atMost(AWAIT).untilAsserted(() -> {
@@ -262,6 +297,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
         return found.get(0);
     }
 
+    /** Raw readback (StringDeserializer) to prove the actual wire shape. */
     private ConsumerRecord<String, String> awaitRecord(String topic, String key) {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

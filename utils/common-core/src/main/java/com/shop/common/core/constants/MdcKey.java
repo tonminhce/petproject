@@ -1,5 +1,10 @@
 package com.shop.common.core.constants;
 
+/**
+ * Single source of truth for MDC keys used across logging, response envelopes,
+ * and downstream propagation. Keep both the constant names and the literal values
+ * in sync with the log pattern in {@code logback-spring.xml}.
+ */
 public final class MdcKey {
 
     public static final String CORRELATION_ID = "correlationId";

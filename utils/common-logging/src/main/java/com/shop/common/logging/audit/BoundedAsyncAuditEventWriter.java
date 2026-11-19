@@ -17,10 +17,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+/**
+ * Default {@link AuditEventWriter}: formats each event to a JSON line on the
+ * caller thread (cheap, and the event's context is request-bound), then hands
+ * the line to a bounded executor that performs the I/O.
+ * <p>Binding rules (spec D6 + review nit N1, sink recovery per review I-1):</p>
+ * <ul>
+ *   <li>Pool is hard-bounded: core 2, max 4, queue 1000 — NOT configurable.</li>
+ *   <li>Queue overflow DISCARDS the event, increments a counter and logs WARN
+ *       (first discard, then every 100th to avoid log flooding) — the caller
+ *       never blocks and never sees an exception.</li>
+ *   <li>Sink failures (I/O errors) are counted via {@link #failedEvents()},
+ *       logged WARN at most once per minute, and swallowed — the file sink
+ *       REOPENS on the next event, so a transient failure (disk full, volume
+ *       blip) never permanently disables file audit.</li>
+ *   <li>Rejections after shutdown are counted as failures, not overflow.</li>
+ *   <li>Sink: append to {@code AUDIT_LOG_PATH} when the env var is set, else
+ *       one INFO line per event on the {@code AUDIT} logger (stdout).</li>
+ * </ul>
+ */
 public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
 
     private static final Logger log = LoggerFactory.getLogger(BoundedAsyncAuditEventWriter.class);
-
+    /** The dedicated stdout sink — services ship this via their log pipeline. */
     private static final Logger auditStdout = LoggerFactory.getLogger("AUDIT");
 
     static final String ENV_AUDIT_LOG_PATH = "AUDIT_LOG_PATH";
@@ -32,7 +51,7 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
     private static final long KEEP_ALIVE_SECONDS = 60L;
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 5L;
     private static final int WARN_EVERY = 100;
-
+    /** Sink-failure WARNs are throttled to one per interval — no per-event spam. */
     static final long SINK_WARN_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(60);
 
     private final ThreadPoolExecutor executor;
@@ -41,6 +60,7 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
     private final AtomicLong failed = new AtomicLong();
     private final AtomicLong lastSinkWarnNanos = new AtomicLong();
 
+    /** Test seam: sink receives fully-formatted JSON lines. */
     BoundedAsyncAuditEventWriter(Consumer<String> sink) {
         this.sink = sink;
         AtomicInteger threadSeq = new AtomicInteger();
@@ -61,6 +81,7 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
                 });
     }
 
+    /** File sink when {@code auditLogPath} is set, stdout {@code AUDIT} logger otherwise. */
     public static BoundedAsyncAuditEventWriter create(String auditLogPath) {
         if (auditLogPath == null || auditLogPath.isBlank()) {
             return new BoundedAsyncAuditEventWriter(auditStdout::info);
@@ -68,6 +89,7 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
         return new BoundedAsyncAuditEventWriter(new FileSink(Path.of(auditLogPath)));
     }
 
+    /** Production factory: reads {@code AUDIT_LOG_PATH} from the environment. */
     public static BoundedAsyncAuditEventWriter create() {
         return create(System.getenv(ENV_AUDIT_LOG_PATH));
     }
@@ -101,6 +123,7 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
         }
     }
 
+    /** Counts the lost event and WARNs at most once per throttle interval. */
     private void recordSinkFailure(String message, Exception cause) {
         long total = failed.incrementAndGet();
         long now = System.nanoTime();
@@ -116,6 +139,7 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
         return discarded.get();
     }
 
+    /** Events lost to sink failures — distinct from queue-overflow discards. */
     public long failedEvents() {
         return failed.get();
     }
@@ -137,6 +161,13 @@ public final class BoundedAsyncAuditEventWriter implements AuditEventWriter {
         return executor;
     }
 
+    /**
+     * Appending, lazily-opened, line-per-event file sink. Thread-safe: all
+     * writes go through the executor. On I/O failure the writer is closed so
+     * the NEXT event reopens the file — transient failures (disk full, volume
+     * blip) recover without a restart; the failure itself propagates to
+     * {@link BoundedAsyncAuditEventWriter} for counting and throttled WARN.
+     */
     private static final class FileSink implements Consumer<String> {
 
         private final Path file;

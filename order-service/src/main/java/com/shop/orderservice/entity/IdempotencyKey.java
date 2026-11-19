@@ -13,6 +13,10 @@ import java.util.Objects;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class IdempotencyKey {
 
+    /**
+     * Owner label (H-6): ADMIN sub, {@code service:<azp>}, or the customer sub —
+     * a string by design so machine actors are never forced into a UUID shape.
+     */
     @Id
     @Column(name = "actor", nullable = false)
     private String actor;
@@ -24,6 +28,7 @@ public class IdempotencyKey {
     @Column(name = "request_hash", nullable = false, length = 64)
     private String requestHash;
 
+    /** 0 = in-flight, 200/201 = complete. See spec §3.7. */
     @Column(name = "response_status", nullable = false)
     private Integer responseStatus;
 

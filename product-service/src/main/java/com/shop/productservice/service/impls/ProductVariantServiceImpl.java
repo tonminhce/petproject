@@ -115,7 +115,16 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         ensureProductExists(productId);
         ProductVariant variant = productVariantRepository.findByIdAndProductIdAndDeletedFalse(variantId, productId)
             .orElseThrow(() -> BusinessException.notFound("product.variant.not.found", variantId));
-
+        // F-061/F-049: the actor is resolved through the shared convention
+        // instead of the hard-coded "system", so the audit trail names the
+        // administrator who removed the variant.
+        //
+        // No stock check: the stock lives on the PRODUCT (inventory-service
+        // keys the reservation by product id), not on the variant. Deleting a
+        // variant of a product that still has stock does not orphan the stock
+        // - the product row and its inventory row stay alive - so there is
+        // nothing to guard here. The product-level guard is the delete-time
+        // stock check of ProductServiceImpl.delete() (F-060).
         variant.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         productVariantRepository.save(variant);
         log.info("Deleted variant {} for product {}", variantId, productId);

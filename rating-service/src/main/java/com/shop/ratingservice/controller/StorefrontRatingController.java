@@ -25,6 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Storefront rating surface (spec D2). Deliberately NOT annotated with
+ * {@code @PreAuthorize} (fleet precedent P2-6, {@code OrderController}): Keycloak
+ * users may lack an explicit USER realm role, which would surface as an unhelpful
+ * 403. The fleet filter chain already enforces authentication; ownership is
+ * resolved from the JWT userId in the service layer, so users only ever touch
+ * their own ratings.
+ */
 @RestController
 @RequestMapping(ApiPaths.RATINGS)
 @RequiredArgsConstructor

@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Wraps {@link InventoryService} reservation operations with a manual retry
+ * loop for {@link OptimisticLockingFailureException}. A retry re-reads the
+ * entity (fresh @Version) and re-validates - safe for the low-contention
+ * internal call pattern.
+ */
 @Service
 @RequiredArgsConstructor
 public class ReservationServiceImpl implements ReservationService {
@@ -52,7 +58,7 @@ public class ReservationServiceImpl implements ReservationService {
                     throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, resourceId);
                 }
                 if (!sleep(BACKOFF_BASE_MS * attempt)) {
-
+                    // remaining attempt failed instantly and the caller saw a
                     Thread.currentThread().interrupt();
                     throw BusinessException.of(ErrorCode.INVENTORY_VERSION_CONFLICT, resourceId);
                 }
@@ -60,6 +66,10 @@ public class ReservationServiceImpl implements ReservationService {
         }
     }
 
+    /**
+     * @return {@code true} when the sleep completed normally, {@code false} when
+     *         the thread was interrupted.
+     */
     private boolean sleep(long ms) {
         try {
             Thread.sleep(ms);

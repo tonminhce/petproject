@@ -22,10 +22,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * <p>{@code Campaign} carries {@code @SQLRestriction("deleted = false")}, so
+ * soft-deleted rows are invisible to every lookup here — {@code existsByCode}
+ * can never collide with a deleted campaign's code, and a deleted id 404s.
+ * <p>Delete guard (spec: usage keeps quota): a campaign with PENDING or
+ * COMMITTED reservations cannot be deleted; RELEASED/EXPIRED rows are terminal
+ * and don't block.
+ */
 @Service
 @RequiredArgsConstructor
 public class CampaignServiceImpl implements CampaignService {
 
+    /** Usages that hold quota — mirrors {@code CampaignReservationServiceImpl.COUNTED_STATUSES}. */
     private static final List<UsageStatus> COUNTED_STATUSES =
         List.of(UsageStatus.PENDING, UsageStatus.COMMITTED);
 
@@ -92,7 +101,11 @@ public class CampaignServiceImpl implements CampaignService {
         campaign.setMaxRedemptions(request.maxRedemptions());
         campaign.setTotalBudget(request.totalBudget());
         campaign.setPerUserLimit(request.perUserLimit() != null ? request.perUserLimit() : 1);
-
+        // F-048: the status is applied ONLY when the request carries one. A
+        // request without a status used to fall into the deactivate branch
+        // (null != ACTIVE), so an admin who only renamed a campaign silently
+        // switched the promotion off. A client that wants to deactivate must
+        // send status=INACTIVE explicitly.
         if (request.status() != null) {
             applyStatus(campaign, request.status());
         }
@@ -120,6 +133,11 @@ public class CampaignServiceImpl implements CampaignService {
             .map(CampaignUsageResponse::from);
     }
 
+    /**
+     * Applies an EXPLICIT status. The caller only invokes this when the
+     * request carries a status - a request without one leaves the current
+     * status untouched (F-048).
+     */
     private void applyStatus(Campaign campaign, CampaignStatus status) {
         if (status == CampaignStatus.ACTIVE) {
             campaign.activate();

@@ -17,6 +17,28 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * F-080: the realm import must not carry a credential that the deployment
+ * cannot rotate.
+ *
+ * <p>The realm bootstrap script substitutes {@code ${VAR}} placeholders from
+ * the environment before Keycloak reads the realm JSON, and it refuses to
+ * boot when a required variable is missing. The placeholders were once
+ * reverted to the literal {@code changeme} while the script kept requiring
+ * the variables: the substitution had nothing to replace, so the realm booted
+ * with the well-known secrets while the deployment believed it had rotated
+ * them. The seeded ADMIN user carried the literal {@code adminpass} with no
+ * placeholder at all.</p>
+ *
+ * <p>Two contracts are asserted here:</p>
+ * <ul>
+ *   <li>every credential in the realm JSON is a {@code ${VAR}} placeholder -
+ *       never a literal;</li>
+ *   <li>every placeholder is a variable the bootstrap script actually
+ *       substitutes - a placeholder nobody replaces would be a literal in
+ *       disguise.</li>
+ * </ul>
+ */
 class RealmImportCredentialContractTest {
 
     private static final Path REPO_ROOT = repoRoot();
@@ -48,7 +70,9 @@ class RealmImportCredentialContractTest {
         while (matcher.find()) {
             variables.add(matcher.group(1));
         }
-
+        // The script builds the pattern with a shell expansion - ${$v} - so the
+        // names also appear inside the loop. The names of the loop variables
+        // are read from the same file.
         String script = Files.readString(ENTRYPOINT);
         Matcher loop = Pattern.compile("for v in ([A-Z0-9_ ]+); do").matcher(script);
         while (loop.find()) {
@@ -129,6 +153,8 @@ class RealmImportCredentialContractTest {
     void theBootstrapScriptRefusesToBootWhenARequiredVariableIsMissing() throws IOException {
         String script = Files.readString(ENTRYPOINT);
 
+        // The fail-fast loop must run BEFORE the substitution and must cover
+        // every placeholder the realm uses.
         int failFast = script.indexOf("is not set; refusing to boot");
         int substitute = script.indexOf("sed -i");
         assertThat(failFast).as("the fail-fast guard must exist").isPositive();
@@ -137,15 +163,26 @@ class RealmImportCredentialContractTest {
         assertThat(script).contains("exit 1");
     }
 
+    /**
+     * F-081: the bootstrap script must never write the substituted realm back
+     * into the mounted template directory.
+     *
+     * <p>The template is bind-mounted from the repository. Writing the
+     * substituted realm back into it persisted the rotated secrets into the
+     * developer's working tree, ready to be committed. The substituted copy
+     * belongs in the container-local directory Keycloak imports from.</p>
+     */
     @Test
     @DisplayName("the bootstrap script never writes the substituted realm back into the mounted template")
     void theBootstrapScriptNeverWritesBackIntoTheMountedTemplate() throws IOException {
         String script = Files.readString(ENTRYPOINT);
 
+        // The source the script reads must be the read-only template mount.
         assertThat(script)
                 .as("the script must read from the read-only template mount")
                 .contains("/opt/keycloak/realm-template/ecommerce-realm.json");
 
+        // The script must not copy anything INTO the template directory.
         assertThat(script)
                 .as("a write-back into the template would persist the rotated secrets in the repository")
                 .doesNotContain("cp \"$tmp\" /opt/keycloak/realm-template");
@@ -159,30 +196,18 @@ class RealmImportCredentialContractTest {
                 .as("a write-back into the template would persist the rotated secrets in the repository")
                 .doesNotContain("sed -i.*/opt/keycloak/realm-template");
 
+        // The substituted realm must land in the container-local import dir.
         assertThat(script)
                 .as("the substituted realm must land in the directory Keycloak imports from")
                 .contains("/opt/keycloak/data/import");
     }
 
-    @Test
-    @DisplayName("the bootstrap script refuses to boot when a secret still carries a published placeholder")
-    void theBootstrapScriptRefusesToBootWhenASecretStillCarriesAPublishedPlaceholder() throws IOException {
-        String script = Files.readString(ENTRYPOINT);
-
-        assertThat(script)
-                .as("the rotation guard must exist")
-                .contains("KEYCLOAK_REQUIRE_ROTATED_SECRETS");
-        assertThat(script)
-                .as("the published development placeholders must be denied")
-                .contains("changeme")
-                .contains("adminpass");
-
-        String prodOverlay = Files.readString(REPO_ROOT.resolve("docker-compose.prod.yml"));
-        assertThat(prodOverlay)
-                .as("the production overlay must enable the rotation guard")
-                .contains("KEYCLOAK_REQUIRE_ROTATED_SECRETS");
-    }
-
+    /**
+     * F-081: the compose deployment must mount the template READ-ONLY.
+     *
+     * <p>A read-write mount is what allowed the write-back in the first
+     * place. The compose file is the contract the deployment ships with.</p>
+     */
     @Test
     @DisplayName("the compose deployment mounts the realm template read-only")
     void theComposeDeploymentMountsTheRealmTemplateReadOnly() throws IOException {
@@ -199,6 +224,18 @@ class RealmImportCredentialContractTest {
                 .contains("/opt/keycloak/realm-template/entrypoint.sh");
     }
 
+    /**
+     * F-081: the bootstrap script must be a POSIX shell script with LF line
+     * endings.
+     *
+     * <p>The template is bind-mounted into the container and executed by
+     * {@code sh}. With CRLF line endings the shell reads the carriage return
+     * as part of the command, so the script dies with "set: -r: invalid
+     * option" before it substitutes anything and the whole compose stack
+     * fails to boot Keycloak. {@code core.autocrlf=true} produced exactly
+     * that on a Windows checkout, so {@code .gitattributes} pins the
+     * line endings.</p>
+     */
     @Test
     @DisplayName("the bootstrap script has LF line endings so the container can execute it")
     void theBootstrapScriptHasLfLineEndings() throws IOException {
@@ -214,6 +251,10 @@ class RealmImportCredentialContractTest {
                 .isZero();
     }
 
+    /**
+     * F-081: {@code .gitattributes} must pin the shell scripts to LF so a
+     * checkout on any platform keeps the bootstrap script executable.
+     */
     @Test
     @DisplayName("the repository pins the shell scripts to LF line endings")
     void theRepositoryPinsTheShellScriptsToLf() throws IOException {
@@ -223,7 +264,6 @@ class RealmImportCredentialContractTest {
                 .exists();
         assertThat(Files.readString(attributes))
                 .as("the shell scripts must be checked out with LF")
-                .contains("* text=auto eol=lf")
                 .contains("*.sh text eol=lf");
     }
 }

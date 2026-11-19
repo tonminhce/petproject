@@ -20,6 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Storefront read endpoints only. CRUD lives in
+ * {@link BackofficeProductController} — C13 fix removed POST/PUT/DELETE from the
+ * storefront so a non-admin storefront caller can no longer trigger
+ * write-side Product endpoints via the public route.
+ */
 @RestController
 @RequestMapping(ApiPaths.PRODUCTS)
 @RequiredArgsConstructor

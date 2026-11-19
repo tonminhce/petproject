@@ -24,13 +24,30 @@ class VariantRenderer {
 
     private static final int MAX_DIMENSION = 8192;
 
+    /** Bytes per pixel of a decoded {@code BufferedImage} (ARGB). */
     private static final long BYTES_PER_PIXEL = 4L;
 
     private final MediaProperties properties;
 
+    /** One rendered variant pending its S3 write. */
     record Render(String variant, String format, int width, byte[] bytes) {
     }
 
+    /**
+     * Decode + render the D2 variants — original/display/thumb, each in the
+     * original format AND WebP. For WebP sources the two formats coincide, so
+     * the pair collapses and the render list holds 3 entries (never duplicate
+     * variant+format rows).
+     *
+     * @throws InvalidImageException when the bytes (magic-valid or not) cannot
+     *                               be decoded into an image — corrupt upload
+     * @throws IllegalStateException on an encoder failure of an ALREADY-DECODED
+     *                               image — a 500-class internal error, not a
+     *                               user-input problem (input is always a
+     *                               {@code BufferedImage}, outputs always
+     *                               supported formats; wrapped once here
+     *                               instead of per-encode)
+     */
     List<Render> render(byte[] source, String format, int displayWidthCap, int thumbWidthCap)
             throws InvalidImageException {
         BufferedImage image = decode(source);
@@ -60,6 +77,21 @@ class VariantRenderer {
         return renders;
     }
 
+    /**
+     * Decodes the upload ONCE.
+     *
+     * <p>F-062: the source used to be parsed twice - once by the dimension
+     * probe and once more by {@code ImageIO.read}, which opened its own
+     * stream over the same bytes. The probe and the decode now share one
+     * {@code ImageInputStream} and one {@code ImageReader}.</p>
+     *
+     * <p>The guard is expressed in DECODED MEMORY, not in pixels: a
+     * {@code BufferedImage} of width x height costs 4 bytes per pixel, and
+     * the source bytes are held at the same time. An image above the budget
+     * is rejected BEFORE it is decoded, so the peak heap of the upload stays
+     * bounded instead of exhausting the heap (the old pixel guard allowed
+     * 8192 x 8192 = 268 MB for a single upload).</p>
+     */
     private BufferedImage decode(byte[] source) throws InvalidImageException {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(source))) {
             if (in == null) {
@@ -94,11 +126,16 @@ class VariantRenderer {
                 reader.dispose();
             }
         } catch (IOException e) {
-
+            // rejects (e.g. a bogus segment length) surface as IIOException
             throw new InvalidImageException("Truncated or unreadable image stream", e);
         }
     }
 
+    /**
+     * Downscale-only width cap: an image narrower than the cap keeps its
+     * dimensions (no upscaling), a wider one is scaled to the cap keeping
+     * aspect ratio.
+     */
     private static int[] fitWithin(BufferedImage image, int widthCap) {
         if (image.getWidth() <= widthCap) {
             return new int[] {image.getWidth(), image.getHeight()};
@@ -117,6 +154,7 @@ class VariantRenderer {
         return out.toByteArray();
     }
 
+    /** Corrupt upload that passed the magic check but cannot be decoded/rendered. */
     static class InvalidImageException extends Exception {
         InvalidImageException(String message) {
             super(message);
@@ -127,6 +165,10 @@ class VariantRenderer {
         }
     }
 
+    /**
+     * The upload is a valid image, but decoding it would exceed the memory
+     * budget of the service (F-062) - a 413, not a 415.
+     */
     static final class ImageTooLargeException extends InvalidImageException {
         ImageTooLargeException(String message) {
             super(message);

@@ -1,7 +1,6 @@
 package com.shop.searchservice.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.shop.common.core.security.ClientCredentialsGuard;
 import com.shop.searchservice.config.ShopServicesProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -13,6 +12,15 @@ import org.springframework.web.client.RestClient;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Client-credentials token cache for outbound service-to-service calls
+ * (rating/order precedent, local to search-service deliberately — the
+ * keycloak settings live in {@link ShopServicesProperties#keycloak()}).
+ * <p>Obtains an access token from Keycloak via the {@code client_credentials}
+ * grant and caches it in-memory, refreshing 30 seconds before expiry. Used by
+ * {@code ProductBackofficeClient} to attach a {@code Bearer} token when
+ * streaming the reindex source from product-service.</p>
+ */
 @Component
 @Slf4j
 public class ServiceTokenProvider {
@@ -33,9 +41,12 @@ public class ServiceTokenProvider {
         this.tokenUrl = kc.tokenUrl();
         this.clientId = kc.clientId();
         this.clientSecret = kc.clientSecret();
-        ClientCredentialsGuard.requireConfigured(this.clientId, this.clientSecret);
     }
 
+    /**
+     * Returns a valid (non-near-expiry) access token, refreshing the cache
+     * synchronously when needed. Thread-safe: only one refresh runs at a time.
+     */
     public String getToken() {
         CachedToken current = cache.get();
         Instant cutoff = Instant.now().plusSeconds(REFRESH_SKEW_SECONDS);

@@ -11,7 +11,9 @@ class BaseSecurityConfigJwtDecoderLazyTest {
 
     @Test
     void jwtDecoderBeanFactoryDoesNotBlockWhenIssuerIsUnreachable() {
-
+        // Pick an address the OS will reject immediately (connection refused),
+        // so any synchronous HTTP attempt fails fast — proving the bean
+        // creation did not perform one.
         String unreachable = "http://127.0.0.1:1/realms/ecommerce";
         SecurityProperties props = new SecurityProperties(
                 true, unreachable, true, true,
@@ -26,7 +28,8 @@ class BaseSecurityConfigJwtDecoderLazyTest {
         long elapsed = System.currentTimeMillis() - start;
 
         assertThat(decoder).isNotNull();
-
+        // Bean creation must complete well under any HTTP timeout — proving
+        // no OIDC discovery was attempted eagerly.
         assertThat(elapsed)
                 .as("bean factory call must be non-blocking")
                 .isLessThan(2_000L);
@@ -34,7 +37,11 @@ class BaseSecurityConfigJwtDecoderLazyTest {
 
     @Test
     void applicationContextStartsWithoutDecoderInitThrowing() {
-
+        // Same unreachable issuer; the test exercises a real Spring Boot web
+        // context with the SecurityAutoConfiguration auto-configuration active.
+        // If the JwtDecoder bean factory is still synchronous-on-startup, this
+        // context will fail to start (or hang on bean init). After the fix it
+        // starts cleanly because the bean is a Holder that defers discovery.
         new WebApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
                         SecurityAutoConfiguration.class,
@@ -49,7 +56,8 @@ class BaseSecurityConfigJwtDecoderLazyTest {
                     assertThat(context).hasSingleBean(JwtDecoder.class);
                     JwtDecoder decoder = context.getBean(JwtDecoder.class);
                     assertThat(decoder).isNotNull();
-
+                    // The bean factory itself must not have hit the wire —
+                    // the assertion is the context-load completing cleanly.
                 });
     }
 }

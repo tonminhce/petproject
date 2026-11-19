@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mediaservice}
     username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:}
+    password: ${POSTGRES_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -24,8 +24,15 @@ shop:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: media-service
+      # F-018 (P1): a consumer group must replay the events it missed.
+      # 'latest' silently skipped everything published while the group had no
+      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
 
+  # common-storage wires S3Client/S3Presigner/ObjectStorageService from these
+  # props (RustFS in compose, MinIO in ITs). Bucket creation is BucketBootstrap's
+  # job — it also asserts the private ACL — so auto-create stays off here and a
+  # storage outage at startup degrades the service instead of killing the context.
   storage:
     endpoint: ${STORAGE_ENDPOINT:http://localhost:9000}
     region: ${STORAGE_REGION:us-east-1}
@@ -40,6 +47,8 @@ shop:
     stateless-session: true
     public-paths: []
 
+  # D4 outbox relay scheduling (ports rating-service's convention)
+  # H-5 aging: nightly retention — SENT>retention-days purged, FAILED>retention-days → terminal DEAD
   media:
     outbox:
       poll-millis: ${MEDIA_OUTBOX_POLL_MILLIS:2000}
@@ -48,18 +57,24 @@ shop:
       retention-days: ${MEDIA_OUTBOX_RETENTION_DAYS:7}
       retention-cron: ${MEDIA_OUTBOX_RETENTION_CRON:0 0 3 * * *}
 
+  # H-4 purge gate: product-service internal reference-count endpoint
+  # (SERVICE-token gated) + client_credentials token endpoint. Compose wiring
+  # for these env vars rides the fleet env sweep.
   product:
     base-url: ${PRODUCT_SERVICE_URL:http://localhost:8086}
     timeout-ms: 3000
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:9090/realms/ecommerce/protocol/openid-connect/token}
       client-id: ${MEDIA_SERVICE_CLIENT_ID:media-service}
-      client-secret: ${MEDIA_SERVICE_CLIENT_SECRET:}
+      client-secret: ${MEDIA_SERVICE_CLIENT_SECRET:changeme}
 
 media:
   bucket: ${STORAGE_BUCKET:media}
   presign-ttl: ${MEDIA_PRESIGN_TTL:7d}
   max-upload: ${MEDIA_MAX_UPLOAD:10MB}
+  # F-062: the budget for the DECODED image (width x height x 4 bytes) plus the
+  # source bytes. A larger image is rejected with 413 BEFORE it is decoded, so
+  # a single upload can no longer allocate hundreds of megabytes of heap.
   max-decoded-bytes: ${MEDIA_MAX_DECODED_BYTES:64MB}
   purge-grace: ${MEDIA_PURGE_GRACE:30d}
   display-width: ${MEDIA_DISPLAY_WIDTH:1200}

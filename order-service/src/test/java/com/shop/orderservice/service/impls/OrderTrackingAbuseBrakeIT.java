@@ -14,6 +14,17 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * The abuse brake of the unauthenticated order-tracking endpoint, against the
+ * REAL database.
+ *
+ * <p>The unit test of the service uses a mocked repository, so it can only
+ * prove that the counter is written on the entity. It cannot prove that the
+ * counter SURVIVES: the rejection is a {@link BusinessException} (a
+ * {@link RuntimeException}), so a plain {@code @Transactional} method rolls the
+ * bookkeeping back together with the error and the brake never engages. That
+ * is the defect this IT pins down.</p>
+ */
 class OrderTrackingAbuseBrakeIT extends AbstractOrderServiceIT {
 
     private static final String PHONE = "0912345678";
@@ -65,6 +76,7 @@ class OrderTrackingAbuseBrakeIT extends AbstractOrderServiceIT {
                 .isNotNull()
                 .isAfter(Instant.now());
 
+        // and the lock holds even for the correct phone
         assertThatThrownBy(() -> orderService.trackOrder(orderId, null, PHONE))
                 .isInstanceOf(BusinessException.class);
     }

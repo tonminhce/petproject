@@ -14,6 +14,16 @@ import jakarta.validation.ConstraintViolation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Task 9 carry-in fixes (Task 5 review findings a + b):
+ * (a) PERCENT discountValue must be strictly positive — value = 0 was let
+ *     through by the inclusive field-level {@code @DecimalMin("0")}.
+ * (b) discountType domain is enforced exactly by {@code @Pattern} — the
+ *     class-level validator's {@code equalsIgnoreCase} let "percent" slip to
+ *     persistence where {@code DiscountCalculator} (exact equals) can't match it.
+ *
+ * <p>Exercises the real Bean Validation factory — no Spring context needed.
+ */
 class CampaignRequestValidationTest {
 
     private static ValidatorFactory factory;

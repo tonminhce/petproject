@@ -35,7 +35,7 @@ class BaseSecurityConfigClientIdValidationTest {
     @Test
     void noClientCheckConfiguredMeansNoAzpValidator() throws Exception {
         OAuth2TokenValidator<Jwt> validator = validator(List.of());
-
+        // The claim is absent, so only an azp validator could reject it.
         assertThat(hasErrors(validator, jwtWithAzp(null))).isFalse();
     }
 

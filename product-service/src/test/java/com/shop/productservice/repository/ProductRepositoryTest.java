@@ -52,7 +52,7 @@ class ProductRepositoryTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
-
+        // Liquibase owns the schema; Hibernate must NOT validate before Liquibase runs.
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 
@@ -157,6 +157,7 @@ class ProductRepositoryTest {
         assertThat(productRepository.countByMediaId(mediaId)).isEqualTo(2);
         assertThat(productRepository.countByMediaId(UUID.randomUUID())).isZero();
 
+        // soft-deleted rows leave the count — the purge gate must not see them
         Product fresh = productRepository.findById(referencingDeleted.getId()).orElseThrow();
         fresh.markDeleted("test");
         em.persistAndFlush(fresh);

@@ -29,6 +29,13 @@ public class NotificationWriter {
         return repository.saveAndFlush(notification);
     }
 
+    /**
+     * Claims {@code id} for a delivery attempt. Allowed from {@code PENDING},
+     * {@code FAILED_RETRYABLE}, legacy {@code FAILED}, and a {@code SENDING}
+     * row whose heartbeat has elapsed. {@code heartbeatDeadline} is the new
+     * heartbeat (now + stale horizon). Returns {@code false} when the row is
+     * settled or claimed by a live peer — the caller must not send.
+     */
     @Transactional
     public boolean markSending(UUID id, Instant heartbeatDeadline, Instant now) {
         return repository.findById(id).map(n -> {
@@ -42,6 +49,7 @@ public class NotificationWriter {
         }).orElse(false);
     }
 
+    /** SENDING → SENT. The ONLY path to SENT — call strictly after the sender's ack. */
     @Transactional
     public boolean markSent(UUID id) {
         return repository.findById(id).map(n -> {
@@ -56,6 +64,7 @@ public class NotificationWriter {
         }).orElse(false);
     }
 
+    /** SENDING → FAILED_RETRYABLE with the attempt bookkeeping for the scheduler. */
     @Transactional
     public boolean markRetryable(UUID id, int attempt, Instant nextRetryAt, String error) {
         return repository.findById(id).map(n -> {
@@ -71,6 +80,7 @@ public class NotificationWriter {
         }).orElse(false);
     }
 
+    /** SENDING → FAILED_PERMANENT (terminal). Increments the ops counter. */
     @Transactional
     public boolean markPermanent(UUID id, String error) {
         return repository.findById(id).map(n -> {

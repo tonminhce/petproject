@@ -20,6 +20,10 @@ public class InternalProductMediaController {
 
     private final ProductMediaService productMediaService;
 
+    /**
+     * @return {@code {mediaId, referenceCount}} — count of LIVE products whose
+     *         {@code media_id} points at the given media (0 = safe to purge)
+     */
     @GetMapping("/{mediaId}")
     @PreAuthorize("hasRole('SERVICE')")
     public ApiResponse<MediaReferenceCountResponse> referenceCount(@PathVariable UUID mediaId) {

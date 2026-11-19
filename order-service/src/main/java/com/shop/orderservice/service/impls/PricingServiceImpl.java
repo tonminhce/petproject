@@ -27,6 +27,16 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Product snapshots used to be fetched serially in a {@code for} loop,
+ * one HTTP round-trip per cart item. With N items the wall time was
+ * {@code N * RTT} — a 50-item cart blocked the order thread for 50 round
+ * trips. The fix fans the snapshot fetches out via {@link CompletableFuture}
+ * on a small executor: the slowest single fetch sets the budget.
+ * <p>Traceparent propagation is fleet-wide via
+ * {@code com.shop.common.web.TraceparentInterceptor} on the
+ * {@code RestClient.Builder} — the call sites don't need to do anything.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,6 +46,11 @@ public class PricingServiceImpl implements PricingService {
     private final TaxServiceClient taxClient;
     private final PromotionServiceClient promotionClient;
 
+    /**
+     * Bounded executor for fan-out. Pool size = 2 * available processors —
+     * matches the Spring {@code @Async} default for I/O-bound work. Daemon
+     * threads so a JVM shutdown doesn't wait on them.
+     */
     private static final ExecutorService SNAPSHOT_EXECUTOR =
         Executors.newFixedThreadPool(
             Math.max(2, Runtime.getRuntime().availableProcessors() * 2),
@@ -47,7 +62,7 @@ public class PricingServiceImpl implements PricingService {
 
     @Override
     public PricingBreakdown calculate(UUID orderId, UUID userId, List<CartItem> items, String couponCode) {
-
+        // P1-5 — Reject couponCode upfront if promotion service is disabled.
         if (couponCode != null && !couponCode.isBlank() && !promotionClient.isEnabled()) {
             throw BusinessException.of(ErrorCode.ORDER_PROMOTION_INVALID, couponCode);
         }
@@ -108,10 +123,17 @@ public class PricingServiceImpl implements PricingService {
         return new PricingBreakdown(subtotal, taxAmount, discountAmount, total, snapshots, promotionReservationId);
     }
 
+    /**
+     * The promotion reservation (step 2) already exists REMOTELY when the tax
+     * call runs; a tax failure must not leak it until the TTL sweep. Best-effort
+     * plain {@code /release} (the saga's compensation convention — the commit-side
+     * {@code /release-committed} belongs to the confirm coordinator), then rethrow
+     * the original error unchanged.
+     */
     private TaxCalculateResponse calculateTaxSafely(BigDecimal taxableAmount, UUID promotionReservationId) {
         try {
             return taxClient.calculate(
-                new TaxCalculateRequest(null, null, null, taxableAmount)
+                new TaxCalculateRequest(null, null, null, taxableAmount)  // taxClassId from product? defer
             );
         } catch (RuntimeException ex) {
             if (promotionReservationId != null) {

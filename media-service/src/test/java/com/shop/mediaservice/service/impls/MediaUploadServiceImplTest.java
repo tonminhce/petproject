@@ -80,8 +80,8 @@ class MediaUploadServiceImplTest {
         when(renderer.render(any(), anyString(), anyInt(), anyInt())).thenReturn(List.of(
                 new VariantRenderer.Render("original", "jpeg", 100, new byte[] {1})));
         when(mediaRepository.findBySha256(anyString()))
-                .thenReturn(Optional.empty())
-                .thenReturn(Optional.of(Media.builder().id(loserId).sha256(SHA).build()));
+                .thenReturn(Optional.empty())      // dedup probe: no winner yet
+                .thenReturn(Optional.of(Media.builder().id(loserId).sha256(SHA).build())); // after the race
         when(storage.upload(eq("media"), anyString(), any(InputStream.class), anyLong(), anyString()))
                 .thenAnswer(inv -> inv.getArgument(1));
         when(transactionTemplate.execute(any())).thenThrow(
@@ -99,12 +99,14 @@ class MediaUploadServiceImplTest {
         assertThat(response.id()).as("the WINNER's media is returned").isEqualTo(winnerId);
         assertThat(response.duplicate()).isTrue();
 
+        // the LOSER's freshly written object was purged (its own random key,
+        // distinct from the winner's row), then the winner was re-read
         org.mockito.ArgumentCaptor<String> orphanKey = org.mockito.ArgumentCaptor.forClass(String.class);
         InOrder order = inOrder(storage, mediaRepository);
         order.verify(storage).delete(eq("media"), orphanKey.capture());
         assertThat(orphanKey.getValue()).endsWith("/original.jpg");
         order.verify(mediaRepository).findBySha256(anyString());
-
+        // loser never re-inserted — the response IS the winner's row
         verify(mediaRepository, never()).deleteIncludingDeleted(any());
     }
 
@@ -122,6 +124,7 @@ class MediaUploadServiceImplTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("db down");
 
+        // the object the pipeline wrote was cleaned up — no orphan storage
         verify(storage).delete(eq("media"), anyString());
     }
 }

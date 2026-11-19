@@ -64,6 +64,8 @@ class RatingServiceImplEditTest {
                 .build();
     }
 
+    // --- edit ---
+
     @Test
     void edit_updatesOwnRow_setsEditedAt_andPreservesVerified() {
         Rating own = existingRating(true);
@@ -104,6 +106,8 @@ class RatingServiceImplEditTest {
 
         service.edit(userId, productId, editRequest());
 
+        // NIT #1 — the snapshot aggregate JPQL inside record() only sees the
+        // updated values once saveAndFlush has landed them.
         InOrder inOrder = inOrder(ratingRepository, ratingEventService);
         inOrder.verify(ratingRepository).saveAndFlush(any(Rating.class));
         inOrder.verify(ratingEventService).record(any(Rating.class), eq(RatingAction.UPDATED));
@@ -122,6 +126,8 @@ class RatingServiceImplEditTest {
         verify(ratingRepository, never()).saveAndFlush(any(Rating.class));
         verifyNoInteractions(ratingEventService);
     }
+
+    // --- list ---
 
     @Test
     void findVisibleByProductId_sortsNewestFirst_andQueriesVisibleOnly() {

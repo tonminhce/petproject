@@ -16,6 +16,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class OrderLifecycleEventTest {
 
+    /**
+     * The class must be a {@link Record}. The JVM exposes records via
+     * {@link Class#isRecord()} and the canonical component array. If this
+     * test fails, the class has been re-introduced as a mutable Lombok POJO
+     * and every caller that uses the record's canonical constructor would
+     * break — fail-fast here so the regression is caught at the unit-test
+     * boundary instead of at the Kafka deserializer.
+     */
     @Test
     void orderLifecycleEvent_isJavaRecord() {
         assertThat(OrderLifecycleEvent.class.isRecord())
@@ -43,6 +51,19 @@ class OrderLifecycleEventTest {
                 .isFalse();
     }
 
+    /**
+     * Records must round-trip through Jackson exactly like production does
+     * over Kafka: the wire mapper constructs the event through the canonical
+     * constructor, then every accessor returns the field that was passed in.
+     * A misconfigured record (e.g. a missing component accessor) would fail
+     * here before the consumer ever runs.
+     *
+     * <p>BigDecimal scale is compared via {@code compareTo} rather than
+     * {@code equals}: {@code BigDecimal.equals} is scale-sensitive, and the
+     * Jackson wire form strips trailing zeros ({@code "100.00"} →
+     * {@code "100.0"}). The numeric value is what matters on the wire; the
+     * pre-existing {@link OrderLifecycleEvent} had the same property.</p>
+     */
     @Test
     void record_roundTripsThroughJacksonCanonicalCtor() throws Exception {
         ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());

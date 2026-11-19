@@ -75,7 +75,8 @@ class ReservationCleanupSchedulerTest {
         verify(inventoryRepository).releaseReserved(productId, 5);
         verify(inventoryRepository, never()).save(any());
         verify(reservationRepository, never()).saveAll(any());
-
+        // Cache invariant — every batch that mutates Inventory.reservedQuantity
+        // must drop the corresponding cache entry.
         verify(cacheService).evictAfterCommit(productId);
     }
 
@@ -109,7 +110,7 @@ class ReservationCleanupSchedulerTest {
                 eq(ReservationStatus.PENDING), any(Instant.class), any(PageRequest.class)))
             .thenReturn(List.of(raced))
             .thenReturn(List.of());
-
+        // The claim lost the race - the row is no longer PENDING.
         when(reservationRepository.claimForExpiry(
                 raced.getId(), ReservationStatus.PENDING, ReservationStatus.EXPIRED)).thenReturn(0);
 

@@ -16,6 +16,19 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * F-056: the local role catalogue and the Keycloak realm roles stay in step.
+ *
+ * <p>The realm import is the source of truth: the realm ships the roles
+ * ADMIN, USER, MANAGER and SERVICE. The local catalogue used to be USER, PM
+ * and ADMIN - {@code PM} does not exist in the realm (granting it changed
+ * nothing at runtime) while MANAGER and SERVICE could not be granted at all
+ * (the admin role API answered 400).</p>
+ *
+ * <p>This test reads the provisioned realm file and compares it with the
+ * enum, so a realm change that is not mirrored in the catalogue fails here
+ * instead of silently at the API boundary.</p>
+ */
 class RoleCatalogueContractTest {
 
     private static final Path REALM_FILE = realmFile();
@@ -26,7 +39,7 @@ class RoleCatalogueContractTest {
         if (Files.exists(candidate)) {
             return candidate.normalize();
         }
-
+        // fall back to walking up to the repository root
         Path current = module;
         while (current.getParent() != null) {
             Path probe = current.resolve("docker/keycloak/import/ecommerce-realm.json");

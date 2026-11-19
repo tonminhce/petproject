@@ -8,6 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handler for rating lifecycle events (spec D5, decision Q2-A): dumb
+ * idempotent copy of the carried avgRating/ratingCount snapshot onto the
+ * product row. No recompute, no rating-service client, no action-based
+ * filtering — replaying the same event overwrites with identical values.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,7 +32,7 @@ public class ProductRatingService {
         Product product = found.get();
         product.setAvgRating(event.avgRating());
         product.setRatingCount(event.ratingCount());
-
+        // this transaction — REQUIRED propagation joins the outbox insert so
         Product saved = productRepository.save(product);
         productEventPublisher.publishUpdated(saved);
     }

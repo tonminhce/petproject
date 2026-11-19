@@ -33,6 +33,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Audit spot matrix (spec D6, fix round 1): the ADMIN-gated product mutation
+ * on the backoffice path ({@code ApiPaths.BACKOFFICE_PRODUCTS}) exercised
+ * through the {@code AuditAspect} — audit coverage follows the authorization
+ * level (ADMIN), not the URL prefix. C13 fix: the mutations live on
+ * {@code BackofficeProductController} since the storefront write endpoints
+ * were removed.
+ */
 @WebMvcTest(value = BackofficeProductController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
@@ -76,6 +84,7 @@ class ProductControllerAuditTest {
     @Test
     void update_emitsAuditLineWithAnnotatedActionAndResourceId() throws Exception {
 
+        // audit wiring — the annotated action/resourceId stay unchanged.
         UUID productId = UUID.fromString("00000000-0000-0000-0000-000000006002");
         when(productService.update(eq(productId), any())).thenReturn(null);
 

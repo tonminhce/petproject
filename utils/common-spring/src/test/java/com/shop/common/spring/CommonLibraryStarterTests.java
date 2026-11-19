@@ -10,6 +10,27 @@ import org.springframework.test.context.TestPropertySource;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Smoke test that verifies the {@code common-spring} starter boots a full
+ * Spring application context with every cross-cutting auto-configuration
+ * registered.
+ *
+ * <p>If any of the bundled modules (security, keycloak, logging, kafka,
+ * storage) has a wiring problem — e.g. a missing bean, a circular
+ * dependency, or a misconfigured property — this test fails fast.</p>
+ *
+ * <p>DataSource / JPA auto-configuration is excluded because the starter
+ * pulls in {@code spring-boot-starter-data-jpa} as an <i>optional</i>
+ * dependency for compile-time convenience, but the starter has no
+ * opinion on which database each service uses. A real service adds its
+ * own datasource configuration on top of this starter.</p>
+ *
+ * <p>This test doubles as the reference "no-datasource consumer" boot
+ * proof. JPA auditing must therefore be opted out explicitly via
+ * {@code shop.jpa.auditing.enabled=false} — auditing cannot activate
+ * without an EntityManagerFactory (see {@code JpaAuditingAutoConfiguration}
+ * for why this is a property and not a bean condition).</p>
+ */
 @SpringBootTest(
         classes = CommonLibraryStarter.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE

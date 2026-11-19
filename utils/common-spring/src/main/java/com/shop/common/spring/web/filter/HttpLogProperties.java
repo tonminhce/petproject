@@ -2,6 +2,9 @@ package com.shop.common.spring.web.filter;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * Configuration for {@link HttpLoggingFilter}, bound from {@code shop.web.logging.*}.
+ */
 @ConfigurationProperties(prefix = "shop.web.logging")
 public class HttpLogProperties {
 

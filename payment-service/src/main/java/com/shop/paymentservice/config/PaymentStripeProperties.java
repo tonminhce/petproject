@@ -21,6 +21,7 @@ public record PaymentStripeProperties(
         }
     }
 
+    /** True when the stripe provider is actually activating (key present). */
     public boolean isConfigured() {
         return !secretKey.isBlank();
     }

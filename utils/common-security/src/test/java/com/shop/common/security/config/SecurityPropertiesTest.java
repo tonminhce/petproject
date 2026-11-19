@@ -7,6 +7,15 @@ import org.springframework.http.HttpMethod;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+/**
+ * Unit tests for {@link SecurityProperties.EndpointRule}'s compact-constructor
+ * validation. The integration test
+ * {@code SecurityFilterChainIntegrationTest#S8} proves the happy-path
+ * behaviour end-to-end (a method-scoped rule actually permits the matching
+ * request through the filter chain); these unit tests pin down the
+ * single-argument validation rule in isolation so future changes cannot
+ * silently relax {@code path}-blankness checks.
+ */
 class SecurityPropertiesTest {
 
     @Test

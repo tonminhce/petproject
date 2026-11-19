@@ -18,6 +18,21 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
+/**
+ * 4 — NO {@code @Qualifier} on {@code @Bean} params. Lombok does not copy
+ * {@code @Qualifier} from fields to constructor params. Defining beans as method
+ * signatures here works because Spring wires by parameter NAME ({@code productRestClient},
+ * {@code inventoryRestClient}, etc.) — clients inject by name with
+ * {@code @Qualifier("productRestClient")}.
+ * <p>3 — no auth header is set HERE (shared builders). Authorization is attached
+ * PER-CALL inside each client method — only {@code InventoryServiceClient} needs a
+ * token (product GET is a public path; tax/promotion are disabled in the MVP). The
+ * header value comes from {@code ServiceTokenProvider.getToken()}.</p>
+ * <p>Traceparent propagation is central: every {@code RestClient.Builder}
+ * bean is enriched by common-spring's
+ * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
+ * that bean and no interceptor is hand-added here.</p>
+ */
 @Configuration
 public class RestClientConfig {
 
@@ -79,6 +94,13 @@ public class RestClientConfig {
         return new HttpComponentsClientHttpRequestFactory(httpClient);
     }
 
+    /**
+     * Spring Boot 4 does not auto-register {@code RestClient.Builder} as a bean;
+     * ServiceTokenProvider needs it. R1 — prototype scope so every consumer
+     * (each client bean above + ServiceTokenProvider) gets a FRESH builder that
+     * the common-spring BPP has already enriched with the traceparent
+     * interceptor; a shared mutable builder would accumulate per-client config.
+     */
     @Bean
     @Scope("prototype")
     public RestClient.Builder restClientBuilder() {

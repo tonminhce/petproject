@@ -15,6 +15,18 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Fleet contract: every {@code @KafkaListener} declares its consumer group id
+ * explicitly.
+ *
+ * <p>A listener that inherits {@code shop.kafka.consumer.group-id} has no
+ * identity of its own: the id is whatever the deployment configuration
+ * happens to say, and two services configured with the same id would silently
+ * COMPETE for the partitions of a shared topic, so half of the events would
+ * never reach one of them. The id is also the offset key - a new id replays
+ * the topic from the earliest offset - so it must be a deliberate, reviewable
+ * value rather than an ambient one.</p>
+ */
 class KafkaListenerGroupIdContractTest {
 
     private static final Pattern LISTENER = Pattern.compile("@KafkaListener\\s*\\(");
@@ -49,6 +61,7 @@ class KafkaListenerGroupIdContractTest {
                 .isEmpty();
     }
 
+    /** The annotation arguments of every @KafkaListener in the file. */
     private static List<String> listenerAnnotations(String text) {
         List<String> found = new ArrayList<>();
         Matcher matcher = LISTENER.matcher(text);
@@ -69,6 +82,7 @@ class KafkaListenerGroupIdContractTest {
         return found;
     }
 
+    /** Every first-party production source of the reactor. */
     private static List<Path> productionSources(Path repoRoot) throws IOException {
         try (Stream<Path> modules = Files.list(repoRoot)) {
             return modules
@@ -86,6 +100,7 @@ class KafkaListenerGroupIdContractTest {
         }
     }
 
+    /** The reactor root: the directory that holds the modules and the parent pom. */
     private static Path findRepoRoot() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {

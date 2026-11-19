@@ -55,10 +55,13 @@ class S3ObjectStorageServiceDownloadLeakTest {
 
         StorageObject obj = service.download("test", "k");
 
+        // the StorageObject is handed to the caller. The caller's close() on
+        // .content() is now an idempotent cleanup of an in-memory copy.
         assertThat(underlyingClosed.get())
                 .as("S3 stream must be closed by download() to release the HTTP connection")
                 .isTrue();
 
+        // Sanity: the returned object still carries the bytes for the caller.
         byte[] actual = obj.content().readAllBytes();
         assertThat(actual).containsExactly(payload);
         assertThat(obj.key()).isEqualTo("k");
@@ -100,6 +103,7 @@ class S3ObjectStorageServiceDownloadLeakTest {
         try {
             obj = service.download("test", "k");
 
+            // must be closed (try-with-resources) before the exception propagates.
             assertThatNoException().isThrownBy(() -> obj.content().readAllBytes());
         } catch (RuntimeException expected) {
             assertThat(underlyingClosed.get())

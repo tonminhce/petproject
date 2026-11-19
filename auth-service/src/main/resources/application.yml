@@ -1,5 +1,14 @@
+# =============================================================================
+#  auth-service — Authentication & user management.
+#  Identity is delegated to Keycloak (login/refresh/logout + admin user ops);
+#  this service keeps a local shadow copy of users for fast lookups.
+#
+#  Platform-wide defaults live in `common-spring/application.yml` (inherited).
+#  Only service-specific overrides belong here.
+# =============================================================================
 spring:
   mail:
+    # the SMTP server itself (host/port/user/password) - F-054
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:25}
     username: ${SMTP_USERNAME:}
@@ -16,11 +25,12 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/authservice}
     username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:}
+    password: ${POSTGRES_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
+      # Schema is owned by Liquibase — never let Hibernate mutate it.
       ddl-auto: validate
     open-in-view: false
 
@@ -28,6 +38,7 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
 server:
+  # Override the common-spring default 8080.
   port: 8088
   shutdown: graceful
 
@@ -36,10 +47,16 @@ shop:
     name: auth-service
   auth:
     smtp:
+      # F-054: the password reset email is dispatched over SMTP. Without a
+      # channel the reset request FAILS (503 AUTH-1010) instead of reporting
+      # a success that never happened.
       enabled: ${AUTH_MAIL_ENABLED:false}
+      # required when enabled - the service refuses to start without them
       from: ${AUTH_MAIL_FROM:}
       reset-base-url: ${AUTH_RESET_BASE_URL:}
   security:
+    # Auth entrypoints must stay public: sign-up / login / refresh / logout.
+    # (actuator, swagger, api-docs are public via common-security platform defaults)
     public-paths:
       - path: /api/v1/auth/sign-up
       - path: /api/v1/auth/login
@@ -50,5 +67,8 @@ shop:
 
 management:
   health:
+    # F-054: the SMTP channel only serves the password reset. Its health
+    # indicator must not take the whole auth-service out of rotation - login,
+    # refresh and the user APIs do not need a mailbox.
     mail:
       enabled: false

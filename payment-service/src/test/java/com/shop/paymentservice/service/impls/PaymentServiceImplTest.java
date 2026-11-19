@@ -190,6 +190,8 @@ class PaymentServiceImplTest {
         verifyNoInteractions(writer);
     }
 
+    // --- backoffice read API ---
+
     @Test
     void findAllByOrderId_nullOrderId_delegatesToUnfilteredNewestFirstFinder() {
         PageRequest pageable = PageRequest.of(0, 10);

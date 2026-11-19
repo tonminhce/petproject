@@ -96,7 +96,8 @@ class ProductMediaSweepJobTest {
     @Test
     @DisplayName("bounding/paging: queries exactly ONE page of size=limit; a full page is never followed by a second query")
     void paging_exactlyOnePageOfLimit_noPaginationLoop() {
-
+        // page reports MORE total rows available (hasNext true) — the sweep must
+        // still stop after this one page; the next cycle continues.
         List<Product> fullPage = List.of(product(MEDIA_A), product(MEDIA_B));
         var page = new PageImpl<>(fullPage, PageRequest.of(0, properties.limit()), 500);
         when(productRepository.findByMediaIdIsNotNull(any(Pageable.class))).thenReturn(page);
@@ -141,7 +142,7 @@ class ProductMediaSweepJobTest {
         job.sweep();
 
         verify(productMediaService, times(2)).clearReference(MEDIA_A);
-        assertThat(clearedCount()).isEqualTo(4);
+        assertThat(clearedCount()).isEqualTo(4);   // 2 rows × 2 calls (second call is a no-op replay)
     }
 
     @Test
@@ -156,6 +157,8 @@ class ProductMediaSweepJobTest {
 
         assertThatCode(job::sweep).doesNotThrowAnyException();
 
+        // entire cycle skipped: the failing row's media is never "cleared", the
+        // remaining rows are never even checked, no clear path is touched
         verify(mediaHeadClient, times(1)).exists(any());
         verifyNoInteractions(productMediaService);
         assertThat(checkedCount()).isEqualTo(1);

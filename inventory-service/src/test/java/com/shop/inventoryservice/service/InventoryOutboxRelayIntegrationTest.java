@@ -15,11 +15,18 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Container-backed relay test — all Testcontainers/property bootstrap lives in
+ * {@link AbstractIntegrationTest}; only the service-specific poll-interval
+ * override is declared here.
+ */
 class InventoryOutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void registerInventoryProps(DynamicPropertyRegistry registry) {
-
+        // Neutralize the @Scheduled relay timer (LifecycleAndEventsIT precedent):
+        // the test drains manually, and a 200ms background tick claiming the head
+        // row would lock the manual relay() out via SKIP LOCKED (C14) mid-drain.
         registry.add("inventory.outbox.poll-interval-ms", () -> "3600000");
     }
 

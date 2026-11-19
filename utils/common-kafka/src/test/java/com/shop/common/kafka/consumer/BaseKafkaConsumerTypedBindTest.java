@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BaseKafkaConsumerTypedBindTest {
 
+    /** Mirror of a fleet lifecycle DTO: UUID identity + ISO instant fields. */
     record ShippedAtEvent(String eventId, String eventType, Instant occurredAt, UUID orderId) {}
 
     static final class TestConsumer extends BaseKafkaConsumer<String, ShippedAtEvent> {

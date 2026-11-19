@@ -1,5 +1,9 @@
 package com.shop.common.core.constants;
 
+/**
+ * Canonical API path prefixes. Every service must pin its {@code @RequestMapping}
+ * to one of these constants so versioning stays consistent across the platform.
+ */
 public final class ApiPaths {
 
     public static final String API = "/api";
@@ -31,7 +35,7 @@ public final class ApiPaths {
     public static final String RATINGS = API_V1 + "/ratings";
 
     public static final String INTERNAL_PRODUCT_MEDIA_REFERENCES = "/internal/products/media-references";
-
+    /** Internal, SERVICE-role: live stock reservations of a product (F-060). */
     public static final String INTERNAL_INVENTORY_RESERVATIONS = "/internal/inventory/reservations";
 
     public static final String BACKOFFICE_RATINGS = API_V1 + "/backoffice/ratings";

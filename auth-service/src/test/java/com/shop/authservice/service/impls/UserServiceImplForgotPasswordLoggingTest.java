@@ -31,6 +31,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+/**
+ * F-057: the password reset log must not enumerate accounts.
+ *
+ * <p>The unknown-account branch logged the submitted address, so anybody with
+ * read access to the log could tell which addresses have an account. The two
+ * branches now write the SAME line; the counter keeps the distinction
+ * visible to monitoring instead of to the log reader.</p>
+ */
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplForgotPasswordLoggingTest {
 

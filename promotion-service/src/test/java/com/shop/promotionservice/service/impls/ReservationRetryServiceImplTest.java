@@ -19,6 +19,12 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Task 6 — retry wrapper (spec §5.1 step 5): mirrors inventory
+ * ReservationServiceImpl — 3 attempts, linear backoff 50ms*attempt,
+ * exhausted → PRO-7011. Splits from the transactional bean so the proxy
+ * boundary is real (no self-invocation) and the loop is unit-testable.
+ */
 @ExtendWith(MockitoExtension.class)
 class ReservationRetryServiceImplTest {
 
@@ -78,12 +84,15 @@ class ReservationRetryServiceImplTest {
         assertThat(service.reserveWithRetry(CODE, req)).isEqualTo(resp);
         verify(campaignReservationService, times(1)).reserve(CODE, req);
 
+        // business rejection is NOT retried — only OptimisticLockingFailureException is
         when(campaignReservationService.reserve(CODE, req))
             .thenThrow(BusinessException.of(com.shop.common.core.exception.ErrorCode.BUDGET_EXHAUSTED, CODE));
         assertThatThrownBy(() -> service.reserveWithRetry(CODE, req))
             .isInstanceOf(BusinessException.class);
         verify(campaignReservationService, times(2)).reserve(CODE, req);
     }
+
+    // --- Task 7 — lifecycle *WithRetry variants (spec §5.3: same wrapper as reserve) ---
 
     @Test
     void commitWithRetry_retriesOnOptimisticLockFailure() {

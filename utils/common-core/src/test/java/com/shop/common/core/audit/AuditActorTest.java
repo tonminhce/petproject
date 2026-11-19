@@ -9,6 +9,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * F-049: one convention for the actor of an audited change.
+ */
 class AuditActorTest {
 
     @Test

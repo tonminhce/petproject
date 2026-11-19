@@ -66,7 +66,8 @@ class ProductServiceImplTest {
 
     @org.junit.jupiter.api.BeforeEach
     void runTransactionCallback() {
-
+        // the write runs inside the template; the callback itself is executed
+        // directly so the unit test can assert the transaction BOUNDARY
         org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
@@ -243,7 +244,8 @@ class ProductServiceImplTest {
     void delete_evictsOnlyAffectedCacheKeys() {
         Product existing = sampleProduct();
         when(repo.findById(ID)).thenReturn(Optional.of(existing));
-
+        // F-060: the delete asks inventory-service whether the product still
+        // has live stock reservations.
         when(inventoryReservationClient.activeReservationCount(ID)).thenReturn(OptionalLong.of(0));
         when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("alice"));
         when(cacheManager.getCache("product")).thenReturn(productCache);
@@ -284,6 +286,8 @@ class ProductServiceImplTest {
 
         assertThat(result.content()).hasSize(1);
     }
+
+    // --- media epic spec D5 — Option C write-time gate ---
 
     private static final UUID MEDIA_ID = UUID.fromString("88888888-8888-8888-8888-888888888888");
 
@@ -377,7 +381,9 @@ class ProductServiceImplTest {
         service.update(ID, req);
 
         verify(mediaHeadClient).exists(MEDIA_ID);
-
+        // mediaId wiring lives in mapper.partialUpdate (mocked here — its real
+        // behavior is pinned in ProductMapperMediaFieldsTest); the gate must
+        // pass BEFORE the update proceeds.
         verify(mapper).partialUpdate(existing, req);
         verify(publisher).publishUpdated(existing);
     }
@@ -416,6 +422,7 @@ class ProductServiceImplTest {
     @Test
     void update_clearMediaId_skipsHeadCheckAndProceeds() {
 
+        // not fire (nothing to verify) — the mapper removes the reference.
         Product existing = sampleProduct();
         ProductUpdateRequest req = new ProductUpdateRequest(null, null, null, null,
             null, null, null, null, null, null, null, null, null, true);

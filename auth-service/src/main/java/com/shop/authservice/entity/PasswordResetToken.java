@@ -47,6 +47,14 @@ public class PasswordResetToken {
     @Builder.Default
     private Instant createdAt = Instant.now();
 
+    /**
+     * Optimistic lock.
+     *
+     * <p>F-053: the token used to carry only a 'used' flag, so two concurrent
+     * redemptions both read {@code used = false}, both changed the password and
+     * the last writer silently replaced the password the owner had just
+     * chosen.</p>
+     */
     @Version
     @Column(name = "version", nullable = false)
     private Long version;

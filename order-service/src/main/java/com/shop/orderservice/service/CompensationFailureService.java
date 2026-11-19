@@ -15,6 +15,20 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * The ledger of the compensations that failed.
+ *
+ * <p>A compensation (release the stock reservation of a failed checkout) that
+ * fails must not disappear: the order row is deleted right after, so nothing
+ * else points at the orphaned hold. The row written here is that link, and the
+ * retry below is what eventually releases the hold - instead of waiting for
+ * inventory-service's TTL sweep (900 seconds by default) with the sellable
+ * stock materially lower than the ledger says.</p>
+ *
+ * <p>The record is written in its OWN transaction: the saga that failed is
+ * rolling back, so a write that joins that transaction would be rolled back
+ * with it.</p>
+ */
 @Service
 @Slf4j
 public class CompensationFailureService {
@@ -22,6 +36,7 @@ public class CompensationFailureService {
     private final FailedCompensationRepository repository;
     private final StockReservationService stockReservationService;
 
+    /** The backoff between two retries of the same compensation. */
     private final Duration retryBackoff;
 
     @Autowired
@@ -33,6 +48,13 @@ public class CompensationFailureService {
         this.retryBackoff = Duration.ofSeconds(retryBackoffSeconds);
     }
 
+    /**
+     * Records a compensation that could not be done.
+     *
+     * <p>Idempotent per (reservation, kind): a reservation that is already on
+     * the list is not recorded twice, so a repeated failure does not pile up
+     * rows.</p>
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(UUID orderId, UUID reservationId, String kind, String error) {
         if (reservationId == null) {
@@ -59,6 +81,12 @@ public class CompensationFailureService {
                 kind, reservationId, orderId, error);
     }
 
+    /**
+     * Retries the pending compensations.
+     *
+     * <p>A compensation that succeeds is marked RESOLVED; one that fails again
+     * is counted and pushed to the next attempt.</p>
+     */
     @Scheduled(fixedDelayString = "${order.compensation.retry-millis:30000}")
     @Transactional
     public int retryPending() {

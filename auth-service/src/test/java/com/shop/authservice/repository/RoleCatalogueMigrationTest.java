@@ -21,6 +21,22 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * F-056: the changeset that aligns the role table with the Keycloak realm.
+ *
+ * <p>The test applies the real Liquibase changesets against a real
+ * PostgreSQL, in two steps:</p>
+ * <ol>
+ *   <li>the pre-F-056 changesets - the database still holds the fictional PM
+ *       role and a user linked to it (the legacy state);</li>
+ *   <li>the real master changelog - only changeset 006 is new, and it must
+ *       add MANAGER and SERVICE and remove PM together with its links.</li>
+ * </ol>
+ *
+ * <p>Running it against a legacy database is the point: the changeset deletes
+ * the {@code user_role} links BEFORE the role row, because of the foreign
+ * key. The other order fails the migration on every existing database.</p>
+ */
 @Testcontainers
 class RoleCatalogueMigrationTest {
 
@@ -34,7 +50,7 @@ class RoleCatalogueMigrationTest {
     @DisplayName("the migration adds MANAGER and SERVICE and removes PM with its links")
     void theMigrationAlignsTheRoleTableWithTheRealm() throws Exception {
         try (Connection connection = POSTGRES.createConnection("")) {
-
+            // 1. the legacy schema and the legacy PM assignment
             update(connection, "db/changelog/legacy-roles-changelog.yaml");
             execute(connection, "insert into users (user_id, full_name, user_name, email, gender) values "
                     + "(gen_random_uuid(), 'Legacy PM', 'legacy-pm', 'legacy-pm@example.com', 'OTHER')");
@@ -45,6 +61,7 @@ class RoleCatalogueMigrationTest {
             assertThat(query(connection, "select role_name from roles order by role_name"))
                     .containsExactly("ADMIN", "PM", "USER");
 
+            // 2. the real changelog - only 006 is new
             update(connection, "db/changelog/db.changelog-master.yaml");
 
             assertThat(query(connection, "select role_name from roles order by role_name"))

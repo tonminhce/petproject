@@ -50,6 +50,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MediaOutboxIT extends AbstractMediaIntegrationTest {
 
+    /**
+     * F-063: the delete path consults the reference checker. This suite is
+     * about the outbox, so the product-service boundary reports "no live
+     * reference".
+     */
     @MockitoBean
     MediaReferenceClient referenceClient;
 
@@ -71,10 +76,11 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /** Relay's scheduled poll must not race the manual {@code relay()} calls in tests. */
     @DynamicPropertySource
     static void relayProps(DynamicPropertyRegistry registry) {
         registry.add("shop.media.outbox.poll-millis", () -> "3600000");
-
+        // low bar so the FAILED parking (and its replay) is reachable in-test
         registry.add("shop.media.outbox.max-retries", () -> "2");
     }
 
@@ -86,6 +92,8 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         FlakyOutbox.failSave = false;
         FlakyPublisher.failing = false;
     }
+
+    // --- same-tx: upload commit path ---
 
     @Test
     @DisplayName("upload commits MediaCreated outbox row in the SAME transaction as the media row")
@@ -117,7 +125,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         assertThat(json.get("canonicalPath").textValue())
                 .isEqualTo("/api/v1/medias/" + response.id());
         assertThat(json.get("variants").isArray()).isTrue();
-        assertThat(json.get("variants").size()).isEqualTo(6);
+        assertThat(json.get("variants").size()).isEqualTo(6); // 3 variants × original-format + webp
         for (JsonNode variant : json.get("variants")) {
             assertThat(variant.size()).isEqualTo(5);
             assertThat(variant.fieldNames()).toIterable()
@@ -145,6 +153,8 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         assertThat(outboxRepository.count()).isZero();
         assertThat(mediaRepository.count()).isZero();
     }
+
+    // --- same-tx: soft-delete commit path ---
 
     @Test
     @DisplayName("soft-delete commits MediaDeleted row in the SAME transaction as the deleted_at update")
@@ -189,8 +199,10 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
                 .filter(r -> "MediaDeleted".equals(r.getEventType()))
                 .count();
         assertThat(deletedRows).isEqualTo(1);
-        assertThat(outboxRepository.count()).isEqualTo(2);
+        assertThat(outboxRepository.count()).isEqualTo(2); // MediaCreated + MediaDeleted, no more
     }
+
+    // --- same-tx rollback proof: outbox insert failure rolls the media write back ---
 
     @Test
     @DisplayName("outbox insert fails on upload → media row rolls back, orphan objects purged")
@@ -215,9 +227,11 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         assertThatThrownBy(() -> lifecycleService.softDelete(response.id()))
                 .isInstanceOf(IllegalStateException.class);
 
-        assertThat(mediaRepository.findById(response.id())).isPresent();
-        assertThat(outboxRepository.count()).isEqualTo(1);
+        assertThat(mediaRepository.findById(response.id())).isPresent(); // not deleted
+        assertThat(outboxRepository.count()).isEqualTo(1); // only the MediaCreated row
     }
+
+    // --- relay → real Kafka ---
 
     @Test
     @DisplayName("relay publishes to media.lifecycle.v1 with key=mediaId and the snapshot payload; sent flag flips")
@@ -264,7 +278,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
 
         OutboxEvent retried = outboxRepository.findById(row.getId()).orElseThrow();
         assertThat(retried.getStatus()).isEqualTo(com.shop.common.core.constants.OutboxStatus.SENT);
-        assertThat(retried.getRetryCount()).isEqualTo(1);
+        assertThat(retried.getRetryCount()).isEqualTo(1); // unchanged by the successful publish
         assertThat(awaitRecord("media.lifecycle.v1", response.id().toString())).isNotNull();
     }
 
@@ -276,20 +290,22 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         OutboxEvent row = outboxRepository.findAll().get(0);
 
         FlakyPublisher.failing = true;
-        relay.relay();
-        relay.relay();
+        relay.relay(); // retry 1/2
+        relay.relay(); // retry 2/2 → parked FAILED
         OutboxEvent parked = outboxRepository.findById(row.getId()).orElseThrow();
         assertThat(parked.getStatus()).isEqualTo(com.shop.common.core.constants.OutboxStatus.FAILED);
         assertThat(parked.getLastError()).isNotBlank();
 
         FlakyPublisher.failing = false;
-        relay.relay();
+        relay.relay(); // replay cycle picks FAILED rows up again
 
         OutboxEvent replayed = outboxRepository.findById(row.getId()).orElseThrow();
         assertThat(replayed.getStatus()).isEqualTo(com.shop.common.core.constants.OutboxStatus.SENT);
         assertThat(replayed.getSentAt()).isNotNull();
         assertThat(awaitRecord("media.lifecycle.v1", response.id().toString())).isNotNull();
     }
+
+    // --- helpers ---
 
     private org.springframework.web.multipart.MultipartFile multipart(String contentType, byte[] bytes) {
         return new org.springframework.mock.web.MockMultipartFile("file", "upload", contentType, bytes);
@@ -299,6 +315,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
     }
 
+    /** The fleet serializer string-encodes the payload String — unwrap one token if present. */
     private JsonNode snapshot(String rawValue) throws Exception {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
@@ -328,6 +345,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         return null;
     }
 
+    /** Test-only outbox wrapper: throws on the next save while the flag is set. */
     @TestConfiguration(proxyBeanMethods = false)
     static class FlakyOutboxConfig {
 
@@ -350,6 +368,7 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
         static volatile boolean failSave = false;
     }
 
+    /** Test-only publisher wrapper: outage while the flag is set, pass-through otherwise. */
     @TestConfiguration(proxyBeanMethods = false)
     static class FlakyKafkaConfig {
 
@@ -376,6 +395,11 @@ class MediaOutboxIT extends AbstractMediaIntegrationTest {
             super.publish(topic, key, value);
         }
 
+        /**
+         * The relay publishes in a batch, so the outage has to be injected on
+         * the batch path too - otherwise the test would silently exercise a
+         * healthy publish and assert a failure that never happened.
+         */
         @Override
         public BatchOutcome publishBatch(List<OutboxMessage> records, long timeout, TimeUnit unit) {
             if (failing) {

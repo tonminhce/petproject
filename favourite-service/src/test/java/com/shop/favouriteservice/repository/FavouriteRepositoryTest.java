@@ -23,6 +23,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Mirrors product-service's {@code ProductRepositoryTest} pattern exactly so the
+ * fleet stays consistent: {@code @DataJpaTest} with {@code Replace.NONE}, explicit
+ * imports for {@code JpaAuditingAutoConfiguration} + {@code LiquibaseAutoConfiguration}
+ * + {@code TestLiquibaseConfig}, a static {@code @Container} + {@code @DynamicPropertySource}
+ * (NOT {@code @ServiceConnection}).
+ */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -46,7 +53,7 @@ class FavouriteRepositoryTest {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.liquibase.change-log",
                 () -> "classpath:db/changelog/db.changelog-master.yaml");
-
+        // Liquibase owns the schema; Hibernate must NOT validate before Liquibase runs.
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 
@@ -87,7 +94,7 @@ class FavouriteRepositoryTest {
 
         assertThat(affected).isEqualTo(1);
         em.clear();
-
+        // Native query bypasses @SQLRestriction so we can read the tombstoned row.
         Favourite raw = (Favourite) em.getEntityManager()
                 .createNativeQuery("SELECT * FROM favourites WHERE id = ?1", Favourite.class)
                 .setParameter(1, fav.getId())
@@ -95,7 +102,7 @@ class FavouriteRepositoryTest {
         assertThat(raw.isDeleted()).isTrue();
         assertThat(raw.getDeletedAt()).isNotNull();
         assertThat(raw.getDeletedBy()).isEqualTo("alice");
-
+        // Repository finder still skips soft-deleted rows.
         assertThat(repo.findByUserIdOrderByCreatedAtDesc(alice, PageRequest.of(0, 20))).isEmpty();
     }
 
@@ -107,6 +114,8 @@ class FavouriteRepositoryTest {
         assertThat(deleted).isEqualTo(1);
         em.clear();
 
+        // After soft-delete, the partial unique index releases (user, product), so the
+        // same pair can be re-inserted.
         Favourite re = persistFavourite(alice, productId);
         assertThat(re.getId()).isNotNull();
     }

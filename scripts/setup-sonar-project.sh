@@ -4,26 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-ENV_FILE="$REPO_ROOT/.env.sonar"
-
-if [ -f "$ENV_FILE" ]; then
-    # shellcheck disable=SC1090
-    source "$ENV_FILE"
-fi
-
 SONAR_HOST="${SONAR_HOST:-http://localhost:9000}"
 SONAR_ADMIN_USER="${SONAR_ADMIN_USER:-admin}"
-SONAR_ADMIN_PASS="${SONAR_ADMIN_PASS:-}"
-SONAR_NEW_ADMIN_PASS="${SONAR_NEW_ADMIN_PASS:-}"
+SONAR_ADMIN_PASS="${SONAR_ADMIN_PASS:-admin}"
+SONAR_NEW_ADMIN_PASS="${SONAR_NEW_ADMIN_PASS:-Shop#Sonar2026!Strict}"
 PROJECT_KEY="${SONAR_PROJECT_KEY:-petproject}"
 PROJECT_NAME="${SONAR_PROJECT_NAME:-petproject}"
-
-if [ -z "$SONAR_ADMIN_PASS" ] || [ -z "$SONAR_NEW_ADMIN_PASS" ]; then
-    echo "ERROR: SONAR_ADMIN_PASS and SONAR_NEW_ADMIN_PASS must both be set."
-    echo "       They are read from the environment or from $ENV_FILE; the script ships no password."
-    echo "       SONAR_ADMIN_PASS is the password of the running instance, SONAR_NEW_ADMIN_PASS is the one to set."
-    exit 1
-fi
+ENV_FILE="$REPO_ROOT/.env.sonar"
 
 echo "==> 1. Waiting for SonarQube to become UP at $SONAR_HOST..."
 MAX_RETRIES=60
@@ -41,6 +28,10 @@ echo "SonarQube is UP!"
 
 # Determine working credentials
 AUTH_HEADER=""
+if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+fi
 
 # Check if existing token works
 if [ -n "${SONAR_TOKEN:-}" ]; then
@@ -95,9 +86,6 @@ cat > "$ENV_FILE" <<EOF
 SONAR_HOST_URL=$SONAR_HOST
 SONAR_TOKEN=$SONAR_TOKEN
 SONAR_PROJECT_KEY=$PROJECT_KEY
-SONAR_ADMIN_USER=$SONAR_ADMIN_USER
-SONAR_ADMIN_PASS=$SONAR_ADMIN_PASS
-SONAR_NEW_ADMIN_PASS=$SONAR_NEW_ADMIN_PASS
 EOF
 chmod 600 "$ENV_FILE"
 echo "Saved credentials to $ENV_FILE"

@@ -108,7 +108,7 @@ class OrderReturnServiceTest {
     void requestReturn_notOwnedByUser_throwsException() {
         Order order = Order.builder()
                 .id(orderId)
-                .userId(UUID.randomUUID())
+                .userId(UUID.randomUUID()) // different user
                 .status(OrderStatus.DELIVERED)
                 .total(BigDecimal.valueOf(200))
                 .build();
@@ -183,7 +183,8 @@ class OrderReturnServiceTest {
         assertThatThrownBy(() -> service.requestReturn(userId, orderId, request))
                 .isInstanceOfSatisfying(BusinessException.class, ex -> {
                     assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST.getCode());
-
+                    // the i18n key resolves to a human message - the raw key must
+                    // never reach the client
                     assertThat(ex.getMessage()).contains("exceeds the order total");
                     assertThat(ex.getMessage()).doesNotContain("order.return.refund.exceeds.total");
                 });

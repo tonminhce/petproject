@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 @Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class})
 public abstract class AbstractMediaIntegrationTest {
 
+    /** Same name for {@code shop.storage.bucket} and {@code media.bucket} — single source of truth. */
     public static final String BUCKET = "media";
 
     @SuppressWarnings("resource")
@@ -40,6 +41,7 @@ public abstract class AbstractMediaIntegrationTest {
         .waitingFor(Wait.forHttp("/minio/health/live").forPort(9000)
                 .forStatusCode(200));
 
+    /** S3 endpoint of the shared RustFS container. */
     public static String rustfsEndpoint() {
         return "http://" + rustfs.getHost() + ":" + rustfs.getMappedPort(9000);
     }
@@ -50,6 +52,7 @@ public abstract class AbstractMediaIntegrationTest {
         rustfs.start();
     }
 
+    /** Bootstrap servers of the shared Kafka singleton — ITs assert on real topics. */
     public static String kafkaBootstrapServers() {
         return kafka.getBootstrapServers();
     }
@@ -60,7 +63,8 @@ public abstract class AbstractMediaIntegrationTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-
+        // Liquibase owns the media schema (changelog-001) — schema-by-Hibernate
+        // stays off (ddl-auto none) so the changelog is what ITs exercise.
         registry.add("spring.liquibase.enabled", () -> "true");
         registry.add("shop.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
@@ -72,6 +76,5 @@ public abstract class AbstractMediaIntegrationTest {
         registry.add("shop.security.issuer-uri", () -> "http://localhost:0/realms/test");
         registry.add("shop.security.csrf-disabled", () -> "true");
         registry.add("shop.security.stateless-session", () -> "true");
-        registry.add("shop.product.keycloak.client-secret", () -> "mediatest");
     }
 }

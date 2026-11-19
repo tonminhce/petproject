@@ -66,6 +66,7 @@ public class StripeProvider implements PaymentProvider {
             return new ProviderResult(intent.getId(), true);
         } catch (IdempotencyException e) {
 
+            // original intent; the adapter treats it as success, never an error.
             log.info("Stripe replayed cached intent for idempotency key {} — treating as accepted", idempotencyKey);
             return new ProviderResult("idempotent-" + idempotencyKey, true);
         } catch (CardException e) {
@@ -106,6 +107,12 @@ public class StripeProvider implements PaymentProvider {
         }
     }
 
+    /**
+     * The port hands us only the LOCAL payment id — the Stripe intent id was
+     * never persisted (no provider-reference column). The intent was created
+     * with {@code metadata[payment_id]} at capture time, so the deterministic
+     * way back is the Stripe Search API (no 24h idempotency-cache race).
+     */
     private PaymentIntent findIntentByLocalPaymentId(UUID paymentId) throws StripeException {
         PaymentIntentSearchParams searchParams = PaymentIntentSearchParams.builder()
                 .setQuery("metadata['payment_id']:'" + paymentId + "'")

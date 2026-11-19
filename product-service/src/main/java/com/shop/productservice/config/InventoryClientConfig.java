@@ -9,6 +9,16 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
+/**
+ * The inventory-service client of the delete-time stock guard (F-060).
+ *
+ * <p>Mirrors {@link MediaClientConfig}: the client is built FROM the shared
+ * {@code RestClient.Builder} bean, so common-spring's
+ * {@code traceparentRestClientBuilderPostProcessor} has already enriched it
+ * with the traceparent interceptor. The Authorization header is attached
+ * PER CALL inside the client (see
+ * {@code InventoryReservationClient}) — never here.</p>
+ */
 @Configuration
 public class InventoryClientConfig {
 

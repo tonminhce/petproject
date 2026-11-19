@@ -27,6 +27,11 @@ public interface TaxRateRepository extends JpaRepository<TaxRate, UUID> {
     @Query("select count(r) from TaxRate r where r.taxClassId = :classId")
     long countByClassId(@Param("classId") UUID classId);
 
+    /**
+     * Duplicate pre-check mirroring the DB unique index on
+     * (tax_class_id, country, coalesce(postal_code, '')): null and empty
+     * postal codes are treated as equal tiers.
+     */
     @Query("select count(r) from TaxRate r where r.taxClassId = :c and r.country = :country " +
            "and coalesce(r.postalCode, '') = coalesce(:postal, '') " +
            "and (:excludeId is null or r.id <> :excludeId)")

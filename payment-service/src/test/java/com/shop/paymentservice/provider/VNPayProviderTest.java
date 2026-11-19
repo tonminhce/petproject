@@ -35,7 +35,7 @@ class VNPayProviderTest {
     @Test
     void capture_largeAmountExceedingIntegerMax_doesNotOverflow() {
         UUID paymentId = UUID.randomUUID();
-
+        // 50,000,000 * 100 = 5,000,000,000 > Integer.MAX_VALUE (2,147,483,647)
         PaymentProvider.ProviderResult result = provider.capture(
             paymentId, BigDecimal.valueOf(50000000), "VND", "idemp-key-large");
 
@@ -58,6 +58,6 @@ class VNPayProviderTest {
         String hash1 = VNPayProvider.hmacSHA512("secret", "message");
         String hash2 = VNPayProvider.hmacSHA512("secret", "message");
         assertThat(hash1).isEqualTo(hash2);
-        assertThat(hash1).hasSize(128);
+        assertThat(hash1).hasSize(128); // 512 bits = 64 bytes = 128 hex chars
     }
 }

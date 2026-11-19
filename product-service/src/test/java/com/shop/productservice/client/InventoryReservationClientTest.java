@@ -26,6 +26,13 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/**
+ * F-060: the delete-time stock guard client is fail-closed.
+ *
+ * <p>An answer the client cannot read is NOT an answer of "no live
+ * reservation" — it is UNKNOWN, and the caller must refuse the delete. A
+ * delete must never happen on doubt.</p>
+ */
 @ExtendWith(MockitoExtension.class)
 class InventoryReservationClientTest {
 

@@ -30,8 +30,25 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     private final IdempotencyKeyRepository repository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Programmatic REQUIRES_NEW template for the in-flight insert. Hibernate sees an
+     * {@code @IdClass} with a non-null PK as "managed/merged" — {@code saveAndFlush}
+     * would bypass the INSERT and silently merge, so {@code DataIntegrityViolation}
+     * never fires on a plain save; the explicit existence check is what short-circuits
+     * replays, and the unique composite PK is the final arbiter on concurrent inserts.
+     * <p>The insert runs in its own committed transaction (independent of the caller's
+     * saga TX) so other requests can observe the in-flight row during the saga, and a
+     * lost same-key race rolls back cleanly without poisoning the caller's transaction
+     * (review finding I1).</p>
+     * <p>Pool note (review finding 7): while the caller's transaction is active, this
+     * template holds a SECOND pooled connection for the whole saga — including the
+     * remote pricing/reserve calls. Hikari's pool must be sized with that in mind
+     * (connections ≈ 2 × concurrent checkouts), or the in-flight insert should move
+     * outside the saga TX in a future revision.</p>
+     */
     private final TransactionTemplate requiresNewTemplate;
 
+    /** TTL from spec §3.7 — wired to the {@code order.idempotency.ttl-hours} knob. */
     private final long ttlHours;
 
     public IdempotencyServiceImpl(IdempotencyKeyRepository repository,
@@ -50,6 +67,7 @@ public class IdempotencyServiceImpl implements IdempotencyService {
     public Optional<OrderResponse> begin(String key, String actor, String requestHash) {
         if (key == null) return Optional.empty();
 
+        // had to be sized to 2 × concurrent sagas, exhausting at half the
         Optional<OrderResponse> result = requiresNewTemplate.execute(status -> {
             Optional<IdempotencyKey> preExisting = repository.findByActorAndKey(actor, key);
             if (preExisting.isPresent()) {
@@ -58,9 +76,10 @@ public class IdempotencyServiceImpl implements IdempotencyService {
             IdempotencyKey ik = newInFlight(key, actor, requestHash);
             try {
                 repository.saveAndFlush(ik);
-                return Optional.<OrderResponse>empty();
+                return Optional.<OrderResponse>empty();  // owner — proceed with saga
             } catch (DataIntegrityViolationException ex) {
-
+                // Lost a same-key race: the winner's insert committed first.
+                // never leak a raw constraint violation as a 500.
                 IdempotencyKey winner = repository.findByActorAndKey(actor, key)
                     .orElseThrow(() -> ex);
                 return resolve(winner, requestHash, key);
@@ -71,13 +90,13 @@ public class IdempotencyServiceImpl implements IdempotencyService {
 
     private Optional<OrderResponse> resolve(IdempotencyKey existing, String requestHash, String key) {
         if (existing.getResponseStatus() != 0) {
-
+            // Complete — but spec §5.6 requires hash match before replay.
             if (!existing.getRequestHash().equals(requestHash)) {
                 throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
             }
             return Optional.of(deserialize(existing.getResponseBody()));
         }
-
+        // In-flight — reject
         throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
     }
 
@@ -86,7 +105,7 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         ik.setActor(actor);
         ik.setKey(key);
         ik.setRequestHash(requestHash);
-        ik.setResponseStatus(0);
+        ik.setResponseStatus(0);  // in-flight
         ik.setResponseBody("");
         ik.setCreatedAt(Instant.now());
         ik.setExpiresAt(Instant.now().plus(ttlHours, ChronoUnit.HOURS));

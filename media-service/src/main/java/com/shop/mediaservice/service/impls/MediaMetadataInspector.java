@@ -12,10 +12,19 @@ import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
 
+/**
+ * Upload-time metadata INSPECTION using metadata-extractor: logs which
+ * classes of personal metadata the upload carried (EXIF, GPS, IPTC, XMP).
+ * Logging only — raw metadata is never persisted anywhere; every stored byte
+ * comes out of the thumbnailator re-encode, which drops all metadata blocks
+ * inherently (ImageIO renders pure pixels). The log is the privacy audit trail
+ * proving the strip stage saw (and destroyed) the data.
+ */
 @Component
 @Slf4j
 class MediaMetadataInspector {
 
+    /** Best-effort audit log of metadata classes present in the raw upload. */
     void inspect(byte[] source) {
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(source));
@@ -32,7 +41,7 @@ class MediaMetadataInspector {
                 log.info("GPS metadata present in upload ({} tags) — removed by re-encode before storage", tagCount);
             }
         } catch (Exception inspectFailure) {
-
+            // enforces decodability. Never fail an upload from here.
             log.debug("Metadata inspection skipped (unreadable metadata block): {}", inspectFailure.toString());
         }
     }

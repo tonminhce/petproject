@@ -18,12 +18,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Container-backed releaseCommitted tests — bootstrap lives in
+ * {@link AbstractIntegrationTest} (Postgres + Kafka, real Liquibase).
+ * Asserts the hardening spec §7.2 contract: a COMMITTED reservation released
+ * after the fact restocks availableQuantity (half-commit rollback), retried
+ * calls on terminal states are no-ops, and PENDING rows stay on the plain
+ * release path (rejected here).
+ */
 class ReleaseCommittedTest extends AbstractIntegrationTest {
 
     @Autowired ReservationRepository reservations;
     @Autowired InventoryService inventoryService;
     @Autowired InventoryRepository inventories;
 
+    /**
+     * Seeds inventory + reservation rows directly. For COMMITTED status the
+     * inventory reflects the post-commit state — commit() already moved
+     * reservedQuantity→0 and availableQuantity -= qty — so the releaseCommitted
+     * restock assertion measures the rollback against a realistic state.
+     */
     UUID seedReserved(UUID productId, int qty, ReservationStatus status, Instant expiresAt) {
         boolean committed = status == ReservationStatus.COMMITTED;
         inventories.save(Inventory.builder()
@@ -50,7 +64,7 @@ class ReleaseCommittedTest extends AbstractIntegrationTest {
         inventoryService.releaseCommitted(id);
 
         Inventory inv = inventories.findByProductId(productId).orElseThrow();
-        assertThat(inv.getAvailableQuantity()).isEqualTo(100);
+        assertThat(inv.getAvailableQuantity()).isEqualTo(100);   // restored
         Reservation r = reservations.findById(id).orElseThrow();
         assertThat(r.getStatus()).isEqualTo(ReservationStatus.RELEASED);
         assertThat(r.getReleasedAt()).isNotNull();
@@ -70,6 +84,7 @@ class ReleaseCommittedTest extends AbstractIntegrationTest {
             inventoryService.releaseCommitted(expiredId);
         }).doesNotThrowAnyException();
 
+        // No-op means no double restock and no status churn.
         Inventory releasedInv = inventories.findByProductId(releasedProductId).orElseThrow();
         assertThat(releasedInv.getAvailableQuantity()).isEqualTo(100);
         assertThat(reservations.findById(releasedId).orElseThrow().getStatus())
@@ -90,6 +105,7 @@ class ReleaseCommittedTest extends AbstractIntegrationTest {
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESERVATION_INVALID_STATE.getCode()));
 
+        // Rejected, not mutated — plain release() is the PENDING path.
         assertThat(reservations.findById(id).orElseThrow().getStatus())
             .isEqualTo(ReservationStatus.PENDING);
         assertThat(inventories.findByProductId(productId).orElseThrow().getAvailableQuantity())

@@ -33,6 +33,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * Rating lifecycle consumer against the REAL Kafka wire (R1 + H-1): this IT
+ * publishes through the SAME production path as rating-service's
+ * {@code RatingOutboxRelay} — the context {@link KafkaMessagePublisher} (R1
+ * single-encode: the outbox payload STRING forwarded as raw UTF-8 bytes), so
+ * records arrive SINGLE-ENCODED UTF-8 JSON. Under the previous
+ * {@code JsonDeserializer} wiring real records failed value deserialization
+ * before the listener ever ran — the fleet's rating→product aggregation
+ * silently dropped every event; with the H-1 String base the event binds
+ * directly (and a legacy double-encoded token from pre-R1 producers would be
+ * unwrapped-once — tolerance pinned in {@link MediaDeletedConsumerIT}). Poison
+ * tokens must never stall the partition.
+ */
 class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
 
     private static final String TOPIC = "shop.rating.lifecycle.v1";
@@ -54,6 +67,15 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * The product base leaves the KafkaProperties/application.yml default in
+     * place — pin {@code earliest} like the shipping/notification IT bases so
+     * the listener consumes this IT's records deterministically from offset 0
+     * of the fresh container topic (prod runs {@code latest}; a record
+     * published around container-join time is otherwise silently skipped —
+     * the exact class of bug this epic hunts). The class-level
+     * {@code @DynamicPropertySource} here only affects this IT's context.
+     */
     @DynamicPropertySource
     static void kafkaEarliest(DynamicPropertyRegistry r) {
         r.add("shop.kafka.consumer.auto-offset-reset", () -> "earliest");
@@ -77,10 +99,12 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
         return productRepository.save(p);
     }
 
+    /** Publishes EXACTLY like RatingOutboxRelay: payload String via the fleet KafkaMessagePublisher (R1 single-encode). */
     private void publishExactlyLikeRelay(String payloadJson, UUID productId) {
         kafkaMessagePublisher.publish(TOPIC, productId.toString(), payloadJson);
     }
 
+    /** Mirrors RatingEventService.record: 13 contract fields, LinkedHashMap order. */
     private String ratingPayload(String eventId, UUID productId, String action, String avgRating, int ratingCount) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("eventId", eventId);
@@ -111,7 +135,7 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
     @DisplayName("rating.submitted.v1 (production single-encoded wire) copies the snapshot onto the product and emits ProductUpdated")
     void ratingSubmittedUpdatesAggregatesAndEmitsProductUpdated() {
         Product product = product("iPhone 15");
-        outboxRepository.deleteAllInBatch();
+        outboxRepository.deleteAllInBatch(); // isolate this test's ProductUpdated assertions
 
         publishExactlyLikeRelay(ratingPayload(UUID.randomUUID().toString(), product.getId(), "CREATED", "4.50", 2),
             product.getId());
@@ -151,6 +175,7 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
             throw new IllegalStateException(e);
         }
 
+        // wire value IS the event object, not a JSON string token.
         assertThat(node.isTextual())
             .as("R1 pin: wire value must be single-encoded (a JSON object, not a string token)")
             .isFalse();
@@ -174,6 +199,8 @@ class RatingLifecycleConsumerIT extends AbstractIntegrationTest {
             assertThat(fresh.getRatingCount()).isEqualTo(1);
         });
     }
+
+    // --- helpers ---
 
     private ConsumerRecord<String, String> awaitRecord(String topic, String key) {
         Map<String, Object> props = new HashMap<>();

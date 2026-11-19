@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
-@EnableScheduling
+@EnableScheduling  // REQUIRED: OutboxRelay + OutboxRetentionScheduler + IdempotencyKeyCleanupScheduler
 public class OrderServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(OrderServiceApplication.class, args);

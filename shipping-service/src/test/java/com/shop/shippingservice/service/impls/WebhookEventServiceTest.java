@@ -111,6 +111,7 @@ class WebhookEventServiceTest {
                 .build();
     }
 
+    /** C3: a fresh event id means no prior row — the service inserts one before processing. */
     private void happyPathStubs(String eventId) {
         when(events.findFirstByCarrierAndProviderEventId(CARRIER, eventId)).thenReturn(Optional.empty());
     }
@@ -217,6 +218,8 @@ class WebhookEventServiceTest {
         assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
                 .doesNotThrowAnyException();
 
+        // Event row persisted first (FAILED_RETRYABLE), then marked with the
+        // failure detail via saveEvent — the retry scheduler owns the replay.
         ArgumentCaptor<ShipmentEvent> insertCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
         verify(writer).insert(insertCaptor.capture());
         assertThat(insertCaptor.getValue().getStatus()).isEqualTo("FAILED_RETRYABLE");

@@ -13,12 +13,28 @@ import java.util.UUID;
 
 public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
 
+    /**
+     * Returns the current user's favourites, newest first, paginated.
+     * {@code @SQLRestriction} on the entity auto-filters soft-deleted rows —
+     * no {@code AndDeletedFalse} suffix needed.
+     */
     Page<Favourite> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
+    /**
+     * Finds a favourite by id scoped to its owning user. Returns empty when the row
+     * exists but belongs to a different user — lets the service throw NOT_FOUND
+     * without leaking cross-user existence.
+     */
     Optional<Favourite> findByIdAndUserId(UUID id, UUID userId);
 
     boolean existsByUserIdAndProductId(UUID userId, UUID productId);
 
+    /**
+     * Soft-deletes a single favourite when it belongs to the given user.
+     *
+     * @return number of rows updated (0 if id missing or owner mismatch — both
+     *         intentionally treated as "not found" by the service layer)
+     */
     @Modifying
     @Query("""
             UPDATE Favourite f
@@ -33,6 +49,10 @@ public interface FavouriteRepository extends JpaRepository<Favourite, UUID> {
                                  @Param("userId") UUID userId,
                                  @Param("deletedBy") String deletedBy);
 
+    /**
+     * Soft-deletes by (userId, productId) pair. Used by the
+     * {@code DELETE /api/v1/favourites/by-product/{productId}} endpoint.
+     */
     @Modifying
     @Query("""
             UPDATE Favourite f

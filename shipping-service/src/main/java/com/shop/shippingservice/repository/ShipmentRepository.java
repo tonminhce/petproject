@@ -29,6 +29,14 @@ public interface ShipmentRepository extends JpaRepository<Shipment, UUID> {
 
     Page<Shipment> findAllByCarrierOrderByCreatedAtDesc(Carrier carrier, Pageable pageable);
 
+    /**
+     * The shipments the stale sweep may auto-deliver: the carrier has
+     * acknowledged them, and nothing has been heard from the carrier since
+     * the cutoff. The window runs from the last carrier update when there
+     * is one, otherwise from the acknowledgement - a shipment the carrier
+     * accepted but never reported on must still be closed out, while a
+     * shipment the carrier never accepted must never be.
+     */
     @Query("SELECT s FROM Shipment s WHERE s.status IN :statuses "
          + "AND s.carrierAcknowledgedAt IS NOT NULL "
          + "AND COALESCE(s.lastCarrierUpdate, s.carrierAcknowledgedAt) < :cutoff")

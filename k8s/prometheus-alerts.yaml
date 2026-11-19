@@ -38,7 +38,7 @@ spec:
             description: "JVM Heap usage on pod {{ $labels.pod }} exceeds 85% for more than 3 minutes."
 
         - alert: HighOutboxPendingLag
-          expr: sum by (application) (inventory_outbox_pending_count{namespace="shop-system"} or order_outbox_pending_count{namespace="shop-system"} or product_outbox_pending_count{namespace="shop-system"} or promotion_outbox_pending_count{namespace="shop-system"}) > 1000
+          expr: sum by (application) (outbox_pending_events_count{namespace="shop-system"}) > 1000
           for: 5m
           labels:
             severity: warning

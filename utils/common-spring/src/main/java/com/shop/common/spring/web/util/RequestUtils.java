@@ -2,6 +2,10 @@ package com.shop.common.spring.web.util;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/**
+ * Utilities for extracting metadata from an incoming servlet HTTP request.
+ * Handles reverse-proxy header chains so the real client IP is always returned.
+ */
 public final class RequestUtils {
 
     private static final String UNKNOWN = "unknown";
@@ -15,6 +19,10 @@ public final class RequestUtils {
 
     private RequestUtils() {}
 
+    /**
+     * Returns the real client IP address, inspecting proxy headers before falling
+     * back to {@link HttpServletRequest#getRemoteAddr()}.
+     */
     public static String getClientIp(HttpServletRequest request) {
         for (String header : IP_HEADER_CANDIDATES) {
             String ip = request.getHeader(header);
@@ -26,6 +34,7 @@ public final class RequestUtils {
         return normalize(request.getRemoteAddr());
     }
 
+    /** Normalizes IPv6 loopback to the familiar {@code 127.0.0.1} form. */
     private static String normalize(String ip) {
         if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) return "127.0.0.1";
         return ip;
