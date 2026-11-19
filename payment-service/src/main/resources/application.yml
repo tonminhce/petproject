@@ -34,6 +34,7 @@ shop:
 
   payment:
     provider: ${SHOP_PAYMENT_PROVIDER:mock}
+    production-mode: ${SHOP_PAYMENT_PRODUCTION_MODE:false}
     webhook:
       secret: ${PAYMENT_WEBHOOK_SECRET:?PAYMENT_WEBHOOK_SECRET must be set}
     stripe:
@@ -42,6 +43,29 @@ shop:
       api-version: "2024-06-20"
       api-base: ${SHOP_PAYMENT_STRIPE_API_BASE:}
       connect: false
+    momo:
+      base-url: ${SHOP_PAYMENT_MOMO_BASE_URL:}
+      partner-code: ${SHOP_PAYMENT_MOMO_PARTNER_CODE:}
+      access-key: ${SHOP_PAYMENT_MOMO_ACCESS_KEY:}
+      secret-key: ${SHOP_PAYMENT_MOMO_SECRET_KEY:}
+      return-url: ${SHOP_PAYMENT_MOMO_RETURN_URL:}
+      notify-url: ${SHOP_PAYMENT_MOMO_NOTIFY_URL:}
+      order-info: ${SHOP_PAYMENT_MOMO_ORDER_INFO:Payment}
+      timeout-ms: ${SHOP_PAYMENT_MOMO_TIMEOUT_MS:30000}
+    vnpay:
+      payment-url: ${SHOP_PAYMENT_VNPAY_PAYMENT_URL:}
+      api-url: ${SHOP_PAYMENT_VNPAY_API_URL:}
+      tmn-code: ${SHOP_PAYMENT_VNPAY_TMN_CODE:}
+      hash-secret: ${SHOP_PAYMENT_VNPAY_HASH_SECRET:}
+      return-url: ${SHOP_PAYMENT_VNPAY_RETURN_URL:}
+      notify-url: ${SHOP_PAYMENT_VNPAY_NOTIFY_URL:}
+      bank-code: ${SHOP_PAYMENT_VNPAY_BANK_CODE:}
+      order-info: ${SHOP_PAYMENT_VNPAY_ORDER_INFO:Payment}
+      ip-address: ${SHOP_PAYMENT_VNPAY_IP_ADDRESS:127.0.0.1}
+      user-name: ${SHOP_PAYMENT_VNPAY_USER_NAME:}
+      refund-type: ${SHOP_PAYMENT_VNPAY_REFUND_TYPE:partial}
+      transaction-date: ${SHOP_PAYMENT_VNPAY_TRANSACTION_DATE:}
+      timeout-ms: ${SHOP_PAYMENT_VNPAY_TIMEOUT_MS:30000}
 
   security:
     issuer-uri: ${SHOP_SECURITY_ISSUER_URI:http://localhost:9090/realms/ecommerce}

@@ -1,5 +1,5 @@
 {
-  "count": 246,
+  "count": 247,
   "tasks": {
     "CAT-01": {
       "acceptance_criteria": [
@@ -6640,6 +6640,24 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T07:16:03Z",
+          "evidence": "implementing the real MoMo and VNPay PSP integrations",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T07:16:03Z",
+          "evidence": "MoMoProvider now POSTs /v2/gateway/api/create and /v2/gateway/api/refund with the documented HMAC-SHA256 signature and verifies the response signature; VNPayProvider builds the signed vpcpay redirect and calls merchant_webapi/api/transaction for refunds with HMAC-SHA512; non-VND currencies are refused instead of being mis-scaled; PaymentProviderProductionGuard rejects a simulated or unconfigured provider when shop.payment.production-mode=true",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T07:16:03Z",
+          "evidence": "payment-service suite green: 239 tests, 0 failures; checkstyle 0 violations",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
         }
       ],
       "id": "PAY-15",
@@ -6654,14 +6672,17 @@
         "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java:41",
         "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java:42"
       ],
-      "state": "READY",
+      "state": "VERIFYING",
       "target_implementation": "Use the currency-unit rules already present in StripeCurrencyUnits and either integrate the PSP or remove the provider from the selectable set.",
       "technical_risk": "VNPay multiplies the amount by 100 regardless of the currency while VNPay is a zero-decimal currency, and MoMo truncates with longValue. Neither provider contacts the external PSP and the redirect URL is discarded.",
       "title": "VNPay multiplies the amount by 100 unconditionally and neither provider ever contacts the PSP",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T07:16:03Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementing the real MoMo and VNPay PSP integrations",
+        "MoMoProvider now POSTs /v2/gateway/api/create and /v2/gateway/api/refund with the documented HMAC-SHA256 signature and verifies the response signature; VNPayProvider builds the signed vpcpay redirect and calls merchant_webapi/api/transaction for refunds with HMAC-SHA512; non-VND currencies are refused instead of being mis-scaled; PaymentProviderProductionGuard rejects a simulated or unconfigured provider when shop.payment.production-mode=true",
+        "payment-service suite green: 239 tests, 0 failures; checkstyle 0 violations"
       ]
     },
     "PAY-16": {
@@ -7139,6 +7160,55 @@
       "technical_risk": "Suppressed unused imports remain in five provider classes.",
       "title": "Unused imports in the provider classes",
       "updated_at": "2026-11-18T13:23:37Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
+    },
+    "PAY-30": {
+      "acceptance_criteria": [],
+      "affected_service": "payment-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T07:16:55Z",
+      "current_implementation": "",
+      "dependencies": [],
+      "design_pattern": "Adapter",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T07:16:56Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T07:16:56Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
+      "id": "PAY-30",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 20,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:47 accepts only a Stripe-style t=,v1 header or a bare 64-hex HMAC over the body; payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java and VNPayProvider.java now drive real PSP redirects whose callbacks carry the MoMo signature field and the VNPay vnp_SecureHash parameter, which this verifier rejects"
+      ],
+      "state": "READY",
+      "target_implementation": "",
+      "technical_risk": "",
+      "title": "The non-Stripe webhook path cannot verify a real MoMo or VNPay IPN",
+      "updated_at": "2026-11-19T07:16:56Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present"
@@ -13706,5 +13776,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-19T06:26:36Z"
+  "updated_at": "2026-11-19T07:16:56Z"
 }

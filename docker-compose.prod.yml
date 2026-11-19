@@ -63,6 +63,7 @@ services:
     ports: !override []
     environment:
       <<: *audit-env
+      SHOP_PAYMENT_PRODUCTION_MODE: "true"
 
   shipping-service:
     <<: *audit-volume
