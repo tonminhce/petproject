@@ -19,7 +19,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -183,9 +182,9 @@ public class VNPayProvider implements PaymentProvider {
             if (query.length() > 0) {
                 query.append('&');
             }
-            query.append(URLEncoder.encode(key, StandardCharsets.UTF_8))
+            query.append(VNPayEncoding.encode(key))
                     .append('=')
-                    .append(URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8));
+                    .append(VNPayEncoding.encode(value));
         });
         return query.toString();
     }
@@ -196,8 +195,7 @@ public class VNPayProvider implements PaymentProvider {
             if ("vnp_SecureHash".equals(key) || "vnp_SecureHashType".equals(key)) {
                 return;
             }
-            encoded.put(URLEncoder.encode(key, StandardCharsets.UTF_8),
-                    URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8));
+            encoded.put(VNPayEncoding.encode(key), VNPayEncoding.encode(value));
         });
         return encoded;
     }

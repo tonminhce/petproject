@@ -68,6 +68,28 @@ class TracingAutoConfigurationTest {
     }
 
     @Test
+    void aBaseEndpointGetsTheTracesSignalPath() {
+        assertThat(TracingAutoConfiguration.tracesEndpoint("http://otel-collector:4318"))
+            .isEqualTo("http://otel-collector:4318/v1/traces");
+    }
+
+    @Test
+    void aTrailingSlashDoesNotProduceADoubleSlash() {
+        assertThat(TracingAutoConfiguration.tracesEndpoint("http://otel-collector:4318/"))
+            .isEqualTo("http://otel-collector:4318/v1/traces");
+    }
+
+    @Test
+    void anEndpointThatAlreadyCarriesTheSignalPathIsKept() {
+        assertThat(TracingAutoConfiguration.tracesEndpoint(ENDPOINT)).isEqualTo(ENDPOINT);
+    }
+
+    @Test
+    void aBlankEndpointStillCarriesTheSignalPath() {
+        assertThat(TracingAutoConfiguration.tracesEndpoint("  ")).isEqualTo("/v1/traces");
+    }
+
+    @Test
     void mdcCarriesTraceIdAndSpanIdEvenWithoutExporter() {
         runner.run(ctx -> {
             Tracer tracer = ctx.getBean(Tracer.class);

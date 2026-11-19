@@ -41,7 +41,113 @@
       "status": "PASS",
       "suite": "e2e",
       "updated_at": "2026-11-19T11:02:51Z"
+    },
+    "operations": {
+      "checks": [
+        {
+          "detail": "1 service targets up, 2 request metric series",
+          "evidence": {
+            "request_series": [
+              null,
+              null
+            ],
+            "service_targets_up": [
+              "payment-service:8085"
+            ]
+          },
+          "id": "OBS-01",
+          "name": "metrics",
+          "passed": true
+        },
+        {
+          "detail": "heap series 8, cpu series 1, thread series 1",
+          "id": "OBS-07",
+          "name": "runtime metrics",
+          "passed": true
+        },
+        {
+          "detail": "5 log streams, 50 samples",
+          "evidence": {
+            "containers": [
+              "/grafana",
+              "/loki",
+              "/search-service",
+              "/tempo"
+            ]
+          },
+          "id": "OBS-02",
+          "name": "centralized logs",
+          "passed": true
+        },
+        {
+          "detail": "20 traces from 2 services",
+          "evidence": {
+            "services": [
+              "payment-service",
+              "shop-service"
+            ],
+            "trace_ids": [
+              "df12c43b625b929805dabb60ab56124e",
+              "cfb7b589b8f607d603a1c165f543685e",
+              "8a8b9c7876aad01af37b59e893afda8e",
+              "7a9ed4295823a314fca76574f9508656",
+              "80350701c000384f048e81b20f438297"
+            ]
+          },
+          "id": "OBS-03",
+          "name": "distributed traces",
+          "passed": true
+        },
+        {
+          "detail": "grafana search returned 0",
+          "id": "OBS-06",
+          "name": "dashboards",
+          "passed": false
+        },
+        {
+          "detail": "Loki=OK, Prometheus=OK, Tempo=OK",
+          "evidence": {
+            "datasources": [
+              {
+                "name": "Loki",
+                "status": "OK",
+                "type": "loki"
+              },
+              {
+                "name": "Prometheus",
+                "status": "OK",
+                "type": "prometheus"
+              },
+              {
+                "name": "Tempo",
+                "status": "OK",
+                "type": "tempo"
+              }
+            ]
+          },
+          "id": "OBS-06b",
+          "name": "datasources",
+          "passed": true
+        },
+        {
+          "detail": "no token, webhook secret or private key in the collected logs",
+          "evidence": {
+            "leaked_samples": []
+          },
+          "id": "OBS-08",
+          "name": "no credential in the telemetry",
+          "passed": true
+        }
+      ],
+      "detail": "6 of 7 observability checks passed",
+      "not_verified": [
+        "OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically",
+        "OBS-05 a controlled failure is visible in the backends but the check is not automated"
+      ],
+      "status": "FAIL",
+      "suite": "operations",
+      "updated_at": "2026-11-19T11:56:15Z"
     }
   },
-  "updated_at": "2026-11-19T11:02:51Z"
+  "updated_at": "2026-11-19T11:56:15Z"
 }

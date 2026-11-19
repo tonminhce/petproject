@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: petproject
+
+scrape_configs:
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8888"]
+
+  - job_name: petproject-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - "gateway-service:8080"
+          - "auth-service:8088"
+          - "product-service:8086"
+          - "inventory-service:8082"
+          - "order-service:8084"
+          - "payment-service:8085"
+          - "shipping-service:8087"
+          - "favourite-service:8081"
+          - "media-service:8083"
+          - "tax-service:8091"
+          - "promotion-service:8093"
+          - "rating-service:8089"
+          - "search-service:8094"
+          - "notification-service:8090"

@@ -55,7 +55,10 @@ public class PspCallbackController {
         if (body == null || !momoVerifier.verify(body)) {
             throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         }
-        webhookEventService.handle(MOMO_PROVIDER, carrier(momoPayload(body)));
+        String status = momoStatus(body.path("resultCode").asInt(-1));
+        if (status != null) {
+            webhookEventService.handle(MOMO_PROVIDER, carrier(momoPayload(body, status)));
+        }
         return ResponseEntity.noContent().build();
     }
 
@@ -68,15 +71,37 @@ public class PspCallbackController {
         if (paymentId == null) {
             return ResponseEntity.ok(Map.of("RspCode", "97", "RspMsg", "Invalid Transaction Reference"));
         }
-        webhookEventService.handle(VNPAY_PROVIDER, carrier(vnpayPayload(params, paymentId)));
+        String status = vnpayStatus(params.getOrDefault("vnp_TransactionStatus", ""));
+        if (status != null) {
+            webhookEventService.handle(VNPAY_PROVIDER, carrier(vnpayPayload(params, paymentId, status)));
+        }
         return ResponseEntity.ok(Map.of("RspCode", "00", "RspMsg", "Confirm Success"));
     }
 
-    private WebhookPayload momoPayload(JsonNode body) {
+    static String momoStatus(int resultCode) {
+        if (resultCode == 0) {
+            return CAPTURED;
+        }
+        if (resultCode == 1002 || resultCode == 1005) {
+            return FAILED;
+        }
+        return null;
+    }
+
+    static String vnpayStatus(String transactionStatus) {
+        if ("00".equals(transactionStatus)) {
+            return CAPTURED;
+        }
+        if ("01".equals(transactionStatus) || "04".equals(transactionStatus)) {
+            return FAILED;
+        }
+        return null;
+    }
+
+    private WebhookPayload momoPayload(JsonNode body, String status) {
         String orderId = body.path("orderId").asText("");
         String requestId = body.path("requestId").asText("");
         String transId = body.path("transId").asText("");
-        int resultCode = body.path("resultCode").asInt(-1);
         String eventId = transId.isBlank() || "0".equals(transId) ? requestId : transId;
         return WebhookPayload.builder()
                 .eventId(eventId)
@@ -84,16 +109,15 @@ public class PspCallbackController {
                 .paymentId(orderId)
                 .amount(amountOf(body.path("amount").asText("")))
                 .currency(VND)
-                .status(resultCode == 0 ? CAPTURED : FAILED)
+                .status(status)
                 .providerEventId(eventId)
                 .providerIntentId(transId.isBlank() || "0".equals(transId) ? null : transId)
                 .build();
     }
 
-    private WebhookPayload vnpayPayload(Map<String, String> params, UUID paymentId) {
+    private WebhookPayload vnpayPayload(Map<String, String> params, UUID paymentId, String status) {
         String transactionNo = params.getOrDefault("vnp_TransactionNo", "");
         String txnRef = params.getOrDefault("vnp_TxnRef", "");
-        String status = params.getOrDefault("vnp_TransactionStatus", "");
         String eventId = transactionNo.isBlank() ? txnRef : transactionNo;
         return WebhookPayload.builder()
                 .eventId(eventId)
@@ -101,7 +125,7 @@ public class PspCallbackController {
                 .paymentId(paymentId.toString())
                 .amount(vnpayAmount(params.getOrDefault("vnp_Amount", "")))
                 .currency(VND)
-                .status("00".equals(status) ? CAPTURED : FAILED)
+                .status(status)
                 .providerEventId(eventId)
                 .providerIntentId(txnRef)
                 .build();

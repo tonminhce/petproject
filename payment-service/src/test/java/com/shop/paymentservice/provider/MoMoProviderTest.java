@@ -180,7 +180,7 @@ class MoMoProviderTest {
                 .andExpect(jsonPath("$.orderId").value(refundOrderId))
                 .andExpect(jsonPath("$.transId").value(144492817L))
                 .andRespond(withSuccess("""
-                        {"resultCode":0,"message":"Successful","orderId":"%s"}
+                        {"resultCode":0,"message":"Successful","orderId":"%s","amount":50000}
                         """.formatted(refundOrderId), MediaType.APPLICATION_JSON));
 
         PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1",
@@ -188,6 +188,19 @@ class MoMoProviderTest {
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
         assertThat(result.providerEventId()).isEqualTo("144492817");
+        server.verify();
+    }
+
+    @Test
+    void refund_isIndeterminateWhenTheResponseCarriesNoProofThatItBelongsToTheRequest() {
+        server.expect(requestTo(REFUND_URL))
+                .andRespond(withSuccess("{\"resultCode\":0,\"message\":\"Successful\"}", MediaType.APPLICATION_JSON));
+
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "key-1",
+                "144492817");
+
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
+        assertThat(result.providerEventId()).isEqualTo("MOMO_REFUND_RESPONSE_MISMATCH");
         server.verify();
     }
 

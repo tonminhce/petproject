@@ -167,10 +167,7 @@ public class MoMoProvider implements PaymentProvider {
     private boolean refundResponseBoundToRequest(JsonNode response, String refundOrderId, long amountValue) {
         String orderId = response.path("orderId").asText("");
         String amount = response.path("amount").asText("");
-        if (!orderId.isEmpty() && !orderId.equals(refundOrderId)) {
-            return false;
-        }
-        return amount.isEmpty() || amount.equals(Long.toString(amountValue));
+        return orderId.equals(refundOrderId) && amount.equals(Long.toString(amountValue));
     }
 
     private boolean refundResponseSignatureValid(JsonNode response, String refundOrderId, long amountValue,

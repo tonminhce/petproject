@@ -272,6 +272,26 @@ def command_build(arguments: argparse.Namespace) -> int:
     return config.EXIT_OK if result["status"] == "PASS" else config.EXIT_GATE_FAILED
 
 
+def command_operations(arguments: argparse.Namespace) -> int:
+    from ..verification.operations import run_checks
+
+    document = run_checks()
+    status = PASS if document.get("status") == "PASS" else FAIL
+    record_suite_result(
+        "operations",
+        {
+            "suite": "operations",
+            "status": status,
+            "detail": f"{document.get('passed')} of {document.get('total')} observability checks passed",
+            "checks": document.get("checks", []),
+            "not_verified": document.get("not_verified", []),
+            "updated_at": utc_now(),
+        },
+    )
+    emit(document)
+    return config.EXIT_OK if status == PASS else config.EXIT_GATE_FAILED
+
+
 def command_test(arguments: argparse.Namespace) -> int:
     result = run_suite(arguments.suite, config.repository_root(), modules=arguments.modules)
     record_suite_result(arguments.suite, result)
@@ -577,6 +597,10 @@ def build_parser() -> argparse.ArgumentParser:
     test.add_argument("--suite", required=True, choices=sorted(load_suites().keys()))
     test.add_argument("--modules", nargs="*", default=[])
     test.set_defaults(handler=command_test)
+
+    operations = subparsers.add_parser("operations", help="observability operations checks")
+    operations.add_argument("action", choices=("check",))
+    operations.set_defaults(handler=command_operations)
 
     e2e = subparsers.add_parser("e2e", help="end to end environment lifecycle")
     e2e.add_argument("action", choices=("setup", "run", "report", "teardown", "dependencies"))

@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @ConditionalOnClass(name = "io.opentelemetry.api.trace.Span")
 public class TracingAutoConfiguration {
 
+    static final String TRACES_PATH = "/v1/traces";
+
     @Bean
     @ConditionalOnMissingBean
     public TraceparentInterceptor traceparentInterceptor() {
@@ -110,6 +112,17 @@ public class TracingAutoConfiguration {
     @ConditionalOnProperty("otel.exporter.otlp.endpoint")
     public OtlpHttpSpanExporter otlpSpanExporter(
             @Value("${otel.exporter.otlp.endpoint}") String endpoint) {
-        return OtlpHttpSpanExporter.builder().setEndpoint(endpoint).build();
+        return OtlpHttpSpanExporter.builder().setEndpoint(tracesEndpoint(endpoint)).build();
+    }
+
+    static String tracesEndpoint(String endpoint) {
+        String trimmed = endpoint == null ? "" : endpoint.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        if (trimmed.endsWith(TRACES_PATH)) {
+            return trimmed;
+        }
+        return trimmed + TRACES_PATH;
     }
 }

@@ -10,6 +10,18 @@ x-logging: &logging
       max-size: "10m"
       max-file: "3"
 
+x-management: &management
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+  MANAGEMENT_ENDPOINT_PROMETHEUS_ACCESS: read_only
+
+x-otel: &otel
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  OTEL_RESOURCE_ATTRIBUTES: service.namespace=ecommerce,deployment.environment=petproject
+
 x-jwt: &jwt
   SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
 
@@ -199,7 +211,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      <<: *jwt
+      <<: [*jwt, *otel, *management]
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -234,7 +246,7 @@ services:
     ports:
       - "8088:8088"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
       SHOP_KEYCLOAK_SERVER_URL: http://keycloak:8080
       SHOP_KEYCLOAK_PUBLIC_SERVER_URL: ${KEYCLOAK_PUBLIC_SERVER_URL}
@@ -280,7 +292,7 @@ services:
     ports:
       - "8086:8086"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/productservice
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
@@ -312,7 +324,7 @@ services:
     ports:
       - "8084:8084"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orderservice
       PRODUCT_SERVICE_URL: http://product-service:8086
       INVENTORY_SERVICE_URL: http://inventory-service:8082
@@ -346,7 +358,7 @@ services:
     ports:
       - "8085:8085"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SHOP_PAYMENT_PROVIDER: ${SHOP_PAYMENT_PROVIDER:-mock}
@@ -417,7 +429,7 @@ services:
     ports:
       - "8087:8087"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shippingservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SHIPMENT_AUTO_DELIVER_DAYS: ${SHIPMENT_AUTO_DELIVER_DAYS:-7}
@@ -443,7 +455,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventoryservice
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
@@ -469,7 +481,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/favouriteservice
     depends_on:
       postgres:
@@ -487,7 +499,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mediaservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_ENDPOINT: http://rustfs:9000
@@ -521,7 +533,7 @@ services:
     ports:
       - "8091:8091"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/taxservice
     depends_on:
       postgres:
@@ -539,7 +551,7 @@ services:
     ports:
       - "8093:8093"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotionservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
@@ -558,7 +570,7 @@ services:
     ports:
       - "8089:8089"
     environment:
-      <<: [*jwt, *pg-creds]
+      <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ratingservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_SERVICE_URL: http://order-service:8084
@@ -610,7 +622,7 @@ services:
     ports:
       - "8090:8090"
     environment:
-      <<: *jwt
+      <<: [*jwt, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notificationservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MAIL_USERNAME: ${MAIL_USERNAME}
@@ -628,11 +640,140 @@ services:
     networks:
       - ecommerce-network
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    profiles: [observability]
+    <<: [*restart, *logging]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./config/observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:4318:4318"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol/config.yaml"]
+    networks:
+      - ecommerce-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    profiles: [observability]
+    <<: [*restart, *logging]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=24h"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./config/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9095:9090"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    profiles: [observability]
+    <<: [*restart, *logging]
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./config/observability/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "/tempo", "-version"]
+    networks:
+      - ecommerce-network
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    profiles: [observability]
+    <<: [*restart, *logging]
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./config/observability/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "/usr/bin/loki", "-version"]
+    networks:
+      - ecommerce-network
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    profiles: [observability]
+    <<: [*restart, *logging]
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./config/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    ports:
+      - "127.0.0.1:12345:12345"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "/bin/alloy", "validate", "/etc/alloy/config.alloy"]
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    profiles: [observability]
+    <<: [*restart, *logging]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_INSTALL_PLUGINS: ""
+    volumes:
+      - ./config/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/observability/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health > /dev/null 2>&1 || exit 1"]
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
 networks:
   ecommerce-network:
     driver: bridge
 
 volumes:
+  prometheus_data:
+  tempo_data:
+  loki_data:
+  alloy_data:
+  grafana_data:
   postgres_data:
   redis_data:
   kafka_data:

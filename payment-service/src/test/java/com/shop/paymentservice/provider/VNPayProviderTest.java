@@ -80,6 +80,14 @@ class VNPayProviderTest {
     }
 
     @Test
+    void theHashUsesTheEncodeUriComponentConvention() {
+        assertThat(VNPayEncoding.encode("a b")).isEqualTo("a+b");
+        assertThat(VNPayEncoding.encode("~!()'")).isEqualTo("~!()'");
+        assertThat(VNPayEncoding.encode("/path")).isEqualTo("%2Fpath");
+        assertThat(VNPayEncoding.encode("a+b")).isEqualTo("a%2Bb");
+    }
+
+    @Test
     void capture_rejectsACurrencyTheProviderDoesNotSupport() {
         PaymentProvider.ProviderResult result = provider.capture(UUID.randomUUID(), BigDecimal.valueOf(10), "USD", "key-1");
 

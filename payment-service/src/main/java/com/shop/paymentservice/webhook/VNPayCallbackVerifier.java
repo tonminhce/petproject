@@ -1,10 +1,10 @@
 package com.shop.paymentservice.webhook;
 
 import com.shop.paymentservice.config.PaymentVNPayProperties;
+import com.shop.paymentservice.provider.VNPayEncoding;
 import com.shop.paymentservice.provider.VNPayProvider;
 import org.springframework.stereotype.Component;
 
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Map;
@@ -32,8 +32,7 @@ public class VNPayCallbackVerifier {
             if ("vnp_SecureHash".equals(key) || "vnp_SecureHashType".equals(key)) {
                 return;
             }
-            encoded.put(URLEncoder.encode(key, StandardCharsets.UTF_8),
-                    URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8));
+            encoded.put(VNPayEncoding.encode(key), VNPayEncoding.encode(value));
         });
         StringBuilder data = new StringBuilder();
         encoded.forEach((key, value) -> {

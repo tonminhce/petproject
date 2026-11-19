@@ -132,6 +132,28 @@ class PspCallbackControllerTest {
         verify(webhookEventService, never()).handle(any(), any());
     }
 
+    @Test
+    void momoCallbackWithAnUnknownResultCodeIsAcknowledgedWithoutAStateChange() {
+        Map<String, Object> body = momoBody("9000", "Unknown error", 0L);
+
+        ResponseEntity<Void> response = controller.momoIpn(json(body));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(webhookEventService, never()).handle(any(), any());
+    }
+
+    @Test
+    void vnpayCallbackWithAPendingStatusIsAcknowledgedWithoutAStateChange() {
+        Map<String, String> params = vnpayParams();
+        params.put("vnp_TransactionStatus", "03");
+        params.put("vnp_SecureHash", vnpayHash(params));
+
+        ResponseEntity<Map<String, String>> response = controller.vnpayIpn(params);
+
+        assertThat(response.getBody()).containsEntry("RspCode", "00");
+        verify(webhookEventService, never()).handle(any(), any());
+    }
+
     private String capturedCarrier(String provider) {
         ArgumentCaptor<byte[]> captor = ArgumentCaptor.forClass(byte[].class);
         verify(webhookEventService).handle(eq(provider), captor.capture());
