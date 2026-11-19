@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.paymentservice.config.PaymentVNPayProperties;
+import com.shop.paymentservice.config.VNPayProviderConfiguredCondition;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
@@ -28,6 +30,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 @Component
+@Conditional(VNPayProviderConfiguredCondition.class)
 @Slf4j
 public class VNPayProvider implements PaymentProvider {
 
@@ -182,17 +185,26 @@ public class VNPayProvider implements PaymentProvider {
             }
             query.append(URLEncoder.encode(key, StandardCharsets.UTF_8))
                     .append('=')
-                    .append(URLEncoder.encode(value, StandardCharsets.UTF_8));
+                    .append(URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8));
         });
         return query.toString();
     }
 
-    private String sign(Map<String, String> params) {
-        StringBuilder data = new StringBuilder();
+    private Map<String, String> encodedParams(Map<String, String> params) {
+        Map<String, String> encoded = new TreeMap<>();
         params.forEach((key, value) -> {
-            if (value == null || value.isBlank() || "vnp_SecureHash".equals(key) || "vnp_SecureHashType".equals(key)) {
+            if ("vnp_SecureHash".equals(key) || "vnp_SecureHashType".equals(key)) {
                 return;
             }
+            encoded.put(URLEncoder.encode(key, StandardCharsets.UTF_8),
+                    URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8));
+        });
+        return encoded;
+    }
+
+    private String sign(Map<String, String> params) {
+        StringBuilder data = new StringBuilder();
+        encodedParams(params).forEach((key, value) -> {
             if (data.length() > 0) {
                 data.append('&');
             }

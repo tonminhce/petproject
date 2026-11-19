@@ -6658,6 +6658,36 @@
           "evidence": "payment-service suite green: 239 tests, 0 failures; checkstyle 0 violations",
           "from": "IMPLEMENTED",
           "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T07:31:42Z",
+          "evidence": "delivered as commit 33976ab9 on branch audit/production-hardening-run-20261118-a2b6e6fc; payment-service 242 tests green, fleet validate green, GitNexus detect-changes low risk with no affected process",
+          "from": "VERIFYING",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T07:47:45Z",
+          "evidence": "independent QA review verdict QA_FAIL: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-psp-integration-review.md; D1 the MoMo request signature dropped the documented empty extraData and description so the PSP would reject every call, D2 the MoMo refund confirmed on an unverified response, D3 no PSP callback path so a payment never leaves PENDING, D4 a genuine MoMo refusal was reported as indeterminate, D5 the production guard only covered the default provider, D6 the k8s deployment never enables production mode, D7 configured did not require the callback URLs",
+          "from": "VERIFYING",
+          "to": "FAILED_VERIFICATION"
+        },
+        {
+          "at": "2026-11-19T07:47:45Z",
+          "evidence": "reopened for the confirmed defect batch",
+          "from": "FAILED_VERIFICATION",
+          "to": "REOPENED"
+        },
+        {
+          "at": "2026-11-19T10:49:47Z",
+          "evidence": "fixing the confirmed QA defects",
+          "from": "REOPENED",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T10:49:47Z",
+          "evidence": "D1 and D4: the MoMo canonical string now carries every documented field including the empty extraData and the empty payUrl, so the PSP accepts the request and a genuine refusal is a rejection, not an unknown outcome; D2: the MoMo refund binds the response to the request by order id and amount and verifies the response signature when the PSP sends one; D5: MoMoProvider and VNPayProvider are registered only when they are fully configured and explicitly enabled, so an unintegrated provider cannot be selected by name; D6: the Kubernetes deployment sets SHOP_PAYMENT_PRODUCTION_MODE; D7: a configured provider now requires the callback urls; VNPay signs the url encoded parameter string, matching the official VNPay node sample, so vnp_ReturnUrl and vnp_NotifyUrl no longer break the hash; payment-service 250 tests green with the containerised integration tests, checkstyle 0 violations, fleet validate green, GitNexus change analysis low risk",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
         }
       ],
       "id": "PAY-15",
@@ -6672,17 +6702,28 @@
         "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java:41",
         "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java:42"
       ],
-      "state": "VERIFYING",
+      "state": "IMPLEMENTED",
       "target_implementation": "Use the currency-unit rules already present in StripeCurrencyUnits and either integrate the PSP or remove the provider from the selectable set.",
       "technical_risk": "VNPay multiplies the amount by 100 regardless of the currency while VNPay is a zero-decimal currency, and MoMo truncates with longValue. Neither provider contacts the external PSP and the redirect URL is discarded.",
       "title": "VNPay multiplies the amount by 100 unconditionally and neither provider ever contacts the PSP",
-      "updated_at": "2026-11-19T07:16:03Z",
+      "updated_at": "2026-11-19T10:49:47Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
         "implementing the real MoMo and VNPay PSP integrations",
         "MoMoProvider now POSTs /v2/gateway/api/create and /v2/gateway/api/refund with the documented HMAC-SHA256 signature and verifies the response signature; VNPayProvider builds the signed vpcpay redirect and calls merchant_webapi/api/transaction for refunds with HMAC-SHA512; non-VND currencies are refused instead of being mis-scaled; PaymentProviderProductionGuard rejects a simulated or unconfigured provider when shop.payment.production-mode=true",
-        "payment-service suite green: 239 tests, 0 failures; checkstyle 0 violations"
+        "payment-service suite green: 239 tests, 0 failures; checkstyle 0 violations",
+        "delivered as commit 33976ab9 on branch audit/production-hardening-run-20261118-a2b6e6fc; payment-service 242 tests green, fleet validate green, GitNexus detect-changes low risk with no affected process",
+        "independent QA review verdict QA_FAIL: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-psp-integration-review.md; D1 the MoMo request signature dropped the documented empty extraData and description so the PSP would reject every call, D2 the MoMo refund confirmed on an unverified response, D3 no PSP callback path so a payment never leaves PENDING, D4 a genuine MoMo refusal was reported as indeterminate, D5 the production guard only covered the default provider, D6 the k8s deployment never enables production mode, D7 configured did not require the callback URLs",
+        "reopened for the confirmed defect batch",
+        "fixing the confirmed QA defects",
+        "D1 and D4: the MoMo canonical string now carries every documented field including the empty extraData and the empty payUrl, so the PSP accepts the request and a genuine refusal is a rejection, not an unknown outcome",
+        "D2: the MoMo refund binds the response to the request by order id and amount and verifies the response signature when the PSP sends one",
+        "D5: MoMoProvider and VNPayProvider are registered only when they are fully configured and explicitly enabled, so an unintegrated provider cannot be selected by name",
+        "D6: the Kubernetes deployment sets SHOP_PAYMENT_PRODUCTION_MODE",
+        "D7: a configured provider now requires the callback urls",
+        "VNPay signs the url encoded parameter string, matching the official VNPay node sample, so vnp_ReturnUrl and vnp_NotifyUrl no longer break the hash",
+        "payment-service 250 tests green with the containerised integration tests, checkstyle 0 violations, fleet validate green, GitNexus change analysis low risk"
       ]
     },
     "PAY-16": {
@@ -7166,19 +7207,35 @@
       ]
     },
     "PAY-30": {
-      "acceptance_criteria": [],
+      "acceptance_criteria": [
+        "A MoMo IPN is accepted only when its signature verifies against the documented MoMo field set",
+        "A VNPay IPN is accepted only when vnp_SecureHash verifies over the decoded parameters",
+        "The callback translates the PSP payload into the carrier payload so the payment reaches CAPTURED and the order captured-payment gate opens",
+        "The callback endpoints are public, size limited and rate limited like the Stripe path",
+        "A duplicate callback does not apply the state transition twice",
+        "A callback whose amount differs from the captured amount is rejected"
+      ],
       "affected_service": "payment-service",
       "assigned_agent": "",
       "blockers": [],
       "business_risk": "",
       "concurrency_tests": [],
       "created_at": "2026-11-19T07:16:55Z",
-      "current_implementation": "",
+      "current_implementation": "payment-service exposes only /api/v1/webhooks/payments/{provider}, which accepts the Stripe signature or the repository body HMAC. Neither a MoMo IPN nor a VNPay IPN can be ingested, and the provider id persisted on the payment is the order id, so it can never carry the MoMo transaction id a refund needs.",
       "dependencies": [],
       "design_pattern": "Adapter",
-      "edge_case_tests": [],
+      "edge_case_tests": [
+        "A tampered MoMo IPN is rejected with 401 and leaves the payment pending",
+        "A VNPay IPN with an invalid vnp_SecureHash is rejected and answered with RspCode 97",
+        "A repeated callback does not move the payment twice",
+        "A callback whose amount differs from the payment amount is rejected",
+        "A callback for an unknown payment id is rejected without a database write"
+      ],
       "git_commit_sha": "",
-      "happy_path_tests": [],
+      "happy_path_tests": [
+        "A signed MoMo IPN with resultCode 0 marks the payment captured and publishes payment.captured.v1",
+        "A signed VNPay IPN with vnp_TransactionStatus 00 marks the payment captured and records the provider transaction id"
+      ],
       "history": [
         {
           "at": "2026-11-19T07:16:56Z",
@@ -7195,7 +7252,7 @@
       ],
       "id": "PAY-30",
       "implementation_revision": "",
-      "independent_verifier": "",
+      "independent_verifier": "audit-payment",
       "integration_e2e_coverage": [],
       "notes": "",
       "priority": 20,
@@ -7205,8 +7262,8 @@
         "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:47 accepts only a Stripe-style t=,v1 header or a bare 64-hex HMAC over the body; payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java and VNPayProvider.java now drive real PSP redirects whose callbacks carry the MoMo signature field and the VNPay vnp_SecureHash parameter, which this verifier rejects"
       ],
       "state": "READY",
-      "target_implementation": "",
-      "technical_risk": "",
+      "target_implementation": "A dedicated PSP callback adapter per provider that verifies the vendor signature, maps the PSP payload to the carrier payload and hands it to the existing webhook event service.",
+      "technical_risk": "A payment created against a redirect provider never leaves PENDING, so the order captured-payment gate never opens and checkout cannot complete. The MoMo transaction id that a refund needs is only delivered by the callback, so a refund also fails without it.",
       "title": "The non-Stripe webhook path cannot verify a real MoMo or VNPay IPN",
       "updated_at": "2026-11-19T07:16:56Z",
       "verification_evidence": [
@@ -13776,5 +13833,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-19T07:16:56Z"
+  "updated_at": "2026-11-19T10:49:47Z"
 }

@@ -14,6 +14,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 import java.util.Map;
@@ -75,6 +76,7 @@ class VNPayProviderTest {
         assertThat(params).containsEntry("vnp_TxnRef", paymentId.toString().replace("-", ""));
         assertThat(params.get("vnp_CreateDate")).matches("\\d{14}");
         assertThat(params.get("vnp_SecureHash")).isEqualTo(expectedSignature(params));
+        assertThat(result.clientSecret()).contains("vnp_ReturnUrl=https%3A%2F%2Fshop.test%2Fvnpay%2Freturn");
     }
 
     @Test
@@ -164,14 +166,16 @@ class VNPayProviderTest {
     }
 
     private String expectedSignature(Map<String, String> params) {
-        Map<String, String> signed = new TreeMap<>(params);
-        signed.remove("vnp_SecureHash");
-        signed.remove("vnp_SecureHashType");
-        StringBuilder data = new StringBuilder();
-        signed.forEach((key, value) -> {
-            if (value == null || value.isBlank()) {
+        Map<String, String> signed = new TreeMap<>();
+        params.forEach((key, value) -> {
+            if ("vnp_SecureHash".equals(key) || "vnp_SecureHashType".equals(key)) {
                 return;
             }
+            signed.put(URLEncoder.encode(key, StandardCharsets.UTF_8),
+                    URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8));
+        });
+        StringBuilder data = new StringBuilder();
+        signed.forEach((key, value) -> {
             if (data.length() > 0) {
                 data.append('&');
             }

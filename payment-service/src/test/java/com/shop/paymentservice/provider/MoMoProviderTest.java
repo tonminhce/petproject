@@ -192,6 +192,41 @@ class MoMoProviderTest {
     }
 
     @Test
+    void refund_isIndeterminateWhenTheResponseDoesNotBelongToTheRequest() {
+        UUID paymentId = UUID.randomUUID();
+        server.expect(requestTo(REFUND_URL))
+                .andRespond(withSuccess("""
+                        {"resultCode":0,"message":"Successful","orderId":"RF-somebody-else","amount":50000}
+                        """, MediaType.APPLICATION_JSON));
+
+        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1",
+                "144492817");
+
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
+        assertThat(result.providerEventId()).isEqualTo("MOMO_REFUND_RESPONSE_MISMATCH");
+        server.verify();
+    }
+
+    @Test
+    void refund_isIndeterminateWhenTheResponseSignatureDoesNotVerify() {
+        UUID paymentId = UUID.randomUUID();
+        String refundOrderId = "RF" + paymentId.toString().replace("-", "");
+        server.expect(requestTo(REFUND_URL))
+                .andRespond(withSuccess("""
+                        {"resultCode":0,"message":"Successful","orderId":"%s","amount":50000,\
+                        "requestId":"%s","transId":144492817,"signature":"%s"}
+                        """.formatted(refundOrderId, refundOrderId,
+                        "0000000000000000000000000000000000000000000000000000000000000000"), MediaType.APPLICATION_JSON));
+
+        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1",
+                "144492817");
+
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
+        assertThat(result.providerEventId()).isEqualTo("MOMO_REFUND_SIGNATURE_INVALID");
+        server.verify();
+    }
+
+    @Test
     void hmacSHA256_matchesTheKnownVector() {
         assertThat(MoMoProvider.hmacSHA256("key", "The quick brown fox jumps over the lazy dog"))
                 .isEqualTo("f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8");
@@ -201,6 +236,7 @@ class MoMoProviderTest {
         String orderId = paymentId.toString();
         String data = "accessKey=" + ACCESS_KEY
                 + "&amount=" + amount
+                + "&extraData="
                 + "&ipnUrl=" + NOTIFY_URL
                 + "&orderId=" + orderId
                 + "&orderInfo=" + ORDER_INFO
@@ -237,6 +273,7 @@ class MoMoProviderTest {
                 + "&message=" + message
                 + "&orderId=" + orderId
                 + "&partnerCode=" + PARTNER
+                + "&payUrl="
                 + "&requestId=" + orderId
                 + "&responseTime=1700000000000"
                 + "&resultCode=" + resultCode;

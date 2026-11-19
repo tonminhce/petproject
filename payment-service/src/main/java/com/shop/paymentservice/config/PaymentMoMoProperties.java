@@ -25,7 +25,8 @@ public record PaymentMoMoProperties(
     }
 
     public boolean isConfigured() {
-        return !baseUrl.isBlank() && !partnerCode.isBlank() && !accessKey.isBlank() && !secretKey.isBlank();
+        return !baseUrl.isBlank() && !partnerCode.isBlank() && !accessKey.isBlank() && !secretKey.isBlank()
+                && !returnUrl.isBlank() && !notifyUrl.isBlank();
     }
 
     private static String trimToEmpty(String value) {

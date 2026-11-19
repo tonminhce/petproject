@@ -3,9 +3,11 @@ package com.shop.paymentservice.provider;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.paymentservice.config.MoMoProviderConfiguredCondition;
 import com.shop.paymentservice.config.PaymentMoMoProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -24,6 +26,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 @Component
+@Conditional(MoMoProviderConfiguredCondition.class)
 @Slf4j
 public class MoMoProvider implements PaymentProvider {
 
@@ -78,7 +81,6 @@ public class MoMoProvider implements PaymentProvider {
         signed.put("redirectUrl", properties.returnUrl());
         signed.put("requestId", orderId);
         signed.put("requestType", REQUEST_TYPE);
-
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("partnerCode", properties.partnerCode());
         payload.put("requestId", orderId);
@@ -149,11 +151,44 @@ public class MoMoProvider implements PaymentProvider {
         if (response == null) {
             return ProviderResult.indeterminate("MOMO_MALFORMED_RESPONSE");
         }
+        if (!refundResponseBoundToRequest(response, refundOrderId, amountValue)) {
+            return ProviderResult.indeterminate("MOMO_REFUND_RESPONSE_MISMATCH");
+        }
+        if (!refundResponseSignatureValid(response, refundOrderId, amountValue, transactionId)) {
+            return ProviderResult.indeterminate("MOMO_REFUND_SIGNATURE_INVALID");
+        }
         int resultCode = response.path("resultCode").asInt(-1);
         if (resultCode != SUCCESS_RESULT_CODE) {
             return ProviderResult.rejected("MOMO_RESULT_CODE_" + resultCode);
         }
         return ProviderResult.confirmed(transactionId);
+    }
+
+    private boolean refundResponseBoundToRequest(JsonNode response, String refundOrderId, long amountValue) {
+        String orderId = response.path("orderId").asText("");
+        String amount = response.path("amount").asText("");
+        if (!orderId.isEmpty() && !orderId.equals(refundOrderId)) {
+            return false;
+        }
+        return amount.isEmpty() || amount.equals(Long.toString(amountValue));
+    }
+
+    private boolean refundResponseSignatureValid(JsonNode response, String refundOrderId, long amountValue,
+            String transactionId) {
+        String signature = response.path("signature").asText(null);
+        if (signature == null || signature.isBlank()) {
+            return true;
+        }
+        Map<String, String> signed = new TreeMap<>();
+        signed.put("accessKey", properties.accessKey());
+        signed.put("amount", Long.toString(amountValue));
+        signed.put("description", "");
+        signed.put("orderId", response.path("orderId").asText(refundOrderId));
+        signed.put("partnerCode", properties.partnerCode());
+        signed.put("requestId", response.path("requestId").asText(refundOrderId));
+        signed.put("transId", response.path("transId").asText(transactionId));
+        return MessageDigest.isEqual(sign(signed).getBytes(StandardCharsets.UTF_8),
+                signature.getBytes(StandardCharsets.UTF_8));
     }
 
     private ProviderResult captureOutcome(String body, String orderId, BigDecimal amount) {
@@ -227,13 +262,10 @@ public class MoMoProvider implements PaymentProvider {
     private String sign(Map<String, String> fields) {
         StringBuilder data = new StringBuilder();
         fields.forEach((key, value) -> {
-            if (value == null || value.isBlank()) {
-                return;
-            }
             if (data.length() > 0) {
                 data.append('&');
             }
-            data.append(key).append('=').append(value);
+            data.append(key).append('=').append(value == null ? "" : value);
         });
         return hmacSHA256(properties.secretKey(), data.toString());
     }

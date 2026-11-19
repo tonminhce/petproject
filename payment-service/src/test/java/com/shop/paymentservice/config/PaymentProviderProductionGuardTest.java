@@ -55,8 +55,25 @@ class PaymentProviderProductionGuardTest {
                         "shop.payment.momo.base-url=https://test-payment.momo.vn",
                         "shop.payment.momo.partner-code=PARTNER",
                         "shop.payment.momo.access-key=ACCESS",
-                        "shop.payment.momo.secret-key=SECRET")
+                        "shop.payment.momo.secret-key=SECRET",
+                        "shop.payment.momo.return-url=https://shop.test/momo/return",
+                        "shop.payment.momo.notify-url=https://shop.test/momo/ipn")
                 .run(ctx -> assertThat(ctx).hasNotFailed());
+    }
+
+    @Test
+    void aProviderWithoutTheCallbackUrlsIsRejectedInProductionMode() {
+        contextRunner.withPropertyValues(
+                        "shop.payment.production-mode=true",
+                        "shop.payment.provider=momo",
+                        "shop.payment.momo.base-url=https://test-payment.momo.vn",
+                        "shop.payment.momo.partner-code=PARTNER",
+                        "shop.payment.momo.access-key=ACCESS",
+                        "shop.payment.momo.secret-key=SECRET")
+                .run(ctx -> {
+                    assertThat(ctx).hasFailed();
+                    assertThat(ctx.getStartupFailure()).hasStackTraceContaining("momo");
+                });
     }
 
     @Test

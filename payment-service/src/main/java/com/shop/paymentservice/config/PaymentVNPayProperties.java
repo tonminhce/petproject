@@ -35,7 +35,8 @@ public record PaymentVNPayProperties(
     }
 
     public boolean isConfigured() {
-        return !paymentUrl.isBlank() && !apiUrl.isBlank() && !tmnCode.isBlank() && !hashSecret.isBlank();
+        return !paymentUrl.isBlank() && !apiUrl.isBlank() && !tmnCode.isBlank() && !hashSecret.isBlank()
+                && !returnUrl.isBlank() && !notifyUrl.isBlank();
     }
 
     private static String trimToEmpty(String value) {

@@ -44,6 +44,7 @@ shop:
       api-base: ${SHOP_PAYMENT_STRIPE_API_BASE:}
       connect: false
     momo:
+      enabled: ${SHOP_PAYMENT_MOMO_ENABLED:false}
       base-url: ${SHOP_PAYMENT_MOMO_BASE_URL:}
       partner-code: ${SHOP_PAYMENT_MOMO_PARTNER_CODE:}
       access-key: ${SHOP_PAYMENT_MOMO_ACCESS_KEY:}
@@ -53,6 +54,7 @@ shop:
       order-info: ${SHOP_PAYMENT_MOMO_ORDER_INFO:Payment}
       timeout-ms: ${SHOP_PAYMENT_MOMO_TIMEOUT_MS:30000}
     vnpay:
+      enabled: ${SHOP_PAYMENT_VNPAY_ENABLED:false}
       payment-url: ${SHOP_PAYMENT_VNPAY_PAYMENT_URL:}
       api-url: ${SHOP_PAYMENT_VNPAY_API_URL:}
       tmn-code: ${SHOP_PAYMENT_VNPAY_TMN_CODE:}
