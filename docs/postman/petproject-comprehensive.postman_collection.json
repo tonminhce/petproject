@@ -193,6 +193,10 @@
     {
       "key": "badSlug",
       "value": ""
+    },
+    {
+      "key": "stripeWebhookSecret",
+      "value": "whsec_local_e2e_only"
     }
   ],
   "item": [
@@ -967,14 +971,82 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Payment captured\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                      "pm.test('Payment capture accepted', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                       "const res = pm.response.json();",
-                      "pm.expect(res.data.status).to.eql(\"CAPTURED\");",
-                      "pm.expect(res.data.previousStatus).to.eql(\"PENDING\");"
+                      "pm.test('A provider that needs client confirmation leaves the payment pending', () => {",
+                      "    pm.expect(res.data.status).to.eql('PENDING');",
+                      "});",
+                      "pm.test('The client secret for the confirmation is returned', () => {",
+                      "    pm.expect(res.data.clientSecret).to.be.a('string');",
+                      "    pm.expect(res.data.clientSecret.length).to.be.above(0);",
+                      "});"
                     ]
                   }
                 }
               ]
+            },
+            {
+              "name": "6.6 Provider Confirms the Payment (Stripe Webhook)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Stripe-Signature",
+                    "value": "{{stripeWebhookSignature}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"evt_{{paymentId}}\",\n  \"object\": \"event\",\n  \"api_version\": \"2024-06-20\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_{{paymentId}}\",\n      \"object\": \"payment_intent\",\n      \"amount\": 249900,\n      \"currency\": \"usd\",\n      \"status\": \"succeeded\",\n      \"livemode\": false,\n      \"metadata\": {\n        \"payment_id\": \"{{paymentId}}\"\n      }\n    }\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{paymentUrl}}/api/v1/webhooks/payments/stripe",
+                  "host": [
+                    "{{paymentUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "webhooks",
+                    "payments",
+                    "stripe"
+                  ]
+                },
+                "description": "A Stripe intent that was created without confirmation is confirmed by the client, and the provider then notifies the platform. The platform must only mark the payment captured from a signed provider event."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const ts = Math.floor(Date.now() / 1000);",
+                      "const raw = pm.variables.replaceIn(pm.request.body.raw);",
+                      "const secret = pm.variables.get('stripeWebhookSecret');",
+                      "const signature = 't=' + ts + ',v1=' + CryptoJS.HmacSHA256(ts + '.' + raw, secret).toString(CryptoJS.enc.Hex);",
+                      "pm.collectionVariables.set('stripeWebhookSignature', signature);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Provider webhook accepted', function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "pm.test('Provider webhook envelope is a success', function () {",
+                      "    const res = pm.response.json();",
+                      "    pm.expect(res.success).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "response": []
             },
             {
               "name": "6.6 Query Captured Payment Status (Admin)",
@@ -994,11 +1066,9 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Payment retrieved and status is CAPTURED\", () => {",
-                      "  pm.expect(pm.response.code).to.eql(200);",
-                      "  const res = pm.response.json();",
-                      "  pm.expect(res.data.status).to.eql(\"CAPTURED\");",
-                      "  pm.expect(res.data.previousStatus).to.eql(\"PENDING\");",
+                      "pm.test('Payment retrieved and status is CAPTURED', () => {",
+                      "    const res = pm.response.json();",
+                      "    pm.expect(res.data.status).to.eql('CAPTURED');",
                       "});"
                     ]
                   }

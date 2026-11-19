@@ -349,6 +349,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SHOP_PAYMENT_PROVIDER: ${SHOP_PAYMENT_PROVIDER:-mock}
+      SHOP_PAYMENT_STRIPE_API_BASE: ${SHOP_PAYMENT_STRIPE_API_BASE:-http://stripe-mock:12111}
+      SHOP_PAYMENT_STRIPE_SECRET_KEY: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:-sk_test_localE2EOnly}
+      SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:-whsec_local_e2e_only}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?required}
       STORAGE_ENDPOINT: http://rustfs:9000
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
@@ -364,6 +367,14 @@ services:
     healthcheck:
       <<: *hc-defaults
       test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  stripe-mock:
+    image: stripe/stripe-mock:latest
+    container_name: stripe-mock
+    <<: [*restart, *logging]
+    command: ["-http-port", "12111", "-https-port", "12112"]
     networks:
       - ecommerce-network
 
@@ -397,6 +408,7 @@ services:
       SHIPPING_NOTIFY_THRESHOLD_HOURS: ${SHIPPING_NOTIFY_THRESHOLD_HOURS:-72}
       SHOP_SHIPPING_CARRIER: ${SHOP_SHIPPING_CARRIER:-manual}
       SHIPMENT_WEBHOOK_SECRET_GHN: ${SHIPMENT_WEBHOOK_SECRET_GHN:?required}
+      SHIPMENT_WEBHOOK_SECRET_GHTK: ${SHIPMENT_WEBHOOK_SECRET_GHTK:?required}
     depends_on:
       postgres:
         condition: service_healthy
