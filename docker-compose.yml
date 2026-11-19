@@ -595,7 +595,7 @@ services:
     ports:
       - "8094:8094"
     environment:
-      <<: *jwt
+      <<: [*jwt, *otel, *management]
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: ${ES_ADMIN_USERNAME}
       ELASTICSEARCH_PASSWORD: ${ES_ADMIN_PASSWORD}

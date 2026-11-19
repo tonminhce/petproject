@@ -45,34 +45,27 @@
     "operations": {
       "checks": [
         {
-          "detail": "1 service targets up, 2 request metric series",
+          "detail": "0 service targets up, 0 request metric series",
           "evidence": {
-            "request_series": [
-              null,
-              null
-            ],
-            "service_targets_up": [
-              "payment-service:8085"
-            ]
+            "request_series": [],
+            "service_targets_up": []
           },
           "id": "OBS-01",
           "name": "metrics",
-          "passed": true
+          "passed": false
         },
         {
-          "detail": "heap series 8, cpu series 1, thread series 1",
+          "detail": "heap series 0, cpu series 0, thread series 0",
           "id": "OBS-07",
           "name": "runtime metrics",
-          "passed": true
+          "passed": false
         },
         {
-          "detail": "5 log streams, 50 samples",
+          "detail": "2 log streams, 50 samples",
           "evidence": {
             "containers": [
               "/grafana",
-              "/loki",
-              "/search-service",
-              "/tempo"
+              "/search-service"
             ]
           },
           "id": "OBS-02",
@@ -80,18 +73,17 @@
           "passed": true
         },
         {
-          "detail": "20 traces from 2 services",
+          "detail": "20 traces from 1 services",
           "evidence": {
             "services": [
-              "payment-service",
-              "shop-service"
+              "payment-service"
             ],
             "trace_ids": [
-              "df12c43b625b929805dabb60ab56124e",
-              "cfb7b589b8f607d603a1c165f543685e",
-              "8a8b9c7876aad01af37b59e893afda8e",
-              "7a9ed4295823a314fca76574f9508656",
-              "80350701c000384f048e81b20f438297"
+              "c3b4233009ad385606be40d99f6c2a40",
+              "ed10f39ab2f7129ef442e5db9ab69a1b",
+              "7a919c80ebd76a7608d586b1d00e9422",
+              "bfa0d5ab854ee2bd0a9de3abd6e786b2",
+              "87d6920bde75e7b604aa7457fa069600"
             ]
           },
           "id": "OBS-03",
@@ -99,10 +91,15 @@
           "passed": true
         },
         {
-          "detail": "grafana search returned 0",
+          "detail": "1 dashboards provisioned, fleet overview has 8 panels",
+          "evidence": {
+            "dashboard_titles": [
+              "Fleet Overview"
+            ]
+          },
           "id": "OBS-06",
           "name": "dashboards",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "Loki=OK, Prometheus=OK, Tempo=OK",
@@ -139,15 +136,15 @@
           "passed": true
         }
       ],
-      "detail": "6 of 7 observability checks passed",
+      "detail": "5 of 7 observability checks passed",
       "not_verified": [
         "OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically",
         "OBS-05 a controlled failure is visible in the backends but the check is not automated"
       ],
       "status": "FAIL",
       "suite": "operations",
-      "updated_at": "2026-11-19T11:56:15Z"
+      "updated_at": "2026-11-19T12:09:11Z"
     }
   },
-  "updated_at": "2026-11-19T11:56:15Z"
+  "updated_at": "2026-11-19T12:09:11Z"
 }
