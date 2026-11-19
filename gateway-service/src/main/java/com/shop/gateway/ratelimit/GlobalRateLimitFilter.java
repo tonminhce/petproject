@@ -12,6 +12,9 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+/**
+ * Applies one shared capacity bucket before route-specific filters run.
+ */
 public final class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
     private static final String GLOBAL_ROUTE_ID = "gateway-system";

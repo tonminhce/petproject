@@ -12,6 +12,18 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * The password reset email goes out over SMTP (F-054).
+ *
+ * <p>The previous sender only logged the dispatch, so the endpoint answered
+ * "a password reset instruction has been sent" while no message ever left the
+ * process - the flow was silently non-functional and the only signal was the
+ * support load. The raw token is deliberately NOT logged; it only travels to
+ * the mailbox of the account owner.</p>
+ *
+ * <p>A failed dispatch is an error, not a warning: the caller must not be
+ * told that a message was sent when it was not.</p>
+ */
 @Component
 @ConditionalOnProperty(name = "shop.auth.smtp.enabled", havingValue = "true")
 public class SmtpPasswordResetEmailSender implements PasswordResetEmailSender {

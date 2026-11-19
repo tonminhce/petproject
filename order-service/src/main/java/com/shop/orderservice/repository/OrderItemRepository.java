@@ -15,6 +15,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
 
     List<OrderItem> findByOrderId(UUID orderId);
 
+    /** Batch loader for paginated reads (avoids the per-order N+1). */
     List<OrderItem> findByOrderIdIn(Collection<UUID> orderIds);
 
     @Query("""

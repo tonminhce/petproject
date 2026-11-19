@@ -9,6 +9,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Campaign persistence.
+ * <p>{@code Campaign} carries {@code @SQLRestriction("deleted = false")}, so Hibernate
+ * excludes soft-deleted rows from every query (derived, JPQL, and {@code findAll}) —
+ * derived method names therefore need no explicit {@code DeletedFalse} predicate.
+ * Paged listing without filters is the inherited {@link JpaRepository#findAll(Pageable)}.
+ */
 public interface CampaignRepository extends JpaRepository<Campaign, UUID> {
 
     Optional<Campaign> findByCode(String code);

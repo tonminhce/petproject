@@ -26,6 +26,7 @@ public class TaxCalculationController {
     @Audited(action = "tax.calculate", resourceType = "tax-calculation")
     public ApiResponse<TaxCalculateResponse> calculate(@Valid @RequestBody TaxCalculateRequest request) {
 
+        // is money, and the SERVICE role alone is a fleet-wide privilege.
         serviceCallerGuard.requireCaller("order-service");
         return ApiResponse.ok(taxCalculationService.calculate(request));
     }

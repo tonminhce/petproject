@@ -74,7 +74,8 @@ class MediaReferenceClientIT extends AbstractMediaIntegrationTest {
         var count = referenceClient.referenceCount(MEDIA_ID);
 
         assertThat(count).hasValue(3);
-
+        // the call carried a bearer token (client_credentials stub) — the
+        // endpoint is SERVICE-gated, so an anonymous call would 401
         productServer.verify(com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(urlEqualTo(path()))
             .withHeader("Authorization", com.github.tomakehurst.wiremock.client.WireMock.matching("Bearer .*")));
     }

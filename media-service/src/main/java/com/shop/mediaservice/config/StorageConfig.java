@@ -10,6 +10,14 @@ import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
+/**
+ * Media's storage wiring: the common-storage client stack built from
+ * {@code shop.storage.*} props. Declaring the beans here (instead of relying
+ * on common-storage's auto-configuration) keeps bucket creation out of bean
+ * initialization — {@link com.shop.mediaservice.storage.BucketBootstrap} owns
+ * create-if-missing + the private-ACL assert, so a storage outage degrades
+ * the service at startup instead of failing the context.
+ */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(StorageProperties.class)
 public class StorageConfig {

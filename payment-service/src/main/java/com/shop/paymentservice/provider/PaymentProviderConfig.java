@@ -30,6 +30,11 @@ public class PaymentProviderConfig {
         }
     }
 
+    /**
+     * Multi-provider aware: selects the provider matching
+     * {@code shop.payment.provider} as the primary injection target.
+     * Falls back to the first registered provider if no match is found.
+     */
     @Bean
     @Primary
     public PaymentProvider primary(List<PaymentProvider> all,

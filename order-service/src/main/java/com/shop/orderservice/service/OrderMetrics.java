@@ -11,6 +11,20 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Micrometer-backed observability surface for order-service (review I4 — brings
+ * order-service to parity with ProductMetrics/InventoryMetrics):
+ * <ul>
+ *   <li>{@code order.outbox.relay.duration} — timer recorded by {@code OrderOutboxRelay}.</li>
+ *   <li>{@code order.outbox.pending.count} — gauge updated by the relay each tick.</li>
+ *   <li>{@code order.events.published} — counter tagged {@code event_type}
+ *       (order.created.v1 / order.updated.v1 / order.cancelled.v1).</li>
+ *   <li>{@code order.cache.hit} / {@code order.cache.miss} — gauges backed by
+ *       Spring Data Redis {@link CacheStatistics} for the {@code productPrice} cache;
+ *       skipped when the CacheManager is not Redis (e.g. {@code spring.cache.type=none}
+ *       in tests).</li>
+ * </ul>
+ */
 @Component
 public class OrderMetrics {
 

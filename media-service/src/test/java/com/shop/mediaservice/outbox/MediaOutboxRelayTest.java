@@ -33,6 +33,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/**
+ * The relay publishes the claimed batch in one fan-out and marks every row
+ * by its OWN outcome. A record that failed blocks the records behind it of
+ * the same media only, so a consumer never sees a later event of a media
+ * before an earlier one.
+ *
+ * <p>This service's outbox has two properties the tests pin: FAILED is not
+ * terminal (it is replayed until the retention window ages it to DEAD), and
+ * the relay is type-agnostic (it relays whatever event type the row
+ * carries).</p>
+ */
 @ExtendWith(MockitoExtension.class)
 class MediaOutboxRelayTest {
 
@@ -52,7 +63,7 @@ class MediaOutboxRelayTest {
         PlatformTransactionManager txManager = new PlatformTransactionManager() {
             @Override
             public TransactionStatus getTransaction(TransactionDefinition definition) {
-
+                // No-op - TransactionTemplate needs a non-null status to commit.
                 return new SimpleTransactionStatus(true);
             }
             @Override
@@ -116,7 +127,7 @@ class MediaOutboxRelayTest {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<OutboxMessage>> captor = ArgumentCaptor.forClass(List.class);
-
+        // Kafka key = mediaId (per-media partition ordering)
         verify(kafkaPublisher).publishBatch(captor.capture(), anyLong(), any());
         assertThat(captor.getValue().get(0).key()).isEqualTo(mediaId.toString());
         assertThat(captor.getValue().get(0).value()).isEqualTo(event.getPayload());
@@ -136,6 +147,7 @@ class MediaOutboxRelayTest {
 
         relay.relay();
 
+        // Relay is type-agnostic - it relays the row verbatim; consumers ack-skip unknown.
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<OutboxMessage>> captor = ArgumentCaptor.forClass(List.class);
         verify(kafkaPublisher).publishBatch(captor.capture(), anyLong(), any());
@@ -199,7 +211,7 @@ class MediaOutboxRelayTest {
 
         relay.relay();
 
-        assertThat(event.getStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(event.getStatus()).isEqualTo(OutboxStatus.FAILED);  // parked for the next cycle
         assertThat(event.getRetryCount()).isEqualTo(11);
         assertThat(event.getLastError()).isEqualTo("kafka down");
     }
@@ -231,7 +243,10 @@ class MediaOutboxRelayTest {
 
     @Test
     void claimedRowsArePublishedInAscendingIdOrder() {
-
+        // The database does not return the rows in id order, so the relay has
+        // to sort them: a scrambled batch must come out ascending, because
+        // ascending id IS the production order (the claim takes the lowest
+        // due id first).
         OutboxEvent first = event(1L, OutboxStatus.PENDING, 0, mediaId);
         OutboxEvent second = event(2L, OutboxStatus.PENDING, 0, mediaId);
         OutboxEvent third = event(3L, OutboxStatus.PENDING, 0, otherMediaId);

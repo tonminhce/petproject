@@ -17,6 +17,19 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 
+/**
+ * Denies every request whose client IP is outside {@code ADMIN_IP_ALLOWLIST},
+ * expressed as comma-separated CIDRs. Because the env is absent in dev, the
+ * filter starts INACTIVE and becomes a fail-closed deny-by-default control the
+ * moment the variable carries content.
+ * <p>Bypass list (never IP-blocked — third-party callers and probes have no
+ * office IP): payment/shipping webhook paths ({@code /api/v1/webhooks/**}) and
+ * the actuator health endpoint (incl. liveness/readiness probes).</p>
+ * <p>Evasive paths (percent-encoded — raw &ne; decoded, incl. double encoding
+ * and malformed escapes — or carrying matrix variables) are rejected with the
+ * fleet 400 envelope before any bypass/IP decision — see
+ * {@link RequestPathGuard} for the strategy.</p>
+ */
 public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(AdminIpAllowlistFilter.class);
@@ -24,6 +37,14 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
     private static final String WEBHOOK_BYPASS_PREFIX = ApiPaths.WEBHOOKS_PREFIX + "/";
     private static final String HEALTH_BYPASS_PATH = ApiPaths.ACTUATOR_HEALTH;
 
+    /**
+     * The storefront paths that are never IP-blocked.
+     *
+     * <p>Segment-aware on purpose: {@code /api/v1/ratings-admin} is not a
+     * child of {@code /api/v1/ratings}, so a bare prefix match would hand
+     * every route that merely begins with one of these prefixes the bypass.
+     * See {@link RequestPathMatcher}.</p>
+     */
     private static final List<String> PUBLIC_STOREFRONT_PREFIXES = List.of(
             "/api/v1/products",
             "/api/v1/categories",
@@ -83,7 +104,7 @@ public final class AdminIpAllowlistFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isAllowed(final String clientIp) {
-
+        // Literal-IP guard: InetAddress.getByName would otherwise perform a
         if (!isLiteralAddress(clientIp)) {
             return false;
         }

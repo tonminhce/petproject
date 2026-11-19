@@ -18,6 +18,14 @@ public interface PaymentService {
 
     Page<PaymentResponse> findAllByOrderId(UUID orderId, Pageable pageable);
 
+    /**
+     * The captured payment of an order, if there is one.
+     *
+     * <p>The order-service confirm gate asks this question and must be right
+     * about it: a paged lookup would miss a captured payment that sits beyond
+     * the first page, and the gate fails closed - the order could never be
+     * confirmed and would be auto-cancelled while the customer had paid.</p>
+     */
     Optional<PaymentResponse> findCapturedByOrderId(UUID orderId);
 
     PaymentResponse findById(UUID id);

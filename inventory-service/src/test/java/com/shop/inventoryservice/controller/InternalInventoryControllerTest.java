@@ -24,6 +24,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Slice test for the internal reservation-count endpoint (F-060).
+ *
+ * <p>The endpoint is how the catalogue learns that a product still has live
+ * stock reservations before it soft-deletes the product. It runs with the
+ * REAL security chain, so the SERVICE-role gate is actually enforced: SERVICE
+ * role → 200, anonymous → 401, USER role → 403.</p>
+ */
 @WebMvcTest(value = InternalInventoryController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

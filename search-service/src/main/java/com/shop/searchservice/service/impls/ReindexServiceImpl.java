@@ -22,11 +22,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Failure semantics: any source-page failure or ES failure mid-stream maps
+ * to 503 SRH-12002 and aborts WITHOUT an alias swap. The freshly created
+ * (possibly empty/partial) index is left behind as an orphan — the next
+ * successful run resolves {@code max(products-v*)+1}, skips the orphan number,
+ * and its post-swap cleanup deletes ALL {@code products-v*} indices except the
+ * new target, so the orphan is reaped then.
+ * <p>Concurrency: an in-process {@link AtomicBoolean} lock rejects a second
+ * concurrent run with 409 SRH-12001 (single-instance MVP posture — a multi-node
+ * deployment needs a distributed lock first).</p>
+ * <p>NO auto full-sync on startup (ops §4(1)): the first deploy runs reindex
+ * once via this endpoint; the Kafka consumer keeps the index fresh after.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ReindexServiceImpl implements ReindexService {
 
+    /** Page size for the source stream — the backoffice endpoint's cap (PageableConstant.MAX_PAGE_SIZE). */
     static final int SOURCE_PAGE_SIZE = PageableConstant.MAX_PAGE_SIZE;
 
     private final ElasticsearchClient client;
@@ -67,6 +81,7 @@ public class ReindexServiceImpl implements ReindexService {
         return new ReindexResponse(indexed, newIndex, System.currentTimeMillis() - start);
     }
 
+    /** Streams every source page; the sink decides what to do with each page. */
     private long streamSource(SourcePageSink sink) {
         long count = 0;
         int page = 0;
@@ -117,7 +132,7 @@ public class ReindexServiceImpl implements ReindexService {
         try {
             int max = 0;
             for (String name : listGenerationIndices()) {
-
+                // log and skip — a safe default that doesn't fail the whole
                 String suffix = name.substring("products-v".length());
                 try {
                     max = Math.max(max, Integer.parseInt(suffix));
@@ -154,6 +169,10 @@ public class ReindexServiceImpl implements ReindexService {
         }
     }
 
+    /**
+     * Atomic swap: remove the alias from every generation index and add it to
+     * the new one in a single updateAliases call.
+     */
     private void swapAlias(String newIndex) {
         try {
             client.indices().updateAliases(u -> u.actions(List.of(
@@ -166,6 +185,7 @@ public class ReindexServiceImpl implements ReindexService {
         }
     }
 
+    /** Post-swap cleanup: every generation index except the new target (incl. orphans from failed runs). */
     private void deleteSupersededIndices(String newIndex) {
         try {
             for (String name : listGenerationIndices()) {
@@ -180,6 +200,7 @@ public class ReindexServiceImpl implements ReindexService {
         }
     }
 
+    /** The concrete index currently behind the {@code products} alias, or "none". */
     private String currentAliasTarget() {
         try {
             return client.indices().getAlias(a -> a.name(IndexProvisioner.ALIAS))

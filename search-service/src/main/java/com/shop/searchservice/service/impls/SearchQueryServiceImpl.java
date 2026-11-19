@@ -36,6 +36,23 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Query mechanics behind {@link SearchQueryService}: multi_match over
+ * title^3/brandName^2/categoryName/description when {@code q} is present,
+ * match_all browse otherwise, with keyword filters for brand/category, a
+ * range filter for price, and an avgRating floor for {@code minRating}
+ * (never-rated docs have no value and drop out naturally).
+ * <p>F3 sort branching: {@code _score} is meaningless on match_all, so an
+ * empty-q browse defaults to NEWEST — including when the client explicitly
+ * asks for relevance. A q-present query defaults to RELEVANCE, and an
+ * explicit sort param always wins.</p>
+ * <p>ES failures surface as 503 SRH-12002 — never a raw exception or 500
+ * (spec D6): transport failures (I/O, timeout, connection refused) arrive as
+ * IOException, while error responses (e.g. {@code index_not_found_exception}
+ * when the alias is missing in a degraded provisioning window — a state
+ * {@code IndexProvisioner} explicitly tolerates) arrive as
+ * ElasticsearchException.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -101,6 +118,11 @@ public class SearchQueryServiceImpl implements SearchQueryService {
         }
     }
 
+    /**
+     * Build the bool query (multi_match / match_all, brand/category filters,
+     * price range, minRating floor). Pure construction; safe to invoke from
+     * both the shallow and the deep (PIT) search paths.
+     */
     private static BoolQuery buildBoolQuery(SearchRequest request, boolean queryPresent) {
         BoolQuery.Builder bool = new BoolQuery.Builder();
         if (queryPresent) {
@@ -142,12 +164,20 @@ public class SearchQueryServiceImpl implements SearchQueryService {
             log.warn("Search query failed — Elasticsearch error response", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         } catch (IOException ex) {
-
+            // 8.15/9.15 transport failures (connect refused, timeout, socket
             log.warn("Search query failed — Elasticsearch unavailable", ex);
             throw BusinessException.of(ErrorCode.SEARCH_QUERY_FAILED);
         }
     }
 
+    /**
+     * Deep-pagination path: open a PIT on the alias, walk forward {@code page}
+     * times with {@code search_after} (one size per step), and return the
+     * final page. PIT open/close failures map to 503 SRH-12002 (spec D6).
+     * <p>Reference:
+     * https://www.elastic.co/guide/en/elasticsearch/reference/9.4/paginate-search-results.html
+     * https://www.elastic.co/guide/en/elasticsearch/reference/9.4/point-in-time-api.html</p>
+     */
     private SearchResponse<Map> searchDeepWithPit(BoolQuery boolQuery, List<SortOptions> sort, int size, int page) {
         String pitId = openPit();
         try {

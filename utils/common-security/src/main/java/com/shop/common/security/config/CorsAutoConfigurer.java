@@ -12,6 +12,18 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Builds the {@link CorsConfigurationSource} bean used by Spring Security's
+ * filter chain.
+ * <p>Driven entirely by {@link SecurityProperties.Cors} so a service can tune
+ * CORS per environment without recompiling. When {@code shop.security.cors.enabled}
+ * is {@code false} the bean is omitted and Spring Security falls back to its
+ * built-in CORS handling.</p>
+ * <p>The {@code allowedOriginPatterns} field (not {@code allowedOrigins}) is
+ * used intentionally — it is the only knob that supports {@code "*"} together
+ * with {@code allowCredentials=true}, which is what most SPA backends need
+ * during local development.</p>
+ */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(prefix = "shop.security.cors", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CorsAutoConfigurer {
@@ -49,5 +61,6 @@ public class CorsAutoConfigurer {
         return values == null ? List.of() : values;
     }
 
+    /** Shared constant — kept here so callers can pass {@code Customizer.withDefaults()}. */
     public static final Customizer<Void> NOOP = Customizer.withDefaults();
 }

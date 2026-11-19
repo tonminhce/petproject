@@ -26,6 +26,22 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * F-015: the reservations table must support a by-order-id lookup.
+ *
+ * <p>The reconciliation flow looks reservations up by order id, but the table
+ * only had an index on product_id (and on status+expires_at), so that lookup
+ * ran a sequential scan over a table that grows with every checkout.</p>
+ *
+ * <p>The test runs against the REAL Liquibase schema on Testcontainers
+ * Postgres: it asserts that the index exists in the catalog and that the
+ * planner can use it for a by-order-id query. It also documents WHY there is
+ * no foreign key to inventory.product_id: deleting an inventory row is legal
+ * while only RELEASED/EXPIRED reservations remain, so a restricting FK would
+ * turn a legal delete into a constraint violation. The application guarantees
+ * the invariant instead - reserve() answers INVENTORY_NOT_FOUND when the
+ * product has no inventory row.</p>
+ */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -87,6 +103,9 @@ class ReservationsOrderIdIndexIT {
                 .orderId(orderId)
                 .build());
 
+        // The planner prefers a sequential scan on a tiny table, so the
+        // sequential scan is disabled for this statement only: the plan then
+        // shows WHICH index can serve the lookup.
         List<Map<String, Object>> plan = jdbc.queryForList("""
                 EXPLAIN (COSTS OFF) SELECT * FROM reservations WHERE order_id = ?
                 """, orderId);
@@ -99,7 +118,9 @@ class ReservationsOrderIdIndexIT {
     @Test
     @DisplayName("the inventory row stays deletable while only released reservations remain")
     void theInventoryRowStaysDeletableWithReleasedReservations() {
-
+        // This is the reason there is no restricting FK to inventory.product_id:
+        // the delete guard blocks PENDING/COMMITTED reservations only, so a
+        // released history must not block the delete.
         UUID productId = UUID.randomUUID();
         inventoryRepository.save(Inventory.builder()
                 .productId(productId)

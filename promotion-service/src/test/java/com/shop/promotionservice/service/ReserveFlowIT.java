@@ -35,10 +35,25 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Task 13 — reserve-flow integration suite: the real
+ * {@link ReservationRetryService} → {@code CampaignReservationServiceImpl}
+ * call path (the controller's production entry point) against real Postgres
+ * (Liquibase-owned schema, singleton containers from the harness) and the
+ * real transactional outbox.
+ *
+ * <p>Covers spec §5.1: happy path persistence contract (frozen amounts,
+ * TTL-derived {@code expiresAt}, reserved outbox row), every PRO-7xxx gate
+ * branch seeded through the real repositories, the optimistic-lock
+ * version-touch race under 8 concurrent threads (§5.2), and budget
+ * quota-return when a hold expires (§5.4 semantics, exercised by directly
+ * flipping the row to EXPIRED — the sweep itself is covered by its own unit
+ * tests and the lifecycle suite).</p>
+ */
 class ReserveFlowIT extends AbstractIntegrationTest {
 
     private static final long TTL_SECONDS = 900L;
-
+    /** PRO-7006 / PRO-7011 — the only failure codes permitted for losing threads. */
     private static final Set<String> RACE_FAILURE_CODES = Set.of("PRO-7006", "PRO-7011");
     private static final List<UsageStatus> COUNTED_STATUSES =
         List.of(UsageStatus.PENDING, UsageStatus.COMMITTED);
@@ -52,6 +67,8 @@ class ReserveFlowIT extends AbstractIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    // --- helpers -----------------------------------------------------------
+
     private Campaign.CampaignBuilder baseCampaign(String code) {
         Instant now = Instant.now();
         return Campaign.builder()
@@ -61,7 +78,7 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             .discountValue(new BigDecimal("10.00"))
             .startsAt(now.minusSeconds(3600))
             .endsAt(now.plusSeconds(86400))
-
+            // Unlimited per-user by default: individual gate tests opt in.
             .perUserLimit(0)
             .status(CampaignStatus.ACTIVE);
     }
@@ -74,6 +91,7 @@ class ReserveFlowIT extends AbstractIntegrationTest {
         return new ReserveRequest(userId, UUID.randomUUID(), new BigDecimal(orderAmount));
     }
 
+    /** Direct repo seed of a usage row (real persistence path, no service gates). */
     private CouponUsageReservation seedReservation(UUID campaignId, UUID userId, UsageStatus status,
                                                    String discount, Instant reservedAt) {
         return reservationRepository.save(CouponUsageReservation.builder()
@@ -94,6 +112,8 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             String.class, eventType);
     }
 
+    // --- 1. happy reserve ---------------------------------------------------
+
     @Test
     @DisplayName("happy reserve → PENDING row with frozen amounts + expiresAt=reservedAt+900 + reserved outbox row")
     void happyReservePersistsPendingRowAndOutboxEvent() {
@@ -105,10 +125,13 @@ class ReserveFlowIT extends AbstractIntegrationTest {
         ReservationResponse response =
             reservationService.reserveWithRetry("HAPPY-IT", request(userId, "199.99"));
 
+        // 201-equivalent: no exception, response carries the frozen math
+        // (199.99 × 10% → 20.00 HALF_UP).
         assertThat(response.status()).isEqualTo("PENDING");
         assertThat(response.discountAmount()).isEqualByComparingTo("20.00");
         assertThat(response.finalAmount()).isEqualByComparingTo("179.99");
 
+        // Real DB row: PENDING, frozen discount, TTL-derived expiry.
         CouponUsageReservation row = reservationRepository.findById(response.reservationId())
             .orElseThrow();
         assertThat(row.getStatus()).isEqualTo(UsageStatus.PENDING);
@@ -119,13 +142,18 @@ class ReserveFlowIT extends AbstractIntegrationTest {
         assertThat(Duration.between(row.getReservedAt(), row.getExpiresAt()).getSeconds())
             .isEqualTo(TTL_SECONDS);
 
+        // Same-transaction outbox row for promotion.reserved.v1.
         assertThat(outboxPayloads("promotion.reserved.v1"))
             .anySatisfy(payload -> {
                 assertThat(payload).contains(response.reservationId().toString());
                 assertThat(payload).contains("\"code\":\"HAPPY-IT\"");
                 assertThat(payload).contains("\"discountAmount\":20.00");
             });
-
+        // Row presence is exact (exactly one reserved event for this
+        // reservation), but its status is raced by the bootstrap context's
+        // background relay timer (~5s): the relay may legitimately drain the
+        // row to SENT between the reserve commit and this assert. Both
+        // statuses prove the row was written PENDING by the same transaction.
         List<String> statuses = jdbcTemplate.queryForList(
             "select status from outbox_events where event_type = 'promotion.reserved.v1' " +
             "and payload like ?",
@@ -133,6 +161,8 @@ class ReserveFlowIT extends AbstractIntegrationTest {
         assertThat(statuses).hasSize(1);
         assertThat(statuses.get(0)).isIn("PENDING", "SENT");
     }
+
+    // --- 2. gate branches (PRO-7xxx), seeded via real repos ------------------
 
     @Test
     @DisplayName("unknown code → CAMPAIGN_NOT_FOUND (PRO-7001)")
@@ -239,6 +269,8 @@ class ReserveFlowIT extends AbstractIntegrationTest {
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7007"));
     }
 
+    // --- 3. concurrency: version-touch + optimistic retry vs real Postgres ---
+
     @Test
     @DisplayName("8 concurrent reserves, per_user_limit=3 → exactly 3 succeed, 5 rejected PRO-7006/7011, DB invariant holds")
     void concurrentReservesEnforcePerUserLimitUnderRealPostgres() throws Exception {
@@ -256,7 +288,10 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             for (int i = 0; i < threads; i++) {
                 futures.add(pool.submit((Callable<Void>) () -> {
                     try {
-
+                        // Maximize collision: all 8 read the campaign before any
+                        // version-touch flush lands, forcing the loser of each
+                        // round through OptimisticLockingFailureException → the
+                        // retry wrapper's re-read + re-validate.
                         barrier.await(15, TimeUnit.SECONDS);
                         successes.add(reservationService.reserveWithRetry(
                             "RACE-IT", request(userId, "199.99")));
@@ -271,7 +306,7 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             assertThat(done.await(60, TimeUnit.SECONDS))
                 .as("all 8 reserve attempts must finish").isTrue();
             for (Future<?> future : futures) {
-                future.get(1, TimeUnit.SECONDS);
+                future.get(1, TimeUnit.SECONDS); // propagate unexpected errors
             }
         } finally {
             pool.shutdownNow();
@@ -283,6 +318,7 @@ class ReserveFlowIT extends AbstractIntegrationTest {
         assertThat(failureCodes).allMatch(RACE_FAILURE_CODES::contains,
             "expected only PRO-7006/PRO-7011 but got " + failureCodes);
 
+        // DB invariant — quota accounting counts PENDING + COMMITTED holds.
         assertThat(reservationRepository
             .countByCampaignIdAndUserIdAndStatusIn(campaign.getId(), userId, COUNTED_STATUSES))
             .isEqualTo(3L);
@@ -290,6 +326,8 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             .countByCampaignIdAndStatusIn(campaign.getId(), COUNTED_STATUSES))
             .isEqualTo(3L);
     }
+
+    // --- 4. budget quota-return on expiry ------------------------------------
 
     @Test
     @DisplayName("budget: 60 of 100 reserved → second reserve PRO-7007 → hold EXPIRED → reserve OK again (quota returned)")
@@ -301,20 +339,25 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             .build());
         UUID firstUser = UUID.randomUUID();
 
+        // Fill 60 of 100.
         ReservationResponse first =
             reservationService.reserveWithRetry("BUDGETRETURN-IT", request(firstUser, "500.00"));
         assertThat(first.discountAmount()).isEqualByComparingTo("60.00");
 
+        // 60 + 60 > 100 → PRO-7007.
         assertThatThrownBy(() -> reservationService.reserveWithRetry("BUDGETRETURN-IT",
                 request(UUID.randomUUID(), "500.00")))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7007"));
 
+        // Simulate the TTL sweep (deterministic — no reliance on the 60s timer):
+        // flip the first hold to EXPIRED directly through the real repository.
         CouponUsageReservation expired = reservationRepository.findById(first.reservationId())
             .orElseThrow();
         expired.setStatus(UsageStatus.EXPIRED);
         reservationRepository.save(expired);
 
+        // Quota returned: the same 60 discount fits again.
         ReservationResponse second =
             reservationService.reserveWithRetry("BUDGETRETURN-IT", request(UUID.randomUUID(), "500.00"));
         assertThat(second.status()).isEqualTo("PENDING");

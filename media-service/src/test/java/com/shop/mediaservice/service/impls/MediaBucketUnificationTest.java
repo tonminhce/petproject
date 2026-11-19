@@ -43,6 +43,7 @@ import org.mockito.ArgumentCaptor;
 @ExtendWith(MockitoExtension.class)
 class MediaBucketUnificationTest {
 
+    /** NOT the common-storage default bucket name — proves the property, not the chain. */
     private static final String BUCKET = "media-unified-bucket";
 
     @Mock
@@ -81,7 +82,9 @@ class MediaBucketUnificationTest {
     }
 
     private byte[] jpegMagicBytes() {
-
+        // any bytes with valid jpeg magic pass the pipeline guards here — the
+        // renderer and repository are mocked, this test is about the BUCKET
+        // ARGUMENT (sniff requires ≥12 bytes)
         byte[] head = new byte[16];
         head[0] = (byte) 0xFF; head[1] = (byte) 0xD8; head[2] = (byte) 0xFF; head[3] = (byte) 0xE0;
         return head;
@@ -102,6 +105,8 @@ class MediaBucketUnificationTest {
         var response = uploadService.upload(
                 new org.springframework.mock.web.MockMultipartFile("file", "a.jpg", "image/jpeg", jpegMagicBytes()));
 
+        // the write went to media.bucket with the persisted media's own key,
+        // and NO default-bucket-chain overload was ever touched
         verify(storage).upload(eq(BUCKET), eq(response.id() + "/original.jpg"),
                 any(InputStream.class), anyLong(), eq("image/jpeg"));
         verify(storage, never()).upload(anyString(), any(byte[].class), anyString());
@@ -122,7 +127,7 @@ class MediaBucketUnificationTest {
             uploadService.upload(new org.springframework.mock.web.MockMultipartFile(
                     "file", "a.jpg", "image/jpeg", jpegMagicBytes()));
         } catch (RuntimeException expected) {
-
+            // rethrown after orphan cleanup
         }
 
         ArgumentCaptor<String> orphanKey = ArgumentCaptor.forClass(String.class);

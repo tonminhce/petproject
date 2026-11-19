@@ -13,6 +13,7 @@ public final class PaymentStateMachine {
             PaymentStatus.PENDING, Set.of(PaymentStatus.CAPTURED, PaymentStatus.FAILED),
             PaymentStatus.CAPTURED, Set.of(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED),
 
+            // (the self-transition is allowed) and by the final full refund.
             PaymentStatus.PARTIALLY_REFUNDED, Set.of(PaymentStatus.REFUNDED));
 
     private PaymentStateMachine() {

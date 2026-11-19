@@ -26,6 +26,7 @@ public class Payment extends AbstractMappedEntity {
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
+    // not from columnDefinition, which would expect VARCHAR and fail at boot.
     @JdbcTypeCode(java.sql.Types.CHAR)
     @Column(name = "currency", nullable = false, columnDefinition = "char(3)")
     private String currency;
@@ -44,6 +45,7 @@ public class Payment extends AbstractMappedEntity {
     @Column(name = "idempotency_key", nullable = false, length = 64)
     private String idempotencyKey;
 
+    /** H29 — multi-tenant scoping: idempotency-key lookup must include the user/tenant. */
     @Column(name = "user_id")
     private UUID userId;
 

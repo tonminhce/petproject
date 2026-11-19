@@ -5,6 +5,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * Lightweight page envelope used for paginated endpoints. Decouples the wire format
+ * from Spring Data's {@code Page} (which is not designed to be serialized directly).
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record PageResponse<T>(
         List<T> content,
@@ -33,6 +37,10 @@ public record PageResponse<T>(
         );
     }
 
+    /**
+     * Map the content elements while keeping pagination metadata intact.
+     * Avoid building a Spring {@code Page} on the caller side just to remap.
+     */
     public <R> PageResponse<R> map(Function<? super T, ? extends R> mapper) {
         List<R> mapped = content.stream().<R>map(mapper).toList();
         return new PageResponse<>(mapped, page, size, totalElements, totalPages, first, last);

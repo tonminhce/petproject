@@ -33,6 +33,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Audit spot matrix (spec D6): one mutating backoffice endpoint exercised
+ * end-to-end through the {@code AuditAspect} to prove the structured JSON
+ * audit line is emitted with the annotated action/resourceType, the path
+ * {@code id} as resourceId and the JWT {@code sub} as actor.
+ */
 @WebMvcTest(value = BackofficeRatingController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

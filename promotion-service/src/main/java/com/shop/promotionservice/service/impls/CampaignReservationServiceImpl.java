@@ -30,6 +30,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CampaignReservationServiceImpl implements CampaignReservationService {
 
+    /**
+     * Usages that hold quota. Spec §5.1 says "PENDING, CONFIRMED" — CONFIRMED
+     * is {@code COMMITTED} in the landed {@link UsageStatus} enum.
+     */
     private static final List<UsageStatus> COUNTED_STATUSES =
         List.of(UsageStatus.PENDING, UsageStatus.COMMITTED);
 
@@ -41,6 +45,12 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
     @Value("${shop.promotion.reservation-ttl-seconds:900}")
     private long reservationTtlSeconds;
 
+    /**
+     * Reserve flow (spec §5.1). Gate order is load-bearing:
+     * NOT_FOUND → NOT_ACTIVE → MIN_ORDER → PER_USER → MAX_REDEMPTIONS → BUDGET.
+     * Campaign lookup never needs a deleted-predicate — {@code @SQLRestriction}
+     * on {@link Campaign} hides soft-deleted rows from every query.
+     */
     @Override
     @Transactional
     public ReservationResponse reserve(String code, ReserveRequest request) {
@@ -71,6 +81,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             return ReservationResponse.from(campaign, existing);
         }
 
+        // returned amounts must match the stored row exactly.
         BigDecimal discount = DiscountCalculator.compute(
             campaign.getDiscountType(), campaign.getDiscountValue(), request.orderAmount());
 
@@ -91,6 +102,10 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             throw BusinessException.of(ErrorCode.BUDGET_EXHAUSTED, campaign.getCode());
         }
 
+        // ⚠️ Race protection (spec §5.2) — explicit choice: version-touch on the campaign row.
+        // two concurrent reserves can both pass. Touching a mapped field + saveAndFlush makes
+        // OptimisticLockingFailureException → the retry wrapper re-reads (now seeing the
+        // winner's committed PENDING row) and re-validates → correctly rejected.
         campaign.setUpdatedAt(now);
         campaignRepository.saveAndFlush(campaign);
 
@@ -109,6 +124,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             saved = reservationRepository.save(reservation);
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
 
+            // for the same order is rejected by the database. Without this
             log.info("Concurrent coupon reservation for order {} rejected by uk_cur_order_id",
                     request.orderId());
             throw BusinessException.of(ErrorCode.PROMOTION_DUPLICATE_REQUEST, request.orderId());
@@ -117,6 +133,12 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         return ReservationResponse.from(campaign, saved);
     }
 
+    /**
+     * Idempotent state machine (spec §5.3, branch order load-bearing):
+     * COMMITTED → retry OK; RELEASED/EXPIRED → PRO-7010 fail-closed (caller
+     * view diverged — reconciliation owns it); expired pending → PRO-7009;
+     * PENDING → COMMITTED + committedAt + {@code promotion.committed.v1}.
+     */
     @Override
     @Transactional
     public void commit(UUID id) {
@@ -140,6 +162,12 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         eventPublisher.publishCommitted(campaign, reservation);
     }
 
+    /**
+     * PENDING → RELEASED + releasedAt + {@code promotion.released.v1}
+     * ({@code previousStatus="PENDING"}). Terminal states are idempotent
+     * no-ops (quota already returned); COMMITTED → PRO-7010 — the
+     * commit→rollback path is {@link #releaseCommitted(UUID)} (§5.3).
+     */
     @Override
     @Transactional
     public void release(UUID id) {
@@ -159,6 +187,12 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name());
     }
 
+    /**
+     * Half-commit rollback (spec §5.3): COMMITTED → RELEASED with
+     * {@code previousStatus="COMMITTED"} so consumers distinguish
+     * confirm-flow compensation from a plain reserve→release. Terminal
+     * states are idempotent no-ops; PENDING belongs to {@link #release(UUID)}.
+     */
     @Override
     @Transactional
     public void releaseCommitted(UUID id) {
@@ -178,6 +212,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         eventPublisher.publishReleased(campaign, reservation, UsageStatus.COMMITTED.name());
     }
 
+    /** Read-only projection for reconciliation polling (spec §5.3). */
     @Override
     @Transactional(readOnly = true)
     public ReservationResponse getState(UUID id) {

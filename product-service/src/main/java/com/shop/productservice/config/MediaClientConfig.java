@@ -10,6 +10,20 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
+/**
+ * Media-service {@link RestClient} for the Option C write-time existence
+ * check (media epic spec D5). P0-4 — NO {@code @Qualifier} on {@code @Bean}
+ * params: Lombok does not copy {@code @Qualifier} from fields to constructor
+ * params, so Spring wires by parameter NAME here ({@code mediaRestClient})
+ * and clients inject with {@code @Qualifier("mediaRestClient")}.
+ * <p>3 — no auth header is set HERE (shared builder). Authorization is
+ * attached PER-CALL inside {@code MediaHeadClient} — the header value comes
+ * from {@code ServiceTokenProvider.getToken()}.</p>
+ * <p>Traceparent propagation is central: the {@code RestClient.Builder}
+ * bean is enriched by common-spring's
+ * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
+ * that bean and no interceptor is hand-added here.</p>
+ */
 @Configuration
 public class MediaClientConfig {
 
@@ -30,6 +44,13 @@ public class MediaClientConfig {
             .build();
     }
 
+    /**
+     * Spring Boot 4 does not auto-register {@code RestClient.Builder} as a bean;
+     * ServiceTokenProvider needs it. R1 — prototype scope so every consumer
+     * gets a FRESH builder that the common-spring BPP has already enriched
+     * with the traceparent interceptor; a shared mutable builder would
+     * accumulate per-client config.
+     */
     @Bean
     @Scope("prototype")
     public RestClient.Builder restClientBuilder() {

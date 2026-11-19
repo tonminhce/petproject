@@ -47,6 +47,6 @@ class MoMoProviderTest {
         String hash1 = MoMoProvider.hmacSHA256("secret", "message");
         String hash2 = MoMoProvider.hmacSHA256("secret", "message");
         assertThat(hash1).isEqualTo(hash2);
-        assertThat(hash1).hasSize(64);
+        assertThat(hash1).hasSize(64); // 256 bits = 32 bytes = 64 hex chars
     }
 }

@@ -6,6 +6,16 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * F-008: the shared library must not ship an object-store credential.
+ *
+ * <p>{@code StorageProperties} used to default the access key and the secret
+ * key to {@code rustfsadmin}. A deployment that forgot to configure the
+ * object store therefore talked to it with a well-known credential instead
+ * of failing - and the mistake stayed invisible until the first storage call
+ * failed with an opaque 403. A blank credential is not a usable credential:
+ * the auto-configuration refuses to build the client without one.</p>
+ */
 class StoragePropertiesCredentialsTest {
 
     @Test

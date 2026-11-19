@@ -59,7 +59,7 @@ class OutboxRetentionSchedulerTest {
 
     @Test
     void purgeNeverTouchesPendingRows() {
-
+        // The scheduler only calls delete* on SENT + DEAD — verify no PENDING call.
         scheduler.purge();
 
         verify(outboxRepo, times(0)).deleteByStatusAndSentAtBefore(eq(OutboxStatus.PENDING), any(Instant.class));

@@ -51,6 +51,10 @@ public class Campaign extends AbstractMappedEntity {
     @Builder.Default
     private Integer perUserLimit = 1;
 
+    /**
+     * Optimistic-lock guard for concurrent reserve/commit/release (mirrors
+     * order-service Order / inventory-service precedent).
+     */
     @Version
     @Column(name = "version")
     @Builder.Default

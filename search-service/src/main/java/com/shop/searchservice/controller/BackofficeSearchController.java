@@ -21,6 +21,11 @@ public class BackofficeSearchController {
 
     private final ReindexService reindexService;
 
+    /**
+     * Body optional: {@code {"dryRun":true}} counts the ACTIVE source rows
+     * without creating an index; no body (or {@code false}) runs the full
+     * stream + atomic alias swap.
+     */
     @PostMapping("/reindex")
     @Audited(action = "search.reindex", resourceType = "search-index")
     public ApiResponse<ReindexResponse> reindex(

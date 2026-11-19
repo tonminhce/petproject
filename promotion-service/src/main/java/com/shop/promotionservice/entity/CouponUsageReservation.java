@@ -20,6 +20,12 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Coupon usage held for a pending order. Hard-delete (retention purge)
+ * semantics — deliberately does NOT extend {@code AbstractMappedEntity}
+ * (spec D10): there is nothing to audit, {@code reservedAt} serves as the
+ * creation timestamp, and terminal rows are purged after 30 days.
+ */
 @Entity
 @Table(name = "coupon_usage_reservation")
 @Getter

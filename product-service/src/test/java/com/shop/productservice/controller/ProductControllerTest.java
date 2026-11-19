@@ -23,6 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ProductController.class)
 @AutoConfigureMockMvc(addFilters = false)
 
+// the write tests moved to BackofficeProductControllerTest (the write
+// endpoints now live behind the ADMIN-gated backoffice path).
 @Import(ApiExceptionHandler.class)
 class ProductControllerTest {
 

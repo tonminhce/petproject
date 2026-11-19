@@ -13,6 +13,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
+/**
+ * Wires every web-tier cross-cutter for servlet-stack services:
+ * correlation-id filter, HTTP logging filter, and the global exception handler.
+ * <p>Skipped automatically for reactive runtimes because of
+ * {@code @ConditionalOnWebApplication(type = SERVLET)}.</p>
+ */
 @AutoConfiguration(after = I18nAutoConfiguration.class)
 @ConditionalOnClass({Servlet.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)

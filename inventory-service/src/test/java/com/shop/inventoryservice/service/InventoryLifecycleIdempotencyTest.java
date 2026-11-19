@@ -19,6 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Container-backed lifecycle idempotency tests — bootstrap lives in
+ * {@link AbstractIntegrationTest} (Postgres + Kafka, real Liquibase).
+ * Seeds reservation rows directly at each terminal state and asserts the
+ * hardening spec §7.1 contract: retried terminal calls are no-ops, wrong-way
+ * transitions stay rejected.
+ */
 class InventoryLifecycleIdempotencyTest extends AbstractIntegrationTest {
 
     @Autowired ReservationRepository reservations;
@@ -26,6 +33,12 @@ class InventoryLifecycleIdempotencyTest extends AbstractIntegrationTest {
     @Autowired InventoryRepository inventories;
     @Autowired OutboxEventRepository outboxEvents;
 
+    /**
+     * A no-op retry must publish nothing — asserted via the outbox row count,
+     * which only ever grows when the transactional publisher writes a row
+     * (the relay flips status, never deletes; the retention scheduler is a
+     * 3am cron), so count stability here proves no new event was emitted.
+     */
     private void assertNoMutation(UUID productId, Inventory before, long outboxBefore) {
         Inventory after = inventories.findByProductId(productId).orElseThrow();
         assertThat(after.getAvailableQuantity()).isEqualTo(before.getAvailableQuantity());

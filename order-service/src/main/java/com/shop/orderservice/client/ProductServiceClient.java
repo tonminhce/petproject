@@ -15,6 +15,14 @@ import org.springframework.web.client.RestClient;
 
 import java.util.UUID;
 
+/**
+ * 5 — Unwraps {@code ApiResponse<ProductSnapshot>} envelope. Product-service
+ * returns ALL endpoints wrapped in {@code ApiResponse<T>} — calling
+ * {@code .body(ProductSnapshot.class)} would deserialize {@code {success, code, message, data, ...}}
+ * directly into {@code ProductSnapshot} → all fields null → NPE on {@code .unitPrice()}.
+ * <p>Use {@link ParameterizedTypeReference} to capture the generic type, then
+ * {@code .data()} to extract the payload.</p>
+ */
 @Component
 @RequiredArgsConstructor
 public class ProductServiceClient {
@@ -35,7 +43,7 @@ public class ProductServiceClient {
                 .retrieve()
                 .body(RESPONSE_TYPE);
         } catch (HttpClientErrorException.NotFound ex) {
-
+            // A 404 from product-service must surface as the platform 404, not a raw
             throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, productId);
         }
         return resp.data();

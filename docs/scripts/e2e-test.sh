@@ -136,12 +136,12 @@ code=$(curl_code POST "$AUTH_BASE/auth/sign-up" "" \
 if [[ "$code" == "200" ]]; then
     green "  PASS [Sign-up new user] HTTP 200 — user created in Keycloak + local DB"
     PASS=$((PASS+1))
-
+    
     # Now login with the new user
     NEW_RESP=$(curl -s -X POST "$AUTH_BASE/auth/login" -H "Content-Type: application/json" \
         -d "{\"username\":\"$NEW_USER\",\"password\":\"Newpass123\"}")
     NEW_TOKEN=$(echo "$NEW_RESP" | python3 -c 'import sys,json; print(json.load(sys.stdin)["data"]["accessToken"])')
-
+    
     code=$(curl_code GET "$AUTH_BASE/users/me" "$NEW_TOKEN")
     assert_http "GET /users/me (newly registered)" 200 "$code"
     assert_contains "GET /users/me has correct username" "$(cat /tmp/last_body)" "$NEW_USER"

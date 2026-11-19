@@ -26,6 +26,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames.*;
 
+/**
+ * Client for Keycloak admin operations (user management, role assignment).
+ * Uses admin credentials (admin username + password) to obtain admin access token.
+ */
 public class KeycloakAdminClient {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakAdminClient.class);
@@ -42,14 +46,23 @@ public class KeycloakAdminClient {
     private final String adminTokenEndpoint;
     private final String usersEndpoint;
     private final String rolesEndpoint;
-
+    /**
+     * F-078: the client endpoint of the realm. The grant posture of a client
+     * is a property of the CLIENT - reading it from the users endpoint
+     * answered for a user and reported the grant of a client that does not
+     * exist.
+     */
     private final String clientsEndpoint;
     private final String adminClientId;
     private final String adminUsername;
     private final String adminPassword;
-
+    /**
+     * F-078: the secret of the admin service account. When it is set, the
+     * admin token is fetched with the client_credentials grant; the
+     * master-realm password grant is then not used at all.
+     */
     private final String adminClientSecret;
-
+    /** F-078: the token endpoint of the application realm - the service account lives there. */
     private final String serviceAccountTokenEndpoint;
 
     public KeycloakAdminClient(RestClient.Builder restClientBuilder,
@@ -98,11 +111,23 @@ public class KeycloakAdminClient {
         this.serviceAccountTokenEndpoint = serviceAccountTokenEndpoint;
     }
 
+    /**
+     * Whether the service-account (client_credentials) path is configured
+     * (F-078).
+     */
     public boolean hasServiceAccountCredentials() {
         return adminClientSecret != null && !adminClientSecret.isBlank()
                 && serviceAccountTokenEndpoint != null && !serviceAccountTokenEndpoint.isBlank();
     }
 
+    /**
+     * The admin token of the service account (F-078).
+     *
+     * <p>The client_credentials grant replaces the master-realm password
+     * grant: no administrator credential travels in a plain password grant on
+     * every admin call, and the permissions of the token are scoped to the
+     * application realm instead of the whole installation.</p>
+     */
     private String getServiceAccountAccessToken() {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add(GRANT_TYPE, CLIENT_CREDENTIALS);
@@ -136,11 +161,30 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Whether real master-realm admin credentials were configured.
+     *
+     * <p>F-006: the shared defaults ship no credential any more, so a
+     * deployment that forgets to set them has a client that cannot
+     * authenticate. The callers must be able to say so instead of sending a
+     * blank credential to the identity provider.</p>
+     */
     public boolean hasAdminCredentials() {
         return adminUsername != null && !adminUsername.isBlank()
                 && adminPassword != null && !adminPassword.isBlank();
     }
 
+    /**
+     * Create a new user in Keycloak and assign realm roles.
+     *
+     * @param username user's username
+     * @param email user's email
+     * @param fullName user's full name (will be split into firstName + lastName)
+     * @param password user's password
+     * @param realmRoles list of realm role names to assign
+     * @return Keycloak user ID
+     * @throws KeycloakClientException if creation fails
+     */
     public String createUser(String username, String email, String fullName,
                              String password, List<String> realmRoles) {
         String adminToken = getAdminAccessToken();
@@ -180,6 +224,12 @@ public class KeycloakAdminClient {
         return userId;
     }
 
+    /**
+     * Delete a user from Keycloak.
+     *
+     * @param userId Keycloak user ID
+     * @throws KeycloakClientException if deletion fails
+     */
     public void deleteUser(String userId) {
         String adminToken = getAdminAccessToken();
 
@@ -199,10 +249,12 @@ public class KeycloakAdminClient {
         }
     }
 
+    /** Disable a user and invalidate active sessions in Keycloak. */
     public void disableUser(String userId) {
         updateUserEnabled(userId, false);
     }
 
+    /** Re-enable a previously disabled user in Keycloak. */
     public void enableUser(String userId) {
         updateUserEnabled(userId, true);
     }
@@ -227,6 +279,19 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Revoke every active session (and therefore every refresh token) for a
+     * user.
+     * <p>Keycloak's admin {@code reset-password} endpoint changes the
+     * credential but does NOT end the user's existing sessions, so a refresh
+     * token captured before a password change keeps working. Calling the
+     * {@code /logout} admin endpoint after a credential change closes that
+     * window: every previously issued refresh token is invalidated and the
+     * client must authenticate again.</p>
+     *
+     * @param userId Keycloak user id
+     * @throws KeycloakClientException if the revocation request fails
+     */
     public void logoutUser(String userId) {
         String adminToken = getAdminAccessToken();
         try {
@@ -245,6 +310,28 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * is the direct-access (password / ROPC) grant still enabled for a
+     * client?
+     *
+     * <p>The platform's own login flow uses the Resource Owner Password
+     * Credentials grant, and the provisioned realm enables
+     * {@code directAccessGrantsEnabled} on the client that serves it. ROPC is
+     * deprecated by the OAuth 2.0 Security Best Current Practice: the user
+     * discloses their password to the client, and there is no MFA binding.
+     * The grant cannot be removed unilaterally - first-party clients depend on
+     * it - but the platform CAN observe it, so the migration to Authorization
+     * Code + PKCE has a measurable signal instead of a memory.</p>
+     *
+     * <p>F-079: the grant belongs to the CLIENT, so it is read from the
+     * clients endpoint. The previous implementation appended the client id
+     * to the USERS endpoint: the realm answered 404 for a client id, the
+     * call threw, and the posture check reported the posture as unknown on
+     * every boot - the measurement never observed anything.</p>
+     *
+     * @param clientId the Keycloak client id to inspect
+     * @return true when the password grant is enabled for that client
+     */
     public boolean isDirectAccessGrantEnabled(String clientId) {
         String adminToken = getAdminAccessToken();
         try {
@@ -255,7 +342,8 @@ public class KeycloakAdminClient {
                     .body(LIST_TYPE);
 
             if (clients == null || clients.isEmpty()) {
-
+                // A client that does not exist has no posture to report.
+                // Reporting "no ROPC" for it would hide a misconfiguration.
                 throw new KeycloakClientException(
                         "Keycloak client not found: " + clientId, HttpStatus.NOT_FOUND);
             }
@@ -272,6 +360,14 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Reset user's password in Keycloak.
+     *
+     * @param userId Keycloak user ID
+     * @param newPassword new password to set
+     * @param temporary if true, user must change password on next login
+     * @throws KeycloakClientException if reset fails
+     */
     public void resetUserPassword(String userId, String newPassword, boolean temporary) {
         String adminToken = getAdminAccessToken();
 
@@ -352,6 +448,18 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Grants a realm role to a Keycloak user (F-075).
+     *
+     * <p>The realm is the only place that decides what a token carries: the
+     * local role table of auth-service is a mirror. Before this method
+     * existed, the admin role API only wrote the mirror, so granting ADMIN
+     * answered 200 while the next token still carried no ADMIN.</p>
+     *
+     * @param userId the Keycloak user id
+     * @param roleName a realm role name - it must exist, otherwise the call
+     *                 fails instead of silently granting nothing
+     */
     public void assignRealmRole(String userId, String roleName) {
         String adminToken = getAdminAccessToken();
         Map<String, Object> role = fetchRealmRole(adminToken, roleName);
@@ -374,12 +482,18 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Revokes a realm role from a Keycloak user (F-075) - the mirror of
+     * {@link #assignRealmRole(String, String)}.
+     */
     public void removeRealmRole(String userId, String roleName) {
         String adminToken = getAdminAccessToken();
         Map<String, Object> role = fetchRealmRole(adminToken, roleName);
 
         try {
-
+            // method(DELETE) and not delete(): the Keycloak role mapping is
+            // removed with the role representation in the request body, and
+            // only the generic method spec carries a body.
             restClient.method(HttpMethod.DELETE)
                     .uri(usersEndpoint + "/" + userId + "/role-mappings/realm")
                     .header(HttpHeaders.AUTHORIZATION, BEARER + adminToken)
@@ -396,6 +510,11 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * Fetches a realm role. A role that the realm does not know is an error:
+     * skipping it silently would create a user whose authorities are not the
+     * ones the caller asked for.
+     */
     private Map<String, Object> fetchRealmRole(String adminToken, String roleName) {
         try {
             Map<String, Object> role = restClient.get()
@@ -422,7 +541,9 @@ public class KeycloakAdminClient {
         List<Map<String, Object>> roleRepresentations = new ArrayList<>();
 
         for (String roleName : roleNames) {
-
+            // F-075: a role that the realm does not know must fail the call.
+            // It used to be skipped with a warning, which created a Keycloak
+            // user with fewer authorities than requested - silently.
             roleRepresentations.add(fetchRealmRole(adminToken, roleName));
         }
 

@@ -2,6 +2,12 @@ package com.shop.common.core.exception;
 
 import org.springframework.http.HttpStatus;
 
+/**
+ * Centralized error catalog. Each entry is the contract between services and clients:
+ * a stable machine-readable {@code code}, an i18n message key, and the HTTP status to return.
+ * <p>Why an enum: gives compile-time exhaustiveness checks at every {@code switch} site
+ * and prevents typos in {@code code} / {@code messageKey} drift.</p>
+ */
 public enum ErrorCode implements ErrorCatalog {
 
     BAD_REQUEST("ERR-0400", "error.bad.request", HttpStatus.BAD_REQUEST),

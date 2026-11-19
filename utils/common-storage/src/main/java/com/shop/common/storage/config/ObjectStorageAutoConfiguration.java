@@ -12,6 +12,13 @@ import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
+/**
+ * Auto-wires an S3-compatible {@link ObjectStorageService} (RustFS by default).
+ * <p>Activated whenever the AWS SDK is on the classpath and
+ * {@code shop.storage.enabled} is not explicitly set to {@code false}. Services
+ * override any bean by declaring their own {@link S3Client}, {@link S3Presigner}
+ * or {@link ObjectStorageService}.</p>
+ */
 @AutoConfiguration
 @ConditionalOnClass(S3Client.class)
 @ConditionalOnProperty(prefix = "shop.storage", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -32,6 +39,14 @@ public class ObjectStorageAutoConfiguration {
         return S3ClientFactory.s3Presigner(props);
     }
 
+    /**
+     * F-008: the object-store credentials are MANDATORY when the storage is
+     * enabled. The library used to default them to {@code rustfsadmin}, so a
+     * deployment that forgot to configure them silently talked to the object
+     * store with a well-known credential. A missing credential is a
+     * misconfiguration, not an outage - it must fail the startup, loudly, and
+     * it must never be replaced by a shipped default.
+     */
     private static void requireCredentials(StorageProperties props) {
         if (props.getAccessKey() == null || props.getAccessKey().isBlank()) {
             throw new IllegalStateException(

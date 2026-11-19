@@ -25,6 +25,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Task 7 (persist-early ruling): pricing must carry the REAL orderId into the
+ * promotion reserve call (spec D3 — reservation is frozen at reserve time), and
+ * the returned reservationId must surface on {@link PricingBreakdown} so the
+ * saga can persist it on the order and compensate on failure.
+ */
 @ExtendWith(MockitoExtension.class)
 class PricingServiceImplTest {
 
@@ -65,7 +71,7 @@ class PricingServiceImplTest {
         assertThat(sent.code()).isEqualTo("SAVE10");
         assertThat(sent.orderAmount()).isEqualByComparingTo(new BigDecimal("200.00"));
         assertThat(sent.userId()).isEqualTo(userId);
-        assertThat(sent.orderId()).isEqualTo(orderId);
+        assertThat(sent.orderId()).isEqualTo(orderId);   // real orderId — NOT null (persist-early)
 
         assertThat(breakdown.subtotal()).isEqualByComparingTo(new BigDecimal("200.00"));
         assertThat(breakdown.discountAmount()).isEqualByComparingTo(new BigDecimal("20.00"));

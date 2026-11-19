@@ -37,6 +37,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * F-060: the catalogue refuses to drop a product whose stock is reserved or
+ * committed.
+ *
+ * <p>inventory-service already refused to delete an inventory row with live
+ * reservations. The symmetric guard was missing on the catalogue side, so a
+ * product could leave the catalogue while its stock was reserved - the
+ * checkout could still commit that reservation for a product that no longer
+ * existed, and the reserved stock never returned to the sellable pool.</p>
+ */
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplDeleteGuardTest {
 

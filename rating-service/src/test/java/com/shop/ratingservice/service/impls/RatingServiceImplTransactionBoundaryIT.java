@@ -17,6 +17,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+/**
+ * The eligibility check is a REMOTE call and must not run while a DB
+ * transaction (and its pooled connection) is held open (F-066).
+ *
+ * <p>The unit test cannot prove the boundary - without a Spring context the
+ * {@code @Transactional} proxy is inert. This IT runs against the real
+ * context (real Postgres, real transaction manager), so the mocked client
+ * observes the ACTUAL transaction state of the calling thread.</p>
+ */
 class RatingServiceImplTransactionBoundaryIT extends AbstractIntegrationTest {
 
     @MockitoBean

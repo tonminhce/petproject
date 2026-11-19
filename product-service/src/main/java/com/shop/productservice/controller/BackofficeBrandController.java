@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Brand CRUD moved out of the storefront {@link BrandController}
+ * into this ADMIN-only backoffice entry point.
+ */
 @RestController
 @RequestMapping(ApiPaths.BACKOFFICE_BRANDS)
 @RequiredArgsConstructor

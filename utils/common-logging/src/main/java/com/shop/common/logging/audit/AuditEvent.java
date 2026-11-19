@@ -3,6 +3,14 @@ package com.shop.common.logging.audit;
 import java.time.Instant;
 import java.util.Objects;
 
+/**
+ * One audit event, EXACTLY the binding payload of spec D6 — no other fields,
+ * ever: {@code timestamp, actor, action, resourceType, resourceId, outcome,
+ * correlationId, traceId}. Every value is PII-safe by construction: the actor
+ * is a UUID/clientId (never email/phone/name) and the resourceId is a UUID
+ * from a path variable (never a title). Serialization produces a single
+ * compact JSON line.
+ */
 public record AuditEvent(
         Instant timestamp,
         String actorId,
@@ -27,6 +35,10 @@ public record AuditEvent(
         Objects.requireNonNull(outcome, "outcome");
     }
 
+    /**
+     * Compact one-line JSON with the exact D6 field set, in the spec's order.
+     * String values are JSON-escaped; {@code resourceId} may be {@code null}.
+     */
     public String toJson() {
         return new StringBuilder(256)
                 .append('{')

@@ -5,6 +5,11 @@ import com.shop.promotionservice.dto.response.ReservationResponse;
 
 import java.util.UUID;
 
+/**
+ * Controller-facing reservation entry point — wraps the transactional
+ * {@link CampaignReservationService} with the fleet's optimistic-lock retry
+ * idiom (mirror of inventory {@code ReservationService}).
+ */
 public interface ReservationRetryService {
 
     ReservationResponse reserveWithRetry(String code, ReserveRequest request);

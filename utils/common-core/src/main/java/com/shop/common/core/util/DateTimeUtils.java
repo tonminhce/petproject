@@ -5,6 +5,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Thread-safe formatter helpers. Formatters are immutable but compiling a new one per call
+ * is wasteful — we cache by pattern string.
+ */
 public final class DateTimeUtils {
 
     public static final String DEFAULT_PATTERN = "dd-MM-yyyy_HH-mm-ss";

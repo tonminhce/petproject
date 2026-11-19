@@ -11,6 +11,29 @@ import org.springframework.messaging.MessageHeaders;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+/**
+ * Template-method base class for Kafka consumers. Three flavors of
+ * {@code processMessage}:
+ * <ul>
+ *   <li>Raw-wire + typed bind (H-1): the listener hands over the RAW STRING
+ *       value (see {@link BaseKafkaListenerConfig}'s wire contract) plus the
+ *       DTO class; the base unwraps-once and binds the typed event before the
+ *       handler sees it. Decode failures are contained ack-skips — the
+ *       listener method never throws and the offset always advances.</li>
+ *   <li>Value-only (typed event already bound): when the key is not relevant
+ *       to the handler logic.</li>
+ *   <li>Key + value: when the consumer needs to dedupe or partition by
+ *       key.</li>
+ * </ul>
+ * <p>The wire mapper is a shared {@link ObjectMapper} with
+ * {@link JavaTimeModule} so ISO-8601 instants on the fleet wire (e.g.
+ * {@code transitionedAt}) bind like they do on the producer side (Boot's
+ * mapper also registers jsr310). Trusted-package configuration is not needed:
+ * binding targets a concrete DTO class, never polymorphic types.</p>
+ *
+ * @param <K> key type
+ * @param <V> value type
+ */
 public abstract class BaseKafkaConsumer<K, V> {
 
     private static final ObjectMapper WIRE_MAPPER =
@@ -18,6 +41,14 @@ public abstract class BaseKafkaConsumer<K, V> {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
+    /**
+     * Raw-wire entry: decode the record value — the production wire is
+     * single-encoded JSON (R1); a legacy double-encoded token (pre-R1
+     * in-flight shape, H-1 tolerance) is unwrapped first — and hand the
+     * bound event to the typed handler. A decode failure logs at ERROR and
+     * ack-skips without invoking the handler (fleet containment: no DLT, no
+     * container crash).
+     */
     protected void processMessage(String rawValue, MessageHeaders headers, Class<V> type, Consumer<V> handler) {
         V event = decodeContained(rawValue, type);
         if (event == null) {
@@ -49,6 +80,14 @@ public abstract class BaseKafkaConsumer<K, V> {
         }
     }
 
+    /**
+     * Unwrap-once + typed bind: a textual top-level node (the LEGACY
+     * double-encoded wire — a JSON string token wrapping the event JSON —
+     * is unwrapped and parsed
+     * again; a non-textual node binds directly (the production single-encoded
+     * wire). Any decode failure returns {@code null} so the caller
+     * ack-skips.
+     */
     private V decodeContained(String rawValue, Class<V> type) {
         if (rawValue == null) {
             log.info("Tombstone record (null value) for {} — ack-skipping", type.getSimpleName());
@@ -57,12 +96,14 @@ public abstract class BaseKafkaConsumer<K, V> {
         try {
             JsonNode node = WIRE_MAPPER.readTree(rawValue);
             if (node.isTextual()) {
-
+                // Legacy double-encoded wire (pre-R1): an old producer
                 node = WIRE_MAPPER.readTree(node.textValue());
             }
             V bound = WIRE_MAPPER.treeToValue(node, type);
             if (bound == null) {
-
+                // An empty or structurally empty payload binds to null. Handing a
+                // null event to the handler would surface as a NullPointerException
+                // deep inside business logic instead of a clear poison record.
                 throw new IllegalStateException(
                         "Payload did not bind to " + type.getSimpleName());
             }

@@ -19,6 +19,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Writes one {@link OutboxEvent} row per domain action in the SAME
+ * transactional boundary as the reservation lifecycle change. The relay
+ * ({@code PromotionOutboxRelay}) drains the table to Kafka.
+ * <p>Event contract (spec §5.5): topic {@code shop.promotion.lifecycle.v1},
+ * event types in dot.case ({@code promotion.reserved.v1}, …) — the same
+ * dot-style payload contract as inventory-service's
+ * {@code inventory.*.v1} events, NOT product-service's PascalCase style.
+ * {@code previousStatus} on {@code promotion.released.v1} lets consumers
+ * distinguish a plain release (quota returned unused) from a half-commit
+ * rollback (confirm-flow compensation).</p>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -66,7 +78,7 @@ public class TransactionalPromotionEventPublisher implements PromotionEventPubli
         data.put("reservationId", reservation.getId());
         data.put("discountAmount", reservation.getDiscountAmount());
         data.put("releasedAt", reservation.getReleasedAt().toString());
-
+        // half-commit rollback (confirm-flow compensation) without a separate
         data.put("previousStatus", previousStatus);
         save(campaign, "promotion.released.v1", data);
     }
@@ -75,7 +87,7 @@ public class TransactionalPromotionEventPublisher implements PromotionEventPubli
         OutboxEvent event = new OutboxEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setAggregateType(AGGREGATE_TYPE);
-        event.setAggregateId(campaign.getId());
+        event.setAggregateId(campaign.getId());           // Kafka partition key
         event.setEventType(eventType);
         event.setTopic(TOPIC);
 

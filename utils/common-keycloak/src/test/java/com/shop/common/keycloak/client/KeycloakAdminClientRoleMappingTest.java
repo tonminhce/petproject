@@ -16,6 +16,15 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/**
+ * F-075: the realm role mappings of the Keycloak admin client.
+ *
+ * <p>The admin role API of auth-service used to write the local mirror only,
+ * so a granted role never reached the realm - and the token of the user kept
+ * the old authorities. These tests pin the two calls that actually change the
+ * realm, and the strict lookup: a role that the realm does not know must
+ * fail instead of being skipped silently.</p>
+ */
 class KeycloakAdminClientRoleMappingTest {
 
     private static final String TOKEN_ENDPOINT = "http://keycloak/realms/master/protocol/openid-connect/token";

@@ -16,6 +16,20 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+/**
+ * Product-service {@link RestClient} for the H-4 purge-gate reference-count
+ * call. P0-4 — NO {@code @Qualifier} on {@code @Bean} params: Lombok does not
+ * copy {@code @Qualifier} from fields to constructor params, so Spring wires
+ * by parameter NAME here ({@code productRestClient}) and clients inject with
+ * {@code @Qualifier("productRestClient")}.
+ * <p>3 — no auth header is set HERE (shared builder). Authorization is
+ * attached PER-CALL inside {@code MediaReferenceClient} — the header value
+ * comes from {@code ServiceTokenProvider.getToken()}.</p>
+ * <p>Traceparent propagation is central: the {@code RestClient.Builder}
+ * bean is enriched by common-spring's
+ * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
+ * that bean and no interceptor is hand-added here.</p>
+ */
 @Configuration
 public class ProductClientConfig {
 
@@ -53,6 +67,13 @@ public class ProductClientConfig {
         return new HttpComponentsClientHttpRequestFactory(httpClient);
     }
 
+    /**
+     * Spring Boot 4 does not auto-register {@code RestClient.Builder} as a bean;
+     * ServiceTokenProvider needs it. R1 — prototype scope so every consumer
+     * gets a FRESH builder that the common-spring BPP has already enriched
+     * with the traceparent interceptor; a shared mutable builder would
+     * accumulate per-client config.
+     */
     @Bean
     @Scope("prototype")
     public RestClient.Builder restClientBuilder() {

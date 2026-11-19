@@ -67,7 +67,7 @@ public class FavouriteController {
         try {
             return UUID.fromString(sub);
         } catch (IllegalArgumentException ex) {
-
+            // Defensive — valid Keycloak JWT subjects are always UUIDs. Prevents a
             throw BusinessException.unauthorized("favourite.user.subject.malformed");
         }
     }

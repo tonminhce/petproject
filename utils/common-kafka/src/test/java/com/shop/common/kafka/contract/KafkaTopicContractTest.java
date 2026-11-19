@@ -19,11 +19,39 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Fleet contract: every published topic has a declared consumption mode
+ * (F-002).
+ *
+ * <p>Four topics were published by the outbox relay with no consumer anywhere
+ * in the fleet - {@code shop.inventory.events.v1},
+ * {@code shop.promotion.lifecycle.v1}, {@code shop.category.lifecycle.v1} and
+ * {@code shop.brand.lifecycle.v1} - while the documentation implied
+ * projections that did not exist. A published topic that nobody consumes is
+ * not a defect in itself, but an UNDECLARED one is: the fleet then drifts
+ * apart from its own documentation and every new reader has to guess whether
+ * a missing consumer is intentional.</p>
+ *
+ * <p>This test therefore enforces that:</p>
+ * <ul>
+ *   <li>every topic bound to a {@code @KafkaListener} is declared in
+ *       {@link KafkaTopicContract} - a new consumer cannot introduce an
+ *       undeclared topic;</li>
+ *   <li>every topic declared as {@code CONSUMED} really has at least one
+ *       listener - a consumer cannot silently disappear;</li>
+ *   <li>every topic declared as {@code FIRE_AND_FORGET} carries a rationale
+ *       that explains why no in-fleet consumer exists - the gap has to be a
+ *       reviewed decision, not an omission;</li>
+ *   <li>every declared topic is really produced - the contract cannot drift
+ *       away from the code.</li>
+ * </ul>
+ */
 class KafkaTopicContractTest {
 
     private static final Pattern LISTENER = Pattern.compile("@KafkaListener\\s*\\(");
     private static final Pattern TOPICS_ATTRIBUTE = Pattern.compile("topics\\s*=\\s*(\"[^\"]*\"|[A-Za-z_][A-Za-z0-9_.]*)");
 
+    /** The topic literal behind each constant of the contract, by constant name. */
     private static final Map<String, String> CONSTANTS = constantsByName();
 
     @Test
@@ -34,6 +62,7 @@ class KafkaTopicContractTest {
 
         Map<String, List<String>> listenersByTopic = listenerTopicsByTopic(repoRoot);
 
+        // 1) every topic a listener binds to is declared
         List<String> undeclared = listenersByTopic.entrySet().stream()
                 .filter(entry -> KafkaTopicContract.find(entry.getKey()) == null)
                 .map(entry -> entry.getKey() + " (consumed by " + String.join(", ", entry.getValue()) + ")")
@@ -42,6 +71,7 @@ class KafkaTopicContractTest {
                 .as("every consumed topic must be declared in the Kafka topic contract")
                 .isEmpty();
 
+        // 2) every declared CONSUMED topic really has a listener
         List<String> withoutConsumer = new ArrayList<>();
         for (KafkaTopicContract.Topic topic : KafkaTopicContract.TOPICS) {
             if (topic.mode() == KafkaTopicContract.Mode.CONSUMED
@@ -53,6 +83,7 @@ class KafkaTopicContractTest {
                 .as("a topic declared as CONSUMED must have at least one @KafkaListener")
                 .isEmpty();
 
+        // 3) every fire-and-forget topic explains itself
         List<String> withoutRationale = KafkaTopicContract.TOPICS.stream()
                 .filter(topic -> topic.mode() == KafkaTopicContract.Mode.FIRE_AND_FORGET)
                 .filter(topic -> topic.rationale() == null || topic.rationale().isBlank())
@@ -62,6 +93,7 @@ class KafkaTopicContractTest {
                 .as("a fire-and-forget topic must state why no in-fleet consumer exists")
                 .isEmpty();
 
+        // 4) every declared topic is really produced by the module that owns it
         List<String> notProduced = new ArrayList<>();
         for (KafkaTopicContract.Topic topic : KafkaTopicContract.TOPICS) {
             Path producerModule = repoRoot.resolve(topic.producerModule());
@@ -93,6 +125,8 @@ class KafkaTopicContractTest {
         Assumptions.assumeTrue(repoRoot != null,
                 "repository root not reachable from the module working directory - contract not checked");
 
+        // The producers publish through the contract constants, so a producer
+        // that used its own literal would show up here as an undeclared topic.
         Set<String> declared = new HashSet<>();
         for (KafkaTopicContract.Topic topic : KafkaTopicContract.TOPICS) {
             declared.add(topic.topic());
@@ -114,6 +148,7 @@ class KafkaTopicContractTest {
                 .isEmpty();
     }
 
+    /** The topic literal behind each constant name of the contract. */
     private static Map<String, String> constantsByName() {
         Map<String, String> constants = new HashMap<>();
         for (java.lang.reflect.Field field : KafkaTopicContract.class.getDeclaredFields()) {
@@ -130,6 +165,7 @@ class KafkaTopicContractTest {
         return Map.copyOf(constants);
     }
 
+    /** The contract constant that carries the given topic literal. */
     private static String constantNameFor(String topic) {
         for (Map.Entry<String, String> entry : CONSTANTS.entrySet()) {
             if (entry.getValue().equals(topic)) {
@@ -139,6 +175,7 @@ class KafkaTopicContractTest {
         throw new IllegalStateException("no contract constant carries the topic " + topic);
     }
 
+    /** The topics every @KafkaListener of the fleet binds to, with the consuming files. */
     private static Map<String, List<String>> listenerTopicsByTopic(Path repoRoot) throws IOException {
         Map<String, List<String>> byTopic = new HashMap<>();
         for (Path file : productionSources(repoRoot)) {
@@ -155,6 +192,7 @@ class KafkaTopicContractTest {
         return byTopic;
     }
 
+    /** A topic literal, or the literal behind a contract constant. */
     private static String resolveTopic(String value) {
         if (value.startsWith("\"")) {
             return value.substring(1, value.length() - 1);
@@ -167,6 +205,7 @@ class KafkaTopicContractTest {
         return topic;
     }
 
+    /** The annotation arguments of every @KafkaListener in the file. */
     private static List<String> listenerAnnotations(String text) {
         List<String> found = new ArrayList<>();
         Matcher matcher = LISTENER.matcher(text);
@@ -187,6 +226,7 @@ class KafkaTopicContractTest {
         return found;
     }
 
+    /** Every first-party production source of the reactor. */
     private static List<Path> productionSources(Path repoRoot) throws IOException {
         try (Stream<Path> modules = Files.list(repoRoot)) {
             return modules
@@ -204,6 +244,7 @@ class KafkaTopicContractTest {
         }
     }
 
+    /** The reactor root: the directory that holds the modules and the parent pom. */
     private static Path findRepoRoot() {
         Path current = Path.of("").toAbsolutePath();
         while (current != null) {

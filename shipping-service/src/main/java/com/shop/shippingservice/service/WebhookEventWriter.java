@@ -31,6 +31,10 @@ public class WebhookEventWriter {
         }
     }
 
+    /**
+     * Generic event save used by the retry scheduler and the entry path to
+     * mark FAILED_RETRYABLE rows.
+     */
     @Transactional
     public ShipmentEvent saveEvent(ShipmentEvent event) {
         return eventRepository.saveAndFlush(event);

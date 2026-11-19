@@ -21,6 +21,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * The cancel path must not hold a database connection across the remote
+ * releases.
+ *
+ * <p>Each release is an HTTP call with a 3-5 second timeout; inside a
+ * transaction every one of them kept a pooled connection busy. With a pool of
+ * 20, a burst of cancellations against a degraded inventory or payment service
+ * exhausted the pool and stalled unrelated requests of the same service.</p>
+ *
+ * <p>The pool here has ONE connection on purpose: with the cancel path
+ * transactional, the remote call would hold it and the concurrent read below
+ * would have to wait for the whole call to finish.</p>
+ */
 @TestPropertySource(properties = "spring.datasource.hikari.maximum-pool-size=1")
 class CancelOutsideTransactionIT extends AbstractOrderServiceIT {
 
@@ -58,10 +71,12 @@ class CancelOutsideTransactionIT extends AbstractOrderServiceIT {
         try {
             Future<?> cancel = pool.submit(() -> orderService.cancelOrder(orderId, userId, false));
 
+            // the remote call is in flight
             await().atMost(10, TimeUnit.SECONDS).until(() -> !inventoryServer
                     .findAll(postRequestedFor(urlMatching("/api/v1/inventory/reservations/.*/release")))
                     .isEmpty());
 
+            // the only connection of the pool must NOT be held by the cancel
             long start = System.nanoTime();
             orderRepository.findById(orderId);
             long elapsedMillis = (System.nanoTime() - start) / 1_000_000;

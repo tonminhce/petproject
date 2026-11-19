@@ -36,6 +36,13 @@ public record RegisterRequest(
         @Pattern(regexp = "^(https?://)\\S+$", message = "Avatar URL must be a valid HTTP or HTTPS URL")
         String avatar,
 
+        /**
+         * Caller-supplied role names. The server enforces a server-side whitelist
+         * (see {@code UserServiceImpl.SELF_REGISTRATION_ALLOWED_ROLES}); values not on
+         * the whitelist are silently dropped. ADMIN/SERVICE/MANAGER cannot be obtained
+         * through this endpoint by design — keep the field here so existing clients
+         * don't break, but don't trust it.
+         */
         @Deprecated
         Set<String> roles
 ) {

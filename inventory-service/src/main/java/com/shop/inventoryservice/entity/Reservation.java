@@ -19,6 +19,13 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Stock held for a pending order. Hard-delete (retention purge) semantics.
+ * Deliberately does NOT extend {@code AbstractMappedEntity}: its lifecycle is
+ * fully described by created/expires/committed/released timestamps — there is
+ * nothing to audit (no updated_at/updated_by churn), and terminal rows are
+ * purged after 30 days, so tombstones would be dead weight.
+ */
 @Entity
 @Table(name = "reservations")
 @Getter
@@ -57,6 +64,15 @@ public class Reservation {
     @Column(name = "order_id")
     private UUID orderId;
 
+    /**
+     * Optimistic-lock guard for the reservation aggregate. Without it
+     * the expiry sweep (an unlocked SELECT followed by a blind save) could
+     * overwrite a COMMITTED reservation with EXPIRED, which released stock that
+     * had already been consumed by a paid order. The sweep now also claims the
+     * row with a conditional UPDATE, so exactly one writer can transition it;
+     * this version column is the second line of defence for the concurrent
+     * commit/release paths.
+     */
     @Version
     @Column(name = "version", nullable = false)
     @Builder.Default

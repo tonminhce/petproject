@@ -18,6 +18,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Writes the media lifecycle outbox row (spec D4) in the SAME transaction as
+ * the media write — the relay publishes it later on topic
+ * {@code media.lifecycle.v1}. The payload carries the FULL media snapshot
+ * (snapshot-carry precedent) so consumers stay dumb, idempotent copy-readers:
+ * the product-service D4 consumer clears {@code products.media_id} from the
+ * {@code mediaId} alone, audit/CDN hooks get sha256/contentType/variants for
+ * free.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -29,17 +38,26 @@ public class MediaEventService {
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Joins the caller's transaction (REQUIRED): the row must commit or roll
+     * back with the media write it describes. The upload pipeline calls this
+     * INSIDE its final DB transaction (after the S3 writes, with the media
+     * row); the lifecycle soft-delete calls it in the same transaction as the
+     * {@code deleted_at} update.
+     */
     @Transactional(propagation = Propagation.REQUIRED)
     public void record(Media media, MediaEventType type) {
         OutboxEvent event = OutboxEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .aggregateType(AGGREGATE_TYPE)
-
+                // Spec D4: Kafka message key = mediaId (per-media partition
+                // ordering) and the relay keys on aggregateId — the partition
                 .aggregateId(media.getId())
                 .eventType(type.name())
                 .topic(TOPIC)
                 .build();
 
+        // Field order + names are contract (spec D4) — LinkedHashMap, 7 fields.
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("eventType", type.name());
         payload.put("mediaId", media.getId());

@@ -20,11 +20,25 @@ import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * Integration test for the full outbox → Kafka path:
+ *
+ * <ol>
+ *   <li>{@link ProductService#create} writes one {@code OutboxEvent} row in
+ *       the same DB transaction as the product.</li>
+ *   <li>{@link OutboxRelay#relay} is invoked manually (avoid waiting for the
+ *       {@code @Scheduled} timer) and publishes to the Testcontainers Kafka.</li>
+ *   <li>The outbox row flips from {@link OutboxStatus#PENDING} to
+ *       {@link OutboxStatus#SENT}.</li>
+ * </ol>
+ */
 class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
-
+        // Neutralize the @Scheduled relay timer (LifecycleAndEventsIT precedent):
+        // the test drains manually, and a background tick claiming the head row
+        // would lock the manual relay() out via SKIP LOCKED (C14) mid-drain.
         registry.add("product.outbox.poll-interval-ms", () -> "3600000");
     }
 
@@ -42,9 +56,11 @@ class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
             null, null, null, null, null, null);
         productService.create(req);
 
+        // Sanity: the publisher wrote a PENDING outbox row in the same TX as the product.
         long pendingAfterCreate = outboxRepo.countByStatus(OutboxStatus.PENDING);
         assertThat(pendingAfterCreate).isGreaterThanOrEqualTo(1L);
 
+        // Drain — invoke the relay directly instead of waiting for the @Scheduled timer.
         outboxRelay().relay();
 
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
@@ -64,6 +80,7 @@ class OutboxRelayIntegrationTest extends AbstractIntegrationTest {
 
         outboxRelay().relay();
 
+        // Both aggregate types drain through the SAME relay — two rows must flip.
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             assertThat(outboxRepo.countByStatus(OutboxStatus.PENDING)).isEqualTo(0L);
             assertThat(outboxRepo.countByStatus(OutboxStatus.SENT)).isGreaterThanOrEqualTo(sentBefore + 2);

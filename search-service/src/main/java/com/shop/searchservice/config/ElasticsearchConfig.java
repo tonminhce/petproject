@@ -19,6 +19,11 @@ public class ElasticsearchConfig {
 
     private final SearchProperties properties;
 
+    /**
+     * Managed low-level client so Spring invokes {@link RestClient#close()} on
+     * context shutdown, stopping the async I/O reactor thread (T1 review
+     * finding 1 — an inline builder would leak it past shutdown).
+     */
     @Bean(destroyMethod = "close")
     public RestClient elasticsearchRestClient() {
         RestClientBuilder builder = RestClient.builder(HttpHost.create(properties.url()))

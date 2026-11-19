@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/notificationservice}
     username: ${POSTGRES_USER:admin}
-    password: ${POSTGRES_PASSWORD:}
+    password: ${POSTGRES_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -35,11 +35,18 @@ shop:
     bootstrap-servers: ${SHOP_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: notification-service
+      # F-018 (P1): a consumer group must replay the events it missed.
+      # 'latest' silently skipped everything published while the group had no
+      # active member (redeploy, scaled-to-zero service, expired offsets).
       auto-offset-reset: earliest
 
   notification:
     smtp:
       enabled: ${SMTP_ENABLED:false}
+      # H22 — required, no default. A misconfigured deploy must fail fast
+      # (SmtpNotificationSender guards against null/blank at construction);
+      # we deliberately drop the historical "ops@example.com" fallback so
+      # nothing silently routes to a hardcoded address.
       fallback-recipient: ${SMTP_FALLBACK_RECIPIENT}
     retry:
       poll-ms: ${NOTIFICATION_RETRY_POLL_MS:60000}

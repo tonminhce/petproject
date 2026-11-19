@@ -40,6 +40,7 @@ public class MediaPublicController {
         return ResponseEntity.status(status).build();
     }
 
+    /** Wire format of the {@code format} query param — invalid values are a 400 via type mismatch. */
     public enum MediaFormatQuery {
         auto, webp
     }

@@ -38,6 +38,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Saga orchestrator for {@code OrderServiceImpl.createOrder}.
+ * <p>Separates DB transaction boundaries from remote HTTP calls (Pricing,
+ * Stock Reservation) to prevent HikariCP connection pool exhaustion during
+ * downstream latency spikes.</p>
+ */
 @Service
 @Slf4j
 public class OrderCreateSaga {
@@ -117,6 +123,9 @@ public class OrderCreateSaga {
     private record CartAndOrder(Cart cart, List<CartItem> items, Order order) {
     }
 
+    /**
+     * Executes the order creation saga with isolated transaction boundaries.
+     */
     public OrderResponse execute(UUID userId, OrderCreateRequest request, String idempotencyKey) {
         CartAndOrder initial = executeInTx(() -> {
             Cart cart = (request.cartId() != null)
@@ -139,7 +148,7 @@ public class OrderCreateSaga {
                 .recipientName(request.recipientName())
                 .phoneNumber(request.phoneNumber())
                 .shippingAddress(request.shippingAddress())
-
+                // the tracking capability of the order, issued with it
                 .trackingCode(UUID.randomUUID())
                 .build());
 
@@ -216,6 +225,7 @@ public class OrderCreateSaga {
             orderEventPublisher.publishCreated(order, orderItems);
         });
 
+        // Step 5: Complete idempotency and map response
         OrderResponse response = orderMapper.toResponse(order, orderItems);
         idempotencyService.complete(idempotencyKey, userId.toString(), response, 201);
         return response;
@@ -228,7 +238,11 @@ public class OrderCreateSaga {
                     stockReservationService.release(item.getReservationId());
                 }
             } catch (Exception ex) {
-
+                // The order row is deleted right after this compensation, so a
+                // swallowed failure would leave an orphaned hold with no
+                // reference to it - recoverable only through inventory's TTL
+                // sweep (900 seconds of unavailable stock). The failure is
+                // therefore recorded, and the retry releases the hold.
                 if (compensationFailureService != null) {
                     compensationFailureService.record(orderId, item.getReservationId(),
                             FailedCompensation.KIND_RESERVATION_RELEASE, ex.getMessage());

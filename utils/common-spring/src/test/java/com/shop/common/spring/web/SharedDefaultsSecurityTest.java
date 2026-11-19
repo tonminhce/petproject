@@ -10,6 +10,15 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * The shared defaults must not ship a credential or a wildcard origin.
+ *
+ * <p>F-006: {@code shop.keycloak.admin-username/admin-password} defaulted to
+ * admin/admin - a master-realm takeover waiting to happen in any deployment
+ * that forgot to override them - and the CORS origin list defaulted to
+ * {@code *}, which lets any site read the unauthenticated endpoints of the
+ * platform.</p>
+ */
 class SharedDefaultsSecurityTest {
 
     @SuppressWarnings("unchecked")

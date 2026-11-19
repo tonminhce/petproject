@@ -9,6 +9,18 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Bootstrap smoke IT — proves the Task-13 harness boots the full
+ * payment-service context against real infrastructure: Testcontainers
+ * PostgreSQL + Kafka up, Liquibase changelog applied (business tables +
+ * Liquibase bookkeeping present), the {@code shop.payment.provider=mock}
+ * override selects {@code MockProvider}, and the outbox relay's
+ * {@code KafkaTemplate} wiring is present so {@code PaymentOutboxRelay}
+ * can publish.
+ *
+ * <p>Container/property bootstrap lives entirely in
+ * {@link AbstractIntegrationTest}; this class only asserts.</p>
+ */
 class PaymentBootstrapIT extends AbstractIntegrationTest {
 
     @Autowired

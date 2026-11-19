@@ -30,6 +30,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Webhook entry + retry. Before this fix, events were marked FAILED-from-birth
+ * and the dedup-on-exists check swallowed every provider retry of the same
+ * {@code provider_event_id}. The state machine now distinguishes:
+ * <ul>
+ *   <li>PROCESSED — terminal success, dedup-skip on retried delivery</li>
+ *   <li>FAILED_RETRYABLE — initial state on parse/handler failure; picked up by
+ *       {@link com.shop.paymentservice.scheduler.WebhookRetryScheduler}</li>
+ *   <li>FAILED_PERMANENT — exhausted retries; needs ops attention</li>
+ * </ul>
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -39,6 +50,7 @@ public class WebhookEventService {
     static final String INVALID_PREFIX = "invalid-";
     static final String UNKNOWN_TYPE = "unknown";
 
+    /** The stripe webhook path provider label (mirrors {@code {provider}=stripe}). */
     static final String STRIPE_PROVIDER = "stripe";
 
     private static final Map<String, String> STRIPE_EVENT_STATUS = Map.of(
@@ -46,8 +58,10 @@ public class WebhookEventService {
             "payment_intent.payment_failed", "FAILED",
             "charge.refunded", "REFUNDED");
 
+    /** The Stripe event type that carries a refund. */
     private static final String REFUND_EVENT_TYPE = "charge.refunded";
 
+    /** Carrier status used for a refund that has not returned the full amount. */
     private static final String PARTIAL_REFUND_STATUS = "PARTIALLY_REFUNDED";
 
     private final PaymentRepository paymentRepository;
@@ -61,7 +75,8 @@ public class WebhookEventService {
         String webhookSecret = stripeProperties == null ? null : stripeProperties.webhookSecret();
         if (webhookSecret == null || webhookSecret.isBlank()
                 || signatureHeader == null || signatureHeader.isBlank()) {
-
+            // Fail-closed: an unconfigured secret must behave exactly like a
+            // bad signature, never like an open receiver.
             throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         }
         Event event;
@@ -72,7 +87,9 @@ public class WebhookEventService {
             log.warn("Stripe webhook signature verification failed: {}", e.getMessage());
             throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         } catch (RuntimeException e) {
-
+            // Fail-closed: constructEvent also raises unchecked Gson errors on
+            // JSON-corrupting tampering — an unparseable body can never be a
+            // treatment (401 PAY-5005, no state change), never a 500.
             log.warn("Stripe webhook payload rejected during verification: {}", e.getMessage());
             throw BusinessException.of(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         }
@@ -89,6 +106,8 @@ public class WebhookEventService {
         WebhookPayload payload = tryParse(rawBody);
         String providerEventId = resolveProviderEventId(payload, rawBody);
 
+        //   FAILED_RETRYABLE   → fall through; the retry scheduler will pick it up
+        //                        status transitions to PROCESSED; if it fails we
         Optional<PaymentEvent> existing = eventRepository
                 .findFirstByProviderAndProviderEventId(provider, providerEventId);
         if (existing.isPresent() && PaymentEvent.STATUS_PROCESSED.equals(existing.get().getStatus())) {
@@ -107,12 +126,18 @@ public class WebhookEventService {
         }
 
         if (payload == null || !hasCriticalFields(payload)) {
-
+            // retry scheduler will give up after MAX attempts and surface it.
             return;
         }
         processFromRaw(provider, providerEventId, rawBody);
     }
 
+    /**
+     * Public entry point for {@link com.shop.paymentservice.scheduler.WebhookRetryScheduler}.
+     * Re-parses the persisted payload and runs the same handler logic as a fresh
+     * delivery. Idempotent: state-machine rejects illegal transitions, and
+     * {@link #completeWithEvent} is idempotent for already-PROCESSED rows.
+     */
     public void retry(PaymentEvent event) {
         byte[] rawBody = event.getPayload() == null ? new byte[0] : event.getPayload().getBytes(StandardCharsets.UTF_8);
         WebhookPayload payload = tryParse(rawBody);
@@ -134,7 +159,8 @@ public class WebhookEventService {
         if (payload == null || !hasCriticalFields(payload)) {
             return;
         }
-
+        // can transition it the same way it would on retry. If the read races
+        // a concurrent retry (extremely unlikely), we fall through to inline
         PaymentEvent event = eventRepository
                 .findFirstByProviderAndProviderEventId(provider, providerEventId)
                 .orElse(null);
@@ -149,6 +175,11 @@ public class WebhookEventService {
         }
     }
 
+    /**
+     * Extracted from the original handle(); now {@code public} so the retry
+     * scheduler can invoke it on a re-loaded event row. The state-machine
+     * transition rules live here and nowhere else.
+     */
     public void process(WebhookPayload payload, PaymentEvent event) {
         UUID paymentId = parsePaymentId(payload.paymentId());
         Payment payment = paymentRepository.findById(paymentId)
@@ -212,6 +243,11 @@ public class WebhookEventService {
             String status = mappedStatus;
             if (REFUND_EVENT_TYPE.equals(stripeType)) {
 
+                // 'amount' is the ORIGINAL charge amount and 'amount_refunded'
+                // is how much has actually come back. The refunded total is the
+                // amount that must be reconciled against the payment, so it is
+                // the one carried on the carrier payload; the charge amount is
+                // only used to tell a full refund from a partial one.
                 Long refundedMinor = obj.path("amount_refunded").isNumber()
                         ? obj.path("amount_refunded").asLong() : null;
                 if (refundedMinor != null) {
@@ -232,7 +268,7 @@ public class WebhookEventService {
                     .build();
             return objectMapper.writeValueAsBytes(payload);
         } catch (Exception e) {
-
+            // synthetic non-JSON body embeds the stable event id so dedupe
             log.warn("Stripe event {} could not be converted to the carrier payload", eventId, e);
             return ("not-json-" + eventId).getBytes(StandardCharsets.UTF_8);
         }
@@ -277,6 +313,12 @@ public class WebhookEventService {
                 && parseStatus(payload.status()) != null;
     }
 
+    /**
+     * Whitelist parsing replaces {@code PaymentStatus.valueOf(payload.status())}.
+     * A typo'd carrier payload ("capture") previously surfaced as IllegalArgumentException,
+     * caught upstream only in narrow contexts — explicit whitelist avoids leaking enum
+     * semantics to untrusted input.
+     */
     private PaymentStatus parseStatus(String status) {
         return switch (status == null ? "" : status) {
             case "CAPTURED" -> PaymentStatus.CAPTURED;

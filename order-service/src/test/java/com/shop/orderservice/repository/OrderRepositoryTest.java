@@ -84,6 +84,7 @@ class OrderRepositoryTest {
         assertThat(result.getContent()).isEmpty();
     }
 
+    /** Task 12 — reconciliation candidates: only PENDING orders older than the cutoff. */
     @Test
     void findByStatusAndCreatedAtBefore_returnsOnlyPendingOlderThanCutoff() {
         var oldPending = persistOrder(alice, OrderStatus.PENDING);
@@ -115,7 +116,8 @@ class OrderRepositoryTest {
 
     @Test
     void versionIncrementsOnUpdate_andStaleSaveThrows() {
-
+        // Review I3: @Version guards concurrent status transitions and changelog-003
+        // must apply cleanly under ddl-auto=validate.
         Order order = persistOrder(alice, OrderStatus.PENDING);
         em.clear();
 
@@ -125,6 +127,7 @@ class OrderRepositoryTest {
         repo.saveAndFlush(managed);
         assertThat(managed.getVersion()).isEqualTo(1L);
 
+        // `order` is a stale detached copy (version 0) — writing it now must fail.
         em.clear();
         order.setStatus(OrderStatus.CANCELLED);
         assertThatThrownBy(() -> repo.saveAndFlush(order))

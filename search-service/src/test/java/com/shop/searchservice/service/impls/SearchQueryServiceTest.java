@@ -26,6 +26,14 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * ES-unavailability mapping (spec D6): any transport-level failure (I/O,
+ * timeout, connection refused) AND any ES error response (e.g.
+ * index_not_found_exception on a missing alias during a degraded provisioning
+ * window) surfaces as 503 SRH-12002 — never a raw exception, never a 500.
+ * Uses a mocked client so the failure is instant and deterministic instead of
+ * waiting out real connect timeouts.
+ */
 class SearchQueryServiceTest {
 
     private final ElasticsearchClient client = mock(ElasticsearchClient.class);
@@ -79,14 +87,20 @@ class SearchQueryServiceTest {
 
     @Test
     void deepPagination_usesPointInTimeAndSearchAfter() throws IOException {
-
+        // page=50 * size=200 = from=10000 -> from+size=10200 > MAX_RESULT_WINDOW (10000).
+        // The H37/Wave-C fix must NOT reject this; instead it must open a PIT, search
+        // with search_after cursor pagination, and return the next page (not 503).
+        // https://www.elastic.co/guide/en/elasticsearch/reference/9.4/paginate-search-results.html
+        // https://www.elastic.co/guide/en/elasticsearch/reference/9.4/point-in-time-api.html
         SearchRequest request = new SearchRequest(null, null, null, null, null, null,
             "newest", 50, 200);
 
+        // PIT open: a real id is returned so the service threads it into the search call.
         when(client.openPointInTime(any(co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest.class)))
             .thenReturn(co.elastic.clients.elasticsearch.core.OpenPointInTimeResponse
                 .of(b -> b.id("pit-id-abc")));
 
+        // Stubbed search response: one hit with a sort cursor value.
         java.util.Map<String, Object> doc = java.util.Map.of(
             "id", "a1000000-0000-0000-0000-000000000099",
             "title", "Deep Page Item",
@@ -126,6 +140,7 @@ class SearchQueryServiceTest {
         assertThat(page.size()).isEqualTo(200);
         assertThat(page.totalElements()).isEqualTo(1L);
 
+        // PIT was opened and closed.
         org.mockito.Mockito.verify(client).openPointInTime(any(co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest.class));
         org.mockito.Mockito.verify(client).closePointInTime(any(co.elastic.clients.elasticsearch.core.ClosePointInTimeRequest.class));
     }
@@ -147,7 +162,7 @@ class SearchQueryServiceTest {
 
     @Test
     void shallowPagination_doesNotOpenPit() throws IOException {
-
+        // page=0 * size=20 = from=0 < MAX_RESULT_WINDOW (10000) -> no PIT path.
         SearchRequest request = new SearchRequest(null, null, null, null, null, null,
             "newest", 0, 20);
 
@@ -191,7 +206,7 @@ class SearchQueryServiceTest {
         try {
             service.search(params());
         } catch (BusinessException ignored) {
-
+            // expected
         }
 
         assertThat(registry.find("search_queries_total").counter()).isNull();

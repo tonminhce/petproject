@@ -55,6 +55,18 @@ public class ProductServiceImpl implements ProductService {
     private final CacheManager cacheManager;
     private final TransactionTemplate transactionTemplate;
 
+    /**
+     * <p>A missing {@code status} is normalised to {@link ProductStatus#ACTIVE}
+     * at the SERVICE layer so the public catalog never leaks DRAFT,
+     * DISCONTINUED, or OUT_OF_STOCK rows. The {@code ProductController} also
+     * defaults at the HTTP boundary; this is defence-in-depth so a future
+     * internal caller that forgets the default does not silently re-open the
+     * privacy leak. The backoffice / reindex path
+     * {@link #findAllDetail(ProductFilter, Pageable)} deliberately keeps the
+     * {@code null = all statuses} semantics.
+     * <p>Spec construction reference:
+     * https://docs.spring.io/spring-data/jpa/reference/jpa/specifications.html
+     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductSummaryResponse> findAll(ProductFilter filter, Pageable pageable) {
@@ -116,7 +128,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductDetailResponse create(ProductCreateRequest request) {
-
+        // F-066: the media HEAD check is a REMOTE call. It used to run inside
+        // the @Transactional method, so a slow media-service held a pooled DB
+        // connection and an open transaction for the whole round trip. The
+        // check now runs before the transaction is opened; only the local
+        // write is transactional.
         if (repo.existsBySlug(request.slug())) {
             throw BusinessException.of(ErrorCode.PRODUCT_SLUG_EXISTS);
         }
@@ -147,7 +163,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @CachePut(value = "product", key = "#id")
     public ProductDetailResponse update(UUID id, ProductUpdateRequest request) {
-
+        // F-066: the media HEAD check is a REMOTE call and must not run while
+        // a DB transaction (and its pooled connection) is held open.
         Product existing = repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         if (request.slug() != null && repo.existsBySlugAndIdNot(request.slug(), id)) {
@@ -182,13 +199,19 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void delete(UUID id) {
-
+        // F-060: a product may not leave the catalogue while its stock is
+        // reserved or committed. The reservations live in the inventory
+        // database, so the check is a REMOTE call - and F-066 says a remote
+        // call must not run while a DB transaction (and its pooled connection)
+        // is held open. The existence check runs first so a delete of an
+        // unknown product does not depend on inventory-service.
         repo.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
         assertNoLiveStockReservations(id);
 
         transactionTemplate.executeWithoutResult(status -> {
-
+            // Re-read inside the transaction: the entity must be the current
+            // one, otherwise the merge would write back a stale snapshot.
             Product existing = repo.findById(id)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, id));
             existing.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
@@ -202,6 +225,20 @@ public class ProductServiceImpl implements ProductService {
         });
     }
 
+    /**
+     * F-060 — the delete-time stock guard.
+     *
+     * <p>inventory-service refuses to delete an inventory row that still has
+     * PENDING or COMMITTED reservations. The symmetric guard was missing here:
+     * the product was soft-deleted unconditionally, so the catalogue could
+     * lose a product whose stock was reserved or committed - the checkout
+     * could still commit that reservation for a product that no longer exists
+     * and the reserved stock would never return to the sellable pool.</p>
+     *
+     * <p>Fail-closed: when inventory-service cannot be reached the answer is
+     * UNKNOWN, and an unknown answer must never authorise a delete - the
+     * request fails with PRD-2011 (503) instead.</p>
+     */
     private void assertNoLiveStockReservations(UUID productId) {
         OptionalLong activeReservations = inventoryReservationClient.activeReservationCount(productId);
         if (activeReservations.isEmpty()) {
@@ -221,6 +258,12 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    /**
+     * Media epic spec D5 — Option C write-time gate: a non-null mediaId is
+     * HEAD-checked against media-service; an unknown id rejects the write with
+     * MED-12004 (admin typos never ship broken images). The delete-time side
+     * stays EVENTUAL via the MediaDeleted consumer — no sync check here.
+     */
     private void assertMediaExists(UUID mediaId) {
         if (mediaId != null && !mediaHeadClient.exists(mediaId)) {
             throw BusinessException.of(ErrorCode.MEDIA_NOT_FOUND);

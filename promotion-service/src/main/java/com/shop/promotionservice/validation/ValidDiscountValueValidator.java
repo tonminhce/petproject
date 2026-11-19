@@ -16,7 +16,7 @@ public class ValidDiscountValueValidator implements ConstraintValidator<ValidDis
         if (request == null
                 || request.discountType() == null
                 || request.discountValue() == null) {
-            return true;
+            return true; // field-level @NotBlank / @NotNull handle these
         }
         if (DiscountCalculator.TYPE_PERCENT.equalsIgnoreCase(request.discountType())
                 && (request.discountValue().compareTo(BigDecimal.ZERO) <= 0

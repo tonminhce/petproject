@@ -22,10 +22,11 @@ public class DeadLetterReplayService {
 
     private static final Logger log = LoggerFactory.getLogger(DeadLetterReplayService.class);
 
+    /** Header Spring Kafka adds with the topic the record was consumed from. */
     public static final String ORIGINAL_TOPIC_HEADER = "kafka_dlt-original-topic";
-
+    /** Header Spring Kafka adds with the partition the record was consumed from. */
     public static final String ORIGINAL_PARTITION_HEADER = "kafka_dlt-original-partition";
-
+    /** Header Spring Kafka adds with the offset the record was consumed from. */
     public static final String ORIGINAL_OFFSET_HEADER = "kafka_dlt-original-offset";
 
     private final KafkaTemplate<String, String> template;
@@ -40,12 +41,26 @@ public class DeadLetterReplayService {
         this.groupIdPrefix = groupIdPrefix;
     }
 
+    /**
+     * The outcome of one replay pass.
+     *
+     * @param replayed  records republished to their original topic
+     * @param skipped   records without an original-topic header (not replayable)
+     * @param failed    records that could not be republished
+     */
     public record ReplayResult(int replayed, int skipped, int failed, List<String> replayedTopics) {
         public static ReplayResult empty() {
             return new ReplayResult(0, 0, 0, List.of());
         }
     }
 
+    /**
+     * Replay up to {@code maxRecords} records from a dead-letter topic.
+     *
+     * @param deadLetterTopic the topic the records were dead-lettered onto
+     * @param maxRecords       the hard cap for this pass
+     * @param maxConsecutiveFailures stop after this many consecutive publish failures
+     */
     public ReplayResult replay(String deadLetterTopic, int maxRecords, int maxConsecutiveFailures) {
         if (deadLetterTopic == null || deadLetterTopic.isBlank()) {
             throw new IllegalArgumentException("deadLetterTopic must be set");
@@ -73,7 +88,7 @@ public class DeadLetterReplayService {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(2));
                 if (records.isEmpty()) {
                     if (consecutiveFailures == 0) {
-                        break;
+                        break; // drained
                     }
                     break;
                 }
@@ -119,6 +134,7 @@ public class DeadLetterReplayService {
         return new String(header.value(), java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    /** The producer configuration a caller needs to publish into the DLQ by hand. */
     public static Map<String, Object> producerProperties(String bootstrapServers) {
         Map<String, Object> props = new HashMap<>();
         props.put("bootstrap.servers", bootstrapServers);

@@ -24,6 +24,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Task 7 — rating eligibility probe: only items of DELIVERED, non-deleted orders
+ * belonging to the requesting user are returned for a given product.
+ */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

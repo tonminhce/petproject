@@ -34,6 +34,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Audit spot matrix (spec §4.3): the ADMIN-gated media upload/delete
+ * exercised through the real {@code AuditAspect} — one structured JSON
+ * audit line per mutation, mirroring the product-side audit contract.
+ */
 @WebMvcTest(value = BackofficeMediaController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

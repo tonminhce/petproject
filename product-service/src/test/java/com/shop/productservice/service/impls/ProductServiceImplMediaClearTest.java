@@ -50,7 +50,7 @@ class ProductServiceImplMediaClearTest {
 
     @BeforeEach
     void setUp() {
-
+        // Real mapper + real ModelMapper — the partialUpdate branch is the unit under test here.
         org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             org.springframework.transaction.support.TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);

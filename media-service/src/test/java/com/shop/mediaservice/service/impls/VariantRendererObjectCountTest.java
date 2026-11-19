@@ -11,6 +11,15 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * F-064: the rendered object count per source format.
+ *
+ * <p>The documentation claimed "6 WebP variants". The renderer produces
+ * THREE variants (original/display/thumb), each stored in the SOURCE format
+ * and in WebP - so a JPEG or PNG upload yields SIX objects, of which only
+ * three are WebP, and a WebP upload yields THREE objects (the two formats
+ * coincide, so no duplicate variant+format row is written).</p>
+ */
 class VariantRendererObjectCountTest {
 
     private static final int WIDTH = 800;

@@ -64,11 +64,19 @@ public class UserServiceImpl implements UserService {
     public UserResponse register(RegisterRequest request) {
         validateUniqueConstraints(request);
 
+        // F-050: the local row is inserted BEFORE the Keycloak user exists, so
+        // the unique index is the arbiter of a concurrent registration. The
+        // loser of the race fails on the insert and never creates a Keycloak
+        // user at all - with the previous order both registrations created a
+        // Keycloak user and the local insert of the loser only failed
+        // afterwards.
         User user = buildUserFromRequest(request, null);
         try {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
-
+            // A concurrent registration won the race on the unique index: the
+            // caller gets the catalogue conflict, not a raw constraint
+            // violation.
             throw conflictForDuplicate(e, request);
         }
 
@@ -76,23 +84,24 @@ public class UserServiceImpl implements UserService {
         try {
             keycloakUserId = createKeycloakUser(request);
         } catch (RuntimeException e) {
-
+            // The local row must not keep the username hostage when the
+            // identity provider refused the user.
             rollbackLocalUser(user.getId());
             throw e;
         }
 
         user.setKeycloakUserId(keycloakUserId);
-        try {
-            User saved = userRepository.save(user);
-            return userMapper.toResponse(saved);
-        } catch (RuntimeException e) {
-
-            rollbackKeycloakUser(keycloakUserId);
-            rollbackLocalUser(user.getId());
-            throw e;
-        }
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
     }
 
+    /**
+     * The catalogue conflict for a unique-constraint violation.
+     *
+     * <p>The constraint name decides the code, so the caller learns WHICH
+     * field is taken (username / email / phone) instead of a generic
+     * conflict.</p>
+     */
     private BusinessException conflictForDuplicate(DataIntegrityViolationException e, RegisterRequest request) {
         String detail = rootMessage(e);
         if (detail.contains("username")) {
@@ -115,6 +124,7 @@ public class UserServiceImpl implements UserService {
         return String.valueOf(root.getMessage()).toLowerCase();
     }
 
+    /** Removes the local row of a registration whose Keycloak user could not be created. */
     private void rollbackLocalUser(UUID userId) {
         try {
             userRepository.deleteById(userId);
@@ -146,7 +156,7 @@ public class UserServiceImpl implements UserService {
                 request.newPassword(),
                 false
         );
-
+        // rather than reported as a failed password change.
         revokeSessions(currentUser.getKeycloakUserId());
 
         return "Password changed successfully";
@@ -227,6 +237,13 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    /**
+     * Server-side whitelist of role names assignable through the PUBLIC sign-up
+     * endpoint. Only {@code USER} is allowed; {@code ADMIN}, {@code SERVICE},
+     * {@code MANAGER} must be assigned via an authenticated admin endpoint (or via
+     * Keycloak directly). Unknown values from the request are silently dropped — not
+     * rejected with 400 — so existing clients that still send the field keep working.
+     */
     private static final Set<String> SELF_REGISTRATION_ALLOWED_ROLES = Set.of("USER");
 
     private List<RoleName> extractRoles(Set<String> requestedRoles) {
@@ -241,7 +258,8 @@ public class UserServiceImpl implements UserService {
                 .distinct()
                 .toList();
         if (allowed.isEmpty()) {
-
+            // roles: they could sign in, but every @PreAuthorize rule failed
+            // and the account was permanently broken without operator
             return List.of(RoleName.USER);
         }
         return allowed;
@@ -319,7 +337,10 @@ public class UserServiceImpl implements UserService {
         }
         var userOpt = userRepository.findByEmail(email.trim());
         if (userOpt.isEmpty()) {
-
+            // F-057: the log must not tell an attacker (or an operator reading
+            // the log) WHICH address has no account - the two branches write
+            // the SAME line, so the log cannot be used to enumerate accounts.
+            // The counter keeps the case visible to monitoring.
             meterRegistry.counter("auth.password.reset.request", "outcome", "unknown_account").increment();
             log.info("Password reset request processed");
             return;
@@ -340,7 +361,8 @@ public class UserServiceImpl implements UserService {
         passwordResetTokenRepository.save(resetToken);
         passwordResetEmailSender.sendResetEmail(user.getEmail(), user.getUsername(), rawToken);
         meterRegistry.counter("auth.password.reset.request", "outcome", "dispatched").increment();
-
+        // F-057: the same line as the unknown-account branch - the log must not
+        // distinguish an existing account from a non-existent one.
         log.info("Password reset request processed");
     }
 
@@ -362,19 +384,29 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(resetToken.getUserId())
                 .orElseThrow(() -> BusinessException.notFound("auth.user.not.found", resetToken.getUserId()));
 
+        // F-053: the token is consumed BEFORE the password is changed, and the
+        // consumption is a conditional update - only one redemption can win the
+        // race. Consuming first also means a crash between the two steps
+        // cannot leave a token that is still redeemable.
         if (passwordResetTokenRepository.consumeIfUnused(tokenHash) != 1) {
-
+            // another redemption won the race: the token is single-use
             throw BusinessException.badRequest("auth.token.invalid.or.expired");
         }
 
         keycloakAdminClient.resetUserPassword(user.getKeycloakUserId(), request.newPassword(), false);
-
+        // a reset performed because the password may have been compromised must
         revokeSessions(user.getKeycloakUserId());
 
         log.info("Password successfully reset for user {}", user.getUsername());
         return "Password reset successfully";
     }
 
+    /**
+     * Revoke every Keycloak session for a user. Best-effort by design: the
+     * credential change has already been applied, so a failure here must not
+     * be reported as a failed password change. It is logged at ERROR so the
+     * operator can see that the old sessions survived.
+     */
     private void revokeSessions(String keycloakUserId) {
         try {
             keycloakAdminClient.logoutUser(keycloakUserId);

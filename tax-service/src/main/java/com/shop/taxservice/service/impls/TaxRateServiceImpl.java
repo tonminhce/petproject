@@ -79,6 +79,7 @@ public class TaxRateServiceImpl implements TaxRateService {
         TaxRate taxRate = taxRateRepository.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.TAX_RATE_NOT_FOUND, id));
 
+        // configuration change must be attributable to a real actor.
         taxRate.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         taxRateRepository.save(taxRate);
     }

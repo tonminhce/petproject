@@ -12,6 +12,16 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * The ledger of the compensations that failed.
+ *
+ * <p>The checkout saga releases the stock reservations when it fails and
+ * deletes the order row right after. When the release call itself fails, the
+ * hold is orphaned: nothing references it any more, and the only way back was
+ * inventory-service's TTL sweep - 900 seconds of unavailable stock with a log
+ * line as the only trace. The failure must leave a durable record instead, and
+ * the retry must release the hold.</p>
+ */
 class CompensationFailureLedgerIT extends AbstractOrderServiceIT {
 
     @Autowired
@@ -20,6 +30,7 @@ class CompensationFailureLedgerIT extends AbstractOrderServiceIT {
     @Autowired
     private FailedCompensationRepository failedCompensationRepository;
 
+    /** The ledger is shared by the whole suite, so every assertion is scoped. */
     private List<FailedCompensation> rowsFor(UUID reservationId) {
         return failedCompensationRepository.findAll().stream()
                 .filter(row -> reservationId.equals(row.getReservationId()))
@@ -66,6 +77,9 @@ class CompensationFailureLedgerIT extends AbstractOrderServiceIT {
         compensationFailureService.record(orderId, reservationId,
                 FailedCompensation.KIND_RESERVATION_RELEASE, "inventory unavailable");
 
+        // the retry runs against the real inventory client: it fails while the
+        // inventory service is down, and the row stays PENDING with the attempt
+        // counted.
         compensationFailureService.retryPending();
 
         FailedCompensation pending = rowsFor(reservationId).get(0);
@@ -73,9 +87,13 @@ class CompensationFailureLedgerIT extends AbstractOrderServiceIT {
         assertThat(pending.getAttempts()).isEqualTo(1);
         assertThat(pending.getNextAttemptAt()).isNotNull();
 
+        // the failed attempt pushed the next attempt into the future (the
+        // backoff), so the row is not due yet
         FailedCompensation scheduled = rowsFor(reservationId).get(0);
         assertThat(scheduled.getNextAttemptAt()).isAfter(Instant.now());
 
+        // with the inventory service answering again, the due retry releases
+        // the hold and the row is closed.
         scheduled.setNextAttemptAt(Instant.now().minusSeconds(1));
         failedCompensationRepository.save(scheduled);
         inventoryServer.stubFor(com.github.tomakehurst.wiremock.client.WireMock

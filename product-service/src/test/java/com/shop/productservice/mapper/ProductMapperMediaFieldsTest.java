@@ -15,6 +15,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Media-reference mapping (media epic spec D5): the displayed image is
+ * DERIVED at mapping time — mediaId present → canonicalPath
+ * {@code /api/v1/medias/{id}}; mediaId null → legacy free-text imageUrl
+ * (backward compat for legacy rows). mediaId itself is carried on both
+ * payloads. Nothing is stored on the entity — the canonical path is computed.
+ */
 class ProductMapperMediaFieldsTest {
 
     private static final UUID MEDIA_ID = UUID.fromString("88888888-8888-8888-8888-888888888888");
@@ -98,6 +105,8 @@ class ProductMapperMediaFieldsTest {
         assertThat(detail.imageUrl()).isNull();
         assertThat(summary.imageUrl()).isNull();
     }
+
+    // --- H-2: explicit clearMediaId on partialUpdate ---
 
     @Test
     @DisplayName("partialUpdate: clearMediaId=true → media_id removed even when the target referenced one")

@@ -25,6 +25,7 @@ export default function () {
     },
   };
 
+  // 1. Browse Catalog
   const catalogRes = http.get(`${BASE_URL}/api/v1/products?page=0&size=10`, params);
   check(catalogRes, {
     'catalog status is 200': (r) => r.status === 200,
@@ -32,6 +33,7 @@ export default function () {
 
   sleep(1);
 
+  // 2. Add item to cart
   const cartPayload = JSON.stringify({
     productId: '00000000-0000-0000-0000-000000000001',
     quantity: 1,
@@ -44,6 +46,7 @@ export default function () {
 
   sleep(1);
 
+  // 3. Checkout (Order Create Saga with Isolated DB Transactions)
   const idempotencyKey = `k6-${uuidv4()}`;
   const checkoutPayload = JSON.stringify({
     recipientName: 'Load Tester',
@@ -70,6 +73,7 @@ export default function () {
     const orderId = orderData ? orderData.id : null;
 
     if (orderId) {
+      // 4. Create Payment via Multi-Provider Factory (e.g. COD / VNPay)
       const paymentPayload = JSON.stringify({
         orderId: orderId,
         amount: orderData.total || 90.0,

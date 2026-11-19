@@ -38,7 +38,7 @@ class ProductMediaSweepJobIT extends AbstractIntegrationTest {
     static {
         mediaServer.start();
         keycloakServer.start();
-
+        // ServiceTokenProvider's client_credentials token endpoint (cached after first fetch).
         keycloakServer.stubFor(post(urlMatching("/realms/.*/protocol/openid-connect/token"))
             .willReturn(okJson(
                 "{\"access_token\":\"dummy-jwt\",\"expires_in\":3600,\"token_type\":\"Bearer\"}")));
@@ -55,7 +55,8 @@ class ProductMediaSweepJobIT extends AbstractIntegrationTest {
         r.add("shop.media.base-url", mediaServer::baseUrl);
         r.add("shop.media.keycloak.token-url",
             () -> keycloakServer.url("/realms/test/protocol/openid-connect/token"));
-
+        // never fire from the scheduler (Feb 30 does not exist) — only explicit
+        // sweep() calls run here
         r.add("shop.product.media-sweep.cron", () -> "0 0 0 30 2 *");
     }
 
@@ -106,6 +107,7 @@ class ProductMediaSweepJobIT extends AbstractIntegrationTest {
             .toList();
     }
 
+    /** Meter counters accumulate across tests sharing this cached context — assert on deltas. */
     private double checkedDelta(double before) {
         return meterRegistry.counter("product_media_sweep_checked_total").count() - before;
     }

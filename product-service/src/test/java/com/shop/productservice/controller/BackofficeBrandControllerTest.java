@@ -63,6 +63,8 @@ class BackofficeBrandControllerTest {
             .authorities(createAuthorityList("ROLE_USER"));
     }
 
+    // --- ADMIN happy paths ---
+
     @Test
     void create_admin_returns200() throws Exception {
         when(brandService.create(any())).thenReturn(response());
@@ -99,6 +101,8 @@ class BackofficeBrandControllerTest {
         verify(brandService).delete(ID);
     }
 
+    // --- validation ---
+
     @Test
     void create_withInvalidDto_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/backoffice/brands")
@@ -111,6 +115,8 @@ class BackofficeBrandControllerTest {
 
         verifyNoInteractions(brandService);
     }
+
+    // --- security matrix ---
 
     @Test
     void create_customerRole_returns403() throws Exception {

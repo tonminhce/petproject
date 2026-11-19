@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+/**
+ * Storefront read endpoints only. CRUD lives in
+ * {@link BackofficeBrandController} — C13 fix.
+ */
 @RestController
 @RequestMapping(ApiPaths.BRANDS)
 @RequiredArgsConstructor

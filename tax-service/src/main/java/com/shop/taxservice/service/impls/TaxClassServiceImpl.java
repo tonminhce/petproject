@@ -75,6 +75,7 @@ public class TaxClassServiceImpl implements TaxClassService {
             throw BusinessException.of(ErrorCode.TAX_CLASS_IN_USE, id);
         }
 
+        // delete in promotion-service and the TaxClassServiceImpl contract
         taxClass.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         taxClassRepository.save(taxClass);
     }

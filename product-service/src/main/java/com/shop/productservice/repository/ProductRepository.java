@@ -21,6 +21,7 @@ public interface ProductRepository
     @EntityGraph(attributePaths = {"category", "brand"})
     Optional<Product> findWithRelationsBySlug(String slug);
 
+    /** Live products pointing at the given media — the MediaDeleted clear set (spec D4). */
     @EntityGraph(attributePaths = {"category", "brand"})
     List<Product> findByMediaId(UUID mediaId);
 
@@ -28,6 +29,10 @@ public interface ProductRepository
 
     long countByMediaId(UUID mediaId);
 
+    /**
+     * Executor override with category+brand fetch-joined (backoffice detail
+     * list, F2). Scalar ManyToOne joins only — pagination stays in SQL.
+     */
     @Override
     @EntityGraph(attributePaths = {"category", "brand"})
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);

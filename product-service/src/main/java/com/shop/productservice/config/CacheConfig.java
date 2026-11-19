@@ -16,12 +16,44 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
+/**
+ * Redis cache tuning for the catalog read paths.
+ * <p>The {@code RedisCacheManager} itself is built by Spring Boot's cache
+ * autoconfiguration ({@code spring.cache.type: redis}); this class only
+ * customises the per-cache entries so each one can carry its own TTL instead of
+ * inheriting the global {@code spring.cache.redis.time-to-live} fallback.</p>
+ * <p>Note the Boot 4 package: {@code RedisCacheManagerBuilderCustomizer} lives in
+ * {@code org.springframework.boot.cache.autoconfigure} (module
+ * {@code spring-boot-cache}), no longer in {@code o.s.b.autoconfigure.cache}.</p>
+ * <p><b>Important:</b> Spring Boot 4 + Spring Data Redis 4.x defaults to
+ * {@code JdkSerializationRedisSerializer}, which can't serialize records
+ * ({@code ProductDetailResponse}, {@code ProductSummaryResponse}). We wire a
+ * {@code GenericJackson2JsonRedisSerializer} with a hand-tuned ObjectMapper
+ * (JavaTimeModule for {@code Instant}, polymorphic typing for record types) so
+ * the same serializer survives cache round-trips for any cached type.</p>
+ * <p><b>Immediate writes (fleet rule 6):</b> spring-data-redis 4.1.1's
+ * {@code DefaultRedisCacheWriter} defaults to {@code asynchronousWrites=true} —
+ * {@code put()} dispatches the Redis {@code SET} fire-and-forget on a
+ * Netty/Reactor event-loop thread while {@code get()} reads on the caller's
+ * synchronous connection, so a same-request reader racing the writer by tens of
+ * microseconds misses and re-fetches downstream (proven with Redis MONITOR wire
+ * evidence in order-service; fixed there in commit 02ac753). No Boot
+ * {@code spring.cache.redis.*} property exists for this — it must be set on the
+ * writer via {@code immediateWrites()}, which also makes {@code clear()}
+ * synchronous (see the IT-base per-test cache reset).</p>
+ */
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
+    /** Product lookups are read-heavy and tolerate a short staleness window. */
     private static final Duration PRODUCT_TTL = Duration.ofMinutes(10);
 
+    /**
+     * Categories/brands change rarely but are read on every product page and
+     * filter facet; a longer TTL is safe because every write path evicts or
+     * replaces the entry (see CategoryServiceImpl/BrandServiceImpl).
+     */
     private static final Duration TAXONOMY_TTL = Duration.ofMinutes(30);
 
     @Bean
@@ -36,8 +68,14 @@ public class CacheConfig {
                 .withCacheConfiguration("brand", cacheConfig(TAXONOMY_TTL));
     }
 
+    /**
+     * Base cache configuration: fixed TTL, JSON value serializer, no null
+     * caching (a miss must stay a miss so deletes are not masked), and
+     * {@code <cacheName>::<key>} key layout.
+     */
     private RedisCacheConfiguration cacheConfig(Duration ttl) {
-
+        // round-trip cleanly. We then hand it to the serializer via the builder,
+        // hint on every serialized value — without it, the read path
         ObjectMapper mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

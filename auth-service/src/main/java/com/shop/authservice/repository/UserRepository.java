@@ -23,6 +23,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByPhone(String phone);
 
+    /**
+     * Soft-deletes a user instead of removing the row. Sets {@code deleted=true},
+     * {@code deletedAt=NOW()}, and the actor's id. The row stays in the DB for audit
+     * but disappears from every {@code find*} query thanks to {@code @SQLRestriction}.
+     *
+     * @return number of rows affected (0 if id didn't exist or already deleted)
+     */
     @Modifying
     @Query("""
             UPDATE User u
@@ -45,6 +52,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     int restore(@Param("id") UUID id);
 
+    /**
+     * Looks up a user INCLUDING soft-deleted ones. Used by admin endpoints that need
+     * to inspect or restore deleted records. Bypasses {@code @SQLRestriction} via native SQL.
+     */
     @Query(value = "SELECT * FROM users WHERE user_id = :id", nativeQuery = true)
     Optional<User> findByIdIncludingDeleted(@Param("id") UUID id);
 }

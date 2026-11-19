@@ -9,6 +9,10 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Regression contract for every persisted shipment-event status must be
+ * accepted by the database check constraint after the webhook retry migration.
+ */
 class ShipmentEventStatusChangelogTest {
 
     private static final String MASTER_CHANGELOG = "db/changelog/db.changelog-master.yaml";

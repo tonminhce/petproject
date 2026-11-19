@@ -26,6 +26,29 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
+/**
+ * Reconciliation scheduler for stuck PENDING orders (hardening §6, D8).
+ * A PENDING order older than {@code order.reconciliation.stuck-minutes} means its
+ * confirm orchestration died mid-flight. The reservation ledger is polled and the
+ * order finalized without re-running the commit orchestration:
+ * <ul>
+ *   <li>all applicable reservations COMMITTED → auto-confirm (AUTO_CONFIRMED_BY_RECON)</li>
+ *   <li>all applicable reservations terminal (RELEASED/EXPIRED) → auto-cancel
+ *       (nothing to release — already terminal)</li>
+ *   <li>mixed — or ANY state-poll failure (404→RESERVATION_NOT_FOUND, promotion 4xx→
+ *       SERVICE_UNAVAILABLE fallback) → NO automatic decision (spec §6): mixed counter +
+ *       structured log for alerting; a missing reservation row inside the 30-min TTL
+ *       window is inconsistent data that needs human eyes</li>
+ * </ul>
+ * <p>Null reservation ids (no promotion reservation, legacy item without stock
+ * reservation) are not-applicable — skipped, never mixed (D5 analog). Mutations set
+ * fields directly (like {@code transitionStatus}) and go through orderRepository.save +
+ * OrderEventPublisher inside a per-order transaction (order row + outbox event commit
+ * atomically) — deliberately NOT through confirmOrder/cancelOrder, which would re-run
+ * the commit orchestration and recurse. Races with a concurrent admin transition are
+ * caught by the Order {@code @Version} guard; the losing write rolls back and the
+ * order is re-examined next cycle.</p>
+ */
 @Component
 @Slf4j
 public class OrderReconciliationScheduler {
@@ -65,14 +88,21 @@ public class OrderReconciliationScheduler {
                                         @Value("${order.reconciliation.batch-size:50}") int batchSize) {
         this(orderRepository, orderItemRepository, promotionClient, inventoryClient,
              orderEventPublisher, confirmMetrics, transactionTemplate,
-             stuckMinutes, batchSize, 10_000L);
+             stuckMinutes, batchSize, /*gauge-ttl-millis*/ 10_000L);
     }
 
+    /** Gauge must be registered exactly once — supplier re-reads on every scrape. */
     @PostConstruct
     public void registerStuckGauge() {
         confirmMetrics.stuckGauge(this::stuckPendingCount);
     }
 
+    /**
+     * Invalidate the memoised gauge count cache. Used by tests to observe a
+     * {@code thenReturn(...)} swap in a single JVM run. Production code never
+     * calls this; the cache self-refreshes when its TTL elapses.
+     */
+    // VisibleForTesting — production must not call this; see class javadoc.
     void invalidateStuckCountCache() {
         stuckPendingCountCache.invalidateForTest();
     }
@@ -103,9 +133,19 @@ public class OrderReconciliationScheduler {
 
     private void reconcile(Order order) {
         List<String> states = pollReservationStates(order);
-        if (states == null) return;
+        if (states == null) return;  // poll failure → already routed to the mixed path
         if (states.isEmpty()) {
 
+            // the create saga: no stock was reserved, no promotion was held and
+            // no payment could have been captured. It is an orphan left behind
+            // by a crash between the two saga transactions, and the old
+            // decision table sent it to the mixed path forever - so the row
+            // stayed PENDING, was re-selected on every tick and raised the
+            // mixed-counter alert indefinitely.
+            //
+            // An order that HAS items but no applicable reservation is a
+            // different case (a legacy order, or a partially migrated state)
+            // and stays on the mixed path: it is not safe to decide.
             if (hasNoOrderItems(order)) {
                 autoCancel(order, "orphan order with no line items - the create saga never completed");
                 return;
@@ -128,6 +168,15 @@ public class OrderReconciliationScheduler {
         return orderItemRepository.findByOrderId(order.getId()).isEmpty();
     }
 
+    /**
+     * Polls promotion (when the order has a reservation) + per-item inventory states.
+     * Returns {@code null} when any poll fails — the failure is routed to the mixed
+     * path here because the caller must never auto-decide on incomplete data (§6).
+     * Catches {@link Exception} (not just BusinessException) so transport failures
+     * (ResourceAccessException from 5xx / connect-read timeouts, RestClientException)
+     * also reach the mixed/alert path instead of the sweep-loop RECONCILIATION_ERROR
+     * catch — alerting must stay loud during an upstream outage.
+     */
     private List<String> pollReservationStates(Order order) {
         List<String> states = new ArrayList<>();
         try {
@@ -135,7 +184,7 @@ public class OrderReconciliationScheduler {
                 states.add(promotionClient.getReservationState(order.getPromotionReservationId()).status());
             }
             for (OrderItem item : orderItemRepository.findByOrderId(order.getId())) {
-                if (item.getReservationId() != null) {
+                if (item.getReservationId() != null) {  // D5 analog — legacy items skipped
                     states.add(inventoryClient.getReservationState(item.getReservationId()).status());
                 }
             }
@@ -184,6 +233,16 @@ public class OrderReconciliationScheduler {
         return Instant.now().minus(Duration.ofMinutes(stuckMinutes));
     }
 
+    /**
+     * The gauge supplier runs on every Prometheus scrape (default 15s).
+     * Without memoization each scrape issues a {@code COUNT(*)} against
+     * {@code orders}; with hundreds of scrapes per minute the table sees
+     * orders of magnitude more read traffic than the reconcile sweep itself.
+     * The fix caches the value with a TTL slightly less than the scrape
+     * interval so the DB sees at most one COUNT per scrape window. A pure
+     * in-process cache is fine here — this metric is per-instance; fleet-wide
+     * aggregation is the Prometheus server's job.
+     */
     private static final class MemoizedCount {
         private final long ttlNanos;
         private final LongSupplier supplier;
@@ -219,6 +278,7 @@ public class OrderReconciliationScheduler {
 
     private final MemoizedCount stuckPendingCountCache;
 
+    /** Test seam — pass an explicit gauge TTL. */
     OrderReconciliationScheduler(OrderRepository orderRepository,
                                  OrderItemRepository orderItemRepository,
                                  PromotionServiceClient promotionClient,

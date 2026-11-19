@@ -105,6 +105,7 @@ class WebhookEventServiceTest {
                 .thenAnswer(inv -> Optional.ofNullable(stored.get()));
     }
 
+    /** Dedupe probe only: no prior row, insert behavior left to the caller. */
     private void dedupeStubsNoRow() {
         when(eventRepository.findFirstByProviderAndProviderEventId(PROVIDER, PROVIDER_EVENT_ID))
                 .thenReturn(Optional.empty());

@@ -32,6 +32,18 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * MediaDeleted consumer against the REAL Kafka wire: this IT publishes
+ * through the SAME production path as MediaOutboxRelay
+ * — the context {@link KafkaMessagePublisher} (single-encode: JSON-as-String
+ * forwarded as raw UTF-8 bytes). On MediaDeleted the product's media_id is
+ * cleared, the derived image falls back to the legacy imageUrl, and a
+ * ProductUpdated outbox row (→ search refresh) is emitted per product. One
+ * pin keeps the LEGACY double-encoded shape (a JSON string token wrapping the
+ * event JSON, from pre-R1 producers) accepted — H-1 defense-in-depth for
+ * in-flight/retained records. Unknown eventTypes and poison bytes must not
+ * stall the partition.
+ */
 class MediaDeletedConsumerIT extends AbstractIntegrationTest {
 
     private static final String TOPIC = "media.lifecycle.v1";
@@ -73,14 +85,16 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
             .mediaId(mediaId)
             .build();
         productRepository.save(p);
-        outboxRepository.deleteAllInBatch();
+        outboxRepository.deleteAllInBatch(); // isolate this test's ProductUpdated assertions
         return p;
     }
 
+    /** Publishes EXACTLY like MediaOutboxRelay: payload String via the fleet KafkaMessagePublisher (R1 single-encode). */
     private void publishExactlyLikeRelay(String payloadJson, UUID key) {
         kafkaMessagePublisher.publish(TOPIC, key.toString(), payloadJson);
     }
 
+    /** Publishes the pre-R1 legacy wire: a JSON string token wrapping the event JSON (H-1 in-flight tolerance). */
     private void publishLegacyDoubleEncoded(String payloadJson, UUID key) throws Exception {
         kafkaMessagePublisher.publish(TOPIC, key.toString(), objectMapper.writeValueAsString(payloadJson));
     }
@@ -127,6 +141,8 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
         assertThat(row.getStatus()).isEqualTo(OutboxStatus.PENDING);
         JsonNode snapshot = readPayload(row.getPayload());
 
+        // the reference is gone — the derived canonical path belonged to the
+        // deleted media.
         assertThat(snapshot.get("imageUrl").asText()).isEqualTo("http://legacy.example/ip15.png");
         assertThat(snapshot.get("slug").asText()).isEqualTo(product.getSlug());
     }
@@ -137,6 +153,9 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
         Product product = productWithMedia(MEDIA_ID, "iPhone 15");
         publishLegacyDoubleEncoded(mediaPayload("MediaDeleted", MEDIA_ID), MEDIA_ID);
 
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 shape that
+        // in-flight/retained records may still carry.
         ConsumerRecord<String, String> record = awaitRecord(TOPIC, MEDIA_ID.toString());
         assertThat(record).as("record on media.lifecycle.v1 with key=mediaId").isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
@@ -147,6 +166,7 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
         assertThat(unwrapped.get("eventType").textValue()).isEqualTo("MediaDeleted");
         assertThat(unwrapped.get("mediaId").textValue()).isEqualTo(MEDIA_ID.toString());
 
+        // ...and the legacy double-encoded record is actually ingested.
         await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
             assertThat(productRepository.findById(product.getId()).orElseThrow().getMediaId())
                 .as("legacy double-encoded MediaDeleted must still clear the reference").isNull());
@@ -181,6 +201,8 @@ class MediaDeletedConsumerIT extends AbstractIntegrationTest {
         await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
             assertThat(productRepository.findById(product.getId()).orElseThrow().getMediaId()).isNull());
     }
+
+    // --- helpers ---
 
     private JsonNode readPayload(String payload) {
         try {

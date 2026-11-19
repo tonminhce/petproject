@@ -62,6 +62,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * Shipping flow ITs over the REAL fleet inbound wire (R1 + H-1): order
+ * lifecycle records are produced through the SAME path production uses —
+ * {@link KafkaMessagePublisher} over a StringSerializer ×2 template (the
+ * {@code stringKafkaTemplate} semantics of order-service's
+ * {@code OrderOutboxRelay}) — so the payload String lands SINGLE-ENCODED
+ * UTF-8 JSON on the wire. The consumer unwraps-once at the
+ * {@code BaseKafkaConsumer} boundary and also tolerates the legacy
+ * double-encoded shape (a JSON string token wrapping the event JSON) that
+ * pre-R1 in-flight records may still carry — pinned by test 9. The helper
+ * previously used a {@code JsonKafkaSerializer} double-encoding template —
+ * a wire production no longer emits.
+ */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @AutoConfigureTestRestTemplate
 class ShippingFlowIT extends AbstractIntegrationTest {
@@ -110,7 +123,9 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-
+        // The R1 production path: KafkaMessagePublisher over StringSerializer
+        // ×2 (stringKafkaTemplate semantics) — the payload String is forwarded
+        // as raw UTF-8 bytes, single-encoded JSON on the wire.
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(props));
         kafkaMessagePublisher = new KafkaMessagePublisher(producerTemplate);
@@ -273,6 +288,8 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
         Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
 
+        // The carrier took the shipment over (a tracking number came back)
+        // but never sent a status update, so there is no carrier timestamp.
         jdbcTemplate.update("update shipments set status = 'IN_TRANSIT' where id = ?",
             shipment.getId());
         Shipment acknowledged = reload(shipment.getId());
@@ -301,6 +318,9 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
         Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
 
+        // An in-flight shipment with no handover: the carrier never took it.
+        // The stale carrier timestamp is present as well, so the test pins
+        // the acknowledgement gate itself and not just the null handling.
         jdbcTemplate.update(
             "update shipments set status = 'IN_TRANSIT', carrier_acknowledged_at = null, "
                 + "last_carrier_update = ? where id = ?",
@@ -358,6 +378,10 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
         assertThat(shipment.getCarrier()).isEqualTo(Carrier.MANUAL);
 
+        // Wire proof on the real topic: the legacy record value is a JSON
+        // string token wrapping the event JSON — the pre-R1 wire that
+        // in-flight records may still carry; the unwrap-once boundary
+        // accepts it.
         ConsumerRecord<String, String> record = awaitRecord(ORDER_TOPIC, orderId.toString());
         assertThat(record).as("record on %s with key=orderId", ORDER_TOPIC).isNotNull();
         JsonNode token = objectMapper.readTree(record.value());
@@ -367,6 +391,7 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         assertThat(unwrapped.get("orderId").textValue()).isEqualTo(orderId.toString());
     }
 
+    /** Publishes through the R1 production path: single-encoded JSON on the wire. */
     private void sendOrderEvent(UUID orderId, String eventType, String status) {
         Map<String, Object> event = Map.of(
             "eventId", UUID.randomUUID().toString(),
@@ -382,6 +407,10 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         }
     }
 
+    /**
+     * Publishes the pre-R1 legacy wire: a JSON string token wrapping the event
+     * JSON (H-1 tolerance pin for in-flight records from pre-R1 producers).
+     */
     private void sendOrderEventLegacyDoubleEncoded(UUID orderId, String eventType, String status) {
         Map<String, Object> event = Map.of(
             "eventId", UUID.randomUUID().toString(),
@@ -496,6 +525,7 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         }
     }
 
+    /** Raw readback (StringDeserializer) to prove the actual wire shape. */
     private ConsumerRecord<String, String> awaitRecord(String topic, String key) {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

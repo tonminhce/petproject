@@ -18,6 +18,12 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+/**
+ * One rendered variant of a {@link Media}: canonical names
+ * {@code original|display|thumb}, format {@code jpeg|png|webp}, rendered
+ * pixel width, encoded byte size, and the private-bucket object key
+ * ({@code {mediaId}/{variant}.{ext}}).
+ */
 @Entity
 @Table(name = "media_variants",
        uniqueConstraints = @UniqueConstraint(name = "uk_media_variant_format",

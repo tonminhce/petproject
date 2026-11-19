@@ -31,6 +31,13 @@ import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Webhook entry + retry. Same shape as payment-service's WebhookEventService:
+ * events start as {@link ShipmentEvent#STATUS_FAILED_RETRYABLE}, are processed
+ * once, and the new {@code WebhookRetryScheduler} picks up any that didn't
+ * reach {@link ShipmentEvent#STATUS_PROCESSED}. After max retries the row
+ * transitions to {@link ShipmentEvent#STATUS_FAILED_PERMANENT}.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -66,6 +73,7 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             return;
         }
 
+        // so the retry scheduler can re-process them.
         Optional<ShipmentEvent> existing = eventRepository
                 .findFirstByCarrierAndProviderEventId(parsedCarrier, payload.getEventId());
         if (existing.isPresent() && ShipmentEvent.STATUS_PROCESSED.equals(existing.get().getStatus())) {
@@ -132,7 +140,8 @@ public class WebhookEventServiceImpl implements WebhookEventService {
     public void process(CarrierWebhookPayload payload, ShipmentEvent event) {
         Shipment shipment = shipmentRepository.findByTrackingNumber(payload.getTrackingNumber()).orElse(null);
         if (shipment == null) {
-
+            // error so the scheduler eventually surfaces FAILED_PERMANENT and ops
+            // can investigate. We avoid logging inside the exception path because
             throw BusinessException.badRequest("shipping.webhook.unknown.tracking",
                 payload.getTrackingNumber());
         }
@@ -189,7 +198,7 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         Optional<ShipmentEvent> existing = eventRepository
                 .findFirstByCarrierAndProviderEventId(carrier, providerEventId);
         if (existing.isPresent()) {
-            return;
+            return; // already on the retry queue
         }
         ShipmentEvent event = ShipmentEvent.builder()
                 .id(UUID.randomUUID())

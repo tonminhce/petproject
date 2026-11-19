@@ -75,7 +75,8 @@ class RatingServiceImplTest {
 
     @Test
     void submit_clientFailureSeam_propagatesWithoutSave() {
-
+        // EligibilityClient fails closed internally (never throws by contract) —
+        // but if that seam ever leaks, the service must not swallow it or save.
         when(ratingRepository.findByUserIdAndProductIdAndDeletedFalse(userId, productId)).thenReturn(Optional.empty());
         when(eligibilityClient.isEligible(userId, productId)).thenThrow(new IllegalStateException("downstream boom"));
 
@@ -108,6 +109,8 @@ class RatingServiceImplTest {
         assertThat(persisted.isVerified()).isTrue();
         assertThat(persisted.isHidden()).isFalse();
 
+        // NIT #1 — flush MUST land before record(): the snapshot aggregate JPQL
+        // inside record() only sees the new row after the flush.
         InOrder inOrder = inOrder(ratingRepository, ratingEventService);
         inOrder.verify(ratingRepository).saveAndFlush(any(Rating.class));
         inOrder.verify(ratingEventService).record(any(Rating.class), eq(RatingAction.CREATED));

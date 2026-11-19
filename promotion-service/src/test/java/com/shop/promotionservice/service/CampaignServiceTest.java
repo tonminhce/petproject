@@ -35,6 +35,13 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Task 9 — backoffice campaign CRUD service (spec §4.2). Unit tests: mocked
+ * repos + auditor, real impl. Error contract: PRO-7001 not found, PRO-7002
+ * duplicate live code (@SQLRestriction makes deleted rows invisible, so a
+ * deleted campaign's code is reusable), PRO-7003 campaign with PENDING/COMMITTED
+ * usage cannot be deleted. Edits never touch reservation rows.
+ */
 @ExtendWith(MockitoExtension.class)
 class CampaignServiceTest {
 
@@ -80,6 +87,8 @@ class CampaignServiceTest {
                 assertThat(ex.getStatus()).isEqualTo(status);
             });
     }
+
+    // --- 1. create ---
 
     @Test
     @DisplayName("create duplicate live code → CAMPAIGN_ALREADY_EXISTS (PRO-7002), nothing saved")
@@ -139,6 +148,8 @@ class CampaignServiceTest {
         assertThat(response.status()).isEqualTo(CampaignStatus.INACTIVE);
     }
 
+    // --- 2. update ---
+
     @Test
     @DisplayName("update unknown id → CAMPAIGN_NOT_FOUND (PRO-7001)")
     void updateUnknownIdThrowsNotFound() {
@@ -166,7 +177,7 @@ class CampaignServiceTest {
             "PRO-7002", HttpStatus.CONFLICT);
 
         verify(campaignRepository, never()).save(any(Campaign.class));
-
+        // the collision check must not be scoped to some other row
         verify(campaignRepository).existsByCodeAndIdNot("SAVE20", campaignId);
     }
 
@@ -197,7 +208,7 @@ class CampaignServiceTest {
         assertThat(saved.getMaxRedemptions()).isEqualTo(250);
         assertThat(saved.getTotalBudget()).isEqualByComparingTo("2000.00");
         assertThat(saved.getPerUserLimit()).isEqualTo(2);
-
+        // status INACTIVE via deactivate()
         assertThat(saved.getStatus()).isEqualTo(CampaignStatus.INACTIVE);
         assertThat(response.name()).isEqualTo("Renamed");
         verifyNoInteractions(reservationRepository);
@@ -227,7 +238,7 @@ class CampaignServiceTest {
         when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(existing));
         when(campaignRepository.save(any(Campaign.class)))
             .thenAnswer(inv -> inv.getArgument(0));
-
+        // a request that renames the campaign and carries NO status
         CampaignRequest edits = new CampaignRequest(
             CODE, "Renamed", "PERCENT", new BigDecimal("10.00"),
             new BigDecimal("50.00"),
@@ -244,6 +255,8 @@ class CampaignServiceTest {
         assertThat(response.status()).isEqualTo(CampaignStatus.ACTIVE);
         assertThat(response.name()).isEqualTo("Renamed");
     }
+
+    // --- 3. delete ---
 
     @Test
     @DisplayName("delete without a resolvable actor → AUD-9001 (F-049, not a raw NoSuchElementException)")
@@ -315,6 +328,8 @@ class CampaignServiceTest {
         assertThat(saved.getDeletedAt()).isNotNull();
     }
 
+    // --- 4. findAll / findById ---
+
     @Test
     @DisplayName("findAll with null status → repo.findAll(pageable), mapped to CampaignResponse")
     void findAllNullStatusDelegatesToUnfiltered() {
@@ -362,6 +377,8 @@ class CampaignServiceTest {
         assertThat(response.code()).isEqualTo(CODE);
         assertThat(response.discountValue()).isEqualByComparingTo("10.00");
     }
+
+    // --- 5. usages ---
 
     @Test
     @DisplayName("usages unknown campaign → CAMPAIGN_NOT_FOUND (existence guard), no reservation query")

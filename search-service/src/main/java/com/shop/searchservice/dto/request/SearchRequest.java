@@ -10,6 +10,10 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+/**
+ * Query-string parameters for {@code GET /api/v1/search} (spec D5).
+ * {@code status} is deliberately absent — only ACTIVE docs are indexed (D3).
+ */
 public record SearchRequest(
     @Size(max = 200)
     String q,
@@ -24,9 +28,11 @@ public record SearchRequest(
 
     BigDecimal minRating,
 
+    /** relevance (default) | price_asc | price_desc | rating_desc | newest */
     @Pattern(regexp = "relevance|price_asc|price_desc|rating_desc|newest")
     String sort,
 
+    /** The largest page that remains inside Elasticsearch result window. */
     @PositiveOrZero
     @Max(MAX_PAGE_NUMBER)
     Integer page,
@@ -35,7 +41,7 @@ public record SearchRequest(
     @Max(PageableConstant.MAX_PAGE_SIZE)
     Integer size
 ) {
-
+    /** Elasticsearch default result window. */
     public static final int MAX_RESULT_WINDOW = 10_000;
     public static final int MAX_PAGE_NUMBER = MAX_RESULT_WINDOW / PageableConstant.MAX_PAGE_SIZE - 1;
 

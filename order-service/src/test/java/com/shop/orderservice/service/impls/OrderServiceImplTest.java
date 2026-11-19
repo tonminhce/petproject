@@ -51,7 +51,7 @@ class OrderServiceImplTest {
     @InjectMocks OrderServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();
-
+    /** H-6 actor label — ADMIN token resolves to the sub string. */
     private final String actor = UUID.randomUUID().toString();
     private final UUID orderId = UUID.randomUUID();
     private final UUID productId = UUID.randomUUID();
@@ -98,7 +98,8 @@ class OrderServiceImplTest {
     void cancelOrder_throwsOnDelivered() {
         order.setStatus(OrderStatus.DELIVERED);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-
+        // orderStatusService is a mock — encode the real state-machine contract
+        // (DELIVERED is terminal) instead of relying on service internals.
         doThrow(BusinessException.of(ErrorCode.ORDER_INVALID_STATE_TRANSITION,
                 OrderStatus.DELIVERED, OrderStatus.CANCELLED))
             .when(orderStatusService).validateTransition(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
@@ -114,7 +115,7 @@ class OrderServiceImplTest {
 
         assertThatThrownBy(() -> service.cancelOrder(orderId, otherUser, false))
             .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4001"));
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4001"));  // NOT_FOUND, not FORBIDDEN
     }
 
     @Test
@@ -124,6 +125,7 @@ class OrderServiceImplTest {
             BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, null,
             Instant.now(), null, null, null, null);
 
+        // hash() runs BEFORE idempotencyService.begin() — stub ObjectMapper to return non-null bytes
         when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
         when(idempotencyService.begin(eq("key1"), eq(userId.toString()), any()))
             .thenReturn(Optional.of(cached));
@@ -131,11 +133,16 @@ class OrderServiceImplTest {
         OrderResponse result = service.createOrder(userId, req, "key1");
 
         assertThat(result).isEqualTo(cached);
-        verify(orderCreateSaga, never()).execute(any(), any(), any());
+        verify(orderCreateSaga, never()).execute(any(), any(), any());  // saga NOT re-run
     }
+
+    // ========================================================================
+    // CONFIRM — orchestration + Idempotency-Key (Task 11)
+    // ========================================================================
 
     private static final String CONFIRM_KEY = "confirm-key-1";
 
+    /** Contract: request hash for confirm = sha256 hex of orderId.toString() (64 chars). */
     private String confirmHash() {
         try {
             byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
@@ -146,6 +153,7 @@ class OrderServiceImplTest {
         }
     }
 
+    /** Loads only — shared by tests that FAIL before the mapper is reached. */
     private void stubConfirmLoad() {
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
         when(orderItemRepository.findByOrderId(orderId)).thenReturn(List.of());
@@ -176,9 +184,10 @@ class OrderServiceImplTest {
         verify(orderEventPublisher).publishStatusChanged(order);
         verify(idempotencyService).complete(CONFIRM_KEY, actor, response, 200);
         verify(confirmMetrics).attempt();
-
+        // Phase timers are coordinator-owned — service must NOT sample them itself
+        // (review fix: caller-side commit_inventory sample double-counted every confirm)
         verify(confirmMetrics, never()).timer(anyString());
-
+        // external commit FIRST — state flip/publish/complete only after it succeeds
         org.mockito.InOrder seq = inOrder(commitCoordinator, orderRepository,
             orderEventPublisher, idempotencyService);
         seq.verify(commitCoordinator).commitForConfirm(order, List.of());
@@ -239,7 +248,7 @@ class OrderServiceImplTest {
 
         assertThatThrownBy(() -> service.confirmOrder(orderId, actor, CONFIRM_KEY))
             .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4004"));
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4004"));  // NOT wrapped to 4011
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
         verify(confirmMetrics).attempt();
@@ -261,6 +270,10 @@ class OrderServiceImplTest {
         verify(orderEventPublisher).publishStatusChanged(order);
     }
 
+    // ========================================================================
+    // CONFIRM — payment-captured guard (order-wiring D1, flag-gated)
+    // ========================================================================
+
     @Test
     void confirmOrder_flagOff_bypassesPaymentGuard() {
         stubConfirmHappy();
@@ -268,8 +281,8 @@ class OrderServiceImplTest {
         OrderResponse result = service.confirmOrder(orderId, actor, null);
 
         assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
-        verify(paymentClient).isEnabled();
-        verify(paymentClient, never()).findCapturedByOrderId(any());
+        verify(paymentClient).isEnabled();  // flag consulted...
+        verify(paymentClient, never()).findCapturedByOrderId(any());  // ...lookup never made
         verify(commitCoordinator).commitForConfirm(order, List.of());
     }
 
@@ -419,7 +432,7 @@ class OrderServiceImplTest {
         service.cancelOrder(orderId, userId, false);
 
         verify(promotionClient, times(1)).release(promoReservationId);
-
+        // promotion release happens AFTER stock release (mirrors saga compensation order)
         org.mockito.InOrder seq = inOrder(stockReservationService, promotionClient);
         seq.verify(stockReservationService).release(item.getReservationId());
         seq.verify(promotionClient).release(promoReservationId);
@@ -434,6 +447,7 @@ class OrderServiceImplTest {
 
         service.cancelOrder(orderId, userId, true);
 
+        // reservations already COMMITTED at confirm — release belongs to Phase 8 refund
         verify(promotionClient, never()).release(any());
     }
 
@@ -450,15 +464,24 @@ class OrderServiceImplTest {
         verify(promotionClient, never()).release(any());
     }
 
+    // ========================================================================
+    // CREATE — persist-early saga (Task 7 re-attempt ruling)
+    // ========================================================================
+
     private void stubIdempotency() throws Exception {
         when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
         when(idempotencyService.begin(any(), eq(userId.toString()), any())).thenReturn(Optional.empty());
     }
 
+// outer createOrder orchestration only verifies that the saga is invoked
+// through Spring's proxy (so @Transactional takes effect).
+
     @Test
     void createOrder_stockReserveFails_releasesPromotionReservationThenThrows() throws Exception {
         stubIdempotency();
 
+        // directly so the orchestration test stays focused on the outer createOrder
+        // contract (idempotency abort path) without re-testing saga internals.
         when(orderCreateSaga.execute(eq(userId), any(), eq("promo-comp-key")))
             .thenThrow(BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, productId));
 
@@ -476,7 +499,7 @@ class OrderServiceImplTest {
 
         assertThatThrownBy(() -> service.createOrder(userId, new OrderCreateRequest(null, "SAVE10"), "promo-down-key"))
             .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4007"));  // swallow — original error preserved
     }
 
     @Test

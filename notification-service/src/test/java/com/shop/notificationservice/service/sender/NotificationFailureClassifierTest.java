@@ -25,7 +25,9 @@ class NotificationFailureClassifierTest {
 
     @Test
     void sendFailedExceptionInvalidAddresses_isPermanent_unknownRecipient() {
-
+        // JavaMail aggregates rejected RCPT TO (550 user unknown) into a
+        // SendFailedException "Invalid Addresses" — the canonical
+        // unknown-recipient signal.
         Exception e = new IllegalStateException("Failed to send SMTP notification",
                 new MailSendException("Failed messages: jakarta.mail.SendFailedException: Invalid Addresses"));
 

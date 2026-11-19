@@ -31,6 +31,7 @@ import java.util.UUID;
 @Slf4j
 public class OrderReturnServiceImpl implements OrderReturnService {
 
+    /** The reason of a return row that comes from an admin cancellation after shipment. */
     static final String REASON_SHIPPED_CANCELLATION = "ADMIN_CANCEL_AFTER_SHIPMENT";
 
     private final OrderRepository orderRepository;

@@ -9,6 +9,7 @@ public interface EntityCreateUpdateMapper<M, V, R> {
     V toVm(M Model);
     R toModelResponse(M model);
 
+    // null fields skip to support PATCH
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void partialUpdate(@MappingTarget M model, V vm);
 }

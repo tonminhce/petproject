@@ -13,6 +13,14 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Wraps {@link CampaignReservationService} with a manual retry loop for
+ * {@link OptimisticLockingFailureException} (spec §5.1 step 5). A retry
+ * re-reads the campaign (fresh @Version, post-version-touch) and re-validates
+ * — safe because every gate re-runs against the winner's committed state.
+ * Deliberately NOT transactional: each attempt gets its own tx boundary from
+ * the delegate.
+ */
 @Service
 @RequiredArgsConstructor
 public class ReservationRetryServiceImpl implements ReservationRetryService {
@@ -56,6 +64,11 @@ public class ReservationRetryServiceImpl implements ReservationRetryService {
         return withRetry(reservationId, () -> campaignReservationService.getState(reservationId));
     }
 
+    /**
+     * Shared optimistic-lock retry loop (spec §5.1 step 5 / §5.3): 3 attempts,
+     * linear backoff 50ms*attempt, exhausted → PRO-7011. Business rejections
+     * are NOT retried — only OptimisticLockingFailureException is.
+     */
     private <T> T withRetry(Object key, Supplier<T> call) {
         int attempt = 0;
         while (true) {
@@ -65,7 +78,7 @@ public class ReservationRetryServiceImpl implements ReservationRetryService {
                 if (++attempt >= MAX_ATTEMPTS) {
                     throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_VERSION_CONFLICT, key);
                 }
-
+                // retrying, so every remaining attempt failed instantly and
                 if (!sleep(BACKOFF_BASE_MS * attempt)) {
                     Thread.currentThread().interrupt();
                     throw BusinessException.of(ErrorCode.PROMOTION_RESERVATION_VERSION_CONFLICT, key);
@@ -74,6 +87,10 @@ public class ReservationRetryServiceImpl implements ReservationRetryService {
         }
     }
 
+    /**
+     * @return {@code true} when the sleep completed normally, {@code false} when
+     *         the thread was interrupted.
+     */
     private boolean sleep(long ms) {
         try {
             Thread.sleep(ms);
