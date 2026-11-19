@@ -15,11 +15,6 @@ public class ProductMediaReferenceChecker implements MediaReferenceChecker {
 
     private final MediaReferenceClient referenceClient;
 
-    /**
-     * @return {@code true} unless product-service provably reports zero live
-     *         references (or the client reports the media as referenced);
-     *         failures of any shape fail safe to REFERENCED (+ WARN)
-     */
     @Override
     public boolean isReferenced(UUID mediaId) {
         var count = referenceClient.referenceCount(mediaId);

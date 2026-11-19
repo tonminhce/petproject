@@ -29,9 +29,7 @@ class KeycloakPasswordGrantPostureCheckTest {
 
     @Test
     void withAServiceAccountThePostureIsStillMeasured() {
-        // F-078: the admin path uses the service account of the application
-        // realm. The ROPC posture must still be measured through it - the
-        // migration away from the password grant needs the signal.
+
         when(adminClient.hasServiceAccountCredentials()).thenReturn(true);
         when(adminClient.isDirectAccessGrantEnabled("ecommerce-client")).thenReturn(true);
 
@@ -42,9 +40,7 @@ class KeycloakPasswordGrantPostureCheckTest {
 
     @Test
     void withAServiceAccountAndWithoutAdminCredentialsThePostureIsStillMeasured() {
-        // The master-realm credential is not configured any more: that must
-        // NOT stop the posture measurement - the service account can read the
-        // client configuration.
+
         when(adminClient.hasServiceAccountCredentials()).thenReturn(true);
         when(adminClient.hasAdminCredentials()).thenReturn(false);
         when(adminClient.isDirectAccessGrantEnabled("ecommerce-client")).thenReturn(false);
@@ -56,9 +52,7 @@ class KeycloakPasswordGrantPostureCheckTest {
 
     @Test
     void withoutAdminCredentialsTheCheckDoesNotCallTheIdentityProvider() {
-        // F-006: the shared defaults ship no credential any more. With blank
-        // credentials the posture is unknown and the admin API is unusable - the
-        // check must say so instead of sending a blank credential.
+
         when(adminClient.hasAdminCredentials()).thenReturn(false);
         when(adminClient.hasServiceAccountCredentials()).thenReturn(false);
 
@@ -74,8 +68,6 @@ class KeycloakPasswordGrantPostureCheckTest {
         doThrow(new RuntimeException("keycloak down"))
                 .when(adminClient).isDirectAccessGrantEnabled("ecommerce-client");
 
-        // Must not throw: the identity provider being briefly unreachable must
-        // not stop the service from booting.
         new KeycloakPasswordGrantPostureCheck(adminClient, "ecommerce-client").report();
 
         verify(adminClient).isDirectAccessGrantEnabled("ecommerce-client");

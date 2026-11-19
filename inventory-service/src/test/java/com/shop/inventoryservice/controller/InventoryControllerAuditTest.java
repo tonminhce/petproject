@@ -37,13 +37,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6 + R3 veto): the SERVICE-gated reservation
- * mutations exercised through the {@code AuditAspect} — machine actors on
- * client-credentials tokens (azp claim, no session marker) must land on the
- * audit line as actor type {@code service} with the client id, so stock
- * mutations keep a complete insider-threat trail.
- */
 @WebMvcTest(value = InventoryController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

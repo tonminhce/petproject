@@ -8,11 +8,6 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Review I4 follow-up: the constructor must be safe when the CacheManager is not
- * Redis (e.g. spring.cache.type=none in tests) — relay/pending/outbox meters still
- * register, cache hit/miss gauges are skipped.
- */
 class OrderMetricsTest {
 
     @Test

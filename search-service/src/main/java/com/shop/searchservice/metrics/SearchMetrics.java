@@ -3,16 +3,6 @@ package com.shop.searchservice.metrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
-/**
- * Micrometer-backed observability surface for search-service (fleet
- * RatingMetrics/OrderMetrics pattern):
- * <ul>
- *   <li>{@code search_queries_total{sort}} — counter incremented once per
- *       executed query, tagged with the RESOLVED sort (spec D6 / an
- *       empty-q browse without an explicit sort is tagged {@code newest},
- *       never {@code relevance}).</li>
- * </ul>
- */
 @Component
 public class SearchMetrics {
 

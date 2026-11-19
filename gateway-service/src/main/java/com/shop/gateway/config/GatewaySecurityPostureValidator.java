@@ -10,15 +10,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 
-/**
- * Fail-fast guards for the gateway's two network-edge security postures.
- * <p>Both misconfigurations are silent at runtime: a wildcard CORS pattern
- * with credentials silently accepts every origin, and a zero trusted-proxy
- * hop count silently makes the client-IP trust model either spoofable
- * (behind the ForwardedHeaderTransformer) or collapsed onto the proxy's
- * address. Failing fast at startup turns a silent security regression into
- * a deployment error.</p>
- */
 @Configuration(proxyBeanMethods = false)
 public class GatewaySecurityPostureValidator {
 
@@ -50,13 +41,6 @@ public class GatewaySecurityPostureValidator {
         validateAdminIpAllowlist();
     }
 
-    /**
-     * {@code allowCredentials(true)} combined with a wildcard origin
-     * pattern makes every website able to issue credentialed cross-origin
-     * requests to the gateway and read the responses. The gateway's CORS
-     * configuration always sets allowCredentials(true), so a wildcard pattern
-     * is always a misconfiguration.
-     */
     private void validateCors() {
         var patterns = gatewayProperties.corsAllowedOriginPatterns();
         boolean wildcard = patterns.stream().anyMatch(p -> p != null && p.trim().equals("*"));
@@ -70,29 +54,6 @@ public class GatewaySecurityPostureValidator {
         log.info("Gateway CORS origin allow-list resolved to {} entr(y|ies) (credentials enabled)", patterns.size());
     }
 
-    /**
-     * The client IP is resolved from the X-Forwarded-For chain using
-     * {@code gateway.rate-limit.trusted-proxy-hops}. A hop count of 0 makes the
-     * resolver fall back to the socket address. Behind a reverse proxy that is
-     * the PROXY's address: every anonymous caller shares one rate-limit bucket
-     * and the admin allowlist evaluates the proxy instead of the caller. When
-     * the forwarded-header strategy is not 'none', Spring additionally rewrites
-     * the remote address from the caller-supplied header, which makes the
-     * fallback spoofable instead.
-     */
-    /**
-     * The backoffice (products, categories, promotions, tax, payments, ratings,
-     * shipments, search) is only protected by the JWT role check when the admin
-     * IP allowlist is INACTIVE - the shipped default. An empty
-     * ADMIN_IP_ALLOWLIST therefore leaves the administrative surface reachable
-     * from any network origin.
-     *
-     * <p>Where the deployment declares the allowlist mandatory
-     * ({@code gateway.admin-ip-allowlist.required=true}, set by the production
-     * compose file), an empty allowlist is a deployment error and the gateway
-     * refuses to start. Elsewhere the gap is reported loudly: the allowlist is
-     * the only network-layer control in front of the backoffice.</p>
-     */
     private void validateAdminIpAllowlist() {
         if (adminIpAllowlistProperties.active()) {
             log.info("Admin IP allowlist is enforcing with {} CIDR entr(y|ies)",

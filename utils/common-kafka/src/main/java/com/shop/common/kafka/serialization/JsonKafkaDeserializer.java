@@ -7,11 +7,6 @@ import org.apache.kafka.common.serialization.Deserializer;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-/**
- * Jackson-based JSON deserializer used by the platform's Kafka consumer.
- * Throws a {@link RuntimeException} when the payload cannot be parsed so that
- * the {@code ErrorHandlingDeserializer} wrapper can route it to the DLT.
- */
 public class JsonKafkaDeserializer<T> implements Deserializer<T> {
 
     private final Class<T> targetType;
@@ -51,7 +46,6 @@ public class JsonKafkaDeserializer<T> implements Deserializer<T> {
     public void close() {
     }
 
-    /** Convenience helper for tests. */
     public static byte[] toBytes(ObjectMapper mapper, Object payload) {
         try {
             return mapper.writeValueAsBytes(payload);
@@ -60,7 +54,6 @@ public class JsonKafkaDeserializer<T> implements Deserializer<T> {
         }
     }
 
-    /** Convenience helper for tests. */
     public static String toString(byte[] bytes) {
         return bytes == null ? null : new String(bytes, StandardCharsets.UTF_8);
     }

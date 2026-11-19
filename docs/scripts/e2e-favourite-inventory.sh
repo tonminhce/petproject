@@ -209,7 +209,7 @@ banner "PHASE 13: Inventory - ADMIN creates + reads (cache-aside)"
 code=$(curl_code POST "$INV_BASE" "$ADMIN_TOKEN" "{\"productId\":\"$PROD_ID\",\"availableQuantity\":100}")
 assert_http "POST /inventory ADMIN (new)" 200 "$code"
 body=$(cat /tmp/last_body)
-echo "  Created: $(echo "$body" | python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]; print(d)')" 
+echo "  Created: $(echo "$body" | python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]; print(d)')"
 
 code=$(curl_code POST "$INV_BASE" "$ADMIN_TOKEN" "{\"productId\":\"$PROD_ID\",\"availableQuantity\":50}")
 assert_http "POST /inventory ADMIN (duplicate, expect 409 INVENTORY_ALREADY_EXISTS)" 409 "$code"

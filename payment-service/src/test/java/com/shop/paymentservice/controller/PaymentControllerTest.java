@@ -94,8 +94,6 @@ class PaymentControllerTest {
             {"orderId":"%s","amount":98.00,"currency":"USD","idempotencyKey":"idem-9001"}""".formatted(orderId);
     }
 
-    // --- anonymous ---
-
     @Test
     void create_noAuth_returns401() throws Exception {
         mockMvc.perform(post("/api/v1/payments")
@@ -115,8 +113,6 @@ class PaymentControllerTest {
         mockMvc.perform(get("/api/v1/payments").param("orderId", orderId.toString()))
             .andExpect(status().isUnauthorized());
     }
-
-    // --- USER denied ---
 
     @Test
     void create_userRole_returns403() throws Exception {
@@ -147,8 +143,6 @@ class PaymentControllerTest {
                     .authorities(createAuthorityList("ROLE_USER"))))
             .andExpect(status().isForbidden());
     }
-
-    // --- SERVICE happy paths ---
 
     @Test
     void create_serviceRole_returns200WithPendingPayment() throws Exception {
@@ -211,8 +205,6 @@ class PaymentControllerTest {
         verify(paymentService).findAllByOrderId(eq(orderId), eq(PageRequest.of(0, 10)));
     }
 
-    // --- refund allows SERVICE and ADMIN ---
-
     @Test
     void refund_serviceRole_returns200WithPayment() throws Exception {
         when(paymentService.refund(paymentId)).thenReturn(capturedPayment());
@@ -227,8 +219,6 @@ class PaymentControllerTest {
 
         verify(paymentService).refund(paymentId);
     }
-
-    // --- ADMIN happy paths ---
 
     @Test
     void create_adminRole_returns200() throws Exception {
@@ -274,8 +264,6 @@ class PaymentControllerTest {
             .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
-    // --- validation ---
-
     @Test
     void create_blankFields_returns400WithErr0422V() throws Exception {
         String body = """
@@ -307,8 +295,6 @@ class PaymentControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("ERR-0422-V"));
     }
-
-    // --- business error-code mapping ---
 
     @Test
     void capture_unknownPayment_returns404WithPay5002() throws Exception {

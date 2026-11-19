@@ -102,7 +102,6 @@ class BaseKafkaConsumerDeadLetterTest {
         }
     }
 
-    /** The recoverer chooses the dead-letter destination; discover it on the broker. */
     private String firstDeadLetterTopic() {
         try (var admin = org.apache.kafka.clients.admin.Admin.create(Map.of(
                 "bootstrap.servers", broker.getBrokersAsString()))) {

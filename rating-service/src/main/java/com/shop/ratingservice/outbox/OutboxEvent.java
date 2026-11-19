@@ -45,11 +45,6 @@ public class OutboxEvent {
     @Column(name = "sent_at")
     private Instant sentAt;
 
-    /**
-     * When the relay claimed this row (moved it to SENDING). The stale sweep
-     * uses it as the claim lease: a row left in SENDING by a crash is
-     * reclaimed once the lease expires, so the event is not lost.
-     */
     @Column(name = "claimed_at")
     private Instant claimedAt;
 

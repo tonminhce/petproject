@@ -1,30 +1,13 @@
-# =============================================================================
-#  Common Library — platform-wide defaults
-# -----------------------------------------------------------------------------
-#  Every microservice that depends on `com.shop.microservices:common-spring`
-#  inherits this configuration. Service-specific overrides belong in the
-#  service's own `application.yml` / environment variables.
-#
-#  Sensitive values (DB passwords, secrets, OAuth2 client secrets) are
-#  intentionally NOT defaulted here — they must come from the environment
-#  (Spring Cloud Config, Kubernetes secrets, .env file, ...).
-# =============================================================================
 
 spring:
   application:
-    # Logical service name. Override per service via `SPRING_APPLICATION_NAME`.
-    # We bind a literal default; do NOT reference the key itself in a placeholder
-    # because Spring Boot 4.x's strict resolver rejects self-references.
     name: shop-service
 
   profiles:
-    # Default profile. Activate with `--spring.profiles.active=dev|prod|...`.
     active: dev
 
   threads:
     virtual:
-      # Spring Boot 3.2+ virtual threads. Disable on services that need
-      # thread-local semantics (e.g. security context, MDC).
       enabled: ${VIRTUAL_THREADS_ENABLED:false}
 
   datasource:
@@ -36,44 +19,25 @@ spring:
       max-lifetime: ${HIKARI_MAX_LIFETIME_MS:1800000}
       leak-detection-threshold: ${HIKARI_LEAK_DETECTION_THRESHOLD_MS:10000}
 
-# -----------------------------------------------------------------------------
-#  HTTP server
-# -----------------------------------------------------------------------------
 server:
   port: ${SERVER_PORT:8080}
-  # Graceful shutdown gives in-flight requests a chance to drain.
   shutdown: graceful
-  # Trust the X-Forwarded-* headers set by the ingress / load balancer.
   forward-headers-strategy: framework
   error:
-    # The internal exception text must never reach the client: the platform
-    # exception handler (ApiExceptionHandler) emits the curated, i18n message
-    # for every error it handles - a generic one for 5xx and a detailed one for
-    # 4xx client errors. include-message=always only affects the errors that
-    # never reach that handler (filter-chain failures, unmapped MVC errors),
-    # where it would echo SQL fragments, host names or class names.
     include-message: never
-    # Binding failures are 4xx client errors: their field detail is the
-    # curated validation message and stays useful.
     include-binding-errors: always
     include-stacktrace: never
     include-exception: false
 
-# -----------------------------------------------------------------------------
-#  Observability — actuator + Prometheus
-# -----------------------------------------------------------------------------
 management:
   endpoints:
     web:
       exposure:
-        # Expose health, info, Prometheus scrape, and metrics by default.
         include: health,info,prometheus,metrics
   endpoint:
     health:
-      # Don't leak internals to anonymous probes.
       show-details: when-authorized
       probes:
-        # Enable Kubernetes-style liveness/readiness probes.
         enabled: true
     prometheus:
       access: read_only
@@ -82,7 +46,6 @@ management:
       enabled: true
     readinessstate:
       enabled: true
-  # Sensible defaults for the http / jvm / system / process metrics.
   metrics:
     distribution:
       percentiles-histogram:
@@ -92,22 +55,13 @@ management:
     tags:
       application: ${spring.application.name}
 
-# -----------------------------------------------------------------------------
-#  Logging
-# -----------------------------------------------------------------------------
 logging:
   level:
     root: INFO
     com.shop: INFO
   pattern:
-    # Prepend the correlation ID (trace + span) to every log line.
-    # `%X{traceId:-}` and `%X{spanId:-}` fall back to empty strings when no
-    # MDC value is present, keeping the format compact for non-traced logs.
     correlation: "[%X{traceId:-},%X{spanId:-}] "
 
-# -----------------------------------------------------------------------------
-#  Platform web defaults — see WebAutoConfiguration + I18nAutoConfiguration
-# -----------------------------------------------------------------------------
 shop:
   web:
     correlation:
@@ -138,34 +92,11 @@ shop:
     issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
     csrf-disabled: true
     stateless-session: true
-    # F-040 (P1): client-identity validation.
-    #
-    # The provisioned Keycloak 26 realm has NO audience mapper and NO client
-    # scopes, so the access tokens it mints carry NO 'aud' claim at all - only
-    # 'azp' (the client the token was issued to). Measured against Keycloak 26:
-    #   user token     -> azp=ecommerce-client, aud absent
-    #   admin token    -> azp=ecommerce-client, aud absent
-    #   service token  -> azp=order-service,   aud absent
-    #
-    # Two consequences:
-    #   * the 'aud' validator in common-security CANNOT be satisfied against this
-    #     realm - enabling shop.security.expected-audiences would reject every
-    #     token and take the whole fleet offline. Leave it empty until an
-    #     audience mapper is added to the realm.
-    #   * the only usable client discriminator is 'azp'. This list restricts the
-    #     tokens a service accepts to the clients the realm actually knows
-    #     about. Narrow it per service where the callers are known.
     expected-client-ids: ${SHOP_SECURITY_EXPECTED_CLIENT_IDS:ecommerce-client,order-service,rating-service,search-service,product-service,media-service}
     expected-audiences: ${SHOP_SECURITY_EXPECTED_AUDIENCES:}
-    # Note: actuator/swagger/api-docs paths are public via SecurityProperties.PlatformDefaults.PUBLIC_PATHS
-    # (utils/common-security/.../SecurityProperties.java); service-specific paths go in each service's
-    # application.yml under shop.security.public-paths (EndpointRule format).
     cors:
       enabled: ${ECOMMERCE_CORS_ENABLED:true}
       allowed-origin-patterns:
-        # F-006: the shipped default is an explicit localhost list - a wildcard
-        # origin is never the default (it lets any site read the unauthenticated
-        # endpoints of the platform).
         - ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:3000,http://localhost:5173}
       allowed-methods:
         - GET
@@ -182,20 +113,9 @@ shop:
     server-url: ${KEYCLOAK_SERVER_URL:http://keycloak:8080}
     public-server-url: ${KEYCLOAK_PUBLIC_SERVER_URL:http://localhost:9090}
     realm: ${KEYCLOAK_REALM:ecommerce}
-    # F-079: the default must name a client that exists in the provisioned
-    # realm, otherwise the posture check measures a client that was never
-    # provisioned.
     client-id: ${KEYCLOAK_CLIENT_ID:ecommerce-client}
     admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
-    # F-006: NO credential default in a shared library. A shipped
-    # master-realm password is a takeover waiting to happen: the service that
-    # actually administers the realm (auth-service) declares these itself and
-    # fails fast when they are unset.
-    # F-078: the secret of the admin service account. With it, the admin
-    # token is fetched with the client_credentials grant - no master-realm
-    # administrator credential travels through a password grant, and the
-    # permissions of the token are scoped to the application realm.
     admin-client-secret: ${ADMIN_SERVICE_CLIENT_SECRET:}
     admin-username: ${KEYCLOAK_ADMIN_USERNAME:}
     admin-password: ${KEYCLOAK_ADMIN_PASSWORD:}
@@ -221,9 +141,6 @@ shop:
       shutdown-grace-period: 30s
       max-http-header-size: 8192
 
-# -----------------------------------------------------------------------------
-#  OpenAPI / Swagger UI
-# -----------------------------------------------------------------------------
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -232,9 +149,6 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
 
-# -----------------------------------------------------------------------------
-#  Resilience4j defaults — applied to every service that pulls in the starter.
-# -----------------------------------------------------------------------------
 resilience4j:
   circuitbreaker:
     configs:

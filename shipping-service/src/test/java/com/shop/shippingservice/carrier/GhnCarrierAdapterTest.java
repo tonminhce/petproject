@@ -49,7 +49,7 @@ class GhnCarrierAdapterTest {
         CarrierAdapter.ShipmentDraft draft = adapter.createShipment(orderId);
 
         assertThat(draft.initialStatus()).isEqualTo(ShipmentStatus.CREATED);
-        // The tracking number now comes from the carrier, not from the order id.
+
         assertThat(draft.trackingNumber()).isEqualTo("GHN-CARRIER-42");
         server.verify();
     }

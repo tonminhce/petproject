@@ -33,7 +33,6 @@ class MediaOutboxRetentionIT extends AbstractMediaIntegrationTest {
     @Autowired
     private io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
-    /** Scheduler + relay must not race the manual calls in tests. */
     @DynamicPropertySource
     static void schedulingProps(DynamicPropertyRegistry registry) {
         registry.add("shop.media.outbox.poll-millis", () -> "3600000");
@@ -88,7 +87,6 @@ class MediaOutboxRetentionIT extends AbstractMediaIntegrationTest {
         assertThat(deadMeter(meterRegistry)).as("media_outbox_dead_total counts the aged rows")
                 .isEqualTo(deadMeterBefore + 1.0);
 
-        // the relay never polls DEAD — the aged row stays put while the young one publishes
         relay.relay();
 
         OutboxEvent replayed = outboxRepository.findById(youngFailed.getId()).orElseThrow();

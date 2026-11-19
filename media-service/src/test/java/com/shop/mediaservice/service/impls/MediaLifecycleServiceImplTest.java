@@ -24,13 +24,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Delete guard unit proofs: unknown id → 404 MED-12004, repeat delete (the
- * conditional UPDATE returns 0 rows) → 409 MED-12005, fresh delete → ok +
- * MediaDeleted outbox row in the same tx (D4). The DB-level proof (real
- * conditional UPDATE + deleted_at stamp) lives in {@code MediaControllerIT};
- * the same-tx outbox proof lives in {@code MediaOutboxIT}.
- */
 @ExtendWith(MockitoExtension.class)
 class MediaLifecycleServiceImplTest {
 
@@ -76,8 +69,7 @@ class MediaLifecycleServiceImplTest {
 
     @Test
     void softDelete_referencedMedia_isRejectedWith409_andNothingIsDeleted() {
-        // F-063: the DELETE path must consult the reference checker - a media
-        // that a live product still points at must not lose its image.
+
         when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
         when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.of(Media.builder().id(MEDIA_ID).build()));
         when(referenceChecker.isReferenced(MEDIA_ID)).thenReturn(true);
@@ -94,8 +86,7 @@ class MediaLifecycleServiceImplTest {
 
     @Test
     void softDelete_unavailableReferenceService_failsSafeAndRefusesTheDelete() {
-        // the checker itself is fail-safe; a checker that throws must not turn
-        // into a delete on incomplete data
+
         when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
         when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.of(Media.builder().id(MEDIA_ID).build()));
         when(referenceChecker.isReferenced(MEDIA_ID)).thenThrow(new RuntimeException("product-service down"));
@@ -125,8 +116,7 @@ class MediaLifecycleServiceImplTest {
 
     @Test
     void softDelete_racedConcurrentDelete_loadGoneMeans409_noEvent() {
-        // Row soft-deleted between the exists-check and the load — @SQLRestriction
-        // hides it, the snapshot load comes back empty: same 409 conflict.
+
         when(mediaRepository.existsIncludingDeleted(MEDIA_ID)).thenReturn(true);
         when(mediaRepository.findById(MEDIA_ID)).thenReturn(Optional.empty());
 

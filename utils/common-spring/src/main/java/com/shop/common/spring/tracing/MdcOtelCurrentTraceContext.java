@@ -6,14 +6,6 @@ import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.otel.bridge.OtelCurrentTraceContext;
 import org.slf4j.MDC;
 
-/**
- * Populates {@code traceId}/{@code spanId} in SLF4J MDC for the lifetime
- * of every trace scope, WITHOUT requiring an exporter (or any events at all).
- * <p>Boot 4 builds {@code OtelCurrentTraceContext} without an event publisher,
- * so its own {@code Slf4JEventListener} never fires; decorating the scopes
- * directly is deterministic and restores the PARENT context on close, so
- * nested outbound spans never leave the request logs without a traceId.</p>
- */
 public class MdcOtelCurrentTraceContext extends OtelCurrentTraceContext {
 
     @Override

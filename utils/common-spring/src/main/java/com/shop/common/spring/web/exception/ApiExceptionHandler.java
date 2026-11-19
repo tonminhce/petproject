@@ -36,14 +36,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Global, cross-service exception translator. Every uncaught exception in any service
- * is converted to the canonical {@link ApiResponse} envelope so clients see one shape.
- * <h3>Why one handler per exception type instead of a generic mapper?</h3>
- * Each branch encodes a deliberate translation: which {@link ErrorCode}, whether to surface
- * the original message (validation) or a canned one (auth), and whether to log at WARN or ERROR.
- * A table-driven mapper hides those decisions and tends to drift.
- */
 @Order(Ordered.LOWEST_PRECEDENCE)
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -117,7 +109,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableMessage(
             HttpMessageNotReadableException exception, WebRequest request) {
-        // Deliberately do NOT surface exception.getMessage(): it can contain the raw
+
         String safeMessage = Messages.get(ErrorCode.BAD_REQUEST.getMessageKey());
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
@@ -217,12 +209,10 @@ public class ApiExceptionHandler {
         );
     }
 
-    // ------------------- Concurrent modification -------------------
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLocking(
             OptimisticLockingFailureException exception, WebRequest request) {
-        // Another transaction updated the same row between our read and write
-        // client-visible conflict, not a server fault — canonical 409, never
+
         String message = Messages.get(ErrorCode.CONFLICT.getMessageKey());
         return buildErrorResponse(
                 HttpStatus.CONFLICT,

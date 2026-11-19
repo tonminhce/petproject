@@ -37,12 +37,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.http.MediaType;
 
-/**
- * Audit spot matrix (spec D6, fix round 2 + R3 veto): the ADMIN-only refund
- * lifecycle endpoint and the SERVICE-gated create mutation exercised through
- * the {@code AuditAspect} — the service-token case proves machine actors
- * resolve to {@code clientId}/{@code azp} with actor type {@code service}.
- */
 @WebMvcTest(value = PaymentController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

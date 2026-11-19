@@ -171,3 +171,9 @@ scratch/
 # working artefacts, not product source. They stay on disk for the audit
 # trail but are not tracked.
 production-audit/
+
+# --- agent scratch ------------------------------------------------------------
+# The local agent workspace holds throwaway scripts, probes and container
+# files. It is not product source: it must never be committed and it must
+# never be counted by the source inventory.
+.pi/

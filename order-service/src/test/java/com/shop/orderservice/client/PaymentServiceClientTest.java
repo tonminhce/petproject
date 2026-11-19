@@ -77,12 +77,6 @@ class PaymentServiceClientTest {
         assertThat(snapshot.get().orderId()).isEqualTo(ORDER_ID);
     }
 
-    /**
-     * The captured payment is looked up through the dedicated endpoint, NOT
-     * through the paged list: a captured payment beyond the first page was
-     * invisible to the paged lookup, the confirm gate failed closed and the
-     * paid order was auto-cancelled.
-     */
     @Test
     void theLookupUsesTheDedicatedCapturedEndpointNotThePagedList() {
         stubToken();
@@ -140,10 +134,6 @@ class PaymentServiceClientTest {
         assertThat(findFailingClosed()).isEmpty();
     }
 
-    /**
-     * The refund path asks the same question before it refunds, so the new
-     * endpoint is its only way to find the captured payment too.
-     */
     @Test
     void theRefundPathFindsTheCapturedPaymentThroughTheSameEndpoint() {
         stubToken();
@@ -169,7 +159,6 @@ class PaymentServiceClientTest {
         server.verify();
     }
 
-    /** Fail-closed contract: ANY client failure must surface as empty, never a raw throw. */
     private Optional<PaymentStatusSnapshot> findFailingClosed() {
         try {
             return client.findCapturedByOrderId(ORDER_ID);

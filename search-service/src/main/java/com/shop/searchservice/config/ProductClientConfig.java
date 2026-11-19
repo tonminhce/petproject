@@ -10,22 +10,6 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
-/**
- * Product-service {@link RestClient} for the reindex source stream (spec D5).
- * 4 — NO {@code @Qualifier} on {@code @Bean} params: Lombok does not copy
- * {@code @Qualifier} from fields to constructor params, so Spring wires by
- * parameter NAME here ({@code productRestClient}) and clients inject with
- * {@code @Qualifier("productRestClient")}.
- * <p>3 — no auth header is set HERE (shared builder). Authorization is
- * attached PER-CALL inside {@code ProductBackofficeClient}: the reindex stream
- * is consumed with the SERVICE client-credentials token from
- * {@code ServiceTokenProvider.getToken()}, and the product endpoint admits
- * hasAnyRole('SERVICE','ADMIN') (verify-purchase pattern).</p>
- * <p>Traceparent propagation is central: the {@code RestClient.Builder}
- * bean is enriched by common-spring's
- * {@code traceparentRestClientBuilderPostProcessor}, so clients are built FROM
- * that bean and no interceptor is hand-added here.</p>
- */
 @Configuration
 public class ProductClientConfig {
 
@@ -50,13 +34,6 @@ public class ProductClientConfig {
             .build();
     }
 
-    /**
-     * Spring Boot 4 does not auto-register {@code RestClient.Builder} as a bean;
-     * ServiceTokenProvider needs it. R1 — prototype scope so every consumer
-     * gets a FRESH builder that the common-spring BPP has already enriched
-     * with the traceparent interceptor; a shared mutable builder would
-     * accumulate per-client config.
-     */
     @Bean
     @Scope("prototype")
     public RestClient.Builder restClientBuilder() {

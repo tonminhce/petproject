@@ -19,17 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Writes one {@link OutboxEvent} row per domain action in the SAME
- * {@code @Transactional} boundary as the entity write. A subsequent relay
- * (see {@code OutboxRelay}) drains the table and publishes to Kafka.
- * <p>The publisher itself is intentionally NOT {@code @Transactional}: the
- * caller's transaction (e.g. {@code ProductServiceImpl.create/update/delete})
- * provides the boundary. If no transaction is open the row would still be
- * committed individually, defeating atomicity — by participating in an
- * existing transaction we guarantee the entity change and the outbox row
- * either both commit or both roll back.</p>
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -72,7 +61,7 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("productId", p.getId());
         payload.put("slug", p.getSlug());
         payload.put("status", p.getStatus() != null ? p.getStatus().name() : null);
-        // null-safe); avgRating stays JSON null for never-rated products.
+
         payload.put("title", p.getTitle());
         payload.put("description", p.getDescription());
         payload.put("brandId", p.getBrand() != null ? p.getBrand().getId() : null);
@@ -80,8 +69,7 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("categoryId", p.getCategory() != null ? p.getCategory().getId() : null);
         payload.put("categoryName", p.getCategory() != null ? p.getCategory().getTitle() : null);
         payload.put("price", p.getPriceUnit());
-        // path when the product references a media (17-name contract stable —
-        // same names, new value source); legacy free-string otherwise.
+
         payload.put("imageUrl", p.getMediaId() != null
             ? ApiPaths.MEDIAS + "/" + p.getMediaId()
             : p.getImageUrl());

@@ -43,15 +43,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-/**
- * Real-HTTP wire proofs over the full stack (real MinIO + Postgres +
- * Liquibase): multipart upload through the actual servlet multipart parser
- * (closes the T2 multipart-location watch-item), 201→200 dedup, the 302
- * presigned redirect whose Location is a VALID presigned URL (followed
- * manually — redirect-following disabled — and fetched from MinIO), HEAD
- * existence, and the delete guard family 404/409 against the real DB.
- * 401/403 matrices are slice-covered in the controller tests.
- */
 @AutoConfigureTestRestTemplate
 class MediaControllerIT extends AbstractMediaIntegrationTest {
 
@@ -73,19 +64,13 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
 
     private int port;
 
-    /**
-     * The reference checker is the product-service boundary; the delete path
-     * consults it (F-063). Unreferenced by default so the delete cases stay
-     * readable - the referenced case stubs its own count.
-     */
     @MockitoBean
     MediaReferenceClient referenceClient;
 
     @BeforeEach
     void wipeAndReadPort() {
         when(referenceClient.referenceCount(any())).thenReturn(OptionalLong.of(0L));
-        // native DELETE — the entity's @SQLRestriction hides soft-deleted rows
-        // from bulk JPQL too, so deleteAllInBatch would leave them behind
+
         jdbcTemplate.update("DELETE FROM media_variants");
         jdbcTemplate.update("DELETE FROM medias");
         while (true) {
@@ -101,7 +86,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         port = rest.getRestTemplate().getUriTemplateHandler().expand("/").getPort();
     }
 
-    /** Token → Jwt stub: realm_access roles drive {@code hasRole('ADMIN')}. */
     @TestConfiguration(proxyBeanMethods = false)
     static class ItJwtConfig {
 
@@ -119,8 +103,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
             };
         }
     }
-
-    // --- upload via REAL multipart HTTP ---
 
     @Test
     @DisplayName("multipart POST → 201 created; same bytes again → 200 duplicate:true (real HTTP)")
@@ -165,8 +147,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
                 "SELECT count(*) FROM medias", Integer.class)).isZero();
     }
 
-    // --- presigned GET: 302 Location that actually WORKS against MinIO ---
-
     @Test
     @DisplayName("GET default (display+auto) → 302 presigned Location; fetching it yields WebP bytes from MinIO")
     void get_answers302WithWorkingPresignedLocation() throws Exception {
@@ -179,7 +159,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(location).contains(mediaId + "/display.webp");
         assertThat(location).contains("X-Amz-Signature");
 
-        // the presigned URL is valid — MinIO serves the object without any auth header
         HttpURLConnection fetch = (HttpURLConnection) URI.create(location).toURL().openConnection();
         fetch.setRequestMethod("GET");
         assertThat(fetch.getResponseCode()).isEqualTo(200);
@@ -218,8 +197,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(JSON.readTree(unknownMedia.body).get("code").asText()).isEqualTo("MED-12004");
     }
 
-    // --- HEAD: existence without presign ---
-
     @Test
     @DisplayName("HEAD existing media → 200 (no redirect, no presign); unknown → 404")
     void head_answers200or404() throws Exception {
@@ -229,8 +206,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(http("HEAD", ApiPaths.MEDIAS + "/00000000-0000-0000-0000-00000000dead", ADMIN_TOKEN).status)
                 .isEqualTo(404);
     }
-
-    // --- soft delete + repeat-delete guard against the real DB ---
 
     @Test
     @DisplayName("DELETE → 200; repeat DELETE → 409 MED-12005; deleted media reads 404 everywhere")
@@ -244,8 +219,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(repeat.status).isEqualTo(409);
         assertThat(JSON.readTree(repeat.body).get("code").asText()).isEqualTo("MED-12005");
 
-        // deleted media is invisible to reads (404) but a FRESH delete of an
-        // unknown id is 404 too — the guard distinguishes via MED codes only
         assertThat(http("GET", ApiPaths.MEDIAS + "/" + mediaId, ADMIN_TOKEN).status).isEqualTo(404);
         assertThat(http("HEAD", ApiPaths.MEDIAS + "/" + mediaId, ADMIN_TOKEN).status).isEqualTo(404);
 
@@ -266,8 +239,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(referenced.status).isEqualTo(409);
         assertThat(JSON.readTree(referenced.body).get("code").asText()).isEqualTo("MED-12007");
 
-        // the delete was REFUSED: the media was not soft-deleted, so once the
-        // product reference is gone the very same media can be deleted
         when(referenceClient.referenceCount(any())).thenReturn(OptionalLong.of(0L));
         Http afterRelease = http("DELETE", ApiPaths.BACKOFFICE_MEDIAS + "/" + mediaId, ADMIN_TOKEN);
         assertThat(afterRelease.status).isEqualTo(200);
@@ -281,8 +252,6 @@ class MediaControllerIT extends AbstractMediaIntegrationTest {
         assertThat(http("DELETE", ApiPaths.BACKOFFICE_MEDIAS + "/" + mediaId, USER_TOKEN).status)
                 .isEqualTo(403);
     }
-
-    // --- helpers ---
 
     private ResponseEntity<String> upload(byte[] bytes, String token) {
         return upload(bytes, token, "photo.jpg");

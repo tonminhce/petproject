@@ -27,8 +27,7 @@ class SearchIndexProvisioningIT extends AbstractSearchIntegrationTest {
 
     @Test
     void provisioningReRunIsIdempotent() throws Exception {
-        // Second run against the LIVE container (T1 review finding 2): every
-        // exists-check must hold — no error, no duplicate index, one alias target.
+
         indexProvisioner.provision();
 
         var alias = client.indices().getAlias(g -> g.name("products"));

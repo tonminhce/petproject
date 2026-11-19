@@ -1,6 +1,7 @@
 package com.shop.orderservice.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.shop.common.core.security.ClientCredentialsGuard;
 import com.shop.orderservice.config.ShopServicesProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -15,16 +16,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Client-credentials token cache for outbound service-to-service calls.
- * <p>Obtains an access token from Keycloak via the {@code client_credentials}
- * grant and caches it in-memory, refreshing 30 seconds before expiry. Used by
- * outbound HTTP clients (e.g. {@code InventoryServiceClient}) to attach a
- * {@code Bearer} token when calling downstream services.</p>
- * <p>Local to order-service deliberately — keycloak {@code token-url /
- * client-id / client-secret} live in {@link ShopServicesProperties.Keycloak}
- * (not the auth-owned {@code shop.keycloak}). See Task 2 P0-7b rationale.</p>
- */
 @Component
 @Slf4j
 public class ServiceTokenProvider {
@@ -49,12 +40,9 @@ public class ServiceTokenProvider {
         this.tokenUrl = kc.tokenUrl();
         this.clientId = kc.clientId();
         this.clientSecret = kc.clientSecret();
+        ClientCredentialsGuard.requireConfigured(this.clientId, this.clientSecret);
     }
 
-    /**
-     * Returns a valid (non-near-expiry) access token, refreshing the cache
-     * synchronously when needed. Thread-safe: only one refresh runs at a time.
-     */
     public String getToken() {
         CachedToken current = cache.get();
         Instant cutoff = Instant.now().plusSeconds(REFRESH_SKEW_SECONDS);

@@ -26,7 +26,7 @@ class PaymentProviderConfigTest {
     void mockIsActiveWhenExplicitlySelectedAndResolvesAsPrimary() {
         contextRunner.withPropertyValues("shop.payment.provider=mock").run(ctx -> {
             assertThat(ctx).hasBean("mockProvider");
-            // Multi-provider: other lightweight providers also load
+
             assertThat(ctx).hasBean("codProvider");
             assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("mock");
         });
@@ -48,7 +48,7 @@ class PaymentProviderConfigTest {
                         "shop.payment.stripe.secret-key=sk_test_123")
                 .run(ctx -> {
                     assertThat(ctx).hasBean("stripeProvider");
-                    // Multi-provider: mock and cod also load alongside stripe
+
                     assertThat(ctx).hasBean("mockProvider");
                     assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("stripe");
                 });
@@ -57,7 +57,6 @@ class PaymentProviderConfigTest {
     @Test
     void stripeFailsFastOnBlankSecretKey() {
 
-        // enforces the same rule. Message must name the env var ops has to set.
         contextRunner.withPropertyValues(
                         "shop.payment.provider=stripe",
                         "shop.payment.stripe.secret-key=")
@@ -77,9 +76,9 @@ class PaymentProviderConfigTest {
                 .withUserConfiguration(PaymentProviderConfig.class, MockProvider.class, ExtraProviderConfig.class)
                 .run(ctx -> {
                     assertThat(ctx).hasNotFailed();
-                    // Primary resolves to mock per property
+
                     assertThat(ctx.getBean(PaymentProvider.class).name()).isEqualTo("mock");
-                    // Factory contains both providers
+
                     PaymentProviderFactory factory = ctx.getBean(PaymentProviderFactory.class);
                     assertThat(factory.getProvider("mock").name()).isEqualTo("mock");
                     assertThat(factory.getProvider("extra").name()).isEqualTo("extra");

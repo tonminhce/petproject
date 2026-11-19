@@ -24,12 +24,6 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * dryRun alias-lookup failure mapping (T5 review F1): a non-404 ES error from
- * the alias lookup surfaces as 503 SRH-12002 — never a raw 500. Uses a mocked
- * client so the failure is instant and deterministic (SearchQueryServiceTest
- * precedent — a real-client failure would wait out connect timeouts).
- */
 class ReindexServiceTest {
 
     private final ElasticsearchClient client = mock(ElasticsearchClient.class);

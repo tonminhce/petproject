@@ -15,11 +15,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Wiring for the D1/D4/D5 edge filter chain. Execution order is pinned by
- * {@link com.shop.gateway.filter.FilterOrder}:
- * IP allowlist -> rate limit -> role gate -> route.
- */
 @Configuration(proxyBeanMethods = false)
 public class EdgeFiltersConfiguration {
 
@@ -40,11 +35,6 @@ public class EdgeFiltersConfiguration {
         return new AdminIpAllowlistFilter(properties, errorResponseWriter, clientIpResolver);
     }
 
-    /**
-     * The edge limiter is backed by Redis (F-034): the budget has to be
-     * shared by every gateway replica, otherwise the effective limit grows
-     * with the replica count.
-     */
     @Bean
     public EdgeRateLimiter edgeRateLimiter(final ReactiveStringRedisTemplate redis,
                                            final EdgeRateLimitProperties properties) {

@@ -12,38 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-/**
- * Media lifecycle consumer (media epic spec D4, group product-service): on
- * {@code MediaDeleted} every live product referencing the media is cleared
- * and re-published as ProductUpdated (→ search doc refresh via the existing
- * chain). Other event types — e.g. the audit-only {@code MediaCreated} — are
- * ack-skipped.
- * <p>Wire contract (R1 + H-1): producers publish JSON-as-String via the fleet
- * {@code KafkaMessagePublisher}, so records arrive SINGLE-ENCODED UTF-8 JSON.
- * The raw value is parsed once and, when textual (a LEGACY double-encoded
- * token — a JSON string token wrapping the event JSON, from pre-R1 producers),
- * unwrapped and parsed again; both shapes bind. Malformed bytes (poison
- * records) are contained at parse time — never a listener throw.</p>
- * <p>Ack-always poison posture (ProductRatingConsumer precedent): the
- * listener method must never throw — a handler failure is logged and
- * swallowed so the offset still advances. No DLT (fleet containment rule).</p>
- * <p>H-3 bounded retry: {@code clearReference} is a DB write, and the fleet
- * posture acks every failure — so a TRANSIENT storage failure would otherwise
- * drop a clear until the next media event. The clear is therefore retried
- * in-consumer up to {@value #MAX_ATTEMPTS} attempts with a short backoff,
- * then logged at ERROR and acked (posture preserved — the H-3 reconciliation
- * sweep is the durable backstop). Parse/unknown-eventType failures stay
- * immediate ack-skip.</p>
- * <p>Retry scope is {@link TransientDataAccessException}, NOT the broader
- * {@code DataAccessException}: TransientDataAccessException IS a
- * DataAccessException subclass (QueryTimeout, deadlock/serialization,
- * optimistic-locking failures — conditions where a retry can succeed), so
- * narrowing is strictly the transient subset while the same import family
- * keeps the fleet vocabulary. Non-transient data failures (constraint
- * violations, bad SQL grammar, data conversion) are permanent for this
- * payload — retrying them only burns the backoff before the same ack, so
- * they go straight to the ERROR+ack containment.</p>
- */
 @Component
 public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
 
@@ -58,11 +26,6 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
         this.objectMapper = objectMapper;
     }
 
-    // groupId is pinned: it is the consumer's identity, and changing it resets
-    // the committed offsets and replays the topic (see BaseKafkaListenerConfig).
-    // It stays the service group id on purpose: splitting it from the rating
-    // consumer would give this listener a NEW group, which starts at the
-    // earliest offset and would replay every media event of the topic.
     @KafkaListener(topics = KafkaTopicContract.MEDIA_LIFECYCLE, groupId = "product-service",
             containerFactory = "mediaListenerFactory")
     public void onMessage(String rawValue, MessageHeaders headers) {
@@ -115,7 +78,7 @@ public class MediaDeletedConsumer extends BaseKafkaConsumer<String, String> {
     private MediaLifecycleEvent decode(String rawValue) throws Exception {
         JsonNode node = objectMapper.readTree(rawValue);
         if (node.isTextual()) {
-            // Legacy double-encoded wire (pre-R1): an old producer
+
             node = objectMapper.readTree(node.textValue());
         }
         return objectMapper.treeToValue(node, MediaLifecycleEvent.class);

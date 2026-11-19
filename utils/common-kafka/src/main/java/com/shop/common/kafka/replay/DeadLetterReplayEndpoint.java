@@ -18,11 +18,6 @@ public class DeadLetterReplayEndpoint {
         this.replayService = replayService;
     }
 
-    /**
-     * Replay the dead-lettered records of a topic.
-     *
-     * @param request the topic and the bounds of the pass
-     */
     @WriteOperation
     public ReplayResponse replay(ReplayRequest request) {
         if (request == null || request.deadLetterTopic() == null || request.deadLetterTopic().isBlank()) {
@@ -39,11 +34,6 @@ public class DeadLetterReplayEndpoint {
                 result.replayedTopics());
     }
 
-    /**
-     * @param deadLetterTopic      the topic the records were dead-lettered onto
-     * @param maxRecords           the hard cap for this pass
-     * @param maxConsecutiveFailures stop after this many consecutive publish failures
-     */
     public record ReplayRequest(String deadLetterTopic, int maxRecords, int maxConsecutiveFailures) {
     }
 

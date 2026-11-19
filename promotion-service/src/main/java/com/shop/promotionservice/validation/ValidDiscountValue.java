@@ -9,12 +9,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Class-level constraint: a PERCENT campaign's {@code discountValue} must be
- * strictly positive and not exceed 100 (0% is a no-op coupon — the inclusive
- * field-level {@code @DecimalMin("0")} lets it through — and a percentage above
- * 100% is nonsensical and would create money).
- */
 @Documented
 @Constraint(validatedBy = ValidDiscountValueValidator.class)
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})

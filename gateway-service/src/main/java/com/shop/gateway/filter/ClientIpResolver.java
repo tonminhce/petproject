@@ -6,7 +6,6 @@ import org.springframework.web.server.ServerWebExchange;
 import java.net.InetSocketAddress;
 import java.util.Optional;
 
-/** Resolves the client address using the configured trusted proxy chain. */
 public final class ClientIpResolver {
     private static final String UNKNOWN_IP = "unknown";
     private final Optional<XForwardedRemoteAddressResolver> forwardedAddressResolver;

@@ -77,10 +77,6 @@ class WebhookEventServiceStripeTest {
                 .build();
     }
 
-    /**
-     * A payment_intent-shaped Stripe event body. {@code amountMinor} is what
-     * Stripe puts on the wire (minor units); the service must convert.
-     */
     private byte[] stripeEventBody(String eventId, String type, long amountMinor, String currency) {
         String body = """
                 {
@@ -106,7 +102,6 @@ class WebhookEventServiceStripeTest {
         return body.getBytes(StandardCharsets.UTF_8);
     }
 
-    /** charge.refunded — object is a Charge (PaymentIntent metadata is copied onto charges). */
     private byte[] chargeRefundedBody(String eventId, long amountMinor, String currency) {
         String body = """
                 {
@@ -130,7 +125,6 @@ class WebhookEventServiceStripeTest {
         return body.getBytes(StandardCharsets.UTF_8);
     }
 
-    /** charge.refunded with the amount_refunded field Stripe actually sends. */
     private byte[] chargeRefundedBody(String eventId, long amountMinor, String currency, long refundedMinor) {
         String body = """
                 {
@@ -159,8 +153,7 @@ class WebhookEventServiceStripeTest {
         long t = Webhook.Util.getTimeNow();
         String signedPayload = t + "." + new String(rawBody, StandardCharsets.UTF_8);
         try {
-            // SDK util arg order: (secret, signedPayload) — mirrors what
-            // Webhook.Signature computes during verification.
+
             String v1 = Webhook.Util.computeHmacSha256(secret, signedPayload);
             return "t=" + t + ",v1=" + v1;
         } catch (java.security.NoSuchAlgorithmException | java.security.InvalidKeyException e) {
@@ -208,8 +201,7 @@ class WebhookEventServiceStripeTest {
 
     @Test
     void validSignature_paymentIntentSucceeded_minorUnitsConvertedBackToMajorForAmountCheck() {
-        // Stripe wires 9800 (minor units); the local row holds 98.00 (major).
-        // No conversion → AMOUNT_MISMATCH would kill every legitimate capture.
+
         byte[] raw = stripeEventBody("evt_ok_scale", "payment_intent.succeeded", 9800, "usd");
         happyPathStubs("evt_ok_scale");
         when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.PENDING)));
@@ -294,13 +286,11 @@ class WebhookEventServiceStripeTest {
 
     @Test
     void jsonCorruptingTampering_failsClosedAsPay5005_never500() {
-        // Webhook.constructEvent raises UNCHECKED Gson errors on unparseable
-        // bodies (C5 Task 5 IT finding). Fail-closed: identical to a bad
-        // signature — 401 PAY-5005, never a 500.
+
         byte[] garbage = "this is not json at all {{{".getBytes(StandardCharsets.UTF_8);
         String header = signedHeader(garbage, STRIPE_WEBHOOK_SECRET);
         byte[] tampered = java.util.Arrays.copyOf(garbage, garbage.length + 1);
-        tampered[tampered.length - 1] = '!'; // signature was over different bytes anyway
+        tampered[tampered.length - 1] = '!';
 
         assertThatThrownBy(() -> service.handleStripe(tampered, header))
                 .isInstanceOf(BusinessException.class)
@@ -354,10 +344,7 @@ class WebhookEventServiceStripeTest {
 
     @Test
     void unmappedStripeType_storedProcessed_noTransitionNoOpsNoise() {
-        // Companion events (charge.succeeded, checkout.session.completed…) are
-        // deliberately out of scope (spec Task 3 maps exactly 3 types) — store
-        // PROCESSED so dedupe swallows Stripe's retries without the retry
-        // scheduler flagging them FAILED_PERMANENT for ops.
+
         byte[] raw = stripeEventBody("evt_unmapped", "charge.succeeded", 9800, "usd");
 
         assertThatCode(() -> service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET)))
@@ -389,7 +376,7 @@ class WebhookEventServiceStripeTest {
 
     @Test
     void vndSucceededEvent_zeroDecimalAmountsMatchDirectly() {
-        // VND is zero-decimal on Stripe (spec §8): 100000 minor == 100000 major.
+
         byte[] raw = stripeEventBody("evt_vnd", "payment_intent.succeeded", 100000, "vnd");
         happyPathStubs("evt_vnd");
         Payment vndPayment = Payment.builder()

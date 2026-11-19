@@ -29,16 +29,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Confirm-orchestration IT (hardening §5/§11, task 13) — exercises the REAL
- * stack: {@code OrderStatusController} → {@code confirmOrder} →
- * {@code OrderCommitCoordinator} → WireMock promotion/inventory, plus the two
- * deferred ledger cases (task 11 concurrency, task 7 tax-failure compensation).
- *
- * <p>Coordinator contract under test: promotion commit FIRST, then inventory
- * commits sorted by productId; failure ⇒ LIFO release-committed compensation;
- * the local row stays PENDING until every remote commit succeeds.</p>
- */
 class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
 
     private static final String COUPON = "SAVE10";
@@ -60,11 +50,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         promoReservationId = UUID.randomUUID();
     }
 
-    // ------------------------------------------------------------------
-    // Fixtures
-    // ------------------------------------------------------------------
-
-    /** PENDING order with 2 items (productA sorts first) + a frozen promotion reservation. */
     private OrderResponse pendingOrderWithPromotion(String createKey) {
         var cart = cartRepository.save(com.shop.orderservice.entity.Cart.builder()
             .userId(userId).subtotal(BigDecimal.ZERO).build());
@@ -93,8 +78,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         Order saved = orderRepository.findById(response.id()).orElseThrow();
         assertThat(saved.getPromotionReservationId()).isEqualTo(promoReservationId);
 
-        // only allowed to proceed when payment-service reports a CAPTURED
-        // payment for this order.
         stubCapturedPayment(response.id());
         return response;
     }
@@ -107,16 +90,13 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
     }
 
     private void stubCapturedPayment(UUID orderId) {
-        // the confirm gate asks the payment service for the captured payment of
-        // the order through the dedicated endpoint - the paged list cannot
-        // answer it (a captured payment beyond the first page is invisible).
+
         paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + orderId + "/captured"))
             .willReturn(okJson("""
                 {"success":true,"code":"OK","data":{"orderId":"%s","status":"CAPTURED","id":"%s"}}
                 """.formatted(orderId, UUID.randomUUID()))));
     }
 
-    /** No captured payment for the order - the confirm gate must fail closed. */
     private void stubNoCapturedPayment(UUID orderId) {
         paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + orderId + "/captured"))
             .willReturn(aResponse()
@@ -141,14 +121,10 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             .willReturn(aResponse().withStatus(200)));
     }
 
-    // ------------------------------------------------------------------
-    // 1. Happy confirm — promotion commits BEFORE inventory, order CONFIRMED
-    // ------------------------------------------------------------------
-
     @Test
     void confirm_withoutCapturedPayment_failsClosedWithOrd4012() throws Exception {
         OrderResponse order = pendingOrderWithPromotion("create-no-payment");
-        // A later-registered matching stub wins in WireMock.
+
         stubNoCapturedPayment(order.id());
         stubCommitsAllOk();
 
@@ -165,9 +141,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         OrderResponse order = pendingOrderWithPromotion("create-happy");
         seedAdminPrincipal(adminId);
 
-        // 400ms delay on the promotion commit RESPONSE ⇒ inventory commit receipts are
-        // guaranteed ≥400ms after the promotion receipt, so cross-server journal
-        // timestamps cannot tie (ms-precision flake guard).
         promotionServer.stubFor(post(urlEqualTo("/api/v1/promotions/reservations/" + promoReservationId + "/commit"))
             .willReturn(aResponse().withStatus(200).withFixedDelay(400)));
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/reservations/" + resA + "/commit"))
@@ -193,43 +166,17 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
                 assertThat(ik.getActor()).isEqualTo(adminId.toString());
             });
 
-        // Ordering: promotion commit strictly before the first inventory commit
         List<ServeEvent> promoCommits = posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit");
         List<ServeEvent> invCommits = posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/commit");
         List<ServeEvent> invCommitsB = posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/commit");
         assertThat(promoCommits).hasSize(1);
         assertThat(invCommits).hasSize(1);
         assertThat(invCommitsB).hasSize(1);
-        // WireMock loggedDate uses millisecond resolution; the promo + inv commits
-        // are issued sequentially in code but can land in the same millisecond on
-        // a fast machine, in either order. The contract being asserted is
-        // adjacency - the promotion commit is issued before the inventory
-        // fan-out starts - not a strict ordering that millisecond resolution
-        // cannot guarantee.
-        // The "promotion commits before inventory" contract is asserted
-        // deterministically by OrderCommitCoordinatorTest with an InOrder
-        // verification. It cannot be asserted here from WireMock timestamps:
-        // the two requests are served by two different servers whose journals
-        // have millisecond resolution, so their logged dates can invert by a
-        // millisecond even though the calls are strictly sequential in the
-        // coordinator. What this integration test does assert is that BOTH
-        // commits actually reached their service.
-        // Every reservation is committed. The ORDER in which the two inventory
-        // commits reach the server is NOT asserted: the coordinator fans them out
-        // in parallel (H15), so their arrival order is a scheduling detail and
-        // their millisecond-resolution timestamps can invert. The business
-        // invariant is that every reservation of the order is committed exactly
-        // once, which the size assertions above cover.
-        // Nothing compensated on the happy path
+
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release-committed")).isEmpty();
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed")).isEmpty();
     }
-
-    // ------------------------------------------------------------------
-    // 2. item-2 commit 500 → LIFO release-committed (item-1 then promotion),
-    //    order stays PENDING, 409 ORD-4011
-    // ------------------------------------------------------------------
 
     @Test
     void commitFailure_compensatesLifo_staysPending_returns409Ord4011() throws Exception {
@@ -242,10 +189,9 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             .willReturn(aResponse().withStatus(200)));
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/reservations/" + resB + "/commit"))
             .willReturn(aResponse().withStatus(500)));
-        // Compensation targets must be stubbed 200 — clients swallow failures, an
-        // unstubbed 404 would hide a broken call while the journal stayed empty.
+
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/reservations/" + resA + "/release-committed"))
-            .willReturn(aResponse().withStatus(200).withFixedDelay(400)));  // delay ⇒ promotion receipt strictly later
+            .willReturn(aResponse().withStatus(200).withFixedDelay(400)));
         promotionServer.stubFor(post(urlEqualTo("/api/v1/promotions/reservations/" + promoReservationId + "/release-committed"))
             .willReturn(aResponse().withStatus(200)));
 
@@ -259,30 +205,20 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         Order saved = orderRepository.findById(order.id()).orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(OrderStatus.PENDING);
         assertThat(saved.getConfirmedAt()).isNull();
-        // abort() removed the in-flight row — the key is free for a retry
+
         assertThat(idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey)).isEmpty();
 
-        // LIFO compensation: item-1 (last committed) FIRST, then promotion — only
-        // release-committed (coordinator), never the saga's plain release.
         List<ServeEvent> invReleases = posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release-committed");
         List<ServeEvent> promoReleases = posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed");
         assertThat(invReleases).hasSize(1);
         assertThat(promoReleases).hasSize(1);
-        // The LIFO order is enforced by a sequential loop, but two sequential
-        // HTTP calls can land in the SAME millisecond, so the comparison must
-        // not be strict: what matters is that the inventory release was not
-        // recorded AFTER the promotion release.
+
         assertThat(invReleases.get(0).getRequest().getLoggedDate())
             .isBeforeOrEqualTo(promoReleases.get(0).getRequest().getLoggedDate());
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release")).isEmpty();
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release")).isEmpty();
     }
-
-    // ------------------------------------------------------------------
-    // 3. Fault injection — commit 500 once then 200; caller retry succeeds
-    //    (no client-level retry: the SECOND confirm call re-runs and passes)
-    // ------------------------------------------------------------------
 
     @Test
     void faultInjection_commit500Then200_callerRetryConfirms() throws Exception {
@@ -306,23 +242,18 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
 
         String confirmUrl = "/api/v1/orders/" + order.id() + "/confirm";
 
-        // First confirm: itemB commit 500 → 409 ORD-4011, order stays PENDING
         mockMvc.perform(MockMvcRequestBuilders.post(confirmUrl))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("ORD-4011"));
         assertThat(orderRepository.findById(order.id()).orElseThrow().getStatus())
             .isEqualTo(OrderStatus.PENDING);
 
-        // Caller retry: itemB commit now 200 (idempotent remote branches absorb the
-        // double-commit of promotion + item-1) → CONFIRMED
         mockMvc.perform(MockMvcRequestBuilders.post(confirmUrl))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
         assertThat(orderRepository.findById(order.id()).orElseThrow().getStatus())
             .isEqualTo(OrderStatus.CONFIRMED);
 
-        // Journal: every commit branch ran twice (aborted run + retry), item-1 and
-        // promotion were release-committed exactly once, item-2 never compensated.
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit")).hasSize(2);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/commit")).hasSize(2);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/commit")).hasSize(2);
@@ -330,11 +261,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed")).hasSize(1);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();
     }
-
-    // ------------------------------------------------------------------
-    // 4. Timeout-then-replay — same Idempotency-Key: aborted run frees the key
-    //    (abort), retry re-orchestrates exactly once more, row ends COMPLETED
-    // ------------------------------------------------------------------
 
     @Test
     void timeoutThenReplay_sameKey_secondRunCompletes_rowCompleted() throws Exception {
@@ -352,18 +278,14 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         String confirmKey = "confirm-replay-key";
         String confirmUrl = "/api/v1/orders/" + order.id() + "/confirm";
 
-        // Run 1: aborts mid-flight (item-2 500) → 409, key freed
         mockMvc.perform(MockMvcRequestBuilders.post(confirmUrl).header("Idempotency-Key", confirmKey))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("ORD-4011"));
         assertThat(idempotencyKeyRepository.findByActorAndKey(adminId.toString(), confirmKey)).isEmpty();
 
-        // "Fix the stubs": a later-registered matching stub wins in WireMock
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/reservations/" + resB + "/commit"))
             .willReturn(aResponse().withStatus(200)));
 
-        // Run 2 with the SAME key: full re-orchestration (previous run was aborted,
-        // not completed) → CONFIRMED, row COMPLETED
         mockMvc.perform(MockMvcRequestBuilders.post(confirmUrl).header("Idempotency-Key", confirmKey))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
@@ -372,25 +294,18 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(row.getResponseStatus()).isEqualTo(200);
         assertThat(row.getResponseBody()).contains(order.id().toString());
 
-        // Coordinator invoked remotely EXACTLY once per run — no extra invocations
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit")).hasSize(2);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/commit")).hasSize(2);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/commit")).hasSize(2);
-        // Compensation only from run 1
+
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release-committed")).hasSize(1);
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed")).hasSize(1);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/release-committed")).isEmpty();
 
-        // Exactly one CONFIRMED lifecycle event — never a double publish
         assertThat(confirmedEventsFor(order.id())).hasSize(1);
         assertThat(orderRepository.findById(order.id()).orElseThrow().getStatus())
             .isEqualTo(OrderStatus.CONFIRMED);
     }
-
-    // ------------------------------------------------------------------
-    // 5. H-6 SERVICE-token shape — a machine caller's idempotency row owns
-    //    the label "service:<azp>", never the service-account UUID sub
-    // ------------------------------------------------------------------
 
     @Test
     void confirm_byServiceToken_idempotencyRowStoresServiceLabelNotSub() throws Exception {
@@ -409,15 +324,10 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         var row = idempotencyKeyRepository
             .findByActorAndKey("service:fulfillment-service", confirmKey).orElseThrow();
         assertThat(row.getResponseStatus()).isEqualTo(200);
-        // the misattribution this task kills: the service-account UUID sub must NOT be the owner
+
         assertThat(row.getActor()).isEqualTo("service:fulfillment-service");
         assertThat(row.getActor()).isNotEqualTo("00000000-0000-0000-0000-00000000f3a1");
     }
-
-    // ------------------------------------------------------------------
-    // 5a. CONCURRENCY (deferred from task 11) — same key, two threads:
-    //     exactly ONE orchestrates, the other is rejected/replayed
-    // ------------------------------------------------------------------
 
     @Test
     void concurrency_sameKey_exactlyOneOrchestrates_noDoublePublish() throws Exception {
@@ -429,18 +339,10 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         Callable<Object> sameConfirm = () -> orderService.confirmOrder(order.id(), adminId.toString(), key);
         List<Object> outcomes = race(sameConfirm, sameConfirm);
 
-        // Exactly one orchestrator: every remote commit branch hit exactly once
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit")).hasSize(1);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/commit")).hasSize(1);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resB + "/commit")).hasSize(1);
 
-        // Winner-vs-loser responses are deliberately NOT counted: a loser whose
-        // begin() lands after the winner's complete() legitimately replays the
-        // cached 200 (spec §3.7) — a CONFIRMED OrderResponse indistinguishable
-        // from the winner's — so a winners==N gate would flake on loaded CI.
-        // The sound teeth for "exactly ONE orchestrates" are the journal ×1
-        // asserts above, plus the single CONFIRMED event below. Expected loser
-        // outcomes: ORD-4010 (began mid-flight) or the cached-replay 200.
         assertThat(outcomes).anySatisfy(o -> {
             if (o instanceof BusinessException be) {
                 assertThat(be.getErrorCode()).isEqualTo("ORD-4010");
@@ -456,20 +358,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             .isEqualTo(OrderStatus.CONFIRMED);
     }
 
-    // ------------------------------------------------------------------
-    // 5b. CONCURRENCY (deferred from task 11) — different keys: both may
-    //     orchestrate remotely (idempotent branches absorb it), but the
-    //     @Version guard lets only ONE flip the local row ⇒ exactly one
-    //     CONFIRMED event; the loser's retry surfaces the clean state guard.
-    //     Winner-vs-loser responses are deliberately NOT counted: a loser
-    //     whose begin() lands after the winner's complete() legitimately
-    //     replays the cached 200 (spec §3.7) — a CONFIRMED OrderResponse
-    //     indistinguishable from the winner's — so a winners==N gate would
-    //     flake on loaded CI. The sound teeth are the exact invariants
-    //     below: no compensation churn, exactly one CONFIRMED event, and a
-    //     journal-unchanged guard on the follow-up confirm.
-    // ------------------------------------------------------------------
-
     @Test
     void concurrency_differentKeys_versionGuardConfirmsExactlyOnce() throws Exception {
         OrderResponse order = pendingOrderWithPromotion("create-race-diff");
@@ -479,14 +367,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         List<Object> outcomes = race(() -> orderService.confirmOrder(order.id(), adminId.toString(), "race-key-1"),
                                      () -> orderService.confirmOrder(order.id(), adminId.toString(), "race-key-2"));
 
-        // Expected loser outcomes (all spec §3.7-safe): ORD-4004 clean-state
-        // guard (loaded after the winner committed), an @Version
-        // OptimisticLockingFailureException at TX commit, or the cached-replay
-        // 200 (begin() after the winner's complete() — a CONFIRMED
-        // OrderResponse, which is exactly why winners must not be counted).
-        // ORD-4010 is impossible here (keys differ ⇒ begin() never sees a
-        // foreign in-flight row); ORD-4011 is impossible (stubCommitsAllOk()
-        // never fails the coordinator).
         assertThat(outcomes).anySatisfy(o -> {
             if (o instanceof BusinessException be) {
                 assertThat(be.getErrorCode()).isEqualTo("ORD-4004");
@@ -497,15 +377,12 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             }
         });
 
-        // No double publish, no compensation churn, order ends CONFIRMED exactly once
         assertThat(confirmedEventsFor(order.id())).hasSize(1);
         assertThat(posted(inventoryServer, "/api/v1/inventory/reservations/" + resA + "/release-committed")).isEmpty();
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed")).isEmpty();
         assertThat(orderRepository.findById(order.id()).orElseThrow().getStatus())
             .isEqualTo(OrderStatus.CONFIRMED);
 
-        // Follow-up confirm: state guard rejects CONFIRMED→CONFIRMED and the
-        // coordinator is NOT re-invoked remotely (journal unchanged).
         long promoCommitsBefore = posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit").size();
         assertThatThrownBy(() -> orderService.confirmOrder(order.id(), adminId.toString(), "race-retry-key"))
             .isInstanceOfSatisfying(BusinessException.class,
@@ -513,11 +390,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/commit"))
             .hasSize((int) promoCommitsBefore);
     }
-
-    // ------------------------------------------------------------------
-    // 6. T7 ledger — coupon-reserve 200 + tax 500: create fails, TX rollback,
-    //    promotion plain RELEASE once, no inventory release-committed
-    // ------------------------------------------------------------------
 
     @Test
     void createSaga_taxFailsAfterPromotionReserve_rollsBack_andReleasesPromotionOnce() {
@@ -533,37 +405,28 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             .willReturn(okJson("""
                 {"success":true,"code":"OK","data":{"reservationId":"%s","discountAmount":20.00,"finalAmount":230.00}}
                 """.formatted(promoReservationId))));
-        // Base @BeforeEach registered a zero-rate tax stub; the LATER failure stub wins.
+
         taxServer.stubFor(post(urlEqualTo("/api/v1/backoffice/tax-rates/calculate"))
             .willReturn(aResponse().withStatus(500)));
 
         assertThatThrownBy(() -> orderService.createOrder(userId,
             new OrderCreateRequest(null, COUPON), "create-taxfail-key"))
             .isInstanceOfSatisfying(BusinessException.class,
-                be -> assertThat(be.getErrorCode()).isEqualTo("ERR-0503"));  // tax 5xx fails closed
+                be -> assertThat(be.getErrorCode()).isEqualTo("ERR-0503"));
 
-        // TX rollback — no order row for this user, idempotency row aborted away
         assertThat(orderRepository.findAll()
             .stream().filter(o -> o.getUserId().equals(userId)).toList()).isEmpty();
         assertThat(idempotencyKeyRepository.findByActorAndKey(userId.toString(), "create-taxfail-key")).isEmpty();
 
-        // Promotion reservation was created remotely, so it must be RELEASED
-        // (best-effort, plain /release — the saga's compensation convention; the
-        // commit-side /release-committed belongs to the CONFIRM coordinator only).
         assertThat(posted(promotionServer, "/api/v1/promotions/" + COUPON + "/reserve")).hasSize(1);
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release")).hasSize(1);
         assertThat(posted(promotionServer, "/api/v1/promotions/reservations/" + promoReservationId + "/release-committed")).isEmpty();
-        // Tax failed BEFORE the reserve loop — inventory untouched entirely
+
         assertThat(inventoryServer.getAllServeEvents()).isEmpty();
     }
 
-    // ------------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------------
-
     private void stubReleaseCommittedSafetyNet() {
-        // Clients swallow release failures — stub 200 so a broken call can't hide
-        // behind a 404 while the journal assertions below stay exact.
+
         inventoryServer.stubFor(post(urlMatching("/api/v1/inventory/reservations/[^/]+/release-committed"))
             .willReturn(aResponse().withStatus(200)));
         promotionServer.stubFor(post(urlMatching("/api/v1/promotions/reservations/[^/]+/release-committed"))
@@ -584,7 +447,6 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
             .toList();
     }
 
-    /** Runs the given confirms on parallel threads released by a shared barrier. */
     private List<Object> race(Callable<Object>... actions) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(actions.length);
         try {
@@ -595,7 +457,7 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
                     try {
                         return action.call();
                     } catch (Exception ex) {
-                        return ex;  // exceptions ARE a result here (loser outcomes)
+                        return ex;
                     }
                 }))
                 .toList();

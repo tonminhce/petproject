@@ -7,14 +7,8 @@ import org.modelmapper.spi.ValueReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// public: the fixture record below must have a public declaring class, or
-// reflection on its accessors throws IllegalAccessException (silently
-// swallowed by the reader). Production DTO records are public top-level types.
 public class RecordValueReaderTest {
 
-    // public: reflection on accessors of non-public record classes throws
-    // IllegalAccessException (silently swallowed by the reader), so fixtures
-    // must be public to mirror production DTOs.
     public record SourceRequest(String title, String slug, Integer quantity) {}
 
     static class TargetEntity {

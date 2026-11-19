@@ -34,11 +34,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Audit spot matrix (spec D6): one mutating backoffice shipment endpoint
- * (the status transition) exercised through the {@code AuditAspect} — the
- * action names the MEANING ({@code shipment.transition}), not the mechanics.
- */
 @WebMvcTest(value = BackofficeShipmentController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc

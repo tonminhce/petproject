@@ -24,10 +24,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
 
-/**
- * {@link ObjectStorageService} backed by the AWS SDK for Java v2 {@link S3Client}.
- * Works against any S3-compatible backend; defaults are tuned for RustFS.
- */
 public class S3ObjectStorageService implements ObjectStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(S3ObjectStorageService.class);
@@ -107,7 +103,7 @@ public class S3ObjectStorageService implements ObjectStorageService {
         return download(defaultBucket(), key);
     }
 
-    private static final int MAX_BUFFER_BYTES = 50 * 1024 * 1024; // 50MB safety limit against OOM
+    private static final int MAX_BUFFER_BYTES = 50 * 1024 * 1024;
 
     @Override
     public StorageObject download(String bucket, String key) {

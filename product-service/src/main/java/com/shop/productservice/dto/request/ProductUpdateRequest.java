@@ -9,16 +9,6 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/**
- * Partial-update payload (ruling H-2 media semantics): every component is
- * optional — a {@code null}/absent field keeps the current value. Clearing the
- * media reference is EXPLICIT ({@code clearMediaId=true}), because a record
- * cannot distinguish "absent" from "null" for {@code mediaId} itself:
- * flag absent/false = reference untouched; flag true + {@code mediaId} null =
- * reference cleared. Flag and {@code mediaId} together are a binding-time 400
- * ({@code product.media.clear.conflict}, i18n EN+VI) — see
- * {@link #isMediaClearConsistent()}.
- */
 public record ProductUpdateRequest(
     @Size(max = 200)             String title,
     @Size(max = 200)             String slug,

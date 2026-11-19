@@ -14,16 +14,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * F-007: the CORS max-age has exactly ONE rule.
- *
- * <p>{@code maxAgeSeconds} carried {@code @Min(0)} AND {@code @Positive} -
- * two contradictory constraints on the same field. {@code @Positive}
- * implies {@code > 0}, so the effective rule was {@code > 0} while the
- * annotation pair read as "zero or more". A max-age of 0 ("do not cache the
- * preflight response") is a legitimate CORS configuration, so the rule is
- * {@code >= 0} and only {@code @Min(0)} expresses it.</p>
- */
 class SecurityPropertiesCorsMaxAgeTest {
 
     private static ValidatorFactory factory;

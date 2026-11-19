@@ -18,17 +18,6 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Transactional outbox row. Written in the SAME transaction as the promotion
- * lifecycle change; a relay drains PENDING rows to Kafka. Hard delete - no
- * audit or soft-delete columns (spec section 5.5). aggregateId = campaignId
- * (used as Kafka partition key).
- * <p>Deliberately does NOT extend the {@code AbstractMappedEntity}-based
- * style of audited entities: outbox rows are bulk-purged by retention, so
- * audit + soft-delete columns would be dead weight, and the relay lifecycle
- * is PENDING → SENT/FAILED — never a soft delete. This divergence from
- * product-service is intentional; do not "align" it.</p>
- */
 @Entity
 @Table(name = "outbox_events")
 @Getter
@@ -73,11 +62,6 @@ public class OutboxEvent {
     @Column(name = "last_error", length = 1000)
     private String lastError;
 
-    /**
-     * When the relay claimed this row (moved it to SENDING). The stale sweep
-     * uses it as the claim lease: a row left in SENDING by a crash is
-     * reclaimed once the lease expires, so the event is not lost.
-     */
     @Column(name = "claimed_at")
     private Instant claimedAt;
 }

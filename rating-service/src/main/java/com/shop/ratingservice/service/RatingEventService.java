@@ -23,13 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Writes the rating lifecycle outbox row (spec D4) in the SAME transaction as
- * the rating write — the relay publishes it later on topic
- * {@code shop.rating.lifecycle.v1}. The payload carries the recomputed
- * {@code avgRating}/{@code ratingCount} snapshot so consumers stay dumb,
- * idempotent copy-readers.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -44,13 +37,6 @@ public class RatingEventService {
     private final ObjectMapper objectMapper;
     private final RatingMetrics ratingMetrics;
 
-    /**
-     * Joins the caller's transaction (REQUIRED): the snapshot aggregate must
-     * see the caller's new/updated row, which is why every caller MUST
-     * {@code saveAndFlush} before calling this (plan nit #1) — a plain
-     * {@code save} leaves the row unflushed and the JPQL aggregate would
-     * compute over stale data.
-     */
     @Transactional(propagation = Propagation.REQUIRED)
     public void record(Rating rating, RatingAction action) {
         Object[] aggregate = ratingRepository.findAggregateByProductId(rating.getProductId()).get(0);
@@ -60,13 +46,11 @@ public class RatingEventService {
         OutboxEvent event = new OutboxEvent();
         event.setEventId(UUID.randomUUID().toString());
         event.setAggregateType(AGGREGATE_TYPE);
-        // Spec D4: Kafka message key = productId (per-product partition
-        // ordering) and the relay keys on aggregateId — so the partition key
+
         event.setAggregateId(rating.getProductId());
         event.setEventType(EVENT_TYPE);
         event.setTopic(TOPIC);
 
-        // Field order + names are contract (spec D4) — LinkedHashMap, 13 fields.
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("eventId", event.getEventId());
         payload.put("eventType", EVENT_TYPE);

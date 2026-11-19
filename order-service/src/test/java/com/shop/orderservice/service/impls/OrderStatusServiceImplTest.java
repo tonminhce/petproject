@@ -11,41 +11,33 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
 
-/**
- * Plain UNIT test (no Spring, no Testcontainers). Pure state-machine
- * logic — table-driven Map + set lookup. No need to spin up a DB container (~30s
- * saved per run).
- */
 class OrderStatusServiceImplTest {
 
     private final OrderStatusService service = new OrderStatusServiceImpl();
 
     static Stream<Arguments> transitions() {
-        // 5 statuses × 5 statuses = 25 cases; ~5 allowed + 20 rejected
+
         return Stream.of(
-            // PENDING: CONFIRMED, CANCELLED
+
             Arguments.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, true),
             Arguments.of(OrderStatus.PENDING, OrderStatus.CANCELLED, true),
             Arguments.of(OrderStatus.PENDING, OrderStatus.SHIPPED, false),
-            // CONFIRMED: SHIPPED, CANCELLED
+
             Arguments.of(OrderStatus.CONFIRMED, OrderStatus.SHIPPED, true),
             Arguments.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED, true),
             Arguments.of(OrderStatus.CONFIRMED, OrderStatus.PENDING, false),
-            // SHIPPED: DELIVERED + CANCELLED — H12 opens the SHIPPED→CANCELLED
-            // transition for admin tooling (carrier-side loss / fraud / recall).
+
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.DELIVERED, true),
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED, true),
             Arguments.of(OrderStatus.SHIPPED, OrderStatus.PENDING, false),
-            // DELIVERED: terminal — including CANCELLED (asserted against the real
-            // state machine because OrderServiceImplTest stubs the service for the
-            // cancel path)
+
             Arguments.of(OrderStatus.DELIVERED, OrderStatus.PENDING, false),
             Arguments.of(OrderStatus.DELIVERED, OrderStatus.SHIPPED, false),
             Arguments.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED, false),
-            // CANCELLED: terminal
+
             Arguments.of(OrderStatus.CANCELLED, OrderStatus.PENDING, false),
             Arguments.of(OrderStatus.CANCELLED, OrderStatus.CONFIRMED, false),
-            // Same-state: rejected (strict)
+
             Arguments.of(OrderStatus.PENDING, OrderStatus.PENDING, false)
         );
     }

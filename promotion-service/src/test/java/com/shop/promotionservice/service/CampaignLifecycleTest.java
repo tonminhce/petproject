@@ -29,13 +29,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/**
- * Task 7 — idempotent commit / release / releaseCommitted state machine
- * (spec §5.3). Unit tests: mocked repos, frozen Clock, real impl. Branch
- * order is load-bearing: COMMITTED→return, terminal-wrong-way→PRO-7010,
- * expired-pending→PRO-7009 (commit only), then the PENDING/COMMITTED
- * transition + timestamp + event with previousStatus.
- */
 @ExtendWith(MockitoExtension.class)
 class CampaignLifecycleTest {
 
@@ -102,8 +95,6 @@ class CampaignLifecycleTest {
             });
     }
 
-    // --- 1. commit(PENDING, not expired) → COMMITTED + committedAt + promotion.committed.v1 ---
-
     @Test
     @DisplayName("commit PENDING (not expired) → COMMITTED + committedAt + committed event")
     void commitPendingTransitionsAndPublishesCommitted() {
@@ -123,8 +114,6 @@ class CampaignLifecycleTest {
         verify(eventPublisher).publishCommitted(any(Campaign.class), same(saved));
     }
 
-    // --- 2. commit(COMMITTED) → no-op (idempotent retry) ---
-
     @Test
     @DisplayName("commit COMMITTED → idempotent no-op (no save, no event)")
     void commitAlreadyCommittedIsIdempotentNoOp() {
@@ -136,8 +125,6 @@ class CampaignLifecycleTest {
         verifyNoInteractions(eventPublisher, campaignRepository);
     }
 
-    // --- 3. commit(RELEASED) / commit(EXPIRED) → PRO-7010 (terminal-wrong-way, fail-closed) ---
-
     @Test
     @DisplayName("commit RELEASED/EXPIRED → PROMOTION_RESERVATION_INVALID_STATE (PRO-7010)")
     void commitTerminalStatesThrowInvalidState() {
@@ -146,7 +133,6 @@ class CampaignLifecycleTest {
         assertBusinessException(() -> service.commit(reservationId),
             "PRO-7010", HttpStatus.CONFLICT);
 
-        // EXPIRED branch
         org.mockito.Mockito.reset(reservationRepository);
         stubFound(reservation(UsageStatus.EXPIRED, NOW.minusSeconds(1)));
 
@@ -157,8 +143,6 @@ class CampaignLifecycleTest {
         verifyNoInteractions(eventPublisher, campaignRepository);
     }
 
-    // --- 4. commit(PENDING expired) → PRO-7009 (boundary: expiresAt == now counts as expired) ---
-
     @Test
     @DisplayName("commit PENDING past expiresAt → PROMOTION_RESERVATION_EXPIRED (PRO-7009)")
     void commitPendingExpiredThrowsReservationExpired() {
@@ -167,7 +151,6 @@ class CampaignLifecycleTest {
         assertBusinessException(() -> service.commit(reservationId),
             "PRO-7009", HttpStatus.CONFLICT);
 
-        // boundary: expiresAt exactly now is NOT after now → expired
         org.mockito.Mockito.reset(reservationRepository);
         stubFound(reservation(UsageStatus.PENDING, NOW));
 
@@ -177,8 +160,6 @@ class CampaignLifecycleTest {
         verify(reservationRepository, never()).save(any(CouponUsageReservation.class));
         verifyNoInteractions(eventPublisher, campaignRepository);
     }
-
-    // --- 5. release(PENDING) → RELEASED + releasedAt + event previousStatus="PENDING" ---
 
     @Test
     @DisplayName("release PENDING → RELEASED + releasedAt + released event previousStatus=PENDING")
@@ -199,8 +180,6 @@ class CampaignLifecycleTest {
         verify(eventPublisher).publishReleased(any(Campaign.class), same(saved), eq("PENDING"));
     }
 
-    // --- 6. release(RELEASED) / release(EXPIRED) → no-op (idempotent retry) ---
-
     @Test
     @DisplayName("release RELEASED/EXPIRED → idempotent no-op (no save, no event)")
     void releaseTerminalStatesAreIdempotentNoOp() {
@@ -217,8 +196,6 @@ class CampaignLifecycleTest {
         verifyNoInteractions(eventPublisher, campaignRepository);
     }
 
-    // --- 7. release(COMMITTED) → PRO-7010 ---
-
     @Test
     @DisplayName("release COMMITTED → PROMOTION_RESERVATION_INVALID_STATE (PRO-7010)")
     void releaseCommittedReservationThrowsInvalidState() {
@@ -230,8 +207,6 @@ class CampaignLifecycleTest {
         verify(reservationRepository, never()).save(any(CouponUsageReservation.class));
         verifyNoInteractions(eventPublisher, campaignRepository);
     }
-
-    // --- 8. releaseCommitted(COMMITTED) → RELEASED + event previousStatus="COMMITTED" ---
 
     @Test
     @DisplayName("releaseCommitted COMMITTED → RELEASED + released event previousStatus=COMMITTED")
@@ -251,8 +226,6 @@ class CampaignLifecycleTest {
         assertThat(saved.getReleasedAt()).isEqualTo(NOW);
         verify(eventPublisher).publishReleased(any(Campaign.class), same(saved), eq("COMMITTED"));
     }
-
-    // --- 9. releaseCommitted(RELEASED/EXPIRED) → no-op; releaseCommitted(PENDING) → PRO-7010 ---
 
     @Test
     @DisplayName("releaseCommitted RELEASED/EXPIRED → no-op; PENDING → PRO-7010")
@@ -276,8 +249,6 @@ class CampaignLifecycleTest {
         verifyNoInteractions(eventPublisher, campaignRepository);
     }
 
-    // --- 10. getState(unknown) → PRO-7008 ---
-
     @Test
     @DisplayName("getState unknown id → PROMOTION_RESERVATION_NOT_FOUND (PRO-7008)")
     void getStateUnknownThrowsReservationNotFound() {
@@ -287,8 +258,6 @@ class CampaignLifecycleTest {
             "PRO-7008", HttpStatus.NOT_FOUND);
         verifyNoInteractions(campaignRepository, eventPublisher);
     }
-
-    // --- extras beyond the brief's matrix ---
 
     @Test
     @DisplayName("commit unknown id → PROMOTION_RESERVATION_NOT_FOUND (PRO-7008, shared guard)")

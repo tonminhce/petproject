@@ -25,13 +25,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Wires the {@link AuditAspect} through a real AspectJ proxy and asserts the
- * binding end-to-end at the unit level: actor from the security context,
- * resourceId from path variables, outcome from the joinpoint result, ids from
- * MDC — and, critically, PII (email/name/username/title) never appearing in
- * the serialized event.
- */
 class AuditAspectTest {
 
     private final RecordingWriter writer = new RecordingWriter();
@@ -160,7 +153,6 @@ class AuditAspectTest {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
     }
 
-    /** Public target so the AspectJ proxy can subclass it. */
     public static class Target {
 
         @Audited(action = "update", resourceType = "product")

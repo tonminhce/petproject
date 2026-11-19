@@ -25,15 +25,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Media lifecycle consumer (media epic spec D4): the LEGACY pre-R1 wire
- * DOUBLE-ENCODES the payload string (an old JsonKafkaSerializer producer
- * serializes the JSON String into a JSON string token) — the consumer must
- * unwrap before binding. H-1 tolerance pin: a real double-encoded record must
- * reach the handler as a typed event; unknown eventTypes are ack-skipped;
- * handler failures never escape the listener (ack-always containment,
- * rating-consumer precedent).
- */
 @ExtendWith(MockitoExtension.class)
 @EmbeddedKafka(partitions = 1, topics = "media.lifecycle.v1")
 @DirtiesContext
@@ -118,8 +109,6 @@ class MediaDeletedConsumerTest {
             .doesNotThrowAnyException();
     }
 
-    // --- H-3: bounded in-consumer retry for TRANSIENT failures ---
-
     private void transientFailureThenSuccess(int failingAttempts) throws Exception {
         var stub = when(productMediaService.clearReference(MEDIA_ID))
             .thenThrow(new QueryTimeoutException("db blip"));
@@ -181,7 +170,6 @@ class MediaDeletedConsumerTest {
         assertThatCode(() -> consumer.onMessage(payload("MediaDeleted"), new MessageHeaders(new HashMap<>())))
             .doesNotThrowAnyException();
 
-        // permanent failure for this payload — retrying cannot succeed, ack immediately
         verify(productMediaService, times(1)).clearReference(MEDIA_ID);
     }
 

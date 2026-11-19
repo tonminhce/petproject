@@ -24,6 +24,21 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/orderservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: ORDER_SERVICE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: ORDER_SERVICE_CLIENT_SECRET
           resources:
             requests:
               cpu: 500m
@@ -83,6 +98,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/paymentservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -142,6 +167,21 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/productservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PRODUCT_SERVICE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: PRODUCT_SERVICE_CLIENT_SECRET
           resources:
             requests:
               cpu: 500m
@@ -201,6 +241,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/inventoryservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -260,6 +310,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/shippingservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -319,6 +379,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/authservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -378,6 +448,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/notificationservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -437,6 +517,11 @@ spec:
               value: prod
             - name: SPRING_ELASTICSEARCH_URIS
               value: "http://elasticsearch.shop-system.svc.cluster.local:9200"
+            - name: SEARCH_SERVICE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: SEARCH_SERVICE_CLIENT_SECRET
           resources:
             requests:
               cpu: 500m
@@ -496,6 +581,21 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/ratingservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: RATING_SERVICE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: RATING_SERVICE_CLIENT_SECRET
           resources:
             requests:
               cpu: 500m
@@ -555,6 +655,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/promotionservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -614,6 +724,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/taxservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -673,6 +793,21 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/mediaservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
+            - name: MEDIA_SERVICE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: MEDIA_SERVICE_CLIENT_SECRET
           resources:
             requests:
               cpu: 500m
@@ -732,6 +867,16 @@ spec:
               value: prod
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres.shop-system.svc.cluster.local:5432/favouriteservice"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: shop-system-secrets
+                  key: POSTGRES_PASSWORD
           resources:
             requests:
               cpu: 500m
@@ -764,4 +909,3 @@ spec:
   ports:
     - port: 8081
       targetPort: 8081
-

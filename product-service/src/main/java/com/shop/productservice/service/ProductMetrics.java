@@ -13,26 +13,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Micrometer-backed observability surface for product-service.
- * <p>Meters:
- * <ul>
- *   <li>{@code product.cache.hit} / {@code product.cache.miss} — gauges backed
- *       by Spring's {@link CacheStatistics} (one gauge per cache, tagged
- *       {@code cache=product|productBySlug}). Counters-as-gauges (rather than
- *       per-call increments) avoid the AOP dance around Spring's
- *       {@code CacheInterceptor} and stay accurate under load.</li>
- *   <li>{@code product.events.published} — counter tagged with {@code event_type};
- *       incremented from the {@code Transactional*EventPublisher.save()} methods.
- *       The name is service-scoped, not aggregate-scoped: category/brand
- *       lifecycle events flow through the same counter with their own
- *       {@code event_type} tag ({@code CategoryCreated}, {@code BrandDeleted}, …).</li>
- *   <li>{@code product.outbox.relay.duration} — timer; recorded from
- *       {@code OutboxRelay} in a {@code finally} block.</li>
- *   <li>{@code product.outbox.pending.count} — gauge backed by an
- *       {@link AtomicInteger} updated by {@code OutboxRelay}.</li>
- * </ul>
- */
 @Component
 public class ProductMetrics {
 
@@ -46,7 +26,6 @@ public class ProductMetrics {
         Gauge.builder("product.outbox.pending.count", pendingOutboxCount, AtomicInteger::get)
             .register(registry);
 
-        // `RedisCache` does — cast and skip if the cast fails (e.g. test context
         for (String cacheName : List.of("product", "productBySlug", "category", "brand")) {
             if (!(cacheManager.getCache(cacheName) instanceof RedisCache redisCache)) {
                 continue;

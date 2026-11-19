@@ -35,12 +35,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * The relay publishes the claimed batch in one fan-out and marks every row
- * by its OWN outcome. A record that failed blocks the records behind it of
- * the same product only, so a consumer never sees a later stock event of a
- * product before an earlier one - the ordering the consumers depend on.
- */
 @ExtendWith(MockitoExtension.class)
 class OrderOutboxRelayTest {
 
@@ -60,7 +54,7 @@ class OrderOutboxRelayTest {
         PlatformTransactionManager txManager = new PlatformTransactionManager() {
             @Override
             public TransactionStatus getTransaction(TransactionDefinition definition) {
-                // No-op - TransactionTemplate needs a non-null status to commit.
+
                 return new SimpleTransactionStatus(true);
             }
             @Override
@@ -90,9 +84,7 @@ class OrderOutboxRelayTest {
     }
 
     private void stubClaim(OutboxEvent... events) {
-        // One stubbing with a sequence: consecutive when(...).thenReturn(...)
-        // calls on the same mock would REPLACE each other, leaving only the
-        // last one (the empty claim) in place.
+
         Optional<OutboxEvent>[] sequence = new Optional[events.length + 1];
         for (int i = 0; i < events.length; i++) {
             sequence[i] = Optional.of(events[i]);
@@ -184,10 +176,7 @@ class OrderOutboxRelayTest {
 
     @Test
     void claimedRowsArePublishedInAscendingIdOrder() {
-        // The database does not return the rows in id order, so the relay has
-        // to sort them: a scrambled batch must come out ascending, because
-        // ascending id IS the production order (the claim takes the lowest
-        // pending id first).
+
         OutboxEvent first = pendingEvent(1L, productId, 0);
         OutboxEvent second = pendingEvent(2L, productId, 0);
         OutboxEvent third = pendingEvent(3L, otherProductId, 0);

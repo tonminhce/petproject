@@ -32,10 +32,6 @@ class PricingServiceImplParallelFetchTest {
 
     private static final long PER_FETCH_LATENCY_MS = 200L;
 
-    // The fan-out executor pool size = 2*N_cpu threads, so on a 2-core CI box
-    // 5 tasks schedule as ~3 batches (~600ms worst case). The test asserts
-    // wall < 80% of the serial-equivalent (5 * 200 = 1000ms) — a serial loop
-    // regression trips the budget immediately.
     private static final long SUM_BUDGET_MS = 5L * PER_FETCH_LATENCY_MS * 80 / 100;
 
     @Test
@@ -63,14 +59,11 @@ class PricingServiceImplParallelFetchTest {
         PricingBreakdown breakdown = service.calculate(UUID.randomUUID(), UUID.randomUUID(), items, null);
         long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
 
-        // Wall budget: <80% of the serial-equivalent sum. A serial loop regression
-        // would push this past 1000ms and trip the budget immediately.
         assertThat(elapsedMs)
             .as("parallel fan-out must run wall well below sum (budget %d ms, was %d ms)",
                 SUM_BUDGET_MS, elapsedMs)
             .isLessThan(SUM_BUDGET_MS);
 
-        // All five snapshots resolved.
         assertThat(breakdown.snapshots()).hasSize(5);
     }
 }

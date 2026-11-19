@@ -134,14 +134,14 @@ class BoundedAsyncAuditEventWriterTest {
         long sinkFailureWarns = appender.list.stream()
                 .filter(e -> e.getFormattedMessage().contains("sink write failed"))
                 .count();
-        assertThat(sinkFailureWarns).isEqualTo(1); // throttled: NOT one WARN per event
+        assertThat(sinkFailureWarns).isEqualTo(1);
     }
 
     @Test
     void transientFileFailureRecoversForSubsequentEvents() throws Exception {
         Path blocker = tempDir.resolve("blocker");
         Path file = blocker.resolve("audit.log");
-        Files.createFile(blocker); // parent exists as a FILE -> first open must fail
+        Files.createFile(blocker);
 
         AuditEvent second = eventWithOutcome(AuditEvent.OUTCOME_FAIL);
         String secondJson = second.toJson();
@@ -150,7 +150,6 @@ class BoundedAsyncAuditEventWriterTest {
             writer.write(EVENT);
             awaitUntil(() -> writer.failedEvents() == 1);
 
-            // transient condition cleared: blocker file becomes a directory
             Files.delete(blocker);
             Files.createDirectory(blocker);
 
@@ -159,7 +158,6 @@ class BoundedAsyncAuditEventWriterTest {
             writer.close();
         }
 
-        // sink was NOT permanently disabled: the second event is recorded
         assertThat(Files.readAllLines(file)).containsExactly(secondJson);
         assertThat(writer.failedEvents()).isEqualTo(1);
     }
@@ -182,7 +180,7 @@ class BoundedAsyncAuditEventWriterTest {
         Path unwritable = blocker.resolve("audit.log");
         BoundedAsyncAuditEventWriter writer = BoundedAsyncAuditEventWriter.create(unwritable.toString());
         try {
-            Files.createFile(blocker); // parent exists as a FILE -> open must fail
+            Files.createFile(blocker);
 
             assertThatNoException().isThrownBy(() -> {
                 writer.write(EVENT);

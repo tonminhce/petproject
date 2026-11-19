@@ -8,7 +8,6 @@ public interface BaseMapper<M,V> {
     M toModel(V vm);
     V toVm(M toModel);
 
-    // null fields skip to support PATCH
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void partialUpdate(@MappingTarget M model, V vm);
 }

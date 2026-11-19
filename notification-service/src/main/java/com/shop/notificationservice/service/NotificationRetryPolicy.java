@@ -5,18 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
-/**
- * Bounded retry arithmetic for the delivery state machine: exponential
- * backoff ({@code base × 5^(attempt-1)}, the fleet payment/shipping
- * convention) and the hard attempt cap. {@code max-attempts} and the backoff
- * base are configurable via {@code shop.notification.retry.*}; the cap is
- * what turns the retry queue into "bounded attempts → FAILED_PERMANENT".
- */
 @Component
 public class NotificationRetryPolicy {
 
     private static final int BACKOFF_MULTIPLIER = 5;
-    /** Caps the exponent so legacy rows with huge retry_count cannot overflow. */
+
     private static final int MAX_BACKOFF_EXPONENT = 10;
 
     private final int maxAttempts;
@@ -29,7 +22,6 @@ public class NotificationRetryPolicy {
         this.baseBackoffSeconds = baseBackoffSeconds;
     }
 
-    /** True once {@code retryCount} consumed the whole attempt budget. */
     public boolean isExhausted(int retryCount) {
         return retryCount >= maxAttempts;
     }

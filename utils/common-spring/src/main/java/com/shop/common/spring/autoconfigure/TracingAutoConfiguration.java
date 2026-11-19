@@ -36,14 +36,6 @@ public class TracingAutoConfiguration {
         return new TraceparentInterceptor();
     }
 
-    /**
-     * RestClient tracing wiring, guarded so services without
-     * {@code spring-boot-restclient} on their runtime classpath (e.g. services
-     * that never build a {@code RestClient}) still boot — the outer class must
-     * not carry any method signature referencing this module's types, or
-     * {@code OnBeanCondition} introspection fails with
-     * {@code NoClassDefFoundError} at startup.
-     */
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(RestClientCustomizer.class)
     static class RestClientTracingConfiguration {
@@ -54,26 +46,12 @@ public class TracingAutoConfiguration {
             return builder -> builder.requestInterceptor(interceptor);
         }
 
-        /**
-         * Enriches every {@link RestClient.Builder} bean with the traceparent
-         * interceptor (idempotent). Declared {@code static} so this configuration
-         * class is never instantiated early; the interceptor is resolved lazily
-         * from the {@link BeanFactory} on first builder post-processing instead of
-         * being injected here — a BeanPostProcessor must not trigger premature
-         * instantiation of regular beans at registration time.
-         */
         @Bean
         @ConditionalOnMissingBean(name = "traceparentRestClientBuilderPostProcessor")
         public static BeanPostProcessor traceparentRestClientBuilderPostProcessor() {
             return new TraceparentRestClientBuilderPostProcessor();
         }
 
-        /**
-         * Lazy holder + {@code instanceof} idempotency gate. The interceptor is a
-         * singleton bean, so builders manually wired by services and builders
-         * enriched here share the same instance — and any other instance of the
-         * class still satisfies the duplicate check.
-         */
         static final class TraceparentRestClientBuilderPostProcessor implements BeanPostProcessor, BeanFactoryAware {
 
             private static final Logger LOG =
@@ -103,7 +81,6 @@ public class TracingAutoConfiguration {
                 return bean;
             }
 
-            /** Resolved once and cached; a miss is retried on the next builder (never cached). */
             private TraceparentInterceptor interceptor() {
                 TraceparentInterceptor current = interceptor.get();
                 if (current != null) {

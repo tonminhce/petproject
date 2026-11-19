@@ -17,23 +17,6 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Backoffice edge role gate. Requests under one of the 9 backoffice
- * prefixes must carry an ADMIN realm role, mirroring the fleet's
- * {@code JwtRolesConverter} (realm_access.roles) with a resource_access
- * fallback for client-scoped roles. Anything else on those prefixes gets the
- * fleet 403 envelope.
- * <p>Prefix matching runs on the percent-DECODED path; a percent-encoded
- * request whose decoded form falls under a backoffice prefix is rejected with
- * the fleet 400 envelope before the role check (raw &ne; decoded — see
- * {@link RequestPathGuard}; route predicates would decode it onto the gated
- * route, so raw-only matching would let one encoded character skip the
- * gate). Matrix-variable paths (N-R1) are rejected outright, before the
- * prefix decision — the {@code ;} suffix defeats the prefix match itself
- * while route predicates still land the request on the gated route.</p>
- * <p>401 (no/invalid token) is already handled upstream by the resource-server
- * security chain — this filter only ever sees authenticated requests.</p>
- */
 public final class AdminRoleGateFilter implements GlobalFilter, Ordered {
 
     static final String ADMIN_ROLE = "ADMIN";
@@ -94,17 +77,10 @@ public final class AdminRoleGateFilter implements GlobalFilter, Ordered {
         return hasRealmAdminRole(jwt) || hasResourceAdminRole(jwt);
     }
 
-    /**
-     * Mirrors {@code JwtRolesConverter}: Keycloak realm roles live under
-     * {@code realm_access.roles} and the fleet checks the raw role name.
-     */
     private boolean hasRealmAdminRole(final Jwt jwt) {
         return rolesContain(jwt.getClaimAsMap(REALM_ACCESS));
     }
 
-    /**
-     * Fallback: client roles under {@code resource_access.<client>.roles}.
-     */
     private boolean hasResourceAdminRole(final Jwt jwt) {
         final Map<String, Object> resourceAccess = jwt.getClaimAsMap(RESOURCE_ACCESS);
         if (resourceAccess == null) {

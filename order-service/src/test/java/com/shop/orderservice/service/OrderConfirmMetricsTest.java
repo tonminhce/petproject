@@ -9,10 +9,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * OrderConfirmMetrics unit tests — hardening §8 metric names/tags.
- * Wrapper over MeterRegistry: phase timers, attempts counter, stuck gauge, reconciliation-mixed counter.
- */
 class OrderConfirmMetricsTest {
 
     private SimpleMeterRegistry registry;
@@ -24,18 +20,16 @@ class OrderConfirmMetricsTest {
         metrics = new OrderConfirmMetrics(registry);
     }
 
-    /** §8: order.confirm.duration{phase=commit_promotion|commit_inventory|publish|rollback}. */
     @Test
     void timer_registersPhaseTimerWithExactNameAndTag_andDedupesPerPhase() {
         Timer first = metrics.timer("commit_promotion");
 
         assertThat(registry.get("order.confirm.duration").tag("phase", "commit_promotion").timer())
             .isSameAs(first);
-        assertThat(metrics.timer("commit_promotion")).isSameAs(first);          // dedupe
-        assertThat(metrics.timer("commit_inventory")).isNotSameAs(first);       // distinct phase → distinct timer
+        assertThat(metrics.timer("commit_promotion")).isSameAs(first);
+        assertThat(metrics.timer("commit_inventory")).isNotSameAs(first);
     }
 
-    /** §8: order.confirm.attempts counter. */
     @Test
     void attempt_incrementsAttemptsCounter() {
         metrics.attempt();
@@ -44,7 +38,6 @@ class OrderConfirmMetricsTest {
         assertThat(registry.counter("order.confirm.attempts").count()).isEqualTo(2.0);
     }
 
-    /** §8: order.commit.stuck gauge — supplier-backed, re-read on each scrape. */
     @Test
     void stuckGauge_registersGaugeBackedBySupplier() {
         AtomicLong stuck = new AtomicLong(3);
@@ -56,7 +49,6 @@ class OrderConfirmMetricsTest {
         assertThat(registry.get("order.commit.stuck").gauge().value()).isEqualTo(7.0);
     }
 
-    /** §8: order.reconciliation.mixed counter. */
     @Test
     void reconciliationMixed_incrementsCounter() {
         metrics.reconciliationMixed();

@@ -46,9 +46,9 @@ public class ProductMediaSweepJob {
                 checked++;
                 metrics.recordSweepChecked();
                 if (mediaHeadClient.exists(mediaId)) {
-                    continue;   // 200 — reference live, keep
+                    continue;
                 }
-                // 404 — clear via the consumer's own path (transactional clear
+
                 long removed = productMediaService.clearReference(mediaId);
                 cleared += removed;
                 metrics.recordSweepCleared(removed);
@@ -56,8 +56,7 @@ public class ProductMediaSweepJob {
             log.info("Media sweep cycle complete: checked {} product(s), cleared {} reference(s), limit {}",
                 checked, cleared, properties.limit());
         } catch (Exception ex) {
-            // Media outage (fail-closed client → MED-12006) or any unexpected
-            // failure: skip the ENTIRE cycle — never clear behind doubt.
+
             log.warn("Media sweep cycle SKIPPED after checked={} cleared={} — media integrity " +
                 "verification failed, remaining rows left untouched (fail-safe, will retry next cycle)",
                 checked, cleared, ex);

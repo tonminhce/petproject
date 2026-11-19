@@ -74,8 +74,6 @@ class StripeProviderTest {
     @Test
     void captureRequiresActionIntent_isAccepted_scaCompletesViaWebhook() throws Exception {
 
-        // client_secret is consumed by Stripe.js on the client (Phase 9), the
-        // lifecycle completes when payment_intent.succeeded arrives by webhook.
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class))).thenReturn(intent("pi_2", "requires_action"));
 
@@ -104,15 +102,13 @@ class StripeProviderTest {
         assertThat(params.getValue().getCurrency()).isEqualTo("usd");
         assertThat(params.getValue().getMetadata()).containsEntry("payment_id", PAYMENT_ID.toString());
         assertThat(opts.getValue().getIdempotencyKey()).isEqualTo(IDEMPOTENCY_KEY);
-        // Spec D1 — the stripe-java SDK itself pins the Stripe-Version header
-        // (Stripe.API_VERSION is final in 24.x); no per-request override exists.
+
         assertThat(opts.getValue().getApiKey()).isEqualTo("sk_test_123");
     }
 
     @Test
     void captureVndAmountIsZeroDecimal_noConversion() throws Exception {
-        // spec §8 — V1 currency VND is zero-decimal on Stripe: 100000 VND must
-        // be sent as 100000 minor units, not 10000000.
+
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class))).thenReturn(intent("pi_vnd", "requires_confirmation"));
 
@@ -127,7 +123,6 @@ class StripeProviderTest {
     @Test
     void captureIdempotencyConflict_returnsCachedIntentAsAccepted() throws Exception {
 
-        // the adapter treats it as success, never an error.
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
                 any(RequestOptions.class)))
                 .thenThrow(new IdempotencyException("idempotency conflict", "req_1", "idempotency_error", 400));

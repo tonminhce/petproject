@@ -58,10 +58,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OrderServiceImpl implements OrderService {
 
-    /** Wrong phone numbers tolerated before the phone-only tracking path locks. */
     static final int MAX_TRACK_PHONE_FAILURES = 5;
 
-    /** How long the phone-only tracking path stays locked for one order. */
     static final Duration TRACK_PHONE_LOCK = Duration.ofMinutes(15);
 
     private final OrderRepository orderRepository;
@@ -80,7 +78,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderReturnService orderReturnService;
     private final CompensationFailureService compensationFailureService;
     private final TransactionTemplate transactionTemplate;
-    /** The cancel path commits its local change in its OWN short transaction. */
+
     private final TransactionTemplate cancelTransactionTemplate;
 
     @Autowired
@@ -148,27 +146,20 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
-        // 1. Idempotency pre-insert (in-flight row commits in its own TX, before the saga).
+
         String requestHash = hash(request);
         Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId.toString(), requestHash);
-        if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the saga
+        if (cached.isPresent()) return cached.get();
 
-        // 2. H13 — delegate to OrderCreateSaga (sibling bean) so the @Transactional
         try {
             return orderCreateSaga.execute(userId, request, idempotencyKey);
         } catch (RuntimeException ex) {
-            // Single catch covers validation, pricing, reserve, etc. begin() throws are
-            // deliberately OUTSIDE this try: a collision 409 must never delete another
-            // execution's in-flight row; the requestHash guard in abort() is the second lock.
+
             idempotencyService.abort(idempotencyKey, userId.toString(), requestHash);
             throw ex;
         }
     }
 
-    /**
-     * SHA-256 hex (64 chars — fits {@code idempotency_keys.request_hash VARCHAR(64)}).
-     * Shared by create (JSON-serialized body) and confirm (orderId string).
-     */
     private String sha256Hex(String raw) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
@@ -178,7 +169,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /** SHA-256 hex of JSON-serialized request body (Jackson deterministic for record field order). */
     private String hash(OrderCreateRequest request) {
         try {
             return sha256Hex(new String(objectMapper.writeValueAsBytes(request), StandardCharsets.UTF_8));
@@ -187,17 +177,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /**
-     * Cancels an order.
-     *
-     * <p>Deliberately NOT transactional: the remote releases below are HTTP
-     * calls with a 3-5 second timeout each, and holding a pooled database
-     * connection across them exhausts the pool (Hikari max 20) when a
-     * downstream service degrades - a burst of cancellations then stalls
-     * unrelated requests of the same service. The local state change and its
-     * outbox event are committed in a short transaction afterwards, the same
-     * shape the confirm path uses.</p>
-     */
     @Override
     public OrderResponse cancelOrder(UUID orderId, UUID userId, boolean isAdmin) {
         Order order = orderRepository.findById(orderId)
@@ -212,14 +191,13 @@ public class OrderServiceImpl implements OrderService {
         }
         orderStatusService.validateTransition(order.getStatus(), OrderStatus.CANCELLED);
 
-        // releaseCommitted endpoint (restocking) on admin cancel. Without it, admin
         if (order.getStatus() == OrderStatus.PENDING) {
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
                 .filter(Objects::nonNull)
                 .toList();
             releaseAllReservationsById(orderId, reservationIds);
-            // failures; never mask the cancel flow).
+
             if (order.getPromotionReservationId() != null) {
                 try {
                     promotionClient.release(order.getPromotionReservationId());
@@ -230,7 +208,6 @@ public class OrderServiceImpl implements OrderService {
             }
         } else if (order.getStatus() == OrderStatus.CONFIRMED && isAdmin) {
 
-            // release() path would reject the row because it's COMMITTED, not
             List<UUID> reservationIds = orderItemRepository.findByOrderId(orderId).stream()
                 .map(OrderItem::getReservationId)
                 .filter(Objects::nonNull)
@@ -250,13 +227,7 @@ public class OrderServiceImpl implements OrderService {
                 log.error("Failed to trigger payment refund during admin cancel for order {}", orderId, rex);
             }
         } else if (order.getStatus() == OrderStatus.SHIPPED && isAdmin) {
-            // H12: the admin cancels a post-shipment order (carrier loss, fraud,
-            // recall). The goods are in transit, so the stock must NOT be moved
-            // back here - that would put goods back on sale that may still be
-            // delivered - and the refund must NOT be fired here either: the
-            // return flow drives it, exactly once, through the admin review,
-            // which is also where the refund failure is handled. Without this
-            // the cancellation was a bare status change: no record, no refund.
+
             orderReturnService.recordShippedCancellation(orderId, userId);
         }
 
@@ -265,22 +236,16 @@ public class OrderServiceImpl implements OrderService {
                 : applyCancelledStatus(order);
     }
 
-    /** The local part of the cancel: the status change and its outbox event, atomically. */
     private OrderResponse applyCancelledStatus(Order order) {
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancelledAt(Instant.now());
-        // NO markDeleted — cancelled orders must remain in user/admin history (rev 2 fix)
+
         orderRepository.save(order);
 
         orderEventPublisher.publishCancelled(order);
         return orderMapper.toResponse(order, orderItemRepository.findByOrderId(order.getId()));
     }
 
-    /**
-     * A failed release during a cancel must leave a durable trace: the order
-     * row is cancelled right after, so a swallowed failure would orphan the
-     * hold with nothing pointing at it.
-     */
     private void recordCompensationFailure(UUID orderId, UUID reservationId, Exception ex) {
         if (compensationFailureService == null) {
             return;
@@ -300,7 +265,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /** H9 — admin cancel CONFIRMED path; restocks via releaseCommitted. */
     private void releaseAllCommittedReservationsById(UUID orderId, List<UUID> reservationIds) {
         for (UUID id : reservationIds) {
             try {
@@ -312,7 +276,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    // SERVICE → service:<azp>) — stored verbatim on idempotency rows.
     @Override
     public OrderResponse confirmOrder(UUID orderId, String actor, String idempotencyKey) {
         confirmMetrics.attempt();
@@ -320,7 +283,7 @@ public class OrderServiceImpl implements OrderService {
         Optional<OrderResponse> cached = (idempotencyKey == null)
             ? Optional.empty()
             : idempotencyService.begin(idempotencyKey, actor, requestHash);
-        if (cached.isPresent()) return cached.get();  // REPLAY — do not re-run the commit
+        if (cached.isPresent()) return cached.get();
 
         try {
             Order order = orderRepository.findById(orderId)
@@ -328,9 +291,6 @@ public class OrderServiceImpl implements OrderService {
             orderStatusService.validateTransition(order.getStatus(), OrderStatus.CONFIRMED);
             List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
 
-            // payment-service flag on, confirm requires a CAPTURED payment. ANY
-            // client failure also yields ORD-4012 (fail-closed — a payment we
-            // could not verify must block confirm, and the raw exception never
             if (paymentClient.isEnabled()) {
                 PaymentStatusSnapshot payment;
                 try {
@@ -344,7 +304,6 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // must not leak as 503). validateTransition's guard sits BEFORE this inner
             try {
                 commitCoordinator.commitForConfirm(order, items);
             } catch (RuntimeException commitEx) {
@@ -366,15 +325,14 @@ public class OrderServiceImpl implements OrderService {
                 idempotencyService.complete(idempotencyKey, actor, response, 200);
             return response;
         } catch (RuntimeException ex) {
-            // begin() throws are deliberately OUTSIDE this try: a collision 409 must
-            // never delete another execution's in-flight row (same as createOrder).
+
             if (idempotencyKey != null)
                 idempotencyService.abort(idempotencyKey, actor, requestHash);
-            if (!(ex instanceof BusinessException)) {  // infra failure → 409 ORD-4011, order stays PENDING
+            if (!(ex instanceof BusinessException)) {
                 log.error("Confirm commit failed for order {}", orderId, ex);
                 throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
             }
-            throw ex;  // state-machine guard etc. rethrown unchanged
+            throw ex;
         }
     }
 
@@ -408,8 +366,8 @@ public class OrderServiceImpl implements OrderService {
             case CONFIRMED -> order.setConfirmedAt(now);
             case SHIPPED -> order.setShippedAt(now);
             case DELIVERED -> order.setDeliveredAt(now);
-            case CANCELLED -> order.setCancelledAt(now);  // not used here — cancelOrder uses different flow
-            default -> { /* unreachable */ }
+            case CANCELLED -> order.setCancelledAt(now);
+            default -> { }
         }
         order.setStatus(to);
         orderRepository.save(order);
@@ -423,7 +381,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(orderId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
         if (!isAdmin && !order.getUserId().equals(userId)) {
-            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);  // hide existence
+            throw BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId);
         }
         return orderMapper.toResponse(order, orderItemRepository.findByOrderId(orderId));
     }
@@ -451,10 +409,6 @@ public class OrderServiceImpl implements OrderService {
             .map(orderMapper::toItemResponse);
     }
 
-    /**
-     * Batch-loads order items in ONE query for the whole page (review finding M4 —
-     * the per-row {@code findByOrderId} was an N+1: a page of 20 issued 21 queries).
-     */
     private Page<OrderResponse> withItems(Page<Order> page) {
         List<UUID> orderIds = page.map(Order::getId).getContent();
         Map<UUID, List<OrderItem>> itemsByOrder = orderIds.isEmpty()
@@ -465,19 +419,6 @@ public class OrderServiceImpl implements OrderService {
             order, itemsByOrder.getOrDefault(order.getId(), List.of())));
     }
 
-    /**
-     * The legacy phone-number path of the tracking endpoint.
-     *
-     * <p>The phone number is a weak factor: it is low entropy, it is often
-     * known to third parties, and the order id - the other half of the old
-     * pair - leaks routinely through links, screenshots, support tickets and
-     * logs. An unauthenticated caller who knows an order id could grind
-     * through candidate numbers. So the path is kept for the callers that
-     * have no tracking token yet, but every wrong number is counted and the
-     * order is locked out of the phone path for a cool-down window after a
-     * few failures. A wrong token and a wrong phone produce the SAME error,
-     * so the endpoint is not an oracle for "which half was wrong".</p>
-     */
     private void authorizeByPhone(Order order, String phoneNumber) {
         Instant now = Instant.now();
         if (order.getTrackLockedUntil() != null && order.getTrackLockedUntil().isAfter(now)) {
@@ -508,11 +449,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    // noRollbackFor: the abuse brake of the phone path is written by the very
-    // rejection it records, and BusinessException is a RuntimeException - the
-    // default rollback would discard the failure counter and the lockout with
-    // the error, so the brake would never engage. Every other runtime failure
-    // still rolls back.
+
     @Transactional(noRollbackFor = BusinessException.class)
     public OrderTrackingResponse trackOrder(UUID orderId, String trackingToken, String phoneNumber) {
         if (orderId == null) {
@@ -528,8 +465,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_NOT_FOUND, orderId));
 
         if (tokenGiven) {
-            // The tracking code is a random capability the customer holds, so
-            // it authorises the lookup on its own - no phone number needed.
+
             if (order.getTrackingCode() == null
                     || !order.getTrackingCode().toString().equalsIgnoreCase(trackingToken.trim())) {
                 log.warn("Rejected tracking lookup for order {}: wrong tracking token", orderId);

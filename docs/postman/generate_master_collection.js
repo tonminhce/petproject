@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
-// Load existing files
 const flowCol = JSON.parse(fs.readFileSync(path.join(__dirname, "petproject-e2e-business-flow.postman_collection.json")));
 let compCol;
 try {
@@ -12,7 +11,6 @@ try {
   compCol = JSON.parse(fs.readFileSync(path.join(__dirname, "petproject-comprehensive.postman_collection.json")));
 }
 
-// Define collection variables
 const collectionVariables = [
   { key: "gatewayUrl", value: "http://localhost:8080" },
   { key: "authUrl", value: "http://localhost:8088" },
@@ -63,7 +61,6 @@ const collectionVariables = [
   { key: "badSlug", value: "" }
 ];
 
-// Helper to create request
 function makeReq(name, method, url, headers = {}, body = null, preScript = null, testScript = null) {
   const reqObj = {
     name,
@@ -105,12 +102,8 @@ function makeReq(name, method, url, headers = {}, body = null, preScript = null,
   return reqObj;
 }
 
-// ============================================================================
-// BUILD PART 1: E2E BUSINESS LIFECYCLE (CHOREOGRAPHED HAPPY PATH)
-// ============================================================================
 const e2eFolders = [];
 
-// 1. Authentication
 e2eFolders.push({
   name: "1. Authentication",
   item: [
@@ -159,7 +152,6 @@ try {
   ]
 });
 
-// 2. Catalog & Products
 e2eFolders.push({
   name: "2. Catalog & Products",
   item: [
@@ -229,7 +221,6 @@ pm.expect(res.data.id).to.eql(pm.collectionVariables.get("productId"));`
   ]
 });
 
-// 3. Inventory
 e2eFolders.push({
   name: "3. Inventory",
   item: [
@@ -256,7 +247,6 @@ pm.expect(res.data.availableQuantity).to.be.above(0);`
   ]
 });
 
-// 4. Cart & Order
 e2eFolders.push({
   name: "4. Cart & Order",
   item: [
@@ -311,7 +301,6 @@ pm.expect(res.data.id).to.eql(pm.collectionVariables.get("orderId"));`
   ]
 });
 
-// 5. Public Guest Tracking (NEW Sprint 4)
 e2eFolders.push({
   name: "5. Public Guest Order Tracking",
   item: [
@@ -330,7 +319,6 @@ pm.expect(res.data.status).to.be.a("string");`
   ]
 });
 
-// 6. Payment (Multi-Gateway)
 e2eFolders.push({
   name: "6. Payment (Multi-Gateway)",
   item: [
@@ -408,7 +396,6 @@ pm.collectionVariables.set("paymentId", res.data.id);`
   ]
 });
 
-// 7. Order Fulfillment Lifecycle
 e2eFolders.push({
   name: "7. Order Fulfillment Lifecycle",
   item: [
@@ -448,7 +435,6 @@ pm.expect(res.data.status).to.eql("DELIVERED");`
   ]
 });
 
-// 8. Rating & Favourite
 e2eFolders.push({
   name: "8. Rating & Favourite",
   item: [
@@ -495,7 +481,6 @@ e2eFolders.push({
   ]
 });
 
-// 9. RMA Order Returns (NEW Sprint 4)
 e2eFolders.push({
   name: "9. RMA Order Returns Workflow",
   item: [
@@ -552,7 +537,6 @@ pm.expect(res.data.status).to.be.oneOf(["APPROVED", "REFUNDED"]);`
   ]
 });
 
-// 10. Search & Notification
 e2eFolders.push({
   name: "10. Search & Notification",
   item: [
@@ -586,7 +570,6 @@ e2eFolders.push({
   ]
 });
 
-// 11. Tax & Promotion
 e2eFolders.push({
   name: "11. Tax & Promotion",
   item: [
@@ -630,7 +613,6 @@ pm.collectionVariables.set("taxClassId", res.data.id);`
   ]
 });
 
-// 12. Gateway E2E Routing
 e2eFolders.push({
   name: "12. Gateway E2E Routing",
   item: [
@@ -673,12 +655,8 @@ e2eFolders.push({
   ]
 });
 
-// ============================================================================
-// BUILD PART 2: COMPREHENSIVE EDGE CASES & NEGATIVE TESTING
-// ============================================================================
 const edgeFolders = [];
 
-// 13. Edge Cases - Auth & Security
 edgeFolders.push({
   name: "13. Edge Cases - Auth & Security",
   item: [
@@ -725,7 +703,6 @@ pm.expect(res.code).to.eql("ERR-0403");`
   ]
 });
 
-// 14. Edge Cases - Catalog & Products
 edgeFolders.push({
   name: "14. Edge Cases - Catalog & Products",
   item: [
@@ -777,7 +754,6 @@ pm.expect(res.code).to.eql("ERR-0422-V");`
   ]
 });
 
-// 15. Edge Cases - Cart & Inventory (2PC / Over-reservation)
 edgeFolders.push({
   name: "15. Edge Cases - Cart & Inventory",
   item: [
@@ -826,7 +802,6 @@ pm.expect(res.code).to.eql("INV-3002");`
   ]
 });
 
-// 16. Edge Cases - Payment & Webhooks
 edgeFolders.push({
   name: "16. Edge Cases - Payment & Webhooks",
   item: [
@@ -865,7 +840,6 @@ pm.expect(res.code).to.be.oneOf(["PAY-5005", "WEBHOOK_SIGNATURE_INVALID"]);`
   ]
 });
 
-// 17. Edge Cases - Shipping Carrier Webhooks
 edgeFolders.push({
   name: "17. Edge Cases - Shipping Carrier Webhooks",
   item: [
@@ -892,7 +866,6 @@ pm.expect(res.code).to.be.oneOf(["SHP-10004", "SHIPPING_WEBHOOK_SIGNATURE_INVALI
   ]
 });
 
-// 18. Edge Cases - RMA Returns & Guest Tracking
 edgeFolders.push({
   name: "18. Edge Cases - RMA Returns & Guest Tracking",
   item: [
@@ -934,7 +907,6 @@ pm.expect(res.message).to.include("order.return");`
   ]
 });
 
-// 19. Edge Cases - Rating & Order & Media
 edgeFolders.push({
   name: "19. Edge Cases - Rating & Order & Media",
   item: [
@@ -997,17 +969,11 @@ pm.expect(res.code).to.eql("ERR-0400");`
   ]
 });
 
-// ============================================================================
-// BUILD PART 3: MICROSERVICES API CATALOG (SERVICE-BY-SERVICE REFERENCE)
-// ============================================================================
-// We extract the service-by-service catalog items from compCol
 const catalogFolders = compCol.item.filter(f => f.name.endsWith("service"));
 
-// Update service catalog endpoints with Authorization and valid headers
 catalogFolders.forEach(serviceFolder => {
   if (serviceFolder.item) {
     serviceFolder.item.forEach(req => {
-      // Ensure Bearer auth header exists
       const isBackoffice = req.name.includes("backoffice") || req.name.includes("Admin");
       const tokenVar = isBackoffice ? "{{adminToken}}" : "{{userToken}}";
       if (!req.request.header) req.request.header = [];
@@ -1019,7 +985,6 @@ catalogFolders.forEach(serviceFolder => {
   }
 });
 
-// Add new endpoints to order-service in catalog:
 const orderServiceFolder = catalogFolders.find(f => f.name === "order service");
 if (orderServiceFolder) {
   orderServiceFolder.item.push(
@@ -1071,7 +1036,6 @@ if (orderServiceFolder) {
   );
 }
 
-// Add gateway service to catalogFolders
 catalogFolders.push({
   name: "gateway service",
   item: [
@@ -1123,7 +1087,6 @@ catalogFolders.push({
   ]
 });
 
-// Combine all into the Master Collection
 const masterCollection = {
   info: {
     _postman_id: "7d0d0be4-d7b1-4bb2-b5e0-master-petproject",
@@ -1155,12 +1118,10 @@ const masterCollection = {
   ]
 };
 
-// Write out to petproject-comprehensive.postman_collection.json
 const targetPath = path.join(__dirname, "petproject-comprehensive.postman_collection.json");
 fs.writeFileSync(targetPath, JSON.stringify(masterCollection, null, 2), "utf8");
 console.log("Successfully generated Master Collection at:", targetPath);
 
-// Also sync petproject-e2e-business-flow.postman_collection.json so E2E-only runners stay in sync!
 const flowSyncCollection = {
   info: {
     _postman_id: "c48f8a91-b13a-4cd5-839e-flow-petproject",

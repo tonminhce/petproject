@@ -21,11 +21,6 @@ import org.hibernate.annotations.SQLRestriction;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Rows are never soft-deleted by notification code, but the entity carries
- * the fleet-wide {@code @SQLRestriction("deleted = false")} guard (Payment,
- * Order, Media, …) so any query against this table auto-filters tombstones.
- */
 @Entity
 @Table(name = "notifications")
 @SQLRestriction("deleted = false")
@@ -57,8 +52,6 @@ public class Notification extends AbstractMappedEntity {
     @Builder.Default
     private NotificationStatus status = NotificationStatus.PENDING;
 
-    // SENDING heartbeat: the retry scheduler reclaims rows whose heartbeat has
-    // elapsed (crash mid-send), so a delivery attempt is never silently lost.
     @Column(name = "retry_count", nullable = false)
     @Builder.Default
     private int retryCount = 0;
