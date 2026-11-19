@@ -1,6 +1,6 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-18T14:29:39Z",
+    "evaluated_at": "2026-11-19T06:47:48Z",
     "failing_gates": [
       "GATE-1",
       "GATE-3",
@@ -11,6 +11,7 @@
       "GATE-8",
       "GATE-9",
       "GATE-10",
+      "GATE-12",
       "GATE-13",
       "GATE-14",
       "GATE-15",
@@ -18,14 +19,13 @@
       "GATE-17",
       "GATE-18",
       "GATE-19",
-      "GATE-21",
       "GATE-22"
     ],
     "gate_results": {
       "GATE-1": false,
       "GATE-10": false,
       "GATE-11": true,
-      "GATE-12": true,
+      "GATE-12": false,
       "GATE-13": false,
       "GATE-14": false,
       "GATE-15": false,
@@ -35,7 +35,7 @@
       "GATE-19": false,
       "GATE-2": true,
       "GATE-20": true,
-      "GATE-21": false,
+      "GATE-21": true,
       "GATE-22": false,
       "GATE-3": false,
       "GATE-4": false,
@@ -50,10 +50,10 @@
   },
   "gates": [
     {
-      "detail": "1255 files not yet fully reviewed",
+      "detail": "188 files not yet fully reviewed",
       "evidence": [
-        "control/source-manifest.json: 1255 files",
-        "control/source-coverage.json: 0 reviewed"
+        "control/source-manifest.json: 1298 files",
+        "control/source-coverage.json: 1110 reviewed"
       ],
       "id": "GATE-1",
       "name": "SOURCE_COVERAGE",
@@ -72,7 +72,7 @@
     {
       "detail": "pattern refactorings incomplete",
       "evidence": [
-        "2/21 pattern tasks verified"
+        "18/37 pattern tasks verified"
       ],
       "id": "GATE-3",
       "name": "DESIGN_PATTERNS",
@@ -144,7 +144,7 @@
     {
       "detail": "no prohibited first-party comments remain",
       "evidence": [
-        "1138 files scanned",
+        "1136 files scanned",
         "0 prohibited comments"
       ],
       "id": "GATE-11",
@@ -152,13 +152,13 @@
       "status": "PASS"
     },
     {
-      "detail": "full reactor build succeeded",
+      "detail": "reactor build not yet verified",
       "evidence": [
         "build exit=0"
       ],
       "id": "GATE-12",
       "name": "BUILD",
-      "status": "PASS"
+      "status": "PENDING"
     },
     {
       "detail": "",
@@ -226,7 +226,7 @@
     {
       "detail": "verified batches have traceable commits",
       "evidence": [
-        "21 delivery records",
+        "36 delivery records",
         "unpushed: 1"
       ],
       "id": "GATE-20",
@@ -234,24 +234,24 @@
       "status": "PASS"
     },
     {
-      "detail": "release blockers remain",
+      "detail": "no unresolved release blocker",
       "evidence": [
-        "2 unresolved CRITICAL tasks"
+        "0 unresolved CRITICAL tasks"
       ],
       "id": "GATE-21",
       "name": "ZERO_RELEASE_BLOCKERS",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
       "detail": "evidence does not match current revision",
       "evidence": [
-        "manifest revision=a2b6e6fc336f42f851166cab0cf0d1bba42db12f",
-        "HEAD=66d91881817d3ce06ccbde2efc657a9cee08d7ce"
+        "manifest revision=5d16040510b1551dcecf01c8558774215b0d9d8f",
+        "HEAD=c3738544408c0dd3f15cfe85da85ca01313b6757"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
       "status": "PENDING"
     }
   ],
-  "generated_at": "2026-11-18T14:29:39Z"
+  "generated_at": "2026-11-19T06:47:48Z"
 }

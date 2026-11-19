@@ -373,7 +373,29 @@
       "remote_branch": "",
       "state": "COMMITTED",
       "timestamp": "2026-11-19T06:38:42Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "d088f2afe7186219a1e2a71c64355465c6576a4e",
+      "detail": "chore(audit): record the verification state, the task ledger and the audit reports",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:47:26Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "c3738544408c0dd3f15cfe85da85ca01313b6757",
+      "detail": "docs(audit): record the tool-call hygiene rules for the agents in this repository",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:47:31Z"
     }
   ],
-  "updated_at": "2026-11-19T06:38:42Z"
+  "updated_at": "2026-11-19T06:47:31Z"
 }

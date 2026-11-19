@@ -200,24 +200,24 @@
     "AGENTS.md": {
       "category": "DOCUMENTATION",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "3cd89d41fbfebb420f1bf29371ba9ce256b6946ff73b9d6645065894b46d03f2",
+      "current_sha256": "2016ae680b1930c2e75662c80447167773c885837f7ff085fa015d69af44182a",
       "language": "markdown",
-      "lines": 44,
+      "lines": 54,
       "module": "AGENTS.md",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "3cd89d41fbfebb420f1bf29371ba9ce256b6946ff73b9d6645065894b46d03f2"
+      "sha256_at_discovery": "2016ae680b1930c2e75662c80447167773c885837f7ff085fa015d69af44182a"
     },
     "CLAUDE.md": {
       "category": "DOCUMENTATION",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "27584a25834665054628e50f362f4e36f87fd9bccee543d0675a278fd496c4d6",
+      "current_sha256": "f45f225f4b117c8de6abf99487986e914b0ccfd879afb6ae075579e249b79708",
       "language": "markdown",
-      "lines": 65,
+      "lines": 71,
       "module": "CLAUDE.md",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "27584a25834665054628e50f362f4e36f87fd9bccee543d0675a278fd496c4d6"
+      "sha256_at_discovery": "f45f225f4b117c8de6abf99487986e914b0ccfd879afb6ae075579e249b79708"
     },
     "FINDING.md": {
       "category": "DOCUMENTATION",
@@ -1845,9 +1845,9 @@
     "docker-compose.yml": {
       "category": "INFRASTRUCTURE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "3bbbb1abaaf7cab17b6c81b7cbcf9e9b8d2a783785936615e15253b897df3af6",
+      "current_sha256": "8fe439b0cf653eb1d87d2e3e13766f7a2dad159e565f9f60651a0a98d72ea8c5",
       "language": "yaml",
-      "lines": 624,
+      "lines": 625,
       "lines_reviewed": 613,
       "module": "docker-compose.yml",
       "reviewed_by": "orchestrator",
@@ -1871,7 +1871,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "3bbbb1abaaf7cab17b6c81b7cbcf9e9b8d2a783785936615e15253b897df3af6",
+      "sha256_at_discovery": "8fe439b0cf653eb1d87d2e3e13766f7a2dad159e565f9f60651a0a98d72ea8c5",
       "updated_at": "2026-11-18T16:10:08Z"
     },
     "docker/keycloak/import/ecommerce-realm.json": {
@@ -2006,13 +2006,13 @@
     "docs/PATTERNS.md": {
       "category": "DOCUMENTATION",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "81f343d001ccf959394f849e7193067bab4c84819c51a83ff51fe6d4bd520c73",
+      "current_sha256": "bd11ababe9af3b0dade8b38462899485efc0927126f9a5e2da129dff25556d1b",
       "language": "markdown",
-      "lines": 439,
+      "lines": 476,
       "module": "docs",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "81f343d001ccf959394f849e7193067bab4c84819c51a83ff51fe6d4bd520c73"
+      "sha256_at_discovery": "bd11ababe9af3b0dade8b38462899485efc0927126f9a5e2da129dff25556d1b"
     },
     "docs/PRODUCTION-READINESS.md": {
       "category": "DOCUMENTATION",
@@ -6746,9 +6746,9 @@
       "baseline_blob": "23af8fce5a1d5b10dea9375b028a1d4211996304",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "27e7a90b85851aa79d90971a999da68936b88a4f0a15fcd0321023b0e6030358",
+      "current_sha256": "9bc680d4a7e0c7815a4ac92285da7c22c36cd11b6e65558ff786ad3c38d82ce2",
       "language": "java",
-      "lines": 108,
+      "lines": 26,
       "lines_reviewed": 125,
       "module": "media-service",
       "reviewed_by": "audit-agent",
@@ -6759,7 +6759,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "27e7a90b85851aa79d90971a999da68936b88a4f0a15fcd0321023b0e6030358",
+      "sha256_at_discovery": "9bc680d4a7e0c7815a4ac92285da7c22c36cd11b6e65558ff786ad3c38d82ce2",
       "source_report": "catalog-search-media.md",
       "updated_at": "2026-11-18T16:07:20Z"
     },
@@ -10214,9 +10214,9 @@
       "baseline_blob": "0f1c0b4ca471d20e6f3a87095bc174038e774232",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "fa8d55488e9ae294489a2cc3517e1e5ffae104e909ffced5e107170cfd7b4f0b",
+      "current_sha256": "cae7c7a17014948f6a2d3e3df1e3ff95cab3b629c6570c8dfb400a7d9d5518c6",
       "language": "java",
-      "lines": 108,
+      "lines": 26,
       "lines_reviewed": 122,
       "module": "order-service",
       "reviewed_by": "audit-agent",
@@ -10227,7 +10227,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "fa8d55488e9ae294489a2cc3517e1e5ffae104e909ffced5e107170cfd7b4f0b",
+      "sha256_at_discovery": "cae7c7a17014948f6a2d3e3df1e3ff95cab3b629c6570c8dfb400a7d9d5518c6",
       "source_report": "order-inventory.md",
       "updated_at": "2026-11-18T16:07:34Z"
     },
@@ -15128,9 +15128,9 @@
       "baseline_blob": "a7bfd4c82c6a0929a1e9aa311f6f3ba7f4180da2",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "dcb451add0cb7cb7ee788e168ab758a930cf510954f7e1eef9cf295d6c4fc245",
+      "current_sha256": "533d9bebf925de85bf7c8f738294382490e111862533dd47734503f2f059433c",
       "language": "java",
-      "lines": 110,
+      "lines": 26,
       "lines_reviewed": 125,
       "module": "product-service",
       "reviewed_by": "audit-agent",
@@ -15141,7 +15141,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "dcb451add0cb7cb7ee788e168ab758a930cf510954f7e1eef9cf295d6c4fc245",
+      "sha256_at_discovery": "533d9bebf925de85bf7c8f738294382490e111862533dd47734503f2f059433c",
       "source_report": "security.md",
       "updated_at": "2026-11-18T16:07:41Z"
     },
@@ -16622,13 +16622,13 @@
     "production-audit/harness/e2e/environment.py": {
       "category": "HARNESS",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "3a2ab62a51eb1931710eed3d520d71b61e148487dbbbaec4deb214fa2a55131d",
+      "current_sha256": "eb3ec766f3537ac42d78ba03db8b5367b87fcac86684f47673fe916ff26f2a39",
       "language": "python",
-      "lines": 259,
+      "lines": 350,
       "module": "production-audit",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "3a2ab62a51eb1931710eed3d520d71b61e148487dbbbaec4deb214fa2a55131d"
+      "sha256_at_discovery": "eb3ec766f3537ac42d78ba03db8b5367b87fcac86684f47673fe916ff26f2a39"
     },
     "production-audit/harness/e2e/scenarios.py": {
       "category": "HARNESS",
@@ -16655,13 +16655,13 @@
     "production-audit/harness/git_delivery/delivery.py": {
       "category": "HARNESS",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "7f5c03c063175e7aad75290327285ae3aaca47ebce5438548efb318eb3271db9",
+      "current_sha256": "00d64d468dca7b6178719d9e45cbc0cf49edee9c2da534d4717d8fc1d17743a6",
       "language": "python",
-      "lines": 399,
+      "lines": 429,
       "module": "production-audit",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "7f5c03c063175e7aad75290327285ae3aaca47ebce5438548efb318eb3271db9"
+      "sha256_at_discovery": "00d64d468dca7b6178719d9e45cbc0cf49edee9c2da534d4717d8fc1d17743a6"
     },
     "production-audit/harness/inventory/__init__.py": {
       "category": "HARNESS",
@@ -16864,13 +16864,13 @@
     "production-audit/harness/source_policy/equivalence.py": {
       "category": "HARNESS",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "8e496aef0b4427cf9fed8e72f8f5fc83e624fc409ae8477269aefee3059a9fd3",
+      "current_sha256": "af7f9f02ce45219094d46a0ee901a4b5c6451f3b2268767c009e90947f5b71e5",
       "language": "python",
-      "lines": 128,
+      "lines": 132,
       "module": "production-audit",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "8e496aef0b4427cf9fed8e72f8f5fc83e624fc409ae8477269aefee3059a9fd3"
+      "sha256_at_discovery": "af7f9f02ce45219094d46a0ee901a4b5c6451f3b2268767c009e90947f5b71e5"
     },
     "production-audit/harness/source_policy/generic_lexer.py": {
       "category": "HARNESS",
@@ -16974,13 +16974,13 @@
     "production-audit/harness/tests/test_git_delivery.py": {
       "category": "HARNESS",
       "coverage_state": "DISCOVERED",
-      "current_sha256": "c37093268cd42725ecf72d09fefa9f1049836230520befddfdcce8149b1f61fd",
+      "current_sha256": "985303ec12f5dba47c7784eda849cff48a9e1fdc993df92e188acb5867834e6e",
       "language": "python",
-      "lines": 170,
+      "lines": 206,
       "module": "production-audit",
       "reviewed_ranges": [],
       "reviews": [],
-      "sha256_at_discovery": "c37093268cd42725ecf72d09fefa9f1049836230520befddfdcce8149b1f61fd"
+      "sha256_at_discovery": "985303ec12f5dba47c7784eda849cff48a9e1fdc993df92e188acb5867834e6e"
     },
     "production-audit/harness/tests/test_inventory.py": {
       "category": "HARNESS",
@@ -18610,9 +18610,9 @@
       "baseline_blob": "4487c9ce254a205d92fcd4a64ec94db00b1781f5",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "7d38986370f93a210bc779c3a62b118c6d54060d1620e736b4482186529eafda",
+      "current_sha256": "bf611af73879918cdc97aeeeefa6ed4a006f4c81287fb8449f6419d4c76ec465",
       "language": "java",
-      "lines": 54,
+      "lines": 66,
       "lines_reviewed": 73,
       "module": "rating-service",
       "reviewed_by": "audit-agent",
@@ -18623,7 +18623,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "7d38986370f93a210bc779c3a62b118c6d54060d1620e736b4482186529eafda",
+      "sha256_at_discovery": "bf611af73879918cdc97aeeeefa6ed4a006f4c81287fb8449f6419d4c76ec465",
       "source_report": "security.md",
       "updated_at": "2026-11-18T16:07:41Z"
     },
@@ -18778,9 +18778,9 @@
       "baseline_blob": "68bb6c1f196c83c8e4c6cabab1fe049efa55cdd0",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "b961c5847812f6bf213c2909cbd1c237146a0cd54d73e17e232eb0c3207c1140",
+      "current_sha256": "bd3e52f827c1d78f435db447d3a03082dce2a76695cda8dfdfec7d6231f939a7",
       "language": "java",
-      "lines": 108,
+      "lines": 26,
       "lines_reviewed": 123,
       "module": "rating-service",
       "reviewed_by": "audit-agent",
@@ -18791,7 +18791,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "b961c5847812f6bf213c2909cbd1c237146a0cd54d73e17e232eb0c3207c1140",
+      "sha256_at_discovery": "bd3e52f827c1d78f435db447d3a03082dce2a76695cda8dfdfec7d6231f939a7",
       "source_report": "catalog-search-media.md",
       "updated_at": "2026-11-18T16:07:26Z"
     },
@@ -19051,9 +19051,9 @@
       "baseline_blob": "a4a67b1c8635c7be3a34ce140a400a87827d7945",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "c9dbec36a9b3de94a16dec202d9cb7a21733b597b45c8e49e142c17e6778c5c1",
+      "current_sha256": "4dc5a36ec771bda2ef4d475cec40e0526d55f3450f832690e5750167cadf8d24",
       "language": "java",
-      "lines": 128,
+      "lines": 157,
       "lines_reviewed": 135,
       "module": "rating-service",
       "reviewed_by": "audit-agent",
@@ -19064,7 +19064,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "c9dbec36a9b3de94a16dec202d9cb7a21733b597b45c8e49e142c17e6778c5c1",
+      "sha256_at_discovery": "4dc5a36ec771bda2ef4d475cec40e0526d55f3450f832690e5750167cadf8d24",
       "source_report": "catalog-search-media.md",
       "updated_at": "2026-11-18T16:07:26Z"
     },
@@ -19261,9 +19261,9 @@
       "baseline_blob": "eec03fec985e5e4c52b1067ca5b092cec804e2e3",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "700ea96991ae56541acead486430d10685982f7a23fe90136f7cedbd4e051ed8",
+      "current_sha256": "fa9f62518b7cb920090b1f22bc656052d497e4bb0c7f18088901bd4da18e8b09",
       "language": "java",
-      "lines": 137,
+      "lines": 154,
       "lines_reviewed": 141,
       "module": "rating-service",
       "reviewed_by": "audit-agent",
@@ -19274,7 +19274,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "700ea96991ae56541acead486430d10685982f7a23fe90136f7cedbd4e051ed8",
+      "sha256_at_discovery": "fa9f62518b7cb920090b1f22bc656052d497e4bb0c7f18088901bd4da18e8b09",
       "source_report": "catalog-search-media.md",
       "updated_at": "2026-11-18T16:07:27Z"
     },
@@ -19820,9 +19820,9 @@
       "baseline_blob": "254d3fcce4e9a8be36d3da8b90a619a056db97c2",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "fedacda726880e551c4b723785c2b4b66cba9013d9222bae374a155605425c91",
+      "current_sha256": "d23a5a6d3bb4a3d6f18eb848d2ea1d6fcbb0b8e4acb5104d4d17c8eaa71ba823",
       "language": "java",
-      "lines": 84,
+      "lines": 26,
       "lines_reviewed": 97,
       "module": "search-service",
       "reviewed_by": "audit-agent",
@@ -19833,7 +19833,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "fedacda726880e551c4b723785c2b4b66cba9013d9222bae374a155605425c91",
+      "sha256_at_discovery": "d23a5a6d3bb4a3d6f18eb848d2ea1d6fcbb0b8e4acb5104d4d17c8eaa71ba823",
       "source_report": "catalog-search-media.md",
       "updated_at": "2026-11-18T16:07:18Z"
     },
@@ -20342,13 +20342,24 @@
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
+    "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizer.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "44d842dc109ce766448b9600e75bd46db51614e5bb15e52e82bc88acc28b113c",
+      "language": "java",
+      "lines": 45,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "44d842dc109ce766448b9600e75bd46db51614e5bb15e52e82bc88acc28b113c"
+    },
     "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierShipmentClient.java": {
       "baseline_blob": "74e5677a50f10a01d22e9628ddd4b3bed506ac5c",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "8a7d4dbbfa09b579407577e43f7e568ac721b8d84050c119fddd738b31e41162",
+      "current_sha256": "e0d4319b1a8ffab581d63dc90ff9c7d543a7f0f7c512c450904f96b949789cdd",
       "language": "java",
-      "lines": 70,
+      "lines": 71,
       "lines_reviewed": 97,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20359,7 +20370,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "8a7d4dbbfa09b579407577e43f7e568ac721b8d84050c119fddd738b31e41162",
+      "sha256_at_discovery": "e0d4319b1a8ffab581d63dc90ff9c7d543a7f0f7c512c450904f96b949789cdd",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -20510,6 +20521,17 @@
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
+    "shipping-service/src/main/java/com/shop/shippingservice/constant/ShipmentCreationStatus.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "5485f3bff1e4ac2f1c78e478a7e2799fd0529983783465db393dfe0676dbc0ef",
+      "language": "java",
+      "lines": 5,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "5485f3bff1e4ac2f1c78e478a7e2799fd0529983783465db393dfe0676dbc0ef"
+    },
     "shipping-service/src/main/java/com/shop/shippingservice/constant/ShipmentStatus.java": {
       "baseline_blob": "c2d5b71267589bc609c70df06439953490e60af2",
       "category": "PRODUCTION_CODE",
@@ -20640,9 +20662,9 @@
       "baseline_blob": "d51ced5787cc2df20737142742de79140ac53503",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "6a18876633b3520c3ffe1e38e9c95ab0416df0e2809edc79ff442cbc9128cbd7",
+      "current_sha256": "cf964116f4d9e48d2e3d2339f297fbf0c911081bb050247bfadcfbcbb7da489e",
       "language": "java",
-      "lines": 68,
+      "lines": 102,
       "lines_reviewed": 75,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20653,17 +20675,28 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "6a18876633b3520c3ffe1e38e9c95ab0416df0e2809edc79ff442cbc9128cbd7",
+      "sha256_at_discovery": "cf964116f4d9e48d2e3d2339f297fbf0c911081bb050247bfadcfbcbb7da489e",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
+    },
+    "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentCreationTask.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "5f3a94b07dffe2c66ed083e61cd070d44ba24325487b5579ae6aae8013553489",
+      "language": "java",
+      "lines": 118,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "5f3a94b07dffe2c66ed083e61cd070d44ba24325487b5579ae6aae8013553489"
     },
     "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentEvent.java": {
       "baseline_blob": "aa485af85870684d0b33d487867640ba23050849",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "21f0582f828de2c50644c523185da847628671063b1c0f8b1eadb6446315b79c",
+      "current_sha256": "b82f24c7a064f8cc630361c491303afa442e9337bef4c9fcd44a039f486ca648",
       "language": "java",
-      "lines": 72,
+      "lines": 77,
       "lines_reviewed": 72,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20674,7 +20707,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "21f0582f828de2c50644c523185da847628671063b1c0f8b1eadb6446315b79c",
+      "sha256_at_discovery": "b82f24c7a064f8cc630361c491303afa442e9337bef4c9fcd44a039f486ca648",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -20745,9 +20778,9 @@
       "baseline_blob": "6ed9abe244de17e52fbf0319ce39ced5c17aaf35",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "79c5a18e5c6b9a20794689c2665b6b44c938cd9de1a7cf36ba139f805eb42147",
+      "current_sha256": "43dcd23352a0673afdf24843aed5dbcd39c6b96e81d441c1309e2a9999e3e34f",
       "language": "java",
-      "lines": 49,
+      "lines": 57,
       "lines_reviewed": 86,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20758,7 +20791,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "79c5a18e5c6b9a20794689c2665b6b44c938cd9de1a7cf36ba139f805eb42147",
+      "sha256_at_discovery": "43dcd23352a0673afdf24843aed5dbcd39c6b96e81d441c1309e2a9999e3e34f",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -20808,9 +20841,9 @@
       "baseline_blob": "09774511930a2cf01f5ae131630579f286b8e6ea",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "41a17aa354461018dc34e945dd86ae9aea42705197c2f1759dc0e7e5bacbc897",
+      "current_sha256": "4db30489ca313058c19afca449b9f1fe4958e1676e8e7eb1cb1af68d0489cbfe",
       "language": "java",
-      "lines": 172,
+      "lines": 184,
       "lines_reviewed": 251,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20821,7 +20854,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "41a17aa354461018dc34e945dd86ae9aea42705197c2f1759dc0e7e5bacbc897",
+      "sha256_at_discovery": "4db30489ca313058c19afca449b9f1fe4958e1676e8e7eb1cb1af68d0489cbfe",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -20829,9 +20862,9 @@
       "baseline_blob": "0cc5563c3fce13e6de34b868422b8da184a2997c",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "1979ab2dd0262e112fd0484a46c3927178179a946e80edaee6038ae4297fa251",
+      "current_sha256": "fa6bf3e512de7300094a117b171699a56dfe9571ee2e8bbc98295077d2d19ab0",
       "language": "java",
-      "lines": 33,
+      "lines": 38,
       "lines_reviewed": 33,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20842,17 +20875,28 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "1979ab2dd0262e112fd0484a46c3927178179a946e80edaee6038ae4297fa251",
+      "sha256_at_discovery": "fa6bf3e512de7300094a117b171699a56dfe9571ee2e8bbc98295077d2d19ab0",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
+    },
+    "shipping-service/src/main/java/com/shop/shippingservice/repository/ShipmentCreationTaskRepository.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "0e5358690e5b2491a1141ae9ff8c8ba250c22c7d3c35a0d6f615c83cf1a1183a",
+      "language": "java",
+      "lines": 33,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "0e5358690e5b2491a1141ae9ff8c8ba250c22c7d3c35a0d6f615c83cf1a1183a"
     },
     "shipping-service/src/main/java/com/shop/shippingservice/repository/ShipmentEventRepository.java": {
       "baseline_blob": "c5273af3c9016e3a54b70403c6bd93cd7368e34f",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "01afcf97c1952aebbeb927da97de1a5d436408bf3da931504d0ec363b65f00f9",
+      "current_sha256": "771b522732de65aefa8bde9c000742b57e529a4af1a3b7ca8d6d68ac6d400984",
       "language": "java",
-      "lines": 21,
+      "lines": 46,
       "lines_reviewed": 28,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20863,7 +20907,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "01afcf97c1952aebbeb927da97de1a5d436408bf3da931504d0ec363b65f00f9",
+      "sha256_at_discovery": "771b522732de65aefa8bde9c000742b57e529a4af1a3b7ca8d6d68ac6d400984",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -20892,9 +20936,9 @@
       "baseline_blob": "5914d87f994d88c8af99736046de1f19bb6b7253",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "3918096f68427c89f18c997dcfea351155cfaffac24c373ba4d9f88a30e71c60",
+      "current_sha256": "269559d6ebd65be0635f004baa7687072a09e937fc28b6c12a9f12c93eeb4a3c",
       "language": "java",
-      "lines": 64,
+      "lines": 65,
       "lines_reviewed": 64,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20905,17 +20949,28 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "3918096f68427c89f18c997dcfea351155cfaffac24c373ba4d9f88a30e71c60",
+      "sha256_at_discovery": "269559d6ebd65be0635f004baa7687072a09e937fc28b6c12a9f12c93eeb4a3c",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
+    },
+    "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ShipmentCreationRetryScheduler.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "7b7f0fade6bf14f706faa747cd081d59fe9b748b905bdb715d788cd0d986d6ac",
+      "language": "java",
+      "lines": 84,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "7b7f0fade6bf14f706faa747cd081d59fe9b748b905bdb715d788cd0d986d6ac"
     },
     "shipping-service/src/main/java/com/shop/shippingservice/scheduler/WebhookRetryScheduler.java": {
       "baseline_blob": "aec6b3cca69ea7b902a7a4cef810f439d5ea8496",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "020e7b6d4716c4d8177bab852b405b619ad48c98c14432d92f436ef9443ad6a6",
+      "current_sha256": "5da74ce0061a60c9402eae63910d4a93c66ff6945f4f43e2c97fb1bbf4850a3d",
       "language": "java",
-      "lines": 110,
+      "lines": 166,
       "lines_reviewed": 117,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20926,9 +20981,31 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "020e7b6d4716c4d8177bab852b405b619ad48c98c14432d92f436ef9443ad6a6",
+      "sha256_at_discovery": "5da74ce0061a60c9402eae63910d4a93c66ff6945f4f43e2c97fb1bbf4850a3d",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
+    },
+    "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationService.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "d00011d3bf64d8d8392aefadcd50b17a1cfaa027c5c810464f7a395d215ee2c1",
+      "language": "java",
+      "lines": 123,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "d00011d3bf64d8d8392aefadcd50b17a1cfaa027c5c810464f7a395d215ee2c1"
+    },
+    "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationWriter.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "53ff8e9df69b471aeae06b00baf458eeb4c550827b339aacbf597400a72f62f1",
+      "language": "java",
+      "lines": 94,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "53ff8e9df69b471aeae06b00baf458eeb4c550827b339aacbf597400a72f62f1"
     },
     "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentService.java": {
       "baseline_blob": "51743baf6bcc6aaf57a72c66aae6bd171335137a",
@@ -20955,9 +21032,9 @@
       "baseline_blob": "faff176f434afaeae79d30ee07a9e6d27832d346",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "4930095dc208094356dadc3eca2d99bf9dd93122a2711daef2e167861560fee2",
+      "current_sha256": "467c778c29a11fb6b32ae75cf2d9a5bd2b15f44c4b46f8c519096f1e2d9b55e4",
       "language": "java",
-      "lines": 35,
+      "lines": 58,
       "lines_reviewed": 35,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -20968,7 +21045,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "4930095dc208094356dadc3eca2d99bf9dd93122a2711daef2e167861560fee2",
+      "sha256_at_discovery": "467c778c29a11fb6b32ae75cf2d9a5bd2b15f44c4b46f8c519096f1e2d9b55e4",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -20997,9 +21074,9 @@
       "baseline_blob": "d17a6a6476ea921662e0994546a3a9da6fc86ef3",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "e50b5c66b0798c1664755bc9b39f1d905ef3e23318109106b7cd957422202dc5",
+      "current_sha256": "8f20e74b8c98d8cc2c8231db752d49475029712bf3d31d50e2793268f61e26e9",
       "language": "java",
-      "lines": 37,
+      "lines": 59,
       "lines_reviewed": 37,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21010,7 +21087,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "e50b5c66b0798c1664755bc9b39f1d905ef3e23318109106b7cd957422202dc5",
+      "sha256_at_discovery": "8f20e74b8c98d8cc2c8231db752d49475029712bf3d31d50e2793268f61e26e9",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -21060,9 +21137,9 @@
       "baseline_blob": "ca3833ca98123c0f15a5863a2da456ccce210957",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "21d22af1dc595a551198e53c3c3ab17df35c8ecf19a655f1d08ff5d4835058d5",
+      "current_sha256": "39c9a52e90fd7aa5558fae8804786dbfe54adbfa9a467ea6f290fdc88a202fe6",
       "language": "java",
-      "lines": 196,
+      "lines": 180,
       "lines_reviewed": 199,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21073,7 +21150,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "21d22af1dc595a551198e53c3c3ab17df35c8ecf19a655f1d08ff5d4835058d5",
+      "sha256_at_discovery": "39c9a52e90fd7aa5558fae8804786dbfe54adbfa9a467ea6f290fdc88a202fe6",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -21081,9 +21158,9 @@
       "baseline_blob": "4ae6412d8006536d1b1050faf9ddbc02281a70c0",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "aa828235f3337f959549632b6adf69ca19b61c4b6dd0921dc05c200a5fc18bc9",
+      "current_sha256": "86d5b2cf7e040d4f65fae207f521e451b7ce10f06d4f9c4820d985396c8514e7",
       "language": "java",
-      "lines": 235,
+      "lines": 265,
       "lines_reviewed": 245,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21094,7 +21171,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "aa828235f3337f959549632b6adf69ca19b61c4b6dd0921dc05c200a5fc18bc9",
+      "sha256_at_discovery": "86d5b2cf7e040d4f65fae207f521e451b7ce10f06d4f9c4820d985396c8514e7",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -21245,6 +21322,17 @@
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
+    "shipping-service/src/main/resources/db/changelog/changelog-002b-expand-events-status-check-pre.yaml": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "dbd66dc0f5914d4b35f01f2a86229e4c7e31aaac90ba6123faec896329a3459e",
+      "language": "yaml",
+      "lines": 11,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "dbd66dc0f5914d4b35f01f2a86229e4c7e31aaac90ba6123faec896329a3459e"
+    },
     "shipping-service/src/main/resources/db/changelog/changelog-003-webhook-retry.yaml": {
       "baseline_blob": "dc23dab308fabd8491db67f7b57ba52a2f3b13e6",
       "category": "PRODUCTION_CODE",
@@ -21308,13 +21396,46 @@
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
+    "shipping-service/src/main/resources/db/changelog/changelog-007-shipment-creation-tasks.yaml": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "b2aab114b8ec3cb2904b35ae794cfd56e501143e16657f21303fdb2ca92894eb",
+      "language": "yaml",
+      "lines": 42,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "b2aab114b8ec3cb2904b35ae794cfd56e501143e16657f21303fdb2ca92894eb"
+    },
+    "shipping-service/src/main/resources/db/changelog/changelog-008-webhook-retry-claim-and-index.yaml": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "366a25262815fb10422067eba18596432e7c2cd855486a4fb5b75da4979d5975",
+      "language": "yaml",
+      "lines": 16,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "366a25262815fb10422067eba18596432e7c2cd855486a4fb5b75da4979d5975"
+    },
+    "shipping-service/src/main/resources/db/changelog/changelog-009-shipment-event-shipment-fk.yaml": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "4615f5e16c81e0a12fbc56bafe8f601a37780634409a188988f94985dd73f2f7",
+      "language": "yaml",
+      "lines": 10,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "4615f5e16c81e0a12fbc56bafe8f601a37780634409a188988f94985dd73f2f7"
+    },
     "shipping-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "8577b93f66477fe85ab5df2ee744e9d0c650ebcb",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "aac468d737f3409cb776eff222f256a87bd280edacacfbf17852346cac3f7bb7",
+      "current_sha256": "46ca94b680f1edb9de5950690b27c05cc4b1c2701fbb82382aa88a70e424fcea",
       "language": "yaml",
-      "lines": 19,
+      "lines": 31,
       "lines_reviewed": 19,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21325,7 +21446,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "aac468d737f3409cb776eff222f256a87bd280edacacfbf17852346cac3f7bb7",
+      "sha256_at_discovery": "46ca94b680f1edb9de5950690b27c05cc4b1c2701fbb82382aa88a70e424fcea",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:45Z"
     },
@@ -21333,9 +21454,9 @@
       "baseline_blob": "4c4791f504432a41f6f6cd4aacc693bb30416144",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "f84572a338b1d4294e41f2fc6054541000690a476af8ecfd7cfffb07bbf3ec91",
+      "current_sha256": "8f3470d4a7de779ca04cc88c90b6e62c150be916c374cbf06ffd34a5b70809fa",
       "language": "java",
-      "lines": 572,
+      "lines": 672,
       "lines_reviewed": 603,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21346,7 +21467,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "f84572a338b1d4294e41f2fc6054541000690a476af8ecfd7cfffb07bbf3ec91",
+      "sha256_at_discovery": "8f3470d4a7de779ca04cc88c90b6e62c150be916c374cbf06ffd34a5b70809fa",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
@@ -21392,13 +21513,24 @@
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
+    "shipping-service/src/test/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizerTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "90d3743b2dad3c498e4bae0fc1c9a88583b9ece777a01bb53427f3ee36207336",
+      "language": "java",
+      "lines": 65,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "90d3743b2dad3c498e4bae0fc1c9a88583b9ece777a01bb53427f3ee36207336"
+    },
     "shipping-service/src/test/java/com/shop/shippingservice/carrier/CarrierShipmentClientTest.java": {
       "baseline_blob": "97e232e8cd2615cd7aa8c8283c8bc580873465fa",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "4def49b209805801b7ff7845cb992509037507d2da024aae9cf6c29ac657bb2a",
+      "current_sha256": "fb3beb41125c4206371267dd88f331869c37e25b8d1cbee0dc1ea39306110013",
       "language": "java",
-      "lines": 104,
+      "lines": 120,
       "lines_reviewed": 104,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21409,7 +21541,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "4def49b209805801b7ff7845cb992509037507d2da024aae9cf6c29ac657bb2a",
+      "sha256_at_discovery": "fb3beb41125c4206371267dd88f331869c37e25b8d1cbee0dc1ea39306110013",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
@@ -21560,6 +21692,28 @@
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
+    "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogContractTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "d9fe583d41a4061c944ec0821184fb4767315cbcb453d8be91443d82e8059574",
+      "language": "java",
+      "lines": 111,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "d9fe583d41a4061c944ec0821184fb4767315cbcb453d8be91443d82e8059574"
+    },
+    "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogIT.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "43748941a351d4829383adae523cf71904b519ced9f8c8edfcd0be9b0015d4e5",
+      "language": "java",
+      "lines": 154,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "43748941a351d4829383adae523cf71904b519ced9f8c8edfcd0be9b0015d4e5"
+    },
     "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingEventPublisherImplTest.java": {
       "baseline_blob": "1e0d82c7a921160837ecd78452836923baaabb47",
       "category": "TEST_CODE",
@@ -21585,9 +21739,9 @@
       "baseline_blob": "cf5acb201028fb9373392b1e3b3dd9029a7d6486",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "c290521a9f0c75555a0dbd51ffdfd099be84b05947c407450a63222d912819bf",
+      "current_sha256": "9b86c084dfafc846a46ce8da6b93757885fabc6e24f2f505ff441f0ece6b266e",
       "language": "java",
-      "lines": 174,
+      "lines": 176,
       "lines_reviewed": 184,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21598,7 +21752,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "c290521a9f0c75555a0dbd51ffdfd099be84b05947c407450a63222d912819bf",
+      "sha256_at_discovery": "9b86c084dfafc846a46ce8da6b93757885fabc6e24f2f505ff441f0ece6b266e",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
@@ -21627,9 +21781,9 @@
       "baseline_blob": "1e37cfd2ef0da564376ac9a50dc740015dbc9061",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "5c3df1ceb6e365df94f7499bf68f6a31587d3423a9f1806c2b0c4051880ef407",
+      "current_sha256": "4d1893cc101ec7ab68eecf5def768922cca51c4fd4d1b8f82b3d03d19518c63f",
       "language": "java",
-      "lines": 194,
+      "lines": 212,
       "lines_reviewed": 208,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21640,17 +21794,28 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "5c3df1ceb6e365df94f7499bf68f6a31587d3423a9f1806c2b0c4051880ef407",
+      "sha256_at_discovery": "4d1893cc101ec7ab68eecf5def768922cca51c4fd4d1b8f82b3d03d19518c63f",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
+    },
+    "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionSchedulerTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "8222991daa2af9e9ef13469d72a32579fb99efa60086db9db59eeba5ba587232",
+      "language": "java",
+      "lines": 39,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "8222991daa2af9e9ef13469d72a32579fb99efa60086db9db59eeba5ba587232"
     },
     "shipping-service/src/test/java/com/shop/shippingservice/scheduler/ReconciliationSchedulerTest.java": {
       "baseline_blob": "e1082ef30a2a920eac52691107418bb3c71d3298",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "13f8cae07dcc1b458cfcce99c9faf9e9f928e81b79cf193f46684de0123ab1d8",
+      "current_sha256": "f190ff7eeb95c5cbb4804a28f9b4594ddf4adf4954345acdf99ca1eb92a6b11d",
       "language": "java",
-      "lines": 136,
+      "lines": 181,
       "lines_reviewed": 136,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21661,17 +21826,28 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "13f8cae07dcc1b458cfcce99c9faf9e9f928e81b79cf193f46684de0123ab1d8",
+      "sha256_at_discovery": "f190ff7eeb95c5cbb4804a28f9b4594ddf4adf4954345acdf99ca1eb92a6b11d",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
+    },
+    "shipping-service/src/test/java/com/shop/shippingservice/scheduler/ShipmentCreationRetrySchedulerTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "7dbb3bebae42ddb09188a2e6e0775a3bffe7c6f1fd2f83a6ded2c4f048ed6139",
+      "language": "java",
+      "lines": 105,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "7dbb3bebae42ddb09188a2e6e0775a3bffe7c6f1fd2f83a6ded2c4f048ed6139"
     },
     "shipping-service/src/test/java/com/shop/shippingservice/scheduler/WebhookRetrySchedulerTest.java": {
       "baseline_blob": "a8525b164a13554e2b781d5ac7dade4fd35c66cb",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "9fdc633793f18d4c2428829ba0848cfda8e596e78b28d2a578db6dc60d5ec520",
+      "current_sha256": "da857acdfa1258e01630cf2bb6e690bfc5291d4315d50530e0b01dd028806f84",
       "language": "java",
-      "lines": 125,
+      "lines": 239,
       "lines_reviewed": 125,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21682,17 +21858,28 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "9fdc633793f18d4c2428829ba0848cfda8e596e78b28d2a578db6dc60d5ec520",
+      "sha256_at_discovery": "da857acdfa1258e01630cf2bb6e690bfc5291d4315d50530e0b01dd028806f84",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
+    },
+    "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentCreationServiceTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "378200108a457aa2018b66057bce47bd556d5547ea7843eb6292199f198d6dff",
+      "language": "java",
+      "lines": 225,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "378200108a457aa2018b66057bce47bd556d5547ea7843eb6292199f198d6dff"
     },
     "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentStateMachineTest.java": {
       "baseline_blob": "30ca9b1af3bf83a9498f7a8812f51926353c7370",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "10c3bdf9b77c9ea0f5a07d95509c9a37d7e240cfc27c68c9a07a75b8cab3d06c",
+      "current_sha256": "95baff7043a138416d25a888258ac1a3062e47821db2781205fd1607fa7e52d4",
       "language": "java",
-      "lines": 84,
+      "lines": 153,
       "lines_reviewed": 84,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21703,9 +21890,20 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "10c3bdf9b77c9ea0f5a07d95509c9a37d7e240cfc27c68c9a07a75b8cab3d06c",
+      "sha256_at_discovery": "95baff7043a138416d25a888258ac1a3062e47821db2781205fd1607fa7e52d4",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
+    },
+    "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentStatusWriteGuardTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "84f30528544f74f222122b5b59f55d26b613f2d55cf21ca005669e908b8ca89b",
+      "language": "java",
+      "lines": 72,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "84f30528544f74f222122b5b59f55d26b613f2d55cf21ca005669e908b8ca89b"
     },
     "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentWriterTest.java": {
       "baseline_blob": "421ae7e9c7a445892f7306308582f3b5ff595f65",
@@ -21753,9 +21951,9 @@
       "baseline_blob": "1f9a8c5b10ea880d37b5fb19ffdb6cb06f84e501",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "64679e548a546c3d948730e62044396c8ed9fcd327eac3ccfac231c10ddc9f4a",
+      "current_sha256": "d822bf9dab2bfcc6dde57a01013757cb0b1b110d0662d8788fa51124707227bb",
       "language": "java",
-      "lines": 402,
+      "lines": 378,
       "lines_reviewed": 405,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21766,7 +21964,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "64679e548a546c3d948730e62044396c8ed9fcd327eac3ccfac231c10ddc9f4a",
+      "sha256_at_discovery": "d822bf9dab2bfcc6dde57a01013757cb0b1b110d0662d8788fa51124707227bb",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
@@ -21774,9 +21972,9 @@
       "baseline_blob": "98fdaf4e8334067c0a2c222e344b827a02486910",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "edf7dcdd409b96a6d1471bb94c79e27931c6606520227bbccdc4d8482e38fbe7",
+      "current_sha256": "d88956e9780bac1da161c8ff94719bee8bc4e9aaab2977fb0c146836f041fadf",
       "language": "java",
-      "lines": 398,
+      "lines": 444,
       "lines_reviewed": 401,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21787,7 +21985,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "edf7dcdd409b96a6d1471bb94c79e27931c6606520227bbccdc4d8482e38fbe7",
+      "sha256_at_discovery": "d88956e9780bac1da161c8ff94719bee8bc4e9aaab2977fb0c146836f041fadf",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
@@ -21795,9 +21993,9 @@
       "baseline_blob": "a27940677305771f6c41da4d275ef82b801c7ad4",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "fc21295f0cb444ed34e6e8ce9aa0fb43e991e6d255a919191b76083d28a05285",
+      "current_sha256": "b75b30ee0f3dd3de9c117c73b805b0fb921dda0000f14ffa0a1f384b00afa6d7",
       "language": "java",
-      "lines": 53,
+      "lines": 65,
       "lines_reviewed": 122,
       "module": "shipping-service",
       "reviewed_by": "audit-agent",
@@ -21808,7 +22006,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "fc21295f0cb444ed34e6e8ce9aa0fb43e991e6d255a919191b76083d28a05285",
+      "sha256_at_discovery": "b75b30ee0f3dd3de9c117c73b805b0fb921dda0000f14ffa0a1f384b00afa6d7",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
     },
@@ -21853,6 +22051,17 @@
       "sha256_at_discovery": "85f327fa2d35b26b436cb66ffaa41d455b6df6d6a70256ecd0c77a95f6eead51",
       "source_report": "shipping-service.md",
       "updated_at": "2026-11-18T16:07:46Z"
+    },
+    "shipping-service/src/test/resources/db/changelog/seed-base-changelog.yaml": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "3be706d1bf8d43290a61a683df10f9f188af31a96ea3b0cd9357e6a612820638",
+      "language": "yaml",
+      "lines": 7,
+      "module": "shipping-service",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "3be706d1bf8d43290a61a683df10f9f188af31a96ea3b0cd9357e6a612820638"
     },
     "start-docker.sh": {
       "category": "INFRASTRUCTURE",
@@ -22920,9 +23129,9 @@
       "baseline_blob": "502f4e6abc9e936ac985033e1731a82971a2cb2a",
       "category": "SHARED_LIBRARY",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "aa5b53ca19b4ac26503b0ecae495285f5ffde9cc6aa658374ae4141cfe0568d8",
+      "current_sha256": "adf0eca7f88ff4c111a7a45076ed5acd01e83001b865867ae4684578e261d047",
       "language": "java",
-      "lines": 98,
+      "lines": 102,
       "lines_reviewed": 118,
       "module": "utils/common-core",
       "reviewed_by": "audit-agent",
@@ -22933,7 +23142,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "aa5b53ca19b4ac26503b0ecae495285f5ffde9cc6aa658374ae4141cfe0568d8",
+      "sha256_at_discovery": "adf0eca7f88ff4c111a7a45076ed5acd01e83001b865867ae4684578e261d047",
       "source_report": "shared-libraries.md",
       "updated_at": "2026-11-18T16:07:41Z"
     },
@@ -23837,9 +24046,9 @@
       "baseline_blob": "852942a8ba3b7a9c00d2e2969163a6ea07a85eb5",
       "category": "SHARED_LIBRARY",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "948c97d2dddc174f2ccfb172dcc1b22cf03121a0ce042c3c9c4369b0eb9cec54",
+      "current_sha256": "b6c4af51ca370515f930cd67f191c2caf02ec092e866b33a6f4f539be0446e2d",
       "language": "java",
-      "lines": 472,
+      "lines": 492,
       "lines_reviewed": 599,
       "module": "utils/common-keycloak",
       "reviewed_by": "audit-agent",
@@ -23850,9 +24059,20 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "948c97d2dddc174f2ccfb172dcc1b22cf03121a0ce042c3c9c4369b0eb9cec54",
+      "sha256_at_discovery": "b6c4af51ca370515f930cd67f191c2caf02ec092e866b33a6f4f539be0446e2d",
       "source_report": "shared-libraries.md",
       "updated_at": "2026-11-18T16:07:42Z"
+    },
+    "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakServiceTokenProvider.java": {
+      "category": "SHARED_LIBRARY",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "89cd4eae6f2caccf09022ecc6f9ebed8d5147b158e085a2bbf2d27de0536f31f",
+      "language": "java",
+      "lines": 210,
+      "module": "utils/common-keycloak",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "89cd4eae6f2caccf09022ecc6f9ebed8d5147b158e085a2bbf2d27de0536f31f"
     },
     "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakTokenClient.java": {
       "baseline_blob": "c2f1a10c7128c7674fc4f2f15d84406986aec5b5",
@@ -23879,9 +24099,9 @@
       "baseline_blob": "6513991273bc2e8f77131425bdead72fe224a3fb",
       "category": "SHARED_LIBRARY",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "77a79d7ef429b0d9448267b7506b0a46cac00ecd7ad55841cae369bb818a69a7",
+      "current_sha256": "74101f4f923c56bf27878dc9020b075e66658edf57b3458d4c8828c75396b389",
       "language": "java",
-      "lines": 71,
+      "lines": 72,
       "lines_reviewed": 101,
       "module": "utils/common-keycloak",
       "reviewed_by": "audit-agent",
@@ -23892,7 +24112,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "77a79d7ef429b0d9448267b7506b0a46cac00ecd7ad55841cae369bb818a69a7",
+      "sha256_at_discovery": "74101f4f923c56bf27878dc9020b075e66658edf57b3458d4c8828c75396b389",
       "source_report": "shared-libraries.md",
       "updated_at": "2026-11-18T16:07:42Z"
     },
@@ -23900,9 +24120,9 @@
       "baseline_blob": "9e9094d99ecf3702dcf33eb5f87b3c1b95444f64",
       "category": "SHARED_LIBRARY",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "989df8b6f5f1ac74dcbbd1a84c8b9c991a6d8b7f4fd2a730b75673dec33db1b2",
+      "current_sha256": "741fe8f1fbb6c646788ed7ef607dd4b22bfe797d5096c91f15c699931a58ba83",
       "language": "java",
-      "lines": 79,
+      "lines": 87,
       "lines_reviewed": 116,
       "module": "utils/common-keycloak",
       "reviewed_by": "audit-agent",
@@ -23913,7 +24133,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "989df8b6f5f1ac74dcbbd1a84c8b9c991a6d8b7f4fd2a730b75673dec33db1b2",
+      "sha256_at_discovery": "741fe8f1fbb6c646788ed7ef607dd4b22bfe797d5096c91f15c699931a58ba83",
       "source_report": "shared-libraries.md",
       "updated_at": "2026-11-18T16:07:42Z"
     },
@@ -23958,6 +24178,17 @@
       "sha256_at_discovery": "c6345a1e162535279f8483ff61a8b01d0ff6ac0aadb46ca4dd08d056b44d9f1b",
       "source_report": "shared-libraries.md",
       "updated_at": "2026-11-18T16:07:42Z"
+    },
+    "utils/common-keycloak/src/main/java/com/shop/common/keycloak/exception/KeycloakServiceTokenException.java": {
+      "category": "SHARED_LIBRARY",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "d1801b38be91391c0a890f4c5b9a74484765223f5439e30874f0a3e2693c6f78",
+      "language": "java",
+      "lines": 12,
+      "module": "utils/common-keycloak",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "d1801b38be91391c0a890f4c5b9a74484765223f5439e30874f0a3e2693c6f78"
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java": {
       "baseline_blob": "8cafda91366c84cff22921babf9d1c1f6d232ee9",
@@ -24005,9 +24236,9 @@
       "baseline_blob": "964b159b0b1b68ef19ba84ee04f6449bfcc2b1b0",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "8f7c9f578829638c30edc9d3ab0778eecb45f9ab5dcb7edbca244f140182dbd9",
+      "current_sha256": "c2df8ed39fb9c8d801265d8cfdbf1eb91c8db2a0149a4ade97782cc73ef2d66c",
       "language": "java",
-      "lines": 158,
+      "lines": 201,
       "lines_reviewed": 176,
       "module": "utils/common-keycloak",
       "reviewed_by": "audit-agent",
@@ -24018,9 +24249,20 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "8f7c9f578829638c30edc9d3ab0778eecb45f9ab5dcb7edbca244f140182dbd9",
+      "sha256_at_discovery": "c2df8ed39fb9c8d801265d8cfdbf1eb91c8db2a0149a4ade97782cc73ef2d66c",
       "source_report": "shared-libraries.md",
       "updated_at": "2026-11-18T16:07:42Z"
+    },
+    "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "DISCOVERED",
+      "current_sha256": "deefa0c19ec2332f43bc6882a39c95644a30d9f05118a19a2e47af9a9c90bedf",
+      "language": "java",
+      "lines": 162,
+      "module": "utils/common-keycloak",
+      "reviewed_ranges": [],
+      "reviews": [],
+      "sha256_at_discovery": "deefa0c19ec2332f43bc6882a39c95644a30d9f05118a19a2e47af9a9c90bedf"
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/config/AdminServiceAccountRealmContractTest.java": {
       "baseline_blob": "c7326faaa478fe1b88d3971c53017662ad7b92be",
@@ -25371,9 +25613,9 @@
       "baseline_blob": "6987d30b9b798384585d4db41a36decd96c6eb39",
       "category": "SHARED_LIBRARY",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "98c44293104fee32b9a982585e3465720b6a135f267f1e8332405c538095b157",
+      "current_sha256": "39ab4f30d32fc60a97c373ed4c2fd56e3992c07aa8130440f5172c1b27c4ebd0",
       "language": "yaml",
-      "lines": 175,
+      "lines": 176,
       "lines_reviewed": 261,
       "module": "utils/common-spring",
       "reviewed_by": "audit-agent",
@@ -25384,7 +25626,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "98c44293104fee32b9a982585e3465720b6a135f267f1e8332405c538095b157",
+      "sha256_at_discovery": "39ab4f30d32fc60a97c373ed4c2fd56e3992c07aa8130440f5172c1b27c4ebd0",
       "source_report": "security.md",
       "updated_at": "2026-11-18T16:07:40Z"
     },
@@ -26025,7 +26267,7 @@
     "utils/common-spring/.flattened-pom.xml",
     "utils/common-storage/.flattened-pom.xml"
   ],
-  "revision": "5d16040510b1551dcecf01c8558774215b0d9d8f",
+  "revision": "c3738544408c0dd3f15cfe85da85ca01313b6757",
   "source_reports": [
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md",
@@ -26035,5 +26277,5 @@
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-service.md"
   ],
-  "updated_at": "2026-11-19T03:50:59Z"
+  "updated_at": "2026-11-19T06:47:56Z"
 }
