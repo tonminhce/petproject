@@ -76,3 +76,5 @@ shop:
     public-paths:
       - method: POST
         path: /api/v1/webhooks/payments/**
+      - method: GET
+        path: /api/v1/webhooks/payments/vnpay/ipn

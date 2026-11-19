@@ -7248,6 +7248,18 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T10:58:15Z",
+          "evidence": "implementing the PSP callback adapters",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T10:58:15Z",
+          "evidence": "MoMoCallbackVerifier and VNPayCallbackVerifier verify the vendor signature over the documented field set, PspCallbackController maps the MoMo IPN and the VNPay IPN onto the carrier payload so the payment reaches CAPTURED and the order gate opens, the VNPay callback answers the vendor RspCode contract, and the GET callback path is public; payment-service 257 tests green with the containerised integration tests, checkstyle 0 violations, fleet validate green, GitNexus low risk",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
         }
       ],
       "id": "PAY-30",
@@ -7261,14 +7273,16 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:47 accepts only a Stripe-style t=,v1 header or a bare 64-hex HMAC over the body; payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java and VNPayProvider.java now drive real PSP redirects whose callbacks carry the MoMo signature field and the VNPay vnp_SecureHash parameter, which this verifier rejects"
       ],
-      "state": "READY",
+      "state": "IMPLEMENTED",
       "target_implementation": "A dedicated PSP callback adapter per provider that verifies the vendor signature, maps the PSP payload to the carrier payload and hands it to the existing webhook event service.",
       "technical_risk": "A payment created against a redirect provider never leaves PENDING, so the order captured-payment gate never opens and checkout cannot complete. The MoMo transaction id that a refund needs is only delivered by the callback, so a refund also fails without it.",
       "title": "The non-Stripe webhook path cannot verify a real MoMo or VNPay IPN",
-      "updated_at": "2026-11-19T07:16:56Z",
+      "updated_at": "2026-11-19T10:58:15Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementing the PSP callback adapters",
+        "MoMoCallbackVerifier and VNPayCallbackVerifier verify the vendor signature over the documented field set, PspCallbackController maps the MoMo IPN and the VNPay IPN onto the carrier payload so the payment reaches CAPTURED and the order gate opens, the VNPay callback answers the vendor RspCode contract, and the GET callback path is public; payment-service 257 tests green with the containerised integration tests, checkstyle 0 violations, fleet validate green, GitNexus low risk"
       ]
     },
     "RES-01": {
@@ -13833,5 +13847,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-19T10:49:47Z"
+  "updated_at": "2026-11-19T10:58:15Z"
 }
