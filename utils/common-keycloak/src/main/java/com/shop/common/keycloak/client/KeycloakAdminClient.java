@@ -44,6 +44,7 @@ public class KeycloakAdminClient {
     private final String rolesEndpoint;
     private final String clientsEndpoint;
     private final String adminClientId;
+    private final String serviceAccountClientId;
     private final String adminUsername;
     private final String adminPassword;
     private final String adminClientSecret;
@@ -57,7 +58,7 @@ public class KeycloakAdminClient {
                                String adminUsername,
                                String adminPassword) {
         this(restClientBuilder, adminTokenEndpoint, usersEndpoint, rolesEndpoint, adminClientId,
-                adminUsername, adminPassword, null, null, null);
+                adminClientId, adminUsername, adminPassword, null, null, null);
     }
 
     public KeycloakAdminClient(RestClient.Builder restClientBuilder,
@@ -70,7 +71,7 @@ public class KeycloakAdminClient {
                                String adminClientSecret,
                                String serviceAccountTokenEndpoint) {
         this(restClientBuilder, adminTokenEndpoint, usersEndpoint, rolesEndpoint, adminClientId,
-                adminUsername, adminPassword, adminClientSecret, serviceAccountTokenEndpoint, null);
+                adminClientId, adminUsername, adminPassword, adminClientSecret, serviceAccountTokenEndpoint, null);
     }
 
     public KeycloakAdminClient(RestClient.Builder restClientBuilder,
@@ -83,12 +84,31 @@ public class KeycloakAdminClient {
                                String adminClientSecret,
                                String serviceAccountTokenEndpoint,
                                String clientsEndpoint) {
+        this(restClientBuilder, adminTokenEndpoint, usersEndpoint, rolesEndpoint, adminClientId,
+                adminClientId, adminUsername, adminPassword, adminClientSecret, serviceAccountTokenEndpoint,
+                clientsEndpoint);
+    }
+
+    public KeycloakAdminClient(RestClient.Builder restClientBuilder,
+                               String adminTokenEndpoint,
+                               String usersEndpoint,
+                               String rolesEndpoint,
+                               String adminClientId,
+                               String serviceAccountClientId,
+                               String adminUsername,
+                               String adminPassword,
+                               String adminClientSecret,
+                               String serviceAccountTokenEndpoint,
+                               String clientsEndpoint) {
         this.restClient = restClientBuilder.build();
         this.adminTokenEndpoint = adminTokenEndpoint;
         this.usersEndpoint = usersEndpoint;
         this.rolesEndpoint = rolesEndpoint;
         this.clientsEndpoint = clientsEndpoint;
         this.adminClientId = adminClientId;
+        this.serviceAccountClientId = serviceAccountClientId == null || serviceAccountClientId.isBlank()
+                ? adminClientId
+                : serviceAccountClientId;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
         this.adminClientSecret = adminClientSecret;
@@ -103,7 +123,7 @@ public class KeycloakAdminClient {
     private String getServiceAccountAccessToken() {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add(GRANT_TYPE, CLIENT_CREDENTIALS);
-        form.add(CLIENT_ID, adminClientId);
+        form.add(CLIENT_ID, serviceAccountClientId);
         form.add(CLIENT_SECRET, adminClientSecret);
 
         try {

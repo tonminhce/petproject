@@ -138,6 +138,49 @@ class KeycloakAdminClientServiceAccountTest {
     }
 
     @Test
+    @DisplayName("the service-account grant uses the service-account client, not the master-realm admin client")
+    void theServiceAccountGrantUsesTheServiceAccountClient() {
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, MASTER_TOKEN_ENDPOINT, USERS_ENDPOINT,
+                ROLES_ENDPOINT, "admin-cli", "ecommerce-admin", "", "", "s3cret", REALM_TOKEN_ENDPOINT,
+                "http://keycloak/admin/realms/ecommerce/clients");
+
+        server.expect(requestTo(REALM_TOKEN_ENDPOINT))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("{\"access_token\":\"service-token\",\"expires_in\":300}",
+                        MediaType.APPLICATION_JSON));
+        expectRoleLookup();
+
+        client.assignRealmRole("kc-123", "MANAGER");
+
+        assertThat(tokenRequestBody.get())
+                .contains("client_id=ecommerce-admin")
+                .doesNotContain("client_id=admin-cli");
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("the master-realm password grant keeps the master-realm admin client")
+    void theMasterRealmPasswordGrantKeepsTheMasterRealmAdminClient() {
+        KeycloakAdminClient client = new KeycloakAdminClient(builder, MASTER_TOKEN_ENDPOINT, USERS_ENDPOINT,
+                ROLES_ENDPOINT, "admin-cli", "ecommerce-admin", "admin", "admin-password", null,
+                REALM_TOKEN_ENDPOINT, "http://keycloak/admin/realms/ecommerce/clients");
+
+        server.expect(requestTo(MASTER_TOKEN_ENDPOINT))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("{\"access_token\":\"master-token\",\"expires_in\":300}",
+                        MediaType.APPLICATION_JSON));
+        expectRoleLookup();
+
+        client.assignRealmRole("kc-123", "MANAGER");
+
+        assertThat(tokenRequestBody.get())
+                .contains("grant_type=password")
+                .contains("client_id=admin-cli")
+                .doesNotContain("client_id=ecommerce-admin");
+        server.verify();
+    }
+
+    @Test
     @DisplayName("the service-account token is reused for the following admin calls")
     void theServiceAccountTokenIsReusedForTheFollowingAdminCalls() {
         KeycloakAdminClient client = new KeycloakAdminClient(builder, MASTER_TOKEN_ENDPOINT, USERS_ENDPOINT,

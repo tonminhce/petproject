@@ -61,6 +61,7 @@ public class KeycloakAutoConfiguration {
                 properties.usersEndpoint(),
                 properties.rolesEndpoint(),
                 properties.getAdminClientId(),
+                properties.getServiceAccountClientId(),
                 properties.getAdminUsername(),
                 properties.getAdminPassword(),
                 properties.getAdminClientSecret(),

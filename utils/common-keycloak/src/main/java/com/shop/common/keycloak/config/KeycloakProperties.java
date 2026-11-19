@@ -23,11 +23,19 @@ public class KeycloakProperties {
 
     private String adminClientId = "admin-cli";
 
+    private String serviceAccountClientId = "ecommerce-admin";
+
     private String adminUsername;
 
     private String adminPassword;
 
     private String adminClientSecret;
+
+    public String getServiceAccountClientId() {
+        return serviceAccountClientId == null || serviceAccountClientId.isBlank()
+                ? adminClientId
+                : serviceAccountClientId;
+    }
 
     public String getPublicServerUrlOrDefault() {
         return (publicServerUrl == null || publicServerUrl.isBlank()) ? serverUrl : publicServerUrl;

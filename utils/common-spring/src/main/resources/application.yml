@@ -116,6 +116,7 @@ shop:
     client-id: ${KEYCLOAK_CLIENT_ID:ecommerce-client}
     admin-realm: ${KEYCLOAK_ADMIN_REALM:master}
     admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+    service-account-client-id: ${KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID:ecommerce-admin}
     admin-client-secret: ${ADMIN_SERVICE_CLIENT_SECRET:}
     admin-username: ${KEYCLOAK_ADMIN_USERNAME:}
     admin-password: ${KEYCLOAK_ADMIN_PASSWORD:}
