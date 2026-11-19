@@ -1,5 +1,5 @@
 {
-  "count": 202,
+  "count": 246,
   "tasks": {
     "CAT-01": {
       "acceptance_criteria": [
@@ -29,6 +29,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "search-service 72 tests and promotion-service 138 tests green; report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/search-promotion-fix.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "CAT-01",
@@ -46,14 +70,15 @@
         "OutboxRelay.java:245",
         "ReindexServiceImpl.java:35-36"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Out-of-order Kafka events silently overwrite newer Elasticsearch state",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-19T03:37:01Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "search-service 72 tests and promotion-service 138 tests green; report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/search-promotion-fix.md"
       ]
     },
     "CAT-02": {
@@ -347,6 +372,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T03:37:01Z",
+          "evidence": "search-service 72 tests and promotion-service 138 tests green; report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/search-promotion-fix.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "CAT-07",
@@ -366,14 +415,15 @@
         "ReserveFlowIT.java:274-327",
         "entity/Campaign.java:45-52"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Promotion quotas are enforced by a racy read-then-write COUNT",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-19T03:37:01Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "search-service 72 tests and promotion-service 138 tests green; report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/search-promotion-fix.md"
       ]
     },
     "CAT-08": {
@@ -1374,6 +1424,36 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "GW-01",
@@ -1394,14 +1474,15 @@
         "config/GatewaySecurityPostureValidator.java:74-81",
         "docker-compose.prod.yml:25-26"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The trusted-proxy hop count is an index into an attacker-controlled header; the transport peer is never verified",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-18T15:42:26Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "GW-02": {
@@ -1432,6 +1513,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "GW-02",
@@ -1447,14 +1552,15 @@
         "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:92-94",
         "gateway-service/src/main/java/com/shop/gateway/filter/RateLimitFilter.java:80"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "A non-literal `X-Forwarded-For` entry becomes the rate-limit key: per-request bucket bypass, unbounded Redis key growth, and blocking DNS on the event loop",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-18T15:42:26Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "GW-03": {
@@ -1485,6 +1591,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:26Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "GW-03",
@@ -1500,14 +1630,15 @@
         "RedisEdgeRateLimiter.java:95-108",
         "RedisEdgeRateLimiter.java:102-108"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Contradictory Redis-outage semantics across the three limiters, and the in-code justification is factually wrong",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-18T15:42:27Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "GW-04": {
@@ -1591,6 +1722,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "GW-05",
@@ -1604,14 +1759,15 @@
       "source_evidence": [
         "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:90-91"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The edge bucket computes its refill from the **gateway JVM clock** while the framework buckets use the **Redis server clock**",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-18T15:42:27Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "GW-06": {
@@ -1695,6 +1851,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "GW-07",
@@ -1711,14 +1891,15 @@
         "GlobalRateLimitFilter.java:61-62",
         "config/SecurityConfig.java:20-27"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Inconsistent 429 contract: empty body from L1, duplicate `X-RateLimit-Remaining`, a `-1` sentinel leaked to clients, and no `Retry-After`",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-18T15:42:27Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "GW-08": {
@@ -3964,6 +4145,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:40Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "OI-01",
@@ -3985,14 +4190,15 @@
         "order-service/src/main/resources/application.yml:51-53",
         "InventoryServiceImpl.java:185-191"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The inventory `reserve` API is not idempotent: duplicate holds and 900-second orphan holds",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-18T16:41:41Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "OI-02": {
@@ -4023,6 +4229,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "OI-02",
@@ -4044,14 +4274,15 @@
         "ReservationCleanupScheduler.java:67-68",
         "CompensationFailureLedgerIT.java:40-108"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "A failed `releaseCommitted` in the confirm-compensation path is dropped: no ledger, no retry, stock permanently consumed",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-18T16:41:41Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "OI-03": {
@@ -6913,6 +7144,1119 @@
         "acceptance criteria and source evidence present"
       ]
     },
+    "RES-01": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-01 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone** while the project runs Boot 4.1.1, and the artifact was **renamed** in Boot 4.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-01",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"To clarify the scope of `spring-boot-starter-aop`, it has been renamed to `spring-boot-starter-aspectj`.\"* (Spring Boot 4.0 Migration Guide) Repository evidence: `pom.xml:73` (`<spring-boot-starter-aop.version>4.0.0-M2</spring-boot-starter-aop.version>`), `pom.xml:188-189`, used at `utils/common-logging/pom.xml:25`. `spring-boot-starter-aop` is **not managed** by the Boot 4.1.1 BOM (0 occurrences in `spring-boot-dependencies-4.1.1.pom`), while `resilience4j-spring-boot4`-style Boot-4 modules are. `~/.m2/.../spring-boot-starter-aop/` contains both `4.0.0-M2` and `4.1.1` — the repo resolves the milestone. The repo **does** use `@Aspect` (`utils/common-logging` `AuditAspect`, `LoggerAspect`), so the starter is genuinely needed under the new name.",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "pom.xml:73",
+        "pom.xml:188-189",
+        "utils/common-logging/pom.xml:25"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone** while the project runs Boot 4.1.1, and the artifact was **renamed** in Boot 4.",
+      "title": "`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone while the project runs Boot 4.1.1, and the artifact was renamed in Boot 4.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-02": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-02 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`spring-boot-starter-web` is used in three modules** although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-02",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Migration table: *Spring Web MVC → `spring-boot-starter-webmvc`*; the Boot 4.1.1 POM describes the old artifact as *\"deprecated in favor of spring-boot-starter-webmvc\"*. Repository evidence: `utils/common-spring/pom.xml:47`, `utils/common-security/pom.xml:43`, `order-service/pom.xml:38`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/pom.xml:47",
+        "utils/common-security/pom.xml:43",
+        "order-service/pom.xml:38"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`spring-boot-starter-web` is used in three modules** although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
+      "title": "`spring-boot-starter-web` is used in three modules although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-03": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-03 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Jackson 2 and Jackson 3 are both on the compile classpath** while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-built Jackson 2 mapper is not equivalent to Boot's auto-configured one.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-03",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Spring Boot now uses Jackson 3 as its preferred JSON library. Jackson 3 uses new group IDs and package names with `com.fasterxml.jackson` becoming `tools.jackson`.\"* Repository evidence: `utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/Jackson2ObjectMapperAutoConfiguration.java:10-18`; offline `dependency:tree` of `utils/common-spring` shows `com.fasterxml.jackson.core:jackson-databind:2.21.5` **and** `tools.jackson.core:jackson-databind:3.1.5`; Jackson 2 users include `rating-service/.../RatingEventService.java:69` (outbox payload) while Jackson 3 is used only in `gateway-service/.../filter/GatewayErrorResponseWriter.java:8-9`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/Jackson2ObjectMapperAutoConfiguration.java:10-18",
+        "rating-service/.../RatingEventService.java:69",
+        "gateway-service/.../filter/GatewayErrorResponseWriter.java:8-9"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Jackson 2 and Jackson 3 are both on the compile classpath** while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-built Jackson 2 mapper is not equivalent to Boot's auto-configured one.",
+      "title": "Jackson 2 and Jackson 3 are both on the compile classpath while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-b",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-04": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-04 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0)** managed by Boot 4.1.1.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-04",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Kafka 3.9 producer/consumer documentation (the broker's own line) governs the runtime behaviour; the client line is a separate Boot-managed choice. Repository evidence: `spring-boot-dependencies-4.1.1.pom` (`<kafka.version>4.2.1</kafka.version>`) vs `docker-compose.yml:69` (`apache/kafka:3.9.0`)",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "docker-compose.yml:69"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0)** managed by Boot 4.1.1.",
+      "title": "The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0) managed by Boot 4.1.1.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-05": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-05 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**No Kafka transaction is configured**, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-05",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Exactly-once delivery for other destination systems generally requires cooperation with such systems … Otherwise, Kafka guarantees at-least-once delivery by default.\"* Repository evidence: No `transactional.id` anywhere; `utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:61-73` builds the producer properties; the single-broker dev cluster sets `KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1` (`docker-compose.yml:85`) — the documented minimum for transactions is three brokers",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:61-73",
+        "docker-compose.yml:85"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**No Kafka transaction is configured**, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
+      "title": "No Kafka transaction is configured, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-06": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-06 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Two listener container factories have no dead-letter recoverer**, so a poisoned record is logged and dropped.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-06",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"The default recoverer logs the failed record after retries are exhausted.\"* Repository evidence: `utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:46` (no-recoverer branch) and `product-service/src/main/java/com/shop/productservice/kafka/MediaLifecycleListenerConfig.java:18-28` (no `setCommonErrorHandler` at all)",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:46",
+        "product-service/src/main/java/com/shop/productservice/kafka/MediaLifecycleListenerConfig.java:18-28"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Two listener container factories have no dead-letter recoverer**, so a poisoned record is logged and dropped.",
+      "title": "Two listener container factories have no dead-letter recoverer, so a poisoned record is logged and dropped.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-07": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-07 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`retries = 3` on the producer** is far below the Kafka 3.9 default of `2147483647`.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-07",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Kafka 3.9 producer configs: `retries` default `2147483647`; idempotence requires *\"retries to be greater than 0\"*. Repository evidence: `utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:109` and `product-service/src/main/resources/application.yml:40`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:109",
+        "product-service/src/main/resources/application.yml:40"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`retries = 3` on the producer** is far below the Kafka 3.9 default of `2147483647`.",
+      "title": "`retries = 3` on the producer is far below the Kafka 3.9 default of `2147483647`.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-08": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-08 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The outbox claim resolves a single `MIN(id)` row**, so `SKIP LOCKED` serialises claim throughput across relay instances.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-08",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"With SKIP LOCKED, any selected rows that cannot be immediately locked are skipped … can be used to avoid lock contention with multiple consumers accessing a queue-like table.\"* Repository evidence: `product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java:24-25` (and the same shape in seven other services)",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java:24-25"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The outbox claim resolves a single `MIN(id)` row**, so `SKIP LOCKED` serialises claim throughput across relay instances.",
+      "title": "The outbox claim resolves a single `MIN(id)` row, so `SKIP LOCKED` serialises claim throughput across relay instances.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-09": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-09 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`jakarta.persistence.lock.timeout` is not declared** on one pessimistic-lock query, so the provider default applies.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-09",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: PostgreSQL 16: *\"To prevent the operation from waiting for other transactions to commit, use either the NOWAIT or SKIP LOCKED option.\"* Repository evidence: `notification-service/src/main/java/com/shop/notificationservice/repository/NotificationRepository.java:29-38` (contrast the explicit `-2` at `OutboxEventRepository.java:23,31` and the explicit `3000` at `order-service/.../CartRepository.java:24,29`)",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "notification-service/src/main/java/com/shop/notificationservice/repository/NotificationRepository.java:29-38"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`jakarta.persistence.lock.timeout` is not declared** on one pessimistic-lock query, so the provider default applies.",
+      "title": "`jakarta.persistence.lock.timeout` is not declared on one pessimistic-lock query, so the provider default applies.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-10": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-10 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback**, and `BusinessException` is a `RuntimeException`.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-10",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Any RuntimeException or Error triggers rollback, and any checked Exception does not.\"* Repository evidence: `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:445` with `utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java:6`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:445",
+        "utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java:6"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback**, and `BusinessException` is a `RuntimeException`.",
+      "title": "`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback, and `BusinessException` is a `RuntimeException`.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-11": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-11 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Five `REQUIRES_NEW` sites against a 20-connection Hikari pool** while virtual threads are switchable on.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-11",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Do not use PROPAGATION_REQUIRES_NEW unless your connection pool is appropriately sized, exceeding the number of concurrent threads by at least 1.\"* Repository evidence: `payment-service/.../PaymentWriter.java:26`, `order-service/.../CompensationFailureService.java:36`, `order-service/.../IdempotencyServiceImpl.java:45,105`, `order-service/.../OrderServiceImpl.java:120`; pool size `utils/common-spring/src/main/resources/application.yml:15`; virtual threads switchable at `:9-11`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "payment-service/.../PaymentWriter.java:26",
+        "order-service/.../CompensationFailureService.java:36",
+        "order-service/.../OrderServiceImpl.java:120",
+        "utils/common-spring/src/main/resources/application.yml:15"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Five `REQUIRES_NEW` sites against a 20-connection Hikari pool** while virtual threads are switchable on.",
+      "title": "Five `REQUIRES_NEW` sites against a 20-connection Hikari pool while virtual threads are switchable on.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-12": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-12 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**A singleton bean holds mutable state** (`currentPage`) mutated from a scheduled method.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-12",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Only one shared instance of a singleton bean is managed … As a rule, you should use the prototype scope for all stateful beans and the singleton scope for stateless beans.\"* + JLS §17.4.5 (data race). Repository evidence: `product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java:27` (mutated at `:40`, `:42`)",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java:27"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**A singleton bean holds mutable state** (`currentPage`) mutated from a scheduled method.",
+      "title": "A singleton bean holds mutable state (`currentPage`) mutated from a scheduled method.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-13": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-13 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Monitor-based synchronization in main code would pin a virtual-thread carrier** if virtual threads were enabled.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-13",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"A virtual thread is pinned when it runs a `native` method or a foreign function … Pinning does not make an application incorrect, but it might hinder its scalability.\"* Repository evidence: `order-service/.../OrderReconciliationScheduler.java:203,214`, `order-service/.../OrderCommitCoordinator.java:101`, `search-service/.../ServiceTokenProvider.java:46`; the switch is `utils/common-spring/src/main/resources/application.yml:9-11`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "order-service/.../OrderCommitCoordinator.java:101",
+        "search-service/.../ServiceTokenProvider.java:46",
+        "utils/common-spring/src/main/resources/application.yml:9-11"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Monitor-based synchronization in main code would pin a virtual-thread carrier** if virtual threads were enabled.",
+      "title": "Monitor-based synchronization in main code would pin a virtual-thread carrier if virtual threads were enabled.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-14": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-14 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Configuration is injected into singletons through non-final `@Value` fields.**",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-14",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: JLS §17.5: *\"A thread that can only see a reference to an object after that object has been completely initialized is guaranteed to see the correctly initialized values for that object's final fields.\"* Repository evidence: `product-service/.../service/OutboxRelay.java:35,38,41,44`; `rating-service/.../outbox/RatingOutboxRelay.java:31,34,37,40`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Configuration is injected into singletons through non-final `@Value` fields.**",
+      "title": "Configuration is injected into singletons through non-final `@Value` fields.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-15": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-15 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`shop.security.expected-audiences` is empty by default**, so no audience validation runs; only the `azp` client check is active.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-15",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Keycloak 26: the certificate endpoint and the issuer define the trust anchor; a token must be checked against the intended audience, not only the client. Repository evidence: `utils/common-spring/src/main/resources/application.yml:96` (`expected-audiences: ${SHOP_SECURITY_EXPECTED_AUDIENCES:}`) with the conditional validator at `utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:89-97`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:96",
+        "utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:89-97"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`shop.security.expected-audiences` is empty by default**, so no audience validation runs; only the `azp` client check is active.",
+      "title": "`shop.security.expected-audiences` is empty by default, so no audience validation runs; only the `azp` client check is active.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-16": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-16 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Client roles (`resource_access`) are not mapped** — only `realm_access.roles` becomes an authority.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-16",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Keycloak 26: realm and client roles are exposed *\"under `realm_access` and `resource_access` keys\"*. Repository evidence: `utils/common-security/src/main/java/com/shop/common/security/jwt/JwtRolesConverter.java:16,22,43-45`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Client roles (`resource_access`) are not mapped** — only `realm_access.roles` becomes an authority.",
+      "title": "Client roles (`resource_access`) are not mapped — only `realm_access.roles` becomes an authority.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-17": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-17 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The webhook verifier accepts a second, legacy signature scheme** (bare 64-hex HMAC over the body) when the header has no `t=` component.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-17",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Accept only the signature scheme you expect (Stripe's v1, for example) and ignore any other scheme in the header, to prevent downgrade attacks (Stripe).\"* Repository evidence: `payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:67-75`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:67-75"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The webhook verifier accepts a second, legacy signature scheme** (bare 64-hex HMAC over the body) when the header has no `t=` component.",
+      "title": "The webhook verifier accepts a second, legacy signature scheme (bare 64-hex HMAC over the body) when the header has no `t=` component.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-18": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-18 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Shipped configuration files carry usable secret defaults** (`changeme`, `admin`).",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-18",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Many organizations have them hardcoded within the source code in plaintext, littered throughout configuration files.\"* Repository evidence: `product-service/src/main/resources/application.yml:8,58`; `rating-service/.../application.yml:8,43`; `media-service/.../application.yml:8,57`; `tax-service/.../application.yml:8`; `notification-service/.../application.yml:8`; `shipping-service/.../application.yml:8`; `payment-service/.../application.yml:8`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "tax-service/.../application.yml:8",
+        "notification-service/.../application.yml:8",
+        "shipping-service/.../application.yml:8",
+        "payment-service/.../application.yml:8"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Shipped configuration files carry usable secret defaults** (`changeme`, `admin`).",
+      "title": "Shipped configuration files carry usable secret defaults (`changeme`, `admin`).",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-19": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-19 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The Stripe webhook is processed synchronously before the 2xx.**",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-19",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Your endpoint must quickly return a successful status code (2xx) before any complex logic that might cause a timeout.\"* Repository evidence: `payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:37-38`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:37-38"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The Stripe webhook is processed synchronously before the 2xx.**",
+      "title": "The Stripe webhook is processed synchronously before the 2xx.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-20": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-20 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The idempotency key is client-supplied** (not a server-generated UUID) and is reused across the local and the Stripe layer.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-20",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"A client generates an idempotency key … we suggest using V4 UUIDs\"*; *\"The idempotency layer compares incoming parameters to those of the original request and errors if they're not the same.\"* Repository evidence: `payment-service/src/main/java/com/shop/paymentservice/dto/CreatePaymentRequest.java:16`; `payment-service/.../provider/StripeProvider.java:66,199`; `payment-service/.../changelog-001-payments.yaml:37`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/dto/CreatePaymentRequest.java:16",
+        "payment-service/.../changelog-001-payments.yaml:37"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The idempotency key is client-supplied** (not a server-generated UUID) and is reused across the local and the Stripe layer.",
+      "title": "The idempotency key is client-supplied (not a server-generated UUID) and is reused across the local and the Stripe layer.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-21": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-21 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**Deprecated Testcontainers 1.x packages are used in 21 test files.**",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-21",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: The Boot 4.1 documentation uses the Testcontainers 2.x packages (`org.testcontainers.mongodb.MongoDBContainer`); the legacy classes are `@Deprecated` in the pinned 2.0.5 artefacts. Repository evidence: `product-service/.../support/AbstractIntegrationTest.java:13-14`, `product-service/.../repository/ProductRepositoryTest.java:21`, `rating-service/.../support/AbstractIntegrationTest.java:12-13`, `media-service/.../support/AbstractMediaIntegrationTest.java:10-11`, `notification-service/.../support/AbstractIntegrationTest.java:12-13`, `shipping-service/.../support/AbstractIntegrationTest.java:13-14`, `payment-service/.../support/AbstractIntegrationTest.java:17-18`, `payment-service/.../StripeWebhookIT.java:42-43`, `search-service/.../support/AbstractSearchIntegrationTest.java:10`, `order-service",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/.../support/AbstractIntegrationTest.java:13-14",
+        "product-service/.../repository/ProductRepositoryTest.java:21",
+        "rating-service/.../support/AbstractIntegrationTest.java:12-13",
+        "media-service/.../support/AbstractMediaIntegrationTest.java:10-11",
+        "notification-service/.../support/AbstractIntegrationTest.java:12-13",
+        "shipping-service/.../support/AbstractIntegrationTest.java:13-14",
+        "payment-service/.../support/AbstractIntegrationTest.java:17-18",
+        "payment-service/.../StripeWebhookIT.java:42-43"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**Deprecated Testcontainers 1.x packages are used in 21 test files.**",
+      "title": "Deprecated Testcontainers 1.x packages are used in 21 test files.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-22": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-22 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The integration-test Kafka image differs from the deployed broker.**",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-22",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Testcontainers/Elasticsearch parity: the test environment must exercise the deployed artefact. Repository evidence: 12 test files pin `confluentinc/cp-kafka:7.6.0` — `inventory-service/.../AbstractIntegrationTest.java:29`, `media-service/.../AbstractMediaIntegrationTest.java:28`, `notification-service/.../AbstractIntegrationTest.java:27`, `shipping-service/.../AbstractIntegrationTest.java:28`, `payment-service/.../AbstractIntegrationTest.java:40`, `payment-service/.../StripeWebhookIT.java:79`, `search-service/.../AbstractSearchIntegrationTest.java:19`, `order-service/.../AbstractOrderServiceIT.java:46`, `promotion-service/.../AbstractIntegrationTest.java:27`, `product-service/.../AbstractIntegrationTest.jav",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "inventory-service/.../AbstractIntegrationTest.java:29",
+        "media-service/.../AbstractMediaIntegrationTest.java:28",
+        "notification-service/.../AbstractIntegrationTest.java:27",
+        "shipping-service/.../AbstractIntegrationTest.java:28",
+        "payment-service/.../AbstractIntegrationTest.java:40",
+        "payment-service/.../StripeWebhookIT.java:79",
+        "search-service/.../AbstractSearchIntegrationTest.java:19",
+        "order-service/.../AbstractOrderServiceIT.java:46"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The integration-test Kafka image differs from the deployed broker.**",
+      "title": "The integration-test Kafka image differs from the deployed broker.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-23": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-23 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server.** The 9.x line also renames the transport package, so honouring the declared version would not compile.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-23",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Elastic Java API client installation: the 9.x client ships `co.elastic.clients.transport.rest5_client` and `RestClient5Client`/`Rest5Client`; the repository imports the 8.x `co.elastic.clients.transport.rest_client.RestClientTransport` and `org.elasticsearch.client.RestClient`. Repository evidence: `pom.xml:54` + `pom.xml:205-206` (9.4.5, managed) vs `search-service/pom.xml:35-37` (**8.15.5**, effective) vs `docker-compose.yml:98` (server 8.15.0); `search-service/src/main/java/com/shop/searchservice/config/ElasticsearchConfig.java:5,11-12` (8.x transport classes); `~/.m2/.../elasticsearch-java/9.4.5/` contains only `co/elastic/clients/transport/rest5_client/`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "pom.xml:54",
+        "pom.xml:205-206",
+        "search-service/pom.xml:35-37",
+        "docker-compose.yml:98"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server.** The 9.x line also renames the transport package, so honouring the declared version would not compile.",
+      "title": "The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server. The 9.x line also renames the transport package, so honouring the ",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-24": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-24 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.**",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-24",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"recordFailurePredicate — throwable -> true — By default all exceptions are recorded as failures\"*; *\"ignoreExceptions … neither count as a failure nor success.\"* Repository evidence: `utils/common-spring/src/main/resources/application.yml:152-162` (no `recordExceptions`/`ignoreExceptions`); `order-service/.../TaxServiceClient.java:49,52`; `order-service/.../PaymentServiceClient.java:56,80`; `rating-service/.../EligibilityClient.java:49`; `media-service/.../MediaReferenceClient.java:45`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:152-162",
+        "rating-service/.../EligibilityClient.java:49",
+        "media-service/.../MediaReferenceClient.java:45"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.**",
+      "title": "The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-25": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-25 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The retry and timelimiter Resilience4j configuration is dead** (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-25",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Resilience4j: the modules are configured in `application.yml` and applied via the annotations; aspect order *\"Retry ( CircuitBreaker ( … ) )\"*. Repository evidence: `utils/common-spring/src/main/resources/application.yml:163-173` (retry `:163-170`, timelimiter `:171-173`); no `@Retry`, `@Bulkhead`, `@RateLimiter`, `@TimeLimiter` in `*/src/main`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:163-173"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The retry and timelimiter Resilience4j configuration is dead** (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
+      "title": "The retry and timelimiter Resilience4j configuration is dead (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-26": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-26 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**No JVM memory or GC option is set**, so the heap defaults to 25 % of the container limit.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-26",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"`-XX:MaxRAMPercentage=percent` … The default value is 25 percent.\"*; *\"The VM now provides automatic container detection support … enabled by default.\"* Repository evidence: All 14 service Dockerfiles use a bare entry point, e.g. `product-service/Dockerfile:9` (`ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]`); limits `k8s/microservices.yaml:30,33`, `k8s/gateway-service.yaml:39,42`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "LOW",
+      "source_evidence": [
+        "product-service/Dockerfile:9"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**No JVM memory or GC option is set**, so the heap defaults to 25 % of the container limit.",
+      "title": "No JVM memory or GC option is set, so the heap defaults to 25 % of the container limit.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-27": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-27 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**`/actuator/prometheus` is an unauthenticated public path** while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-27",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: *\"Since Endpoints may contain sensitive information, you should carefully consider when to expose them.\"* Repository evidence: `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java:84-87`; exposure list `utils/common-spring/src/main/resources/application.yml:36`; gateway exposure `gateway-service/src/main/resources/application.yml:86-88`; public gateway routes `gateway-service/src/main/resources/application.yml:37-40`",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java:84-87",
+        "utils/common-spring/src/main/resources/application.yml:36",
+        "gateway-service/src/main/resources/application.yml:86-88",
+        "gateway-service/src/main/resources/application.yml:37-40"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**`/actuator/prometheus` is an unauthenticated public path** while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
+      "title": "`/actuator/prometheus` is an unauthenticated public path while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RES-28": {
+      "acceptance_criteria": [
+        "The deviation recorded as RES-28 no longer applies to the declared versions"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-18T14:33:23Z",
+      "current_implementation": "**The edge rate limiter touches two Redis keys without a common hash tag**, and it fails open on a Redis error.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [],
+      "id": "RES-28",
+      "implementation_revision": "",
+      "independent_verifier": "research-official-v2",
+      "integration_e2e_coverage": [],
+      "notes": "Official guidance: Redis: scripts must *\"perform conditional updates across multiple keys\"*; Bucket4j checklist: *\"simply log the exception and continue the business transaction without throttling\"* is one of only two permitted behaviours. Repository evidence: `gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:67-69` (keys), `:77-78` (fail-open)",
+      "priority": 45,
+      "push_state": "NOT_READY",
+      "severity": "LOW",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:67-69"
+      ],
+      "state": "DISCOVERED",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "technical_risk": "**The edge rate limiter touches two Redis keys without a common hash tag**, and it fails open on a Redis error.",
+      "title": "The edge rate limiter touches two Redis keys without a common hash tag, and it fails open on a Redis error.",
+      "updated_at": "2026-11-18T14:33:23Z",
+      "verification_evidence": []
+    },
+    "RTG-01": {
+      "acceptance_criteria": [
+        "An upstream transport failure on the eligibility check yields 503 with code ERR-0503 and never 403 with code RTG-11001",
+        "A genuine eligible=false answer from order-service still yields 403 with code RTG-11001",
+        "A missing or malformed payload from order-service is a dependency failure, not a denial",
+        "The circuit breaker that guards the call observes the upstream failure"
+      ],
+      "affected_service": "rating-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "A rating submission returned 403 Only verified purchasers can rate this product while the upstream call had failed with a socket read timeout. A failure to determine was indistinguishable from a real denial.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:19Z",
+      "current_implementation": "catch RestClientException returns false; the caller maps false to ErrorCode.RATING_NOT_ELIGIBLE.",
+      "dependencies": [],
+      "design_pattern": "Circuit Breaker",
+      "edge_case_tests": [
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#nullDataIsReportedAsDependencyFailure",
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#malformedBodyIsReportedAsDependencyFailure",
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#tokenProviderFailureIsReportedAsDependencyFailure",
+        "rating-service/src/test/java/com/shop/ratingservice/service/impls/RatingServiceImplTest.java#submit_dependencyFailure_isReportedAsServiceUnavailableWithoutSave"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#deliveredItemYieldsTrue"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "rating-service module tests green: 76 run, 0 failures, 0 errors; EligibilityClientTest asserts a dependency failure carries status 503 and code ERR-0503 and never RTG-11001; RatingServiceImplTest#submit_dependencyFailure_isReportedAsServiceUnavailableWithoutSave proves no rating is saved; harness e2e run --scope lifecycle exit 0; petproject-comprehensive 42 assertions 0 failures, petproject-e2e-business-flow 42 assertions 0 failures; 8.1 Submit Rating POST http://localhost:8089/api/v1/ratings 201 Created in 3.3s, previously 403 Forbidden RTG-11001 in 33.9s; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "RTG-01",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "Rule R19 was added to docs/PATTERNS.md for this class of defect.",
+      "priority": 5,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "rating-service/src/main/java/com/shop/ratingservice/eligibility/EligibilityClient.java",
+        "production-audit/runs/run-20261118-a2b6e6fc/e2e-results/petproject-comprehensive.postman_collection.log",
+        "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-service.md"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The upstream failure escapes the guarded call as BusinessException.serviceUnavailable (503 ERR-0503) with the cause preserved; the circuit breaker records it; a fallback maps an open breaker to the same dependency failure; a genuine not-eligible answer still returns 403 RTG-11001.",
+      "technical_risk": "The catch swallowed the transport fault and returned false, so the orderService circuit breaker never recorded the failure and never opened.",
+      "title": "An upstream purchase-verification failure was reported as the business denial RTG-11001 (403) instead of a dependency failure",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "rating-service module tests green: 76 run, 0 failures, 0 errors",
+        "EligibilityClientTest asserts a dependency failure carries status 503 and code ERR-0503 and never RTG-11001",
+        "RatingServiceImplTest#submit_dependencyFailure_isReportedAsServiceUnavailableWithoutSave proves no rating is saved",
+        "harness e2e run --scope lifecycle exit 0; petproject-comprehensive 42 assertions 0 failures, petproject-e2e-business-flow 42 assertions 0 failures; 8.1 Submit Rating POST http://localhost:8089/api/v1/ratings 201 Created in 3.3s, previously 403 Forbidden RTG-11001 in 33.9s",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log"
+      ]
+    },
     "SEC-01": {
       "acceptance_criteria": [
         "The behaviour reported for SEC-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md no longer reproduces"
@@ -6941,6 +8285,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SEC-01",
@@ -6962,14 +8330,15 @@
         "utils/common-spring/.../ApiExceptionHandler.java:196-208",
         "auth-service/.../UserServiceImpl.java:317-323"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "auth-service resolves the JWT subject against a DIFFERENT primary-key space",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-18T15:42:27Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "SEC-02": {
@@ -7000,6 +8369,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:40Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:40Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:40Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:40Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SEC-02",
@@ -7021,14 +8414,15 @@
         "payment-service/.../PaymentController.java:43",
         "promotion-service/.../PromotionReservationController.java:39"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Cross-service IDOR: `verify-purchase` accepts an arbitrary `userId` with no principal cross-check",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-18T16:41:40Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "SEC-03": {
@@ -8532,6 +9926,1130 @@
         "acceptance criteria and source evidence present"
       ]
     },
+    "SHIP-01": {
+      "acceptance_criteria": [
+        "Three duplicate CONFIRMED events for one order produce exactly one shipment row, one creation task and one carrier call"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "A duplicate order event produced two physical parcels with one shipment row and one tracking number.",
+      "concurrency_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentCreationServiceTest.java#duplicateConfirmedEvent_secondClaimIsRejectedAndTheCarrierIsNotCalledAgain"
+      ],
+      "created_at": "2026-11-19T06:06:19Z",
+      "current_implementation": "existsByOrderId was checked, then the carrier was called, then the row was inserted.",
+      "dependencies": [],
+      "design_pattern": "Reservation",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java#duplicatedConfirmedEventCreatesExactlyOneCarrierShipment"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-01",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 1,
+      "push_state": "NOT_READY",
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationService.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentCreationTask.java",
+        "shipping-service/src/main/resources/db/changelog/changelog-007-shipment-creation-tasks.yaml"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The order id is claimed in a shipment_creation_tasks row before the carrier call; a partial unique index on order_id arbitrates the claim; the carrier request carries a deterministic Idempotency-Key.",
+      "technical_risk": "The guard was a read that the carrier call invalidated, and the unique index fired only after the side effect.",
+      "title": "The carrier call happened before the idempotency guard, so two duplicate CONFIRMED events created two parcels",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-02": {
+      "acceptance_criteria": [
+        "A carrier failure is recorded on the creation task and rescheduled instead of being lost"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "A carrier outage silently dropped the shipment and the order event dead-lettered.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:19Z",
+      "current_implementation": "The carrier exception propagated out of the consumer.",
+      "dependencies": [],
+      "design_pattern": "Reconciliation Sweeper",
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentCreationServiceTest.java#carrierFailure_isRecordedAndRescheduledInsteadOfBeingLost"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-02",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 2,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationService.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ShipmentCreationRetryScheduler.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The failure is recorded on the creation task with an attempt count and a next attempt time, and a retry worker picks it up.",
+      "technical_risk": "The exception escaped the consumer and nothing recorded that a parcel had to be created.",
+      "title": "A carrier client exception was thrown away, so a failed shipment creation was lost",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-03": {
+      "acceptance_criteria": [
+        "A stalled carrier is abandoned inside the declared timeout budget"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "A stalled carrier held the consumer thread and the parcel creation forever.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The carrier RestClient used the default JDK request factory with no timeout.",
+      "dependencies": [],
+      "design_pattern": "Adapter",
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizerTest.java#aStalledCarrierIsAbandonedInsideTheBudget"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-03",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 3,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizer.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierShipmentClient.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The carrier request factory declares a connect and read timeout inside a budget.",
+      "technical_risk": "The request factory had no connect or read timeout.",
+      "title": "The carrier client declared no HTTP timeout",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-04": {
+      "acceptance_criteria": [
+        "The whole changelog chain applies to an empty database",
+        "The whole chain applies to a database that already holds FAILED webhook event rows"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "The shipping schema could not be migrated past changeset 003, so the webhook retry feature could not be deployed.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The 003 changeset violated the 001 constraint.",
+      "dependencies": [],
+      "design_pattern": "Migration",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-04",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogIT.java#theWholeChainAppliesToADatabaseThatAlreadyHoldsFailedWebhookEvents"
+      ],
+      "notes": "",
+      "priority": 4,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/resources/db/changelog/changelog-002b-expand-events-status-check-pre.yaml",
+        "shipping-service/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "A new changeset 002b widens the constraint before 003 runs; the already applied changesets 001 to 006 are untouched so their checksums stay valid.",
+      "technical_risk": "The 003 backfill writes status FAILED_RETRYABLE while the CHECK created in 001 allowed only PROCESSED and FAILED.",
+      "title": "changelog-003-webhook-retry violated a CHECK constraint, which blocked changesets 004, 005 and 006 from applying",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-05": {
+      "acceptance_criteria": [
+        "A shipment the state machine forbids to auto-deliver is left untouched by the reconciliation sweep",
+        "No public setter can write the shipment status"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "The sweeper could move a shipment into a state the business does not allow.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The reconciliation sweep assigned the status directly.",
+      "dependencies": [],
+      "design_pattern": "State Machine",
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/scheduler/ReconciliationSchedulerTest.java#aShipmentTheStateMachineForbidsToAutoDeliver_isLeftUntouched",
+        "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentStatusWriteGuardTest.java"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-05",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 6,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentStateMachine.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ReconciliationScheduler.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The state machine owns every transition, the status setters are closed, and the sweep goes through the state machine with a per-row error boundary.",
+      "technical_risk": "The status field had a public setter, so any caller could write an illegal transition.",
+      "title": "The reconciliation path bypassed the shipment finite state machine",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-06": {
+      "acceptance_criteria": [
+        "A late webhook cannot resurrect a DELIVERY_FAILED shipment"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "A shipment that had already failed delivery was moved back into transit by a late carrier callback.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The DELIVERY_FAILED to IN_TRANSIT edge existed in the state machine.",
+      "dependencies": [],
+      "design_pattern": "State Machine",
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/impls/WebhookEventServiceTest.java#aLateWebhook_cannotResurrectADeliveryFailedShipment"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-06",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 7,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentStateMachine.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/service/impls/WebhookEventServiceImpl.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The edge is removed; an operator retry is the only way out of DELIVERY_FAILED; the webhook path uses the state machine.",
+      "technical_risk": "The state machine allowed the DELIVERY_FAILED to IN_TRANSIT edge.",
+      "title": "A late webhook could resurrect a DELIVERY_FAILED shipment",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-07": {
+      "acceptance_criteria": [
+        "A webhook retry row is claimed exclusively by one instance"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "The same carrier webhook was retried several times in parallel.",
+      "concurrency_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java#aWebhookRetryRowIsClaimedExclusively"
+      ],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "Due rows were read and processed without an exclusive claim.",
+      "dependencies": [],
+      "design_pattern": "Reconciliation Sweeper",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-07",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 8,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/repository/ShipmentEventRepository.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/scheduler/WebhookRetryScheduler.java",
+        "shipping-service/src/main/resources/db/changelog/changelog-008-webhook-retry-claim-and-index.yaml"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "A conditional update claims the row with a claimed_at stamp and the claim is released on failure.",
+      "technical_risk": "The scheduler selected due rows without locking them.",
+      "title": "Webhook retry rows had no claim, so several instances processed the same retry",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-08": {
+      "acceptance_criteria": [
+        "A locked head row does not block the next pending row"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "One stuck row stopped the whole shipping outbox from draining.",
+      "concurrency_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingOutboxClaimConcurrencyIT.java#twoPendingRows_theLockedHeadRowDoesNotBlockTheNextRow"
+      ],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The claim took the minimum id and locked it.",
+      "dependencies": [],
+      "design_pattern": "Transactional Outbox",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-08",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 9,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/OutboxEventRepository.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The claim selects with ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED, so a locked row is skipped.",
+      "technical_risk": "The claim selected MIN(id) and then locked it, so the head of line blocked the relay.",
+      "title": "The outbox relay selected its head row with MIN(id), so a locked head row blocked every other row",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-11": {
+      "acceptance_criteria": [
+        "The index exists in the migrated database"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "The webhook retry scan degraded as the table grew.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "No index supported the due-retry scan.",
+      "dependencies": [],
+      "design_pattern": "Migration",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-11",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogContractTest.java"
+      ],
+      "notes": "",
+      "priority": 20,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "shipping-service/src/main/resources/db/changelog/changelog-008-webhook-retry-claim-and-index.yaml"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The index matches the due-retry predicate.",
+      "technical_risk": "The status and next retry columns were not indexed.",
+      "title": "The reconciliation query had no matching index",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-12": {
+      "acceptance_criteria": [
+        "A soft-deleted shipment is invisible and does not block a new one"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "A soft-deleted shipment still blocked the creation of a new shipment for the same order.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The soft-deleted rows were visible to the query path.",
+      "dependencies": [],
+      "design_pattern": "Repository",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-12",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java#aSoftDeletedShipmentIsInvisibleAndDoesNotBlockANewOne"
+      ],
+      "notes": "",
+      "priority": 21,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/entity/Shipment.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentEvent.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The restriction matches the partial index and the creation claim reopens the soft-deleted row.",
+      "technical_risk": "The query restriction and the partial index disagreed on the deleted predicate.",
+      "title": "The soft-delete restriction did not match the partial index, so a soft-deleted shipment still occupied the live key",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-13": {
+      "acceptance_criteria": [
+        "The foreign key exists in the migrated database"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "An event could point at a shipment that does not exist.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "No foreign key existed.",
+      "dependencies": [],
+      "design_pattern": "Migration",
+      "edge_case_tests": [],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-13",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogContractTest.java"
+      ],
+      "notes": "",
+      "priority": 22,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "shipping-service/src/main/resources/db/changelog/changelog-009-shipment-event-shipment-fk.yaml"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The foreign key is added, validated for existing rows and enforced for new rows.",
+      "technical_risk": "The relation was not enforced by the database.",
+      "title": "Shipment events had no foreign key to their shipment",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-14": {
+      "acceptance_criteria": [
+        "A signed payload without an event id is rejected with a bad request",
+        "A constraint violation that is not the carrier event index is rejected with a bad request"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "Two carrier callbacks without an event id were indistinguishable.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The missing event id was logged and processing continued.",
+      "dependencies": [],
+      "design_pattern": "Idempotent Consumer",
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/impls/WebhookEventServiceTest.java#aSignedPayloadWithoutAnEventId_isRejectedWithBadRequest"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-14",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 23,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/impls/WebhookEventServiceImpl.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "A signed payload without an event id is rejected with a bad request before any write, and an insert violation is classified by constraint name.",
+      "technical_risk": "The missing id was absorbed and the insert violation was not classified by constraint.",
+      "title": "A null provider event id was swallowed instead of rejected",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
+    "SHIP-15": {
+      "acceptance_criteria": [
+        "An event whose retries are exhausted is parked as dead and counted",
+        "The retention scheduler purges the dead rows"
+      ],
+      "affected_service": "shipping-service",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "An event that could never be published disappeared without any signal.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:20Z",
+      "current_implementation": "The exhausted row stayed in FAILED_RETRYABLE and was not counted.",
+      "dependencies": [],
+      "design_pattern": "Reconciliation Sweeper",
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingOutboxRelayTest.java#relay_maxRetriesExhausted_parksTheEventAsDeadAndCountsIt"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped; shipping-service Checkstyle validate exit 0 with 0 violations; shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log; harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SHIP-15",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 24,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionScheduler.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "The exhausted row is parked as DEAD, counted by a metric, and purged by the retention scheduler.",
+      "technical_risk": "The relay exhausted its retries and left the row in a retry state forever.",
+      "title": "Permanently failed outbox rows were never surfaced",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "shipping-service module tests green: 190 run, 0 failures, 0 errors, 0 skipped",
+        "shipping-service Checkstyle validate exit 0 with 0 violations",
+        "shipping hardening report production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-hardening.md",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+        "harness verify --suite comments PASS, 1136 files scanned, 0 prohibited comments"
+      ]
+    },
     "SL-01": {
       "acceptance_criteria": [
         "The behaviour reported for SL-01 in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md no longer reproduces"
@@ -8765,6 +11283,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:41Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-05",
@@ -8778,14 +11320,15 @@
       "source_evidence": [
         "DeadLetterReplayServiceTest.java:85-112"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`DeadLetterReplayService.replay()` re-reads the whole DLT on every invocation and re-publishes already-replayed records",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-18T16:41:42Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "SL-06": {
@@ -8919,6 +11462,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-08",
@@ -8933,14 +11500,15 @@
         "org/springframework/boot/jackson/autoconfigure/JacksonAutoConfiguration.java:518",
         "Jackson2ObjectMapperAutoConfiguration.java:27-29"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`BaseKafkaConsumer.WIRE_MAPPER` is a bare `ObjectMapper` that rejects unknown properties",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-18T16:41:42Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "SL-09": {
@@ -9745,6 +12313,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T15:42:27Z",
+          "evidence": "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-24",
@@ -9759,14 +12351,15 @@
         "utils/common-security/src/main/java/com/shop/common/security/service/ServiceCallerGuard.java:27-37",
         "BaseSecurityConfig.java:83"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`ServiceCallerGuard.requireCaller()` **fails open** for an unauthenticated caller",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-18T15:42:27Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "mvnw -B -ntp clean verify exit 0; gateway module 177 tests 0 failures; commit 5d16040510b1 pushed to audit/production-hardening-run-20261118-a2b6e6fc"
       ]
     },
     "SL-25": {
@@ -10238,6 +12831,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-34",
@@ -10254,14 +12871,15 @@
         "DeadLetterReplayService.java:96-105",
         "SecurityAutoConfiguration.java:31"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "the DLT-replay actuator endpoint has no authorization",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-18T16:41:42Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "SL-35": {
@@ -10292,6 +12910,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:42Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-35",
@@ -10305,14 +12947,15 @@
       "source_evidence": [
         "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:87-92"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "a listener factory without a recoverer silently drops records",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-18T16:41:43Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "SL-36": {
@@ -10343,6 +12986,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-18T16:41:43Z",
+          "evidence": "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-36",
@@ -10356,14 +13023,15 @@
       "source_evidence": [
         "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:98-106"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "the shared consumer configuration pins none of the commit/isolation semantics",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-18T16:41:43Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "agent-verified module test suite green; report in production-audit/runs/run-20261118-a2b6e6fc/source-reviews/"
       ]
     },
     "SL-37": {
@@ -10846,7 +13514,197 @@
         "normalized from discovered",
         "acceptance criteria and source evidence present"
       ]
+    },
+    "SL-46": {
+      "acceptance_criteria": [
+        "The Keycloak token fetch uses a pooled HTTP client with a bounded connect and read timeout",
+        "The token request sends Accept: application/json",
+        "A transient failure is retried within a total refresh budget and a persistent failure raises a typed exception",
+        "A failure is not re-attempted by the next caller inside the cooldown window",
+        "The five service providers no longer duplicate the token logic"
+      ],
+      "affected_service": "common-keycloak",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "Under load the token fetch stalled, every concurrent caller serialised behind the refresh lock, and the rating request took 33.9 s before failing.",
+      "concurrency_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aFailedRefreshIsNotRepeatedImmediatelyByTheNextCaller"
+      ],
+      "created_at": "2026-11-19T06:06:19Z",
+      "current_implementation": "Five near-identical provider classes, one per service, each with its own request factory.",
+      "dependencies": [],
+      "design_pattern": "Adapter",
+      "edge_case_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aPersistentFailureSurfacesAsAServiceTokenException",
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aFailedRefreshIsNotRepeatedImmediatelyByTheNextCaller",
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aStalledEndpointIsBoundedByTheRefreshBudget"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aSuccessfulGrantReturnsTheAccessToken",
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#theTokenIsCachedForTheFollowingCalls"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "utils/common-keycloak KeycloakServiceTokenProviderTest 8 tests green against a real JDK HTTP server; the grant sends Accept: application/json and the client_credentials form; a stalled endpoint is abandoned inside the refresh budget, a persistent failure raises KeycloakServiceTokenException; a failure is not re-attempted by the next caller inside the cooldown window; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SL-46",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "The test drives a real JDK HTTP server, so it exercises the wire behaviour rather than a mock.",
+      "priority": 10,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakServiceTokenProvider.java",
+        "search-service/src/main/java/com/shop/searchservice/security/ServiceTokenProvider.java",
+        "rating-service/src/main/java/com/shop/ratingservice/security/ServiceTokenProvider.java",
+        "order-service/src/main/java/com/shop/orderservice/security/ServiceTokenProvider.java",
+        "product-service/src/main/java/com/shop/productservice/security/ServiceTokenProvider.java",
+        "media-service/src/main/java/com/shop/mediaservice/security/ServiceTokenProvider.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "One shared KeycloakServiceTokenProvider in common-keycloak with a pooled HttpClient, an Accept: application/json default header, a bounded retry inside a total refresh budget, automatic transport retries disabled so the policy is in one place, and a failure cooldown that collapses a refresh herd. The five service classes became thin adapters.",
+      "technical_risk": "SimpleClientHttpRequestFactory opens a new connection per call with no pooling, the read timeout was 5 s, and search-service set no timeout at all.",
+      "title": "Five duplicated ServiceTokenProvider classes fetched the Keycloak token over a non-pooled connection with no Accept header, no retry and, in search-service, no timeout at all",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "utils/common-keycloak KeycloakServiceTokenProviderTest 8 tests green against a real JDK HTTP server",
+        "the grant sends Accept: application/json and the client_credentials form",
+        "a stalled endpoint is abandoned inside the refresh budget, a persistent failure raises KeycloakServiceTokenException",
+        "a failure is not re-attempted by the next caller inside the cooldown window",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log"
+      ]
+    },
+    "SL-47": {
+      "acceptance_criteria": [
+        "The client_credentials grant sends the configured service account client id",
+        "The master-realm password grant keeps the master-realm admin client id"
+      ],
+      "affected_service": "common-keycloak",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "auth-service failed to start with HttpClientErrorException$Unauthorized from getServiceAccountAccessToken, so the platform could not issue tokens.",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T06:06:19Z",
+      "current_implementation": "The client_credentials grant sent client_id=admin-cli against the ecommerce realm.",
+      "dependencies": [],
+      "design_pattern": "Adapter",
+      "edge_case_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java#theMasterRealmPasswordGrantKeepsTheMasterRealmAdminClient"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java#theServiceAccountGrantUsesTheServiceAccountClient"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to NORMALIZED by the lead after the implementation batch",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to READY by the lead after the implementation batch",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IN_PROGRESS by the lead after the implementation batch",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to IMPLEMENTED by the lead after the implementation batch",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "moved to VERIFYING by the lead after the implementation batch",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T06:26:36Z",
+          "evidence": "KeycloakAdminClientServiceAccountTest 7 tests green; the client_credentials grant sends client_id=ecommerce-admin and the master-realm password grant keeps admin-cli; auth-service starts and issues tokens against the ecommerce realm; ./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
+      "id": "SL-47",
+      "implementation_revision": "",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 12,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakProperties.java",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakAutoConfiguration.java"
+      ],
+      "state": "VERIFIED",
+      "target_implementation": "A distinct service-account-client-id property (default ecommerce-admin) drives the client_credentials grant, while the master-realm password grant keeps admin-cli.",
+      "technical_risk": "shop.keycloak.admin-client-id (default admin-cli) was used for the master-realm password grant and for the application-realm client_credentials grant, but admin-cli exists only in the master realm.",
+      "title": "One Keycloak admin-client property served two different OAuth clients, so the application-realm service account could never authenticate",
+      "updated_at": "2026-11-19T06:26:36Z",
+      "verification_evidence": [
+        "moved to NORMALIZED by the lead after the implementation batch",
+        "moved to READY by the lead after the implementation batch",
+        "moved to IN_PROGRESS by the lead after the implementation batch",
+        "moved to IMPLEMENTED by the lead after the implementation batch",
+        "moved to VERIFYING by the lead after the implementation batch",
+        "KeycloakAdminClientServiceAccountTest 7 tests green",
+        "the client_credentials grant sends client_id=ecommerce-admin and the master-realm password grant keeps admin-cli",
+        "auth-service starts and issues tokens against the ecommerce realm",
+        "./mvnw -B -ntp clean verify exit 0 at 2026-11-19T13:08:27+07:00, 2092 tests, 0 failures, 0 errors, 0 skipped, 23 modules, log production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log"
+      ]
     }
   },
-  "updated_at": "2026-11-18T14:04:41Z"
+  "updated_at": "2026-11-19T06:26:36Z"
 }

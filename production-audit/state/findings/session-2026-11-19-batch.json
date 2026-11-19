@@ -1,0 +1,397 @@
+{
+  "findings": [
+    {
+      "id": "RTG-01",
+      "title": "An upstream purchase-verification failure was reported as the business denial RTG-11001 (403) instead of a dependency failure",
+      "severity": "HIGH",
+      "priority": 5,
+      "affected_service": "rating-service",
+      "design_pattern": "Circuit Breaker",
+      "source_evidence": [
+        "rating-service/src/main/java/com/shop/ratingservice/eligibility/EligibilityClient.java",
+        "production-audit/runs/run-20261118-a2b6e6fc/e2e-results/petproject-comprehensive.postman_collection.log",
+        "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-service.md"
+      ],
+      "business_risk": "A rating submission returned 403 Only verified purchasers can rate this product while the upstream call had failed with a socket read timeout. A failure to determine was indistinguishable from a real denial.",
+      "technical_risk": "The catch swallowed the transport fault and returned false, so the orderService circuit breaker never recorded the failure and never opened.",
+      "current_implementation": "catch RestClientException returns false; the caller maps false to ErrorCode.RATING_NOT_ELIGIBLE.",
+      "target_implementation": "The upstream failure escapes the guarded call as BusinessException.serviceUnavailable (503 ERR-0503) with the cause preserved; the circuit breaker records it; a fallback maps an open breaker to the same dependency failure; a genuine not-eligible answer still returns 403 RTG-11001.",
+      "acceptance_criteria": [
+        "An upstream transport failure on the eligibility check yields 503 with code ERR-0503 and never 403 with code RTG-11001",
+        "A genuine eligible=false answer from order-service still yields 403 with code RTG-11001",
+        "A missing or malformed payload from order-service is a dependency failure, not a denial",
+        "The circuit breaker that guards the call observes the upstream failure"
+      ],
+      "happy_path_tests": [
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#deliveredItemYieldsTrue"
+      ],
+      "edge_case_tests": [
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#nullDataIsReportedAsDependencyFailure",
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#malformedBodyIsReportedAsDependencyFailure",
+        "rating-service/src/test/java/com/shop/ratingservice/eligibility/EligibilityClientTest.java#tokenProviderFailureIsReportedAsDependencyFailure",
+        "rating-service/src/test/java/com/shop/ratingservice/service/impls/RatingServiceImplTest.java#submit_dependencyFailure_isReportedAsServiceUnavailableWithoutSave"
+      ],
+      "notes": "Rule R19 was added to docs/PATTERNS.md for this class of defect."
+    },
+    {
+      "id": "SL-46",
+      "title": "Five duplicated ServiceTokenProvider classes fetched the Keycloak token over a non-pooled connection with no Accept header, no retry and, in search-service, no timeout at all",
+      "severity": "HIGH",
+      "priority": 10,
+      "affected_service": "common-keycloak",
+      "design_pattern": "Adapter",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakServiceTokenProvider.java",
+        "search-service/src/main/java/com/shop/searchservice/security/ServiceTokenProvider.java",
+        "rating-service/src/main/java/com/shop/ratingservice/security/ServiceTokenProvider.java",
+        "order-service/src/main/java/com/shop/orderservice/security/ServiceTokenProvider.java",
+        "product-service/src/main/java/com/shop/productservice/security/ServiceTokenProvider.java",
+        "media-service/src/main/java/com/shop/mediaservice/security/ServiceTokenProvider.java"
+      ],
+      "business_risk": "Under load the token fetch stalled, every concurrent caller serialised behind the refresh lock, and the rating request took 33.9 s before failing.",
+      "technical_risk": "SimpleClientHttpRequestFactory opens a new connection per call with no pooling, the read timeout was 5 s, and search-service set no timeout at all.",
+      "current_implementation": "Five near-identical provider classes, one per service, each with its own request factory.",
+      "target_implementation": "One shared KeycloakServiceTokenProvider in common-keycloak with a pooled HttpClient, an Accept: application/json default header, a bounded retry inside a total refresh budget, automatic transport retries disabled so the policy is in one place, and a failure cooldown that collapses a refresh herd. The five service classes became thin adapters.",
+      "acceptance_criteria": [
+        "The Keycloak token fetch uses a pooled HTTP client with a bounded connect and read timeout",
+        "The token request sends Accept: application/json",
+        "A transient failure is retried within a total refresh budget and a persistent failure raises a typed exception",
+        "A failure is not re-attempted by the next caller inside the cooldown window",
+        "The five service providers no longer duplicate the token logic"
+      ],
+      "happy_path_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aSuccessfulGrantReturnsTheAccessToken",
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#theTokenIsCachedForTheFollowingCalls"
+      ],
+      "edge_case_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aPersistentFailureSurfacesAsAServiceTokenException",
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aFailedRefreshIsNotRepeatedImmediatelyByTheNextCaller",
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aStalledEndpointIsBoundedByTheRefreshBudget"
+      ],
+      "concurrency_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java#aFailedRefreshIsNotRepeatedImmediatelyByTheNextCaller"
+      ],
+      "notes": "The test drives a real JDK HTTP server, so it exercises the wire behaviour rather than a mock."
+    },
+    {
+      "id": "SL-47",
+      "title": "One Keycloak admin-client property served two different OAuth clients, so the application-realm service account could never authenticate",
+      "severity": "HIGH",
+      "priority": 12,
+      "affected_service": "common-keycloak",
+      "design_pattern": "Adapter",
+      "source_evidence": [
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakProperties.java",
+        "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakAutoConfiguration.java"
+      ],
+      "business_risk": "auth-service failed to start with HttpClientErrorException$Unauthorized from getServiceAccountAccessToken, so the platform could not issue tokens.",
+      "technical_risk": "shop.keycloak.admin-client-id (default admin-cli) was used for the master-realm password grant and for the application-realm client_credentials grant, but admin-cli exists only in the master realm.",
+      "current_implementation": "The client_credentials grant sent client_id=admin-cli against the ecommerce realm.",
+      "target_implementation": "A distinct service-account-client-id property (default ecommerce-admin) drives the client_credentials grant, while the master-realm password grant keeps admin-cli.",
+      "acceptance_criteria": [
+        "The client_credentials grant sends the configured service account client id",
+        "The master-realm password grant keeps the master-realm admin client id"
+      ],
+      "happy_path_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java#theServiceAccountGrantUsesTheServiceAccountClient"
+      ],
+      "edge_case_tests": [
+        "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java#theMasterRealmPasswordGrantKeepsTheMasterRealmAdminClient"
+      ]
+    },
+    {
+      "id": "SHIP-01",
+      "title": "The carrier call happened before the idempotency guard, so two duplicate CONFIRMED events created two parcels",
+      "severity": "CRITICAL",
+      "priority": 1,
+      "affected_service": "shipping-service",
+      "design_pattern": "Reservation",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationService.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentCreationTask.java",
+        "shipping-service/src/main/resources/db/changelog/changelog-007-shipment-creation-tasks.yaml"
+      ],
+      "business_risk": "A duplicate order event produced two physical parcels with one shipment row and one tracking number.",
+      "technical_risk": "The guard was a read that the carrier call invalidated, and the unique index fired only after the side effect.",
+      "current_implementation": "existsByOrderId was checked, then the carrier was called, then the row was inserted.",
+      "target_implementation": "The order id is claimed in a shipment_creation_tasks row before the carrier call; a partial unique index on order_id arbitrates the claim; the carrier request carries a deterministic Idempotency-Key.",
+      "acceptance_criteria": [
+        "Three duplicate CONFIRMED events for one order produce exactly one shipment row, one creation task and one carrier call"
+      ],
+      "happy_path_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java#duplicatedConfirmedEventCreatesExactlyOneCarrierShipment"
+      ],
+      "concurrency_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentCreationServiceTest.java#duplicateConfirmedEvent_secondClaimIsRejectedAndTheCarrierIsNotCalledAgain"
+      ]
+    },
+    {
+      "id": "SHIP-02",
+      "title": "A carrier client exception was thrown away, so a failed shipment creation was lost",
+      "severity": "HIGH",
+      "priority": 2,
+      "affected_service": "shipping-service",
+      "design_pattern": "Reconciliation Sweeper",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationService.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ShipmentCreationRetryScheduler.java"
+      ],
+      "business_risk": "A carrier outage silently dropped the shipment and the order event dead-lettered.",
+      "technical_risk": "The exception escaped the consumer and nothing recorded that a parcel had to be created.",
+      "current_implementation": "The carrier exception propagated out of the consumer.",
+      "target_implementation": "The failure is recorded on the creation task with an attempt count and a next attempt time, and a retry worker picks it up.",
+      "acceptance_criteria": [
+        "A carrier failure is recorded on the creation task and rescheduled instead of being lost"
+      ],
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentCreationServiceTest.java#carrierFailure_isRecordedAndRescheduledInsteadOfBeingLost"
+      ]
+    },
+    {
+      "id": "SHIP-03",
+      "title": "The carrier client declared no HTTP timeout",
+      "severity": "HIGH",
+      "priority": 3,
+      "affected_service": "shipping-service",
+      "design_pattern": "Adapter",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizer.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierShipmentClient.java"
+      ],
+      "business_risk": "A stalled carrier held the consumer thread and the parcel creation forever.",
+      "technical_risk": "The request factory had no connect or read timeout.",
+      "current_implementation": "The carrier RestClient used the default JDK request factory with no timeout.",
+      "target_implementation": "The carrier request factory declares a connect and read timeout inside a budget.",
+      "acceptance_criteria": [
+        "A stalled carrier is abandoned inside the declared timeout budget"
+      ],
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizerTest.java#aStalledCarrierIsAbandonedInsideTheBudget"
+      ]
+    },
+    {
+      "id": "SHIP-04",
+      "title": "changelog-003-webhook-retry violated a CHECK constraint, which blocked changesets 004, 005 and 006 from applying",
+      "severity": "HIGH",
+      "priority": 4,
+      "affected_service": "shipping-service",
+      "design_pattern": "Migration",
+      "source_evidence": [
+        "shipping-service/src/main/resources/db/changelog/changelog-002b-expand-events-status-check-pre.yaml",
+        "shipping-service/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "business_risk": "The shipping schema could not be migrated past changeset 003, so the webhook retry feature could not be deployed.",
+      "technical_risk": "The 003 backfill writes status FAILED_RETRYABLE while the CHECK created in 001 allowed only PROCESSED and FAILED.",
+      "current_implementation": "The 003 changeset violated the 001 constraint.",
+      "target_implementation": "A new changeset 002b widens the constraint before 003 runs; the already applied changesets 001 to 006 are untouched so their checksums stay valid.",
+      "acceptance_criteria": [
+        "The whole changelog chain applies to an empty database",
+        "The whole chain applies to a database that already holds FAILED webhook event rows"
+      ],
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogIT.java#theWholeChainAppliesToADatabaseThatAlreadyHoldsFailedWebhookEvents"
+      ]
+    },
+    {
+      "id": "SHIP-05",
+      "title": "The reconciliation path bypassed the shipment finite state machine",
+      "severity": "HIGH",
+      "priority": 6,
+      "affected_service": "shipping-service",
+      "design_pattern": "State Machine",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentStateMachine.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ReconciliationScheduler.java"
+      ],
+      "business_risk": "The sweeper could move a shipment into a state the business does not allow.",
+      "technical_risk": "The status field had a public setter, so any caller could write an illegal transition.",
+      "current_implementation": "The reconciliation sweep assigned the status directly.",
+      "target_implementation": "The state machine owns every transition, the status setters are closed, and the sweep goes through the state machine with a per-row error boundary.",
+      "acceptance_criteria": [
+        "A shipment the state machine forbids to auto-deliver is left untouched by the reconciliation sweep",
+        "No public setter can write the shipment status"
+      ],
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/scheduler/ReconciliationSchedulerTest.java#aShipmentTheStateMachineForbidsToAutoDeliver_isLeftUntouched",
+        "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentStatusWriteGuardTest.java"
+      ]
+    },
+    {
+      "id": "SHIP-06",
+      "title": "A late webhook could resurrect a DELIVERY_FAILED shipment",
+      "severity": "HIGH",
+      "priority": 7,
+      "affected_service": "shipping-service",
+      "design_pattern": "State Machine",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentStateMachine.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/service/impls/WebhookEventServiceImpl.java"
+      ],
+      "business_risk": "A shipment that had already failed delivery was moved back into transit by a late carrier callback.",
+      "technical_risk": "The state machine allowed the DELIVERY_FAILED to IN_TRANSIT edge.",
+      "current_implementation": "The DELIVERY_FAILED to IN_TRANSIT edge existed in the state machine.",
+      "target_implementation": "The edge is removed; an operator retry is the only way out of DELIVERY_FAILED; the webhook path uses the state machine.",
+      "acceptance_criteria": [
+        "A late webhook cannot resurrect a DELIVERY_FAILED shipment"
+      ],
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/impls/WebhookEventServiceTest.java#aLateWebhook_cannotResurrectADeliveryFailedShipment"
+      ]
+    },
+    {
+      "id": "SHIP-07",
+      "title": "Webhook retry rows had no claim, so several instances processed the same retry",
+      "severity": "HIGH",
+      "priority": 8,
+      "affected_service": "shipping-service",
+      "design_pattern": "Reconciliation Sweeper",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/repository/ShipmentEventRepository.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/scheduler/WebhookRetryScheduler.java",
+        "shipping-service/src/main/resources/db/changelog/changelog-008-webhook-retry-claim-and-index.yaml"
+      ],
+      "business_risk": "The same carrier webhook was retried several times in parallel.",
+      "technical_risk": "The scheduler selected due rows without locking them.",
+      "current_implementation": "Due rows were read and processed without an exclusive claim.",
+      "target_implementation": "A conditional update claims the row with a claimed_at stamp and the claim is released on failure.",
+      "acceptance_criteria": [
+        "A webhook retry row is claimed exclusively by one instance"
+      ],
+      "concurrency_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java#aWebhookRetryRowIsClaimedExclusively"
+      ]
+    },
+    {
+      "id": "SHIP-08",
+      "title": "The outbox relay selected its head row with MIN(id), so a locked head row blocked every other row",
+      "severity": "HIGH",
+      "priority": 9,
+      "affected_service": "shipping-service",
+      "design_pattern": "Transactional Outbox",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/OutboxEventRepository.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java"
+      ],
+      "business_risk": "One stuck row stopped the whole shipping outbox from draining.",
+      "technical_risk": "The claim selected MIN(id) and then locked it, so the head of line blocked the relay.",
+      "current_implementation": "The claim took the minimum id and locked it.",
+      "target_implementation": "The claim selects with ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED, so a locked row is skipped.",
+      "acceptance_criteria": [
+        "A locked head row does not block the next pending row"
+      ],
+      "concurrency_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingOutboxClaimConcurrencyIT.java#twoPendingRows_theLockedHeadRowDoesNotBlockTheNextRow"
+      ]
+    },
+    {
+      "id": "SHIP-11",
+      "title": "The reconciliation query had no matching index",
+      "severity": "MEDIUM",
+      "priority": 20,
+      "affected_service": "shipping-service",
+      "design_pattern": "Migration",
+      "source_evidence": [
+        "shipping-service/src/main/resources/db/changelog/changelog-008-webhook-retry-claim-and-index.yaml"
+      ],
+      "business_risk": "The webhook retry scan degraded as the table grew.",
+      "technical_risk": "The status and next retry columns were not indexed.",
+      "current_implementation": "No index supported the due-retry scan.",
+      "target_implementation": "The index matches the due-retry predicate.",
+      "acceptance_criteria": [
+        "The index exists in the migrated database"
+      ],
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogContractTest.java"
+      ]
+    },
+    {
+      "id": "SHIP-12",
+      "title": "The soft-delete restriction did not match the partial index, so a soft-deleted shipment still occupied the live key",
+      "severity": "MEDIUM",
+      "priority": 21,
+      "affected_service": "shipping-service",
+      "design_pattern": "Repository",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/entity/Shipment.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentEvent.java"
+      ],
+      "business_risk": "A soft-deleted shipment still blocked the creation of a new shipment for the same order.",
+      "technical_risk": "The query restriction and the partial index disagreed on the deleted predicate.",
+      "current_implementation": "The soft-deleted rows were visible to the query path.",
+      "target_implementation": "The restriction matches the partial index and the creation claim reopens the soft-deleted row.",
+      "acceptance_criteria": [
+        "A soft-deleted shipment is invisible and does not block a new one"
+      ],
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java#aSoftDeletedShipmentIsInvisibleAndDoesNotBlockANewOne"
+      ]
+    },
+    {
+      "id": "SHIP-13",
+      "title": "Shipment events had no foreign key to their shipment",
+      "severity": "MEDIUM",
+      "priority": 22,
+      "affected_service": "shipping-service",
+      "design_pattern": "Migration",
+      "source_evidence": [
+        "shipping-service/src/main/resources/db/changelog/changelog-009-shipment-event-shipment-fk.yaml"
+      ],
+      "business_risk": "An event could point at a shipment that does not exist.",
+      "technical_risk": "The relation was not enforced by the database.",
+      "current_implementation": "No foreign key existed.",
+      "target_implementation": "The foreign key is added, validated for existing rows and enforced for new rows.",
+      "acceptance_criteria": [
+        "The foreign key exists in the migrated database"
+      ],
+      "integration_e2e_coverage": [
+        "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogContractTest.java"
+      ]
+    },
+    {
+      "id": "SHIP-14",
+      "title": "A null provider event id was swallowed instead of rejected",
+      "severity": "MEDIUM",
+      "priority": 23,
+      "affected_service": "shipping-service",
+      "design_pattern": "Idempotent Consumer",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/service/impls/WebhookEventServiceImpl.java"
+      ],
+      "business_risk": "Two carrier callbacks without an event id were indistinguishable.",
+      "technical_risk": "The missing id was absorbed and the insert violation was not classified by constraint.",
+      "current_implementation": "The missing event id was logged and processing continued.",
+      "target_implementation": "A signed payload without an event id is rejected with a bad request before any write, and an insert violation is classified by constraint name.",
+      "acceptance_criteria": [
+        "A signed payload without an event id is rejected with a bad request",
+        "A constraint violation that is not the carrier event index is rejected with a bad request"
+      ],
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/service/impls/WebhookEventServiceTest.java#aSignedPayloadWithoutAnEventId_isRejectedWithBadRequest"
+      ]
+    },
+    {
+      "id": "SHIP-15",
+      "title": "Permanently failed outbox rows were never surfaced",
+      "severity": "MEDIUM",
+      "priority": 24,
+      "affected_service": "shipping-service",
+      "design_pattern": "Reconciliation Sweeper",
+      "source_evidence": [
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRelay.java",
+        "shipping-service/src/main/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionScheduler.java"
+      ],
+      "business_risk": "An event that could never be published disappeared without any signal.",
+      "technical_risk": "The relay exhausted its retries and left the row in a retry state forever.",
+      "current_implementation": "The exhausted row stayed in FAILED_RETRYABLE and was not counted.",
+      "target_implementation": "The exhausted row is parked as DEAD, counted by a metric, and purged by the retention scheduler.",
+      "acceptance_criteria": [
+        "An event whose retries are exhausted is parked as dead and counted",
+        "The retention scheduler purges the dead rows"
+      ],
+      "edge_case_tests": [
+        "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingOutboxRelayTest.java#relay_maxRetriesExhausted_parksTheEventAsDeadAndCountsIt"
+      ]
+    }
+  ]
+}

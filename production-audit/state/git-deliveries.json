@@ -186,7 +186,194 @@
       "remote_branch": "",
       "state": "REJECTED_BY_GATES",
       "timestamp": "2026-11-18T14:24:20Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "541db1f40a20c154a493e4f36196ba5749a8bd7a",
+      "detail": "chore(audit): add the production engineering harness\n\nAdds production-audit/ with an executable, persistent, self-tested harness:\nsource inventory with hashes, a source-review coverage ledger, an atomic\ntask registry with a state machine, a language-aware comment-policy scanner\nand cleaner, verification gates, an end-to-end environment lifecycle, git\ndelivery rules and reconciliation.\n\nThe harness itself is verified by 116 unit tests covering inventory, hash\ndrift, task identity and transitions, crash recovery, concurrent registry\nwrites, comment detection, safe cleanup, exception handling, maven command\nexecution, exit-code interpretation, e2e lifecycle and collection, gate\nevaluation, git branch and staging rules, secret detection, push failure and\nthe completion predicate.\n\nThe secret scanner separates the two classes of finding. A credential shaped\ntoken, such as a provider key, an access key, a webhook signing secret, a\nprivate key block or a database url with an inline password, is flagged in\nany file. A key equals value assignment is flagged only in a non test source\nand only when the value is a literal rather than a variable reference, a\nplaceholder or a test mode credential.\n\nThe harness artefacts are tracked first party assets. Only the reproducible\nbuild and test logs stay untracked.",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-18T14:25:05Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "d77f6622e037b9e7fa0db93d8a46edbdb8795123",
+      "detail": "fix(payment): require provider confirmation before a payment is captured\n\nPAY-01: StripeProvider created a PaymentIntent with confirmation disabled and\nreported an accepted result, so PaymentServiceImpl wrote CAPTURED and\npublished payment.captured.v1 while no money had moved. ProviderResult now\ncarries an explicit outcome: CONFIRMED, REQUIRES_CONFIRMATION, REJECTED or\nINDETERMINATE, and accepted() is true only for CONFIRMED. A capture reaches\nCAPTURED only on a confirmed result, a provider timeout is indeterminate\nrather than a definitive rejection, and an idempotency replay no longer\nfabricates a provider identifier.\n\nPAY-02: PaymentProviderFactory silently substituted the default provider for\nan unknown name, and the mock provider accepts every call, so a refund could\nbe marked REFUNDED against the wrong provider without any money moving. An\nunknown or blank provider name is now rejected, the mock provider exists only\nwhen it is the configured provider, and the primary provider bean fails fast\nwhen the configured provider is not registered.\n\nAlso closes PAY-08: the provider intent identifier and the client secret are\npersisted through the new additive Liquibase changeset\n009-provider-intent-reference, so a refund addresses the original intent\ninstead of searching an eventually consistent index.\n\nVerified by mvnw -pl payment-service -am clean verify, exit 0, 223 tests, 0\nfailures, 0 errors, 0 skipped, including the new PaymentCaptureConfirmationIT\nwhich asserts the persisted payments row and the outbox_events rows, and the\nnew PaymentProviderRoutingTest which asserts the provider routing rules.\n\nThe explanatory comments of the module are removed in the same batch under the\nrepository no-comment policy.",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-18T14:25:15Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "66d91881817d3ce06ccbde2efc657a9cee08d7ce",
+      "detail": "refactor(common): remove explanatory comments from first-party source\n\nEnforces the repository no-comment policy across the whole first-party tree.\n4516 prohibited comments were removed from 731 files, covering Java\nproduction code, Java tests, Liquibase changesets, application configuration,\nDocker Compose files, shell scripts, load tests and the mock provider.\n\nThe removal is done with a language-aware lexer, never a regular expression\nover raw source. The Java lexer is a character-level state machine that\ndistinguishes code, line comments, block comments, string literals, text\nblocks and character literals, and that honours escape sequences and Java\nunicode escapes, so a double slash inside a string, a block comment marker\ninside a text block and embedded SQL are never treated as a comment. The\nshell lexer resolves quoting and heredoc bodies, so a parameter expansion and\na JavaScript regular expression are never mangled. The YAML lexer only treats\na hash as a comment where the syntax allows one.\n\nMandatory copyright and licence notices, generated-file markers, compiler,\nformatter and linter directives, source-map directives and interpreter\nshebangs are preserved and documented in\nproduction-audit/config/comment-policy.json. The removed rationale is\narchived verbatim in production-audit/architecture/comment-rationale.md, so no\ndesign intent is lost.\n\nVerification: harness verify --suite comments --deep reports zero prohibited\ncomments across 1141 files and proves that 1031 changed files are byte\nidentical to the baseline revision once the same comments are removed, which\ndemonstrates that no executable code changed. The full reactor build\n./mvnw -B -ntp clean verify succeeds with exit 0 and 1931 tests, 0 failures,\n0 errors, 0 skipped, including the integration tests that run against real\nPostgreSQL 16 and Kafka containers.\n\nAlso removes src/main/java/org/example/Main.java, an IntelliJ scaffold that\nis not part of any Maven module and calls a Kotlin-only helper.",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-18T14:25:31Z"
+    },
+    {
+      "action": "push",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "66d91881817d3ce06ccbde2efc657a9cee08d7ce",
+      "detail": "",
+      "exit_code": 0,
+      "remote": "origin",
+      "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "state": "PUSHED",
+      "timestamp": "2026-11-18T14:25:40Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "5d16040510b1551dcecf01c8558774215b0d9d8f",
+      "detail": "fix(gateway): derive the rate-limit identity from the transport peer\n\nGW-01: the client address was taken by indexing into the caller supplied\nX-Forwarded-For header with a hop count, and no trusted proxy allowlist\nexisted anywhere in the repository, so a client chose its own rate limit\nbucket and its own admin allowlist verdict. The client address is now the\ntransport peer address. A forwarding header is consulted only through the\nexplicit gateway.trusted-proxy.cidrs allowlist, and when that allowlist is\nabsent no forwarding header is trusted at all. The gateway refuses to start\nwhen the framework is configured to rewrite the remote address from a header.\n\nGW-02: a non literal forwarding entry was turned into a socket address, which\nperformed a name resolution on the reactor event loop, and the resolved name\nbecame the Redis key, so every request received a fresh full budget and a new\nRedis key. A value that enters a rate limit key is now parsed as a literal\naddress by a dedicated parser that accepts IPv4 and IPv6 only. A value that is\nnot a literal address is discarded and the peer address is used instead. No\nrequest supplied value triggers a name resolution any more.\n\nGW-03: the two framework limiters failed open on a Redis outage while the edge\nlimiter failed closed, and the source comment asserted the opposite of the\ncode. All layers now share one policy, gateway.rate-limit.outage-policy,\nwhich defaults to fail closed.\n\nGW-05: the edge bucket computed its refill from the gateway JVM clock while the\nframework buckets used the Redis clock, so a clock skew between replicas\ndrifted the shared budget. The refill is now computed inside the Redis script\nfrom the Redis server clock.\n\nGW-07: the layers disagreed on the rejection contract, one returned an empty\nbody, another a fleet envelope, one set the remaining header twice and the\nsentinel value minus one leaked to clients. Every rejection now returns the\nsame status, the same envelope and the same headers, including Retry-After.\n\nThe outage guard takes a supplier for the continuation, so the route chain is\nno longer invoked when the gateway rejects a request.\n\nSEC-01: the platform user was resolved in the wrong key space. The entity\ncarries a generated surrogate primary key and a separate unique identity\nprovider identifier, but the self service profile and address surfaces looked\nthe row up by the surrogate using the token subject, so they could never\nresolve a row. The subject is now resolved through the external identifier\nlookup and every call site uses it.\n\nSL-24: the authorization guard returned without objection when the security\ncontext was empty, so an unauthenticated caller passed a guard that is meant\nto authorize. It now raises on an empty context, an unauthenticated principal\nand a missing principal. The inventory controller test was updated to install\nan authenticated order service principal, because it had encoded the previous\nfail open behaviour.\n\nThe token authorised party claim is now extracted from the shared library so a\nservice role caller can be bound to the user it acts for.\n\nVerified by ./mvnw -B -ntp clean verify, exit 0. The gateway module runs 177\ntests and the auth, common-security, inventory, payment, promotion and tax\nmodules all pass. The comment compliance gate reports zero prohibited comments\nacross 1138 files.",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-18T15:42:10Z"
+    },
+    {
+      "action": "push",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "5d16040510b1551dcecf01c8558774215b0d9d8f",
+      "detail": "",
+      "exit_code": 0,
+      "remote": "origin",
+      "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "state": "PUSHED",
+      "timestamp": "2026-11-18T15:42:16Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "5c24b3f49f6a65b54b6187602eee1b8ae7cb1417",
+      "detail": "fix(order,inventory,kafka,search,promotion): close the distributed correctness defects\n\nOI-01: the inventory reserve was not idempotent. The stock decrement and the\nreservation insert ran unconditionally, so a duplicate request decremented the\nstock twice and created a second hold. The reserve now claims an idempotency\nkey at the database level with the unique constraint uk_reservations_idempotency_key,\nand the reservation row is inserted and flushed before the decrement, so a\nduplicate can never touch the stock. The same key with a different product or\nquantity is a conflict, and a request without a key keeps the previous\nbehaviour. The key travels as an optional Idempotency-Key header so no request\nshape changed. The reserve response also carried a null reservation id because\nthe managed copy was discarded by the version check, which left the order side\nholding a null reservation that its compensation could not release; the reserve\nnow uses the entity returned by the save.\n\nOI-02: a failed stock release in the confirmation compensation was swallowed,\nso the stock stayed reserved forever. The failure is now recorded in the\nexisting failed_compensations ledger with the new reservation and promotion\nkinds, and a sweeper claims the due entries with one conditional update, so\nexactly one replica dispatches each entry, and the attempt count is bounded.\n\nSEC-02: the delegated order read returned the delivered order items of any\nuser to any service-role client. The endpoint now answers the eligibility\nquestion it actually exists for and returns the determination and the count,\nso no cross-user order data leaves the service, and the caller is checked\nagainst the platform service allow list. The rating service reads the new\ncontract and no longer receives another user's order lines.\n\nSL-08, SL-35, SL-34, SL-05, SL-36: the consumer wire mapper is now a Jackson 3\nmapper that tolerates an additive event field while a malformed record is still\nrejected into the dead-letter path, every listener factory has a dead-letter\nrecoverer so an exhausted record is published rather than skipped, the replay\nendpoint requires an administrative role and validates the topic against the\ntopic contract, the replay keeps its offsets so a record is published once in\ntotal, and the shared consumer configuration pins the commit semantics instead\nof inheriting a framework default.\n\nCAT-01: the search projection applied every product event unconditionally, so an\nevent describing an older state rolled the document back. The event already\ncarries the producer timestamp, and the index now writes with the external\nversion semantics, so a stale event is rejected and a redelivered event is a\nno-op. The conflict is handled on the exception type the configured transport\nactually raises, which was an unreachable branch before, so a stale event is\nignored instead of failing the index write.\n\nCAT-07: the promotion quota was enforced by a read-then-write count, so two\nconcurrent redemptions of the last coupon both won. The quota is now claimed by\nan atomic conditional statement per user and per campaign, the counters are\nreleased when the reservation is released, and the schema change is additive.\n\nThe authorization guard is now declared by its own auto-configuration, so the\nbean exists whenever the platform security classes are on the classpath and not\nonly when the web security posture is enabled.\n\nVerified by ./mvnw -B -ntp clean verify, exit 0, 2030 tests, 0 failures, 0\nerrors, 0 skipped. The comment compliance gate reports zero prohibited\ncomments across 1136 files and proves 1074 changed files byte identical to the\nbaseline once the same comments are removed.",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T03:52:02Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "59ae0c05092a8b95ad2f02d6fd6c647e38240d5a",
+      "detail": "chore(e2e): make the end-to-end environment reproducible and the payment contract explicit\n\nThe compose stack could not start two of its services and the payment flow\ncould not be exercised end to end, so the environment is fixed and the\ncorrection is recorded.\n\nshipping-service declared spring-boot-restclient with test scope, which\noverrode the compile scoped dependency the shared library provides, so the\nRestClient.Builder auto configuration was absent at runtime and the service\ncould not start at all. The same wrong scope in payment-service and\nrating-service is removed. The compose stack also never supplied the GHTK\nwebhook secret that the shipping configuration requires, so the container\ncould not start as shipped. Both the secret and the new proxy and outage\nsettings are now declared in the compose file and documented in the\nenvironment templates.\n\nThe Stripe provider endpoint is configurable, so the end-to-end run can use the\nofficial Stripe test server instead of a real account. No real payment is ever\ncreated and no real credential is ever used.\n\nThe rate-limit outage policy, the trusted proxy allow list and the Stripe\nendpoint are configuration, so they are declared in the compose file and in\nboth environment templates, and the gateway refuses to start when the\nforwarding header strategy would let the framework rewrite the client address.\n\nThe payment collection encoded the contract that a capture immediately marks a\npayment captured, which was the defect the provider confirmation work removed.\nA Stripe intent that was created without confirmation is confirmed by the\nclient, and the provider then notifies the platform, so the collection now\nasserts that a capture leaves the payment pending with a client secret, adds\na scenario that delivers a signed provider webhook, and then asserts that the\npayment is captured. The webhook is signed with the Stripe scheme in the\ncollection script, so the signature verification path is exercised rather than\nbypassed.\n\nThe end-to-end run of the business flow collection is now 42 assertions with 1\nremaining failure.",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T03:52:09Z"
+    },
+    {
+      "action": "push",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "59ae0c05092a8b95ad2f02d6fd6c647e38240d5a",
+      "detail": "",
+      "exit_code": 0,
+      "remote": "origin",
+      "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "state": "PUSHED",
+      "timestamp": "2026-11-19T03:52:17Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "6c8377ca1df7b52f18585b446adaeb48832b0a85",
+      "detail": "fix(rating): report an upstream purchase-verification failure as a dependency failure",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:32:26Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "62fe05c5f06c338b36564e8d986c62400925dda3",
+      "detail": "fix(common-keycloak): one pooled service-token provider replaces five duplicated clients",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:32:31Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "a65cd619fc3bcd6a94e49a2afbac1ed73152527a",
+      "detail": "fix(keycloak): give the service-account grant its own client id",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:32:35Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "e603e63a0f753750ca00016033b150574402ed60",
+      "detail": "fix(shipping): claim the parcel before the carrier call and harden the shipping pipeline",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:32:39Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "",
+      "detail": "git add failed: fatal: pathspec 'harness/e2e/environment.py' did not match any files",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "REJECTED_BY_GATES",
+      "timestamp": "2026-11-19T06:32:48Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "",
+      "detail": "secret scan failed: ['production-audit/harness/e2e/collection_contract.py']",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "REJECTED_BY_GATES",
+      "timestamp": "2026-11-19T06:32:52Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "",
+      "detail": "secret scan failed: ['production-audit/config/secret-scan-exceptions.json', 'production-audit/harness/e2e/collection_contract.py']",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "REJECTED_BY_GATES",
+      "timestamp": "2026-11-19T06:37:57Z"
+    },
+    {
+      "action": "commit",
+      "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+      "commit_sha": "ed6ffcac5a237c0a04d5e59a8c0353161da37615",
+      "detail": "fix(audit): replay the prerequisite folders in a scoped end-to-end run",
+      "exit_code": 0,
+      "remote": "",
+      "remote_branch": "",
+      "state": "COMMITTED",
+      "timestamp": "2026-11-19T06:38:42Z"
     }
   ],
-  "updated_at": "2026-11-18T14:24:20Z"
+  "updated_at": "2026-11-19T06:38:42Z"
 }

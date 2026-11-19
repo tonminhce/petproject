@@ -155,7 +155,18 @@ There is no Bucket4j dependency anywhere in the repository.
 Each service owns its own PostgreSQL 16 database and its own Liquibase changelog set.
 Redis backs the gateway rate limiting and the service caches. Elasticsearch backs
 `search-service`. RustFS provides S3-compatible object storage for `media-service`.
-The Elasticsearch client is version 9.4.5 while the compose server is 8.15.0.
+
+The Elasticsearch server is 8.15.0 (`docker-compose.yml:98`). The root POM declares the
+client at 9.4.5 (`pom.xml:54`), but `search-service/pom.xml:35-37` overrides it, so the
+effective client is 8.15.5 and matches the server. The declared property is misleading
+and is recorded as finding RES-23.
+
+The Kafka broker is 3.9.0 (`docker-compose.yml:69`) while the managed Kafka client is
+4.2.1. The broker runs with a replication factor of 1 and no producer transaction
+identifier is configured anywhere, so the platform provides at-least-once publication.
+The integration tests run against `confluentinc/cp-kafka:7.6.0`, which is a different
+broker distribution from the deployed `apache/kafka:3.9.0`; that mismatch is recorded as
+finding RES-22.
 
 ## 12. Test strategy
 

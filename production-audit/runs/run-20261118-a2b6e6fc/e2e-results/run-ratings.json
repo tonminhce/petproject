@@ -1,0 +1,69 @@
+{
+  "collections": [
+    {
+      "collection": "petproject-comprehensive.postman_collection.json",
+      "exit_code": 0,
+      "folders": [
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle",
+        "8. Rating & Favourite"
+      ],
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/e2e-results/petproject-comprehensive.postman_collection.ratings.log",
+      "prerequisites": [
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle"
+      ],
+      "status": "PASSED"
+    },
+    {
+      "collection": "petproject-e2e-business-flow.postman_collection.json",
+      "exit_code": 0,
+      "folders": [
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle",
+        "8. Rating & Favourite"
+      ],
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/e2e-results/petproject-e2e-business-flow.postman_collection.ratings.log",
+      "prerequisites": [
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle"
+      ],
+      "status": "PASSED"
+    }
+  ],
+  "generated_at": "2026-11-19T06:32:32Z",
+  "scenario_inventory": [
+    {
+      "collection": "petproject-comprehensive.postman_collection.json",
+      "has_test_scripts": true,
+      "postman_version": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "status": "READABLE",
+      "top_level_items": 3
+    },
+    {
+      "collection": "petproject-e2e-business-flow.postman_collection.json",
+      "has_test_scripts": true,
+      "postman_version": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "status": "READABLE",
+      "top_level_items": 19
+    }
+  ],
+  "scope": "ratings",
+  "state": "COMPLETED"
+}

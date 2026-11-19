@@ -1,0 +1,38 @@
+{
+  "components": [
+    {
+      "available": true,
+      "detail": "docker server 29.7.2, docker compose 5.4.0",
+      "name": "postgres"
+    },
+    {
+      "available": true,
+      "detail": "docker server 29.7.2, docker compose 5.4.0",
+      "name": "redis"
+    },
+    {
+      "available": true,
+      "detail": "docker server 29.7.2, docker compose 5.4.0",
+      "name": "kafka"
+    },
+    {
+      "available": true,
+      "detail": "docker server 29.7.2, docker compose 5.4.0",
+      "name": "elasticsearch"
+    },
+    {
+      "available": true,
+      "detail": "docker server 29.7.2, docker compose 5.4.0",
+      "name": "keycloak"
+    },
+    {
+      "available": true,
+      "detail": "docker server 29.7.2, docker compose 5.4.0",
+      "name": "rustfs"
+    }
+  ],
+  "compose_exit_code": 0,
+  "compose_log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/e2e-results/compose-up.log",
+  "generated_at": "2026-11-18T16:10:34Z",
+  "state": "READY"
+}

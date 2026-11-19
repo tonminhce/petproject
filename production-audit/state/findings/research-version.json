@@ -1,0 +1,772 @@
+{
+  "topic": "research-version",
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/source-reviews/official-research.md",
+  "findings": [
+    {
+      "id": "RES-01",
+      "title": "`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone while the project runs Boot 4.1.1, and the artifact was renamed in Boot 4.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "pom.xml:73",
+        "pom.xml:188-189",
+        "utils/common-logging/pom.xml:25"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone** while the project runs Boot 4.1.1, and the artifact was **renamed** in Boot 4.",
+      "current_implementation": "**`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone** while the project runs Boot 4.1.1, and the artifact was **renamed** in Boot 4.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-01 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"To clarify the scope of `spring-boot-starter-aop`, it has been renamed to `spring-boot-starter-aspectj`.\"* (Spring Boot 4.0 Migration Guide) Repository evidence: `pom.xml:73` (`<spring-boot-starter-aop.version>4.0.0-M2</spring-boot-starter-aop.version>`), `pom.xml:188-189`, used at `utils/common-logging/pom.xml:25`. `spring-boot-starter-aop` is **not managed** by the Boot 4.1.1 BOM (0 occurrences in `spring-boot-dependencies-4.1.1.pom`), while `resilience4j-spring-boot4`-style Boot-4 modules are. `~/.m2/.../spring-boot-starter-aop/` contains both `4.0.0-M2` and `4.1.1` — the repo resolves the milestone. The repo **does** use `@Aspect` (`utils/common-logging` `AuditAspect`, `LoggerAspect`), so the starter is genuinely needed under the new name."
+    },
+    {
+      "id": "RES-02",
+      "title": "`spring-boot-starter-web` is used in three modules although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-spring/pom.xml:47",
+        "utils/common-security/pom.xml:43",
+        "order-service/pom.xml:38"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`spring-boot-starter-web` is used in three modules** although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
+      "current_implementation": "**`spring-boot-starter-web` is used in three modules** although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-02 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Migration table: *Spring Web MVC → `spring-boot-starter-webmvc`*; the Boot 4.1.1 POM describes the old artifact as *\"deprecated in favor of spring-boot-starter-webmvc\"*. Repository evidence: `utils/common-spring/pom.xml:47`, `utils/common-security/pom.xml:43`, `order-service/pom.xml:38`"
+    },
+    {
+      "id": "RES-03",
+      "title": "Jackson 2 and Jackson 3 are both on the compile classpath while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-b",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/Jackson2ObjectMapperAutoConfiguration.java:10-18",
+        "rating-service/.../RatingEventService.java:69",
+        "gateway-service/.../filter/GatewayErrorResponseWriter.java:8-9"
+      ],
+      "business_risk": "",
+      "technical_risk": "**Jackson 2 and Jackson 3 are both on the compile classpath** while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-built Jackson 2 mapper is not equivalent to Boot's auto-configured one.",
+      "current_implementation": "**Jackson 2 and Jackson 3 are both on the compile classpath** while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-built Jackson 2 mapper is not equivalent to Boot's auto-configured one.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-03 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Spring Boot now uses Jackson 3 as its preferred JSON library. Jackson 3 uses new group IDs and package names with `com.fasterxml.jackson` becoming `tools.jackson`.\"* Repository evidence: `utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/Jackson2ObjectMapperAutoConfiguration.java:10-18`; offline `dependency:tree` of `utils/common-spring` shows `com.fasterxml.jackson.core:jackson-databind:2.21.5` **and** `tools.jackson.core:jackson-databind:3.1.5`; Jackson 2 users include `rating-service/.../RatingEventService.java:69` (outbox payload) while Jackson 3 is used only in `gateway-service/.../filter/GatewayErrorResponseWriter.java:8-9`"
+    },
+    {
+      "id": "RES-04",
+      "title": "The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0) managed by Boot 4.1.1.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "docker-compose.yml:69"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0)** managed by Boot 4.1.1.",
+      "current_implementation": "**The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0)** managed by Boot 4.1.1.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-04 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Kafka 3.9 producer/consumer documentation (the broker's own line) governs the runtime behaviour; the client line is a separate Boot-managed choice. Repository evidence: `spring-boot-dependencies-4.1.1.pom` (`<kafka.version>4.2.1</kafka.version>`) vs `docker-compose.yml:69` (`apache/kafka:3.9.0`)"
+    },
+    {
+      "id": "RES-05",
+      "title": "No Kafka transaction is configured, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:61-73",
+        "docker-compose.yml:85"
+      ],
+      "business_risk": "",
+      "technical_risk": "**No Kafka transaction is configured**, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
+      "current_implementation": "**No Kafka transaction is configured**, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-05 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Exactly-once delivery for other destination systems generally requires cooperation with such systems … Otherwise, Kafka guarantees at-least-once delivery by default.\"* Repository evidence: No `transactional.id` anywhere; `utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:61-73` builds the producer properties; the single-broker dev cluster sets `KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1` (`docker-compose.yml:85`) — the documented minimum for transactions is three brokers"
+    },
+    {
+      "id": "RES-06",
+      "title": "Two listener container factories have no dead-letter recoverer, so a poisoned record is logged and dropped.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:46",
+        "product-service/src/main/java/com/shop/productservice/kafka/MediaLifecycleListenerConfig.java:18-28"
+      ],
+      "business_risk": "",
+      "technical_risk": "**Two listener container factories have no dead-letter recoverer**, so a poisoned record is logged and dropped.",
+      "current_implementation": "**Two listener container factories have no dead-letter recoverer**, so a poisoned record is logged and dropped.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-06 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"The default recoverer logs the failed record after retries are exhausted.\"* Repository evidence: `utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:46` (no-recoverer branch) and `product-service/src/main/java/com/shop/productservice/kafka/MediaLifecycleListenerConfig.java:18-28` (no `setCommonErrorHandler` at all)"
+    },
+    {
+      "id": "RES-07",
+      "title": "`retries = 3` on the producer is far below the Kafka 3.9 default of `2147483647`.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:109",
+        "product-service/src/main/resources/application.yml:40"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`retries = 3` on the producer** is far below the Kafka 3.9 default of `2147483647`.",
+      "current_implementation": "**`retries = 3` on the producer** is far below the Kafka 3.9 default of `2147483647`.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-07 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Kafka 3.9 producer configs: `retries` default `2147483647`; idempotence requires *\"retries to be greater than 0\"*. Repository evidence: `utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:109` and `product-service/src/main/resources/application.yml:40`"
+    },
+    {
+      "id": "RES-08",
+      "title": "The outbox claim resolves a single `MIN(id)` row, so `SKIP LOCKED` serialises claim throughput across relay instances.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java:24-25"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The outbox claim resolves a single `MIN(id)` row**, so `SKIP LOCKED` serialises claim throughput across relay instances.",
+      "current_implementation": "**The outbox claim resolves a single `MIN(id)` row**, so `SKIP LOCKED` serialises claim throughput across relay instances.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-08 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"With SKIP LOCKED, any selected rows that cannot be immediately locked are skipped … can be used to avoid lock contention with multiple consumers accessing a queue-like table.\"* Repository evidence: `product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java:24-25` (and the same shape in seven other services)"
+    },
+    {
+      "id": "RES-09",
+      "title": "`jakarta.persistence.lock.timeout` is not declared on one pessimistic-lock query, so the provider default applies.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "notification-service/src/main/java/com/shop/notificationservice/repository/NotificationRepository.java:29-38"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`jakarta.persistence.lock.timeout` is not declared** on one pessimistic-lock query, so the provider default applies.",
+      "current_implementation": "**`jakarta.persistence.lock.timeout` is not declared** on one pessimistic-lock query, so the provider default applies.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-09 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: PostgreSQL 16: *\"To prevent the operation from waiting for other transactions to commit, use either the NOWAIT or SKIP LOCKED option.\"* Repository evidence: `notification-service/src/main/java/com/shop/notificationservice/repository/NotificationRepository.java:29-38` (contrast the explicit `-2` at `OutboxEventRepository.java:23,31` and the explicit `3000` at `order-service/.../CartRepository.java:24,29`)"
+    },
+    {
+      "id": "RES-10",
+      "title": "`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback, and `BusinessException` is a `RuntimeException`.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:445",
+        "utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java:6"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback**, and `BusinessException` is a `RuntimeException`.",
+      "current_implementation": "**`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback**, and `BusinessException` is a `RuntimeException`.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-10 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Any RuntimeException or Error triggers rollback, and any checked Exception does not.\"* Repository evidence: `order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:445` with `utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java:6`"
+    },
+    {
+      "id": "RES-11",
+      "title": "Five `REQUIRES_NEW` sites against a 20-connection Hikari pool while virtual threads are switchable on.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "payment-service/.../PaymentWriter.java:26",
+        "order-service/.../CompensationFailureService.java:36",
+        "order-service/.../OrderServiceImpl.java:120",
+        "utils/common-spring/src/main/resources/application.yml:15"
+      ],
+      "business_risk": "",
+      "technical_risk": "**Five `REQUIRES_NEW` sites against a 20-connection Hikari pool** while virtual threads are switchable on.",
+      "current_implementation": "**Five `REQUIRES_NEW` sites against a 20-connection Hikari pool** while virtual threads are switchable on.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-11 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Do not use PROPAGATION_REQUIRES_NEW unless your connection pool is appropriately sized, exceeding the number of concurrent threads by at least 1.\"* Repository evidence: `payment-service/.../PaymentWriter.java:26`, `order-service/.../CompensationFailureService.java:36`, `order-service/.../IdempotencyServiceImpl.java:45,105`, `order-service/.../OrderServiceImpl.java:120`; pool size `utils/common-spring/src/main/resources/application.yml:15`; virtual threads switchable at `:9-11`"
+    },
+    {
+      "id": "RES-12",
+      "title": "A singleton bean holds mutable state (`currentPage`) mutated from a scheduled method.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java:27"
+      ],
+      "business_risk": "",
+      "technical_risk": "**A singleton bean holds mutable state** (`currentPage`) mutated from a scheduled method.",
+      "current_implementation": "**A singleton bean holds mutable state** (`currentPage`) mutated from a scheduled method.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-12 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Only one shared instance of a singleton bean is managed … As a rule, you should use the prototype scope for all stateful beans and the singleton scope for stateless beans.\"* + JLS §17.4.5 (data race). Repository evidence: `product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java:27` (mutated at `:40`, `:42`)"
+    },
+    {
+      "id": "RES-13",
+      "title": "Monitor-based synchronization in main code would pin a virtual-thread carrier if virtual threads were enabled.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "order-service/.../OrderCommitCoordinator.java:101",
+        "search-service/.../ServiceTokenProvider.java:46",
+        "utils/common-spring/src/main/resources/application.yml:9-11"
+      ],
+      "business_risk": "",
+      "technical_risk": "**Monitor-based synchronization in main code would pin a virtual-thread carrier** if virtual threads were enabled.",
+      "current_implementation": "**Monitor-based synchronization in main code would pin a virtual-thread carrier** if virtual threads were enabled.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-13 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"A virtual thread is pinned when it runs a `native` method or a foreign function … Pinning does not make an application incorrect, but it might hinder its scalability.\"* Repository evidence: `order-service/.../OrderReconciliationScheduler.java:203,214`, `order-service/.../OrderCommitCoordinator.java:101`, `search-service/.../ServiceTokenProvider.java:46`; the switch is `utils/common-spring/src/main/resources/application.yml:9-11`"
+    },
+    {
+      "id": "RES-14",
+      "title": "Configuration is injected into singletons through non-final `@Value` fields.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [],
+      "business_risk": "",
+      "technical_risk": "**Configuration is injected into singletons through non-final `@Value` fields.**",
+      "current_implementation": "**Configuration is injected into singletons through non-final `@Value` fields.**",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-14 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: JLS §17.5: *\"A thread that can only see a reference to an object after that object has been completely initialized is guaranteed to see the correctly initialized values for that object's final fields.\"* Repository evidence: `product-service/.../service/OutboxRelay.java:35,38,41,44`; `rating-service/.../outbox/RatingOutboxRelay.java:31,34,37,40`"
+    },
+    {
+      "id": "RES-15",
+      "title": "`shop.security.expected-audiences` is empty by default, so no audience validation runs; only the `azp` client check is active.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:96",
+        "utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:89-97"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`shop.security.expected-audiences` is empty by default**, so no audience validation runs; only the `azp` client check is active.",
+      "current_implementation": "**`shop.security.expected-audiences` is empty by default**, so no audience validation runs; only the `azp` client check is active.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-15 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Keycloak 26: the certificate endpoint and the issuer define the trust anchor; a token must be checked against the intended audience, not only the client. Repository evidence: `utils/common-spring/src/main/resources/application.yml:96` (`expected-audiences: ${SHOP_SECURITY_EXPECTED_AUDIENCES:}`) with the conditional validator at `utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:89-97`"
+    },
+    {
+      "id": "RES-16",
+      "title": "Client roles (`resource_access`) are not mapped — only `realm_access.roles` becomes an authority.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [],
+      "business_risk": "",
+      "technical_risk": "**Client roles (`resource_access`) are not mapped** — only `realm_access.roles` becomes an authority.",
+      "current_implementation": "**Client roles (`resource_access`) are not mapped** — only `realm_access.roles` becomes an authority.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-16 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Keycloak 26: realm and client roles are exposed *\"under `realm_access` and `resource_access` keys\"*. Repository evidence: `utils/common-security/src/main/java/com/shop/common/security/jwt/JwtRolesConverter.java:16,22,43-45`"
+    },
+    {
+      "id": "RES-17",
+      "title": "The webhook verifier accepts a second, legacy signature scheme (bare 64-hex HMAC over the body) when the header has no `t=` component.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:67-75"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The webhook verifier accepts a second, legacy signature scheme** (bare 64-hex HMAC over the body) when the header has no `t=` component.",
+      "current_implementation": "**The webhook verifier accepts a second, legacy signature scheme** (bare 64-hex HMAC over the body) when the header has no `t=` component.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-17 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Accept only the signature scheme you expect (Stripe's v1, for example) and ignore any other scheme in the header, to prevent downgrade attacks (Stripe).\"* Repository evidence: `payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:67-75`"
+    },
+    {
+      "id": "RES-18",
+      "title": "Shipped configuration files carry usable secret defaults (`changeme`, `admin`).",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "tax-service/.../application.yml:8",
+        "notification-service/.../application.yml:8",
+        "shipping-service/.../application.yml:8",
+        "payment-service/.../application.yml:8"
+      ],
+      "business_risk": "",
+      "technical_risk": "**Shipped configuration files carry usable secret defaults** (`changeme`, `admin`).",
+      "current_implementation": "**Shipped configuration files carry usable secret defaults** (`changeme`, `admin`).",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-18 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Many organizations have them hardcoded within the source code in plaintext, littered throughout configuration files.\"* Repository evidence: `product-service/src/main/resources/application.yml:8,58`; `rating-service/.../application.yml:8,43`; `media-service/.../application.yml:8,57`; `tax-service/.../application.yml:8`; `notification-service/.../application.yml:8`; `shipping-service/.../application.yml:8`; `payment-service/.../application.yml:8`"
+    },
+    {
+      "id": "RES-19",
+      "title": "The Stripe webhook is processed synchronously before the 2xx.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:37-38"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The Stripe webhook is processed synchronously before the 2xx.**",
+      "current_implementation": "**The Stripe webhook is processed synchronously before the 2xx.**",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-19 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Your endpoint must quickly return a successful status code (2xx) before any complex logic that might cause a timeout.\"* Repository evidence: `payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:37-38`"
+    },
+    {
+      "id": "RES-20",
+      "title": "The idempotency key is client-supplied (not a server-generated UUID) and is reused across the local and the Stripe layer.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/dto/CreatePaymentRequest.java:16",
+        "payment-service/.../changelog-001-payments.yaml:37"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The idempotency key is client-supplied** (not a server-generated UUID) and is reused across the local and the Stripe layer.",
+      "current_implementation": "**The idempotency key is client-supplied** (not a server-generated UUID) and is reused across the local and the Stripe layer.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-20 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"A client generates an idempotency key … we suggest using V4 UUIDs\"*; *\"The idempotency layer compares incoming parameters to those of the original request and errors if they're not the same.\"* Repository evidence: `payment-service/src/main/java/com/shop/paymentservice/dto/CreatePaymentRequest.java:16`; `payment-service/.../provider/StripeProvider.java:66,199`; `payment-service/.../changelog-001-payments.yaml:37`"
+    },
+    {
+      "id": "RES-21",
+      "title": "Deprecated Testcontainers 1.x packages are used in 21 test files.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "product-service/.../support/AbstractIntegrationTest.java:13-14",
+        "product-service/.../repository/ProductRepositoryTest.java:21",
+        "rating-service/.../support/AbstractIntegrationTest.java:12-13",
+        "media-service/.../support/AbstractMediaIntegrationTest.java:10-11",
+        "notification-service/.../support/AbstractIntegrationTest.java:12-13",
+        "shipping-service/.../support/AbstractIntegrationTest.java:13-14",
+        "payment-service/.../support/AbstractIntegrationTest.java:17-18",
+        "payment-service/.../StripeWebhookIT.java:42-43"
+      ],
+      "business_risk": "",
+      "technical_risk": "**Deprecated Testcontainers 1.x packages are used in 21 test files.**",
+      "current_implementation": "**Deprecated Testcontainers 1.x packages are used in 21 test files.**",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-21 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: The Boot 4.1 documentation uses the Testcontainers 2.x packages (`org.testcontainers.mongodb.MongoDBContainer`); the legacy classes are `@Deprecated` in the pinned 2.0.5 artefacts. Repository evidence: `product-service/.../support/AbstractIntegrationTest.java:13-14`, `product-service/.../repository/ProductRepositoryTest.java:21`, `rating-service/.../support/AbstractIntegrationTest.java:12-13`, `media-service/.../support/AbstractMediaIntegrationTest.java:10-11`, `notification-service/.../support/AbstractIntegrationTest.java:12-13`, `shipping-service/.../support/AbstractIntegrationTest.java:13-14`, `payment-service/.../support/AbstractIntegrationTest.java:17-18`, `payment-service/.../StripeWebhookIT.java:42-43`, `search-service/.../support/AbstractSearchIntegrationTest.java:10`, `order-service"
+    },
+    {
+      "id": "RES-22",
+      "title": "The integration-test Kafka image differs from the deployed broker.",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "inventory-service/.../AbstractIntegrationTest.java:29",
+        "media-service/.../AbstractMediaIntegrationTest.java:28",
+        "notification-service/.../AbstractIntegrationTest.java:27",
+        "shipping-service/.../AbstractIntegrationTest.java:28",
+        "payment-service/.../AbstractIntegrationTest.java:40",
+        "payment-service/.../StripeWebhookIT.java:79",
+        "search-service/.../AbstractSearchIntegrationTest.java:19",
+        "order-service/.../AbstractOrderServiceIT.java:46"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The integration-test Kafka image differs from the deployed broker.**",
+      "current_implementation": "**The integration-test Kafka image differs from the deployed broker.**",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-22 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Testcontainers/Elasticsearch parity: the test environment must exercise the deployed artefact. Repository evidence: 12 test files pin `confluentinc/cp-kafka:7.6.0` — `inventory-service/.../AbstractIntegrationTest.java:29`, `media-service/.../AbstractMediaIntegrationTest.java:28`, `notification-service/.../AbstractIntegrationTest.java:27`, `shipping-service/.../AbstractIntegrationTest.java:28`, `payment-service/.../AbstractIntegrationTest.java:40`, `payment-service/.../StripeWebhookIT.java:79`, `search-service/.../AbstractSearchIntegrationTest.java:19`, `order-service/.../AbstractOrderServiceIT.java:46`, `promotion-service/.../AbstractIntegrationTest.java:27`, `product-service/.../AbstractIntegrationTest.jav"
+    },
+    {
+      "id": "RES-23",
+      "title": "The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server. The 9.x line also renames the transport package, so honouring the ",
+      "severity": "MEDIUM",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "pom.xml:54",
+        "pom.xml:205-206",
+        "search-service/pom.xml:35-37",
+        "docker-compose.yml:98"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server.** The 9.x line also renames the transport package, so honouring the declared version would not compile.",
+      "current_implementation": "**The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server.** The 9.x line also renames the transport package, so honouring the declared version would not compile.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-23 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Elastic Java API client installation: the 9.x client ships `co.elastic.clients.transport.rest5_client` and `RestClient5Client`/`Rest5Client`; the repository imports the 8.x `co.elastic.clients.transport.rest_client.RestClientTransport` and `org.elasticsearch.client.RestClient`. Repository evidence: `pom.xml:54` + `pom.xml:205-206` (9.4.5, managed) vs `search-service/pom.xml:35-37` (**8.15.5**, effective) vs `docker-compose.yml:98` (server 8.15.0); `search-service/src/main/java/com/shop/searchservice/config/ElasticsearchConfig.java:5,11-12` (8.x transport classes); `~/.m2/.../elasticsearch-java/9.4.5/` contains only `co/elastic/clients/transport/rest5_client/`"
+    },
+    {
+      "id": "RES-24",
+      "title": "The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.",
+      "severity": "LOW",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:152-162",
+        "rating-service/.../EligibilityClient.java:49",
+        "media-service/.../MediaReferenceClient.java:45"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.**",
+      "current_implementation": "**The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.**",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-24 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"recordFailurePredicate — throwable -> true — By default all exceptions are recorded as failures\"*; *\"ignoreExceptions … neither count as a failure nor success.\"* Repository evidence: `utils/common-spring/src/main/resources/application.yml:152-162` (no `recordExceptions`/`ignoreExceptions`); `order-service/.../TaxServiceClient.java:49,52`; `order-service/.../PaymentServiceClient.java:56,80`; `rating-service/.../EligibilityClient.java:49`; `media-service/.../MediaReferenceClient.java:45`"
+    },
+    {
+      "id": "RES-25",
+      "title": "The retry and timelimiter Resilience4j configuration is dead (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
+      "severity": "LOW",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml:163-173"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The retry and timelimiter Resilience4j configuration is dead** (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
+      "current_implementation": "**The retry and timelimiter Resilience4j configuration is dead** (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-25 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Resilience4j: the modules are configured in `application.yml` and applied via the annotations; aspect order *\"Retry ( CircuitBreaker ( … ) )\"*. Repository evidence: `utils/common-spring/src/main/resources/application.yml:163-173` (retry `:163-170`, timelimiter `:171-173`); no `@Retry`, `@Bulkhead`, `@RateLimiter`, `@TimeLimiter` in `*/src/main`"
+    },
+    {
+      "id": "RES-26",
+      "title": "No JVM memory or GC option is set, so the heap defaults to 25 % of the container limit.",
+      "severity": "LOW",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "product-service/Dockerfile:9"
+      ],
+      "business_risk": "",
+      "technical_risk": "**No JVM memory or GC option is set**, so the heap defaults to 25 % of the container limit.",
+      "current_implementation": "**No JVM memory or GC option is set**, so the heap defaults to 25 % of the container limit.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-26 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"`-XX:MaxRAMPercentage=percent` … The default value is 25 percent.\"*; *\"The VM now provides automatic container detection support … enabled by default.\"* Repository evidence: All 14 service Dockerfiles use a bare entry point, e.g. `product-service/Dockerfile:9` (`ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]`); limits `k8s/microservices.yaml:30,33`, `k8s/gateway-service.yaml:39,42`"
+    },
+    {
+      "id": "RES-27",
+      "title": "`/actuator/prometheus` is an unauthenticated public path while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
+      "severity": "LOW",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java:84-87",
+        "utils/common-spring/src/main/resources/application.yml:36",
+        "gateway-service/src/main/resources/application.yml:86-88",
+        "gateway-service/src/main/resources/application.yml:37-40"
+      ],
+      "business_risk": "",
+      "technical_risk": "**`/actuator/prometheus` is an unauthenticated public path** while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
+      "current_implementation": "**`/actuator/prometheus` is an unauthenticated public path** while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-27 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: *\"Since Endpoints may contain sensitive information, you should carefully consider when to expose them.\"* Repository evidence: `utils/common-security/src/main/java/com/shop/common/security/config/SecurityProperties.java:84-87`; exposure list `utils/common-spring/src/main/resources/application.yml:36`; gateway exposure `gateway-service/src/main/resources/application.yml:86-88`; public gateway routes `gateway-service/src/main/resources/application.yml:37-40`"
+    },
+    {
+      "id": "RES-28",
+      "title": "The edge rate limiter touches two Redis keys without a common hash tag, and it fails open on a Redis error.",
+      "severity": "LOW",
+      "priority": 45,
+      "affected_service": "",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:67-69"
+      ],
+      "business_risk": "",
+      "technical_risk": "**The edge rate limiter touches two Redis keys without a common hash tag**, and it fails open on a Redis error.",
+      "current_implementation": "**The edge rate limiter touches two Redis keys without a common hash tag**, and it fails open on a Redis error.",
+      "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
+      "design_pattern": "",
+      "acceptance_criteria": [
+        "The deviation recorded as RES-28 no longer applies to the declared versions"
+      ],
+      "happy_path_tests": [],
+      "edge_case_tests": [],
+      "concurrency_tests": [],
+      "integration_e2e_coverage": [],
+      "dependencies": [],
+      "assigned_agent": "",
+      "independent_verifier": "research-official-v2",
+      "notes": "Official guidance: Redis: scripts must *\"perform conditional updates across multiple keys\"*; Bucket4j checklist: *\"simply log the exception and continue the business transaction without throttling\"* is one of only two permitted behaviours. Repository evidence: `gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:67-69` (keys), `:77-78` (fail-open)"
+    }
+  ]
+}
