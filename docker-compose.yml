@@ -13,6 +13,7 @@ x-logging: &logging
 x-management: &management
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
   MANAGEMENT_ENDPOINT_PROMETHEUS_ACCESS: read_only
+  JAVA_TOOL_OPTIONS: "-XX:ActiveProcessorCount=2 -XX:ParallelGCThreads=2 -XX:CICompilerCount=2 -Xms128m -Xmx384m"
 
 x-otel: &otel
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
@@ -30,10 +31,10 @@ x-pg-creds: &pg-creds
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
 x-healthcheck-defaults: &hc-defaults
-  interval: 30s
+  interval: 20s
   timeout: 10s
-  retries: 5
-  start_period: 60s
+  retries: 25
+  start_period: 240s
 
 services:
 
@@ -99,9 +100,9 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092'"]
       interval: 10s
-      timeout: 10s
+      timeout: 5s
       retries: 20
     networks:
       - ecommerce-network
@@ -123,11 +124,13 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-        set -euo pipefail
-        /usr/share/elasticsearch/bin/elasticsearch-users useradd \
-          "$${ES_ADMIN_USERNAME}" \
-          -p "$${ES_ADMIN_PASSWORD}" \
-          -r superuser || true
+        set -uo pipefail
+        if [ "$${ES_ADMIN_USERNAME}" != "elastic" ]; then
+          /usr/share/elasticsearch/bin/elasticsearch-users useradd \
+            "$${ES_ADMIN_USERNAME}" \
+            -p "$${ES_ADMIN_PASSWORD}" \
+            -r superuser || true
+        fi
         exec /usr/local/bin/docker-entrypoint.sh eswrapper
     ports:
       - "9200:9200"
@@ -135,9 +138,10 @@ services:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS -u ${ES_ADMIN_USERNAME}:${ES_ADMIN_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
-      interval: 15s
+      interval: 10s
       timeout: 10s
-      retries: 20
+      retries: 40
+      start_period: 180s
     networks:
       - ecommerce-network
 
@@ -199,8 +203,8 @@ services:
       test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8080"]
       interval: 10s
       timeout: 5s
-      retries: 30
-      start_period: 90s
+      retries: 40
+      start_period: 180s
     networks:
       - ecommerce-network
 
@@ -361,11 +365,14 @@ services:
       <<: [*jwt, *pg-creds, *otel, *management]
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paymentservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SHOP_PAYMENT_PROVIDER: ${SHOP_PAYMENT_PROVIDER:-mock}
+      SHOP_PAYMENT_PROVIDER: ${SHOP_PAYMENT_PROVIDER:-stripe}
       SHOP_PAYMENT_PRODUCTION_MODE: ${SHOP_PAYMENT_PRODUCTION_MODE:-false}
-      SHOP_PAYMENT_STRIPE_API_BASE: ${SHOP_PAYMENT_STRIPE_API_BASE:-http://stripe-mock:12111}
-      SHOP_PAYMENT_STRIPE_SECRET_KEY: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:-sk_test_localE2EOnly}
+      SHOP_PAYMENT_STRIPE_API_BASE: ${SHOP_PAYMENT_STRIPE_API_BASE:-}
+      SHOP_PAYMENT_STRIPE_SECRET_KEY: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:-stripe_sandbox_key}
       SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:-whsec_local_e2e_only}
+      SHOP_PAYMENT_STRIPE_SANDBOX: ${SHOP_PAYMENT_STRIPE_SANDBOX:-true}
+      SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX: ${SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX:-true}
+      SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD: ${SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD:-pm_card_visa}
       SHOP_PAYMENT_MOMO_BASE_URL: ${SHOP_PAYMENT_MOMO_BASE_URL:-}
       SHOP_PAYMENT_MOMO_ENABLED: ${SHOP_PAYMENT_MOMO_ENABLED:-false}
       SHOP_PAYMENT_MOMO_PARTNER_CODE: ${SHOP_PAYMENT_MOMO_PARTNER_CODE:-}
@@ -395,30 +402,6 @@ services:
     healthcheck:
       <<: *hc-defaults
       test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health > /dev/null 2>&1 || exit 1"]
-    networks:
-      - ecommerce-network
-
-  stripe-mock:
-    image: stripe/stripe-mock:latest
-    container_name: stripe-mock
-    <<: [*restart, *logging]
-    command: ["-http-port", "12111", "-https-port", "12112"]
-    networks:
-      - ecommerce-network
-
-  mock-payment-provider:
-    build: ./mock-services/mock-payment-provider
-    container_name: mock-payment-provider
-    <<: [*restart, *logging]
-    environment:
-      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?required}
-      PAYMENT_SERVICE_URL: http://payment-service:8085
-    depends_on:
-      payment-service:
-        condition: service_healthy
-    healthcheck:
-      <<: *hc-defaults
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/mock-payments/_health > /dev/null 2>&1 || exit 1"]
     networks:
       - ecommerce-network
 

@@ -39,6 +39,7 @@
 
         <revision>1.0-SNAPSHOT</revision>
         <jib.skip>false</jib.skip>
+        <jib.architecture>arm64</jib.architecture>
         <spring-cloud.version>2025.1.0</spring-cloud.version>
         <lombok.version>1.18.46</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
@@ -387,6 +388,12 @@
                     <skip>${jib.skip}</skip>
                     <from>
                         <image>eclipse-temurin:25-jre-alpine</image>
+                        <platforms>
+                            <platform>
+                                <architecture>${jib.architecture}</architecture>
+                                <os>linux</os>
+                            </platform>
+                        </platforms>
                     </from>
                     <to>
                         <image>${project.artifactId}</image>

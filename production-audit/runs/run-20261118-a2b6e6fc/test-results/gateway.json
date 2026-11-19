@@ -1,0 +1,15 @@
+{
+  "command": "./mvnw -B -ntp -T1C verify -Dtest=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl gateway-service -am",
+  "description": "gateway routing, rate limiting and redis behaviour",
+  "duration_seconds": 38.033,
+  "errors": 0,
+  "exit_code": 0,
+  "failures": 0,
+  "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/gateway.log",
+  "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+  "skipped": 0,
+  "status": "PASS",
+  "suite": "gateway",
+  "tests_run": 115,
+  "updated_at": "2026-11-19T13:33:50Z"
+}

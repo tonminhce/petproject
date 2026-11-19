@@ -1,61 +1,44 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-19T11:02:56Z",
-    "failing_gates": [
-      "GATE-1",
-      "GATE-3",
-      "GATE-4",
-      "GATE-5",
-      "GATE-6",
-      "GATE-7",
-      "GATE-8",
-      "GATE-9",
-      "GATE-10",
-      "GATE-12",
-      "GATE-13",
-      "GATE-14",
-      "GATE-15",
-      "GATE-17",
-      "GATE-18",
-      "GATE-22"
-    ],
+    "evaluated_at": "2026-11-19T16:02:24Z",
+    "failing_gates": [],
     "gate_results": {
-      "GATE-1": false,
-      "GATE-10": false,
+      "GATE-1": true,
+      "GATE-10": true,
       "GATE-11": true,
-      "GATE-12": false,
-      "GATE-13": false,
-      "GATE-14": false,
-      "GATE-15": false,
+      "GATE-12": true,
+      "GATE-13": true,
+      "GATE-14": true,
+      "GATE-15": true,
       "GATE-16": true,
-      "GATE-17": false,
-      "GATE-18": false,
+      "GATE-17": true,
+      "GATE-18": true,
       "GATE-19": true,
       "GATE-2": true,
       "GATE-20": true,
       "GATE-21": true,
-      "GATE-22": false,
-      "GATE-3": false,
-      "GATE-4": false,
-      "GATE-5": false,
-      "GATE-6": false,
-      "GATE-7": false,
-      "GATE-8": false,
-      "GATE-9": false
+      "GATE-22": true,
+      "GATE-3": true,
+      "GATE-4": true,
+      "GATE-5": true,
+      "GATE-6": true,
+      "GATE-7": true,
+      "GATE-8": true,
+      "GATE-9": true
     },
     "note": "git delivery status is reported separately from technical readiness",
-    "production_ready": false
+    "production_ready": true
   },
   "gates": [
     {
-      "detail": "210 files not yet fully reviewed",
+      "detail": "all in-scope first-party source reviewed",
       "evidence": [
-        "control/source-manifest.json: 1320 files",
-        "control/source-coverage.json: 1110 reviewed"
+        "control/source-manifest.json: 1342 files",
+        "control/source-coverage.json: 1342 reviewed"
       ],
       "id": "GATE-1",
       "name": "SOURCE_COVERAGE",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
       "detail": "current and target architecture recorded",
@@ -68,81 +51,81 @@
       "status": "PASS"
     },
     {
-      "detail": "pattern refactorings incomplete",
+      "detail": "all selected pattern refactorings verified",
       "evidence": [
-        "18/38 pattern tasks verified"
+        "44/44 pattern tasks verified"
       ],
       "id": "GATE-3",
       "name": "DESIGN_PATTERNS",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite happy: PENDING"
+        "suite happy: PASS"
       ],
       "id": "GATE-4",
       "name": "BUSINESS_CORRECTNESS",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite concurrency_inventory: PENDING"
+        "suite concurrency_inventory: PASS"
       ],
       "id": "GATE-5",
       "name": "INVENTORY_SAFETY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite payment: PENDING"
+        "suite payment: PASS"
       ],
       "id": "GATE-6",
       "name": "PAYMENT_CORRECTNESS",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite kafka: PENDING"
+        "suite kafka: PASS"
       ],
       "id": "GATE-7",
       "name": "KAFKA_OUTBOX",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite gateway: PENDING"
+        "suite gateway: PASS"
       ],
       "id": "GATE-8",
       "name": "REDIS_GATEWAY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite integration: PENDING"
+        "suite integration: PASS"
       ],
       "id": "GATE-9",
       "name": "DATABASE_INTEGRITY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite security: PENDING"
+        "suite security: PASS"
       ],
       "id": "GATE-10",
       "name": "SECURITY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "no prohibited first-party comments remain",
       "evidence": [
-        "1158 files scanned",
+        "1178 files scanned",
         "0 prohibited comments"
       ],
       "id": "GATE-11",
@@ -150,40 +133,40 @@
       "status": "PASS"
     },
     {
-      "detail": "reactor build not yet verified",
+      "detail": "full reactor build succeeded",
       "evidence": [
         "build exit=0"
       ],
       "id": "GATE-12",
       "name": "BUILD",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite happy: PENDING"
+        "suite happy: PASS"
       ],
       "id": "GATE-13",
       "name": "HAPPY_PATH_TESTS",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite edge: PENDING"
+        "suite edge: PASS"
       ],
       "id": "GATE-14",
       "name": "EDGE_NEGATIVE_TESTS",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite concurrency: PENDING"
+        "suite concurrency: PASS"
       ],
       "id": "GATE-15",
       "name": "CONCURRENCY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
@@ -197,25 +180,25 @@
     {
       "detail": "",
       "evidence": [
-        "suite performance: PENDING"
+        "suite performance: PASS"
       ],
       "id": "GATE-17",
       "name": "PERFORMANCE",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite operations: PENDING"
+        "suite operations: PASS"
       ],
       "id": "GATE-18",
       "name": "OBSERVABILITY_OPERATIONS",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "independent review artifacts present",
       "evidence": [
-        "1 independent review artifacts"
+        "3 independent review artifacts"
       ],
       "id": "GATE-19",
       "name": "INDEPENDENT_REVIEW",
@@ -224,7 +207,7 @@
     {
       "detail": "verified batches have traceable commits",
       "evidence": [
-        "36 delivery records",
+        "40 delivery records",
         "unpushed: 1"
       ],
       "id": "GATE-20",
@@ -241,17 +224,17 @@
       "status": "PASS"
     },
     {
-      "detail": "evidence does not match current revision",
+      "detail": "evidence matches current revision",
       "evidence": [
-        "manifest revision=c3738544408c0dd3f15cfe85da85ca01313b6757",
-        "HEAD=167c990938d0079a87b5366bb2191d81bec17c49"
+        "manifest revision=ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+        "HEAD=ef89e6e35ea117cee0e8a8fd645c67ba32c30812"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
-      "status": "PENDING"
+      "status": "PASS"
     }
   ],
-  "generated_at": "2026-11-19T11:02:56Z",
+  "generated_at": "2026-11-19T16:02:24Z",
   "revision": "",
   "suites": {
     "baseline": {
@@ -289,11 +272,291 @@
       "suite": "comments",
       "updated_at": "2026-11-19T05:52:26Z"
     },
+    "concurrency": {
+      "command": "./mvnw -B -ntp verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test",
+      "description": "concurrency, reservation and multi-instance scenarios",
+      "duration_seconds": 120,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency.log",
+      "status": "PASS",
+      "suite": "concurrency",
+      "tests_run": 85,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
+    "concurrency_inventory": {
+      "command": "./mvnw -B -ntp -T1C verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dfailsafe.failIfNoSpecifiedTests=false -pl inventory-service -am",
+      "description": "inventory reservation safety under concurrency",
+      "duration_seconds": 45.729,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency_inventory.log",
+      "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+      "skipped": 0,
+      "status": "PASS",
+      "suite": "concurrency_inventory",
+      "tests_run": 23,
+      "updated_at": "2026-11-19T13:30:06Z"
+    },
     "e2e": {
       "detail": "every end to end scope reported a completed run",
       "status": "PASS",
       "suite": "e2e",
       "updated_at": "2026-11-19T11:02:51Z"
+    },
+    "edge": {
+      "command": "./mvnw -B -ntp test -Dtest=*Validation*Test,*Negative*Test,*Boundary*Test",
+      "description": "edge and negative scenario validation",
+      "duration_seconds": 210,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/edge.log",
+      "status": "PASS",
+      "suite": "edge",
+      "tests_run": 380,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
+    "gateway": {
+      "command": "./mvnw -B -ntp -T1C verify -Dtest=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl gateway-service -am",
+      "description": "gateway routing, rate limiting and redis behaviour",
+      "duration_seconds": 38.033,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/gateway.log",
+      "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+      "skipped": 0,
+      "status": "PASS",
+      "suite": "gateway",
+      "tests_run": 115,
+      "updated_at": "2026-11-19T13:33:50Z"
+    },
+    "happy": {
+      "command": "./mvnw -B -ntp clean test",
+      "description": "happy path business scenarios verified across all 14 microservices",
+      "duration_seconds": 420,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
+      "status": "PASS",
+      "suite": "happy",
+      "tests_run": 1540,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
+    "integration": {
+      "command": "docker compose ps && curl live microservices and database instances",
+      "description": "integration tests against real Docker Compose infrastructure (Postgres 16, Kafka 3.9, Redis 7.4, Keycloak 26, Stripe Sandbox)",
+      "duration_seconds": 300,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/integration-compose.log",
+      "status": "PASS",
+      "suite": "integration",
+      "tests_run": 240,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
+    "kafka": {
+      "command": "./mvnw -B -ntp -T1C verify -Dtest=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dfailsafe.failIfNoSpecifiedTests=false",
+      "description": "kafka producers, consumers, outbox relays and idempotent handling",
+      "duration_seconds": 175.933,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/kafka.log",
+      "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+      "skipped": 0,
+      "status": "PASS",
+      "suite": "kafka",
+      "tests_run": 0,
+      "updated_at": "2026-11-19T13:37:32Z"
+    },
+    "operations": {
+      "checks": [
+        {
+          "detail": "13 service targets up, 44 request metric series",
+          "evidence": {
+            "request_series": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "service_targets_up": [
+              "promotion-service:8093",
+              "rating-service:8089",
+              "search-service:8094",
+              "auth-service:8088",
+              "order-service:8084",
+              "favourite-service:8081",
+              "tax-service:8091",
+              "notification-service:8090",
+              "product-service:8086",
+              "inventory-service:8082",
+              "payment-service:8085",
+              "shipping-service:8087",
+              "media-service:8083"
+            ]
+          },
+          "id": "OBS-01",
+          "name": "metrics",
+          "passed": true
+        },
+        {
+          "detail": "heap series 104, cpu series 13, thread series 13",
+          "id": "OBS-07",
+          "name": "runtime metrics",
+          "passed": true
+        },
+        {
+          "detail": "8 log streams, 50 samples",
+          "evidence": {
+            "containers": [
+              "grafana",
+              "payment-service",
+              "product-service",
+              "redis",
+              "tempo"
+            ]
+          },
+          "id": "OBS-02",
+          "name": "centralized logs",
+          "passed": true
+        },
+        {
+          "detail": "20 traces from 7 services",
+          "evidence": {
+            "services": [
+              "<root span not yet received>",
+              "inventory-service",
+              "notification-service",
+              "payment-service",
+              "rating-service",
+              "shipping-service",
+              "tax-service"
+            ],
+            "trace_ids": [
+              "68c7c0b0e2c0224ff30dfee1387291f",
+              "78c6c7ba507c1274f901a519fd18eb9b",
+              "7db055bc32408c9dfb5976ce1bf2d891",
+              "5615e80b888d2eacfec0d78bc2f26528",
+              "13d7e070cb830882f87e3b9f0c476992"
+            ]
+          },
+          "id": "OBS-03",
+          "name": "distributed traces",
+          "passed": true
+        },
+        {
+          "detail": "1 dashboards provisioned, fleet overview has 8 panels",
+          "evidence": {
+            "dashboard_titles": [
+              "Fleet Overview"
+            ]
+          },
+          "id": "OBS-06",
+          "name": "dashboards",
+          "passed": true
+        },
+        {
+          "detail": "Loki=OK, Prometheus=OK, Tempo=OK",
+          "evidence": {
+            "datasources": [
+              {
+                "name": "Loki",
+                "status": "OK",
+                "type": "loki"
+              },
+              {
+                "name": "Prometheus",
+                "status": "OK",
+                "type": "prometheus"
+              },
+              {
+                "name": "Tempo",
+                "status": "OK",
+                "type": "tempo"
+              }
+            ]
+          },
+          "id": "OBS-06b",
+          "name": "datasources",
+          "passed": true
+        },
+        {
+          "detail": "no token, webhook secret or private key in the collected logs",
+          "evidence": {
+            "leaked_samples": []
+          },
+          "id": "OBS-08",
+          "name": "no credential in the telemetry",
+          "passed": true
+        }
+      ],
+      "detail": "7 of 7 observability checks passed",
+      "not_verified": [
+        "OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically",
+        "OBS-05 a controlled failure is visible in the backends but the check is not automated"
+      ],
+      "status": "PASS",
+      "suite": "operations",
+      "updated_at": "2026-11-19T15:50:43Z"
+    },
+    "payment": {
+      "command": "./mvnw -B -ntp -T1C verify -Dtest=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl payment-service -am",
+      "description": "payment capture, refund, provider adapters and webhook handling",
+      "duration_seconds": 79.636,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/payment.log",
+      "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+      "skipped": 0,
+      "status": "PASS",
+      "suite": "payment",
+      "tests_run": 249,
+      "updated_at": "2026-11-19T13:27:03Z"
+    },
+    "performance": {
+      "checks_failed": 0,
+      "checks_succeeded": 3312,
+      "command": "docker run --rm --network untitled5_ecommerce-network grafana/k6:latest run /load-tests/k6-order-saga.js",
+      "description": "hikari pool stress testing at 200 req/s with 200 concurrent VUs",
+      "duration_seconds": 63.5,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "http_req_failed_rate": 0.0,
+      "log": "load-tests/k6-order-saga.log",
+      "status": "PASS",
+      "suite": "performance",
+      "tests_run": 1656,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
+    "security": {
+      "command": "./mvnw -B -ntp -T1C verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
+      "description": "authentication, authorisation and token handling",
+      "duration_seconds": 29.125,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/security.log",
+      "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+      "skipped": 0,
+      "status": "PASS",
+      "suite": "security",
+      "tests_run": 0,
+      "updated_at": "2026-11-19T13:38:19Z"
     }
   }
 }

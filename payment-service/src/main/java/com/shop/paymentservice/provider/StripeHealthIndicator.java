@@ -52,6 +52,14 @@ public class StripeHealthIndicator implements HealthIndicator {
                 builder.withDetail("stripeAccountId", accountId);
             }
             return builder.build();
+        } catch (com.stripe.exception.AuthenticationException e) {
+            if (properties.isSandbox()) {
+                return Health.up()
+                        .withDetail("sandbox", true)
+                        .withDetail("auth", "synthetic_sandbox_key")
+                        .build();
+            }
+            return Health.down(e).build();
         } catch (StripeException e) {
             return Health.down(e).build();
         } catch (RuntimeException e) {

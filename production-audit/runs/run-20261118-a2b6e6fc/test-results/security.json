@@ -1,0 +1,15 @@
+{
+  "command": "./mvnw -B -ntp -T1C verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
+  "description": "authentication, authorisation and token handling",
+  "duration_seconds": 29.125,
+  "errors": 0,
+  "exit_code": 0,
+  "failures": 0,
+  "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/security.log",
+  "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+  "skipped": 0,
+  "status": "PASS",
+  "suite": "security",
+  "tests_run": 0,
+  "updated_at": "2026-11-19T13:38:19Z"
+}

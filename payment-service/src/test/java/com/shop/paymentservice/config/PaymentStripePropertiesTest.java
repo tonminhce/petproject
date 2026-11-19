@@ -44,9 +44,9 @@ class PaymentStripePropertiesTest {
 
     @Test
     void configuredKeyMeansStripeActivating() {
-        PaymentStripeProperties configured = new PaymentStripeProperties(
+        PaymentStripeProperties configured = PaymentStripeProperties.of(
                 "sk_test_123", "whsec_123", "2024-06-20", "", false);
-        PaymentStripeProperties blank = new PaymentStripeProperties(
+        PaymentStripeProperties blank = PaymentStripeProperties.of(
                 "", "whsec_123", "2024-06-20", "", false);
         assertThat(configured.isConfigured()).isTrue();
         assertThat(blank.isConfigured()).isFalse();
@@ -55,11 +55,11 @@ class PaymentStripePropertiesTest {
     @Test
     void apiVersionDriftFromSdkConstantIsDetected() {
         String sdkVersion = com.stripe.Stripe.API_VERSION;
-        PaymentStripeProperties drifted = new PaymentStripeProperties(
+        PaymentStripeProperties drifted = PaymentStripeProperties.of(
                 "sk_test_123", "whsec_123", "1900-01-01", "", false);
-        PaymentStripeProperties aligned = new PaymentStripeProperties(
+        PaymentStripeProperties aligned = PaymentStripeProperties.of(
                 "sk_test_123", "whsec_123", sdkVersion, "", false);
-        PaymentStripeProperties blankKey = new PaymentStripeProperties(
+        PaymentStripeProperties blankKey = PaymentStripeProperties.of(
                 "", "whsec_123", "1900-01-01", "", false);
         assertThat(drifted.isVersionDriftedFromSdk()).isTrue();
         assertThat(aligned.isVersionDriftedFromSdk()).isFalse();
@@ -68,14 +68,14 @@ class PaymentStripePropertiesTest {
 
     @Test
     void blankApiBaseKeepsTheProviderEndpointUntouched() {
-        PaymentStripeProperties props = new PaymentStripeProperties(
+        PaymentStripeProperties props = PaymentStripeProperties.of(
                 "sk_test_123", "whsec_123", "2024-06-20", "  ", false);
         assertThat(props.apiBase()).isEmpty();
     }
 
     @Test
     void blankApiVersionFallsBackToFleetPinnedVersion() {
-        PaymentStripeProperties props = new PaymentStripeProperties(
+        PaymentStripeProperties props = PaymentStripeProperties.of(
                 "sk_test_123", "whsec_123", " ", "", false);
         assertThat(props.apiVersion()).isEqualTo("2024-06-20");
     }

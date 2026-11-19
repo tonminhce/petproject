@@ -4,14 +4,14 @@
     "BUILD": 1,
     "DOCUMENTATION": 89,
     "GENERATED": 8,
-    "HARNESS": 49,
-    "INFRASTRUCTURE": 29,
-    "PRODUCTION_CODE": 642,
+    "HARNESS": 50,
+    "INFRASTRUCTURE": 37,
+    "PRODUCTION_CODE": 652,
     "SHARED_LIBRARY": 106,
-    "TEST_CODE": 383,
+    "TEST_CODE": 386,
     "VENDORED_TOOLING": 13
   },
-  "file_count": 1320,
+  "file_count": 1342,
   "files": [
     {
       "bytes": 4516,
@@ -1274,6 +1274,104 @@
       "tracked": true
     },
     {
+      "bytes": 6686,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": false,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "9174d2afd20430b28d6db02667f45b3b09d922c3",
+      "language": "json",
+      "lines": 151,
+      "module": "config",
+      "path": "config/observability/grafana/dashboards/fleet-overview.json",
+      "reviewed_lines": [],
+      "sha256": "97f59fee621e792e068acfba26b2367f4f457f964bc1bfdda263573d16a53815",
+      "tracked": true
+    },
+    {
+      "bytes": 269,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "89d6cea701fa4c3ff869182379a89af5888e6316",
+      "language": "yaml",
+      "lines": 13,
+      "module": "config",
+      "path": "config/observability/grafana/provisioning/dashboards/dashboards.yaml",
+      "reviewed_lines": [],
+      "sha256": "f69ddf7318d6c8ac123a371b9dc2079332775c8eccd6d7ce35277d44dc183ff3",
+      "tracked": true
+    },
+    {
+      "bytes": 720,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "7fe52d82ca9bcb15fdeeadcdcd1fc20af0b9f16b",
+      "language": "yaml",
+      "lines": 37,
+      "module": "config",
+      "path": "config/observability/grafana/provisioning/datasources/datasources.yaml",
+      "reviewed_lines": [],
+      "sha256": "182b0f97f8b34fcd4c4045c5805165f712b59a2603afba3b26cd9394f6a1c5f7",
+      "tracked": true
+    },
+    {
+      "bytes": 803,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "905bdc0ca486dca9a1f4ceae027cdfe38f983921",
+      "language": "yaml",
+      "lines": 43,
+      "module": "config",
+      "path": "config/observability/loki.yaml",
+      "reviewed_lines": [],
+      "sha256": "0baa4e874fc1df909af174a1e1bcdb71be986890301ac35a2ad526e055a381a2",
+      "tracked": true
+    },
+    {
+      "bytes": 1079,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "76d81aa139c9e69499a4e2bafec86ee4dd9b984e",
+      "language": "yaml",
+      "lines": 57,
+      "module": "config",
+      "path": "config/observability/otel-collector-config.yaml",
+      "reviewed_lines": [],
+      "sha256": "0c0af045c27c01ac4434c9e643c05b62120bf89215318c7a59ca49b936d9bafc",
+      "tracked": true
+    },
+    {
+      "bytes": 812,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "7238367eb5546c2d22dc5f869314de26904662ca",
+      "language": "yaml",
+      "lines": 29,
+      "module": "config",
+      "path": "config/observability/prometheus.yml",
+      "reviewed_lines": [],
+      "sha256": "a12d77cad0197e167875b64ad0afc45fdc93da2310fca2a41328ebe9bf70c20f",
+      "tracked": true
+    },
+    {
+      "bytes": 388,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "2dbeb510ab76cd41f5db7757276aa726b630aef9",
+      "language": "yaml",
+      "lines": 25,
+      "module": "config",
+      "path": "config/observability/tempo.yaml",
+      "reviewed_lines": [],
+      "sha256": "96c7355df1f2c8de49889b31e02179aac86ca038ba11d48faf4a52ed74dda52e",
+      "tracked": true
+    },
+    {
       "bytes": 5861,
       "category": "INFRASTRUCTURE",
       "comment_gate": false,
@@ -1344,17 +1442,17 @@
       "tracked": true
     },
     {
-      "bytes": 2869,
+      "bytes": 2912,
       "category": "INFRASTRUCTURE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "8564ad98cbd6d5c6e1ab39f39252d0746d2e719a",
+      "git_blob": "83817192973660068ab2b77adfb36d9414ec35b0",
       "language": "yaml",
-      "lines": 122,
+      "lines": 123,
       "module": "docker-compose.prod.yml",
       "path": "docker-compose.prod.yml",
       "reviewed_lines": [],
-      "sha256": "a13fcd128a8cafcaf90e43c2bdaab2cf18cff56e3bad161c7004e09105ab8c16",
+      "sha256": "b40f2e60260bca653176dc8c2888b9c5cd9c4b010f0c6899ac937c9f3e33d037",
       "tracked": true
     },
     {
@@ -1372,17 +1470,17 @@
       "tracked": true
     },
     {
-      "bytes": 21905,
+      "bytes": 27333,
       "category": "INFRASTRUCTURE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "7b44dc8a499bfd1e1afd448a44f48bf3f3df70cf",
+      "git_blob": "9d73ee23a39fdd151a28af203fb4fbad3ee9d095",
       "language": "yaml",
-      "lines": 625,
+      "lines": 764,
       "module": "docker-compose.yml",
       "path": "docker-compose.yml",
       "reviewed_lines": [],
-      "sha256": "8fe439b0cf653eb1d87d2e3e13766f7a2dad159e565f9f60651a0a98d72ea8c5",
+      "sha256": "0ee9cf88c62ee82c2e210fb6f38c1cd2cfcd32ce958ce18ee22ef3c243003d97",
       "tracked": true
     },
     {
@@ -3402,17 +3500,17 @@
       "tracked": true
     },
     {
-      "bytes": 3042,
+      "bytes": 3069,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "130cf62095dc6b01225f19b89c0a2968308b7d74",
       "language": "yaml",
-      "lines": 108,
+      "lines": 109,
       "module": "gateway-service",
       "path": "gateway-service/src/main/resources/application.yml",
       "reviewed_lines": [],
-      "sha256": "8dac5c5d45a9a6a2170ef144df1cfac653e8a9c2654d9fc3a67adf56a79d392f",
+      "sha256": "f9703f503e72d5734c41ab172acc3a67fdedcb760673eb473615bdd451cd5bd9",
       "tracked": true
     },
     {
@@ -3454,7 +3552,7 @@
       "module": "gateway-service",
       "path": "gateway-service/src/test/java/com/shop/gateway/KeycloakRealmImportIT.java",
       "reviewed_lines": [],
-      "sha256": "ff6faaebc886ecdc17d4915b920457e10b77878b388aaffbf702a54bf554f469",
+      "sha256": "85aa6e0279817ed984bd0c7271d09b2feeaca6a61f10bf0debdfdac93a47d712",
       "tracked": true
     },
     {
@@ -4466,17 +4564,17 @@
       "tracked": true
     },
     {
-      "bytes": 6857,
+      "bytes": 6933,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "f360e84d96b420f0eaef2c479c79c9cf9fb7bfd4",
       "language": "java",
-      "lines": 174,
+      "lines": 175,
       "module": "inventory-service",
       "path": "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxRelayRecoveryIT.java",
       "reviewed_lines": [],
-      "sha256": "649736e7539fa265097e0c883087df02212405974a6456253842d9fc556f4465",
+      "sha256": "ec348ca602046076f0717494daa4d8a238ce7b54f51f561a0f0e64aaf2532743",
       "tracked": true
     },
     {
@@ -4648,17 +4746,17 @@
       "tracked": true
     },
     {
-      "bytes": 18238,
+      "bytes": 18315,
       "category": "INFRASTRUCTURE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "bd7cd8f75b68ee473dc7168010e02d31677ca055",
+      "git_blob": "d2122b47abb79454d1380ece2c6c33d2cc640ae9",
       "language": "yaml",
-      "lines": 767,
+      "lines": 769,
       "module": "k8s",
       "path": "k8s/microservices.yaml",
       "reviewed_lines": [],
-      "sha256": "85eeb7e00bf2ebca0d405b7922f4f4ee9fdc7de6e5e63d5993960e46910e6170",
+      "sha256": "a8c1dedc0270eefd8190e57567e546aabadabcfad00f7b26ca6102b9801a955e",
       "tracked": true
     },
     {
@@ -4732,18 +4830,32 @@
       "tracked": true
     },
     {
-      "bytes": 1237,
+      "bytes": 1382,
       "category": "INFRASTRUCTURE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "72e7396a06367b2d805a5bb573ce16255169bf6c",
       "language": "javascript",
-      "lines": 48,
+      "lines": 52,
       "module": "load-tests",
       "path": "load-tests/k6-order-saga.js",
       "reviewed_lines": [],
-      "sha256": "44f5833f586a5b8768b3d9379769ea0e99d57f5e122caa6b9e82294af69f14f5",
+      "sha256": "7779199564de531bf3b2f000f5890507d1073ba7ac57b2dc28300e3968a181d3",
       "tracked": true
+    },
+    {
+      "bytes": 1164,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": null,
+      "language": "python",
+      "lines": 41,
+      "module": "load-tests",
+      "path": "load-tests/run.py",
+      "reviewed_lines": [],
+      "sha256": "462726e1336fa6c855721963f249e620663d2e1484a14ee3540f4bb3d80ab1de",
+      "tracked": false
     },
     {
       "bytes": 5489,
@@ -8638,17 +8750,101 @@
       "tracked": true
     },
     {
-      "bytes": 1117,
+      "bytes": 1533,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "d685d5af454882ed86e65dbfb5c0e9f8720a1d6e",
+      "language": "java",
+      "lines": 34,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/MoMoProviderConfiguredCondition.java",
+      "reviewed_lines": [],
+      "sha256": "f162f690fdb00954723a08e85bdb2de2ac1ca5ffb4c13753d68c9abd85380484",
+      "tracked": true
+    },
+    {
+      "bytes": 1203,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "9f1de8eb59fa6f1ed65bf0ab4f5a922601c7e14c",
+      "language": "java",
+      "lines": 35,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentMoMoProperties.java",
+      "reviewed_lines": [],
+      "sha256": "16c36aff2ce659a53be18efb0bd634c7daeac543b9e82f5b33bee90908bb40a4",
+      "tracked": true
+    },
+    {
+      "bytes": 2861,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "08d58b428061cd3d809aa3c79d78f2904bcf5092",
+      "language": "java",
+      "lines": 67,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentProviderProductionGuard.java",
+      "reviewed_lines": [],
+      "sha256": "d48511eb57dec5d1a450a01004f8b7ac405db6afa026af03f679a5995caddbdd",
+      "tracked": true
+    },
+    {
+      "bytes": 2496,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "b0155f2885619a1f034df2b725ecba723bc3eea3",
+      "language": "java",
+      "lines": 54,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentPspRestClientConfig.java",
+      "reviewed_lines": [],
+      "sha256": "bf3f3d04f8af07a119e388bdc7c745c42da9598d74832b0bfdbad08253328645",
+      "tracked": true
+    },
+    {
+      "bytes": 1816,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "9dac3963caca00975a19080597f2578c8893ba1a",
       "language": "java",
-      "lines": 41,
+      "lines": 60,
       "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentStripeProperties.java",
       "reviewed_lines": [],
-      "sha256": "b8b7f491548b981cf28c261651483a81f47d16eaef6e750ee264c64cb5b21832",
+      "sha256": "38a64c9932442c8aca22332039104acfe69b8d58093553701848fea7936efc52",
+      "tracked": true
+    },
+    {
+      "bytes": 1675,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "72909ddbde1e5ff74ffa9088848c4ef62c2a506f",
+      "language": "java",
+      "lines": 45,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentVNPayProperties.java",
+      "reviewed_lines": [],
+      "sha256": "56103e883bc8eddb2120b1d2989b349e0b5e93f8fc4058c8c8a5edc0017cbc5a",
+      "tracked": true
+    },
+    {
+      "bytes": 1550,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "6530aa5615a19cc877c5265376326e093d7336d2",
+      "language": "java",
+      "lines": 29,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/VNPayProviderConfiguredCondition.java",
+      "reviewed_lines": [],
+      "sha256": "1988421b3d912ab76f57e5e718be43428e61340629102f7939d4da8476e71d39",
       "tracked": true
     },
     {
@@ -8834,17 +9030,17 @@
       "tracked": true
     },
     {
-      "bytes": 2845,
+      "bytes": 12222,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "78a40a7d26dc1578f7fa582554a06ca5f5e348ad",
+      "git_blob": "1b7c1aa7c50f194adacd616b68de2fadbec095ac",
       "language": "java",
-      "lines": 72,
+      "lines": 281,
       "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java",
       "reviewed_lines": [],
-      "sha256": "b1350ecf763c339d65ac19ed2f2208c401e355ca17d19ba33baf762e394e26dc",
+      "sha256": "3f8e04e2505e808ef5096003fd9edee095b284987caed6376c9fa8f9116c97a5",
       "tracked": true
     },
     {
@@ -8918,45 +9114,59 @@
       "tracked": true
     },
     {
-      "bytes": 2336,
+      "bytes": 2693,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "15dd214d04422587231f94bde34c73b87335564c",
       "language": "java",
-      "lines": 69,
+      "lines": 77,
       "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/StripeHealthIndicator.java",
       "reviewed_lines": [],
-      "sha256": "9fedc3870380b1c90d93be91f6f9057c8d5f804521d4d71062159c032bff50de",
+      "sha256": "c32f48ac4475d699ada23b77751d7358af6ca8d1c6e56547de97c90797d330fc",
       "tracked": true
     },
     {
-      "bytes": 11954,
+      "bytes": 12330,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "d76585f86410ef65a94e648b2c79f7f4d4b7f32c",
       "language": "java",
-      "lines": 244,
+      "lines": 251,
       "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java",
       "reviewed_lines": [],
-      "sha256": "b623cc53f7d2db6b66d773c0fc6b43fc9fc4c0bffdd7678313bd7711951e6a20",
+      "sha256": "9e0ea825c90fb8bff98a0eb6c92951909ccff9d5325b5c83140c9e100414eccf",
       "tracked": true
     },
     {
-      "bytes": 3051,
+      "bytes": 1030,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "85716eb0e516c004539fe9be020e89c9f49db353",
+      "git_blob": "60de7b55539ed26363909fe77e50cd91cd237a3f",
       "language": "java",
-      "lines": 74,
+      "lines": 30,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayEncoding.java",
+      "reviewed_lines": [],
+      "sha256": "528e510bc08935ee797b7b4c9f72671595df7786b553f192ed7b03e9514bf3fa",
+      "tracked": true
+    },
+    {
+      "bytes": 9152,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "ccc622552285d229311ec778e5fbce7868e697c4",
+      "language": "java",
+      "lines": 225,
       "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java",
       "reviewed_lines": [],
-      "sha256": "07da1da78bda13295b23c03ebc2cda6c7c9d3373cf5ba0f963932dce7bae799f",
+      "sha256": "4d5c7367f19cac53cc6efabb94f732876c056d40b1ac05b27986b0eb38f739bc",
       "tracked": true
     },
     {
@@ -9086,6 +9296,20 @@
       "tracked": true
     },
     {
+      "bytes": 1995,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "4e0b4c7648cca65fbb8a3f67459306f88b9aacb6",
+      "language": "java",
+      "lines": 64,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/MoMoCallbackVerifier.java",
+      "reviewed_lines": [],
+      "sha256": "bae28f2d09d7176f9f3d75d26f5857e0eb551f038cbc2644378358717fc3bedc",
+      "tracked": true
+    },
+    {
       "bytes": 2012,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
@@ -9097,6 +9321,34 @@
       "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java",
       "reviewed_lines": [],
       "sha256": "74bf41b0934556d6d87ed6e578a37fcd7d355b338be80eaf89d5f0d8ecb95463",
+      "tracked": true
+    },
+    {
+      "bytes": 7328,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "87da101eb7a3415dfc09eb5f4a97a17ac291aecd",
+      "language": "java",
+      "lines": 190,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/PspCallbackController.java",
+      "reviewed_lines": [],
+      "sha256": "c3d7008632a24189cd625a583d7caecf5aad256442cd8d6377400085adcea750",
+      "tracked": true
+    },
+    {
+      "bytes": 1703,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "1bc4ac285851eced1526769d8509f9c17fb5f222",
+      "language": "java",
+      "lines": 48,
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/VNPayCallbackVerifier.java",
+      "reviewed_lines": [],
+      "sha256": "dc3a39df758760ade741f1abef013328dddaaff6edfcc1ebaab5f5db534931f6",
       "tracked": true
     },
     {
@@ -9128,17 +9380,17 @@
       "tracked": true
     },
     {
-      "bytes": 1444,
+      "bytes": 3042,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "8a23a7ff406be5c34ee85081357f4529602d7bce",
+      "git_blob": "bd376d44652ee7506f101a33aef3d27fb955a8c2",
       "language": "yaml",
-      "lines": 52,
+      "lines": 83,
       "module": "payment-service",
       "path": "payment-service/src/main/resources/application.yml",
       "reviewed_lines": [],
-      "sha256": "b02d7a4b265fd06d1c97d9c2f8aa7e87ea4a2f450244ab5a1aaaab09b6a61dff",
+      "sha256": "9c63e9f73fb63a4e9f056afa3b5b72735ddbd15e6bb0af9cf280381f5080e9c6",
       "tracked": true
     },
     {
@@ -9352,7 +9604,21 @@
       "tracked": true
     },
     {
-      "bytes": 3888,
+      "bytes": 4075,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "e61362758b579f3bc5443eeed10820a834393363",
+      "language": "java",
+      "lines": 97,
+      "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/config/PaymentProviderProductionGuardTest.java",
+      "reviewed_lines": [],
+      "sha256": "72af66f671acd3ff00314df9cad5547f47eb3f11ed5b901958c87b3a38f58301",
+      "tracked": true
+    },
+    {
+      "bytes": 3881,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
@@ -9362,7 +9628,7 @@
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripePropertiesTest.java",
       "reviewed_lines": [],
-      "sha256": "50faafd91bb3b2842f3c827e4db873be5ee74592befcf911ecb77dd344a8458a",
+      "sha256": "09ea8e002cc4335c7204c365683c7a59ab6572e4a34e54f627045438d96e44cb",
       "tracked": true
     },
     {
@@ -9436,7 +9702,7 @@
       "tracked": true
     },
     {
-      "bytes": 3116,
+      "bytes": 3117,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
@@ -9446,7 +9712,7 @@
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxBatchAsyncIT.java",
       "reviewed_lines": [],
-      "sha256": "96a37150bb8f75e937a60feefd809cf1a15528461d4987ea297266637d6b4850",
+      "sha256": "7c5a72e40e1932681272a549155b5ba4ee4aa789ec4fd69afc0d57cdcae922bc",
       "tracked": true
     },
     {
@@ -9506,17 +9772,17 @@
       "tracked": true
     },
     {
-      "bytes": 1513,
+      "bytes": 14391,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "5c87eab6b53d0c6f420e054a84f92fe59cdaa05f",
+      "git_blob": "c8e65f10f4af328855a80388014b0bcd8af5d7e2",
       "language": "java",
-      "lines": 52,
+      "lines": 308,
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/MoMoProviderTest.java",
       "reviewed_lines": [],
-      "sha256": "0d9add75485e190efdce1d8ccf5d48b8206929d07b49ff915984303e64d4a104",
+      "sha256": "906f9b06ca24ae155d0b8a57b876430d61ce909388ad4a1b796dc571fc402c45",
       "tracked": true
     },
     {
@@ -9548,6 +9814,20 @@
       "tracked": true
     },
     {
+      "bytes": 5401,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "685ed0954ae48cb841129f4caa75cef0dfc5a2ba",
+      "language": "java",
+      "lines": 123,
+      "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/provider/PaymentProviderRegistrationTest.java",
+      "reviewed_lines": [],
+      "sha256": "e4378004527b89e13784f9260478db634031353b8e4d1bd30a9aa449f53c9ce3",
+      "tracked": true
+    },
+    {
       "bytes": 3880,
       "category": "TEST_CODE",
       "comment_gate": true,
@@ -9562,21 +9842,21 @@
       "tracked": true
     },
     {
-      "bytes": 4462,
+      "bytes": 5116,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "294255f6d39352cfbfaafbc60b5a8d02e5c04e29",
       "language": "java",
-      "lines": 121,
+      "lines": 134,
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/StripeHealthIndicatorTest.java",
       "reviewed_lines": [],
-      "sha256": "940f81f278fc43c68f379e65522356a0fec1cb7eec5fa9f14095b54233d8514e",
+      "sha256": "18297618a6fa408d8a631b05299cf98d6ad2470a283191f71b712d9ba62c6448",
       "tracked": true
     },
     {
-      "bytes": 14599,
+      "bytes": 14597,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
@@ -9586,21 +9866,21 @@
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/StripeProviderTest.java",
       "reviewed_lines": [],
-      "sha256": "8483526cd7c339ceb3662fabbe6ad53875c1d42667e3a8001fa9c3b306e2eb01",
+      "sha256": "b5fa27069327ffdd64f06ae46237bc312de546b6605686fcfad506b3a6343d72",
       "tracked": true
     },
     {
-      "bytes": 1905,
+      "bytes": 9884,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "4da135af79c8acbb39d147b59ee48598b205e430",
+      "git_blob": "408cded2cd142e319ccd34c1e07aad8bb36609e0",
       "language": "java",
-      "lines": 62,
+      "lines": 211,
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/VNPayProviderTest.java",
       "reviewed_lines": [],
-      "sha256": "caaac98c396d27a21eae6688f40a5bfa52bdc6f84c5e6233a4e46acbf50d9246",
+      "sha256": "685996b718d775fecafb82faa8acc322e1b37a92795143ab8060b8ed6a6d95fc",
       "tracked": true
     },
     {
@@ -9674,7 +9954,7 @@
       "tracked": true
     },
     {
-      "bytes": 20761,
+      "bytes": 20759,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
@@ -9684,11 +9964,11 @@
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceStripeTest.java",
       "reviewed_lines": [],
-      "sha256": "50c87abaf7b0934d475a606c6cbe5e226c5599638344f5af4ae33e37868443df",
+      "sha256": "da3453ddf02a6f75b6074b9911dc94c2d27c7c2459fd7887629d7fdc033c5054",
       "tracked": true
     },
     {
-      "bytes": 15881,
+      "bytes": 15880,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
@@ -9698,7 +9978,7 @@
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceTest.java",
       "reviewed_lines": [],
-      "sha256": "4e4e3453172781929aafdb5315f269c1c068f5742f41c21262990fe359e14e94",
+      "sha256": "a191ba7fd60924063276ca6b28cd88f08a5a230e68d63b37adfa4c1685ce7ea8",
       "tracked": true
     },
     {
@@ -9786,6 +10066,20 @@
       "tracked": true
     },
     {
+      "bytes": 9660,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "f760c87497161dbea3d88dd5319f311ea7a3065c",
+      "language": "java",
+      "lines": 235,
+      "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/webhook/PspCallbackControllerTest.java",
+      "reviewed_lines": [],
+      "sha256": "d1679f770c1090af1cfefc5c82574ce1d2d8800b71756faa4cd748de59c0a78a",
+      "tracked": true
+    },
+    {
       "bytes": 6187,
       "category": "TEST_CODE",
       "comment_gate": true,
@@ -9814,17 +10108,17 @@
       "tracked": true
     },
     {
-      "bytes": 24458,
+      "bytes": 24789,
       "category": "BUILD",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "363e64c6383c7e11266d5e419fa727eaa0747831",
       "language": "xml",
-      "lines": 534,
+      "lines": 541,
       "module": "pom.xml",
       "path": "pom.xml",
       "reviewed_lines": [],
-      "sha256": "714869711a10cda6c7a33a60f76eed1415be7078d2bdd514da39f0792a23c790",
+      "sha256": "167085cbb35df1347d7f8ee6f7fb22fdff51013b3d1c0c18406fba6520d1ade5",
       "tracked": true
     },
     {
@@ -11592,17 +11886,17 @@
       "tracked": true
     },
     {
-      "bytes": 27451,
+      "bytes": 29219,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "872531b42dad2eb59c430572900217a8b1d73937",
+      "git_blob": "43b9239704ee024c400513d74e1390821bca85f3",
       "language": "python",
-      "lines": 620,
+      "lines": 670,
       "module": "production-audit",
       "path": "production-audit/harness/cli/main.py",
       "reviewed_lines": [],
-      "sha256": "c841ce59932d2c31892ba28f46f67519accbe2001da64b2b6b751cfb7d801082",
+      "sha256": "98714d7c2a5eb9c6e1fd11b7f82963cad9bf2deffcea352b383b0da9805006e3",
       "tracked": true
     },
     {
@@ -12222,7 +12516,7 @@
       "tracked": true
     },
     {
-      "bytes": 13207,
+      "bytes": 13219,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
@@ -12232,7 +12526,21 @@
       "module": "production-audit",
       "path": "production-audit/harness/verification/gates.py",
       "reviewed_lines": [],
-      "sha256": "1495cb95a133272882e4ac3485d7f0656a338dc9521f6235b7895711f95c195f",
+      "sha256": "f4c6df40941305cfe58c70570915b6dcc1f59abffe56d5e326f594983c669bbc",
+      "tracked": true
+    },
+    {
+      "bytes": 9185,
+      "category": "HARNESS",
+      "comment_gate": false,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "e96c61432107849f5939d76ffa57253d97b64698",
+      "language": "python",
+      "lines": 260,
+      "module": "production-audit",
+      "path": "production-audit/harness/verification/operations.py",
+      "reviewed_lines": [],
+      "sha256": "e16186dabea3e16868ff37fc416111e9fc8bc2c819295dd87f67f57d242bc780",
       "tracked": true
     },
     {
@@ -14280,7 +14588,7 @@
       "tracked": true
     },
     {
-      "bytes": 13462,
+      "bytes": 13463,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
@@ -14290,7 +14598,7 @@
       "module": "search-service",
       "path": "search-service/src/test/java/com/shop/searchservice/service/impls/ReindexIT.java",
       "reviewed_lines": [],
-      "sha256": "2e4246191581537da45a7e1a1ec71f51a537aea1fb1065cbdb466bb55c48bbe9",
+      "sha256": "74b4c21979be691207b326fec64e7f8c6d105cb0ef417e2d9f877ff8339dd636",
       "tracked": true
     },
     {
@@ -17892,17 +18200,17 @@
       "tracked": true
     },
     {
-      "bytes": 5002,
+      "bytes": 5433,
       "category": "SHARED_LIBRARY",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "7704e491163cf6cb60c92138e5d07fde2ff0961d",
+      "git_blob": "4b7513aff760b135720936af0f804cdf1ca3f129",
       "language": "java",
-      "lines": 115,
+      "lines": 128,
       "module": "utils/common-spring",
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/TracingAutoConfiguration.java",
       "reviewed_lines": [],
-      "sha256": "447ea7995dfcd100a3ef2254991690e0c850bf14b188c53f0e4699560beafaaf",
+      "sha256": "51a204a1eb865636899dd561f143cc78a6259e54107341db0d3efa4dc6bf8ec7",
       "tracked": true
     },
     {
@@ -18186,17 +18494,17 @@
       "tracked": true
     },
     {
-      "bytes": 9527,
+      "bytes": 10304,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "e6b507a99269ba7eb360ada4d935b1eb8150d7e9",
+      "git_blob": "aff306313477784eea525a99273420a62d972ab0",
       "language": "java",
-      "lines": 206,
+      "lines": 228,
       "module": "utils/common-spring",
       "path": "utils/common-spring/src/test/java/com/shop/common/spring/autoconfigure/TracingAutoConfigurationTest.java",
       "reviewed_lines": [],
-      "sha256": "6448582e7cc61898c426ed7d46ec5a19d96e434ac8b68ca7e2d7dfac241206c5",
+      "sha256": "910674d1e2e78e6b54a983a8872813a1713c63d6b5a01d77584a63f09608cfe7",
       "tracked": true
     },
     {
@@ -18494,19 +18802,19 @@
       "tracked": true
     }
   ],
-  "generated_at": "2026-11-19T06:47:56Z",
+  "generated_at": "2026-11-19T16:02:18Z",
   "language_summary": {
     "html": 8,
-    "java": 1009,
+    "java": 1022,
     "javascript": 4,
-    "json": 8,
+    "json": 9,
     "markdown": 94,
     "properties": 3,
-    "python": 50,
+    "python": 52,
     "shell": 9,
     "sql": 1,
     "xml": 26,
-    "yaml": 108
+    "yaml": 114
   },
   "module_summary": {
     ".claude": 13,
@@ -18519,7 +18827,7 @@
     "README.md": 1,
     "TASK.md": 1,
     "auth-service": 67,
-    "config": 2,
+    "config": 9,
     "docker": 3,
     "docker-README.md": 1,
     "docker-compose.cdc.yml": 1,
@@ -18531,16 +18839,16 @@
     "gateway-service": 65,
     "inventory-service": 58,
     "k8s": 8,
-    "load-tests": 3,
+    "load-tests": 4,
     "media-service": 72,
     "mock-services": 2,
     "notification-service": 46,
     "order-service": 156,
-    "payment-service": 85,
+    "payment-service": 98,
     "plan.md": 1,
     "pom.xml": 1,
     "product-service": 124,
-    "production-audit": 49,
+    "production-audit": 50,
     "promotion-service": 63,
     "rating-service": 45,
     "scripts": 3,
@@ -18560,6 +18868,6 @@
     "utils/pom.xml": 1
   },
   "repository_root": "/Users/tonminh-mac/IdeaProjects/untitled5",
-  "revision": "c3738544408c0dd3f15cfe85da85ca01313b6757",
-  "total_lines": 198471
+  "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+  "total_lines": 201261
 }

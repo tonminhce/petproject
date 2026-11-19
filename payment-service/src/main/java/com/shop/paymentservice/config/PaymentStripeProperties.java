@@ -8,7 +8,19 @@ public record PaymentStripeProperties(
         String webhookSecret,
         String apiVersion,
         String apiBase,
-        boolean connect) {
+        boolean connect,
+        boolean sandbox,
+        boolean autoConfirmSandbox,
+        String sandboxPaymentMethod) {
+
+    public static PaymentStripeProperties of(
+            String secretKey,
+            String webhookSecret,
+            String apiVersion,
+            String apiBase,
+            boolean connect) {
+        return new PaymentStripeProperties(secretKey, webhookSecret, apiVersion, apiBase, connect, true, false, "pm_card_visa");
+    }
 
     public PaymentStripeProperties {
         if (secretKey == null) {
@@ -29,10 +41,17 @@ public record PaymentStripeProperties(
         } else {
             apiBase = apiBase.trim();
         }
+        if (sandboxPaymentMethod == null || sandboxPaymentMethod.isBlank()) {
+            sandboxPaymentMethod = "pm_card_visa";
+        }
     }
 
     public boolean isConfigured() {
         return !secretKey.isBlank();
+    }
+
+    public boolean isSandbox() {
+        return sandbox || (!secretKey.isBlank() && secretKey.startsWith("sk_test_"));
     }
 
     public boolean isVersionDriftedFromSdk() {

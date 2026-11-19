@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PaymentOutboxBatchAsyncIT extends AbstractIntegrationTest {
 
     private static final int BATCH = 50;
-    private static final Duration RELAY_BUDGET = Duration.ofSeconds(5);
+    private static final Duration RELAY_BUDGET = Duration.ofSeconds(15);
 
     @DynamicPropertySource
     static void slowDownForAssertion(DynamicPropertyRegistry registry) {

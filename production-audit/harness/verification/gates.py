@@ -225,7 +225,7 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     )
 
     build_suite = suites.get("build", {})
-    build_pass = build_suite.get("status") == PASS
+    build_pass = build_suite.get("status") in (PASS, "PASSED")
     gates.append(
         Gate(
             id="GATE-12",

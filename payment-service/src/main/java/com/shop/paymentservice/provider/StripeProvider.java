@@ -65,16 +65,23 @@ public class StripeProvider implements PaymentProvider {
     @Override
     public ProviderResult capture(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
         long minorUnits = toMinorUnits(amount, currency);
-        PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+        PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
                 .setAmount(minorUnits)
                 .setCurrency(currency.toLowerCase(Locale.ROOT))
-                .setConfirm(false)
-                .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                        .setEnabled(true)
-                        .build())
                 .putMetadata("payment_id", paymentId.toString())
-                .putMetadata("idempotency_key", idempotencyKey)
-                .build();
+                .putMetadata("idempotency_key", idempotencyKey);
+
+        if (properties.autoConfirmSandbox() && properties.isSandbox()) {
+            paramsBuilder.setPaymentMethod(properties.sandboxPaymentMethod())
+                    .setConfirm(true)
+                    .setReturnUrl("https://shop.example.com/checkout/complete");
+        } else {
+            paramsBuilder.setConfirm(false)
+                    .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                            .setEnabled(true)
+                            .build());
+        }
+        PaymentIntentCreateParams params = paramsBuilder.build();
         try {
             PaymentIntent intent = createIntent(params, idempotencyKey);
             return captureOutcome(intent, minorUnits, currency);

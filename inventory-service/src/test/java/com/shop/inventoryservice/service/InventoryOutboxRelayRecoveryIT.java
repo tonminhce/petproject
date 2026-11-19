@@ -32,6 +32,7 @@ class InventoryOutboxRelayRecoveryIT extends AbstractIntegrationTest {
     @DynamicPropertySource
     static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
         registry.add("inventory.outbox.poll-interval-ms", () -> "3600000");
+        registry.add("inventory.outbox.publish-timeout-ms", () -> "20000");
     }
 
     @Autowired

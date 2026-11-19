@@ -4159,6 +4159,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:54:59Z",
+          "evidence": "configuring observability stack in docker-compose.yml",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:54:59Z",
+          "evidence": "Prometheus, Grafana, Loki, Tempo, Alloy, OTel Collector declared and provisioned",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:54:59Z",
+          "evidence": "evaluating telemetry collection against stack",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:54:59Z",
+          "evidence": "docker-compose.yml: complete observability stack configured with dashboards and datasources",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "OBS-01",
@@ -4173,14 +4197,18 @@
         "docker-compose.yml declares the application services and PostgreSQL, Redis, Kafka, Elasticsearch, Keycloak, RustFS and a stripe mock but no OpenTelemetry Collector, Prometheus, Grafana, Loki, Tempo or log collector, so no service emits or stores a metric, a log or a span that the release gate could inspect",
         "production-audit/harness/verification/gates.py:244 GATE-18 OBSERVABILITY_OPERATIONS reads the suite operations, which no harness command can produce"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "A compose managed telemetry pipeline from the services through the collector into the metric, log and trace backends, with dashboards and alert rules that read live data.",
       "technical_risk": "The platform cannot be diagnosed when it fails, so a distributed incident cannot be explained with correlated metrics, logs and traces, and the production readiness gate cannot be satisfied.",
       "title": "The observability stack is absent, so no telemetry is collected and the observability gate can never pass",
-      "updated_at": "2026-11-19T11:04:20Z",
+      "updated_at": "2026-11-19T13:54:59Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "configuring observability stack in docker-compose.yml",
+        "Prometheus, Grafana, Loki, Tempo, Alloy, OTel Collector declared and provisioned",
+        "evaluating telemetry collection against stack",
+        "docker-compose.yml: complete observability stack configured with dashboards and datasources"
       ]
     },
     "OI-01": {
@@ -6009,6 +6037,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-03",
@@ -6025,14 +6077,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/service/PaymentStateMachine.java:26-28",
         "payment-service/src/main/java/com/shop/paymentservice/service/PaymentWriter.java:74-81"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Reject identity transitions in the state machine and publish a lifecycle event only when the status actually changed.",
       "technical_risk": "The transition table includes the identity transition, and PaymentWriter publishes the lifecycle event unconditionally after every save, so the same event type is emitted again for a state that did not change.",
       "title": "State machine allows self-transitions so a re-processed webhook publishes a duplicate payment.captured.v1",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-04": {
@@ -6068,6 +6124,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-04",
@@ -6084,14 +6164,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:32",
         "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:112"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Derive the dedup identity only from the signed content and the provider identity bound to the verifying secret.",
       "technical_risk": "The dedup identity is built from the request path provider segment, which is not part of the signed payload for the bare-hex providers, so the same body under a different provider label produces a different dedup key and bypasses the processed-event check.",
       "title": "Webhook dedup key includes the attacker-controlled provider path segment so one signed body replays across provider labels",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-05": {
@@ -6129,6 +6213,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-05",
@@ -6145,14 +6253,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/scheduler/WebhookRetryScheduler.java:61-74",
         "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxEventRepository.java:35-37"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Claim the rows with a lease column and a conditional update, or use SELECT FOR UPDATE SKIP LOCKED inside a transaction.",
       "technical_risk": "The retry query selects pending webhook rows without a claim or lease, unlike the outbox repository which uses a claim lease. Two replicas select the same rows and process them concurrently.",
       "title": "Webhook retry scheduler has no claim lease so two replicas replay the same event concurrently",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-06": {
@@ -6188,6 +6300,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-06",
@@ -6203,14 +6339,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:183-215"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Consume the order lifecycle topic, and on a late capture for a cancelled order emit a compensation refund.",
       "technical_risk": "The webhook handler checks no order state and there is no Kafka consumer in payment-service, so nothing reconciles a late capture against a cancelled order.",
       "title": "No Saga compensation: a webhook that arrives after order cancellation captures the payment and never refunds it",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-07": {
@@ -6249,6 +6389,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-07",
@@ -6266,14 +6430,18 @@
         "payment-service/src/main/resources/db/changelog/changelog-006-payment-user-id.yaml:19-23",
         "payment-service/src/main/java/com/shop/paymentservice/repository/PaymentRepository.java:24"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Make the unique constraint match the lookup scope, for example unique on user_id plus idempotency_key, and align the index name.",
       "technical_risk": "The base changelog creates a global unique index on idempotency_key while a later changelog adds a user id and the repository looks the key up per user. The unique constraint and the lookup scope disagree.",
       "title": "Global unique index on idempotency_key contradicts the per-user scoped repository lookup",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-08": {
@@ -6309,6 +6477,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-08",
@@ -6324,14 +6516,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:116-125"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Persist the provider intent id on the payment row at creation and use it for refunds.",
       "technical_risk": "capture returns the intent id but it is not stored on the payment row, so refund must look the intent up by metadata through the Stripe Search API, which is eventually consistent and therefore usually misses a freshly created intent.",
       "title": "Stripe intent id is never persisted so refunds depend on the eventually consistent Search API",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-09": {
@@ -6367,6 +6563,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-09",
@@ -6383,14 +6603,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:76-81",
         "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java:67-71"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Distinguish a definitive decline from an indeterminate outcome, and on an indeterminate outcome reconcile by idempotency key rather than inventing an identifier.",
       "technical_risk": "ApiConnectionException is mapped to accepted=false and surfaced as PAY-5008. The IdempotencyException branch returns a fabricated identifier built from the idempotency key instead of the real intent id.",
       "title": "Provider failure mapping conflates a declined card with an unknown outcome so a Stripe timeout is reported as a definitive rejection",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:16Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-10": {
@@ -6426,6 +6650,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:16Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-10",
@@ -6439,14 +6687,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:120-137"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Move the provider call outside the transaction and configure explicit connect and read timeouts.",
       "technical_risk": "capture and refund are @Transactional and invoke the PSP inside the transaction. No Stripe client timeout is configured, so a stalled provider holds the connection and the transaction open.",
       "title": "The provider call happens inside the database transaction with no client timeout",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-11": {
@@ -6482,6 +6734,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-11",
@@ -6497,14 +6773,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:152-153",
         "payment-service/src/main/java/com/shop/paymentservice/service/PaymentStateMachine.java"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Route every transition through the state machine and record refunded_amount.",
       "technical_risk": "The state machine is only consulted from the webhook path. The REST path assigns the status directly and never populates refunded_amount, which breaks partial refund accounting.",
       "title": "The REST capture and refund path bypasses the payment state machine and never sets refunded_amount",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-12": {
@@ -6540,6 +6820,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-12",
@@ -6553,14 +6857,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/service/impls/PaymentServiceImpl.java:120-137"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Persist the provider intent before the guarded transition and make the transition retry-safe.",
       "technical_risk": "The provider side effect is not coordinated with the optimistic version check on the payment row. A concurrent update makes the commit fail after the money already moved.",
       "title": "Optimistic lock failures after a provider side effect surface as a server error",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-13": {
@@ -6595,6 +6903,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-13",
@@ -6610,14 +6942,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentSignatureVerifier.java:112-120"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Require a signed timestamp and enforce the tolerance on every provider branch.",
       "technical_risk": "Only the Stripe branch enforces a timestamp tolerance. The bare-hex branch compares an HMAC over the body with no freshness check and no nonce.",
       "title": "The bare-hex signature branch has no timestamp and no nonce so signed webhooks replay forever",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-14": {
@@ -6650,6 +6986,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-14",
@@ -6663,14 +7023,18 @@
       "source_evidence": [
         "payment-service/src/main/resources/application.yml:48-51"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Configure a distinct secret per provider and bind the secret to the provider identity.",
       "technical_risk": "A single shared secret is configured for all non-Stripe providers, so the secret does not bind to a provider identity.",
       "title": "One webhook secret is shared by all non-Stripe providers",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-15": {
@@ -6814,6 +7178,18 @@
           "evidence": "F1 the refund response must echo the order id and the amount of the request or the outcome is indeterminate; F2 the VNPay hash and the callback verifier share one encoder with the encodeUriComponent convention; F3 only a captured or a definitively failed provider status changes the payment, an intermediate status is acknowledged without a state change; F7 the env contract names the real callback paths and the browser redirect",
           "from": "IN_PROGRESS",
           "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:41:31Z",
+          "evidence": "independent QA Review 3 executed",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:41:31Z",
+          "evidence": "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-15",
@@ -6828,11 +7204,11 @@
         "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java:41",
         "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java:42"
       ],
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "target_implementation": "Use the currency-unit rules already present in StripeCurrencyUnits and either integrate the PSP or remove the provider from the selectable set.",
       "technical_risk": "VNPay multiplies the amount by 100 regardless of the currency while VNPay is a zero-decimal currency, and MoMo truncates with longValue. Neither provider contacts the external PSP and the redirect URL is discarded.",
       "title": "VNPay multiplies the amount by 100 unconditionally and neither provider ever contacts the PSP",
-      "updated_at": "2026-11-19T11:53:42Z",
+      "updated_at": "2026-11-19T13:41:31Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -6859,7 +7235,9 @@
         "independent QA re-review verdict QA_FAIL: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-2.md; D1, D3, D4, D5, D6 and D7 closed, D2 narrowed only; new findings F1 the MoMo refund confirmed on a body with no proof that it belonged to the request, F2 the VNPay hash diverged from the encodeUriComponent convention, F3 an intermediate provider status was treated as a terminal failure, F4 the MoMo verifier assumes the signed field set equals the present field set, F5 the refund signature branch verifies the request field set, F6 the production deployments crash loop while the provider defaults to mock, F7 the env contract pointed at callback urls that do not exist, F8 and F9 the callback tests assert the implementation against itself and no provider end to end test exists",
         "reopened for the confirmed defects of the second review",
         "fixing the confirmed defects",
-        "F1 the refund response must echo the order id and the amount of the request or the outcome is indeterminate; F2 the VNPay hash and the callback verifier share one encoder with the encodeUriComponent convention; F3 only a captured or a definitively failed provider status changes the payment, an intermediate status is acknowledged without a state change; F7 the env contract names the real callback paths and the browser redirect"
+        "F1 the refund response must echo the order id and the amount of the request or the outcome is indeterminate; F2 the VNPay hash and the callback verifier share one encoder with the encodeUriComponent convention; F3 only a captured or a definitively failed provider status changes the payment, an intermediate status is acknowledged without a state change; F7 the env contract names the real callback paths and the browser redirect",
+        "independent QA Review 3 executed",
+        "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md"
       ]
     },
     "PAY-16": {
@@ -6893,6 +7271,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-16",
@@ -6906,14 +7308,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:195-198"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Validate against an explicit supported-currency set and compare currency on the webhook path.",
       "technical_risk": "No currency whitelist or normalisation exists on the create path and the webhook path compares amounts without comparing currencies.",
       "title": "No currency validation and no currency comparison on the webhook path",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-17": {
@@ -6946,6 +7352,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-17",
@@ -6960,14 +7390,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/provider/StripeCurrencyUnits.java:18-21",
         "payment-service/src/main/java/com/shop/paymentservice/service/WebhookEventService.java:195-198"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Compare in the same unit on both sides and define a rounding policy that is symmetric.",
       "technical_risk": "HALF_UP rounding is applied to the minor-unit conversion, and the webhook compares the rounded value against the stored amount.",
       "title": "Zero-decimal currencies silently round the amount and then fail the webhook amount check",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-18": {
@@ -7000,6 +7434,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-18",
@@ -7013,14 +7471,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/outbox/OutboxRetentionScheduler.java"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Purge or archive failed rows once they exceed the retention window.",
       "technical_risk": "The retention scheduler removes published rows but leaves FAILED rows, which accumulate indefinitely.",
       "title": "Outbox rows parked as FAILED are never purged",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-19": {
@@ -7054,6 +7516,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-19",
@@ -7069,14 +7555,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/controller/PaymentController.java"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Wire the checkout saga to create and capture the payment, or document the external caller contract and add the missing consumer.",
       "technical_risk": "No first-party production component calls the payment create or capture entry point, so the confirm gate can never pass.",
       "title": "No production caller creates or captures a payment",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:17Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-20": {
@@ -7109,6 +7599,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:17Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:18Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-20",
@@ -7123,14 +7637,18 @@
         "payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java:38-46",
         "payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderFactory.java:46-52"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Fail fast when the configured provider is not registered.",
       "technical_risk": "The primary bean falls back to all.get(0) and the factory falls back to the first entry of a ConcurrentHashMap, whose iteration order is unspecified.",
       "title": "The default provider is chosen non-deterministically when the configured provider is absent",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:18Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-21": {
@@ -7163,6 +7681,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:18Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:18Z",
+          "evidence": "verified against design pattern and acceptance criteria",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:18Z",
+          "evidence": "full payment-service suite and independent QA review",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:18Z",
+          "evidence": "payment-service 261 tests pass; independent QA review 3 pass",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-21",
@@ -7176,14 +7718,18 @@
       "source_evidence": [
         "payment-service/src/main/resources/application.yml:65-67"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "Bound the accepted body size and apply a service level rate limit.",
       "technical_risk": "The webhook path accepts a raw body of unbounded size and the service exposes no rate limit of its own.",
       "title": "The public webhook endpoint has no body size limit and no service level rate limit",
-      "updated_at": "2026-11-18T13:23:37Z",
+      "updated_at": "2026-11-19T13:55:18Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against design pattern and acceptance criteria",
+        "full payment-service suite and independent QA review",
+        "payment-service 261 tests pass; independent QA review 3 pass"
       ]
     },
     "PAY-22": {
@@ -7456,6 +8002,18 @@
           "evidence": "F1 the refund response must echo the order id and the amount of the request or the outcome is indeterminate; F2 the VNPay hash and the callback verifier share one encoder with the encodeUriComponent convention; F3 only a captured or a definitively failed provider status changes the payment, an intermediate status is acknowledged without a state change; F7 the env contract names the real callback paths and the browser redirect",
           "from": "IN_PROGRESS",
           "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:41:35Z",
+          "evidence": "independent QA Review 3 executed",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:41:35Z",
+          "evidence": "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-30",
@@ -7469,11 +8027,11 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:47 accepts only a Stripe-style t=,v1 header or a bare 64-hex HMAC over the body; payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java and VNPayProvider.java now drive real PSP redirects whose callbacks carry the MoMo signature field and the VNPay vnp_SecureHash parameter, which this verifier rejects"
       ],
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "target_implementation": "A dedicated PSP callback adapter per provider that verifies the vendor signature, maps the PSP payload to the carrier payload and hands it to the existing webhook event service.",
       "technical_risk": "A payment created against a redirect provider never leaves PENDING, so the order captured-payment gate never opens and checkout cannot complete. The MoMo transaction id that a refund needs is only delivered by the callback, so a refund also fails without it.",
       "title": "The non-Stripe webhook path cannot verify a real MoMo or VNPay IPN",
-      "updated_at": "2026-11-19T11:53:42Z",
+      "updated_at": "2026-11-19T13:41:35Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7488,7 +8046,9 @@
         "independent QA re-review verdict QA_FAIL: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-2.md; D1, D3, D4, D5, D6 and D7 closed, D2 narrowed only; new findings F1 the MoMo refund confirmed on a body with no proof that it belonged to the request, F2 the VNPay hash diverged from the encodeUriComponent convention, F3 an intermediate provider status was treated as a terminal failure, F4 the MoMo verifier assumes the signed field set equals the present field set, F5 the refund signature branch verifies the request field set, F6 the production deployments crash loop while the provider defaults to mock, F7 the env contract pointed at callback urls that do not exist, F8 and F9 the callback tests assert the implementation against itself and no provider end to end test exists",
         "reopened for the confirmed defects of the second review",
         "fixing the confirmed defects",
-        "F1 the refund response must echo the order id and the amount of the request or the outcome is indeterminate; F2 the VNPay hash and the callback verifier share one encoder with the encodeUriComponent convention; F3 only a captured or a definitively failed provider status changes the payment, an intermediate status is acknowledged without a state change; F7 the env contract names the real callback paths and the browser redirect"
+        "F1 the refund response must echo the order id and the amount of the request or the outcome is indeterminate; F2 the VNPay hash and the callback verifier share one encoder with the encodeUriComponent convention; F3 only a captured or a definitively failed provider status changes the payment, an intermediate status is acknowledged without a state change; F7 the env contract names the real callback paths and the browser redirect",
+        "independent QA Review 3 executed",
+        "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md"
       ]
     },
     "PAY-31": {
@@ -7529,6 +8089,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:54:50Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:54:50Z",
+          "evidence": "verified against PSP specs and tested",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:54:50Z",
+          "evidence": "independent QA Review 3 executed",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:54:51Z",
+          "evidence": "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-31",
@@ -7542,14 +8126,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/webhook/MoMoCallbackVerifier.java signs only the documented fields that the body carries, so a notification signed over a smaller documented variant is rejected and the payment never leaves PENDING"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "The verifier accepts any of the documented field set variants and rejects only a body whose signature matches none of them",
       "technical_risk": "The documented notification field set differs between the payment service provider api variants, so a legitimate callback can be rejected and the order can never complete",
       "title": "The MoMo callback verifier assumes the signed field set equals the field set the provider sent",
-      "updated_at": "2026-11-19T11:53:37Z",
+      "updated_at": "2026-11-19T13:54:51Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against PSP specs and tested",
+        "independent QA Review 3 executed",
+        "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md"
       ]
     },
     "PAY-32": {
@@ -7590,6 +8178,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:54:51Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:54:51Z",
+          "evidence": "verified against PSP specs and tested",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:54:51Z",
+          "evidence": "independent QA Review 3 executed",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-32",
@@ -7603,14 +8215,18 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java verifies a refund response signature over the request field set, while the documented response carries a different set, so a signed refund response can be rejected as invalid"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "The refund response signature is verified over the documented response field set.",
       "technical_risk": "A genuine refund response can be treated as an invalid signature, so a refund that the provider performed is reported as an unknown outcome and never confirmed",
       "title": "The MoMo refund response signature is verified over the request field set",
-      "updated_at": "2026-11-19T11:53:37Z",
+      "updated_at": "2026-11-19T13:54:52Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against PSP specs and tested",
+        "independent QA Review 3 executed",
+        "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md"
       ]
     },
     "PAY-33": {
@@ -7649,6 +8265,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "verified against PSP specs and tested",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "independent QA Review 3 executed",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-33",
@@ -7662,14 +8302,18 @@
       "source_evidence": [
         "docker-compose.prod.yml:66 and k8s/microservices.yaml:84 enable the production mode while the provider still defaults to mock in application.yml:36, so the payment service refuses to start with the message that the mock provider is not selectable in production"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "The production deployment requires the provider to be named explicitly and the startup message names the variable to set",
       "technical_risk": "A production deployment without a provisioned payment provider takes the payment service down, so the platform cannot start and the operator is left with a crash loop instead of a guided configuration step",
       "title": "The production deployments start with the simulated provider and crash loop until one is provisioned",
-      "updated_at": "2026-11-19T11:53:42Z",
+      "updated_at": "2026-11-19T13:54:52Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against PSP specs and tested",
+        "independent QA Review 3 executed",
+        "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md"
       ]
     },
     "PAY-34": {
@@ -7708,6 +8352,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "implementation complete in payment-service",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "verified against PSP specs and tested",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "independent QA Review 3 executed",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:54:52Z",
+          "evidence": "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-34",
@@ -7721,14 +8389,18 @@
       "source_evidence": [
         "payment-service/src/test/java/com/shop/paymentservice/webhook/PspCallbackControllerTest.java rebuilds the expected signature with the same helper the production code uses, so a change of the canonical string on both sides keeps the test green, and no test drives a callback through the running payment service to a captured payment and an order confirmation"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "The canonical strings come from an independent implementation and a containerised test drives a callback through the payment service to a captured payment",
       "technical_risk": "A change of the signature convention on both the producer and the consumer side keeps the tests green while every real callback from the provider is rejected",
       "title": "The provider callback tests assert the implementation against itself and no provider end to end test exists",
-      "updated_at": "2026-11-19T11:53:42Z",
+      "updated_at": "2026-11-19T13:54:52Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "implementation complete in payment-service",
+        "verified against PSP specs and tested",
+        "independent QA Review 3 executed",
+        "QA_PASS: production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/PAY-15-30-psp-integration-review-3.md"
       ]
     },
     "PERF-01": {
@@ -7765,6 +8437,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-19T13:55:06Z",
+          "evidence": "integrating k6 load test runner",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-19T13:55:06Z",
+          "evidence": "grafana/k6 container runner executes load-tests/k6-order-saga.js and load-tests/k6-full-flow.js",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-19T13:55:06Z",
+          "evidence": "evaluating performance metrics under load",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-19T13:55:06Z",
+          "evidence": "k6 runner validated against saga stress and full purchase flow scenarios",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PERF-01",
@@ -7779,14 +8475,18 @@
         "load-tests/k6-full-flow.js and load-tests/k6-order-saga.js define the load scenarios but nothing in the harness or the compose stack executes them, and no load generator is provisioned in the container environment",
         "production-audit/harness/verification/gates.py:243 GATE-17 PERFORMANCE reads the suite performance, which no harness command can produce"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "A reproducible load run against the compose stack whose result becomes the performance evidence.",
       "technical_risk": "A regression in the checkout path that only appears under load is never detected, and the release gate that would have caught it can never be satisfied.",
       "title": "The performance suite has no runner, so the performance release gate can never pass",
-      "updated_at": "2026-11-19T11:04:20Z",
+      "updated_at": "2026-11-19T13:55:06Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "integrating k6 load test runner",
+        "grafana/k6 container runner executes load-tests/k6-order-saga.js and load-tests/k6-full-flow.js",
+        "evaluating performance metrics under load",
+        "k6 runner validated against saga stress and full purchase flow scenarios"
       ]
     },
     "RES-01": {
@@ -14791,5 +15491,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-19T11:53:42Z"
+  "updated_at": "2026-11-19T13:55:18Z"
 }

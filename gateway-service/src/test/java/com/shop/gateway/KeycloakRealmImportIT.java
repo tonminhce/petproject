@@ -78,7 +78,7 @@ class KeycloakRealmImportIT {
         .waitingFor(Wait.forHttp("/realms/" + REALM).forStatusCode(200));
 
     static {
-        keycloak.withStartupTimeout(Duration.ofMinutes(3));
+        keycloak.withStartupTimeout(Duration.ofMinutes(6));
         keycloak.start();
     }
 

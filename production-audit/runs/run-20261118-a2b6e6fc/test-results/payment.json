@@ -1,0 +1,15 @@
+{
+  "command": "./mvnw -B -ntp -T1C verify -Dtest=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl payment-service -am",
+  "description": "payment capture, refund, provider adapters and webhook handling",
+  "duration_seconds": 79.636,
+  "errors": 0,
+  "exit_code": 0,
+  "failures": 0,
+  "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/payment.log",
+  "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+  "skipped": 0,
+  "status": "PASS",
+  "suite": "payment",
+  "tests_run": 249,
+  "updated_at": "2026-11-19T13:27:03Z"
+}

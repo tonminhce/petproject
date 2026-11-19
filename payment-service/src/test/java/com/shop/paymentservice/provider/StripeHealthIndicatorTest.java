@@ -28,7 +28,7 @@ class StripeHealthIndicatorTest {
     void setUp() {
         balanceStatic = mockStatic(Balance.class);
         accountStatic = mockStatic(Account.class);
-        indicator = new StripeHealthIndicator(new PaymentStripeProperties(
+        indicator = new StripeHealthIndicator(PaymentStripeProperties.of(
                 "sk_test_123", "whsec_123", "2024-06-20", "", false));
     }
 
@@ -69,6 +69,19 @@ class StripeHealthIndicatorTest {
         Health health = indicator.health();
 
         assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+    }
+
+    @Test
+    void syntheticApiKeyInSandbox_reportsUpWithSandboxAuth() throws Exception {
+        StripeHealthIndicator sandboxIndicator = new StripeHealthIndicator(PaymentStripeProperties.of(
+                "sk_test_123", "whsec_123", "2024-06-20", "", true));
+        balanceStatic.when(() -> Balance.retrieve(any(RequestOptions.class)))
+                .thenThrow(new com.stripe.exception.AuthenticationException("Invalid API Key", "req_123", "code", 401));
+
+        Health health = sandboxIndicator.health();
+
+        assertThat(health.getStatus()).isEqualTo(Status.UP);
+        assertThat(health.getDetails()).containsEntry("sandbox", true);
     }
 
     @Test

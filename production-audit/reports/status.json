@@ -1,8 +1,7 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-19T07:40:52Z",
+    "evaluated_at": "2026-11-19T13:14:53Z",
     "failing_gates": [
-      "GATE-1",
       "GATE-3",
       "GATE-4",
       "GATE-5",
@@ -15,28 +14,25 @@
       "GATE-13",
       "GATE-14",
       "GATE-15",
-      "GATE-16",
       "GATE-17",
-      "GATE-18",
-      "GATE-19",
-      "GATE-22"
+      "GATE-18"
     ],
     "gate_results": {
-      "GATE-1": false,
+      "GATE-1": true,
       "GATE-10": false,
       "GATE-11": true,
       "GATE-12": false,
       "GATE-13": false,
       "GATE-14": false,
       "GATE-15": false,
-      "GATE-16": false,
+      "GATE-16": true,
       "GATE-17": false,
       "GATE-18": false,
-      "GATE-19": false,
+      "GATE-19": true,
       "GATE-2": true,
       "GATE-20": true,
       "GATE-21": true,
-      "GATE-22": false,
+      "GATE-22": true,
       "GATE-3": false,
       "GATE-4": false,
       "GATE-5": false,
@@ -51,55 +47,59 @@
   "coverage": {
     "category_reviewed": {
       "BUILD": 1,
-      "INFRASTRUCTURE": 29,
-      "PRODUCTION_CODE": 622,
-      "SHARED_LIBRARY": 102,
-      "TEST_CODE": 356
+      "DOCUMENTATION": 89,
+      "GENERATED": 8,
+      "HARNESS": 50,
+      "INFRASTRUCTURE": 36,
+      "PRODUCTION_CODE": 652,
+      "SHARED_LIBRARY": 106,
+      "TEST_CODE": 386,
+      "VENDORED_TOOLING": 13
     },
     "category_totals": {
       "BUILD": 1,
       "DOCUMENTATION": 89,
       "GENERATED": 8,
-      "HARNESS": 49,
-      "INFRASTRUCTURE": 29,
-      "PRODUCTION_CODE": 642,
+      "HARNESS": 50,
+      "INFRASTRUCTURE": 36,
+      "PRODUCTION_CODE": 652,
       "SHARED_LIBRARY": 106,
-      "TEST_CODE": 383,
+      "TEST_CODE": 386,
       "VENDORED_TOOLING": 13
     },
-    "implementation_percent": 95.61,
-    "implementation_reviewed": 1110,
-    "implementation_total": 1161,
+    "implementation_percent": 100.0,
+    "implementation_reviewed": 1181,
+    "implementation_total": 1181,
     "non_implementation_categories": [
       "DOCUMENTATION",
       "GENERATED",
       "VENDORED_TOOLING",
       "HARNESS"
     ],
-    "percent_reviewed": 84.09,
-    "reviewed_files": 1110,
+    "percent_reviewed": 100.0,
+    "reviewed_files": 1341,
     "state_summary": {
       "ASSIGNED": 0,
       "CROSS_REVIEWED": 0,
       "DEEP_TRACED": 0,
-      "DISCOVERED": 210,
-      "FULLY_READ": 1110,
+      "DISCOVERED": 0,
+      "FULLY_READ": 1341,
       "PARTIALLY_READ": 0,
       "RUNTIME_VERIFIED": 0,
       "SEMANTICALLY_REVIEWED": 0
     },
-    "total_files": 1320
+    "total_files": 1341
   },
   "gates": [
     {
-      "detail": "210 files not yet fully reviewed",
+      "detail": "all in-scope first-party source reviewed",
       "evidence": [
-        "control/source-manifest.json: 1320 files",
-        "control/source-coverage.json: 1110 reviewed"
+        "control/source-manifest.json: 1341 files",
+        "control/source-coverage.json: 1341 reviewed"
       ],
       "id": "GATE-1",
       "name": "SOURCE_COVERAGE",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
       "detail": "current and target architecture recorded",
@@ -114,7 +114,7 @@
     {
       "detail": "pattern refactorings incomplete",
       "evidence": [
-        "18/38 pattern tasks verified"
+        "18/44 pattern tasks verified"
       ],
       "id": "GATE-3",
       "name": "DESIGN_PATTERNS",
@@ -186,7 +186,7 @@
     {
       "detail": "no prohibited first-party comments remain",
       "evidence": [
-        "1158 files scanned",
+        "1177 files scanned",
         "0 prohibited comments"
       ],
       "id": "GATE-11",
@@ -232,11 +232,11 @@
     {
       "detail": "",
       "evidence": [
-        "suite e2e: PENDING"
+        "suite e2e: PASS"
       ],
       "id": "GATE-16",
       "name": "REAL_E2E",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
@@ -250,25 +250,25 @@
     {
       "detail": "",
       "evidence": [
-        "suite operations: PENDING"
+        "suite operations: FAIL"
       ],
       "id": "GATE-18",
       "name": "OBSERVABILITY_OPERATIONS",
-      "status": "PENDING"
+      "status": "FAIL"
     },
     {
-      "detail": "no independent review artifacts",
+      "detail": "independent review artifacts present",
       "evidence": [
-        "0 independent review artifacts"
+        "2 independent review artifacts"
       ],
       "id": "GATE-19",
       "name": "INDEPENDENT_REVIEW",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "verified batches have traceable commits",
       "evidence": [
-        "36 delivery records",
+        "38 delivery records",
         "unpushed: 1"
       ],
       "id": "GATE-20",
@@ -285,17 +285,17 @@
       "status": "PASS"
     },
     {
-      "detail": "evidence does not match current revision",
+      "detail": "evidence matches current revision",
       "evidence": [
-        "manifest revision=c3738544408c0dd3f15cfe85da85ca01313b6757",
-        "HEAD=33976ab98ab1dca5aa87c6a1b9e8d3f9420f76e6"
+        "manifest revision=ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
+        "HEAD=ef89e6e35ea117cee0e8a8fd645c67ba32c30812"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
-      "status": "PENDING"
+      "status": "PASS"
     }
   ],
-  "generated_at": "2026-11-19T07:40:52Z",
+  "generated_at": "2026-11-19T13:14:53Z",
   "git_delivery": {
     "deliveries": [
       {
@@ -693,15 +693,37 @@
         "remote_branch": "",
         "state": "COMMITTED",
         "timestamp": "2026-11-19T06:47:31Z"
+      },
+      {
+        "action": "push",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "882a08fd43e4044a6cb27f667ff056dfe2e8344e",
+        "detail": "",
+        "exit_code": 0,
+        "remote": "origin",
+        "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "state": "PUSHED",
+        "timestamp": "2026-11-19T11:06:54Z"
+      },
+      {
+        "action": "push",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "6bd56e55dbf8f88c1553c464ef5dfc6d3adca3e4",
+        "detail": "",
+        "exit_code": 0,
+        "remote": "origin",
+        "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "state": "PUSHED",
+        "timestamp": "2026-11-19T12:12:50Z"
       }
     ],
     "state_summary": {
       "COMMITTED": 17,
-      "PUSHED": 3,
+      "PUSHED": 5,
       "PUSH_BLOCKED": 1,
       "REJECTED_BY_GATES": 15
     },
-    "total": 36,
+    "total": 38,
     "unpushed": [
       {
         "action": "push",
@@ -716,22 +738,22 @@
       }
     ]
   },
-  "revision": "c3738544408c0dd3f15cfe85da85ca01313b6757",
+  "revision": "ef89e6e35ea117cee0e8a8fd645c67ba32c30812",
   "run_id": "run-20261118-a2b6e6fc",
   "tasks": {
-    "count": 247,
+    "count": 253,
     "states": {
       "BLOCKED": 0,
-      "DISCOVERED": 32,
+      "DISCOVERED": 5,
       "FAILED_VERIFICATION": 0,
-      "IMPLEMENTED": 0,
+      "IMPLEMENTED": 2,
       "IN_PROGRESS": 0,
       "NORMALIZED": 0,
-      "READY": 179,
+      "READY": 211,
       "REOPENED": 0,
       "REQUIREMENT_CONFLICT": 0,
       "VERIFIED": 35,
-      "VERIFYING": 1
+      "VERIFYING": 0
     }
   }
 }

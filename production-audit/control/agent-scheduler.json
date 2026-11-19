@@ -1,0 +1,50 @@
+{
+  "max_concurrent_subagents": 5,
+  "reserved_qa_slots": 1,
+  "max_non_qa_subagents": 4,
+  "updated_at": "2026-11-19T13:15:30Z",
+  "active_count": 1,
+  "slots": [
+    {
+      "slot": 1,
+      "role": "Dedicated Independent QA / Test Engineer",
+      "reserved": true,
+      "agent_type": "qa_verifier",
+      "conversation_id": "cbef7b0a-b3af-4729-b43b-3c1fc1f7a772",
+      "assigned_task": "PAY-15, PAY-30 independent verification",
+      "state": "WORKING"
+    },
+    {
+      "slot": 2,
+      "role": "Architecture / Design Patterns / Domain",
+      "reserved": false,
+      "agent_type": "engineering_specialist",
+      "assigned_task": null,
+      "state": "IDLE"
+    },
+    {
+      "slot": 3,
+      "role": "Database / Kafka / Concurrency / Verification",
+      "reserved": false,
+      "agent_type": "engineering_specialist",
+      "assigned_task": null,
+      "state": "IDLE"
+    },
+    {
+      "slot": 4,
+      "role": "Observability / Operations / DevOps",
+      "reserved": false,
+      "agent_type": "engineering_specialist",
+      "assigned_task": null,
+      "state": "IDLE"
+    },
+    {
+      "slot": 5,
+      "role": "Performance / E2E Engineering",
+      "reserved": false,
+      "agent_type": "engineering_specialist",
+      "assigned_task": null,
+      "state": "IDLE"
+    }
+  ]
+}

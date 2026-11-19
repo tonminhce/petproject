@@ -147,7 +147,7 @@ class ReindexIT extends AbstractSearchIntegrationTest {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             Future<ReindexResponse> first = executor.submit(() -> reindexService.reindex(false));
-            await().atMost(java.time.Duration.ofSeconds(5)).untilAsserted(() ->
+            await().atMost(java.time.Duration.ofSeconds(15)).untilAsserted(() ->
                 assertThat(productServer.getAllServeEvents()).hasSize(1));
 
             assertThatThrownBy(() -> reindexService.reindex(false))

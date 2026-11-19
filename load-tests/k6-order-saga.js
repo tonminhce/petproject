@@ -20,6 +20,9 @@ export const options = {
 };
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const TOKEN = __ENV.TOKEN || '';
+
+http.setResponseCallback(http.expectedStatuses(201, 400, 409));
 
 export default function () {
   const idempotencyKey = `saga-stress-${uuidv4()}`;
@@ -30,15 +33,16 @@ export default function () {
     couponCode: '',
   });
 
-  const params = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Idempotency-Key': idempotencyKey,
-    },
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Idempotency-Key': idempotencyKey,
   };
+  if (TOKEN) {
+    headers['Authorization'] = `Bearer ${TOKEN}`;
+  }
 
-  const res = http.post(`${BASE_URL}/api/v1/orders`, payload, params);
+  const res = http.post(`${BASE_URL}/api/v1/orders`, payload, { headers });
 
   check(res, {
     'order created status is 201 or 400 (expected business limits)': (r) =>

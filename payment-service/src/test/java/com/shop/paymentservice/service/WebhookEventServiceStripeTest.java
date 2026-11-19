@@ -58,7 +58,7 @@ class WebhookEventServiceStripeTest {
     @BeforeEach
     void setUp() {
         service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(),
-                receiptService, new PaymentStripeProperties("", STRIPE_WEBHOOK_SECRET, "2024-06-20", "", false));
+                receiptService, PaymentStripeProperties.of("", STRIPE_WEBHOOK_SECRET, "2024-06-20", "", false));
         lenient().doAnswer(inv -> {
             inv.getArgument(1, PaymentEvent.class).setStatus(PaymentEvent.STATUS_PROCESSED);
             return inv.getArgument(0, Payment.class);
@@ -304,7 +304,7 @@ class WebhookEventServiceStripeTest {
     void blankWebhookSecret_failsClosed_throwsPay5005() {
         WebhookEventService unconfigured = new WebhookEventService(paymentRepository, eventRepository, writer,
                 new ObjectMapper(), receiptService,
-                new PaymentStripeProperties("sk_test_1", "", "2024-06-20", "", false));
+                PaymentStripeProperties.of("sk_test_1", "", "2024-06-20", "", false));
         byte[] raw = stripeEventBody("evt_nosecret", "payment_intent.succeeded", 9800, "usd");
 
         assertThatThrownBy(() -> unconfigured.handleStripe(raw, signedHeader(raw, "anything")))

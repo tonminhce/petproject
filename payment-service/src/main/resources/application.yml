@@ -33,7 +33,7 @@ shop:
     bucket: ${STORAGE_BUCKET:shop-payments}
 
   payment:
-    provider: ${SHOP_PAYMENT_PROVIDER:mock}
+    provider: ${SHOP_PAYMENT_PROVIDER:stripe}
     production-mode: ${SHOP_PAYMENT_PRODUCTION_MODE:false}
     webhook:
       secret: ${PAYMENT_WEBHOOK_SECRET:?PAYMENT_WEBHOOK_SECRET must be set}
@@ -43,6 +43,9 @@ shop:
       api-version: "2024-06-20"
       api-base: ${SHOP_PAYMENT_STRIPE_API_BASE:}
       connect: false
+      sandbox: ${SHOP_PAYMENT_STRIPE_SANDBOX:true}
+      auto-confirm-sandbox: ${SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX:true}
+      sandbox-payment-method: ${SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD:pm_card_visa}
     momo:
       enabled: ${SHOP_PAYMENT_MOMO_ENABLED:false}
       base-url: ${SHOP_PAYMENT_MOMO_BASE_URL:}
