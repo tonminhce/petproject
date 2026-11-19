@@ -1,6 +1,6 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-19T16:04:45Z",
+    "evaluated_at": "2026-11-19T16:07:14Z",
     "failing_gates": [],
     "gate_results": {
       "GATE-1": true,
@@ -207,7 +207,7 @@
     {
       "detail": "verified batches have traceable commits",
       "evidence": [
-        "45 delivery records",
+        "47 delivery records",
         "unpushed: 1"
       ],
       "id": "GATE-20",
@@ -226,15 +226,15 @@
     {
       "detail": "evidence matches current revision",
       "evidence": [
-        "manifest revision=cc25eb8b2de901e51e063e1cde86d5f72d7c38d1",
-        "HEAD=cc25eb8b2de901e51e063e1cde86d5f72d7c38d1"
+        "manifest revision=7a3f72e92f79988479ca02dac32549990acf6a49",
+        "HEAD=7a3f72e92f79988479ca02dac32549990acf6a49"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
       "status": "PASS"
     }
   ],
-  "generated_at": "2026-11-19T16:04:45Z",
+  "generated_at": "2026-11-19T16:07:14Z",
   "revision": "",
   "suites": {
     "baseline": {
