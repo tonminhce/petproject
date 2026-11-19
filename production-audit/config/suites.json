@@ -9,6 +9,23 @@
       "*Parallel*Test"
     ]
   },
+  "concurrency_inventory": {
+    "description": "inventory reservation safety under concurrency",
+    "include_integration": true,
+    "patterns": [
+      "*Concurrency*Test",
+      "*Concurrency*IT",
+      "*Reservation*Test",
+      "*Reservation*IT",
+      "*Stock*Test",
+      "*Stock*IT"
+    ],
+    "extra_arguments": [
+      "-pl",
+      "inventory-service",
+      "-am"
+    ]
+  },
   "edge": {
     "description": "edge and negative scenarios",
     "include_integration": false,
@@ -17,6 +34,22 @@
       "*Negative*Test",
       "*Validation*Test",
       "*Boundary*Test"
+    ]
+  },
+  "gateway": {
+    "description": "gateway routing, rate limiting and redis behaviour",
+    "include_integration": true,
+    "patterns": [
+      "*RateLimit*Test",
+      "*RateLimiter*Test",
+      "*Gateway*Test",
+      "*Route*Test",
+      "*Filter*Test"
+    ],
+    "extra_arguments": [
+      "-pl",
+      "gateway-service",
+      "-am"
     ]
   },
   "happy": {
@@ -37,6 +70,50 @@
     "include_integration": true,
     "patterns": [
       "*IT"
+    ]
+  },
+  "kafka": {
+    "description": "kafka producers, consumers, outbox relays and idempotent handling",
+    "include_integration": true,
+    "patterns": [
+      "*Kafka*Test",
+      "*Kafka*IT",
+      "*Outbox*Test",
+      "*Outbox*IT",
+      "*Consumer*Test",
+      "*Relay*Test",
+      "*DeadLetter*Test"
+    ]
+  },
+  "payment": {
+    "description": "payment capture, refund, provider adapters and webhook handling",
+    "include_integration": true,
+    "patterns": [
+      "*Payment*Test",
+      "*Payment*IT",
+      "*Provider*Test",
+      "*Webhook*Test",
+      "*Refund*Test",
+      "*Psp*Test"
+    ],
+    "extra_arguments": [
+      "-pl",
+      "payment-service",
+      "-am"
+    ]
+  },
+  "security": {
+    "description": "authentication, authorisation and token handling",
+    "include_integration": true,
+    "patterns": [
+      "*Security*Test",
+      "*Jwt*Test",
+      "*Token*Test",
+      "*Auth*Test",
+      "*Keycloak*Test",
+      "*Permission*Test",
+      "*Password*Test",
+      "*Role*Test"
     ]
   },
   "unit": {

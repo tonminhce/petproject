@@ -1,6 +1,6 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-19T06:47:48Z",
+    "evaluated_at": "2026-11-19T11:02:56Z",
     "failing_gates": [
       "GATE-1",
       "GATE-3",
@@ -15,10 +15,8 @@
       "GATE-13",
       "GATE-14",
       "GATE-15",
-      "GATE-16",
       "GATE-17",
       "GATE-18",
-      "GATE-19",
       "GATE-22"
     ],
     "gate_results": {
@@ -29,10 +27,10 @@
       "GATE-13": false,
       "GATE-14": false,
       "GATE-15": false,
-      "GATE-16": false,
+      "GATE-16": true,
       "GATE-17": false,
       "GATE-18": false,
-      "GATE-19": false,
+      "GATE-19": true,
       "GATE-2": true,
       "GATE-20": true,
       "GATE-21": true,
@@ -50,9 +48,9 @@
   },
   "gates": [
     {
-      "detail": "188 files not yet fully reviewed",
+      "detail": "210 files not yet fully reviewed",
       "evidence": [
-        "control/source-manifest.json: 1298 files",
+        "control/source-manifest.json: 1320 files",
         "control/source-coverage.json: 1110 reviewed"
       ],
       "id": "GATE-1",
@@ -72,7 +70,7 @@
     {
       "detail": "pattern refactorings incomplete",
       "evidence": [
-        "18/37 pattern tasks verified"
+        "18/38 pattern tasks verified"
       ],
       "id": "GATE-3",
       "name": "DESIGN_PATTERNS",
@@ -144,7 +142,7 @@
     {
       "detail": "no prohibited first-party comments remain",
       "evidence": [
-        "1136 files scanned",
+        "1158 files scanned",
         "0 prohibited comments"
       ],
       "id": "GATE-11",
@@ -190,11 +188,11 @@
     {
       "detail": "",
       "evidence": [
-        "suite e2e: PENDING"
+        "suite e2e: PASS"
       ],
       "id": "GATE-16",
       "name": "REAL_E2E",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
@@ -215,13 +213,13 @@
       "status": "PENDING"
     },
     {
-      "detail": "no independent review artifacts",
+      "detail": "independent review artifacts present",
       "evidence": [
-        "0 independent review artifacts"
+        "1 independent review artifacts"
       ],
       "id": "GATE-19",
       "name": "INDEPENDENT_REVIEW",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "verified batches have traceable commits",
@@ -245,13 +243,57 @@
     {
       "detail": "evidence does not match current revision",
       "evidence": [
-        "manifest revision=5d16040510b1551dcecf01c8558774215b0d9d8f",
-        "HEAD=c3738544408c0dd3f15cfe85da85ca01313b6757"
+        "manifest revision=c3738544408c0dd3f15cfe85da85ca01313b6757",
+        "HEAD=167c990938d0079a87b5366bb2191d81bec17c49"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
       "status": "PENDING"
     }
   ],
-  "generated_at": "2026-11-19T06:47:48Z"
+  "generated_at": "2026-11-19T11:02:56Z",
+  "revision": "",
+  "suites": {
+    "baseline": {
+      "command": "./mvnw -B -ntp -T1C clean verify",
+      "duration_seconds": 644,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "infrastructure": "Testcontainers PostgreSQL 16 and confluentinc/cp-kafka:7.6.0",
+      "log": "/tmp/dsh-baseline-verify.log",
+      "modules": 23,
+      "revision": "a2b6e6fc336f42f851166cab0cf0d1bba42db12f",
+      "skipped": 0,
+      "status": "PASS",
+      "tests_run": 1913,
+      "updated_at": "2026-11-18T13:32:07Z"
+    },
+    "build": {
+      "command": "./mvnw -B -ntp clean verify",
+      "duration_seconds": 830,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
+      "modules": 23,
+      "skipped": 0,
+      "status": "PASSED",
+      "tests_run": 2092,
+      "updated_at": "2026-11-19T13:08:27+07:00"
+    },
+    "comments": {
+      "prohibited_comments": 0,
+      "scanned_files": 1136,
+      "status": "PASS",
+      "suite": "comments",
+      "updated_at": "2026-11-19T05:52:26Z"
+    },
+    "e2e": {
+      "detail": "every end to end scope reported a completed run",
+      "status": "PASS",
+      "suite": "e2e",
+      "updated_at": "2026-11-19T11:02:51Z"
+    }
+  }
 }

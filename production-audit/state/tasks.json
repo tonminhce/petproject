@@ -1,5 +1,5 @@
 {
-  "count": 247,
+  "count": 249,
   "tasks": {
     "CAT-01": {
       "acceptance_criteria": [
@@ -2144,7 +2144,9 @@
       "priority": 40,
       "push_state": "NOT_READY",
       "severity": "MEDIUM",
-      "source_evidence": [],
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:66 builds the token key gateway:edge-rate-limit:{scope}:{clientIp}:tokens and :67 builds the timestamp key gateway:edge-rate-limit:{scope}:{clientIp}:timestamp; the two keys share no hash tag, so a Redis Cluster routes them to different slots and the two key Lua script fails with CROSSSLOT"
+      ],
       "state": "DISCOVERED",
       "target_implementation": "",
       "technical_risk": "",
@@ -2860,7 +2862,9 @@
       "priority": 40,
       "push_state": "NOT_READY",
       "severity": "MEDIUM",
-      "source_evidence": [],
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/filter/RateLimitFilter.java:82 sets X-RateLimit-Remaining on the response and gateway-service/src/main/java/com/shop/gateway/filter/GatewayErrorResponseWriter.java:52 sets the same header again on the rejection path, so the header is written from two places with different values"
+      ],
       "state": "DISCOVERED",
       "target_implementation": "",
       "technical_risk": "",
@@ -4112,6 +4116,68 @@
       "technical_risk": "",
       "title": "The DLT replay endpoint is disabled in every service: the DLT is a write-only bucket",
       "updated_at": "2026-11-18T13:45:22Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
+    },
+    "OBS-01": {
+      "acceptance_criteria": [
+        "The compose stack runs an OpenTelemetry Collector, Prometheus, Grafana, Loki and Tempo with health checks and bounded retention",
+        "A request through the gateway produces a metric, a structured log and a trace that are visible in the backends",
+        "The context propagates across the gateway, the downstream service, the kafka producer and the kafka consumer",
+        "The dashboards show live data rather than empty panels and the alerts are evaluated against the documented thresholds",
+        "No token, credential or payment payload reaches a metric, a log or a trace"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T11:04:09Z",
+      "current_implementation": "No monitoring or tracing backend is deployed with the application.",
+      "dependencies": [],
+      "design_pattern": "Adapter",
+      "edge_case_tests": [
+        "The collector is unavailable and the application keeps serving requests",
+        "A deliberately failing request is visible in the traces and the metrics without leaking a secret"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [
+        "A request through the gateway is counted by the metrics backend and its trace spans the gateway and the downstream service",
+        "The structured log of that request is searchable in the log backend with the correlation id and the trace id"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
+      "id": "OBS-01",
+      "implementation_revision": "",
+      "independent_verifier": "audit-observability",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 10,
+      "push_state": "NOT_READY",
+      "severity": "HIGH",
+      "source_evidence": [
+        "docker-compose.yml declares the application services and PostgreSQL, Redis, Kafka, Elasticsearch, Keycloak, RustFS and a stripe mock but no OpenTelemetry Collector, Prometheus, Grafana, Loki, Tempo or log collector, so no service emits or stores a metric, a log or a span that the release gate could inspect",
+        "production-audit/harness/verification/gates.py:244 GATE-18 OBSERVABILITY_OPERATIONS reads the suite operations, which no harness command can produce"
+      ],
+      "state": "READY",
+      "target_implementation": "A compose managed telemetry pipeline from the services through the collector into the metric, log and trace backends, with dashboards and alert rules that read live data.",
+      "technical_risk": "The platform cannot be diagnosed when it fails, so a distributed incident cannot be explained with correlated metrics, logs and traces, and the production readiness gate cannot be satisfied.",
+      "title": "The observability stack is absent, so no telemetry is collected and the observability gate can never pass",
+      "updated_at": "2026-11-19T11:04:20Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present"
@@ -7285,6 +7351,64 @@
         "MoMoCallbackVerifier and VNPayCallbackVerifier verify the vendor signature over the documented field set, PspCallbackController maps the MoMo IPN and the VNPay IPN onto the carrier payload so the payment reaches CAPTURED and the order gate opens, the VNPay callback answers the vendor RspCode contract, and the GET callback path is public; payment-service 257 tests green with the containerised integration tests, checkstyle 0 violations, fleet validate green, GitNexus low risk"
       ]
     },
+    "PERF-01": {
+      "acceptance_criteria": [
+        "The load scenarios run against the containerised stack and record the throughput, the error rate and the latency percentiles",
+        "The recorded result is stored as the performance suite evidence the release gate reads",
+        "The thresholds are documented and configurable rather than presented as an approved commitment"
+      ],
+      "affected_service": "",
+      "assigned_agent": "",
+      "blockers": [],
+      "business_risk": "",
+      "concurrency_tests": [],
+      "created_at": "2026-11-19T11:04:09Z",
+      "current_implementation": "The load scripts exist but no runner executes them and no result is recorded.",
+      "dependencies": [],
+      "design_pattern": "Adapter",
+      "edge_case_tests": [
+        "A burst above the configured rate limit is rejected with the documented status and the run continues"
+      ],
+      "git_commit_sha": "",
+      "happy_path_tests": [
+        "The full purchase flow scenario runs against the compose stack and reports the request rate and the error rate"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
+      "id": "PERF-01",
+      "implementation_revision": "",
+      "independent_verifier": "audit-performance",
+      "integration_e2e_coverage": [],
+      "notes": "",
+      "priority": 20,
+      "push_state": "NOT_READY",
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "load-tests/k6-full-flow.js and load-tests/k6-order-saga.js define the load scenarios but nothing in the harness or the compose stack executes them, and no load generator is provisioned in the container environment",
+        "production-audit/harness/verification/gates.py:243 GATE-17 PERFORMANCE reads the suite performance, which no harness command can produce"
+      ],
+      "state": "READY",
+      "target_implementation": "A reproducible load run against the compose stack whose result becomes the performance evidence.",
+      "technical_risk": "A regression in the checkout path that only appears under load is never detected, and the release gate that would have caught it can never be satisfied.",
+      "title": "The performance suite has no runner, so the performance release gate can never pass",
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
+    },
     "RES-01": {
       "acceptance_criteria": [
         "The deviation recorded as RES-01 no longer applies to the declared versions"
@@ -7301,7 +7425,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-01",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7315,12 +7452,15 @@
         "pom.xml:188-189",
         "utils/common-logging/pom.xml:25"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone** while the project runs Boot 4.1.1, and the artifact was **renamed** in Boot 4.",
       "title": "`spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone while the project runs Boot 4.1.1, and the artifact was renamed in Boot 4.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-02": {
       "acceptance_criteria": [
@@ -7338,7 +7478,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-02",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7352,12 +7505,15 @@
         "utils/common-security/pom.xml:43",
         "order-service/pom.xml:38"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`spring-boot-starter-web` is used in three modules** although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
       "title": "`spring-boot-starter-web` is used in three modules although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-03": {
       "acceptance_criteria": [
@@ -7375,7 +7531,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-03",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7389,12 +7558,15 @@
         "rating-service/.../RatingEventService.java:69",
         "gateway-service/.../filter/GatewayErrorResponseWriter.java:8-9"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Jackson 2 and Jackson 3 are both on the compile classpath** while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-built Jackson 2 mapper is not equivalent to Boot's auto-configured one.",
       "title": "Jackson 2 and Jackson 3 are both on the compile classpath while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-b",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-04": {
       "acceptance_criteria": [
@@ -7412,7 +7584,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-04",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7424,12 +7609,15 @@
       "source_evidence": [
         "docker-compose.yml:69"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0)** managed by Boot 4.1.1.",
       "title": "The Kafka client (4.2.1) is two minor lines ahead of the broker (3.9.0) managed by Boot 4.1.1.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-05": {
       "acceptance_criteria": [
@@ -7447,7 +7635,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-05",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7460,12 +7661,15 @@
         "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:61-73",
         "docker-compose.yml:85"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**No Kafka transaction is configured**, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
       "title": "No Kafka transaction is configured, so the system cannot use Kafka's exactly-once delivery; the exactly-once effect for the database write is obtained with the outbox instead.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-06": {
       "acceptance_criteria": [
@@ -7483,7 +7687,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-06",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7496,12 +7713,15 @@
         "utils/common-kafka/src/main/java/com/shop/common/kafka/consumer/BaseKafkaListenerConfig.java:46",
         "product-service/src/main/java/com/shop/productservice/kafka/MediaLifecycleListenerConfig.java:18-28"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Two listener container factories have no dead-letter recoverer**, so a poisoned record is logged and dropped.",
       "title": "Two listener container factories have no dead-letter recoverer, so a poisoned record is logged and dropped.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-07": {
       "acceptance_criteria": [
@@ -7519,7 +7739,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-07",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7532,12 +7765,15 @@
         "utils/common-kafka/src/main/java/com/shop/common/kafka/config/KafkaProperties.java:109",
         "product-service/src/main/resources/application.yml:40"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`retries = 3` on the producer** is far below the Kafka 3.9 default of `2147483647`.",
       "title": "`retries = 3` on the producer is far below the Kafka 3.9 default of `2147483647`.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-08": {
       "acceptance_criteria": [
@@ -7555,7 +7791,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-08",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7567,12 +7816,15 @@
       "source_evidence": [
         "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java:24-25"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The outbox claim resolves a single `MIN(id)` row**, so `SKIP LOCKED` serialises claim throughput across relay instances.",
       "title": "The outbox claim resolves a single `MIN(id)` row, so `SKIP LOCKED` serialises claim throughput across relay instances.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-09": {
       "acceptance_criteria": [
@@ -7590,7 +7842,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-09",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7602,12 +7867,15 @@
       "source_evidence": [
         "notification-service/src/main/java/com/shop/notificationservice/repository/NotificationRepository.java:29-38"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`jakarta.persistence.lock.timeout` is not declared** on one pessimistic-lock query, so the provider default applies.",
       "title": "`jakarta.persistence.lock.timeout` is not declared on one pessimistic-lock query, so the provider default applies.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-10": {
       "acceptance_criteria": [
@@ -7625,7 +7893,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-10",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7638,12 +7919,15 @@
         "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java:445",
         "utils/common-core/src/main/java/com/shop/common/core/exception/BusinessException.java:6"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback**, and `BusinessException` is a `RuntimeException`.",
       "title": "`@Transactional(noRollbackFor = BusinessException.class)` suppresses the documented default rollback, and `BusinessException` is a `RuntimeException`.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-11": {
       "acceptance_criteria": [
@@ -7661,7 +7945,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-11",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7676,12 +7973,15 @@
         "order-service/.../OrderServiceImpl.java:120",
         "utils/common-spring/src/main/resources/application.yml:15"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Five `REQUIRES_NEW` sites against a 20-connection Hikari pool** while virtual threads are switchable on.",
       "title": "Five `REQUIRES_NEW` sites against a 20-connection Hikari pool while virtual threads are switchable on.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-12": {
       "acceptance_criteria": [
@@ -7699,7 +7999,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-12",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7711,12 +8024,15 @@
       "source_evidence": [
         "product-service/src/main/java/com/shop/productservice/job/ProductMediaSweepJob.java:27"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**A singleton bean holds mutable state** (`currentPage`) mutated from a scheduled method.",
       "title": "A singleton bean holds mutable state (`currentPage`) mutated from a scheduled method.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-13": {
       "acceptance_criteria": [
@@ -7734,7 +8050,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-13",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7748,12 +8077,15 @@
         "search-service/.../ServiceTokenProvider.java:46",
         "utils/common-spring/src/main/resources/application.yml:9-11"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Monitor-based synchronization in main code would pin a virtual-thread carrier** if virtual threads were enabled.",
       "title": "Monitor-based synchronization in main code would pin a virtual-thread carrier if virtual threads were enabled.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-14": {
       "acceptance_criteria": [
@@ -7780,7 +8112,9 @@
       "priority": 45,
       "push_state": "NOT_READY",
       "severity": "MEDIUM",
-      "source_evidence": [],
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java:35,38,41,44 inject the batch size, the retry count, the publish timeout and the claim lease through non-final @Value fields on a singleton bean, so the injected configuration is mutable after construction"
+      ],
       "state": "DISCOVERED",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Configuration is injected into singletons through non-final `@Value` fields.**",
@@ -7804,7 +8138,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-15",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7817,12 +8164,15 @@
         "utils/common-spring/src/main/resources/application.yml:96",
         "utils/common-security/src/main/java/com/shop/common/security/config/BaseSecurityConfig.java:89-97"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`shop.security.expected-audiences` is empty by default**, so no audience validation runs; only the `azp` client check is active.",
       "title": "`shop.security.expected-audiences` is empty by default, so no audience validation runs; only the `azp` client check is active.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-16": {
       "acceptance_criteria": [
@@ -7849,7 +8199,9 @@
       "priority": 45,
       "push_state": "NOT_READY",
       "severity": "MEDIUM",
-      "source_evidence": [],
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/jwt/JwtRolesConverter.java maps only the realm_access.roles claim into authorities, so a service client that carries its roles under resource_access is authenticated but never authorised"
+      ],
       "state": "DISCOVERED",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Client roles (`resource_access`) are not mapped** — only `realm_access.roles` becomes an authority.",
@@ -7873,7 +8225,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-17",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7885,12 +8250,15 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/webhook/WebhookSignatureVerifier.java:67-75"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The webhook verifier accepts a second, legacy signature scheme** (bare 64-hex HMAC over the body) when the header has no `t=` component.",
       "title": "The webhook verifier accepts a second, legacy signature scheme (bare 64-hex HMAC over the body) when the header has no `t=` component.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-18": {
       "acceptance_criteria": [
@@ -7908,7 +8276,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-18",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7923,12 +8304,15 @@
         "shipping-service/.../application.yml:8",
         "payment-service/.../application.yml:8"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Shipped configuration files carry usable secret defaults** (`changeme`, `admin`).",
       "title": "Shipped configuration files carry usable secret defaults (`changeme`, `admin`).",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-19": {
       "acceptance_criteria": [
@@ -7946,7 +8330,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-19",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7958,12 +8355,15 @@
       "source_evidence": [
         "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java:37-38"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The Stripe webhook is processed synchronously before the 2xx.**",
       "title": "The Stripe webhook is processed synchronously before the 2xx.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-20": {
       "acceptance_criteria": [
@@ -7981,7 +8381,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-20",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -7994,12 +8407,15 @@
         "payment-service/src/main/java/com/shop/paymentservice/dto/CreatePaymentRequest.java:16",
         "payment-service/.../changelog-001-payments.yaml:37"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The idempotency key is client-supplied** (not a server-generated UUID) and is reused across the local and the Stripe layer.",
       "title": "The idempotency key is client-supplied (not a server-generated UUID) and is reused across the local and the Stripe layer.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-21": {
       "acceptance_criteria": [
@@ -8017,7 +8433,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-21",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8036,12 +8465,15 @@
         "payment-service/.../support/AbstractIntegrationTest.java:17-18",
         "payment-service/.../StripeWebhookIT.java:42-43"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**Deprecated Testcontainers 1.x packages are used in 21 test files.**",
       "title": "Deprecated Testcontainers 1.x packages are used in 21 test files.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-22": {
       "acceptance_criteria": [
@@ -8059,7 +8491,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-22",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8078,12 +8523,15 @@
         "search-service/.../AbstractSearchIntegrationTest.java:19",
         "order-service/.../AbstractOrderServiceIT.java:46"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The integration-test Kafka image differs from the deployed broker.**",
       "title": "The integration-test Kafka image differs from the deployed broker.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-23": {
       "acceptance_criteria": [
@@ -8101,7 +8549,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-23",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8116,12 +8577,15 @@
         "search-service/pom.xml:35-37",
         "docker-compose.yml:98"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server.** The 9.x line also renames the transport package, so honouring the declared version would not compile.",
       "title": "The Elasticsearch client declared at the root (9.4.5) is not the one used, and neither matches the 8.15.0 server. The 9.x line also renames the transport package, so honouring the ",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-24": {
       "acceptance_criteria": [
@@ -8139,7 +8603,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-24",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8153,12 +8630,15 @@
         "rating-service/.../EligibilityClient.java:49",
         "media-service/.../MediaReferenceClient.java:45"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.**",
       "title": "The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-25": {
       "acceptance_criteria": [
@@ -8176,7 +8656,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-25",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8188,12 +8681,15 @@
       "source_evidence": [
         "utils/common-spring/src/main/resources/application.yml:163-173"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The retry and timelimiter Resilience4j configuration is dead** (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
       "title": "The retry and timelimiter Resilience4j configuration is dead (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-26": {
       "acceptance_criteria": [
@@ -8211,7 +8707,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-26",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8223,12 +8732,15 @@
       "source_evidence": [
         "product-service/Dockerfile:9"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**No JVM memory or GC option is set**, so the heap defaults to 25 % of the container limit.",
       "title": "No JVM memory or GC option is set, so the heap defaults to 25 % of the container limit.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-27": {
       "acceptance_criteria": [
@@ -8246,7 +8758,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-27",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8261,12 +8786,15 @@
         "gateway-service/src/main/resources/application.yml:86-88",
         "gateway-service/src/main/resources/application.yml:37-40"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**`/actuator/prometheus` is an unauthenticated public path** while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
       "title": "`/actuator/prometheus` is an unauthenticated public path while `/actuator/metrics` is protected — the scrape endpoint publishes the same measurement data.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RES-28": {
       "acceptance_criteria": [
@@ -8284,7 +8812,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "normalized from discovered",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:04:20Z",
+          "evidence": "acceptance criteria and source evidence present",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "RES-28",
       "implementation_revision": "",
       "independent_verifier": "research-official-v2",
@@ -8296,12 +8837,15 @@
       "source_evidence": [
         "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java:67-69"
       ],
-      "state": "DISCOVERED",
+      "state": "READY",
       "target_implementation": "Align the dependency, the configuration or the test fixture with the official guidance of the version actually declared.",
       "technical_risk": "**The edge rate limiter touches two Redis keys without a common hash tag**, and it fails open on a Redis error.",
       "title": "The edge rate limiter touches two Redis keys without a common hash tag, and it fails open on a Redis error.",
-      "updated_at": "2026-11-18T14:33:23Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:04:20Z",
+      "verification_evidence": [
+        "normalized from discovered",
+        "acceptance criteria and source evidence present"
+      ]
     },
     "RTG-01": {
       "acceptance_criteria": [
@@ -12579,7 +13123,9 @@
       "priority": 40,
       "push_state": "NOT_READY",
       "severity": "MEDIUM",
-      "source_evidence": [],
+      "source_evidence": [
+        "utils/common-security/src/main/java/com/shop/common/security/jwt/AuthenticatedUser.java:24 builds the user from the argument but :25 takes the authorities from the ambient security context instead of the token, so the authorities of the caller can differ from the authorities of the presented token"
+      ],
       "state": "DISCOVERED",
       "target_implementation": "",
       "technical_risk": "",
@@ -12814,7 +13360,20 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-19T11:05:48Z",
+          "evidence": "source evidence recorded",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-19T11:05:48Z",
+          "evidence": "source evidence recorded",
+          "from": "NORMALIZED",
+          "to": "READY"
+        }
+      ],
       "id": "SL-31",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -12823,13 +13382,18 @@
       "priority": 70,
       "push_state": "NOT_READY",
       "severity": "LOW",
-      "source_evidence": [],
-      "state": "DISCOVERED",
+      "source_evidence": [
+        "utils/common-core/src/main/java/com/shop/common/core/i18n/Messages.java exposes the message resolution as a static global facade, so the locale and the message source are ambient state that every caller shares"
+      ],
+      "state": "READY",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`Messages` is a static global facade",
-      "updated_at": "2026-11-18T13:38:49Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-19T11:05:48Z",
+      "verification_evidence": [
+        "source evidence recorded",
+        "source evidence recorded"
+      ]
     },
     "SL-32": {
       "acceptance_criteria": [
@@ -13847,5 +14411,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-19T10:58:15Z"
+  "updated_at": "2026-11-19T11:05:48Z"
 }

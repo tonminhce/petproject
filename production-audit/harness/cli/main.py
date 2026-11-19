@@ -19,7 +19,15 @@ from ..source_policy.cleaner import clean_repository
 from ..source_policy.policy import Policy
 from ..source_policy.scanner import scan_repository
 from ..task_registry.registry import dependency_ready, load_tasks, next_task, task_status_summary, transition, upsert_task, validate_task_id, Task
-from ..verification.gates import completion_predicate, evaluate_gates, record_suite_result
+from ..verification.gates import (
+    FAIL,
+    PASS,
+    PENDING,
+    completion_predicate,
+    evaluate_gates,
+    load_verification,
+    record_suite_result,
+)
 from ..verification.suites import load_suites, run_build, run_suite
 
 AUDIT_TOPICS = ("architecture", "patterns", "concurrency", "distributed", "security", "performance")
@@ -238,8 +246,11 @@ def command_verify(arguments: argparse.Namespace) -> int:
 
     gates = evaluate_gates()
     predicate = completion_predicate(gates)
+    existing = load_verification()
     document = {
         "generated_at": utc_now(),
+        "revision": existing.get("revision", ""),
+        "suites": existing.get("suites", {}),
         "gates": [gate.to_document() for gate in gates],
         "completion_predicate": predicate,
     }
@@ -283,10 +294,25 @@ def command_e2e(arguments: argparse.Namespace) -> int:
     else:
         document = {"error": f"unknown e2e action: {action}"}
     emit(document)
+    record_e2e_suite(action, document)
     state = document.get("state", "")
     if state in ("BLOCKED", "FAILED"):
         return config.EXIT_BLOCKED if state == "BLOCKED" else config.EXIT_GATE_FAILED
     return config.EXIT_OK
+
+
+def record_e2e_suite(action: str, document: dict[str, Any]) -> None:
+    if action not in ("run", "report"):
+        return
+    if action == "report":
+        verified = bool(document.get("e2e_verified"))
+        status = PASS if verified else FAIL
+        detail = "every end to end scope reported a completed run"
+    else:
+        state = document.get("state", "")
+        status = PASS if state == "COMPLETED" else (FAIL if state == "FAILED" else PENDING)
+        detail = f"end to end run state {state}"
+    record_suite_result("e2e", {"suite": "e2e", "status": status, "detail": detail, "updated_at": utc_now()})
 
 
 def command_tasks(arguments: argparse.Namespace) -> int:

@@ -1,6 +1,6 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-18T16:42:53Z",
+    "evaluated_at": "2026-11-19T07:40:52Z",
     "failing_gates": [
       "GATE-1",
       "GATE-3",
@@ -11,20 +11,21 @@
       "GATE-8",
       "GATE-9",
       "GATE-10",
-      "GATE-11",
+      "GATE-12",
       "GATE-13",
       "GATE-14",
       "GATE-15",
       "GATE-16",
       "GATE-17",
       "GATE-18",
-      "GATE-19"
+      "GATE-19",
+      "GATE-22"
     ],
     "gate_results": {
       "GATE-1": false,
       "GATE-10": false,
-      "GATE-11": false,
-      "GATE-12": true,
+      "GATE-11": true,
+      "GATE-12": false,
       "GATE-13": false,
       "GATE-14": false,
       "GATE-15": false,
@@ -35,7 +36,7 @@
       "GATE-2": true,
       "GATE-20": true,
       "GATE-21": true,
-      "GATE-22": true,
+      "GATE-22": false,
       "GATE-3": false,
       "GATE-4": false,
       "GATE-5": false,
@@ -59,41 +60,41 @@
       "BUILD": 1,
       "DOCUMENTATION": 89,
       "GENERATED": 8,
-      "HARNESS": 48,
+      "HARNESS": 49,
       "INFRASTRUCTURE": 29,
-      "PRODUCTION_CODE": 634,
-      "SHARED_LIBRARY": 103,
-      "TEST_CODE": 374,
+      "PRODUCTION_CODE": 642,
+      "SHARED_LIBRARY": 106,
+      "TEST_CODE": 383,
       "VENDORED_TOOLING": 13
     },
-    "implementation_percent": 97.28,
+    "implementation_percent": 95.61,
     "implementation_reviewed": 1110,
-    "implementation_total": 1141,
+    "implementation_total": 1161,
     "non_implementation_categories": [
       "DOCUMENTATION",
       "GENERATED",
       "VENDORED_TOOLING",
       "HARNESS"
     ],
-    "percent_reviewed": 85.45,
+    "percent_reviewed": 84.09,
     "reviewed_files": 1110,
     "state_summary": {
       "ASSIGNED": 0,
       "CROSS_REVIEWED": 0,
       "DEEP_TRACED": 0,
-      "DISCOVERED": 189,
+      "DISCOVERED": 210,
       "FULLY_READ": 1110,
       "PARTIALLY_READ": 0,
       "RUNTIME_VERIFIED": 0,
       "SEMANTICALLY_REVIEWED": 0
     },
-    "total_files": 1299
+    "total_files": 1320
   },
   "gates": [
     {
-      "detail": "189 files not yet fully reviewed",
+      "detail": "210 files not yet fully reviewed",
       "evidence": [
-        "control/source-manifest.json: 1299 files",
+        "control/source-manifest.json: 1320 files",
         "control/source-coverage.json: 1110 reviewed"
       ],
       "id": "GATE-1",
@@ -113,7 +114,7 @@
     {
       "detail": "pattern refactorings incomplete",
       "evidence": [
-        "2/21 pattern tasks verified"
+        "18/38 pattern tasks verified"
       ],
       "id": "GATE-3",
       "name": "DESIGN_PATTERNS",
@@ -183,23 +184,23 @@
       "status": "PENDING"
     },
     {
-      "detail": "prohibited comments remain",
+      "detail": "no prohibited first-party comments remain",
       "evidence": [
-        "1194 files scanned",
-        "41 prohibited comments"
+        "1158 files scanned",
+        "0 prohibited comments"
       ],
       "id": "GATE-11",
       "name": "NO_COMMENT_COMPLIANCE",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
-      "detail": "full reactor build succeeded",
+      "detail": "reactor build not yet verified",
       "evidence": [
         "build exit=0"
       ],
       "id": "GATE-12",
       "name": "BUILD",
-      "status": "PASS"
+      "status": "PENDING"
     },
     {
       "detail": "",
@@ -267,7 +268,7 @@
     {
       "detail": "verified batches have traceable commits",
       "evidence": [
-        "23 delivery records",
+        "36 delivery records",
         "unpushed: 1"
       ],
       "id": "GATE-20",
@@ -284,17 +285,17 @@
       "status": "PASS"
     },
     {
-      "detail": "evidence matches current revision",
+      "detail": "evidence does not match current revision",
       "evidence": [
-        "manifest revision=5d16040510b1551dcecf01c8558774215b0d9d8f",
-        "HEAD=5d16040510b1551dcecf01c8558774215b0d9d8f"
+        "manifest revision=c3738544408c0dd3f15cfe85da85ca01313b6757",
+        "HEAD=33976ab98ab1dca5aa87c6a1b9e8d3f9420f76e6"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
-      "status": "PASS"
+      "status": "PENDING"
     }
   ],
-  "generated_at": "2026-11-18T16:42:53Z",
+  "generated_at": "2026-11-19T07:40:52Z",
   "git_delivery": {
     "deliveries": [
       {
@@ -549,15 +550,158 @@
         "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
         "state": "PUSHED",
         "timestamp": "2026-11-18T15:42:16Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "5c24b3f49f6a65b54b6187602eee1b8ae7cb1417",
+        "detail": "fix(order,inventory,kafka,search,promotion): close the distributed correctness defects\n\nOI-01: the inventory reserve was not idempotent. The stock decrement and the\nreservation insert ran unconditionally, so a duplicate request decremented the\nstock twice and created a second hold. The reserve now claims an idempotency\nkey at the database level with the unique constraint uk_reservations_idempotency_key,\nand the reservation row is inserted and flushed before the decrement, so a\nduplicate can never touch the stock. The same key with a different product or\nquantity is a conflict, and a request without a key keeps the previous\nbehaviour. The key travels as an optional Idempotency-Key header so no request\nshape changed. The reserve response also carried a null reservation id because\nthe managed copy was discarded by the version check, which left the order side\nholding a null reservation that its compensation could not release; the reserve\nnow uses the entity returned by the save.\n\nOI-02: a failed stock release in the confirmation compensation was swallowed,\nso the stock stayed reserved forever. The failure is now recorded in the\nexisting failed_compensations ledger with the new reservation and promotion\nkinds, and a sweeper claims the due entries with one conditional update, so\nexactly one replica dispatches each entry, and the attempt count is bounded.\n\nSEC-02: the delegated order read returned the delivered order items of any\nuser to any service-role client. The endpoint now answers the eligibility\nquestion it actually exists for and returns the determination and the count,\nso no cross-user order data leaves the service, and the caller is checked\nagainst the platform service allow list. The rating service reads the new\ncontract and no longer receives another user's order lines.\n\nSL-08, SL-35, SL-34, SL-05, SL-36: the consumer wire mapper is now a Jackson 3\nmapper that tolerates an additive event field while a malformed record is still\nrejected into the dead-letter path, every listener factory has a dead-letter\nrecoverer so an exhausted record is published rather than skipped, the replay\nendpoint requires an administrative role and validates the topic against the\ntopic contract, the replay keeps its offsets so a record is published once in\ntotal, and the shared consumer configuration pins the commit semantics instead\nof inheriting a framework default.\n\nCAT-01: the search projection applied every product event unconditionally, so an\nevent describing an older state rolled the document back. The event already\ncarries the producer timestamp, and the index now writes with the external\nversion semantics, so a stale event is rejected and a redelivered event is a\nno-op. The conflict is handled on the exception type the configured transport\nactually raises, which was an unreachable branch before, so a stale event is\nignored instead of failing the index write.\n\nCAT-07: the promotion quota was enforced by a read-then-write count, so two\nconcurrent redemptions of the last coupon both won. The quota is now claimed by\nan atomic conditional statement per user and per campaign, the counters are\nreleased when the reservation is released, and the schema change is additive.\n\nThe authorization guard is now declared by its own auto-configuration, so the\nbean exists whenever the platform security classes are on the classpath and not\nonly when the web security posture is enabled.\n\nVerified by ./mvnw -B -ntp clean verify, exit 0, 2030 tests, 0 failures, 0\nerrors, 0 skipped. The comment compliance gate reports zero prohibited\ncomments across 1136 files and proves 1074 changed files byte identical to the\nbaseline once the same comments are removed.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T03:52:02Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "59ae0c05092a8b95ad2f02d6fd6c647e38240d5a",
+        "detail": "chore(e2e): make the end-to-end environment reproducible and the payment contract explicit\n\nThe compose stack could not start two of its services and the payment flow\ncould not be exercised end to end, so the environment is fixed and the\ncorrection is recorded.\n\nshipping-service declared spring-boot-restclient with test scope, which\noverrode the compile scoped dependency the shared library provides, so the\nRestClient.Builder auto configuration was absent at runtime and the service\ncould not start at all. The same wrong scope in payment-service and\nrating-service is removed. The compose stack also never supplied the GHTK\nwebhook secret that the shipping configuration requires, so the container\ncould not start as shipped. Both the secret and the new proxy and outage\nsettings are now declared in the compose file and documented in the\nenvironment templates.\n\nThe Stripe provider endpoint is configurable, so the end-to-end run can use the\nofficial Stripe test server instead of a real account. No real payment is ever\ncreated and no real credential is ever used.\n\nThe rate-limit outage policy, the trusted proxy allow list and the Stripe\nendpoint are configuration, so they are declared in the compose file and in\nboth environment templates, and the gateway refuses to start when the\nforwarding header strategy would let the framework rewrite the client address.\n\nThe payment collection encoded the contract that a capture immediately marks a\npayment captured, which was the defect the provider confirmation work removed.\nA Stripe intent that was created without confirmation is confirmed by the\nclient, and the provider then notifies the platform, so the collection now\nasserts that a capture leaves the payment pending with a client secret, adds\na scenario that delivers a signed provider webhook, and then asserts that the\npayment is captured. The webhook is signed with the Stripe scheme in the\ncollection script, so the signature verification path is exercised rather than\nbypassed.\n\nThe end-to-end run of the business flow collection is now 42 assertions with 1\nremaining failure.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T03:52:09Z"
+      },
+      {
+        "action": "push",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "59ae0c05092a8b95ad2f02d6fd6c647e38240d5a",
+        "detail": "",
+        "exit_code": 0,
+        "remote": "origin",
+        "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "state": "PUSHED",
+        "timestamp": "2026-11-19T03:52:17Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "6c8377ca1df7b52f18585b446adaeb48832b0a85",
+        "detail": "fix(rating): report an upstream purchase-verification failure as a dependency failure",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:26Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "62fe05c5f06c338b36564e8d986c62400925dda3",
+        "detail": "fix(common-keycloak): one pooled service-token provider replaces five duplicated clients",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:31Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "a65cd619fc3bcd6a94e49a2afbac1ed73152527a",
+        "detail": "fix(keycloak): give the service-account grant its own client id",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:35Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "e603e63a0f753750ca00016033b150574402ed60",
+        "detail": "fix(shipping): claim the parcel before the carrier call and harden the shipping pipeline",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:39Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "git add failed: fatal: pathspec 'harness/e2e/environment.py' did not match any files",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:32:48Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['production-audit/harness/e2e/collection_contract.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:32:52Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['production-audit/config/secret-scan-exceptions.json', 'production-audit/harness/e2e/collection_contract.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:37:57Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "ed6ffcac5a237c0a04d5e59a8c0353161da37615",
+        "detail": "fix(audit): replay the prerequisite folders in a scoped end-to-end run",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:38:42Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "d088f2afe7186219a1e2a71c64355465c6576a4e",
+        "detail": "chore(audit): record the verification state, the task ledger and the audit reports",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:47:26Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "c3738544408c0dd3f15cfe85da85ca01313b6757",
+        "detail": "docs(audit): record the tool-call hygiene rules for the agents in this repository",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:47:31Z"
       }
     ],
     "state_summary": {
-      "COMMITTED": 8,
-      "PUSHED": 2,
+      "COMMITTED": 17,
+      "PUSHED": 3,
       "PUSH_BLOCKED": 1,
-      "REJECTED_BY_GATES": 12
+      "REJECTED_BY_GATES": 15
     },
-    "total": 23,
+    "total": 36,
     "unpushed": [
       {
         "action": "push",
@@ -572,10 +716,10 @@
       }
     ]
   },
-  "revision": "5d16040510b1551dcecf01c8558774215b0d9d8f",
+  "revision": "c3738544408c0dd3f15cfe85da85ca01313b6757",
   "run_id": "run-20261118-a2b6e6fc",
   "tasks": {
-    "count": 230,
+    "count": 247,
     "states": {
       "BLOCKED": 0,
       "DISCOVERED": 32,
@@ -583,11 +727,11 @@
       "IMPLEMENTED": 0,
       "IN_PROGRESS": 0,
       "NORMALIZED": 0,
-      "READY": 181,
+      "READY": 179,
       "REOPENED": 0,
       "REQUIREMENT_CONFLICT": 0,
-      "VERIFIED": 17,
-      "VERIFYING": 0
+      "VERIFIED": 35,
+      "VERIFYING": 1
     }
   }
 }
