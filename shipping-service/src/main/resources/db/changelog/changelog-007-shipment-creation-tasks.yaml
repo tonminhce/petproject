@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-create-shipment-creation-tasks
+      author: shop-platform
+      changes:
+        - createTable:
+            tableName: shipment_creation_tasks
+            columns:
+              - column: { name: id,             type: uuid,        constraints: { primaryKey: true, nullable: false } }
+              - column: { name: order_id,       type: uuid,        constraints: { nullable: false } }
+              - column: { name: carrier,        type: varchar(16), constraints: { nullable: false } }
+              - column: { name: status,         type: varchar(24), constraints: { nullable: false } }
+              - column: { name: attempt_count,  type: int,         defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: next_attempt_at, type: timestamptz }
+              - column: { name: claimed_at,     type: timestamptz }
+              - column: { name: tracking_number, type: varchar(64) }
+              - column: { name: shipment_id,    type: uuid }
+              - column: { name: last_error,     type: varchar(1000) }
+              - column: { name: version,        type: bigint,      constraints: { nullable: false, defaultValueNumeric: 0 } }
+              - column: { name: created_at,     type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at,     type: timestamptz, constraints: { nullable: false } }
+              - column: { name: created_by,     type: varchar(100) }
+              - column: { name: updated_by,     type: varchar(100) }
+              - column: { name: deleted,        type: boolean,     defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at,     type: timestamptz }
+              - column: { name: deleted_by,     type: varchar(255) }
+
+        - sql:
+            sql: >-
+              ALTER TABLE shipment_creation_tasks
+              ADD CONSTRAINT ck_shipment_creation_task_status
+              CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED_PERMANENT'))
+
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX uk_shipment_creation_task_order
+              ON shipment_creation_tasks (order_id) WHERE deleted = false
+
+        - sql:
+            sql: >-
+              CREATE INDEX idx_shipment_creation_task_due
+              ON shipment_creation_tasks (status, next_attempt_at)

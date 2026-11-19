@@ -15,6 +15,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
@@ -67,6 +68,21 @@ class CarrierShipmentClientTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.CARRIER_NOT_CONFIGURED.getCode()));
+    }
+
+    @Test
+    void theCarrierCallCarriesADeterministicIdempotencyKeyForTheOrder() {
+        UUID orderId = UUID.randomUUID();
+        server.expect(once(), requestTo(ENDPOINT))
+                .andExpect(header("Idempotency-Key", orderId.toString()))
+                .andRespond(withSuccess("{\"data\":{\"tracking_number\":\"GHN-IDEMPOTENT-1\"}}",
+                        MediaType.APPLICATION_JSON));
+
+        String tracking = client.createShipment("GHN", ENDPOINT, "token", "shop-1",
+                orderId, "data.tracking_number");
+
+        assertThat(tracking).isEqualTo("GHN-IDEMPOTENT-1");
+        server.verify();
     }
 
     @Test

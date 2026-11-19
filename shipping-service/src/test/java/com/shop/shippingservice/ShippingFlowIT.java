@@ -9,6 +9,8 @@ import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.entity.Shipment;
+import com.shop.shippingservice.entity.ShipmentEvent;
+import com.shop.shippingservice.repository.ShipmentEventRepository;
 import com.shop.shippingservice.repository.ShipmentRepository;
 import com.shop.shippingservice.scheduler.ReconciliationScheduler;
 import com.shop.shippingservice.support.AbstractIntegrationTest;
@@ -88,6 +90,9 @@ class ShippingFlowIT extends AbstractIntegrationTest {
     private ShipmentRepository shipmentRepository;
 
     @Autowired
+    private ShipmentEventRepository eventRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -139,6 +144,95 @@ class ShippingFlowIT extends AbstractIntegrationTest {
         assertThat(shipmentCountForOrder(orderId)).isEqualTo(1);
         assertThat(shipmentRepository.findByOrderId(orderId).orElseThrow().getStatus())
             .isEqualTo(ShipmentStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("1b. a duplicated CONFIRMED event claims the order once and creates exactly one parcel")
+    void duplicatedConfirmedEventCreatesExactlyOneCarrierShipment() {
+        UUID orderId = UUID.randomUUID();
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+
+        Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
+
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+
+        assertThat(shipmentCountForOrder(orderId)).isEqualTo(1);
+        assertThat(creationTaskCountForOrder(orderId))
+                .as("the order id is claimed once, so the carrier is called once")
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from shipment_creation_tasks where order_id = ?", String.class, orderId))
+                .isEqualTo("COMPLETED");
+    }
+
+    @Test
+    @DisplayName("1c. a soft-deleted shipment is invisible and no longer blocks a live replacement")
+    void aSoftDeletedShipmentIsInvisibleAndDoesNotBlockANewOne() {
+        UUID orderId = UUID.randomUUID();
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+        Shipment shipment = awaitStatus(orderId, ShipmentStatus.CREATED);
+
+        shipment.markDeleted("shipping-it");
+        shipmentRepository.saveAndFlush(shipment);
+
+        assertThat(shipmentRepository.findByOrderId(orderId))
+                .as("a soft-deleted shipment is invisible to every read path")
+                .isEmpty();
+        assertThat(shipmentRepository.existsByOrderId(orderId)).isFalse();
+
+        sendOrderEvent(orderId, EVENT_ORDER_CONFIRMED, "CONFIRMED");
+
+        Shipment replacement = awaitStatus(orderId, ShipmentStatus.CREATED);
+        assertThat(replacement.getId()).isNotEqualTo(shipment.getId());
+        assertThat(shipmentCountForOrder(orderId)).isEqualTo(2);
+        assertThat(shipmentRepository.findByOrderId(orderId)).isPresent();
+    }
+
+    @Test
+    @DisplayName("1d. two workers cannot claim the same webhook retry row")
+    void aWebhookRetryRowIsClaimedExclusively() {
+        UUID eventId = UUID.randomUUID();
+        String providerEventId = "claim-" + eventId;
+        jdbcTemplate.update("insert into shipment_events (id, carrier, provider_event_id, type, payload, "
+                + "status, retry_count, version, created_at, updated_at, deleted) "
+                + "values (?, 'GHN', ?, 'carrier.status.v1', '{}', 'FAILED_RETRYABLE', 0, 0, now(), now(), false)",
+                eventId, providerEventId);
+
+        Instant now = Instant.now();
+        int first = eventRepository.claimForRetry(eventId,
+                ShipmentEvent.STATUS_FAILED_RETRYABLE, now, now.minusSeconds(60));
+        int second = eventRepository.claimForRetry(eventId,
+                ShipmentEvent.STATUS_FAILED_RETRYABLE, now, now.minusSeconds(60));
+
+        assertThat(first).isEqualTo(1);
+        assertThat(second)
+                .as("a claimed row must not be handed to a second worker")
+                .isZero();
+
+        jdbcTemplate.update("update shipment_events set claimed_at = ? where id = ?",
+                java.sql.Timestamp.from(now.minusSeconds(600)), eventId);
+        int staleTakeover = eventRepository.claimForRetry(eventId,
+                ShipmentEvent.STATUS_FAILED_RETRYABLE, now, now.minusSeconds(60));
+
+        assertThat(staleTakeover)
+                .as("a claim whose lease expired must be recoverable")
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("1e. a soft-deleted webhook event is invisible to the read path")
+    void aSoftDeletedWebhookEventIsInvisible() {
+        UUID eventId = UUID.randomUUID();
+        String providerEventId = "soft-deleted-" + eventId;
+        jdbcTemplate.update("insert into shipment_events (id, carrier, provider_event_id, type, payload, "
+                + "status, retry_count, version, created_at, updated_at, deleted) "
+                + "values (?, 'GHN', ?, 'carrier.status.v1', '{}', 'PROCESSED', 0, 0, now(), now(), true)",
+                eventId, providerEventId);
+
+        assertThat(eventRepository.findFirstByCarrierAndProviderEventId(Carrier.GHN, providerEventId))
+                .as("a soft-deleted webhook event is invisible to every read path")
+                .isEmpty();
     }
 
     @Test
@@ -412,6 +506,12 @@ class ShippingFlowIT extends AbstractIntegrationTest {
     private int shipmentCountForOrder(UUID orderId) {
         Integer count = jdbcTemplate.queryForObject(
             "select count(*) from shipments where order_id = ?", Integer.class, orderId);
+        return count == null ? 0 : count;
+    }
+
+    private int creationTaskCountForOrder(UUID orderId) {
+        Integer count = jdbcTemplate.queryForObject(
+            "select count(*) from shipment_creation_tasks where order_id = ?", Integer.class, orderId);
         return count == null ? 0 : count;
     }
 

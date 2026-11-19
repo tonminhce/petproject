@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-webhook-retry-claim-and-index
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE shipment_events ADD COLUMN IF NOT EXISTS claimed_at timestamptz
+        - sql:
+            sql: >-
+              CREATE INDEX IF NOT EXISTS idx_shipment_events_status_next_retry
+              ON shipment_events (status, next_retry_at)
+        - sql:
+            sql: >-
+              CREATE INDEX IF NOT EXISTS idx_shipment_events_claimed_at
+              ON shipment_events (claimed_at)

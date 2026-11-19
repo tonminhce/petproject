@@ -50,4 +50,16 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     protected ApplicationContext applicationContext;
+
+    public static String postgresJdbcUrl() {
+        return postgres.getJdbcUrl();
+    }
+
+    public static String postgresUsername() {
+        return postgres.getUsername();
+    }
+
+    public static String postgresPassword() {
+        return postgres.getPassword();
+    }
 }

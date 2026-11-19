@@ -2,11 +2,13 @@ package com.shop.shippingservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.shippingservice.carrier.CarrierAdapter;
+import com.shop.shippingservice.carrier.CarrierFactory;
 import com.shop.shippingservice.constant.Carrier;
 import com.shop.shippingservice.constant.ShipmentStatus;
 import com.shop.shippingservice.dto.OrderLifecycleEvent;
 import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.repository.ShipmentRepository;
+import com.shop.shippingservice.service.ShipmentCreationService;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentWriter;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
@@ -26,7 +27,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -49,12 +49,15 @@ class ShipmentServiceImplTest {
     @Mock CarrierAdapter adapter;
     @Mock Clock clock;
     @Mock ShippingMetrics metrics;
+    @Mock CarrierFactory carrierFactory;
+    @Mock ShipmentCreationService creationService;
 
     private ShipmentServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new ShipmentServiceImpl(repository, writer, adapter, clock, metrics);
+        service = new ShipmentServiceImpl(repository, writer, adapter, clock, metrics,
+                carrierFactory, creationService);
     }
 
     private OrderLifecycleEvent event(String status) {
@@ -68,47 +71,20 @@ class ShipmentServiceImplTest {
     }
 
     @Test
-    void confirmedEvent_insertsCreatedShipmentRow() {
-        when(repository.existsByOrderId(ORDER_ID)).thenReturn(false);
-        when(adapter.carrier()).thenReturn(Carrier.MANUAL);
-        when(adapter.createShipment(ORDER_ID))
-                .thenReturn(new CarrierAdapter.ShipmentDraft(null, ShipmentStatus.CREATED));
-
+    void confirmedEvent_delegatesTheCreationToTheIdempotentCreationService() {
         service.handleOrderEvent(event("CONFIRMED"));
 
-        verify(adapter).createShipment(ORDER_ID);
-        ArgumentCaptor<Shipment> captor = ArgumentCaptor.forClass(Shipment.class);
-        verify(writer).insert(captor.capture());
-        Shipment inserted = captor.getValue();
-        assertThat(inserted.getId()).isNotNull();
-        assertThat(inserted.getOrderId()).isEqualTo(ORDER_ID);
-        assertThat(inserted.getCarrier()).isEqualTo(Carrier.MANUAL);
-        assertThat(inserted.getStatus()).isEqualTo(ShipmentStatus.CREATED);
-        assertThat(inserted.getTrackingNumber()).isNull();
-        assertThat(inserted.isAutoDelivered()).isFalse();
-    }
-
-    @Test
-    void confirmedEvent_existingShipmentForOrder_skipsAdapterAndInsert() {
-        when(repository.existsByOrderId(ORDER_ID)).thenReturn(true);
-
-        service.handleOrderEvent(event("CONFIRMED"));
-
+        verify(creationService).createForOrder(ORDER_ID, adapter);
         verify(adapter, never()).createShipment(any());
         verify(writer, never()).insert(any());
     }
 
     @Test
-    void confirmedEvent_duplicateInsertRace_noCrash() {
-        when(repository.existsByOrderId(ORDER_ID)).thenReturn(false);
-        when(adapter.carrier()).thenReturn(Carrier.MANUAL);
-        when(adapter.createShipment(ORDER_ID))
-                .thenReturn(new CarrierAdapter.ShipmentDraft(null, ShipmentStatus.CREATED));
-        when(writer.insert(any(Shipment.class)))
-                .thenThrow(new DataIntegrityViolationException("uk_shipments_order_id"));
+    void confirmedEvent_doesNotResolveTheCarrierThroughTheSilentRegistryFallback() {
+        service.handleOrderEvent(event("CONFIRMED"));
 
-        assertThatCode(() -> service.handleOrderEvent(event("CONFIRMED")))
-                .doesNotThrowAnyException();
+        verify(creationService).createForOrder(ORDER_ID, adapter);
+        verify(carrierFactory, never()).getDefaultCarrier();
     }
 
     @Test
@@ -149,7 +125,7 @@ class ShipmentServiceImplTest {
     void deliveredEvent_noop() {
         service.handleOrderEvent(event("DELIVERED"));
 
-        verifyNoInteractions(repository, writer, adapter);
+        verifyNoInteractions(repository, writer, adapter, creationService);
     }
 
     private Shipment shipment(Carrier carrier, ShipmentStatus status) {

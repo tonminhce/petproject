@@ -30,6 +30,7 @@ public class CarrierShipmentClient {
                     .uri(endpoint)
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Authorization", "Bearer " + apiToken)
+                    .header("Idempotency-Key", orderId.toString())
                     .body("{\"order_id\":\"" + orderId + "\"" + (shopId == null ? "" : ",\"shop_id\":\"" + shopId + "\"") + "}")
                     .retrieve()
                     .body(String.class);

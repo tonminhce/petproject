@@ -10,13 +10,12 @@ import com.shop.shippingservice.dto.OrderLifecycleEvent;
 import com.shop.shippingservice.dto.response.ShipmentResponse;
 import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.repository.ShipmentRepository;
+import com.shop.shippingservice.service.ShipmentCreationService;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.ShipmentService;
-import com.shop.shippingservice.service.ShipmentStateMachine;
 import com.shop.shippingservice.service.ShipmentWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +38,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final Clock clock;
     private final ShippingMetrics metrics;
     private final CarrierFactory carrierFactory;
+    private final ShipmentCreationService creationService;
 
     @Autowired
     public ShipmentServiceImpl(
@@ -47,22 +47,15 @@ public class ShipmentServiceImpl implements ShipmentService {
             CarrierAdapter defaultCarrierAdapter,
             Clock clock,
             ShippingMetrics metrics,
-            @Autowired(required = false) CarrierFactory carrierFactory) {
+            CarrierFactory carrierFactory,
+            ShipmentCreationService creationService) {
         this.repository = repository;
         this.writer = writer;
         this.defaultCarrierAdapter = defaultCarrierAdapter;
         this.clock = clock;
         this.metrics = metrics;
         this.carrierFactory = carrierFactory;
-    }
-
-    public ShipmentServiceImpl(
-            ShipmentRepository repository,
-            ShipmentWriter writer,
-            CarrierAdapter defaultCarrierAdapter,
-            Clock clock,
-            ShippingMetrics metrics) {
-        this(repository, writer, defaultCarrierAdapter, clock, metrics, null);
+        this.creationService = creationService;
     }
 
     @Override
@@ -76,29 +69,18 @@ public class ShipmentServiceImpl implements ShipmentService {
     }
 
     private void createShipment(OrderLifecycleEvent event) {
-        UUID orderId = event.getOrderId();
-        if (repository.existsByOrderId(orderId)) {
-            log.info("Shipment for order {} already exists, skipping", orderId);
-            return;
+        CarrierAdapter adapter = resolveCarrierAdapter();
+        if (adapter == null) {
+            throw BusinessException.of(ErrorCode.CARRIER_NOT_CONFIGURED, "no carrier adapter is configured");
         }
-        CarrierAdapter adapter = (carrierFactory != null)
-                ? carrierFactory.getDefaultCarrier()
-                : defaultCarrierAdapter;
-        Shipment shipment = Shipment.builder()
-                .id(UUID.randomUUID())
-                .orderId(orderId)
-                .carrier(adapter.carrier())
-                .build();
-        CarrierAdapter.ShipmentDraft draft = adapter.createShipment(orderId);
-        shipment.setTrackingNumber(draft.trackingNumber());
-        shipment.setCarrierAcknowledgedAt(clock.instant());
-        shipment.setStatus(draft.initialStatus());
-        shipment.setAutoDelivered(draft.initialStatus() == ShipmentStatus.DELIVERED);
-        try {
-            writer.insert(shipment);
-        } catch (DataIntegrityViolationException e) {
-            log.info("Shipment for order {} already persisted by a concurrent consumer, skipping", orderId);
+        creationService.createForOrder(event.getOrderId(), adapter);
+    }
+
+    private CarrierAdapter resolveCarrierAdapter() {
+        if (defaultCarrierAdapter != null) {
+            return defaultCarrierAdapter;
         }
+        return (carrierFactory != null) ? carrierFactory.getDefaultCarrier() : null;
     }
 
     private void cancelShipment(OrderLifecycleEvent event) {
@@ -108,8 +90,7 @@ public class ShipmentServiceImpl implements ShipmentService {
                         shipment.getId(), event.getOrderId(), shipment.getStatus());
                 return;
             }
-            shipment.setPreviousStatus(shipment.getStatus());
-            shipment.setStatus(ShipmentStateMachine.transition(shipment.getStatus(), ShipmentStatus.CANCELLED));
+            shipment.transitionTo(ShipmentStatus.CANCELLED);
             writer.save(shipment);
         });
     }
@@ -169,7 +150,11 @@ public class ShipmentServiceImpl implements ShipmentService {
     @Override
     public ShipmentResponse retry(UUID id) {
         Shipment shipment = requireShipment(id);
-        return advance(shipment, ShipmentStatus.IN_TRANSIT);
+        ShipmentStatus from = shipment.getStatus();
+        shipment.operatorRetry();
+        ShipmentStatus next = shipment.getStatus();
+        metrics.recordAdvance(from, next);
+        return ShipmentResponse.from(writer.save(shipment));
     }
 
     private Shipment requireShipment(UUID id) {
@@ -179,9 +164,8 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     private ShipmentResponse advance(Shipment shipment, ShipmentStatus target) {
         ShipmentStatus from = shipment.getStatus();
-        ShipmentStatus next = ShipmentStateMachine.transition(from, target);
-        shipment.setPreviousStatus(from);
-        shipment.setStatus(next);
+        shipment.transitionTo(target);
+        ShipmentStatus next = shipment.getStatus();
         metrics.recordAdvance(from, next);
         if (next == ShipmentStatus.DELIVERY_FAILED) {
             metrics.recordFailed();

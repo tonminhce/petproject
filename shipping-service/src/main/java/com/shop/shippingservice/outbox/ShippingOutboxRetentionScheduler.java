@@ -26,6 +26,11 @@ public class ShippingOutboxRetentionScheduler {
             if (deleted > 0) {
                 log.info("Purged {} SENT shipping outbox events older than 7 days", deleted);
             }
+            int dead = outboxRepository.deleteByStatusAndClaimedAtBefore(
+                OutboxStatus.DEAD, Instant.now().minus(7, ChronoUnit.DAYS));
+            if (dead > 0) {
+                log.info("Purged {} DEAD shipping outbox events older than 7 days", dead);
+            }
         } catch (Exception ex) {
             log.error("Shipping outbox retention purge failed - needs ops attention", ex);
         }

@@ -10,7 +10,6 @@ import com.shop.shippingservice.entity.Shipment;
 import com.shop.shippingservice.entity.ShipmentEvent;
 import com.shop.shippingservice.repository.ShipmentEventRepository;
 import com.shop.shippingservice.repository.ShipmentRepository;
-import com.shop.shippingservice.service.ShipmentStateMachine;
 import com.shop.shippingservice.service.ShippingMetrics;
 import com.shop.shippingservice.service.WebhookEventService;
 import com.shop.shippingservice.service.WebhookEventWriter;
@@ -18,6 +17,7 @@ import com.shop.shippingservice.webhook.CarrierWebhookPayload;
 import com.shop.shippingservice.webhook.WebhookSignatureVerifier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +39,7 @@ public class WebhookEventServiceImpl implements WebhookEventService {
     private static final String EVENT_TYPE_UNPARSEABLE = "UNPARSEABLE";
     private static final String UNPARSEABLE_EVENT_ID_PREFIX = "unparseable-";
     private static final int PROVIDER_EVENT_ID_MAX_LENGTH = 128;
+    private static final String UNIQUE_CARRIER_EVENT_INDEX = "uk_shipment_events_carrier_event";
 
     private final ShippingWebhookProperties webhookProperties;
     private final ShipmentRepository shipmentRepository;
@@ -66,6 +67,11 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             return;
         }
 
+        if (payload.getEventId() == null || payload.getEventId().isBlank()) {
+            log.warn("Webhook from carrier {} carries no eventId, rejecting the payload", carrier);
+            throw BusinessException.badRequest("shipping.webhook.missing.event.id", carrier);
+        }
+
         Optional<ShipmentEvent> existing = eventRepository
                 .findFirstByCarrierAndProviderEventId(parsedCarrier, payload.getEventId());
         if (existing.isPresent() && ShipmentEvent.STATUS_PROCESSED.equals(existing.get().getStatus())) {
@@ -87,9 +93,14 @@ public class WebhookEventServiceImpl implements WebhookEventService {
             try {
                 writer.insert(event);
             } catch (DataIntegrityViolationException e) {
-                log.info("Webhook event {} from carrier {} raced a concurrent insert, acking no-op",
-                        payload.getEventId(), carrier);
-                return;
+                if (isDuplicateCarrierEvent(e)) {
+                    log.info("Webhook event {} from carrier {} raced a concurrent insert, acking no-op",
+                            payload.getEventId(), carrier);
+                    return;
+                }
+                log.error("Webhook event {} from carrier {} violated a data constraint and was rejected",
+                        payload.getEventId(), carrier, e);
+                throw BusinessException.badRequest("shipping.webhook.rejected.event", payload.getEventId());
             }
         } else {
             event = existing.get();
@@ -138,10 +149,9 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         if (payload.getCarrierStatus() == null) {
             throw BusinessException.badRequest("shipping.webhook.missing.status");
         }
-        ShipmentStatus next;
+        ShipmentStatus target;
         try {
-            next = ShipmentStateMachine.transition(shipment.getStatus(),
-                    ShipmentStatus.valueOf(payload.getCarrierStatus()));
+            target = ShipmentStatus.valueOf(payload.getCarrierStatus());
         } catch (IllegalArgumentException e) {
             throw BusinessException.badRequest("shipping.webhook.invalid.status",
                 payload.getCarrierStatus());
@@ -149,8 +159,8 @@ public class WebhookEventServiceImpl implements WebhookEventService {
 
         ShipmentStatus from = shipment.getStatus();
         Instant now = clock.instant();
-        shipment.setPreviousStatus(from);
-        shipment.setStatus(next);
+        shipment.transitionTo(target);
+        ShipmentStatus next = shipment.getStatus();
         shipment.setLastCarrierUpdate(now);
         if (shipment.getCarrierAcknowledgedAt() == null) {
             shipment.setCarrierAcknowledgedAt(now);
@@ -203,8 +213,28 @@ public class WebhookEventServiceImpl implements WebhookEventService {
         try {
             writer.insert(event);
         } catch (DataIntegrityViolationException e) {
-            log.info("Unparseable webhook body from carrier {} raced a concurrent insert, acking no-op", carrier);
+            if (isDuplicateCarrierEvent(e)) {
+                log.info("Unparseable webhook body from carrier {} raced a concurrent insert, acking no-op", carrier);
+                return;
+            }
+            log.error("Unparseable webhook body from carrier {} violated a data constraint", carrier, e);
+            throw BusinessException.badRequest("shipping.webhook.rejected.event", providerEventId);
         }
+    }
+
+    private boolean isDuplicateCarrierEvent(DataIntegrityViolationException e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException violation
+                    && UNIQUE_CARRIER_EVENT_INDEX.equals(violation.getConstraintName())) {
+                return true;
+            }
+            if (cause.getMessage() != null && cause.getMessage().contains(UNIQUE_CARRIER_EVENT_INDEX)) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     private String syntheticEventId(byte[] rawBody) {

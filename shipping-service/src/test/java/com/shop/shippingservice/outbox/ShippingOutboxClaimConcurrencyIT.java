@@ -63,7 +63,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
+                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING.name()));
                     aClaimed.countDown();
                     try {
                         bLockedOut.await(10, TimeUnit.SECONDS);
@@ -78,7 +78,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         Thread claimerB = new Thread(() -> {
             try {
                 if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING.name())));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -87,7 +87,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
             }
             try {
                 if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING.name())));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -110,7 +110,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void twoPendingRows_secondRowUntouchedWhileHeadRowLocked() throws Exception {
+    void twoPendingRows_theLockedHeadRowDoesNotBlockTheNextRow() throws Exception {
         Long row1 = outboxRepo.save(pendingEvent()).getId();
         Long row2 = outboxRepo.save(pendingEvent()).getId();
         TransactionTemplate tx = new TransactionTemplate(txManager);
@@ -125,7 +125,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
+                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING.name()));
                     aClaimed.countDown();
                     try {
                         bLockedOut.await(10, TimeUnit.SECONDS);
@@ -140,7 +140,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         Thread claimerB = new Thread(() -> {
             try {
                 if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING.name())));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -149,7 +149,7 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
             }
             try {
                 if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING.name())));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -164,7 +164,9 @@ class ShippingOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         assertThat(claimerB.isAlive()).isFalse();
 
         assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        assertThat(claimBWhileLocked.get()).isEmpty();
+        assertThat(claimBWhileLocked.get().map(OutboxEvent::getId))
+                .as("the locked head row must not block the next pending row")
+                .contains(row2);
         assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
         assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
 

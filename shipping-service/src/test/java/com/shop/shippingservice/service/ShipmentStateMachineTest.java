@@ -27,7 +27,6 @@ class ShipmentStateMachineTest {
             Map.entry(PICKED_UP, DELIVERY_FAILED),
             Map.entry(IN_TRANSIT, DELIVERY_FAILED),
             Map.entry(OUT_FOR_DELIVERY, DELIVERY_FAILED),
-            Map.entry(DELIVERY_FAILED, IN_TRANSIT),
             Map.entry(CREATED, CANCELLED),
             Map.entry(PICKED_UP, CANCELLED),
             Map.entry(IN_TRANSIT, CANCELLED),
@@ -43,7 +42,7 @@ class ShipmentStateMachineTest {
 
     @Test
     void exhaustivePairMatrixMatchesExactlyTheLegalSet() {
-        assertThat(LEGAL).hasSize(12);
+        assertThat(LEGAL).hasSize(11);
 
         for (ShipmentStatus from : ShipmentStatus.values()) {
             for (ShipmentStatus to : ShipmentStatus.values()) {
@@ -60,8 +59,78 @@ class ShipmentStateMachineTest {
     }
 
     @Test
-    void retryAfterFailureReturnsToTransit() {
-        assertThat(ShipmentStateMachine.transition(DELIVERY_FAILED, IN_TRANSIT)).isEqualTo(IN_TRANSIT);
+    void deliveryFailedCannotGoBackToInTransitThroughTheCarrierTransition() {
+        BusinessException ex = catchThrowableOfType(
+                () -> ShipmentStateMachine.transition(DELIVERY_FAILED, IN_TRANSIT), BusinessException.class);
+
+        assertThat(ex).isNotNull();
+        assertThat(ex.getErrorCode()).isEqualTo("SHP-10003");
+    }
+
+    @Test
+    void operatorRetryIsTheOnlyPathOutOfDeliveryFailed() {
+        assertThat(ShipmentStateMachine.operatorRetry(DELIVERY_FAILED)).isEqualTo(IN_TRANSIT);
+    }
+
+    @Test
+    void operatorRetryFromAnyOtherStatusIsRejected() {
+        for (ShipmentStatus from : ShipmentStatus.values()) {
+            if (from == DELIVERY_FAILED) {
+                continue;
+            }
+            BusinessException ex = catchThrowableOfType(
+                    () -> ShipmentStateMachine.operatorRetry(from), BusinessException.class);
+            assertThat(ex).as("operator retry from %s", from).isNotNull();
+            assertThat(ex.getErrorCode()).isEqualTo("SHP-10003");
+        }
+    }
+
+    @Test
+    void autoDeliverIsDeclaredForEveryInFlightStatus() {
+        assertThat(ShipmentStateMachine.autoDeliver(PICKED_UP)).isEqualTo(DELIVERED);
+        assertThat(ShipmentStateMachine.autoDeliver(IN_TRANSIT)).isEqualTo(DELIVERED);
+        assertThat(ShipmentStateMachine.autoDeliver(OUT_FOR_DELIVERY)).isEqualTo(DELIVERED);
+    }
+
+    @Test
+    void autoDeliverFromATerminalStatusIsRejected() {
+        for (ShipmentStatus from : ShipmentStatus.values()) {
+            if (ShipmentStatus.inFlight(from)) {
+                continue;
+            }
+            BusinessException ex = catchThrowableOfType(
+                    () -> ShipmentStateMachine.autoDeliver(from), BusinessException.class);
+            assertThat(ex).as("auto delivery from %s", from).isNotNull();
+            assertThat(ex.getErrorCode()).isEqualTo("SHP-10003");
+        }
+    }
+
+    @Test
+    void carrierStatusAcceptsAnUnchangedStatusAsIdempotent() {
+        assertThat(ShipmentStateMachine.carrierStatus(IN_TRANSIT, IN_TRANSIT)).isEqualTo(IN_TRANSIT);
+        assertThat(ShipmentStateMachine.carrierStatus(DELIVERY_FAILED, DELIVERY_FAILED)).isEqualTo(DELIVERY_FAILED);
+    }
+
+    @Test
+    void carrierStatusCannotResurrectADeliveryFailedShipment() {
+        BusinessException ex = catchThrowableOfType(
+                () -> ShipmentStateMachine.carrierStatus(DELIVERY_FAILED, IN_TRANSIT), BusinessException.class);
+
+        assertThat(ex).isNotNull();
+        assertThat(ex.getErrorCode()).isEqualTo("SHP-10003");
+    }
+
+    @Test
+    void carrierStatusWithNullEndpointIsRejected() {
+        BusinessException nullFrom = catchThrowableOfType(
+                () -> ShipmentStateMachine.carrierStatus(null, IN_TRANSIT), BusinessException.class);
+        assertThat(nullFrom).isNotNull();
+        assertThat(nullFrom.getErrorCode()).isEqualTo("SHP-10003");
+
+        BusinessException nullTo = catchThrowableOfType(
+                () -> ShipmentStateMachine.carrierStatus(CREATED, null), BusinessException.class);
+        assertThat(nullTo).isNotNull();
+        assertThat(nullTo.getErrorCode()).isEqualTo("SHP-10003");
     }
 
     @Test

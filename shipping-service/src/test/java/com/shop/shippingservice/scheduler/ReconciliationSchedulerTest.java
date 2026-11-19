@@ -25,7 +25,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -120,6 +122,49 @@ class ReconciliationSchedulerTest {
         verify(repository).findStaleAcknowledgedShipments(statusesCaptor.capture(), any());
         assertThat(statusesCaptor.getValue()).containsExactlyInAnyOrder(
                 ShipmentStatus.PICKED_UP, ShipmentStatus.IN_TRANSIT, ShipmentStatus.OUT_FOR_DELIVERY);
+    }
+
+    @Test
+    void aShipmentTheStateMachineForbidsToAutoDeliver_isLeftUntouched() {
+        Shipment shipment = shipment(ShipmentStatus.DELIVERED, NOW.minus(Duration.ofDays(30)));
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
+                .thenReturn(List.of(shipment));
+
+        scheduler.reconcile();
+
+        verify(writer, never()).saveDelivered(any(), anyBoolean());
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+        assertThat(shipment.getPreviousStatus()).isNull();
+        assertThat(meterRegistry.counter("shipping.delivered.count", "auto", "true").count()).isZero();
+    }
+
+    @Test
+    void aContendedRow_doesNotStopTheRestOfTheBatch() {
+        Shipment contended = shipment(ShipmentStatus.DELIVERED, NOW.minus(Duration.ofDays(30)));
+        Shipment healthy = shipment(ShipmentStatus.IN_TRANSIT, NOW.minus(Duration.ofDays(30)));
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
+                .thenReturn(List.of(contended, healthy));
+        when(writer.saveDelivered(healthy, true)).thenReturn(healthy);
+
+        scheduler.reconcile();
+
+        verify(writer, never()).saveDelivered(eq(contended), anyBoolean());
+        verify(writer).saveDelivered(healthy, true);
+        assertThat(healthy.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+    }
+
+    @Test
+    void theAutoDeliveryGoesThroughTheStateMachineAndRecordsThePreviousStatus() {
+        Shipment shipment = shipment(ShipmentStatus.OUT_FOR_DELIVERY, NOW.minus(Duration.ofDays(8)));
+        when(repository.findStaleAcknowledgedShipments(any(), any(Instant.class)))
+                .thenReturn(List.of(shipment));
+        when(writer.saveDelivered(shipment, true)).thenReturn(shipment);
+
+        scheduler.reconcile();
+
+        assertThat(shipment.getPreviousStatus()).isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
+        assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+        assertThat(shipment.isAutoDelivered()).isTrue();
     }
 
     @Test

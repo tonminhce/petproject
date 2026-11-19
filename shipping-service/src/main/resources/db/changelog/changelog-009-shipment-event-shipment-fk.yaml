@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-shipment-event-shipment-fk
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE shipment_events
+              ADD CONSTRAINT fk_shipment_events_shipment
+              FOREIGN KEY (shipment_id) REFERENCES shipments (id) ON DELETE SET NULL NOT VALID

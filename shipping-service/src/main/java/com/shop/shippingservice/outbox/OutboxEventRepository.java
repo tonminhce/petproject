@@ -19,15 +19,17 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
 
     List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
-    @Query("SELECT e FROM OutboxEvent e WHERE e.status = :status AND e.id = ("
-         + "SELECT MIN(e2.id) FROM OutboxEvent e2 WHERE e2.status = :status)")
-    Optional<OutboxEvent> claimOnePending(@Param("status") OutboxStatus status);
+    @Query(value = "SELECT * FROM outbox_events WHERE status = :status "
+                + "ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED", nativeQuery = true)
+    Optional<OutboxEvent> claimOnePending(@Param("status") String status);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.sentAt < :cutoff")
     int deleteByStatusAndSentAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.claimedAt < :cutoff")
+    int deleteByStatusAndClaimedAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
@@ -46,4 +48,10 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
                              @Param("cutoff") Instant cutoff,
                              @Param("maxRetries") int maxRetries,
                              @Param("reason") String reason);
+
+    @Query("SELECT COUNT(e) FROM OutboxEvent e WHERE e.status = :sending AND e.claimedAt < :cutoff "
+         + "AND e.retryCount + 1 >= :maxRetries")
+    long countStaleExhausted(@Param("sending") OutboxStatus sending,
+                             @Param("cutoff") Instant cutoff,
+                             @Param("maxRetries") int maxRetries);
 }

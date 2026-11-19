@@ -14,12 +14,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "shipment_events")
+@SQLRestriction("deleted = false")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -66,6 +68,9 @@ public class ShipmentEvent extends AbstractMappedEntity {
 
     @Column(name = "next_retry_at")
     private Instant nextRetryAt;
+
+    @Column(name = "claimed_at")
+    private Instant claimedAt;
 
     @Column(name = "last_error", length = 1024)
     private String lastError;

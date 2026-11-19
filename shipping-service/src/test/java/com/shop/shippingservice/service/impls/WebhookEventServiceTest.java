@@ -262,6 +262,52 @@ class WebhookEventServiceTest {
     }
 
     @Test
+    void aLateWebhook_cannotResurrectADeliveryFailedShipment() {
+        byte[] raw = body(payloadJson("evt-late", "TRK-1", "IN_TRANSIT"));
+        happyPathStubs("evt-late");
+        Shipment shipment = shipment(ShipmentStatus.DELIVERY_FAILED);
+        when(shipments.findByTrackingNumber("TRK-1")).thenReturn(Optional.of(shipment));
+
+        assertThatCode(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
+                .doesNotThrowAnyException();
+
+        assertThat(shipment.getStatus())
+                .as("a late carrier event must never roll a failed delivery back to in transit")
+                .isEqualTo(ShipmentStatus.DELIVERY_FAILED);
+        ArgumentCaptor<ShipmentEvent> saveCaptor = ArgumentCaptor.forClass(ShipmentEvent.class);
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo("FAILED_RETRYABLE");
+        verify(writer, never()).complete(any(Shipment.class), any(ShipmentEvent.class), anyBoolean());
+    }
+
+    @Test
+    void aSignedPayloadWithoutAnEventId_isRejectedWithBadRequest() {
+        byte[] raw = body("{\"eventType\":\"carrier.event.v1\",\"trackingNumber\":\"TRK-1\","
+                + "\"carrierStatus\":\"IN_TRANSIT\"}");
+
+        assertThatThrownBy(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+
+        verify(events, never()).findFirstByCarrierAndProviderEventId(any(), any());
+        verify(writer, never()).insert(any(ShipmentEvent.class));
+    }
+
+    @Test
+    void aConstraintViolationThatIsNotTheCarrierEventIndex_isRejectedWithBadRequest() {
+        byte[] raw = body(payloadJson("evt-rejected", "TRK-1", "IN_TRANSIT"));
+        happyPathStubs("evt-rejected");
+        when(writer.insert(any(ShipmentEvent.class)))
+                .thenThrow(new DataIntegrityViolationException("ck_shipment_events_status violated"));
+
+        assertThatThrownBy(() -> service.handle(CARRIER.name(), raw, hmacHex(SECRET, raw)))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+
+        verify(shipments, never()).findByTrackingNumber(anyString());
+    }
+
+    @Test
     void unconfiguredCarrier_throws401BeforeAnything() {
         byte[] raw = body(payloadJson("evt-7", "TRK-1", "IN_TRANSIT"));
 

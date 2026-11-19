@@ -7,6 +7,7 @@ import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
 import com.shop.common.kafka.producer.OutboxBatchOrdering;
 import com.shop.shippingservice.outbox.OutboxEvent;
 import com.shop.shippingservice.outbox.OutboxEventRepository;
+import com.shop.shippingservice.service.ShippingMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,6 +30,7 @@ public class ShippingOutboxRelay {
     private final OutboxEventRepository outboxRepo;
     private final KafkaMessagePublisher kafkaPublisher;
     private final TransactionTemplate transactionTemplate;
+    private final ShippingMetrics metrics;
 
     @Value("${shop.shipping.outbox.batch-size:100}")
     private int batchSize;
@@ -46,10 +48,12 @@ public class ShippingOutboxRelay {
 
     public ShippingOutboxRelay(OutboxEventRepository outboxRepo,
                        KafkaMessagePublisher kafkaPublisher,
-                       PlatformTransactionManager txManager) {
+                       PlatformTransactionManager txManager,
+                       ShippingMetrics metrics) {
         this.outboxRepo = outboxRepo;
         this.kafkaPublisher = kafkaPublisher;
         this.transactionTemplate = new TransactionTemplate(txManager);
+        this.metrics = metrics;
     }
 
     @Scheduled(
@@ -63,7 +67,7 @@ public class ShippingOutboxRelay {
             List<Long> claimedIds = new ArrayList<>();
             for (int drained = 0; drained < batchSize; drained++) {
                 Long claimed = transactionTemplate.execute(tx -> {
-                    Optional<OutboxEvent> locked = outboxRepo.claimOnePending(OutboxStatus.PENDING);
+                    Optional<OutboxEvent> locked = outboxRepo.claimOnePending(OutboxStatus.PENDING.name());
                     if (locked.isEmpty()) {
                         return null;
                     }
@@ -121,8 +125,15 @@ public class ShippingOutboxRelay {
 
     private void recoverStrandedClaims() {
         Instant cutoff = Instant.now().minusMillis(claimLeaseMs);
+        Long exhausted = transactionTemplate.execute(tx -> outboxRepo.countStaleExhausted(
+                OutboxStatus.SENDING, cutoff, maxRetries));
+        if (exhausted != null && exhausted > 0) {
+            metrics.recordOutboxFailed(exhausted.intValue());
+            log.error("{} shipping outbox event(s) exhausted their retry budget and are parked as DEAD",
+                    exhausted);
+        }
         Integer reclaimed = transactionTemplate.execute(tx -> outboxRepo.reclaimStaleSending(
-                OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,
+                OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.DEAD,
                 cutoff, maxRetries,
                 "reclaimed after the claim lease expired - the relay died before publishing"));
         if (reclaimed != null && reclaimed > 0) {
@@ -145,11 +156,12 @@ public class ShippingOutboxRelay {
             e.setRetryCount(e.getRetryCount() + 1);
             e.setLastError(truncate(error));
             if (e.getRetryCount() >= maxRetries) {
-                e.setStatus(OutboxStatus.FAILED);
-                log.error("Outbox event {} permanently failed after {} attempt(s): {}",
+                e.setStatus(OutboxStatus.DEAD);
+                metrics.recordOutboxFailed();
+                log.error("Shipping outbox event {} permanently failed after {} attempt(s): {}",
                         e.getEventId(), e.getRetryCount(), e.getLastError());
             } else {
-                log.warn("Outbox event {} retry {}/{}: {}",
+                log.warn("Shipping outbox event {} retry {}/{}: {}",
                         e.getEventId(), e.getRetryCount(), maxRetries, e.getLastError());
             }
         }

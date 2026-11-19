@@ -17,7 +17,6 @@ public final class ShipmentStateMachine {
             Map.entry(ShipmentStatus.PICKED_UP, ShipmentStatus.DELIVERY_FAILED),
             Map.entry(ShipmentStatus.IN_TRANSIT, ShipmentStatus.DELIVERY_FAILED),
             Map.entry(ShipmentStatus.OUT_FOR_DELIVERY, ShipmentStatus.DELIVERY_FAILED),
-            Map.entry(ShipmentStatus.DELIVERY_FAILED, ShipmentStatus.IN_TRANSIT),
             Map.entry(ShipmentStatus.CREATED, ShipmentStatus.CANCELLED),
             Map.entry(ShipmentStatus.PICKED_UP, ShipmentStatus.CANCELLED),
             Map.entry(ShipmentStatus.IN_TRANSIT, ShipmentStatus.CANCELLED),
@@ -31,5 +30,29 @@ public final class ShipmentStateMachine {
             throw BusinessException.of(ErrorCode.SHIPMENT_INVALID_TRANSITION, from, to);
         }
         return to;
+    }
+
+    public static ShipmentStatus operatorRetry(ShipmentStatus from) {
+        if (from != ShipmentStatus.DELIVERY_FAILED) {
+            throw BusinessException.of(ErrorCode.SHIPMENT_INVALID_TRANSITION, from, ShipmentStatus.IN_TRANSIT);
+        }
+        return ShipmentStatus.IN_TRANSIT;
+    }
+
+    public static ShipmentStatus autoDeliver(ShipmentStatus from) {
+        if (!ShipmentStatus.inFlight(from)) {
+            throw BusinessException.of(ErrorCode.SHIPMENT_INVALID_TRANSITION, from, ShipmentStatus.DELIVERED);
+        }
+        return ShipmentStatus.DELIVERED;
+    }
+
+    public static ShipmentStatus carrierStatus(ShipmentStatus from, ShipmentStatus to) {
+        if (from == null || to == null) {
+            throw BusinessException.of(ErrorCode.SHIPMENT_INVALID_TRANSITION, from, to);
+        }
+        if (from == to) {
+            return to;
+        }
+        return transition(from, to);
     }
 }

@@ -4,8 +4,10 @@ import com.shop.common.core.constants.OutboxStatus;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.BatchOutcome;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.shop.shippingservice.outbox.OutboxEvent;
 import com.shop.shippingservice.outbox.OutboxEventRepository;
+import com.shop.shippingservice.service.ShippingMetrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +44,7 @@ class ShippingOutboxRelayTest {
     @Mock private OutboxEventRepository outboxRepo;
     @Mock private KafkaMessagePublisher kafkaPublisher;
 
+    private SimpleMeterRegistry meterRegistry;
     private ShippingOutboxRelay relay;
 
     private final UUID productId = UUID.randomUUID();
@@ -59,7 +62,9 @@ class ShippingOutboxRelayTest {
             @Override
             public void rollback(TransactionStatus status) { }
         };
-        relay = new ShippingOutboxRelay(outboxRepo, kafkaPublisher, txManager);
+        meterRegistry = new SimpleMeterRegistry();
+        relay = new ShippingOutboxRelay(outboxRepo, kafkaPublisher, txManager,
+                new ShippingMetrics(meterRegistry));
         ReflectionTestUtils.setField(relay, "batchSize", 100);
         ReflectionTestUtils.setField(relay, "maxRetries", 10);
         ReflectionTestUtils.setField(relay, "publishTimeoutMs", 5_000L);
@@ -86,7 +91,7 @@ class ShippingOutboxRelayTest {
             sequence[i] = Optional.of(events[i]);
         }
         sequence[events.length] = Optional.empty();
-        when(outboxRepo.claimOnePending(OutboxStatus.PENDING))
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING.name()))
                 .thenReturn(sequence[0], Arrays.copyOfRange(sequence, 1, sequence.length));
     }
 
@@ -157,17 +162,30 @@ class ShippingOutboxRelayTest {
     }
 
     @Test
-    void relay_maxRetriesExhausted_marksFailed() {
+    void relay_maxRetriesExhausted_parksTheEventAsDeadAndCountsIt() {
         OutboxEvent event = pendingEvent(1L, productId, 9);
         stubClaim(event);
         stubBatch(List.of(event), false);
 
         relay.relay();
 
-        assertThat(event.getStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(event.getStatus()).isEqualTo(OutboxStatus.DEAD);
         assertThat(event.getRetryCount()).isEqualTo(10);
         assertThat(event.getLastError()).isEqualTo("kafka down");
         assertThat(event.getSentAt()).isNull();
+        assertThat(meterRegistry.counter("shipping.outbox.failed.count").count()).isEqualTo(1.0);
+    }
+
+    @Test
+    void relay_aRetryableFailure_isCountedAsAFailureButNotAsPermanent() {
+        OutboxEvent event = pendingEvent(1L, productId, 0);
+        stubClaim(event);
+        stubBatch(List.of(event), false);
+
+        relay.relay();
+
+        assertThat(event.getStatus()).isEqualTo(OutboxStatus.PENDING);
+        assertThat(meterRegistry.counter("shipping.outbox.failed.count").count()).isZero();
     }
 
     @Test
@@ -184,7 +202,7 @@ class ShippingOutboxRelayTest {
 
     @Test
     void relay_emptyPending_noPublishNoSave() {
-        when(outboxRepo.claimOnePending(OutboxStatus.PENDING)).thenReturn(Optional.empty());
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING.name())).thenReturn(Optional.empty());
 
         relay.relay();
 

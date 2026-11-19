@@ -6,6 +6,9 @@ databaseChangeLog:
       file: changelog-002-shipping-outbox.yaml
       relativeToChangelogFile: true
   - include:
+      file: changelog-002b-expand-events-status-check-pre.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changelog-003-webhook-retry.yaml
       relativeToChangelogFile: true
   - include:
@@ -16,4 +19,13 @@ databaseChangeLog:
       relativeToChangelogFile: true
   - include:
       file: 006-shipping-outbox-claim-lease.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-007-shipment-creation-tasks.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-008-webhook-retry-claim-and-index.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-009-shipment-event-shipment-fk.yaml
       relativeToChangelogFile: true

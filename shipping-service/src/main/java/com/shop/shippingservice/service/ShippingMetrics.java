@@ -31,6 +31,28 @@ public class ShippingMetrics {
         registry.counter("shipping.advance.count", "from", from.name(), "to", to.name()).increment();
     }
 
+    public void recordShipmentCreated(String carrier) {
+        registry.counter("shipping.shipment.created.count", "carrier", carrier).increment();
+    }
+
+    public void recordShipmentCreationFailed(String carrier) {
+        registry.counter("shipping.shipment.creation.failed.count", "carrier", carrier).increment();
+    }
+
+    public void recordShipmentCreationFailedPermanently(String carrier) {
+        registry.counter("shipping.shipment.creation.failed.permanent.count", "carrier", carrier).increment();
+    }
+
+    public void recordOutboxFailed() {
+        registry.counter("shipping.outbox.failed.count").increment();
+    }
+
+    public void recordOutboxFailed(int count) {
+        if (count > 0) {
+            registry.counter("shipping.outbox.failed.count").increment(count);
+        }
+    }
+
     public void setStaleInflightCount(int count) {
         staleInflightCount.set(count);
     }

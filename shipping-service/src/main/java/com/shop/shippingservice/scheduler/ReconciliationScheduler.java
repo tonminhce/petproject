@@ -53,12 +53,13 @@ public class ReconciliationScheduler {
         log.info("Auto-delivering {} stale carrier-acknowledged shipment(s) past cutoff {}",
                 stale.size(), cutoff);
         for (Shipment shipment : stale) {
-            shipment.setPreviousStatus(shipment.getStatus());
-            shipment.setStatus(ShipmentStatus.DELIVERED);
-            shipment.setAutoDelivered(true);
-            shipment.setDeliveredAt(clock.instant());
-            metrics.recordDelivered(true);
-            writer.saveDelivered(shipment, true);
+            try {
+                shipment.autoDeliver(clock.instant());
+                writer.saveDelivered(shipment, true);
+                metrics.recordDelivered(true);
+            } catch (RuntimeException e) {
+                log.warn("Auto-delivery of shipment {} was rejected: {}", shipment.getId(), e.getMessage());
+            }
         }
     }
 }
