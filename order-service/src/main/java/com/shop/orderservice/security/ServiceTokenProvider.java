@@ -1,108 +1,26 @@
 package com.shop.orderservice.security;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.shop.common.keycloak.client.KeycloakServiceTokenProvider;
 import com.shop.orderservice.config.ShopServicesProperties;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
-import java.time.Instant;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
-
 @Component
-@Slf4j
 public class ServiceTokenProvider {
 
-    private static final long REFRESH_SKEW_SECONDS = 30L;
-
-    private final RestClient restClient;
-    private final String tokenUrl;
-    private final String clientId;
-    private final String clientSecret;
-
-    private final AtomicReference<CachedToken> cache = new AtomicReference<>();
-    private final ReentrantLock refreshLock = new ReentrantLock();
+    private final KeycloakServiceTokenProvider delegate;
 
     public ServiceTokenProvider(RestClient.Builder restClientBuilder,
                                 ShopServicesProperties properties) {
         ShopServicesProperties.Keycloak kc = properties.keycloak();
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(5000);
-        this.restClient = restClientBuilder.requestFactory(factory).build();
-        this.tokenUrl = kc.tokenUrl();
-        this.clientId = kc.clientId();
-        this.clientSecret = kc.clientSecret();
+        this.delegate = new KeycloakServiceTokenProvider(
+                restClientBuilder,
+                kc.tokenUrl(),
+                kc.clientId(),
+                kc.clientSecret());
     }
 
     public String getToken() {
-        CachedToken current = cache.get();
-        Instant cutoff = Instant.now().plusSeconds(REFRESH_SKEW_SECONDS);
-        if (current != null && current.expiresAt().isAfter(cutoff)) {
-            return current.accessToken();
-        }
-        try {
-            if (refreshLock.tryLock(5, TimeUnit.SECONDS)) {
-                try {
-                    return refreshToken();
-                } finally {
-                    refreshLock.unlock();
-                }
-            } else {
-                current = cache.get();
-                if (current != null && current.expiresAt().isAfter(Instant.now())) {
-                    return current.accessToken();
-                }
-                throw new IllegalStateException("Timeout acquiring Keycloak token refresh lock");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted waiting for Keycloak token refresh", e);
-        }
+        return delegate.getToken();
     }
-
-    private String refreshToken() {
-        CachedToken current = cache.get();
-        Instant cutoff = Instant.now().plusSeconds(REFRESH_SKEW_SECONDS);
-        if (current != null && current.expiresAt().isAfter(cutoff)) {
-            return current.accessToken();
-        }
-
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", "client_credentials");
-        form.add("client_id", clientId);
-        form.add("client_secret", clientSecret);
-
-        TokenResponse response = restClient.post()
-                .uri(tokenUrl)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
-                .retrieve()
-                .body(TokenResponse.class);
-
-        if (response == null || response.accessToken() == null) {
-            throw new IllegalStateException("Keycloak token endpoint returned empty body");
-        }
-
-        CachedToken fresh = new CachedToken(
-                response.accessToken(),
-                Instant.now().plusSeconds(response.expiresIn())
-        );
-        cache.set(fresh);
-        log.info("Refreshed Keycloak service token (expires in {}s)", response.expiresIn());
-        return fresh.accessToken();
-    }
-
-    private record CachedToken(String accessToken, Instant expiresAt) {}
-
-    private record TokenResponse(
-            @JsonProperty("access_token") String accessToken,
-            @JsonProperty("expires_in") long expiresIn
-    ) {}
 }
