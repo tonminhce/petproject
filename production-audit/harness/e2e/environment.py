@@ -22,6 +22,89 @@ REQUIRED_COMPONENTS = {
 
 SCOPES = ("auth", "catalog", "checkout", "inventory", "payment", "shipping", "ratings", "refund", "media", "gateway", "kafka", "lifecycle")
 
+COMPOSE_PROBE = ["docker", "compose", "version", "--short"]
+
+SCOPE_FOLDERS: dict[str, tuple[str, ...]] = {
+    "auth": ("1. Authentication",),
+    "catalog": ("2. Catalog & Products",),
+    "inventory": ("3. Inventory",),
+    "checkout": ("4. Cart & Order",),
+    "payment": ("6. Payment (Multi-Gateway)",),
+    "shipping": ("7. Order Fulfillment Lifecycle",),
+    "ratings": ("8. Rating & Favourite",),
+    "refund": ("9. RMA Order Returns Workflow",),
+    "media": ("19. Edge Cases - Rating & Order & Media",),
+    "gateway": ("12. Gateway E2E Routing",),
+    "kafka": ("10. Search & Notification",),
+    "lifecycle": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle",
+        "8. Rating & Favourite",
+        "9. RMA Order Returns Workflow",
+        "10. Search & Notification",
+        "11. Tax & Promotion",
+    ),
+}
+
+SCOPE_PREREQUISITES: dict[str, tuple[str, ...]] = {
+    "auth": (),
+    "catalog": ("1. Authentication",),
+    "inventory": ("1. Authentication", "2. Catalog & Products"),
+    "checkout": ("1. Authentication", "2. Catalog & Products", "3. Inventory"),
+    "payment": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+    ),
+    "shipping": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+    ),
+    "ratings": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle",
+    ),
+    "refund": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle",
+    ),
+    "media": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+        "6. Payment (Multi-Gateway)",
+        "7. Order Fulfillment Lifecycle",
+    ),
+    "gateway": (
+        "1. Authentication",
+        "2. Catalog & Products",
+        "3. Inventory",
+        "4. Cart & Order",
+    ),
+    "kafka": (
+        "1. Authentication",
+        "2. Catalog & Products",
+    ),
+    "lifecycle": (),
+}
+
 
 @dataclass
 class ComponentStatus:
@@ -33,12 +116,21 @@ class ComponentStatus:
         return {"name": self.name, "available": self.available, "detail": self.detail}
 
 
+def compose_available() -> tuple[bool, str]:
+    if shutil.which("docker") is None:
+        return False, "docker binary not on PATH"
+    probe = subprocess.run(COMPOSE_PROBE, capture_output=True, text=True, check=False, timeout=60)
+    if probe.returncode != 0:
+        return False, f"docker compose plugin unavailable: {probe.stderr.strip()[:200]}"
+    return True, f"docker compose {probe.stdout.strip()}"
+
+
 def detect_dependencies() -> list[ComponentStatus]:
     statuses: list[ComponentStatus] = []
-    for name, binaries in REQUIRED_COMPONENTS.items():
-        missing = [binary for binary in binaries if shutil.which(binary) is None]
-        if missing:
-            statuses.append(ComponentStatus(name, False, f"missing binaries: {missing}"))
+    compose_ok, compose_detail = compose_available()
+    for name in REQUIRED_COMPONENTS:
+        if not compose_ok:
+            statuses.append(ComponentStatus(name, False, compose_detail))
             continue
         probe = subprocess.run(
             ["docker", "info", "--format", "{{.ServerVersion}}"],
@@ -50,7 +142,7 @@ def detect_dependencies() -> list[ComponentStatus]:
         if probe.returncode != 0:
             statuses.append(ComponentStatus(name, False, f"docker daemon unavailable: {probe.stderr.strip()[:200]}"))
             continue
-        statuses.append(ComponentStatus(name, True, f"docker server {probe.stdout.strip()}"))
+        statuses.append(ComponentStatus(name, True, f"docker server {probe.stdout.strip()}, {compose_detail}"))
     return statuses
 
 
@@ -106,6 +198,26 @@ def e2e_teardown(root: Path | None = None, run_id: str | None = None, volumes: b
     }
     write_json(log_dir / "teardown.json", document)
     return document
+
+
+def collection_folder_names(collection: Path) -> tuple[str, ...]:
+    try:
+        document = json.loads(collection.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    names: list[str] = []
+
+    def walk(items: list[dict[str, Any]]) -> None:
+        for item in items:
+            children = item.get("item")
+            if isinstance(children, list):
+                name = item.get("name")
+                if isinstance(name, str):
+                    names.append(name)
+                walk(children)
+
+    walk(document.get("item", []))
+    return tuple(names)
 
 
 def discover_collections(root: Path | None = None) -> list[Path]:
@@ -178,16 +290,37 @@ def e2e_run(scope: str = "all", root: Path | None = None, run_id: str | None = N
         return document
 
     results: list[dict[str, Any]] = []
+    folders = SCOPE_FOLDERS.get(scope, ())
+    prerequisites = SCOPE_PREREQUISITES.get(scope, ())
     for collection in collections:
-        command = [newman, "run", str(collection), "--reporters", "cli,json", "--reporter-json-export", str(log_dir / f"{collection.stem}.json")]
+        available = collection_folder_names(collection)
+        requested = tuple(prerequisites) + tuple(folders) if scope != "all" else ()
+        selected = tuple(folder for folder in requested if folder in available)
+        if scope != "all" and not selected:
+            results.append(
+                {
+                    "collection": collection.name,
+                    "exit_code": 0,
+                    "status": "SKIPPED",
+                    "log": str(log_dir / f"{collection.stem}.{scope}.log"),
+                    "folders": [],
+                    "reason": "no folder in this collection belongs to the scope",
+                }
+            )
+            continue
+        command = [newman, "run", str(collection), "--reporters", "cli,json", "--reporter-json-export", str(log_dir / f"{collection.stem}.{scope}.json")]
+        for folder in selected:
+            command.extend(["--folder", folder])
         command.extend(extra_arguments or [])
-        result = run_command(command, repository, log_dir / f"{collection.stem}.log")
+        result = run_command(command, repository, log_dir / f"{collection.stem}.{scope}.log")
         results.append(
             {
                 "collection": collection.name,
                 "exit_code": result.exit_code,
                 "status": "PASSED" if result.exit_code == 0 else "FAILED",
-                "log": str(log_dir / f"{collection.stem}.log"),
+                "log": str(log_dir / f"{collection.stem}.{scope}.log"),
+                "folders": list(selected),
+                "prerequisites": list(prerequisites),
             }
         )
 

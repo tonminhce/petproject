@@ -141,6 +141,12 @@ def classify(relative_path: str, root: Path) -> tuple[str, str]:
     if module == "utils" and len(parts) > 1:
         module = "utils/" + parts[1]
 
+    if module == ".claude":
+        return "VENDORED_TOOLING", module
+    if module == "production-audit":
+        return "HARNESS", module
+    if path.suffix.lower() in (".html", ".htm") and module == "docs":
+        return "GENERATED", module
     if "src" in parts and "test" in parts:
         return "TEST_CODE", module
     if module.startswith("utils/"):
@@ -170,6 +176,8 @@ def _is_skipped(relative_path: Path) -> bool:
             return True
         if part.startswith("target") and part == "target":
             return True
+    if relative_path.name == ".flattened-pom.xml":
+        return True
     return False
 
 
@@ -224,7 +232,8 @@ def build_inventory(root: Path | None = None, include_harness: bool = True) -> d
                 sha256=sha256_file(path),
                 git_blob=blob_map.get(relative),
                 tracked=relative in tracked_output,
-                comment_gate=path.suffix.lower() in COMMENT_GATE_SUFFIXES and category not in ("DOCUMENTATION",),
+                comment_gate=path.suffix.lower() in COMMENT_GATE_SUFFIXES
+                and category not in ("DOCUMENTATION", "GENERATED", "VENDORED_TOOLING", "HARNESS"),
             )
         )
 

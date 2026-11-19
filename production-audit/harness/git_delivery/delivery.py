@@ -174,7 +174,7 @@ def ensure_audit_branch(root: Path, branch_name: str) -> GitResult:
 def detect_secrets(payload: str, include_assignments: bool = True) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     for match in CREDENTIAL_TOKEN_PATTERN.finditer(payload):
-        findings.append({"pattern": "CREDENTIAL_TOKEN", "offset": str(match.start())})
+        findings.append({"pattern": "CREDENTIAL_TOKEN", "offset": str(match.start()), "value": match.group(0)})
     if not include_assignments:
         return findings
     for match in ASSIGNMENT_PATTERN.finditer(payload):
@@ -191,7 +191,7 @@ def detect_secrets(payload: str, include_assignments: bool = True) -> list[dict[
             continue
         if value.lower().startswith("secret") and len(value) <= 16:
             continue
-        findings.append({"pattern": "SECRET_ASSIGNMENT", "offset": str(match.start())})
+        findings.append({"pattern": "SECRET_ASSIGNMENT", "offset": str(match.start()), "value": value})
     return findings
 
 
@@ -209,9 +209,28 @@ def is_test_source(relative_path: str) -> bool:
     return False
 
 
-def scan_paths_for_secrets(root: Path, relative_paths: list[str]) -> dict[str, list[dict[str, str]]]:
+def allowed_tokens_for(exceptions: dict[str, list[str]], relative: str) -> list[str]:
+    tokens: list[str] = []
+    for key, values in exceptions.items():
+        if key.endswith("*"):
+            if relative.startswith(key[:-1]):
+                tokens.extend(values)
+        elif key == relative:
+            tokens.extend(values)
+    return tokens
+
+
+def scan_paths_for_secrets(
+    root: Path,
+    relative_paths: list[str],
+    exceptions: dict[str, list[str]] | None = None,
+) -> dict[str, list[dict[str, str]]]:
+    allowlist = exceptions if exceptions is not None else secret_scan_exceptions()
+    allowlist_path = _relative_to_root(config.secret_scan_exceptions_path(), root)
     findings: dict[str, list[dict[str, str]]] = {}
     for relative in relative_paths:
+        if relative == allowlist_path:
+            continue
         absolute = root / relative
         if not absolute.exists() or not absolute.is_file():
             continue
@@ -222,7 +241,16 @@ def scan_paths_for_secrets(root: Path, relative_paths: list[str]) -> dict[str, l
             payload = absolute.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        detected = detect_secrets(payload, include_assignments=not is_test_source(relative))
+        allowed = allowed_tokens_for(allowlist, relative)
+        detected = []
+        for finding in detect_secrets(payload, include_assignments=not is_test_source(relative)):
+            matched = finding.get("value") or ""
+            if not matched:
+                offset = int(finding["offset"])
+                matched = payload[offset:offset + 64].split("\n")[0]
+            if any(candidate and candidate in matched for candidate in allowed):
+                continue
+            detected.append(finding)
         if detected:
             findings[relative] = detected
     return findings
@@ -266,12 +294,14 @@ def scan_staged_content_for_secrets(root: Path) -> dict[str, list[dict[str, str]
         if relative in SECRET_FILE_NAMES:
             findings[relative] = [{"pattern": "SECRET_FILE_NAME", "offset": "0"}]
             continue
-        allowed = exceptions.get(relative, [])
+        allowed = allowed_tokens_for(exceptions, relative)
         detected = []
         for finding in detect_secrets(content, include_assignments=not is_test_source(relative)):
-            offset = int(finding["offset"])
-            token = content[offset:offset + 64].split("\n")[0]
-            if any(candidate and candidate in token for candidate in allowed):
+            matched = finding.get("value") or ""
+            if not matched:
+                offset = int(finding["offset"])
+                matched = content[offset:offset + 64].split("\n")[0]
+            if any(candidate and candidate in matched for candidate in allowed):
                 continue
             detected.append(finding)
         if detected:

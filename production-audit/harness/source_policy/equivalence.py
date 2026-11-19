@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import config
+from ..inventory.scanner import load_inventory
 from ..persistence.store import utc_now
 from .cleaner import clean_source
 from .policy import Policy
@@ -76,9 +77,23 @@ def changed_file_insertion_counts(root: Path) -> dict[str, int]:
         if len(parts) < 3:
             continue
         added = parts[0]
+        deleted = parts[1]
         path = parts[2]
-        counts[path] = 0 if added == "-" else int(added)
+        if added == "-" or deleted == "-":
+            counts[path] = 1
+            continue
+        counts[path] = int(added) + int(deleted)
     return counts
+
+
+def comment_gate_paths(root: Path | None = None) -> set[str]:
+    repository = root or config.repository_root()
+    manifest = load_inventory()
+    return {
+        entry["path"]
+        for entry in manifest.get("files", [])
+        if entry.get("comment_gate")
+    }
 
 
 def verify_comment_only_changes(
@@ -90,9 +105,14 @@ def verify_comment_only_changes(
     repository = root or config.repository_root()
     active_policy = policy or Policy.load()
     insertions = changed_file_insertion_counts(repository)
+    gated = comment_gate_paths(repository)
     results = []
     designed = []
+    skipped = []
     for path in paths:
+        if path not in gated:
+            skipped.append(path)
+            continue
         if insertions.get(path, 0) > 0:
             designed.append({"path": path, "insertions": insertions[path]})
             continue
@@ -107,5 +127,6 @@ def verify_comment_only_changes(
         "other": [entry for entry in results if entry["status"] not in ("EQUIVALENT", "DIVERGED")],
         "diverged_details": diverged,
         "modified_by_design": designed,
+        "skipped_outside_gate": len(skipped),
         "clean": not diverged,
     }

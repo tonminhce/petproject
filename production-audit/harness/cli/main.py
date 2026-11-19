@@ -64,10 +64,24 @@ def command_inventory(arguments: argparse.Namespace) -> int:
 def command_coverage(arguments: argparse.Namespace) -> int:
     document = load_coverage()
     summary = coverage_summary(document)
+    if arguments.import_reports:
+        from ..inventory.coverage_import import import_report_coverage
+
+        result = import_report_coverage(reviewer=arguments.reviewer or "audit-agent")
+        emit({**result, "summary": coverage_summary(load_coverage())})
+        return config.EXIT_OK
     if arguments.mark:
         relative = arguments.mark
         entry = record_review(relative, arguments.state, reviewer=arguments.reviewer, notes=arguments.notes or "")
         emit({"marked": relative, "state": entry.get("coverage_state"), "summary": coverage_summary()})
+        return config.EXIT_OK
+    if arguments.mark_file:
+        from ..inventory.coverage import mark_paths
+
+        listing = Path(arguments.mark_file)
+        paths = [line.strip() for line in listing.read_text(encoding="utf-8").splitlines() if line.strip()]
+        result = mark_paths(paths, state=arguments.state, reviewer=arguments.reviewer, notes=arguments.notes or "")
+        emit(result)
         return config.EXIT_OK
     emit(summary)
     return config.EXIT_OK
@@ -471,10 +485,18 @@ def command_status(arguments: argparse.Namespace) -> int:
 
 
 def command_report(arguments: argparse.Namespace) -> int:
+    from ..reporting.generators import write_all_reports
+
     document = status_document()
     write_status_report()
     write_markdown_status()
-    emit({"report": str(config.reports_root() / "status.md"), "status": str(config.reports_root() / "status.json"), "production_ready": document["completion_predicate"]["production_ready"]})
+    written = write_all_reports()
+    emit({
+        "report": str(config.reports_root() / "status.md"),
+        "status": str(config.reports_root() / "status.json"),
+        "generated": [str(path) for path in written],
+        "production_ready": document["completion_predicate"]["production_ready"],
+    })
     return config.EXIT_OK
 
 
@@ -490,6 +512,8 @@ def build_parser() -> argparse.ArgumentParser:
     coverage.add_argument("--state", default="FULLY_READ")
     coverage.add_argument("--reviewer", default="")
     coverage.add_argument("--notes", default="")
+    coverage.add_argument("--import-reports", action="store_true", help="import the file inventories of the source review reports")
+    coverage.add_argument("--mark-file", default="", help="mark every path listed in this file as reviewed")
     coverage.set_defaults(handler=command_coverage)
 
     audit = subparsers.add_parser("audit", help="audit evidence status for a topic")

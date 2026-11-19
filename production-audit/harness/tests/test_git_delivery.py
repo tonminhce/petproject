@@ -7,6 +7,7 @@ from pathlib import Path
 
 from harness.git_delivery.delivery import (
     DeliveryRecord,
+    allowed_tokens_for,
     commit_verified,
     current_branch,
     detect_secrets,
@@ -71,6 +72,41 @@ class SecretDetectionTest(unittest.TestCase):
             root = Path(temporary)
             (root / "Service.java").write_text("class Service {}\n", encoding="utf-8")
             self.assertEqual(scan_paths_for_secrets(root, ["Service.java"]), {})
+
+
+    def test_documented_exception_is_honoured_in_the_path_scan(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "contract.py").write_text(
+                "STRIPE_WEBHOOK_SECRET = \"whsec_local_e2e_only\"\n", encoding="utf-8"
+            )
+            allowlist = {"contract.py": ["whsec_local_e2e_only"]}
+            self.assertEqual(scan_paths_for_secrets(root, ["contract.py"], allowlist), {})
+
+    def test_a_different_secret_in_an_excepted_path_is_still_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "contract.py").write_text(
+                "STRIPE_WEBHOOK_SECRET = \"whsec_" + "live_" + "abcdefghijklmnopqrstuvwx\"\n",
+                encoding="utf-8",
+            )
+            allowlist = {"contract.py": ["whsec_local_e2e_only"]}
+            self.assertIn("contract.py", scan_paths_for_secrets(root, ["contract.py"], allowlist))
+
+    def test_a_prefix_exception_covers_every_file_under_the_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "reports").mkdir()
+            (root / "reports" / "run.json").write_text(
+                "{\"stripeWebhookSecret\": \"whsec_local_e2e_only\"}\n", encoding="utf-8"
+            )
+            allowlist = {"reports/*": ["whsec_local_e2e_only"]}
+            self.assertEqual(scan_paths_for_secrets(root, ["reports/run.json"], allowlist), {})
+
+    def test_allowed_tokens_for_ignores_an_unrelated_path(self) -> None:
+        allowlist = {"reports/*": ["whsec_local_e2e_only"]}
+        self.assertEqual(allowed_tokens_for(allowlist, "src/main/Service.java"), [])
+        self.assertEqual(allowed_tokens_for(allowlist, "reports/run.json"), ["whsec_local_e2e_only"])
 
 
 class CommitRulesTest(unittest.TestCase):
