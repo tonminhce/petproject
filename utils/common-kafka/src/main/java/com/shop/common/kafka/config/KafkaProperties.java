@@ -77,6 +77,11 @@ public class KafkaProperties {
         props.put("bootstrap.servers", bootstrapServers);
         props.put("group.id", consumer.getGroupId());
         props.put("auto.offset.reset", consumer.getAutoOffsetReset());
+        props.put("enable.auto.commit", consumer.isEnableAutoCommit());
+        props.put("isolation.level", consumer.getIsolationLevel());
+        props.put("max.poll.records", consumer.getMaxPollRecords());
+        props.put("max.poll.interval.ms", consumer.getMaxPollIntervalMs());
+        props.put("session.timeout.ms", consumer.getSessionTimeoutMs());
         props.put("key.deserializer", org.apache.kafka.common.serialization.StringDeserializer.class.getName());
         return props;
     }
@@ -168,6 +173,11 @@ public class KafkaProperties {
     public static class ConsumerConfig {
         private String groupId = "shop-service";
         private String autoOffsetReset = "earliest";
+        private boolean enableAutoCommit = false;
+        private String isolationLevel = "read_committed";
+        private int maxPollRecords = 500;
+        private int maxPollIntervalMs = 300_000;
+        private int sessionTimeoutMs = 45_000;
 
         public String getGroupId() {
             return groupId;
@@ -183,6 +193,46 @@ public class KafkaProperties {
 
         public void setAutoOffsetReset(String autoOffsetReset) {
             this.autoOffsetReset = autoOffsetReset;
+        }
+
+        public boolean isEnableAutoCommit() {
+            return enableAutoCommit;
+        }
+
+        public void setEnableAutoCommit(boolean enableAutoCommit) {
+            this.enableAutoCommit = enableAutoCommit;
+        }
+
+        public String getIsolationLevel() {
+            return isolationLevel;
+        }
+
+        public void setIsolationLevel(String isolationLevel) {
+            this.isolationLevel = isolationLevel;
+        }
+
+        public int getMaxPollRecords() {
+            return maxPollRecords;
+        }
+
+        public void setMaxPollRecords(int maxPollRecords) {
+            this.maxPollRecords = maxPollRecords;
+        }
+
+        public int getMaxPollIntervalMs() {
+            return maxPollIntervalMs;
+        }
+
+        public void setMaxPollIntervalMs(int maxPollIntervalMs) {
+            this.maxPollIntervalMs = maxPollIntervalMs;
+        }
+
+        public int getSessionTimeoutMs() {
+            return sessionTimeoutMs;
+        }
+
+        public void setSessionTimeoutMs(int sessionTimeoutMs) {
+            this.sessionTimeoutMs = sessionTimeoutMs;
         }
     }
 }

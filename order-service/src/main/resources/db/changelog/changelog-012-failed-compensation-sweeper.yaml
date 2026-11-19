@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-failed-compensation-sweeper-indexes
+      author: shop-platform
+      changes:
+        - sql:
+            sql: >-
+              DELETE FROM failed_compensations duplicate
+              USING failed_compensations keeper
+              WHERE duplicate.id > keeper.id
+              AND duplicate.reservation_id = keeper.reservation_id
+              AND duplicate.kind = keeper.kind
+              AND duplicate.status IN ('PENDING', 'PROCESSING')
+              AND keeper.status IN ('PENDING', 'PROCESSING')
+
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX IF NOT EXISTS uc_failed_compensations_open
+              ON failed_compensations (reservation_id, kind)
+              WHERE status IN ('PENDING', 'PROCESSING')
+
+        - sql:
+            sql: >-
+              CREATE INDEX IF NOT EXISTS idx_failed_compensations_due_scan
+              ON failed_compensations (created_at)
+              WHERE status IN ('PENDING', 'PROCESSING')

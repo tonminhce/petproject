@@ -12,11 +12,12 @@ class PaymentStripePropertiesTest {
             .withUserConfiguration(PaymentStripePropertiesTest.PropsConfig.class);
 
     @Test
-    void bindsAllFourKeysFromShopPaymentStripeBlock() {
+    void bindsEveryKeyFromShopPaymentStripeBlock() {
         contextRunner.withPropertyValues(
                         "shop.payment.stripe.secret-key=sk_test_123",
                         "shop.payment.stripe.webhook-secret=whsec_123",
                         "shop.payment.stripe.api-version=2024-06-20",
+                        "shop.payment.stripe.api-base=http://stripe-mock:12111",
                         "shop.payment.stripe.connect=true")
                 .run(ctx -> {
                     assertThat(ctx).hasSingleBean(PaymentStripeProperties.class);
@@ -24,6 +25,7 @@ class PaymentStripePropertiesTest {
                     assertThat(props.secretKey()).isEqualTo("sk_test_123");
                     assertThat(props.webhookSecret()).isEqualTo("whsec_123");
                     assertThat(props.apiVersion()).isEqualTo("2024-06-20");
+                    assertThat(props.apiBase()).isEqualTo("http://stripe-mock:12111");
                     assertThat(props.connect()).isTrue();
                 });
     }
@@ -35,6 +37,7 @@ class PaymentStripePropertiesTest {
             assertThat(props.secretKey()).isEmpty();
             assertThat(props.webhookSecret()).isEmpty();
             assertThat(props.apiVersion()).isEqualTo("2024-06-20");
+            assertThat(props.apiBase()).isEmpty();
             assertThat(props.connect()).isFalse();
         });
     }
@@ -42,9 +45,9 @@ class PaymentStripePropertiesTest {
     @Test
     void configuredKeyMeansStripeActivating() {
         PaymentStripeProperties configured = new PaymentStripeProperties(
-                "sk_test_123", "whsec_123", "2024-06-20", false);
+                "sk_test_123", "whsec_123", "2024-06-20", "", false);
         PaymentStripeProperties blank = new PaymentStripeProperties(
-                "", "whsec_123", "2024-06-20", false);
+                "", "whsec_123", "2024-06-20", "", false);
         assertThat(configured.isConfigured()).isTrue();
         assertThat(blank.isConfigured()).isFalse();
     }
@@ -53,20 +56,27 @@ class PaymentStripePropertiesTest {
     void apiVersionDriftFromSdkConstantIsDetected() {
         String sdkVersion = com.stripe.Stripe.API_VERSION;
         PaymentStripeProperties drifted = new PaymentStripeProperties(
-                "sk_test_123", "whsec_123", "1900-01-01", false);
+                "sk_test_123", "whsec_123", "1900-01-01", "", false);
         PaymentStripeProperties aligned = new PaymentStripeProperties(
-                "sk_test_123", "whsec_123", sdkVersion, false);
+                "sk_test_123", "whsec_123", sdkVersion, "", false);
         PaymentStripeProperties blankKey = new PaymentStripeProperties(
-                "", "whsec_123", "1900-01-01", false);
+                "", "whsec_123", "1900-01-01", "", false);
         assertThat(drifted.isVersionDriftedFromSdk()).isTrue();
         assertThat(aligned.isVersionDriftedFromSdk()).isFalse();
         assertThat(blankKey.isVersionDriftedFromSdk()).isFalse();
     }
 
     @Test
+    void blankApiBaseKeepsTheProviderEndpointUntouched() {
+        PaymentStripeProperties props = new PaymentStripeProperties(
+                "sk_test_123", "whsec_123", "2024-06-20", "  ", false);
+        assertThat(props.apiBase()).isEmpty();
+    }
+
+    @Test
     void blankApiVersionFallsBackToFleetPinnedVersion() {
         PaymentStripeProperties props = new PaymentStripeProperties(
-                "sk_test_123", "whsec_123", " ", false);
+                "sk_test_123", "whsec_123", " ", "", false);
         assertThat(props.apiVersion()).isEqualTo("2024-06-20");
     }
 

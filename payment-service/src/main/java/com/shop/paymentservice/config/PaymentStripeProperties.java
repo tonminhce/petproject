@@ -7,17 +7,27 @@ public record PaymentStripeProperties(
         String secretKey,
         String webhookSecret,
         String apiVersion,
+        String apiBase,
         boolean connect) {
 
     public PaymentStripeProperties {
         if (secretKey == null) {
             secretKey = "";
+        } else {
+            secretKey = secretKey.trim();
         }
         if (webhookSecret == null) {
             webhookSecret = "";
+        } else {
+            webhookSecret = webhookSecret.trim();
         }
         if (apiVersion == null || apiVersion.isBlank()) {
             apiVersion = "2024-06-20";
+        }
+        if (apiBase == null) {
+            apiBase = "";
+        } else {
+            apiBase = apiBase.trim();
         }
     }
 

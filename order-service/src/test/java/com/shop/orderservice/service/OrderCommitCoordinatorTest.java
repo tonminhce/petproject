@@ -26,6 +26,7 @@ class OrderCommitCoordinatorTest {
 
     @Mock PromotionServiceClient promotionClient;
     @Mock InventoryServiceClient inventoryClient;
+    @Mock CompensationFailureService compensationFailureService;
 
     private SimpleMeterRegistry meterRegistry;
     private OrderConfirmMetrics confirmMetrics;
@@ -44,7 +45,8 @@ class OrderCommitCoordinatorTest {
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
         confirmMetrics = new OrderConfirmMetrics(meterRegistry);
-        coordinator = new OrderCommitCoordinator(promotionClient, inventoryClient, meterRegistry, confirmMetrics);
+        coordinator = new OrderCommitCoordinator(promotionClient, inventoryClient, meterRegistry,
+            confirmMetrics, compensationFailureService);
     }
 
     private Order orderWithPromotion() {
@@ -156,7 +158,7 @@ class OrderCommitCoordinatorTest {
     }
 
     @Test
-    void commit_rollbackFailure_swallowed_counterIncremented_originalRethrown() {
+    void commit_rollbackFailure_recordedInTheLedger_counterIncremented_originalRethrown() {
         Order order = orderWithPromotion();
         List<OrderItem> items = List.of(item(p1, r1), item(p2, r2));
         RuntimeException commitFailure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
@@ -174,5 +176,51 @@ class OrderCommitCoordinatorTest {
             .isEqualTo(1.0);
         assertThat(meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").count())
             .isEqualTo(1.0);
+    }
+
+    @Test
+    void commit_rollbackFailure_isRecordedInTheCompensationLedger() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, r1), item(p2, r2));
+        RuntimeException commitFailure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+        doNothing().when(inventoryClient).commit(r1);
+        doThrow(commitFailure).when(inventoryClient).commit(r2);
+        doThrow(new IllegalStateException("release-committed 500")).when(inventoryClient).releaseCommitted(r1);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, items)).isSameAs(commitFailure);
+
+        verify(compensationFailureService).record(eq(orderId), eq(r1),
+            eq(com.shop.orderservice.entity.FailedCompensation.KIND_RESERVATION_RELEASE_COMMITTED),
+            eq("release-committed 500"));
+        verify(compensationFailureService, never()).record(any(), eq(r2), any(), any());
+    }
+
+    @Test
+    void commit_promotionRollbackFailure_isRecordedInTheCompensationLedger() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, r1), item(p2, r2));
+        RuntimeException commitFailure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+        doNothing().when(inventoryClient).commit(r1);
+        doThrow(commitFailure).when(inventoryClient).commit(r2);
+        doThrow(new IllegalStateException("release-committed 500")).when(promotionClient).releaseCommitted(promoId);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, items)).isSameAs(commitFailure);
+
+        verify(compensationFailureService).record(eq(orderId), eq(promoId),
+            eq(com.shop.orderservice.entity.FailedCompensation.KIND_PROMOTION_RELEASE_COMMITTED),
+            eq("release-committed 500"));
+    }
+
+    @Test
+    void commit_successfulCompensation_leavesNoLedgerEntry() {
+        Order order = orderWithPromotion();
+        List<OrderItem> items = List.of(item(p1, r1), item(p2, r2));
+        RuntimeException commitFailure = BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+        doNothing().when(inventoryClient).commit(r1);
+        doThrow(commitFailure).when(inventoryClient).commit(r2);
+
+        assertThatThrownBy(() -> coordinator.commitForConfirm(order, items)).isSameAs(commitFailure);
+
+        verify(compensationFailureService, never()).record(any(), any(), any(), any());
     }
 }

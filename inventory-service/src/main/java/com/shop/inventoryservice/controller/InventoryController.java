@@ -2,10 +2,12 @@ package com.shop.inventoryservice.controller;
 
 import com.shop.common.core.constants.ApiPaths;
 import com.shop.common.core.constants.PageableConstant;
+import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.logging.audit.Audited;
 import com.shop.common.security.service.ServiceCallerGuard;
+import com.shop.inventoryservice.constant.ReservationIdempotency;
 import com.shop.inventoryservice.dto.request.InventoryUpsertRequest;
 import com.shop.inventoryservice.dto.request.ReserveRequest;
 import com.shop.inventoryservice.dto.response.InventoryResponse;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -82,10 +85,19 @@ public class InventoryController {
     @PreAuthorize("hasRole('SERVICE') or hasRole('ADMIN')")
     @Audited(action = "inventory.reserve", resourceType = "reservation")
     public ApiResponse<ReservationResponse> reserve(@PathVariable UUID productId,
-                                                     @Valid @RequestBody ReserveRequest request) {
+                                                     @Valid @RequestBody ReserveRequest request,
+                                                     @RequestHeader(value = ReservationIdempotency.KEY_HEADER,
+                                                             required = false) String idempotencyKey) {
 
         serviceCallerGuard.requireCaller("order-service");
-        return ApiResponse.ok(reservationService.reserveWithRetry(productId, request));
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return ApiResponse.ok(reservationService.reserveWithRetry(productId, request));
+        }
+        String key = idempotencyKey.trim();
+        if (key.length() > ReservationIdempotency.MAX_KEY_LENGTH) {
+            throw BusinessException.badRequest("order.idempotency.key.tooLong", ReservationIdempotency.MAX_KEY_LENGTH);
+        }
+        return ApiResponse.ok(reservationService.reserveWithRetry(productId, request, key));
     }
 
     @PostMapping("/reservations/{reservationId}/commit")

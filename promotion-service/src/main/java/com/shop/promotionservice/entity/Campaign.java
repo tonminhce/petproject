@@ -51,6 +51,14 @@ public class Campaign extends AbstractMappedEntity {
     @Builder.Default
     private Integer perUserLimit = 1;
 
+    @Column(name = "used_count", nullable = false, insertable = false, updatable = false)
+    @Builder.Default
+    private Integer usedCount = 0;
+
+    @Column(name = "budget_used", nullable = false, insertable = false, updatable = false)
+    @Builder.Default
+    private BigDecimal budgetUsed = BigDecimal.ZERO;
+
     @Version
     @Column(name = "version")
     @Builder.Default

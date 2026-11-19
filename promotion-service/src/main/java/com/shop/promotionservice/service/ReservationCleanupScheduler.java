@@ -3,6 +3,7 @@ package com.shop.promotionservice.service;
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.entity.CouponUsageReservation;
 import com.shop.promotionservice.repository.CampaignRepository;
+import com.shop.promotionservice.repository.CampaignUserUsageRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ public class ReservationCleanupScheduler {
 
     private final CouponUsageReservationRepository reservationRepository;
     private final CampaignRepository campaignRepository;
+    private final CampaignUserUsageRepository campaignUserUsageRepository;
     private final PromotionEventPublisher eventPublisher;
     private final TransactionTemplate transactionTemplate;
 
@@ -34,10 +36,12 @@ public class ReservationCleanupScheduler {
     public ReservationCleanupScheduler(
             CouponUsageReservationRepository reservationRepository,
             CampaignRepository campaignRepository,
+            CampaignUserUsageRepository campaignUserUsageRepository,
             PromotionEventPublisher eventPublisher,
             PlatformTransactionManager txManager) {
         this.reservationRepository = reservationRepository;
         this.campaignRepository = campaignRepository;
+        this.campaignUserUsageRepository = campaignUserUsageRepository;
         this.eventPublisher = eventPublisher;
         this.transactionTemplate = new TransactionTemplate(txManager);
     }
@@ -66,6 +70,10 @@ public class ReservationCleanupScheduler {
                         }
                         expired++;
                         reservation.setReleasedAt(now);
+                        campaignRepository.releaseQuota(reservation.getCampaignId(),
+                            reservation.getDiscountAmount());
+                        campaignUserUsageRepository.releaseQuota(reservation.getCampaignId(),
+                            reservation.getUserId());
                         campaignRepository.findById(reservation.getCampaignId()).ifPresent(campaign ->
                                 eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name()));
                     }

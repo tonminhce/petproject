@@ -1,0 +1,83 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 006-campaign-quota-counters
+      author: production-audit
+      changes:
+        - addColumn:
+            tableName: campaign
+            columns:
+              - column:
+                  name: used_count
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: budget_used
+                  type: 'numeric(19,2)'
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+        - createTable:
+            tableName: campaign_user_usage
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValue: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: campaign_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: used_count
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: campaign_user_usage
+            baseColumnNames: campaign_id
+            referencedTableName: campaign
+            referencedColumnNames: id
+            constraintName: fk_cuu_campaign
+
+        - sql:
+            sql: ALTER TABLE campaign_user_usage ADD CONSTRAINT uk_cuu_campaign_user UNIQUE (campaign_id, user_id)
+
+        - sql:
+            sql: ALTER TABLE campaign ADD CONSTRAINT ck_campaign_used_count CHECK (used_count >= 0)
+
+        - sql:
+            sql: ALTER TABLE campaign ADD CONSTRAINT ck_campaign_budget_used CHECK (budget_used >= 0)
+
+        - sql:
+            sql: ALTER TABLE campaign_user_usage ADD CONSTRAINT ck_cuu_used_count CHECK (used_count >= 0)
+
+        - sql:
+            sql: >-
+              UPDATE campaign c
+                 SET used_count = (SELECT count(*) FROM coupon_usage_reservation r
+                                   WHERE r.campaign_id = c.id AND r.status IN ('PENDING', 'COMMITTED')),
+                     budget_used = coalesce((SELECT sum(r.discount_amount) FROM coupon_usage_reservation r
+                                              WHERE r.campaign_id = c.id AND r.status IN ('PENDING', 'COMMITTED')), 0)
+
+        - sql:
+            sql: >-
+              INSERT INTO campaign_user_usage (campaign_id, user_id, used_count)
+                   SELECT r.campaign_id, r.user_id, count(*)
+                     FROM coupon_usage_reservation r
+                    WHERE r.status IN ('PENDING', 'COMMITTED')
+                    GROUP BY r.campaign_id, r.user_id

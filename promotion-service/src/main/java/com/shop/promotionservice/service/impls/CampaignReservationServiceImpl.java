@@ -9,6 +9,7 @@ import com.shop.promotionservice.dto.response.ReservationResponse;
 import com.shop.promotionservice.entity.Campaign;
 import com.shop.promotionservice.entity.CouponUsageReservation;
 import com.shop.promotionservice.repository.CampaignRepository;
+import com.shop.promotionservice.repository.CampaignUserUsageRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import com.shop.promotionservice.service.CampaignReservationService;
 import com.shop.promotionservice.service.DiscountCalculator;
@@ -22,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,11 +30,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CampaignReservationServiceImpl implements CampaignReservationService {
 
-    private static final List<UsageStatus> COUNTED_STATUSES =
-        List.of(UsageStatus.PENDING, UsageStatus.COMMITTED);
-
     private final CampaignRepository campaignRepository;
     private final CouponUsageReservationRepository reservationRepository;
+    private final CampaignUserUsageRepository campaignUserUsageRepository;
     private final PromotionEventPublisher eventPublisher;
     private final Clock clock;
 
@@ -75,24 +73,13 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             campaign.getDiscountType(), campaign.getDiscountValue(), request.orderAmount());
 
         if (campaign.getPerUserLimit() > 0
-                && reservationRepository.countByCampaignIdAndUserIdAndStatusIn(
-                    campaign.getId(), request.userId(), COUNTED_STATUSES) >= campaign.getPerUserLimit()) {
+                && campaignUserUsageRepository.claimQuota(
+                    campaign.getId(), request.userId(), campaign.getPerUserLimit()) == 0) {
             throw BusinessException.of(ErrorCode.PER_USER_LIMIT_EXCEEDED, request.userId());
         }
-        if (campaign.getMaxRedemptions() != null
-                && reservationRepository.countByCampaignIdAndStatusIn(
-                    campaign.getId(), COUNTED_STATUSES) >= campaign.getMaxRedemptions()) {
+        if (campaignRepository.claimQuota(campaign.getId(), discount) == 0) {
             throw BusinessException.of(ErrorCode.BUDGET_EXHAUSTED, campaign.getCode());
         }
-        if (campaign.getTotalBudget() != null
-                && reservationRepository.sumDiscountByCampaignIdAndStatusIn(
-                    campaign.getId(), COUNTED_STATUSES).add(discount)
-                        .compareTo(campaign.getTotalBudget()) > 0) {
-            throw BusinessException.of(ErrorCode.BUDGET_EXHAUSTED, campaign.getCode());
-        }
-
-        campaign.setUpdatedAt(now);
-        campaignRepository.saveAndFlush(campaign);
 
         CouponUsageReservation reservation = CouponUsageReservation.builder()
             .campaignId(campaign.getId())
@@ -156,6 +143,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         reservation.setStatus(UsageStatus.RELEASED);
         reservation.setReleasedAt(clock.instant());
         reservationRepository.save(reservation);
+        releaseQuota(campaign.getId(), reservation);
         eventPublisher.publishReleased(campaign, reservation, UsageStatus.PENDING.name());
     }
 
@@ -175,6 +163,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         reservation.setStatus(UsageStatus.RELEASED);
         reservation.setReleasedAt(clock.instant());
         reservationRepository.save(reservation);
+        releaseQuota(campaign.getId(), reservation);
         eventPublisher.publishReleased(campaign, reservation, UsageStatus.COMMITTED.name());
     }
 
@@ -189,6 +178,11 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
     private CouponUsageReservation loadReservation(UUID id) {
         return reservationRepository.findById(id)
             .orElseThrow(() -> BusinessException.of(ErrorCode.PROMOTION_RESERVATION_NOT_FOUND, id));
+    }
+
+    private void releaseQuota(UUID campaignId, CouponUsageReservation reservation) {
+        campaignRepository.releaseQuota(campaignId, reservation.getDiscountAmount());
+        campaignUserUsageRepository.releaseQuota(campaignId, reservation.getUserId());
     }
 
     private Campaign loadCampaign(CouponUsageReservation reservation) {

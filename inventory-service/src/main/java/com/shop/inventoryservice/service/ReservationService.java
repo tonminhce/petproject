@@ -9,6 +9,8 @@ public interface ReservationService {
 
     ReservationResponse reserveWithRetry(UUID productId, ReserveRequest request);
 
+    ReservationResponse reserveWithRetry(UUID productId, ReserveRequest request, String idempotencyKey);
+
     void commitWithRetry(UUID reservationId);
 
     void releaseWithRetry(UUID reservationId);

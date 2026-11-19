@@ -1,7 +1,6 @@
 package com.shop.ratingservice.eligibility;
 
 import com.shop.common.core.viewmodel.ApiResponse;
-import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.ratingservice.config.RatingClientProperties;
 import com.shop.ratingservice.security.ServiceTokenProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
@@ -21,7 +19,7 @@ import java.util.UUID;
 @Slf4j
 public class EligibilityClient {
 
-    private static final ParameterizedTypeReference<ApiResponse<PageResponse<OrderItemSnapshot>>> RESPONSE_TYPE =
+    private static final ParameterizedTypeReference<ApiResponse<PurchaseEligibilitySnapshot>> RESPONSE_TYPE =
         new ParameterizedTypeReference<>() {};
 
     private final RatingClientProperties props;
@@ -34,7 +32,7 @@ public class EligibilityClient {
     @CircuitBreaker(name = "orderService")
     public boolean isEligible(UUID userId, UUID productId) {
         try {
-            ApiResponse<PageResponse<OrderItemSnapshot>> resp = restClient.get()
+            ApiResponse<PurchaseEligibilitySnapshot> resp = restClient.get()
                 .uri(uriBuilder -> uriBuilder.path("/api/v1/orders/verify-purchase")
                     .queryParam("userId", userId)
                     .queryParam("productId", productId)
@@ -42,16 +40,15 @@ public class EligibilityClient {
                 .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
                 .retrieve()
                 .body(RESPONSE_TYPE);
-            if (resp == null || resp.data() == null || resp.data().content() == null) {
+            if (resp == null || resp.data() == null) {
                 return false;
             }
-            return !resp.data().content().isEmpty();
+            return resp.data().eligible();
         } catch (RestClientException ex) {
             log.error("Purchase verification failed for user {} product {} — failing closed", userId, productId, ex);
             return false;
         }
     }
 
-    record OrderItemSnapshot(UUID productId, String productTitle, Integer quantity,
-                             BigDecimal unitPrice, BigDecimal lineTotal) {}
+    record PurchaseEligibilitySnapshot(boolean eligible, long deliveredItemCount) {}
 }

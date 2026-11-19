@@ -29,7 +29,7 @@ class StripeHealthIndicatorTest {
         balanceStatic = mockStatic(Balance.class);
         accountStatic = mockStatic(Account.class);
         indicator = new StripeHealthIndicator(new PaymentStripeProperties(
-                "sk_test_123", "whsec_123", "2024-06-20", false));
+                "sk_test_123", "whsec_123", "2024-06-20", "", false));
     }
 
     @AfterEach

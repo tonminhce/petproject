@@ -23,6 +23,8 @@ public interface InventoryService {
 
     ReservationResponse reserve(UUID productId, ReserveRequest request);
 
+    ReservationResponse reserve(UUID productId, ReserveRequest request, String idempotencyKey);
+
     void commit(UUID reservationId);
 
     void release(UUID reservationId);

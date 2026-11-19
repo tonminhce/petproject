@@ -81,3 +81,9 @@ order:
   reconciliation:
     interval-ms: ${ORDER_RECONCILIATION_INTERVAL_MS:300000}
     stuck-minutes: ${ORDER_RECONCILIATION_STUCK_MINUTES:30}
+  compensation:
+    retry-millis: ${ORDER_COMPENSATION_RETRY_MILLIS:30000}
+    retry-backoff-seconds: ${ORDER_COMPENSATION_RETRY_BACKOFF_SECONDS:60}
+    claim-lease-seconds: ${ORDER_COMPENSATION_CLAIM_LEASE_SECONDS:120}
+    max-attempts: ${ORDER_COMPENSATION_MAX_ATTEMPTS:5}
+    batch-size: ${ORDER_COMPENSATION_BATCH_SIZE:50}

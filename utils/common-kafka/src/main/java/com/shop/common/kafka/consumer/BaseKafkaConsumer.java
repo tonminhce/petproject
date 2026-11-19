@@ -1,20 +1,18 @@
 package com.shop.common.kafka.consumer;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.MessageHeaders;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public abstract class BaseKafkaConsumer<K, V> {
 
-    private static final ObjectMapper WIRE_MAPPER =
-            new ObjectMapper().registerModule(new JavaTimeModule());
+    private static final ObjectMapper WIRE_MAPPER = KafkaWireMapper.mapper();
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -56,8 +54,8 @@ public abstract class BaseKafkaConsumer<K, V> {
         }
         try {
             JsonNode node = WIRE_MAPPER.readTree(rawValue);
-            if (node.isTextual()) {
-                node = WIRE_MAPPER.readTree(node.textValue());
+            if (node.isString()) {
+                node = WIRE_MAPPER.readTree(node.stringValue());
             }
             V bound = WIRE_MAPPER.treeToValue(node, type);
             if (bound == null) {

@@ -61,7 +61,8 @@ public class KafkaAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnClass(org.springframework.boot.actuate.endpoint.annotation.Endpoint.class)
+    @ConditionalOnClass({org.springframework.boot.actuate.endpoint.annotation.Endpoint.class,
+            org.springframework.security.access.prepost.PreAuthorize.class})
     @ConditionalOnProperty(prefix = "shop.kafka.dlq-replay", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
     public DeadLetterReplayEndpoint deadLetterReplayEndpoint(DeadLetterReplayService replayService) {

@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-reservations-idempotency-key
+      author: production-audit
+      changes:
+        - addColumn:
+            tableName: reservations
+            columns:
+              - column:
+                  name: idempotency_key
+                  type: VARCHAR(64)
+        - addUniqueConstraint:
+            tableName: reservations
+            columnNames: idempotency_key
+            constraintName: uk_reservations_idempotency_key

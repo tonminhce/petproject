@@ -5,6 +5,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.searchservice.dto.response.ReindexResponse;
+import com.shop.searchservice.kafka.ProductLifecycleEvent;
+import com.shop.searchservice.service.ProductSearchService;
 import com.shop.searchservice.service.ReindexService;
 import com.shop.searchservice.support.AbstractSearchIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +40,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 class ReindexIT extends AbstractSearchIntegrationTest {
+
+    private static final String SNAPSHOT_UPDATED_AT = "2026-08-31T09:30:00Z";
 
     static final WireMockServer productServer = new WireMockServer(0);
     static final WireMockServer keycloakServer = new WireMockServer(0);
@@ -60,6 +66,9 @@ class ReindexIT extends AbstractSearchIntegrationTest {
 
     @Autowired
     private ReindexService reindexService;
+
+    @Autowired
+    private ProductSearchService productSearchService;
 
     @BeforeEach
     void resetDownstreamStubs() {
@@ -188,6 +197,49 @@ class ReindexIT extends AbstractSearchIntegrationTest {
     }
 
 
+    @Test
+    @DisplayName("reindexed doc carries the external version: a stale event is refused, a newer one is applied")
+    void reindexedDocumentKeepsMonotonicProjection() throws Exception {
+        UUID p1 = UUID.randomUUID();
+        int beforeMax = maxGeneration();
+        stubPage(0, true, 1, snapshotJson(p1, "iPhone 15"));
+
+        ReindexResponse response = reindexService.reindex(false);
+
+        assertThat(response.indexed()).isEqualTo(1);
+        assertThat(response.indexName()).isEqualTo("products-v" + (beforeMax + 1));
+
+        client.indices().refresh(r -> r.index("products"));
+        assertThat(docVersionViaAlias(p1)).isEqualTo(externalVersion(SNAPSHOT_UPDATED_AT));
+
+        productSearchService.index(lifecycleEvent(p1, "2026-08-31T08:00:00Z", "Stale iPhone 15"));
+        client.indices().refresh(r -> r.index("products"));
+        assertThat(docViaAlias(p1)).containsEntry("title", "iPhone 15");
+
+        productSearchService.index(lifecycleEvent(p1, "2026-08-31T10:30:00Z", "Fresh iPhone 15"));
+        client.indices().refresh(r -> r.index("products"));
+        assertThat(docViaAlias(p1)).containsEntry("title", "Fresh iPhone 15");
+    }
+
+    private ProductLifecycleEvent lifecycleEvent(UUID productId, String occurredAt, String title) {
+        return new ProductLifecycleEvent(
+            UUID.randomUUID().toString(), "ProductUpdated", occurredAt, productId, "iphone-15",
+            "ACTIVE", title, "Apple smartphone",
+            UUID.fromString("11111111-1111-1111-1111-111111111111"), "Apple",
+            UUID.fromString("22222222-2222-2222-2222-222222222222"), "Phones",
+            new BigDecimal("999.00"), "http://img/iphone.png",
+            new BigDecimal("4.50"), 12, occurredAt);
+    }
+
+    private long externalVersion(String timestamp) {
+        Instant instant = Instant.parse(timestamp);
+        return instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
+    }
+
+    private long docVersionViaAlias(UUID productId) throws Exception {
+        return client.get(g -> g.index("products").id(productId.toString()), Map.class).version();
+    }
+
     private static final String PAGE_URI = "/api/v1/backoffice/products?page=%d&size=200&status=ACTIVE";
 
     private void stubPage(int page, boolean last, int totalPages, String... snapshots) {
@@ -202,8 +254,9 @@ class ReindexIT extends AbstractSearchIntegrationTest {
              "avgRating":4.50,"ratingCount":12,
              "categoryId":"22222222-2222-2222-2222-222222222222","categoryTitle":"Phones",
              "brandId":"11111111-1111-1111-1111-111111111111","brandName":"Apple",
-             "updatedAt":"2026-08-31T09:30:00Z","sku":"IGNORED","quantity":9}
-            """.formatted(id, title, title.toLowerCase().replace(" ", "-")).replace("\n", " ");
+             "updatedAt":"%s","sku":"IGNORED","quantity":9}
+            """.formatted(id, title, title.toLowerCase().replace(" ", "-"), SNAPSHOT_UPDATED_AT)
+            .replace("\n", " ");
     }
 
     private static String pageJson(int page, int totalPages, boolean last, String... snapshots) {

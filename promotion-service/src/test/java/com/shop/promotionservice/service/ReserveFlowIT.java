@@ -49,6 +49,8 @@ class ReserveFlowIT extends AbstractIntegrationTest {
     @Autowired
     private ReservationRetryService reservationService;
     @Autowired
+    private ReservationCleanupScheduler reservationCleanupScheduler;
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
 
@@ -75,7 +77,7 @@ class ReserveFlowIT extends AbstractIntegrationTest {
 
     private CouponUsageReservation seedReservation(UUID campaignId, UUID userId, UsageStatus status,
                                                    String discount, Instant reservedAt) {
-        return reservationRepository.save(CouponUsageReservation.builder()
+        CouponUsageReservation saved = reservationRepository.save(CouponUsageReservation.builder()
             .campaignId(campaignId)
             .userId(userId)
             .orderId(UUID.randomUUID())
@@ -85,6 +87,14 @@ class ReserveFlowIT extends AbstractIntegrationTest {
             .reservedAt(reservedAt)
             .expiresAt(reservedAt.plusSeconds(TTL_SECONDS))
             .build());
+        if (COUNTED_STATUSES.contains(status)) {
+            jdbcTemplate.update("UPDATE campaign SET used_count = used_count + 1, "
+                + "budget_used = budget_used + ? WHERE id = ?", new BigDecimal(discount), campaignId);
+            jdbcTemplate.update("INSERT INTO campaign_user_usage (campaign_id, user_id, used_count) "
+                + "VALUES (?, ?, 1) ON CONFLICT (campaign_id, user_id) "
+                + "DO UPDATE SET used_count = campaign_user_usage.used_count + 1", campaignId, userId);
+        }
+        return saved;
     }
 
     private List<String> outboxPayloads(String eventType) {
@@ -313,8 +323,10 @@ class ReserveFlowIT extends AbstractIntegrationTest {
 
         CouponUsageReservation expired = reservationRepository.findById(first.reservationId())
             .orElseThrow();
-        expired.setStatus(UsageStatus.EXPIRED);
+        expired.setExpiresAt(Instant.now().minusSeconds(60));
         reservationRepository.save(expired);
+
+        reservationCleanupScheduler.releaseAllExpiredReservations();
 
         ReservationResponse second =
             reservationService.reserveWithRetry("BUDGETRETURN-IT", request(UUID.randomUUID(), "500.00"));

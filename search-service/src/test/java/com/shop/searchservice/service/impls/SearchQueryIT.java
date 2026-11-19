@@ -1,6 +1,7 @@
 package com.shop.searchservice.service.impls;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.Conflicts;
 import com.shop.searchservice.dto.request.SearchRequest;
 import com.shop.searchservice.dto.response.ProductSearchResponse;
 import com.shop.searchservice.kafka.ProductLifecycleEvent;
@@ -19,7 +20,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -55,20 +58,29 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
     @Autowired MockMvc mockMvc;
     @Autowired MeterRegistry meterRegistry;
 
+    private static final AtomicInteger SEED_CYCLE = new AtomicInteger();
+
     @BeforeEach
     void seedDocs() throws Exception {
-        elasticsearchClient.deleteByQuery(d -> d.index("products").query(q -> q.matchAll(m -> m)));
+        elasticsearchClient.deleteByQuery(d -> d.index("products")
+            .query(q -> q.matchAll(m -> m))
+            .conflicts(Conflicts.Proceed));
+        final String cycle = SEED_CYCLE.incrementAndGet() + "s";
         seed(P1, "Laser Mouse", "Ergonomic office mouse for daily work",
-            BRAND_A, "LogiTech", CAT_X, "Peripherals", "10.00", "4.5", 2, T1);
+            BRAND_A, "LogiTech", CAT_X, "Peripherals", "10.00", "4.5", 2, stamp(T1, cycle));
         seed(P2, "Office Keyboard", "Laser tracking keyboard for professionals",
-            BRAND_A, "LogiTech", CAT_Y, "Input", "30.00", "3.0", 1, T2);
+            BRAND_A, "LogiTech", CAT_Y, "Input", "30.00", "3.0", 1, stamp(T2, cycle));
         seed(P3, "Mechanical Keyboard", "Tactile switches for typing",
-            BRAND_B, "Nordica", CAT_X, "Peripherals", "20.00", null, null, T3);
+            BRAND_B, "Nordica", CAT_X, "Peripherals", "20.00", null, null, stamp(T3, cycle));
         seed(P4, "Wireless Mouse Pro", "Silent clicks and long battery life",
-            BRAND_B, "Nordica", CAT_Y, "Input", "40.00", "5.0", 4, T4);
+            BRAND_B, "Nordica", CAT_Y, "Input", "40.00", "5.0", 4, stamp(T4, cycle));
         seed(P5, "USB Hub", "Seven ports for everything on the desk",
-            BRAND_C, "Kestrel", CAT_Z, "Accessories", "25.00", "2.0", 1, T5);
+            BRAND_C, "Kestrel", CAT_Z, "Accessories", "25.00", "2.0", 1, stamp(T5, cycle));
         elasticsearchClient.indices().refresh(r -> r.index("products"));
+    }
+
+    private static String stamp(String base, String cycle) {
+        return Instant.parse(base).plusSeconds(Long.parseLong(cycle.replace("s", ""))).toString();
     }
 
     private void seed(UUID id, String title, String description, UUID brandId, String brandName,

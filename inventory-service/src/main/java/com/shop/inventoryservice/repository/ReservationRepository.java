@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ReservationRepository extends JpaRepository<Reservation, UUID> {
@@ -26,6 +27,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
                                          @Param("cutoff") Instant cutoff);
 
     long countByProductIdAndStatusIn(UUID productId, List<ReservationStatus> statuses);
+
+    Optional<Reservation> findByIdempotencyKey(String idempotencyKey);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Reservation r SET r.status = :expired, r.version = r.version + 1 "

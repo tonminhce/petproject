@@ -43,7 +43,7 @@ class StripeProviderTest {
         paymentIntentStatic = mockStatic(PaymentIntent.class);
         refundStatic = mockStatic(Refund.class);
         provider = new StripeProvider(new com.shop.paymentservice.config.PaymentStripeProperties(
-                "sk_test_123", "whsec_123", "2024-06-20", false));
+                "sk_test_123", "whsec_123", "2024-06-20", "", false));
     }
 
     @AfterEach
@@ -295,7 +295,7 @@ class StripeProviderTest {
     void blankSecretKey_failsFastAtBeanCreation() {
 
         com.shop.paymentservice.config.PaymentStripeProperties blank =
-                new com.shop.paymentservice.config.PaymentStripeProperties("", "whsec", "2024-06-20", false);
+                new com.shop.paymentservice.config.PaymentStripeProperties("", "whsec", "2024-06-20", "", false);
         assertThatThrownBy(() -> new StripeProvider(blank))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("secret-key");

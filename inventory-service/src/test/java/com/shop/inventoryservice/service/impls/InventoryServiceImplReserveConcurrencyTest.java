@@ -59,7 +59,7 @@ class InventoryServiceImplReserveConcurrencyTest {
             .thenReturn(Optional.of(inventoryWith(initialAvailable, 0)));
         when(inventoryRepository.atomicReserve(eq(productId), eq(qtyPerReserve)))
             .thenReturn(1);
-        lenient().when(reservationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(reservationRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(mapper.toReservationResponse(any())).thenAnswer(inv ->
             new ReservationResponse(UUID.randomUUID(), productId, qtyPerReserve,
                 com.shop.inventoryservice.constant.ReservationStatus.PENDING,

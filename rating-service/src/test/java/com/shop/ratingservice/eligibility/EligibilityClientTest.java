@@ -51,16 +51,10 @@ class EligibilityClientTest {
         lenient().when(serviceTokenProvider.getToken()).thenReturn("test-token");
     }
 
-    private static String itemJson(UUID productId, String title, int quantity) {
+    private static String eligibilityJson(boolean eligible, long count) {
         return """
-            {"productId":"%s","productTitle":"%s","quantity":%d,"unitPrice":110.00,"lineTotal":%s}
-            """.formatted(productId, title, quantity, "220.00");
-    }
-
-    private static String pageJson(String... entries) {
-        return """
-            {"success":true,"code":"OK","data":{"content":[%s],"page":0,"size":20,"totalElements":%d,"totalPages":1,"first":true,"last":true}}
-            """.formatted(String.join(",", entries), entries.length);
+            {"success":true,"code":"OK","data":{"eligible":%s,"deliveredItemCount":%d}}
+            """.formatted(eligible, count);
     }
 
     @Test
@@ -68,16 +62,16 @@ class EligibilityClientTest {
         stubToken();
         server.expect(requestTo(VERIFY_URL))
             .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(pageJson(itemJson(PRODUCT_ID, "Classic Tee", 2)), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(eligibilityJson(true, 2), MediaType.APPLICATION_JSON));
 
         assertThat(client.isEligible(USER_ID, PRODUCT_ID)).isTrue();
     }
 
     @Test
-    void emptyPageYieldsFalse() {
+    void noDeliveredItemYieldsFalse() {
         stubToken();
         server.expect(requestTo(VERIFY_URL))
-            .andRespond(withSuccess(pageJson(), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(eligibilityJson(false, 0), MediaType.APPLICATION_JSON));
 
         assertThat(client.isEligible(USER_ID, PRODUCT_ID)).isFalse();
     }
@@ -109,7 +103,7 @@ class EligibilityClientTest {
         server.expect(requestTo(VERIFY_URL))
             .andExpect(method(HttpMethod.GET))
             .andExpect(header("Authorization", "Bearer test-token"))
-            .andRespond(withSuccess(pageJson(itemJson(PRODUCT_ID, "Classic Tee", 1)), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(eligibilityJson(true, 1), MediaType.APPLICATION_JSON));
 
         assertThat(client.isEligible(USER_ID, PRODUCT_ID)).isTrue();
         server.verify();

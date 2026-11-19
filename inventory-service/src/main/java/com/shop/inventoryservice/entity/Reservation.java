@@ -57,6 +57,9 @@ public class Reservation {
     @Column(name = "order_id")
     private UUID orderId;
 
+    @Column(name = "idempotency_key", length = 64)
+    private String idempotencyKey;
+
     @Version
     @Column(name = "version", nullable = false)
     @Builder.Default

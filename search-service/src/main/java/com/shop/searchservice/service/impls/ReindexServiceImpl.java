@@ -2,6 +2,7 @@ package com.shop.searchservice.service.impls;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch._types.VersionType;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.indices.update_aliases.Action;
@@ -11,6 +12,7 @@ import com.shop.common.core.exception.ErrorCode;
 import com.shop.searchservice.client.ProductBackofficeClient;
 import com.shop.searchservice.dto.response.ReindexResponse;
 import com.shop.searchservice.search.IndexProvisioner;
+import com.shop.searchservice.search.ProductEventVersion;
 import com.shop.searchservice.service.ProductDocuments;
 import com.shop.searchservice.service.ReindexService;
 import lombok.RequiredArgsConstructor;
@@ -94,10 +96,15 @@ public class ReindexServiceImpl implements ReindexService {
             BulkRequest.Builder builder = new BulkRequest.Builder();
             for (ProductBackofficeClient.ProductSnapshot snapshot : snapshots) {
                 Map<String, Object> document = ProductDocuments.of(snapshot);
-                builder.operations(op -> op.index(idx -> idx
-                    .index(newIndex)
-                    .id(document.get("id").toString())
-                    .document(document)));
+                Long version = ProductEventVersion.forTimestamp(snapshot.updatedAt());
+                builder.operations(op -> op.index(idx -> {
+                    var indexOperation = idx.index(newIndex)
+                        .id(document.get("id").toString())
+                        .document(document);
+                    return version == null
+                        ? indexOperation
+                        : indexOperation.version(version).versionType(VersionType.External);
+                }));
             }
             BulkResponse response = client.bulk(builder.build());
             if (response.errors()) {

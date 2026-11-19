@@ -13,8 +13,12 @@ public class FailedCompensation {
 
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_RESOLVED = "RESOLVED";
+    public static final String STATUS_PROCESSING = "PROCESSING";
+    public static final String STATUS_EXHAUSTED = "EXHAUSTED";
 
     public static final String KIND_RESERVATION_RELEASE = "RESERVATION_RELEASE";
+    public static final String KIND_RESERVATION_RELEASE_COMMITTED = "RESERVATION_RELEASE_COMMITTED";
+    public static final String KIND_PROMOTION_RELEASE_COMMITTED = "PROMOTION_RELEASE_COMMITTED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

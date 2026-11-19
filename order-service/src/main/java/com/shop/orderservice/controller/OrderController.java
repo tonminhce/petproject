@@ -6,9 +6,11 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.security.jwt.AuthenticatedUser;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
+import com.shop.orderservice.dto.response.PurchaseEligibility;
 import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.service.OrderService;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ServiceCallerGuard serviceCallerGuard;
 
     @PostMapping
     public ApiResponse<OrderResponse> createOrder(
@@ -79,15 +82,12 @@ public class OrderController {
 
     @GetMapping("/verify-purchase")
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
-    public ApiResponse<PageResponse<OrderItemResponse>> verifyPurchase(
-            @RequestParam UUID userId, @RequestParam UUID productId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, Math.min(size, PageableConstant.MAX_PAGE_SIZE));
-        Page<OrderItemResponse> result =
-            orderService.findDeliveredItemsByUserAndProduct(userId, productId, pageable);
-        return ApiResponse.ok(PageResponse.of(
-            result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements()));
+    public ApiResponse<PurchaseEligibility> verifyPurchase(
+            @RequestParam UUID userId, @RequestParam UUID productId) {
+        serviceCallerGuard.requireCaller("rating-service");
+        Page<OrderItemResponse> result = orderService.findDeliveredItemsByUserAndProduct(
+                userId, productId, PageRequest.of(0, 1));
+        return ApiResponse.ok(PurchaseEligibility.of(result.getTotalElements()));
     }
 
     private static UUID currentUserId() {

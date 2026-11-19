@@ -7,6 +7,8 @@ import com.shop.inventoryservice.dto.response.ReservationResponse;
 import com.shop.inventoryservice.service.InventoryService;
 import com.shop.inventoryservice.service.ReservationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ReservationServiceImpl implements ReservationService {
 
@@ -25,6 +28,24 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public ReservationResponse reserveWithRetry(UUID productId, ReserveRequest request) {
         return withRetry(() -> inventoryService.reserve(productId, request), productId);
+    }
+
+    @Override
+    public ReservationResponse reserveWithRetry(UUID productId, ReserveRequest request, String idempotencyKey) {
+        return withRetry(() -> reserveIdempotently(productId, request, idempotencyKey), productId);
+    }
+
+    private ReservationResponse reserveIdempotently(UUID productId, ReserveRequest request, String idempotencyKey) {
+        try {
+            return inventoryService.reserve(productId, request, idempotencyKey);
+        } catch (DataIntegrityViolationException ex) {
+            if (idempotencyKey == null || idempotencyKey.isBlank()) {
+                throw ex;
+            }
+            log.info("Reserve for product {} lost the idempotency-key race - replaying the committed reservation",
+                productId);
+            return inventoryService.reserve(productId, request, idempotencyKey);
+        }
     }
 
     @Override

@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DeadLetterReplayServiceTest {
 
-    private static final String TOPIC = "replay-round-trip-topic";
+    private static final String TOPIC = com.shop.common.kafka.contract.KafkaTopicContract.SHOP_ORDER_LIFECYCLE;
     private static final String POISON = "{ this is not json }";
     private static final String GOOD = "{\"eventId\":\"e-1\",\"eventType\":\"test.event.v1\"}";
 

@@ -7,6 +7,7 @@ import com.shop.promotionservice.dto.response.ReservationResponse;
 import com.shop.promotionservice.entity.Campaign;
 import com.shop.promotionservice.entity.CouponUsageReservation;
 import com.shop.promotionservice.repository.CampaignRepository;
+import com.shop.promotionservice.repository.CampaignUserUsageRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import com.shop.promotionservice.service.impls.CampaignReservationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class CampaignLifecycleTest {
 
     @Mock CampaignRepository campaignRepository;
     @Mock CouponUsageReservationRepository reservationRepository;
+    @Mock CampaignUserUsageRepository campaignUserUsageRepository;
     @Mock PromotionEventPublisher eventPublisher;
 
     private CampaignReservationServiceImpl service;
@@ -49,7 +51,8 @@ class CampaignLifecycleTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new CampaignReservationServiceImpl(
-            campaignRepository, reservationRepository, eventPublisher, clock);
+            campaignRepository, reservationRepository, campaignUserUsageRepository,
+            eventPublisher, clock);
     }
 
     private Campaign campaign() {

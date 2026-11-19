@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       file: 005-promotion-outbox-claim-lease.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-006-campaign-quota-counters.yaml
+      relativeToChangelogFile: true

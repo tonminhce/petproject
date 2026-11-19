@@ -240,12 +240,11 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.toResponse(order, orderItemRepository.findByOrderId(order.getId()));
     }
 
-    private void recordCompensationFailure(UUID orderId, UUID reservationId, Exception ex) {
+    private void recordCompensationFailure(UUID orderId, UUID reservationId, String kind, Exception ex) {
         if (compensationFailureService == null) {
             return;
         }
-        compensationFailureService.record(orderId, reservationId,
-                FailedCompensation.KIND_RESERVATION_RELEASE, ex.getMessage());
+        compensationFailureService.record(orderId, reservationId, kind, ex.getMessage());
     }
 
     private void releaseAllReservationsById(UUID orderId, List<UUID> reservationIds) {
@@ -253,7 +252,7 @@ public class OrderServiceImpl implements OrderService {
             try {
                 stockReservationService.release(id);
             } catch (Exception ex) {
-                recordCompensationFailure(orderId, id, ex);
+                recordCompensationFailure(orderId, id, FailedCompensation.KIND_RESERVATION_RELEASE, ex);
                 log.error("Failed to release reservation {} during cancel", id, ex);
             }
         }
@@ -264,7 +263,7 @@ public class OrderServiceImpl implements OrderService {
             try {
                 stockReservationService.releaseCommitted(id);
             } catch (Exception ex) {
-                recordCompensationFailure(orderId, id, ex);
+                recordCompensationFailure(orderId, id, FailedCompensation.KIND_RESERVATION_RELEASE_COMMITTED, ex);
                 log.error("Failed to release committed reservation {} during admin cancel", id, ex);
             }
         }

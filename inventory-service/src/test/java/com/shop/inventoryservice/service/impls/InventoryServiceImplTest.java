@@ -114,7 +114,7 @@ class InventoryServiceImplTest {
 
         when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(1);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
-        when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
+        when(reservationRepository.saveAndFlush(any(Reservation.class))).thenReturn(reservation);
         when(mapper.toReservationResponse(any(Reservation.class)))
             .thenReturn(new ReservationResponse(reservationId, productId, 5, ReservationStatus.PENDING,
                 reservation.getCreatedAt(), reservation.getExpiresAt(), null, null, null));
@@ -347,7 +347,7 @@ class InventoryServiceImplTest {
 
         when(inventoryRepository.atomicReserve(productId, req.quantity())).thenReturn(1);
         when(inventoryRepository.findByProductId(productId)).thenReturn(Optional.of(inventory));
-        when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
+        when(reservationRepository.saveAndFlush(any(Reservation.class))).thenReturn(reservation);
 
         service.reserve(productId, req);
 

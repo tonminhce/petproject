@@ -44,7 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         TaxCalculationController.class},
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, AuditAutoConfiguration.class, AopAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class,
+        AuditAutoConfiguration.class, AopAutoConfiguration.class})
 class BackofficeTaxAuditTest {
 
     @TestConfiguration(proxyBeanMethods = false)

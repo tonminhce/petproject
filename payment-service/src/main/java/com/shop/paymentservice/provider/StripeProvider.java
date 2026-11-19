@@ -5,6 +5,7 @@ import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.CardException;
 import com.stripe.exception.IdempotencyException;
 import com.stripe.exception.StripeException;
+import com.stripe.StripeClient;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
 import com.stripe.net.RequestOptions;
@@ -26,6 +27,7 @@ import java.util.UUID;
 public class StripeProvider implements PaymentProvider {
 
     private final PaymentStripeProperties properties;
+    private final StripeClient stripeClient;
 
     public StripeProvider(PaymentStripeProperties properties) {
         if (properties == null || properties.secretKey() == null || properties.secretKey().isBlank()) {
@@ -33,6 +35,17 @@ public class StripeProvider implements PaymentProvider {
                     "StripeProvider requires shop.payment.stripe.secret-key env (SHOP_PAYMENT_STRIPE_SECRET_KEY)");
         }
         this.properties = properties;
+        this.stripeClient = buildClient(properties);
+    }
+
+    private static StripeClient buildClient(final PaymentStripeProperties properties) {
+        if (properties.apiBase().isBlank()) {
+            return null;
+        }
+        return StripeClient.builder()
+                .setApiKey(properties.secretKey())
+                .setApiBase(properties.apiBase())
+                .build();
     }
 
     @PostConstruct
@@ -63,7 +76,7 @@ public class StripeProvider implements PaymentProvider {
                 .putMetadata("idempotency_key", idempotencyKey)
                 .build();
         try {
-            PaymentIntent intent = PaymentIntent.create(params, stripeOptions(idempotencyKey));
+            PaymentIntent intent = createIntent(params, idempotencyKey);
             return captureOutcome(intent, minorUnits, currency);
         } catch (IdempotencyException e) {
             log.info("Stripe replayed a cached intent for idempotency key {} - the capture outcome is unknown",
@@ -105,7 +118,7 @@ public class StripeProvider implements PaymentProvider {
                     .setPaymentIntent(original.getId())
                     .setAmount(refundMinorUnits)
                     .build();
-            Refund refund = Refund.create(params, stripeOptions(refundKey));
+            Refund refund = createRefund(params, refundKey);
             return refundOutcome(refund, refundMinorUnits);
         } catch (IdempotencyException e) {
             log.info("Stripe replayed a cached refund for idempotency key {} - the refund outcome is unknown",
@@ -170,11 +183,39 @@ public class StripeProvider implements PaymentProvider {
 
     private PaymentIntent resolveIntent(UUID paymentId, String providerIntentId) throws StripeException {
         if (providerIntentId != null && !providerIntentId.isBlank()) {
-            return PaymentIntent.retrieve(providerIntentId, RequestOptions.builder()
-                    .setApiKey(properties.secretKey())
-                    .build());
+            return retrieveIntent(providerIntentId);
         }
         return findIntentByLocalPaymentId(paymentId);
+    }
+
+    private PaymentIntent createIntent(PaymentIntentCreateParams params, String idempotencyKey)
+            throws StripeException {
+        RequestOptions options = stripeOptions(idempotencyKey);
+        return stripeClient == null
+                ? PaymentIntent.create(params, options)
+                : stripeClient.paymentIntents().create(params, options);
+    }
+
+    private Refund createRefund(RefundCreateParams params, String idempotencyKey) throws StripeException {
+        RequestOptions options = stripeOptions(idempotencyKey);
+        return stripeClient == null
+                ? Refund.create(params, options)
+                : stripeClient.refunds().create(params, options);
+    }
+
+    private PaymentIntent retrieveIntent(String intentId) throws StripeException {
+        RequestOptions options = RequestOptions.builder().setApiKey(properties.secretKey()).build();
+        return stripeClient == null
+                ? PaymentIntent.retrieve(intentId, options)
+                : stripeClient.paymentIntents().retrieve(intentId, options);
+    }
+
+    private PaymentIntent searchIntents(PaymentIntentSearchParams searchParams) throws StripeException {
+        RequestOptions options = RequestOptions.builder().setApiKey(properties.secretKey()).build();
+        return stripeClient == null
+                ? PaymentIntent.search(searchParams, options).getData().stream().findFirst().orElse(null)
+                : stripeClient.paymentIntents().search(searchParams, options).getData().stream()
+                        .findFirst().orElse(null);
     }
 
     private PaymentIntent findIntentByLocalPaymentId(UUID paymentId) throws StripeException {
@@ -182,10 +223,7 @@ public class StripeProvider implements PaymentProvider {
                 .setQuery("metadata['payment_id']:'" + paymentId + "'")
                 .setLimit(1L)
                 .build();
-        return PaymentIntent.search(searchParams, RequestOptions.builder()
-                .setApiKey(properties.secretKey())
-                .build())
-            .getData().stream().findFirst().orElse(null);
+        return searchIntents(searchParams);
     }
 
     private boolean isDefinitiveClientError(StripeException e) {

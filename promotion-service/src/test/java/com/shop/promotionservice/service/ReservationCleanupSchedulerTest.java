@@ -3,6 +3,7 @@ package com.shop.promotionservice.service;
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.entity.CouponUsageReservation;
 import com.shop.promotionservice.repository.CampaignRepository;
+import com.shop.promotionservice.repository.CampaignUserUsageRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ class ReservationCleanupSchedulerTest {
 
     @Mock CouponUsageReservationRepository reservationRepository;
     @Mock CampaignRepository campaignRepository;
+    @Mock CampaignUserUsageRepository campaignUserUsageRepository;
     @Mock PromotionEventPublisher eventPublisher;
 
     private ReservationCleanupScheduler scheduler;
@@ -52,7 +54,8 @@ class ReservationCleanupSchedulerTest {
             public void rollback(TransactionStatus status) { }
         };
         scheduler = new ReservationCleanupScheduler(
-                reservationRepository, campaignRepository, eventPublisher, txManager);
+                reservationRepository, campaignRepository, campaignUserUsageRepository,
+                eventPublisher, txManager);
         ReflectionTestUtils.setField(scheduler, "batchSize", 500);
         ReflectionTestUtils.setField(scheduler, "retentionDays", 30);
     }

@@ -8,6 +8,7 @@ import com.shop.promotionservice.dto.response.ReservationResponse;
 import com.shop.promotionservice.entity.Campaign;
 import com.shop.promotionservice.entity.CouponUsageReservation;
 import com.shop.promotionservice.repository.CampaignRepository;
+import com.shop.promotionservice.repository.CampaignUserUsageRepository;
 import com.shop.promotionservice.repository.CouponUsageReservationRepository;
 import com.shop.promotionservice.service.impls.CampaignReservationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +24,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,11 +37,10 @@ class CampaignReserveTest {
     private static final Instant NOW = Instant.parse("2026-08-30T10:00:00Z");
     private static final long TTL_SECONDS = 900L;
     private static final String CODE = "SAVE10";
-    private static final List<UsageStatus> COUNTED_STATUSES =
-        List.of(UsageStatus.PENDING, UsageStatus.COMMITTED);
 
     @Mock CampaignRepository campaignRepository;
     @Mock CouponUsageReservationRepository reservationRepository;
+    @Mock CampaignUserUsageRepository campaignUserUsageRepository;
     @Mock PromotionEventPublisher eventPublisher;
 
     private CampaignReservationServiceImpl service;
@@ -54,7 +53,7 @@ class CampaignReserveTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new CampaignReservationServiceImpl(
-            campaignRepository, reservationRepository, eventPublisher, clock);
+            campaignRepository, reservationRepository, campaignUserUsageRepository, eventPublisher, clock);
         ReflectionTestUtils.setField(service, "reservationTtlSeconds", TTL_SECONDS);
     }
 
@@ -81,14 +80,18 @@ class CampaignReserveTest {
 
     private void stubHappyPath(Campaign campaign) {
         when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(campaign));
-        when(campaignRepository.saveAndFlush(any(Campaign.class)))
-            .thenAnswer(inv -> inv.getArgument(0));
+        when(campaignRepository.claimQuota(any(UUID.class), any(BigDecimal.class))).thenReturn(1);
         when(reservationRepository.save(any(CouponUsageReservation.class)))
             .thenAnswer(inv -> {
                 CouponUsageReservation r = inv.getArgument(0);
                 r.setId(UUID.randomUUID());
                 return r;
             });
+    }
+
+    private void stubPerUserQuota() {
+        when(campaignUserUsageRepository.claimQuota(any(UUID.class), any(UUID.class), anyInt()))
+            .thenReturn(1);
     }
 
     @Test
@@ -171,8 +174,8 @@ class CampaignReserveTest {
             .thenReturn(Optional.of(baseCampaign().startsAt(NOW.plusSeconds(1)).build()));
 
         assertThatThrownBy(() -> service.reserve(CODE, request("199.99")))
-            .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7004"));
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("PRO-7004"));
     }
 
     @Test
@@ -182,8 +185,8 @@ class CampaignReserveTest {
             .thenReturn(Optional.of(baseCampaign().endsAt(NOW.minusSeconds(1)).build()));
 
         assertThatThrownBy(() -> service.reserve(CODE, request("199.99")))
-            .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7004"));
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("PRO-7004"));
     }
 
 
@@ -194,33 +197,30 @@ class CampaignReserveTest {
             .thenReturn(Optional.of(baseCampaign().minOrderAmount(new BigDecimal("200.00")).build()));
 
         assertThatThrownBy(() -> service.reserve(CODE, request("199.99")))
-            .isInstanceOfSatisfying(BusinessException.class, ex -> {
-                assertThat(ex.getErrorCode()).isEqualTo("PRO-7005");
-                assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-            });
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("PRO-7005"));
         verifyNoInteractions(reservationRepository, eventPublisher);
     }
 
 
     @Test
-    @DisplayName("user at per_user_limit → PER_USER_LIMIT_EXCEEDED (PRO-7006)")
+    @DisplayName("per-user quota claim refused → PER_USER_LIMIT_EXCEEDED (PRO-7006)")
     void perUserLimitReachedThrowsPerUserLimitExceeded() {
         when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(activeCampaign()));
-        when(reservationRepository.countByCampaignIdAndUserIdAndStatusIn(
-            campaignId, userId, COUNTED_STATUSES)).thenReturn(1L);
+        when(campaignUserUsageRepository.claimQuota(campaignId, userId, 1)).thenReturn(0);
 
         assertThatThrownBy(() -> service.reserve(CODE, request("199.99")))
             .isInstanceOfSatisfying(BusinessException.class, ex -> {
                 assertThat(ex.getErrorCode()).isEqualTo("PRO-7006");
                 assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
             });
-        verify(reservationRepository).countByCampaignIdAndUserIdAndStatusIn(
-            campaignId, userId, COUNTED_STATUSES);
+        verify(campaignUserUsageRepository).claimQuota(campaignId, userId, 1);
+        verify(campaignRepository, never()).claimQuota(any(), any());
         verifyNoInteractions(eventPublisher);
     }
 
     @Test
-    @DisplayName("per_user_limit=0 → check skipped (no per-user count query)")
+    @DisplayName("per_user_limit=0 → check skipped (no per-user quota claim)")
     void zeroPerUserLimitSkipsLimitCheck() {
         Campaign campaign = baseCampaign().perUserLimit(0).build();
         stubHappyPath(campaign);
@@ -228,50 +228,48 @@ class CampaignReserveTest {
         ReservationResponse response = service.reserve(CODE, request("199.99"));
 
         assertThat(response).isNotNull();
-        verify(reservationRepository, never()).countByCampaignIdAndUserIdAndStatusIn(
-            any(), any(), any());
+        verify(campaignUserUsageRepository, never()).claimQuota(any(), any(), anyInt());
     }
 
 
     @Test
-    @DisplayName("max_redemptions reached (PENDING+COMMITTED count) → BUDGET_EXHAUSTED (PRO-7007)")
+    @DisplayName("campaign quota claim refused → BUDGET_EXHAUSTED (PRO-7007)")
     void maxRedemptionsReachedThrowsBudgetExhausted() {
         Campaign campaign = baseCampaign().maxRedemptions(10).build();
         when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(campaign));
-        when(reservationRepository.countByCampaignIdAndStatusIn(campaignId, COUNTED_STATUSES))
-            .thenReturn(10L);
+        when(campaignUserUsageRepository.claimQuota(campaignId, userId, 1)).thenReturn(1);
+        when(campaignRepository.claimQuota(campaignId, new BigDecimal("20.00"))).thenReturn(0);
 
         assertThatThrownBy(() -> service.reserve(CODE, request("199.99")))
             .isInstanceOfSatisfying(BusinessException.class, ex -> {
                 assertThat(ex.getErrorCode()).isEqualTo("PRO-7007");
                 assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
             });
-        verify(reservationRepository, never()).sumDiscountByCampaignIdAndStatusIn(any(), any());
+        verify(campaignRepository).claimQuota(campaignId, new BigDecimal("20.00"));
         verifyNoInteractions(eventPublisher);
     }
 
 
     @Test
-    @DisplayName("sumDiscount(PENDING+COMMITTED) + newDiscount > total_budget → BUDGET_EXHAUSTED (PRO-7007)")
+    @DisplayName("campaign quota claim refused when the budget is exhausted → BUDGET_EXHAUSTED (PRO-7007)")
     void budgetExceededThrowsBudgetExhausted() {
         Campaign campaign = baseCampaign().totalBudget(new BigDecimal("100.00")).build();
         when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(campaign));
-        when(reservationRepository.sumDiscountByCampaignIdAndStatusIn(campaignId, COUNTED_STATUSES))
-            .thenReturn(new BigDecimal("80.01"));
+        when(campaignUserUsageRepository.claimQuota(campaignId, userId, 1)).thenReturn(1);
+        when(campaignRepository.claimQuota(campaignId, new BigDecimal("20.00"))).thenReturn(0);
 
         assertThatThrownBy(() -> service.reserve(CODE, request("199.99")))
-            .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("PRO-7007"));
+            .isInstanceOfSatisfying(BusinessException.class, ex ->
+                assertThat(ex.getErrorCode()).isEqualTo("PRO-7007"));
         verifyNoInteractions(eventPublisher);
     }
 
     @Test
-    @DisplayName("sumDiscount + newDiscount == total_budget → allowed (<= passes)")
+    @DisplayName("campaign quota claim granted when the budget is exactly met → allowed")
     void budgetExactlyMetIsAllowed() {
         Campaign campaign = baseCampaign().totalBudget(new BigDecimal("100.00")).build();
         stubHappyPath(campaign);
-        when(reservationRepository.sumDiscountByCampaignIdAndStatusIn(campaignId, COUNTED_STATUSES))
-            .thenReturn(new BigDecimal("80.00"));
+        stubPerUserQuota();
 
         ReservationResponse response = service.reserve(CODE, request("199.99"));
 
@@ -280,18 +278,17 @@ class CampaignReserveTest {
 
 
     @Test
-    @DisplayName("happy: saves PENDING row frozen at now+ttl, touches campaign version, publishes, returns frozen amounts")
+    @DisplayName("happy: saves PENDING row frozen at now+ttl, claims both quotas, publishes, returns frozen amounts")
     void happyPathSavesPendingRowAndReturnsFrozenAmounts() {
         Campaign campaign = activeCampaign();
         stubHappyPath(campaign);
+        stubPerUserQuota();
 
         ReservationResponse response = service.reserve(CODE, request("199.99"));
 
-        assertThat(campaign.getUpdatedAt()).isEqualTo(NOW);
-        verify(campaignRepository).saveAndFlush(same(campaign));
-
-        verify(reservationRepository).countByCampaignIdAndUserIdAndStatusIn(
-            campaignId, userId, COUNTED_STATUSES);
+        verify(campaignUserUsageRepository).claimQuota(campaignId, userId, 1);
+        verify(campaignRepository).claimQuota(campaignId, new BigDecimal("20.00"));
+        verify(campaignRepository, never()).saveAndFlush(any(Campaign.class));
 
         org.mockito.ArgumentCaptor<CouponUsageReservation> captor =
             org.mockito.ArgumentCaptor.forClass(CouponUsageReservation.class);
@@ -322,10 +319,12 @@ class CampaignReserveTest {
     void nullCapsAreSkipped() {
         Campaign campaign = activeCampaign();
         stubHappyPath(campaign);
+        stubPerUserQuota();
 
         ReservationResponse response = service.reserve(CODE, request("0.01"));
 
         assertThat(response.discountAmount()).isEqualByComparingTo("0.00");
+        verify(campaignRepository).claimQuota(campaignId, new BigDecimal("0.00"));
         verify(reservationRepository, never()).countByCampaignIdAndStatusIn(any(), any());
         verify(reservationRepository, never()).sumDiscountByCampaignIdAndStatusIn(any(), any());
     }

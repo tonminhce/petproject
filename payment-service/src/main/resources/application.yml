@@ -40,6 +40,7 @@ shop:
       secret-key: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:}
       webhook-secret: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:}
       api-version: "2024-06-20"
+      api-base: ${SHOP_PAYMENT_STRIPE_API_BASE:}
       connect: false
 
   security:

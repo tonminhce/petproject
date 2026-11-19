@@ -1,9 +1,11 @@
 package com.shop.common.kafka.replay;
 
+import com.shop.common.kafka.contract.KafkaTopicContract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -19,10 +21,12 @@ public class DeadLetterReplayEndpoint {
     }
 
     @WriteOperation
+    @PreAuthorize("hasRole('ADMIN')")
     public ReplayResponse replay(ReplayRequest request) {
         if (request == null || request.deadLetterTopic() == null || request.deadLetterTopic().isBlank()) {
             throw new IllegalArgumentException("deadLetterTopic is required");
         }
+        KafkaTopicContract.requireDeadLetterTopic(request.deadLetterTopic());
         int maxRecords = request.maxRecords() <= 0 ? 10 : request.maxRecords();
         int maxConsecutiveFailures = request.maxConsecutiveFailures() <= 0 ? 3 : request.maxConsecutiveFailures();
         DeadLetterReplayService.ReplayResult result =

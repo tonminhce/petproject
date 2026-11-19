@@ -1,9 +1,11 @@
 package com.shop.orderservice.controller;
 
 import com.shop.common.security.config.SecurityAutoConfiguration;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.service.OrderService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -37,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(value = OrderController.class,
     properties = {"shop.security.issuer-uri=http://localhost:9999/realms/test"})
 @AutoConfigureMockMvc
-@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class})
+@Import({ApiExceptionHandler.class, SecurityAutoConfiguration.class, ServiceCallerGuard.class})
 class VerifyPurchaseEndpointTest {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -51,6 +53,7 @@ class VerifyPurchaseEndpointTest {
 
     private final UUID userId = UUID.fromString("00000000-0000-0000-0000-000000007001");
     private final UUID productId = UUID.fromString("00000000-0000-0000-0000-000000007002");
+    private final String clientId = "rating-service";
 
     private OrderItemResponse item() {
         return new OrderItemResponse(productId, "Widget", 2,
@@ -58,7 +61,12 @@ class VerifyPurchaseEndpointTest {
     }
 
     private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor serviceClient() {
-        return jwt().jwt(j -> j.subject("rating-service"))
+        return jwt().jwt(j -> j.subject("service-account-" + clientId).claim("azp", clientId))
+            .authorities(createAuthorityList("ROLE_SERVICE"));
+    }
+
+    private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor foreignServiceClient() {
+        return jwt().jwt(j -> j.subject("service-account-media-service").claim("azp", "media-service"))
             .authorities(createAuthorityList("ROLE_SERVICE"));
     }
 
@@ -76,9 +84,12 @@ class VerifyPurchaseEndpointTest {
         return "/api/v1/orders/verify-purchase?userId=" + userId + "&productId=" + productId;
     }
 
+    @BeforeEach
+    void resetInteractions() {
+    }
 
     @Test
-    void verifyPurchase_serviceRole_returns200WithItems() throws Exception {
+    void verifyPurchase_serviceRoleClient_returnsTheEligibilityOnly() throws Exception {
         when(orderService.findDeliveredItemsByUserAndProduct(
                 eq(userId), eq(productId), any(Pageable.class)))
             .thenReturn(new PageImpl<>(List.of(item())));
@@ -86,12 +97,25 @@ class VerifyPurchaseEndpointTest {
         mockMvc.perform(get(url()).with(serviceClient()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.content[0].productId").value(productId.toString()))
-            .andExpect(jsonPath("$.data.totalElements").value(1));
+            .andExpect(jsonPath("$.data.eligible").value(true))
+            .andExpect(jsonPath("$.data.deliveredItemCount").value(1));
     }
 
     @Test
-    void verifyPurchase_serviceRole_returns200WithEmptyPage_whenNoDeliveredPurchase() throws Exception {
+    void verifyPurchase_doesNotExposeTheOrderItemsOfTheUser() throws Exception {
+        when(orderService.findDeliveredItemsByUserAndProduct(
+                eq(userId), eq(productId), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(item())));
+
+        mockMvc.perform(get(url()).with(serviceClient()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.content").doesNotExist())
+            .andExpect(jsonPath("$.data.productTitle").doesNotExist())
+            .andExpect(jsonPath("$.data.unitPrice").doesNotExist());
+    }
+
+    @Test
+    void verifyPurchase_serviceRoleClient_returnsNotEligible_whenNoDeliveredPurchase() throws Exception {
         when(orderService.findDeliveredItemsByUserAndProduct(
                 eq(userId), eq(productId), any(Pageable.class)))
             .thenReturn(Page.empty());
@@ -99,8 +123,16 @@ class VerifyPurchaseEndpointTest {
         mockMvc.perform(get(url()).with(serviceClient()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.content").isEmpty())
-            .andExpect(jsonPath("$.data.totalElements").value(0));
+            .andExpect(jsonPath("$.data.eligible").value(false))
+            .andExpect(jsonPath("$.data.deliveredItemCount").value(0));
+    }
+
+    @Test
+    void verifyPurchase_aServiceClientOutsideTheAllowListIsRejected() throws Exception {
+        mockMvc.perform(get(url()).with(foreignServiceClient()))
+            .andExpect(status().isForbidden());
+
+        verifyNoInteractions(orderService);
     }
 
     @Test
@@ -115,18 +147,17 @@ class VerifyPurchaseEndpointTest {
     }
 
     @Test
-    void verifyPurchase_passesCappedPageable() throws Exception {
+    void verifyPurchase_readsOnlyTheFirstPage() throws Exception {
         when(orderService.findDeliveredItemsByUserAndProduct(
                 eq(userId), eq(productId), any(Pageable.class)))
             .thenReturn(Page.empty());
 
-        mockMvc.perform(get(url() + "&page=1&size=5000").with(serviceClient()))
+        mockMvc.perform(get(url()).with(serviceClient()))
             .andExpect(status().isOk());
 
         org.mockito.Mockito.verify(orderService).findDeliveredItemsByUserAndProduct(
-            eq(userId), eq(productId), eq(PageRequest.of(1, com.shop.common.core.constants.PageableConstant.MAX_PAGE_SIZE)));
+            eq(userId), eq(productId), eq(PageRequest.of(0, 1)));
     }
-
 
     @Test
     void verifyPurchase_customerRole_returns403() throws Exception {

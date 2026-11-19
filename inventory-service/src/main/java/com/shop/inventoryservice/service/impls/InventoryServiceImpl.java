@@ -9,6 +9,7 @@ import com.shop.inventoryservice.dto.response.InventoryResponse;
 import com.shop.inventoryservice.dto.response.ReservationResponse;
 import com.shop.inventoryservice.entity.Inventory;
 import com.shop.inventoryservice.entity.Reservation;
+import com.shop.inventoryservice.constant.ReservationIdempotency;
 import com.shop.inventoryservice.constant.ReservationStatus;
 import com.shop.inventoryservice.mapper.InventoryMapper;
 import com.shop.inventoryservice.repository.InventoryRepository;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -128,6 +130,30 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public ReservationResponse reserve(UUID productId, ReserveRequest request) {
+        return reserve(productId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public ReservationResponse reserve(UUID productId, ReserveRequest request, String idempotencyKey) {
+        String key = normalizeIdempotencyKey(idempotencyKey);
+        if (key != null) {
+            Optional<Reservation> existing = reservationRepository.findByIdempotencyKey(key);
+            if (existing.isPresent()) {
+                return replayReservation(existing.get(), productId, request.quantity(), key);
+            }
+        }
+
+        Reservation reservation = reservationRepository.saveAndFlush(Reservation.builder()
+            .productId(productId)
+            .quantity(request.quantity())
+            .status(ReservationStatus.PENDING)
+            .createdAt(Instant.now())
+            .expiresAt(Instant.now().plusSeconds(reservationTtlSeconds))
+            .orderId(request.orderId())
+            .idempotencyKey(key)
+            .build());
+
         int updated = inventoryRepository.atomicReserve(productId, request.quantity());
         if (updated == 0) {
             inventoryRepository.findByProductId(productId)
@@ -137,19 +163,35 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = inventoryRepository.findByProductId(productId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.INVENTORY_NOT_FOUND, productId));
 
-        Reservation reservation = Reservation.builder()
-            .productId(productId)
-            .quantity(request.quantity())
-            .status(ReservationStatus.PENDING)
-            .createdAt(Instant.now())
-            .expiresAt(Instant.now().plusSeconds(reservationTtlSeconds))
-            .orderId(request.orderId())
-            .build();
-        reservationRepository.save(reservation);
-
         publisher.publishReserved(inventory, reservation);
         cacheService.evictAfterCommit(productId);
         return mapper.toReservationResponse(reservation);
+    }
+
+    private ReservationResponse replayReservation(Reservation existing, UUID productId, int quantity, String key) {
+        if (!existing.getProductId().equals(productId)
+            || existing.getQuantity() == null
+            || existing.getQuantity() != quantity) {
+            log.warn("Idempotency key {} was replayed with a different reservation intent "
+                    + "(stored product {} quantity {}, requested product {} quantity {}) - rejecting the replay",
+                key, existing.getProductId(), existing.getQuantity(), productId, quantity);
+            throw BusinessException.conflict("order.duplicate.request", key);
+        }
+        return mapper.toReservationResponse(existing);
+    }
+
+    private String normalizeIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null) {
+            return null;
+        }
+        String trimmed = idempotencyKey.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() > ReservationIdempotency.MAX_KEY_LENGTH) {
+            throw BusinessException.badRequest("order.idempotency.key.tooLong", ReservationIdempotency.MAX_KEY_LENGTH);
+        }
+        return trimmed;
     }
 
     @Override

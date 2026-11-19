@@ -39,7 +39,7 @@ public class ProductSearchConsumer extends BaseKafkaConsumer<String, String> {
         }
         switch (event.eventType() == null ? "" : event.eventType()) {
             case "ProductCreated", "ProductUpdated" -> productSearchService.index(event);
-            case "ProductDeleted" -> productSearchService.delete(event.productId());
+            case "ProductDeleted" -> productSearchService.delete(event);
             default -> log.info("Skipping unknown product eventType {} (eventId={})",
                 event.eventType(), event.eventId());
         }

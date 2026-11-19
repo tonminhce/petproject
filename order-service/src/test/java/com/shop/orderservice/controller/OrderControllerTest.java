@@ -4,6 +4,7 @@ import com.shop.common.spring.web.exception.ApiExceptionHandler;
 import com.shop.orderservice.dto.response.OrderItemResponse;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.constant.OrderStatus;
+import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.orderservice.service.OrderService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(OrderController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(ApiExceptionHandler.class)
+@Import({ApiExceptionHandler.class, ServiceCallerGuard.class})
 class OrderControllerTest {
 
     @Autowired private MockMvc mockMvc;

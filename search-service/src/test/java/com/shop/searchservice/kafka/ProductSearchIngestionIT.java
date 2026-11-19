@@ -126,6 +126,7 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         Map<String, Object> updated = payload(productId, "ProductUpdated", "ACTIVE");
         updated.put("title", "Gaming Mouse");
         updated.put("price", new BigDecimal("39.99"));
+        updated.put("occurredAt", "2026-08-31T11:30:00Z");
         updated.put("updatedAt", "2026-08-31T11:30:00Z");
         send(productId, updated);
 
@@ -147,7 +148,10 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         send(productId, payload(productId, "ProductCreated", "ACTIVE"));
         awaitDocIndexed(productId);
 
-        send(productId, payload(productId, "ProductUpdated", "ARCHIVED"));
+        Map<String, Object> archived = payload(productId, "ProductUpdated", "ARCHIVED");
+        archived.put("occurredAt", "2026-08-31T11:30:00Z");
+        archived.put("updatedAt", "2026-08-31T11:30:00Z");
+        send(productId, archived);
 
         awaitDocDeleted(productId);
     }
@@ -165,6 +169,8 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         Map<String, Object> active = payload(productId, "ProductUpdated", "ACTIVE");
         active.put("avgRating", null);
         active.put("ratingCount", null);
+        active.put("occurredAt", "2026-08-31T10:05:00Z");
+        active.put("updatedAt", "2026-08-31T10:20:30Z");
         send(productId, active);
 
         Map<String, Object> doc = awaitDocIndexed(productId);
@@ -182,7 +188,10 @@ class ProductSearchIngestionIT extends AbstractSearchIntegrationTest {
         send(productId, payload(productId, "ProductCreated", "ACTIVE"));
         awaitDocIndexed(productId);
 
-        send(productId, payload(productId, "ProductDeleted", "ACTIVE"));
+        Map<String, Object> deleted = payload(productId, "ProductDeleted", "ACTIVE");
+        deleted.put("occurredAt", "2026-08-31T11:30:00Z");
+        deleted.put("updatedAt", "2026-08-31T11:30:00Z");
+        send(productId, deleted);
 
         awaitDocDeleted(productId);
     }

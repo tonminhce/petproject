@@ -2,6 +2,7 @@ package com.shop.orderservice.service;
 
 import com.shop.orderservice.client.InventoryServiceClient;
 import com.shop.orderservice.client.PromotionServiceClient;
+import com.shop.orderservice.entity.FailedCompensation;
 import com.shop.orderservice.entity.Order;
 import com.shop.orderservice.entity.OrderItem;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,6 +32,7 @@ public class OrderCommitCoordinator {
     private final InventoryServiceClient inventoryClient;
     private final MeterRegistry meterRegistry;
     private final OrderConfirmMetrics confirmMetrics;
+    private final CompensationFailureService compensationFailureService;
 
     private static final ExecutorService COMMIT_EXECUTOR =
         Executors.newFixedThreadPool(
@@ -119,22 +121,29 @@ public class OrderCommitCoordinator {
         } catch (RuntimeException ex) {
             log.warn("Order {} commit failed after {} successes — compensating",
                 order.getId(), committed.size(), ex);
-            compensateInReverse(committed);
+            compensateInReverse(order, committed);
             meterRegistry.counter("order.confirm.commit.outcome", "result", "compensated").increment();
             throw ex;
         }
     }
 
-    private void compensateInReverse(List<CompensationTarget> committed) {
+    private void compensateInReverse(Order order, List<CompensationTarget> committed) {
         for (int i = committed.size() - 1; i >= 0; i--) {
             CompensationTarget t = committed.get(i);
             try {
                 if (t.type() == CompensationTarget.Type.PROMOTION) promotionClient.releaseCommitted(t.id());
                 else inventoryClient.releaseCommitted(t.id());
             } catch (Exception ex) {
-                log.error("Failed to rollback {} reservation {} — reconciliation owns it", t.type(), t.id(), ex);
+                compensationFailureService.record(order.getId(), t.id(), compensationKind(t), ex.getMessage());
+                log.error("Failed to rollback {} reservation {} — recorded for the retry", t.type(), t.id(), ex);
                 meterRegistry.counter("order.confirm.commit.outcome", "result", "rollback_failed").increment();
             }
         }
+    }
+
+    private static String compensationKind(CompensationTarget target) {
+        return target.type() == CompensationTarget.Type.PROMOTION
+            ? FailedCompensation.KIND_PROMOTION_RELEASE_COMMITTED
+            : FailedCompensation.KIND_RESERVATION_RELEASE_COMMITTED;
     }
 }

@@ -6,6 +6,8 @@ import java.util.Map;
 
 public final class KafkaTopicContract {
 
+    private static final List<String> DEAD_LETTER_SUFFIXES = List.of("-dlt", ".DLT");
+
     public enum Mode {
         CONSUMED,
         FIRE_AND_FORGET
@@ -103,6 +105,30 @@ public final class KafkaTopicContract {
         Topic contract = BY_TOPIC.get(topic);
         if (contract == null) {
             throw new IllegalStateException("topic is not declared in the Kafka topic contract: " + topic);
+        }
+        return contract;
+    }
+
+    public static String originalTopicOf(String deadLetterTopic) {
+        if (deadLetterTopic != null) {
+            for (String suffix : DEAD_LETTER_SUFFIXES) {
+                if (deadLetterTopic.endsWith(suffix)) {
+                    String originalTopic = deadLetterTopic.substring(0, deadLetterTopic.length() - suffix.length());
+                    if (!originalTopic.isBlank()) {
+                        return originalTopic;
+                    }
+                }
+            }
+        }
+        throw new IllegalArgumentException("not a dead-letter topic: " + deadLetterTopic);
+    }
+
+    public static Topic requireDeadLetterTopic(String deadLetterTopic) {
+        String originalTopic = originalTopicOf(deadLetterTopic);
+        Topic contract = find(originalTopic);
+        if (contract == null) {
+            throw new IllegalArgumentException(
+                    "the dead-letter topic does not belong to a contracted topic: " + deadLetterTopic);
         }
         return contract;
     }
