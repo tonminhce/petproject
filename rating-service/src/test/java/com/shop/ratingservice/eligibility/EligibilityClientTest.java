@@ -1,5 +1,7 @@
 package com.shop.ratingservice.eligibility;
 
+import com.shop.common.core.exception.BusinessException;
+import com.shop.common.keycloak.exception.KeycloakServiceTokenException;
 import com.shop.ratingservice.config.RatingClientProperties;
 import com.shop.ratingservice.security.ServiceTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +19,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -77,24 +80,24 @@ class EligibilityClientTest {
     }
 
     @Test
-    void connectionRefusedFailsClosed() {
+    void connectionRefusedIsReportedAsDependencyFailure() {
         stubToken();
         server.expect(requestTo(VERIFY_URL))
             .andRespond(withException(new IOException("Connection refused")));
         server.expect(requestTo(VERIFY_URL))
             .andRespond(withServerError());
 
-        assertThat(failingClosed()).isFalse();
-        assertThat(failingClosed()).isFalse();
+        assertDependencyFailure();
+        assertDependencyFailure();
     }
 
     @Test
-    void malformedBodyFailsClosed() {
+    void malformedBodyIsReportedAsDependencyFailure() {
         stubToken();
         server.expect(requestTo(VERIFY_URL))
             .andRespond(withSuccess("not-json{", MediaType.APPLICATION_JSON));
 
-        assertThat(failingClosed()).isFalse();
+        assertDependencyFailure();
     }
 
     @Test
@@ -110,19 +113,45 @@ class EligibilityClientTest {
     }
 
     @Test
-    void nullDataFailsClosed() {
+    void nullDataIsReportedAsDependencyFailure() {
         stubToken();
         server.expect(requestTo(VERIFY_URL))
             .andRespond(withSuccess("{\"success\":true,\"code\":\"OK\",\"data\":null}", MediaType.APPLICATION_JSON));
 
-        assertThat(failingClosed()).isFalse();
+        assertDependencyFailure();
     }
 
-    private boolean failingClosed() {
-        try {
-            return client.isEligible(USER_ID, PRODUCT_ID);
-        } catch (RuntimeException ex) {
-            throw new AssertionError("Client must fail closed (false), not throw", ex);
-        }
+    @Test
+    void tokenProviderFailureIsReportedAsDependencyFailure() {
+        lenient().when(serviceTokenProvider.getToken())
+            .thenThrow(new KeycloakServiceTokenException("Keycloak token endpoint is failing"));
+
+        assertDependencyFailure();
+        server.verify();
+    }
+
+    @Test
+    void dependencyFailureCarriesTheServiceUnavailableCode() {
+        stubToken();
+        server.expect(requestTo(VERIFY_URL))
+            .andRespond(withException(new IOException("Connection refused")));
+
+        assertThatThrownBy(() -> client.isEligible(USER_ID, PRODUCT_ID))
+            .isInstanceOf(BusinessException.class)
+            .satisfies(ex -> {
+                BusinessException businessException = (BusinessException) ex;
+                assertThat(businessException.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(businessException.getErrorCode()).isEqualTo("ERR-0503");
+            });
+    }
+
+    private void assertDependencyFailure() {
+        assertThatThrownBy(() -> client.isEligible(USER_ID, PRODUCT_ID))
+            .isInstanceOf(BusinessException.class)
+            .satisfies(ex -> {
+                BusinessException businessException = (BusinessException) ex;
+                assertThat(businessException.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(businessException.getErrorCode()).isEqualTo("ERR-0503");
+            });
     }
 }

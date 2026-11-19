@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -80,6 +81,22 @@ class RatingServiceImplTest {
 
         assertThatThrownBy(() -> service.submit(userId, request()))
                 .isInstanceOf(IllegalStateException.class);
+
+        verify(ratingRepository, never()).saveAndFlush(any(Rating.class));
+        verifyNoInteractions(ratingEventService);
+    }
+
+    @Test
+    void submit_dependencyFailure_isReportedAsServiceUnavailableWithoutSave() {
+        when(ratingRepository.findByUserIdAndProductIdAndDeletedFalse(userId, productId)).thenReturn(Optional.empty());
+        when(eligibilityClient.isEligible(userId, productId)).thenThrow(
+                BusinessException.serviceUnavailable("error.service.unavailable", new IOException("connection refused")));
+
+        assertThatThrownBy(() -> service.submit(userId, request()))
+                .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo("ERR-0503");
+                    assertThat(ex.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                });
 
         verify(ratingRepository, never()).saveAndFlush(any(Rating.class));
         verifyNoInteractions(ratingEventService);

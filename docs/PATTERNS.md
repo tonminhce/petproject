@@ -437,3 +437,40 @@ event.
 
 **Failure mode caught:** A bare `new ObjectMapper()` on the consumer path, and a
 listener factory built without a recoverer.
+
+---
+
+## R19. A dependency failure is reported as a dependency failure
+
+**Rule:**
+- A call to a downstream dependency that cannot be reached, that times out, that
+  returns a non-success status, or whose payload cannot be parsed, is reported as a
+  dependency failure. The status is 503 and the code is the platform dependency
+  failure code, never a business code.
+- A business denial is produced only from a response the dependency actually
+  returned. "The dependency said no" and "the dependency did not answer" are
+  different outcomes and must not share a status code.
+- A dependency that answers with a missing or malformed payload is a dependency
+  failure, not a denial.
+- The circuit breaker that guards the call observes the failure. The failure must
+  escape the guarded call so the breaker can record it, and an open breaker is
+  reported as a dependency failure as well.
+- The dependency failure keeps the original cause so the transport fault remains
+  diagnosable.
+
+**Why:** An end-to-end run returned 403 for a rating submission while the upstream
+purchase-verification call had failed with a socket read timeout. A failure to
+determine was reported as "this user did not buy this product". The business rule
+was correct, the dependency was unhealthy, and the two were indistinguishable in
+the response, in the metrics, and in the on-call queue.
+
+**Citation:**
+- Spring RestClient error handling:
+  https://docs.spring.io/spring-framework/reference/web/rest-clients.html#rest-clients.retrieve
+- Resilience4j circuit breaker:
+  https://resilience4j.readme.io/docs/getting-started-3
+
+**Failure mode caught:** A `catch (RestClientException) { return false; }` on an
+eligibility or authorisation check, with the circuit breaker placed inside the catch
+so it never records the failure.
+

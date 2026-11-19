@@ -1,6 +1,8 @@
 package com.shop.ratingservice.eligibility;
 
+import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.viewmodel.ApiResponse;
+import com.shop.common.keycloak.exception.KeycloakServiceTokenException;
 import com.shop.ratingservice.config.RatingClientProperties;
 import com.shop.ratingservice.security.ServiceTokenProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -29,7 +31,7 @@ public class EligibilityClient {
 
     private final ServiceTokenProvider serviceTokenProvider;
 
-    @CircuitBreaker(name = "orderService")
+    @CircuitBreaker(name = "orderService", fallbackMethod = "isEligibleFallback")
     public boolean isEligible(UUID userId, UUID productId) {
         try {
             ApiResponse<PurchaseEligibilitySnapshot> resp = restClient.get()
@@ -41,13 +43,23 @@ public class EligibilityClient {
                 .retrieve()
                 .body(RESPONSE_TYPE);
             if (resp == null || resp.data() == null) {
-                return false;
+                log.error("Purchase verification returned no payload for user {} product {}", userId, productId);
+                throw BusinessException.serviceUnavailable("error.service.unavailable",
+                        new IllegalStateException("Purchase verification returned no payload"));
             }
             return resp.data().eligible();
-        } catch (RestClientException ex) {
-            log.error("Purchase verification failed for user {} product {} — failing closed", userId, productId, ex);
-            return false;
+        } catch (RestClientException | KeycloakServiceTokenException ex) {
+            log.error("Purchase verification is unavailable for user {} product {} - dependency failure", userId, productId, ex);
+            throw BusinessException.serviceUnavailable("error.service.unavailable", ex);
         }
+    }
+
+    private boolean isEligibleFallback(UUID userId, UUID productId, Throwable throwable) {
+        if (throwable instanceof BusinessException businessException) {
+            throw businessException;
+        }
+        log.error("Purchase verification is unavailable for user {} product {} - dependency failure", userId, productId, throwable);
+        throw BusinessException.serviceUnavailable("error.service.unavailable", throwable);
     }
 
     record PurchaseEligibilitySnapshot(boolean eligible, long deliveredItemCount) {}

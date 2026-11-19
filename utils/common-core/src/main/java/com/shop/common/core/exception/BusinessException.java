@@ -80,6 +80,10 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(ErrorCode.CONFLICT, Messages.get(messageKey, args), cause);
     }
 
+    public static BusinessException serviceUnavailable(String messageKey, Throwable cause, Object... args) {
+        return new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, Messages.get(messageKey, args), cause);
+    }
+
     public static BusinessException internalServerError(String messageKey, Object... args) {
         return new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, Messages.get(messageKey, args));
     }
