@@ -2,7 +2,7 @@
 
 Every finding was produced by reading the first-party source, not the documentation.
 
-Registry size: 262 findings.
+Registry size: 278 findings.
 
 | ID | Severity | Area | Title |
 | --- | --- | --- | --- |
@@ -10,6 +10,7 @@ Registry size: 262 findings.
 | GW-02 | CRITICAL | gateway-redis | A non-literal `X-Forwarded-For` entry becomes the rate-limit key: per-request bucket bypass, unbounded Redis key growth, and blocking DNS on the event loop |
 | PAY-01 | CRITICAL | payment | Capture marks CAPTURED while no money moved; Stripe intent uses confirm=false and discards client_secret |
 | PAY-02 | CRITICAL | payment | Unknown provider name silently falls back to the default provider so a refund can succeed against the wrong PSP |
+| SHIP-01 | CRITICAL |  | The carrier call happened before the idempotency guard, so two duplicate CONFIRMED events created two parcels |
 | CAT-01 | HIGH | catalog-search-media | Out-of-order Kafka events silently overwrite newer Elasticsearch state |
 | CAT-02 | HIGH | catalog-search-media | Elasticsearch client dependency drift |
 | CAT-05 | HIGH | catalog-search-media | No currency on any money field in the fleet |
@@ -29,9 +30,17 @@ Registry size: 262 findings.
 | PAY-08 | HIGH | payment | Stripe intent id is never persisted so refunds depend on the eventually consistent Search API |
 | PAY-09 | HIGH | payment | Provider failure mapping conflates a declined card with an unknown outcome so a Stripe timeout is reported as a definitive rejection |
 | PAY-10 | HIGH | payment | The provider call happens inside the database transaction with no client timeout |
+| RTG-01 | HIGH |  | An upstream purchase-verification failure was reported as the business denial RTG-11001 (403) instead of a dependency failure |
 | SEC-01 | HIGH | security | auth-service resolves the JWT subject against a DIFFERENT primary-key space |
 | SEC-02 | HIGH | security | Cross-service IDOR: `verify-purchase` accepts an arbitrary `userId` with no principal cross-check |
 | SEC-03 | HIGH | security | Committed literal credentials in `.env.example` for accounts the deployment *requires* |
+| SHIP-02 | HIGH |  | A carrier client exception was thrown away, so a failed shipment creation was lost |
+| SHIP-03 | HIGH |  | The carrier client declared no HTTP timeout |
+| SHIP-04 | HIGH |  | changelog-003-webhook-retry violated a CHECK constraint, which blocked changesets 004, 005 and 006 from applying |
+| SHIP-05 | HIGH |  | The reconciliation path bypassed the shipment finite state machine |
+| SHIP-06 | HIGH |  | A late webhook could resurrect a DELIVERY_FAILED shipment |
+| SHIP-07 | HIGH |  | Webhook retry rows had no claim, so several instances processed the same retry |
+| SHIP-08 | HIGH |  | The outbox relay selected its head row with MIN(id), so a locked head row blocked every other row |
 | SL-01 | HIGH | shared-libraries | `KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call |
 | SL-01 | HIGH | shared-libraries | `synchronized (this)` on a shared bean, held across a network call |
 | SL-02 | HIGH | shared-libraries | `KeycloakAdminClient` silently falls back to the master-realm *password* grant |
@@ -55,6 +64,8 @@ Registry size: 262 findings.
 | SL-35 | HIGH | shared-libraries | a listener factory without a recoverer silently drops records |
 | SL-36 | HIGH | shared-libraries | the shared consumer configuration pins none of the commit/isolation semantics |
 | SL-37 | HIGH | shared-libraries | the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad |
+| SL-46 | HIGH |  | Five duplicated ServiceTokenProvider classes fetched the Keycloak token over a non-pooled connection with no Accept header, no retry and, in search-service, no timeout at all |
+| SL-47 | HIGH |  | One Keycloak admin-client property served two different OAuth clients, so the application-realm service account could never authenticate |
 | CAT-03 | MEDIUM | catalog-search-media | Mutable, non-volatile pagination state on a singleton scheduled bean |
 | CAT-04 | MEDIUM | catalog-search-media | Money stored as an IEEE-754 double in the search index |
 | CAT-06 | MEDIUM | catalog-search-media | Product-variant changes emit no lifecycle event |
@@ -144,6 +155,11 @@ Registry size: 262 findings.
 | SEC-12 | MEDIUM | security | Gateway edge permits `/api/v1/carts/**`, `/api/v1/ratings/**` and `/api/v1/medias/**` anonymously |
 | SEC-27 | MEDIUM | security | `auth-service` public-path rules are method-agnostic |
 | SEC-28 | MEDIUM | security | Seeded credential pairs are documented in tracked markdown |
+| SHIP-11 | MEDIUM |  | The reconciliation query had no matching index |
+| SHIP-12 | MEDIUM |  | The soft-delete restriction did not match the partial index, so a soft-deleted shipment still occupied the live key |
+| SHIP-13 | MEDIUM |  | Shipment events had no foreign key to their shipment |
+| SHIP-14 | MEDIUM |  | A null provider event id was swallowed instead of rejected |
+| SHIP-15 | MEDIUM |  | Permanently failed outbox rows were never surfaced |
 | SL-03 | MEDIUM | shared-libraries | `LazyJwtDecoder` builds **N** decoders under concurrent first-request load (javadox guarantee is false) |
 | SL-03 | MEDIUM | shared-libraries | `LazyJwtDecoder` builds more than one decoder under concurrent load |
 | SL-04 | MEDIUM | shared-libraries | `LazyJwtDecoder` performs a synchronous OIDC discovery on the **request** thread with no negative cache |

@@ -1,14 +1,47 @@
 # End-to-End Verification
 
-Generated: 2026-11-18T16:42:55Z
+Generated: 2026-11-19T16:03:53Z
 
 Run identifier: `run-20261118-a2b6e6fc`
 
 ## Artefacts
 
+- `petproject-comprehensive.postman_collection.auth.json`: state n/a
+- `petproject-comprehensive.postman_collection.catalog.json`: state n/a
+- `petproject-comprehensive.postman_collection.checkout.json`: state n/a
+- `petproject-comprehensive.postman_collection.gateway.json`: state n/a
+- `petproject-comprehensive.postman_collection.inventory.json`: state n/a
 - `petproject-comprehensive.postman_collection.json`: state n/a
+- `petproject-comprehensive.postman_collection.kafka.json`: state n/a
+- `petproject-comprehensive.postman_collection.media.json`: state n/a
+- `petproject-comprehensive.postman_collection.payment.json`: state n/a
+- `petproject-comprehensive.postman_collection.ratings.json`: state n/a
+- `petproject-comprehensive.postman_collection.refund.json`: state n/a
+- `petproject-comprehensive.postman_collection.shipping.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.auth.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.catalog.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.checkout.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.gateway.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.inventory.json`: state n/a
 - `petproject-e2e-business-flow.postman_collection.json`: state n/a
-- `run-lifecycle.json`: state FAILED
+- `petproject-e2e-business-flow.postman_collection.kafka.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.media.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.payment.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.ratings.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.refund.json`: state n/a
+- `petproject-e2e-business-flow.postman_collection.shipping.json`: state n/a
+- `run-auth.json`: state COMPLETED
+- `run-catalog.json`: state COMPLETED
+- `run-checkout.json`: state COMPLETED
+- `run-gateway.json`: state COMPLETED
+- `run-inventory.json`: state COMPLETED
+- `run-kafka.json`: state COMPLETED
+- `run-lifecycle.json`: state COMPLETED
+- `run-media.json`: state COMPLETED
+- `run-payment.json`: state COMPLETED
+- `run-ratings.json`: state COMPLETED
+- `run-refund.json`: state COMPLETED
+- `run-shipping.json`: state COMPLETED
 - `setup.json`: state READY
 
 ## Disclosure

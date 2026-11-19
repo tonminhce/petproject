@@ -1,42 +1,32 @@
 # Remaining Tasks
 
-Generated: 2026-11-18T16:42:54Z
+Generated: 2026-11-19T16:03:53Z
 
-- Registered tasks: 230
+- Registered tasks: 253
 
 | State | Count |
 | --- | --- |
 | BLOCKED | 0 |
-| DISCOVERED | 32 |
+| DISCOVERED | 5 |
 | FAILED_VERIFICATION | 0 |
 | IMPLEMENTED | 0 |
 | IN_PROGRESS | 0 |
 | NORMALIZED | 0 |
-| READY | 181 |
+| READY | 187 |
 | REOPENED | 0 |
 | REQUIREMENT_CONFLICT | 0 |
-| VERIFIED | 17 |
+| VERIFIED | 61 |
 | VERIFYING | 0 |
 
 ## Open tasks by severity
 
 | ID | Severity | Area | Title |
 | --- | --- | --- | --- |
-| CAT-01 | HIGH |  | Out-of-order Kafka events silently overwrite newer Elasticsearch state |
 | CAT-02 | HIGH |  | Elasticsearch client dependency drift |
 | CAT-05 | HIGH |  | No currency on any money field in the fleet |
-| CAT-07 | HIGH |  | Promotion quotas are enforced by a racy read-then-write COUNT |
 | GW-04 | HIGH |  | The "global" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas |
 | KAF-01 | HIGH |  | 6 of 8 outbox relays serialise: a second replica publishes nothing |
 | KAF-02 | HIGH |  | payment-service relay has no per-aggregate ordering barrier |
-| PAY-03 | HIGH | payment-service | State machine allows self-transitions so a re-processed webhook publishes a duplicate payment.captured.v1 |
-| PAY-04 | HIGH | payment-service | Webhook dedup key includes the attacker-controlled provider path segment so one signed body replays across provider labels |
-| PAY-05 | HIGH | payment-service | Webhook retry scheduler has no claim lease so two replicas replay the same event concurrently |
-| PAY-06 | HIGH | payment-service | No Saga compensation: a webhook that arrives after order cancellation captures the payment and never refunds it |
-| PAY-07 | HIGH | payment-service | Global unique index on idempotency_key contradicts the per-user scoped repository lookup |
-| PAY-08 | HIGH | payment-service | Stripe intent id is never persisted so refunds depend on the eventually consistent Search API |
-| PAY-09 | HIGH | payment-service | Provider failure mapping conflates a declined card with an unknown outcome so a Stripe timeout is reported as a definitive rejection |
-| PAY-10 | HIGH | payment-service | The provider call happens inside the database transaction with no client timeout |
 | SEC-03 | HIGH |  | Committed literal credentials in `.env.example` for accounts the deployment *requires* |
 | SL-01 | HIGH |  | `KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call |
 | SL-02 | HIGH |  | `KeycloakAdminClient` silently falls back to the master-realm *password* grant |
@@ -91,15 +81,6 @@ Generated: 2026-11-18T16:42:54Z
 | OI-14 | MEDIUM |  | The return flow's cumulative-refund and pending-return checks are unlocked read-modify-write |
 | OI-28 | MEDIUM |  | INFO — YAML/code drift on three scheduler knobs |
 | OI-29 | MEDIUM |  | INFO — `ReturnStatus.APPROVED` is a dead state and the return flow has no transition table |
-| PAY-11 | MEDIUM | payment-service | The REST capture and refund path bypasses the payment state machine and never sets refunded_amount |
-| PAY-12 | MEDIUM | payment-service | Optimistic lock failures after a provider side effect surface as a server error |
-| PAY-13 | MEDIUM | payment-service | The bare-hex signature branch has no timestamp and no nonce so signed webhooks replay forever |
-| PAY-14 | MEDIUM | payment-service | One webhook secret is shared by all non-Stripe providers |
-| PAY-15 | MEDIUM | payment-service | VNPay multiplies the amount by 100 unconditionally and neither provider ever contacts the PSP |
-| PAY-16 | MEDIUM | payment-service | No currency validation and no currency comparison on the webhook path |
-| PAY-17 | MEDIUM | payment-service | Zero-decimal currencies silently round the amount and then fail the webhook amount check |
-| PAY-18 | MEDIUM | payment-service | Outbox rows parked as FAILED are never purged |
-| PAY-19 | MEDIUM | payment-service | No production caller creates or captures a payment |
 | RES-01 | MEDIUM |  | `spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone while the project runs Boot 4.1.1, and the artifact was renamed in Boot 4. |
 | RES-02 | MEDIUM |  | `spring-boot-starter-web` is used in three modules although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`. |
 | RES-03 | MEDIUM |  | Jackson 2 and Jackson 3 are both on the compile classpath while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-b |
@@ -200,8 +181,6 @@ Generated: 2026-11-18T16:42:54Z
 | OI-25 | LOW |  | The reconciliation sweeper decides on a stale detached snapshot |
 | OI-26 | LOW |  | `GuestCartCleanupScheduler` purges active carts of real users and is unbounded |
 | OI-27 | LOW |  | The tracking abuse brake under-counts under concurrency |
-| PAY-20 | LOW | payment-service | The default provider is chosen non-deterministically when the configured provider is absent |
-| PAY-21 | LOW | payment-service | The public webhook endpoint has no body size limit and no service level rate limit |
 | PAY-22 | LOW | payment-service | Dead code in the webhook event service and an unreachable status value |
 | PAY-23 | LOW | payment-service | The Stripe api-version property is inert and always reports drift |
 | PAY-24 | LOW | payment-service | Unused imports in the provider classes |

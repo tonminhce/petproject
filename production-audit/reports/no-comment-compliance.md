@@ -1,13 +1,13 @@
 # No-Comment Compliance
 
-Generated: 2026-11-18T16:42:54Z
+Generated: 2026-11-19T16:03:53Z
 
 ## Result
 
-- Files scanned: 1138
-- Total comments found: 11
+- Files scanned: 1136
+- Total comments found: 9
 - Prohibited comments remaining: 0
-- Preserved by policy: 11
+- Preserved by policy: 9
 - Files with violations: 0
 
 ## Equivalence proof
@@ -16,8 +16,8 @@ Every cleaned file was compared against the baseline revision after applying the
 comment removal. A file is equivalent when the result is byte identical, which proves
 that the cleanup changed comments only and no executable code.
 
-- Files checked: 1102
-- Equivalent: 1097
+- Files checked: 1130
+- Equivalent: 1130
 - Diverged: 0
 
 ## Preserved categories
