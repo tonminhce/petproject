@@ -108,7 +108,7 @@ public class PspCallbackController {
                 .eventType("momo.ipn")
                 .paymentId(orderId)
                 .amount(amountOf(body.path("amount").asText("")))
-                .currency(VND)
+                .currency(carrierCurrency(orderId))
                 .status(status)
                 .providerEventId(eventId)
                 .providerIntentId(transId.isBlank() || "0".equals(transId) ? null : transId)
@@ -124,11 +124,22 @@ public class PspCallbackController {
                 .eventType("vnpay.ipn")
                 .paymentId(paymentId.toString())
                 .amount(vnpayAmount(params.getOrDefault("vnp_Amount", "")))
-                .currency(VND)
+                .currency(carrierCurrency(paymentId.toString()))
                 .status(status)
                 .providerEventId(eventId)
                 .providerIntentId(txnRef)
                 .build();
+    }
+
+    private String carrierCurrency(String paymentId) {
+        String currency = webhookEventService.paymentCurrency(paymentId);
+        if (currency == null || currency.isBlank()) {
+            return null;
+        }
+        if (!VND.equalsIgnoreCase(currency)) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, currency, VND);
+        }
+        return currency;
     }
 
     private BigDecimal amountOf(String value) {

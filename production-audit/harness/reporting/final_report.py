@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,24 @@ from ..inventory.coverage import coverage_summary, load_coverage
 from ..persistence.store import read_json, utc_now
 from ..task_registry.registry import load_tasks, task_status_summary
 from ..verification.gates import completion_predicate, evaluate_gates, evidence_is_fresh
+
+OPEN_TASK_STATES = (
+    "DISCOVERED",
+    "NORMALIZED",
+    "READY",
+    "IN_PROGRESS",
+    "IMPLEMENTED",
+    "VERIFYING",
+    "REOPENED",
+    "FAILED_VERIFICATION",
+    "BLOCKED",
+    "REQUIREMENT_CONFLICT",
+)
+
+STALE_EVIDENCE_NOTE = (
+    "Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, "
+    "phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt."
+)
 
 
 def _state(path: Path) -> dict[str, Any]:
@@ -34,6 +53,7 @@ def _load_results() -> list[dict[str, Any]]:
     for path in sorted(root.iterdir(), key=_load_directory_order, reverse=True):
         result = path / "result.json"
         latest = path / "summary.json"
+        stamp = _load_directory_order(path)[1]
         if result.exists():
             try:
                 document = json.loads(result.read_text(encoding="utf-8"))
@@ -42,12 +62,17 @@ def _load_results() -> list[dict[str, Any]]:
             results.append(
                 {
                     "directory": path.name,
+                    "stamp": stamp,
+                    "measured": True,
+                    "document": document,
                     "scenario": document.get("scenario", ""),
                     "profile": document.get("profile", ""),
                     "status": document.get("status", ""),
                     "metrics": document.get("metrics") or {},
                     "business_verdict": document.get("business_verdict", ""),
                     "measurement_valid": document.get("measurement_valid"),
+                    "invariants": document.get("invariants") or {},
+                    "measurement_host": document.get("measurement_host") or {},
                 }
             )
             continue
@@ -60,38 +85,68 @@ def _load_results() -> list[dict[str, Any]]:
         results.append(
             {
                 "directory": path.name,
+                "stamp": stamp,
+                "measured": False,
+                "document": {},
                 "scenario": document.get("scenario", ""),
                 "profile": "",
                 "status": "",
                 "metrics": {},
                 "business_verdict": "",
                 "measurement_valid": None,
+                "invariants": {},
+                "measurement_host": {},
             }
         )
     return results
 
 
-def _persisted_load_result() -> dict[str, Any]:
-    return _state(config.state_root() / "performance-baselines.json")
+def _profile_key(row: dict[str, Any]) -> str:
+    profile = str(row.get("profile") or "")
+    if profile:
+        return profile
+    directory = str(row.get("directory") or "")
+    return directory.rsplit("-", 1)[0] if directory else ""
+
+
+def _newest_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {}
+    return max(rows, key=lambda row: (int(row.get("stamp", 0)), str(row.get("directory", ""))))
+
+
+def _latest_load_run(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return _newest_row([row for row in rows if row.get("measured")])
+
+
+def _latest_profile_run(rows: list[dict[str, Any]], profile: str) -> dict[str, Any]:
+    matching = [row for row in rows if row.get("measured") and _profile_key(row) == profile]
+    return _newest_row(matching)
+
+
+def _suite_status(verification: dict[str, Any], name: str, fingerprint: str = "") -> tuple[str, str]:
+    suite = (verification.get("suites") or {}).get(name) or {}
+    status = str(suite.get("status", "PENDING"))
+    tests = suite.get("tests_run")
+    if fingerprint and not evidence_is_fresh(suite, fingerprint):
+        status = "STALE"
+    elif status == "PASS" and tests is not None and int(tests) == 0:
+        status = "INSUFFICIENT_EVIDENCE"
+    detail = str(suite.get("detail", ""))
+    if tests is not None:
+        detail = (detail + " " if detail else "") + str(tests) + " test"
+    if status == "STALE":
+        detail = (detail + " " if detail else "") + "recorded against an earlier source revision"
+    if status == "INSUFFICIENT_EVIDENCE":
+        detail = (detail + " " if detail else "") + "no test was recorded for this suite"
+    return status, detail.strip()
 
 
 def _suite_rows(verification: dict[str, Any], fingerprint: str = "") -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
-    for name, suite in sorted((verification.get("suites") or {}).items()):
-        status = str(suite.get("status", "PENDING"))
-        tests = suite.get("tests_run")
-        if fingerprint and not evidence_is_fresh(suite, fingerprint):
-            status = "STALE"
-        elif status == "PASS" and tests is not None and int(tests) == 0:
-            status = "INSUFFICIENT_EVIDENCE"
-        detail = str(suite.get("detail", ""))
-        if tests is not None:
-            detail = (detail + " " if detail else "") + str(tests) + " test"
-        if status == "STALE":
-            detail = (detail + " " if detail else "") + "recorded against an earlier source revision"
-        if status == "INSUFFICIENT_EVIDENCE":
-            detail = (detail + " " if detail else "") + "no test was recorded for this suite"
-        rows.append((name, status, detail.strip()))
+    for name in sorted((verification.get("suites") or {}).keys()):
+        status, detail = _suite_status(verification, name, fingerprint)
+        rows.append((name, status, detail))
     return rows
 
 
@@ -101,15 +156,22 @@ def _field(task: Any, name: str, default: Any = "") -> Any:
     return getattr(task, name, default)
 
 
-def _task_rows(tasks: Any, states: tuple[str, ...], severity: str = "") -> list[tuple[str, str, str]]:
-    rows: list[tuple[str, str, str]] = []
+def _task_rows(tasks: Any, states: tuple[str, ...], severity: str = "") -> list[tuple[str, str, str, str]]:
+    rows: list[tuple[str, str, str, str]] = []
     entries = tasks.items() if isinstance(tasks, dict) else [(getattr(task, "id", ""), task) for task in tasks]
     for identifier, task in sorted(entries, key=lambda item: str(item[0])):
         if _field(task, "state") not in states:
             continue
         if severity and _field(task, "severity") != severity:
             continue
-        rows.append((str(identifier), str(_field(task, "severity", "")), str(_field(task, "title", ""))))
+        rows.append(
+            (
+                str(identifier),
+                str(_field(task, "severity", "")),
+                str(_field(task, "state", "")),
+                str(_field(task, "title", "")),
+            )
+        )
     return rows
 
 
@@ -119,6 +181,35 @@ def _metric(value: Any, suffix: str = "") -> str:
     if isinstance(value, float):
         return ("%.2f" % value) + suffix
     return str(value) + suffix
+
+
+def _rate(value: Any) -> str:
+    if value is None:
+        return "không đo được"
+    if isinstance(value, bool):
+        return str(value)
+    if isinstance(value, (int, float)):
+        number = float(value)
+        if number == 0:
+            return "0.0000"
+        if abs(number) < 0.0001:
+            return "%.2e" % number
+        return "%.4f" % number
+    return str(value)
+
+
+def _invariant_counts(invariants: dict[str, Any]) -> tuple[int, int, int, int, int]:
+    rows = list(invariants.get("invariants", []) or [])
+    passed = len([row for row in rows if str(row.get("status", "")) == "PASS"])
+    skipped = len([row for row in rows if str(row.get("status", "")) == "SKIPPED"])
+    failed = len(rows) - passed - skipped
+    violations = 0
+    for row in rows:
+        try:
+            violations += int(row.get("violations") or 0)
+        except (TypeError, ValueError):
+            violations += 0
+    return len(rows), passed, failed, skipped, violations
 
 
 def write_final_report(path: Path | None = None) -> Path:
@@ -133,16 +224,15 @@ def write_final_report(path: Path | None = None) -> Path:
     kubernetes = _state(config.state_root() / "k8s-results.json")
     alerts = _state(config.state_root() / "alert-results.json")
     deliveries = _state(config.git_deliveries_path())
-    persisted_load = _persisted_load_result()
     load_rows = _load_results()
 
     passed = [gate for gate in gates if gate.status == "PASS"]
     failed = [gate for gate in gates if gate.status == "FAIL"]
     pending = [gate for gate in gates if gate.status == "PENDING"]
-    open_states = ("READY", "DISCOVERED", "IN_PROGRESS", "IMPLEMENTED", "VERIFYING", "REOPENED", "FAILED_VERIFICATION")
-    open_high = _task_rows(tasks, open_states, "HIGH")
-    open_medium = _task_rows(tasks, open_states, "MEDIUM")
-    open_low = _task_rows(tasks, open_states, "LOW")
+    open_high = _task_rows(tasks, OPEN_TASK_STATES, "HIGH")
+    open_critical = _task_rows(tasks, OPEN_TASK_STATES, "CRITICAL")
+    open_medium = _task_rows(tasks, OPEN_TASK_STATES, "MEDIUM")
+    open_low = _task_rows(tasks, OPEN_TASK_STATES, "LOW")
     alert_gates = alerts.get("results", [])
     alerting_status = "chưa chạy"
     alerting_document = _state(config.state_root() / "alerting-results.json")
@@ -150,9 +240,10 @@ def write_final_report(path: Path | None = None) -> Path:
         alerting_status = str(alerting_document["result"].get("status", "chưa chạy"))
     stripe_result = stripe.get("result", {})
     kubernetes_result = kubernetes.get("result", {})
-    load_result = persisted_load.get("result", {})
-    load_metrics = load_result.get("metrics", {}) or (load_rows[-1]["metrics"] if load_rows else {})
-    load_invariants = load_result.get("invariants", {})
+    latest_load = _latest_load_run(load_rows)
+    load_result = latest_load.get("document", {}) or {}
+    load_metrics = latest_load.get("metrics", {}) or {}
+    load_invariants = latest_load.get("invariants", {}) or {}
     build = verification.get("suites", {}).get("build", {})
     from ..inventory.scanner import source_fingerprint
 
@@ -180,12 +271,15 @@ def write_final_report(path: Path | None = None) -> Path:
     add("- **Quyết định nghiệm thu**: **" + decision + "**.")
     add("- **Cổng kiểm định**: " + str(len(passed)) + "/" + str(len(gates)) + " đạt, " + str(len(failed)) + " không đạt, " + str(len(pending)) + " chờ.")
     add("- **Rà soát mã nguồn**: " + _metric(coverage.get("percent_reviewed"), "%") + " (" + str(coverage.get("reviewed_files")) + "/" + str(coverage.get("total_files")) + " tập tin).")
-    add("- **Tác vụ còn mở mức HIGH**: " + str(len(open_high)) + " (MEDIUM: " + str(len(open_medium)) + ", LOW: " + str(len(open_low)) + ").")
+    add("- **Tác vụ còn mở mức HIGH**: " + str(len(open_high)) + " (CRITICAL: " + str(len(open_critical)) + ", MEDIUM: " + str(len(open_medium)) + ", LOW: " + str(len(open_low)) + ").")
     add("- **Quyết định sản xuất theo completion predicate**: " + ("đạt" if predicate.get("production_ready") else "chưa đạt") + ".")
     failing = predicate.get("failing_gates", [])
     if failing:
         add("- **Cổng đang không đạt**: " + ", ".join(failing) + ".")
-    add("- **Bằng chứng tải nặng**: yêu cầu " + _metric(load_metrics.get("requests")) + ", tần suất " + _metric(load_metrics.get("request_rate_per_second"), " req/s") + ", p95 " + _metric(load_metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _metric(load_metrics.get("failure_rate")) + ".")
+    if load_result:
+        add("- **Bằng chứng tải nặng** (lần chạy mới nhất: " + str(load_result.get("profile", "")) + " — " + str(load_result.get("status", "")) + ", thư mục " + str(latest_load.get("directory", "")) + "): yêu cầu " + _metric(load_metrics.get("requests")) + ", tần suất " + _metric(load_metrics.get("request_rate_per_second"), " req/s") + ", p95 " + _metric(load_metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(load_metrics.get("failure_rate")) + ".")
+    else:
+        add("- **Bằng chứng tải nặng**: chưa có lần chạy tải nào được lưu trong thư mục load-results để đo.")
     add("- **Stripe sandbox thực**: trạng thái " + str(stripe_result.get("status", "chưa chạy")) + " — xem mục 12 và 13.")
     add("- **Cảnh báo Telegram**: " + str(len(alert_gates)) + " cổng cảnh báo đã được ghi nhận — xem mục 29, 30 và 31.")
     add("")
@@ -224,13 +318,19 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     add("- Báo cáo đầy đủ: production-audit/reports/concurrency.md và production-audit/architecture/concurrency.md.")
     concurrency = verification.get("suites", {}).get("concurrency", {})
-    add("- Bộ kiểm thử đồng thời: " + str(concurrency.get("status", "chưa chạy")) + ", " + str(concurrency.get("tests_run", "?")) + " test.")
+    concurrency_status, _ = _suite_status(verification, "concurrency", fingerprint)
+    add("- Bộ kiểm thử đồng thời: " + concurrency_status + ", " + str(concurrency.get("tests_run", "?")) + " test.")
+    if concurrency_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     add("")
 
     add("## 8. TÍNH ĐÚNG ĐẮN KHO HÀNG (INVENTORY CORRECTNESS)")
     add("")
     inventory = verification.get("suites", {}).get("concurrency_inventory", {})
-    add("- Bộ kiểm thử kho hàng: " + str(inventory.get("status", "chưa chạy")) + ", " + str(inventory.get("tests_run", "?")) + " test.")
+    inventory_status, _ = _suite_status(verification, "concurrency_inventory", fingerprint)
+    add("- Bộ kiểm thử kho hàng: " + inventory_status + ", " + str(inventory.get("tests_run", "?")) + " test.")
+    if inventory_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     if load_invariants:
         for invariant in load_invariants.get("invariants", []):
             if invariant.get("id") == "INV-01":
@@ -243,18 +343,25 @@ def write_final_report(path: Path | None = None) -> Path:
         for invariant in load_invariants.get("invariants", []):
             if invariant.get("id") in {"INV-02", "INV-06", "INV-08"}:
                 add("- " + str(invariant.get("id")) + " (" + str(invariant.get("name")) + "): " + str(invariant.get("status")) + ", vi phạm: " + str(invariant.get("violations")) + ".")
+    else:
+        add("- Chưa có lần chạy tải nào ghi nhận bất biến hạn mức khuyến mãi.")
     add("")
 
     add("## 10. SAGA CHECKOUT & BỒI ĐỀN (CHECKOUT SAGA)")
     add("")
     kafka = verification.get("suites", {}).get("kafka", {})
-    add("- Bộ kiểm thử Kafka/Outbox: " + str(kafka.get("status", "chưa chạy")) + ", " + str(kafka.get("tests_run", "?")) + " test.")
+    kafka_status, _ = _suite_status(verification, "kafka", fingerprint)
+    add("- Bộ kiểm thử Kafka/Outbox: " + kafka_status + ", " + str(kafka.get("tests_run", "?")) + " test.")
+    if kafka_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     add("- Cơ chế bồi đền được kiểm chứng trong production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-authz-compensation-fix.md.")
     add("")
 
     add("## 11. KAFKA & TRANSACTIONAL OUTBOX")
     add("")
-    add("- Bộ kiểm thử: " + str(kafka.get("status", "chưa chạy")) + ".")
+    add("- Bộ kiểm thử: " + kafka_status + ".")
+    if kafka_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     add("- Bằng chứng rà soát: production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md và kafka-safety-fix.md.")
     add("")
 
@@ -282,19 +389,36 @@ def write_final_report(path: Path | None = None) -> Path:
     add("## 14. XÁC MINH WEBHOOK & HOÀN TIỀN (WEBHOOK AND REFUND VERIFICATION)")
     add("")
     add("- Logic xác minh chữ ký webhook được kiểm thử bằng lệnh harness stripe test-webhooks, ký HMAC-SHA256 theo đúng định dạng t/v1 của Stripe.")
-    add("- Hoàn tiền: xem bộ kiểm thử payment — " + str(verification.get("suites", {}).get("payment", {}).get("status", "chưa chạy")) + ".")
+    payment_status, _ = _suite_status(verification, "payment", fingerprint)
+    add("- Hoàn tiền: xem bộ kiểm thử payment — " + payment_status + ".")
+    if payment_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     add("")
 
     add("## 15. XÁC MINH DOCKER COMPOSE (DOCKER COMPOSE VERIFICATION)")
     add("")
     integration = verification.get("suites", {}).get("integration", {})
-    add("- Bộ kiểm thử tích hợp: " + str(integration.get("status", "chưa chạy")) + ", " + str(integration.get("tests_run", "?")) + " test, hạ tầng: " + str(integration.get("infrastructure", "")) + ".")
+    integration_status, _ = _suite_status(verification, "integration", fingerprint)
+    integration_line = "- Bộ kiểm thử tích hợp: " + integration_status + ", " + str(integration.get("tests_run", "?")) + " test"
+    if integration.get("infrastructure"):
+        integration_line += ", hạ tầng: " + str(integration.get("infrastructure"))
+    add(integration_line + ".")
+    if integration_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     add("")
 
     add("## 16. KIẾN TRÚC KUBERNETES (KUBERNETES ARCHITECTURE)")
     add("")
-    add("- Kết quả kiểm định manifest: " + str(kubernetes_result.get("status", "chưa chạy")) + ".")
-    for check in kubernetes_result.get("checks", []):
+    kubernetes_checks = kubernetes_result.get("checks", [])
+    k8s_status, k8s_detail = _suite_status(verification, "k8s", fingerprint)
+    add("- Hành động đã ghi nhận: " + str(kubernetes.get("action", "không rõ")) + " — " + str(len(kubernetes_checks)) + " mục kiểm tra tĩnh trên các tệp manifest trong k8s/.")
+    add("- Kết quả kiểm tra tĩnh manifest tại thời điểm ghi nhận: " + str(kubernetes_result.get("status", "chưa chạy")) + " — đây không phải kiểm định trên một cụm Kubernetes thật.")
+    add("- Bộ kiểm thử k8s: " + k8s_status + (" — " + k8s_detail if k8s_detail else "") + ".")
+    if k8s_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
+    add("- **Không có cụm Kubernetes chạy được trong môi trường này**: các mục kiểm tra dưới đây chỉ đọc tệp manifest, không áp dụng lên cụm và không có phản hồi nào từ một cụm thật.")
+    add("- **Cấp nhân tự động ở thời gian chạy chưa được xác minh**: HPA và KEDA mới chỉ được kiểm tra về mặt khai báo trong manifest, chưa có bằng chứng nào từ một cụm thật.")
+    for check in kubernetes_checks:
         add("  - " + str(check.get("id")) + " " + str(check.get("name")) + ": " + str(check.get("status")) + " — " + str(check.get("detail"))[:200])
     add("")
 
@@ -321,63 +445,96 @@ def write_final_report(path: Path | None = None) -> Path:
     latest_by_profile: dict[str, dict[str, Any]] = {}
     attempts: dict[str, int] = {}
     for row in load_rows:
-        profile = str(row.get("profile") or row.get("directory")).rsplit("-", 1)[0]
+        profile = _profile_key(row)
+        if not profile:
+            continue
         attempts[profile] = attempts.get(profile, 0) + 1
-        if profile not in latest_by_profile:
+        known = latest_by_profile.get(profile)
+        if known is None or int(row.get("stamp", 0)) > int(known.get("stamp", 0)):
             latest_by_profile[profile] = row
-    ordered = sorted(latest_by_profile.values(), key=lambda row: str(row.get("profile") or row.get("directory")))
+    ordered = sorted(latest_by_profile.values(), key=lambda row: _profile_key(row))
     for row in ordered:
         metrics = row.get("metrics", {})
         profile = str(row.get("profile") or row.get("directory"))
-        add("- " + profile + " — kịch bản " + str(row.get("scenario")) + ", trạng thái " + str(row.get("status") or "không ghi nhận") + ": yêu cầu " + _metric(metrics.get("requests")) + ", " + _metric(metrics.get("request_rate_per_second"), " req/s") + ", lượt lặp " + _metric(metrics.get("iterations")) + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _metric(metrics.get("failure_rate")) + ".")
+        add("- " + profile + " — kịch bản " + str(row.get("scenario")) + ", trạng thái " + str(row.get("status") or "không ghi nhận") + ": yêu cầu " + _metric(metrics.get("requests")) + ", " + _metric(metrics.get("request_rate_per_second"), " req/s") + ", lượt lặp " + _metric(metrics.get("iterations")) + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(metrics.get("failure_rate")) + ".")
         if row.get("business_verdict"):
             add("  - Kết luận nghiệp vụ: " + str(row.get("business_verdict")) + ".")
         if row.get("measurement_valid") is False:
             add("  - **Phép đo không hợp lệ**: máy chủ đo bị nhiễu, kết quả không dùng để kết luận.")
-        profile_name = str(row.get("profile") or row.get("directory"))
+        profile_name = _profile_key(row)
         if attempts.get(profile_name, 0) > 1:
             add("  - Số lần chạy đã lưu cho hồ sơ này: " + str(attempts.get(profile_name)) + "; bảng trên là lần chạy cuối cùng.")
     if load_result:
-        add("- Lần chạy đã lưu: hồ sơ " + str(load_result.get("profile")) + ", " + str(load_result.get("requests_per_second")) + " req/s nhắm, " + str(load_result.get("virtual_users")) + " VU, trạng thái " + str(load_result.get("status")) + ".")
+        add("- Lần chạy đã lưu (mới nhất): hồ sơ " + str(load_result.get("profile")) + ", " + str(load_result.get("requests_per_second")) + " req/s nhắm, " + str(load_result.get("virtual_users")) + " VU, trạng thái " + str(load_result.get("status")) + ", thư mục " + str(latest_load.get("directory", "")) + ".")
         host = load_result.get("measurement_host") or {}
         add("- **Tính hợp lệ của phép đo**: " + ("hợp lệ" if load_result.get("measurement_valid") else "KHÔNG hợp lệ — " + "; ".join(host.get("reasons", []))) + ".")
     add("")
 
     add("## 21. ĐỘ TRỄ & TỶ LỆ LỖI (LATENCY AND ERROR RATES)")
     add("")
+    if load_result:
+        add("- Nguồn: lần chạy mới nhất " + str(load_result.get("profile", "")) + " — " + str(load_result.get("status", "")) + ", thư mục " + str(latest_load.get("directory", "")) + ".")
     add("- p50 " + _metric(load_metrics.get("latency_p50_ms"), " ms") + ", p90 " + _metric(load_metrics.get("latency_p90_ms"), " ms") + ", p95 " + _metric(load_metrics.get("latency_p95_ms"), " ms") + ", p99 " + _metric(load_metrics.get("latency_p99_ms"), " ms") + ", trung bình " + _metric(load_metrics.get("latency_avg_ms"), " ms") + ", lớn nhất " + _metric(load_metrics.get("latency_max_ms"), " ms") + ".")
-    add("- Tỷ lệ lỗi HTTP: " + _metric(load_metrics.get("failure_rate")) + " (" + _metric(load_metrics.get("failed_requests")) + " yêu cầu lỗi).")
-    add("- Tỷ lệ kiểm tra nghiệp vụ đạt: " + _metric(load_metrics.get("check_rate")) + ".")
+    add("- Tỷ lệ lỗi HTTP: " + _rate(load_metrics.get("failure_rate")) + " (" + _metric(load_metrics.get("failed_requests")) + " yêu cầu lỗi).")
+    add("- Tỷ lệ kiểm tra nghiệp vụ đạt: " + _rate(load_metrics.get("check_rate")) + ".")
     add("")
 
     add("## 22. BÃO HÒA TÀI NGUYÊN (RESOURCE SATURATION)")
     add("")
     host = load_result.get("measurement_host") or {}
     add("- Máy đo: " + str(host.get("cpu_count", "?")) + " lõi, tải trung bình " + str(host.get("load_average")) + ".")
-    add("- HikariCP, CPU, bộ nhớ, Kafka lag và Redis: xem production-audit/reports/build-and-tests.md và trạng thái cổng kiểm định.")
+    if load_result:
+        add("- Phép đo của lần chạy mới nhất (" + str(load_result.get("profile", "")) + ") là " + ("hợp lệ" if load_result.get("measurement_valid") else "KHÔNG hợp lệ") + ".")
+    add("- HikariCP, CPU, bộ nhớ, Kafka lag và Redis: lần chạy tải không ghi nhận các chỉ số này, xem trạng thái cổng kiểm định tại production-audit/state/verification.json.")
     add("")
 
     add("## 23. KẾT QUẢ FLASH-SALE TRÊN KHO HÀNG (FLASH-SALE INVENTORY RESULTS)")
     add("")
     add("- Kịch bản flash-sale hướng mọi VU vào cùng một SKU hạn chế; bất biến kiểm tra sau mỗi lần chạy bằng lệnh harness load flash-sale.")
-    add("- Kết quả chạy cụ thể: " + ("xem production-audit/state/performance-baselines.json" if load_result else "chưa có lần chạy flash-sale được lưu trong phiên này") + ".")
+    flash_sale = _latest_profile_run(load_rows, "flash-sale")
+    if flash_sale:
+        metrics = flash_sale.get("metrics", {})
+        add("- Lần chạy flash-sale đã lưu: " + str(flash_sale.get("directory")) + " — trạng thái " + str(flash_sale.get("status") or "không ghi nhận") + ", yêu cầu " + _metric(metrics.get("requests")) + ", " + _metric(metrics.get("request_rate_per_second"), " req/s") + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(metrics.get("failure_rate")) + ".")
+    else:
+        add("- Kết quả chạy cụ thể: chưa có lần chạy flash-sale được lưu trong thư mục load-results.")
     add("")
 
     add("## 24. KẾT QUẢ PROMOTION-STORM (PROMOTION-STORM RESULTS)")
     add("")
     add("- Kịch bản promotion-storm áp dụng cùng một mã giảm giá cho mọi VU; bất biến hạn mức được kiểm tra sau mỗi lần chạy.")
+    promotion_storm = _latest_profile_run(load_rows, "promotion-storm")
+    if promotion_storm:
+        metrics = promotion_storm.get("metrics", {})
+        add("- Lần chạy promotion-storm đã lưu: " + str(promotion_storm.get("directory")) + " — trạng thái " + str(promotion_storm.get("status") or "không ghi nhận") + ", yêu cầu " + _metric(metrics.get("requests")) + ", " + _metric(metrics.get("request_rate_per_second"), " req/s") + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(metrics.get("failure_rate")) + ".")
+        storm_invariants = promotion_storm.get("invariants", {}) or {}
+        if storm_invariants:
+            total, ok, bad, skipped, violations = _invariant_counts(storm_invariants)
+            add("- Bất biến hạn mức khuyến mãi của lần chạy này: " + str(storm_invariants.get("status", "chưa chạy")) + " — " + str(total) + " bất biến, " + str(ok) + " đạt, " + str(bad) + " không đạt, " + str(skipped) + " bỏ qua, " + str(violations) + " vi phạm.")
+    else:
+        add("- Chưa có lần chạy promotion-storm được lưu trong thư mục load-results.")
     add("")
 
     add("## 25. KIỂM THỬ KHÔI PHỤC & LỖI (RECOVERY AND FAILURE TESTING)")
     add("")
     add("- Hồ sơ recovery và failure-during-peak đã được hiện thực trong harness.")
-    add("- Chi tiết: production-audit/reports/e2e.md và production-audit/state/performance-baselines.json.")
+    recovery = _latest_profile_run(load_rows, "recovery")
+    if recovery:
+        metrics = recovery.get("metrics", {})
+        add("- Lần chạy recovery đã lưu: " + str(recovery.get("directory")) + " — trạng thái " + str(recovery.get("status") or "không ghi nhận") + ", yêu cầu " + _metric(metrics.get("requests")) + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(metrics.get("failure_rate")) + ".")
+    else:
+        add("- Chưa có lần chạy recovery được lưu trong thư mục load-results.")
+    add("- Chi tiết: production-audit/reports/e2e.md và các lần chạy đã lưu tại production-audit/runs/run-20261118-a2b6e6fc/load-results/.")
     add("")
 
     add("## 26. BẰNG CHỨNG TRUY VẾT PHÂN TÁN (DISTRIBUTED TRACE EVIDENCE)")
     add("")
     add("- Tempo và OpenTelemetry Collector đang chạy trong cụm Compose; cấu hình tại config/observability/tempo.yaml và config/observability/otel-collector-config.yaml.")
-    add("- Cổng kiểm định quan sát: " + str(verification.get("suites", {}).get("operations", {}).get("status", "chưa chạy")) + ".")
+    operations_status, operations_detail = _suite_status(verification, "operations", fingerprint)
+    add("- Cổng kiểm định quan sát: " + operations_status + (" — " + operations_detail if operations_detail else "") + ".")
+    if operations_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
+    for item in (verification.get("suites", {}).get("operations", {}) or {}).get("not_verified", []) or []:
+        add("- Chưa xác minh theo bộ kiểm thử quan sát: " + str(item) + ".")
     add("")
 
     add("## 27. NHẬT KÝ TẬP TRUNG (CENTRALIZED LOGS)")
@@ -404,11 +561,31 @@ def write_final_report(path: Path | None = None) -> Path:
     add("## 30. KẾT QUẢ CẢNH BÁO TELEGRAM RUNTIME (RUNTIME TELEGRAM ALERT RESULTS)")
     add("")
     runtime_rows = [row for row in alert_gates if str(row.get("gate", "")) in {"QA-ALERT-02", "QA-ALERT-03", "QA-ALERT-04", "QA-ALERT-05"}]
+    alerts_status, alerts_detail = _suite_status(verification, "alerts", fingerprint)
+    add("- Cổng kiểm định cảnh báo (GATE-23): " + alerts_status + (" — " + alerts_detail if alerts_detail else "") + ".")
+    if alerts_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     if runtime_rows:
         for row in runtime_rows:
-            add("- " + str(row.get("gate")) + ": " + str(row.get("status")) + " — " + str(row.get("evidence", {}).get("detail", "")) + " " + str(row.get("evidence", {}).get("reason", "")))
+            evidence = row.get("evidence", {}) or {}
+            add("- " + str(row.get("gate")) + ": " + str(row.get("status")) + " — " + str(evidence.get("detail", "")) + " " + str(evidence.get("reason", "")))
+            if "submitted" in evidence:
+                submitted = evidence.get("submitted")
+                received = evidence.get("alertmanager_count")
+                add("  - Số cảnh báo đã gửi: " + str(submitted) + "; số nhóm cảnh báo Alertmanager trả về: " + str(evidence.get("grouped_alerts")) + "; số cảnh báo Alertmanager đếm được: " + str(received) + ".")
+                if int(received or 0) == 0:
+                    add("  - **Alertmanager không đếm được cảnh báo nào (0/" + str(submitted) + ")**: kiểm tra giao hàng chấp nhận cả 0 lẫn " + str(submitted) + ", nên trạng thái PASS không chứng minh được việc gom cảnh báo đã thực sự xảy ra; phải chạy lại khi Alertmanager nhận đủ " + str(submitted) + " cảnh báo.")
+                elif int(received or 0) >= int(submitted or 0):
+                    add("  - Alertmanager đã đếm đủ " + str(submitted) + " cảnh báo và gom thành " + str(evidence.get("grouped_alerts")) + " nhóm: việc gom cảnh báo đã được chứng minh.")
     else:
         add("- Chưa có lần chạy kiểm thử giao hàng runtime trong phiên này.")
+    missing_alerts = [
+        gate
+        for gate in ("QA-ALERT-02", "QA-ALERT-03", "QA-ALERT-05")
+        if not any(str(row.get("gate", "")) == gate for row in runtime_rows)
+    ]
+    if missing_alerts:
+        add("- Các cổng chưa có kết quả nào được ghi nhận: " + ", ".join(missing_alerts) + ".")
     add("- Cấu hình: config/observability/alertmanager/alertmanager.yml.template, quy tắc config/observability/alertmanager/rules/runtime-alerts.yml.")
     add("")
 
@@ -424,7 +601,16 @@ def write_final_report(path: Path | None = None) -> Path:
     for name, status, detail in _suite_rows(verification, fingerprint):
         add("- " + name + ": " + status + (" — " + detail if detail else ""))
     if build:
-        add("- Lệnh build: " + str(build.get("command")) + ", mã thoát " + str(build.get("exit_code")) + ", " + str(build.get("tests_run", "?")) + " test, " + str(build.get("modules", "?")) + " module, thời gian " + str(build.get("duration_seconds")) + " giây.")
+        build_line = "- Lệnh build: " + str(build.get("command", "")) + ", mã thoát " + str(build.get("exit_code", "?"))
+        duration = build.get("duration_seconds")
+        build_line += ", thời gian " + (str(duration) if duration is not None else "chưa ghi nhận") + " giây"
+        if build.get("updated_at"):
+            build_line += ", ghi nhận lúc " + str(build.get("updated_at"))
+        if build.get("revision"):
+            build_line += " tại revision " + str(build.get("revision"))[:12]
+        if not build_fresh:
+            build_line += " — bằng chứng đã cũ so với mã nguồn hiện tại, phải chạy lại và ghi nhận lại"
+        add(build_line + ".")
     add("")
 
     add("## 33. PHÁN QUYẾT QA ĐỘC LẬP (INDEPENDENT QA VERDICTS)")
@@ -441,8 +627,21 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     entries = deliveries.get("deliveries", deliveries.get("entries", []))
     if isinstance(entries, list) and entries:
+        states = Counter(str(entry.get("state", "")) for entry in entries)
+        add("- Tổng số bản ghi phân phối: **" + str(len(entries)) + "** (" + ", ".join(name + ": **" + str(count) + "**" for name, count in sorted(states.items())) + ").")
+        rejected = [entry for entry in entries if str(entry.get("state", "")) == "REJECTED_BY_GATES"]
+        blocked = [entry for entry in entries if str(entry.get("state", "")) == "PUSH_BLOCKED"]
+        if rejected:
+            add("- **Bị cổng kiểm định từ chối**: " + str(len(rejected)) + " bản ghi.")
+            for entry in rejected:
+                add("  - " + str(entry.get("timestamp", "")) + " — " + str(entry.get("action", "")) + " — " + str(entry.get("detail", "")).replace("\n", " ")[:180])
+        if blocked:
+            add("- **Bị chặn khi đẩy**: " + str(len(blocked)) + " bản ghi.")
+            for entry in blocked:
+                add("  - " + str(entry.get("timestamp", "")) + " — " + str(entry.get("action", "")) + " — " + str(entry.get("detail", "")).replace("\n", " ")[:180])
+        add("- Các lần phân phối gần nhất:")
         for entry in entries[-8:]:
-            add("- " + str(entry.get("commit_sha", ""))[:12] + " — " + str(entry.get("message", ""))[:90] + " — push: " + str(entry.get("push_state", "")) + ".")
+            add("  - " + str(entry.get("timestamp", "")) + " — " + str(entry.get("commit_sha", ""))[:12] + " — " + str(entry.get("state", "")) + " — " + str(entry.get("detail", "")).replace("\n", " ")[:120])
     else:
         add("- " + json.dumps(deliveries, ensure_ascii=False)[:600])
     add("")
@@ -452,10 +651,10 @@ def write_final_report(path: Path | None = None) -> Path:
     add("### 35.1 Mức HIGH")
     add("")
     if open_high:
-        add("| Mã | Mức | Nội dung |")
-        add("| --- | --- | --- |")
-        for identifier, severity, title in open_high:
-            add("| " + identifier + " | " + severity + " | " + title + " |")
+        add("| Mã | Mức | Trạng thái | Nội dung |")
+        add("| --- | --- | --- | --- |")
+        for identifier, severity, state, title in open_high:
+            add("| " + identifier + " | " + severity + " | " + state + " | " + title + " |")
     else:
         add("- Không có tác vụ HIGH nào đang mở.")
     add("")
@@ -464,7 +663,7 @@ def write_final_report(path: Path | None = None) -> Path:
     if open_medium:
         add("| Mã | Mức | Nội dung |")
         add("| --- | --- | --- |")
-        for identifier, severity, title in open_medium:
+        for identifier, severity, state, title in open_medium:
             add("| " + identifier + " | " + severity + " | " + title + " |")
     else:
         add("- Không có tác vụ MEDIUM nào đang mở.")
@@ -478,10 +677,14 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     add("### 36.1 ĐÃ XÁC MINH BẰNG BẰNG CHỨNG")
     add("")
-    add("- Rà soát mã nguồn đầy đủ: " + str(coverage.get("reviewed_files")) + "/" + str(coverage.get("total_files")) + " tập tin.")
+    add("- Rà soát mã nguồn: " + str(coverage.get("reviewed_files")) + "/" + str(coverage.get("total_files")) + " tập tin đã được rà soát; " + str(int(coverage.get("total_files") or 0) - int(coverage.get("reviewed_files") or 0)) + " tập tin chưa rà soát (cổng GATE-1 chưa đạt).")
     add("- Chính sách không chú thích: " + str(verification.get("suites", {}).get("comments", {}).get("status", "chưa chạy")) + ".")
     add("- Build reactor: " + build_status + ".")
-    add("- Bất biến nghiệp vụ dưới tải: " + str(load_invariants.get("status", "chưa chạy")) + " với " + str(len(load_invariants.get("invariants", []))) + " bất biến kiểm tra.")
+    if load_invariants:
+        total, ok, bad, skipped, violations = _invariant_counts(load_invariants)
+        add("- Bất biến nghiệp vụ dưới tải (lần chạy " + str(load_result.get("profile", "")) + " — " + str(load_result.get("status", "")) + "): " + str(load_invariants.get("status", "chưa chạy")) + " — " + str(total) + " bất biến kiểm tra, " + str(ok) + " đạt, " + str(bad) + " không đạt, " + str(skipped) + " bỏ qua, " + str(violations) + " vi phạm.")
+    else:
+        add("- Bất biến nghiệp vụ dưới tải: chưa có lần chạy tải nào ghi nhận bất biến.")
     add("")
     add("### 36.2 CHƯA XÁC MINH")
     add("")
@@ -499,7 +702,7 @@ def write_final_report(path: Path | None = None) -> Path:
     else:
         add("- **Quyết định**: CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT.")
         add("- Các cổng chưa đạt: " + ", ".join(failing) if failing else "- Không xác định được cổng chưa đạt.")
-    add("- Số tác vụ HIGH đang mở: " + str(len(open_high)) + "; MEDIUM: " + str(len(open_medium)) + "; LOW: " + str(len(open_low)) + ".")
+    add("- Số tác vụ HIGH đang mở: " + str(len(open_high)) + " (CRITICAL: " + str(len(open_critical)) + "); MEDIUM: " + str(len(open_medium)) + "; LOW: " + str(len(open_low)) + ".")
     add("- Trạng thái tổng hợp tác vụ: " + ", ".join(name + "=" + str(count) for name, count in sorted(summary.items())) + ".")
     add("- Báo cáo được sinh tự động tại " + str(target) + ".")
     add("")

@@ -1,5 +1,6 @@
 package com.shop.orderservice.service.impls;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -148,13 +150,35 @@ public class OrderReturnServiceImpl implements OrderReturnService {
             throw BusinessException.badRequest("order.return.already.reviewed");
         }
 
+        Order order = orderReturn.getOrder();
+        String orderCurrency = PlatformCurrency.normalize(order.getCurrency());
+        String returnCurrency = PlatformCurrency.normalize(orderReturn.getCurrency());
+        if (orderCurrency == null || returnCurrency == null || !orderCurrency.equals(returnCurrency)) {
+            log.warn("Rejected the review of return {}: it is in {} while the order is in {}",
+                    returnId, returnCurrency, orderCurrency);
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, returnCurrency, orderCurrency);
+        }
+
+        BigDecimal approvedAmount = orderReturn.getRefundAmount();
+        if (approvedAmount == null || approvedAmount.signum() <= 0) {
+            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, approvedAmount);
+        }
+
+        BigDecimal orderTotal = order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO;
+        BigDecimal remainingRefundable = orderTotal.subtract(alreadyRefundedAmount(order, orderReturn));
+        if (approvedAmount.compareTo(remainingRefundable) > 0) {
+            log.warn("Rejected the review of return {}: {} exceeds the remaining refundable amount {}",
+                    returnId, approvedAmount, remainingRefundable);
+            throw BusinessException.badRequest("order.return.refund.exceeds.total");
+        }
+
         orderReturn.setStatus(request.status());
         orderReturn.setAdminNotes(request.adminNotes());
         orderReturn.setReviewedBy(adminUsername);
         orderReturn.setReviewedAt(Instant.now());
 
         if (request.status() == ReturnStatus.APPROVED || request.status() == ReturnStatus.REFUNDED) {
-            boolean refunded = paymentServiceClient.refundByOrderId(orderReturn.getOrder().getId());
+            boolean refunded = paymentServiceClient.refundByOrderId(order.getId(), approvedAmount, orderCurrency);
             if (!refunded) {
                 throw BusinessException.badRequest("order.return.refund.gateway.failed");
             }
@@ -164,6 +188,26 @@ public class OrderReturnServiceImpl implements OrderReturnService {
         OrderReturn updated = orderReturnRepository.save(orderReturn);
         log.info("Admin {} reviewed return {} with decision {}", adminUsername, returnId, updated.getStatus());
         return mapToResponse(updated);
+    }
+
+    private BigDecimal alreadyRefundedAmount(Order order, OrderReturn current) {
+        return orderReturnRepository.findByOrderId(order.getId()).stream()
+                .filter(candidate -> !isSameReturn(candidate, current))
+                .filter(candidate -> candidate.getStatus() == ReturnStatus.APPROVED
+                        || candidate.getStatus() == ReturnStatus.REFUNDED)
+                .map(OrderReturn::getRefundAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private boolean isSameReturn(OrderReturn candidate, OrderReturn current) {
+        if (candidate == current) {
+            return true;
+        }
+        if (candidate.getId() == null || current.getId() == null) {
+            return false;
+        }
+        return candidate.getId().equals(current.getId());
     }
 
     private OrderReturnResponse mapToResponse(OrderReturn entity) {

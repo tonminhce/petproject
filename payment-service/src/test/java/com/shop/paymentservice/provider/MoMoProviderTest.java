@@ -164,10 +164,20 @@ class MoMoProviderTest {
 
     @Test
     void refund_isRejectedWhenTheProviderTransactionIdIsUnknown() {
-        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "key-1");
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "VND", "key-1");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
         assertThat(result.providerEventId()).isEqualTo("MOMO_TRANSACTION_ID_MISSING");
+        server.verify();
+    }
+
+    @Test
+    void refund_rejectsACurrencyTheProviderDoesNotSupportWithoutCallingIt() {
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "USD",
+                "key-1", "144492817");
+
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
+        assertThat(result.providerEventId()).isEqualTo("MOMO_UNSUPPORTED_CURRENCY");
         server.verify();
     }
 
@@ -183,7 +193,7 @@ class MoMoProviderTest {
                         {"resultCode":0,"message":"Successful","orderId":"%s","amount":50000}
                         """.formatted(refundOrderId), MediaType.APPLICATION_JSON));
 
-        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1",
+        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "VND", "key-1",
                 "144492817");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
@@ -196,7 +206,7 @@ class MoMoProviderTest {
         server.expect(requestTo(REFUND_URL))
                 .andRespond(withSuccess("{\"resultCode\":0,\"message\":\"Successful\"}", MediaType.APPLICATION_JSON));
 
-        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "key-1",
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "VND", "key-1",
                 "144492817");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
@@ -212,7 +222,7 @@ class MoMoProviderTest {
                         {"resultCode":0,"message":"Successful","orderId":"RF-somebody-else","amount":50000}
                         """, MediaType.APPLICATION_JSON));
 
-        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1",
+        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "VND", "key-1",
                 "144492817");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
@@ -231,7 +241,7 @@ class MoMoProviderTest {
                         """.formatted(refundOrderId, refundOrderId,
                         "0000000000000000000000000000000000000000000000000000000000000000"), MediaType.APPLICATION_JSON));
 
-        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1",
+        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "VND", "key-1",
                 "144492817");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);

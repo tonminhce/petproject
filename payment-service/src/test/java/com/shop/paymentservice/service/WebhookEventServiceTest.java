@@ -241,6 +241,24 @@ class WebhookEventServiceTest {
     }
 
     @Test
+    void currencyMismatch_marksEventFailedRetryable_stateUnchanged() {
+        happyPathStubs();
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+
+        assertThatCode(() -> service.handle(PROVIDER,
+                body(capturedPayload().currency("VND").build())))
+                .doesNotThrowAnyException();
+
+        ArgumentCaptor<PaymentEvent> saveCaptor = ArgumentCaptor.forClass(PaymentEvent.class);
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
+        assertThat(saveCaptor.getValue().getLastError()).contains("VND").contains("USD");
+        verify(writer, never()).completeWithEvent(any(Payment.class), any(PaymentEvent.class), anyString());
+        assertThat(pending.getStatus()).isEqualTo(PaymentStatus.PENDING);
+    }
+
+    @Test
     void illegalTransition_marksEventFailedRetryable_andAcks() {
         happyPathStubs();
         when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.REFUNDED)));

@@ -1,9 +1,11 @@
 package com.shop.promotionservice.service.impls;
 
 import com.shop.common.core.audit.AuditActor;
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.promotionservice.constant.CampaignStatus;
+import com.shop.promotionservice.constant.PromotionErrorCode;
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.dto.request.CampaignRequest;
 import com.shop.promotionservice.dto.response.CampaignResponse;
@@ -66,6 +68,7 @@ public class CampaignServiceImpl implements CampaignService {
             .endsAt(request.endsAt())
             .maxRedemptions(request.maxRedemptions())
             .totalBudget(request.totalBudget())
+            .currency(resolveCurrency(request.currency()))
             .perUserLimit(request.perUserLimit() != null ? request.perUserLimit() : 1)
             .status(request.status() != null ? request.status() : CampaignStatus.INACTIVE)
             .build();
@@ -91,6 +94,7 @@ public class CampaignServiceImpl implements CampaignService {
         campaign.setEndsAt(request.endsAt());
         campaign.setMaxRedemptions(request.maxRedemptions());
         campaign.setTotalBudget(request.totalBudget());
+        campaign.setCurrency(resolveCurrency(request.currency()));
         campaign.setPerUserLimit(request.perUserLimit() != null ? request.perUserLimit() : 1);
         if (request.status() != null) {
             applyStatus(campaign, request.status());
@@ -117,6 +121,17 @@ public class CampaignServiceImpl implements CampaignService {
             .orElseThrow(() -> BusinessException.of(ErrorCode.CAMPAIGN_NOT_FOUND, campaignId));
         return reservationRepository.findByCampaignId(campaignId, pageable)
             .map(CampaignUsageResponse::from);
+    }
+
+    private String resolveCurrency(String currency) {
+        if (currency == null || currency.isBlank()) {
+            return PlatformCurrency.DEFAULT;
+        }
+        String normalized = PlatformCurrency.normalize(currency.trim());
+        if (!PlatformCurrency.isSupported(normalized)) {
+            throw BusinessException.of(PromotionErrorCode.PROMOTION_CURRENCY_UNSUPPORTED, currency);
+        }
+        return normalized;
     }
 
     private void applyStatus(Campaign campaign, CampaignStatus status) {

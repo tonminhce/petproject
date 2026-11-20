@@ -108,25 +108,31 @@ public class StripeProvider implements PaymentProvider {
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        return refund(paymentId, amount, idempotencyKey, null);
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
+        return refund(paymentId, amount, currency, idempotencyKey, null);
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey,
+            String providerIntentId) {
         try {
             PaymentIntent original = resolveIntent(paymentId, providerIntentId);
             if (original == null) {
                 return ProviderResult.rejected("stripe-error-intent-not-found");
             }
-            long refundMinorUnits = toMinorUnits(amount, original.getCurrency());
+            if (!sameCurrency(currency, original.getCurrency())) {
+                log.warn("Stripe refund refused: payment currency {} differs from the original transaction currency {}",
+                        currency, original.getCurrency());
+                return ProviderResult.rejected("currency-mismatch");
+            }
+            long refundMinorUnits = toMinorUnits(amount, currency);
             String refundKey = "refund-" + idempotencyKey + "-" + amount.toPlainString();
             RefundCreateParams params = RefundCreateParams.builder()
                     .setPaymentIntent(original.getId())
                     .setAmount(refundMinorUnits)
                     .build();
             Refund refund = createRefund(params, refundKey);
-            return refundOutcome(refund, refundMinorUnits, original.getCurrency());
+            return refundOutcome(refund, refundMinorUnits, currency);
         } catch (IdempotencyException e) {
             log.info("Stripe replayed a cached refund for idempotency key {} - the refund outcome is unknown",
                     idempotencyKey);
@@ -236,6 +242,12 @@ public class StripeProvider implements PaymentProvider {
                 .setLimit(1L)
                 .build();
         return searchIntents(searchParams);
+    }
+
+    static boolean sameCurrency(String expected, String reported) {
+        return expected != null && !expected.isBlank()
+                && reported != null && !reported.isBlank()
+                && expected.equalsIgnoreCase(reported);
     }
 
     private boolean isDefinitiveClientError(StripeException e) {

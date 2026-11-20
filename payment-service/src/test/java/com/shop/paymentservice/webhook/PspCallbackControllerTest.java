@@ -2,6 +2,7 @@ package com.shop.paymentservice.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
 import com.shop.paymentservice.config.PaymentMoMoProperties;
 import com.shop.paymentservice.config.PaymentVNPayProperties;
 import com.shop.paymentservice.service.WebhookEventService;
@@ -20,10 +21,12 @@ import java.util.TreeMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class PspCallbackControllerTest {
 
@@ -49,6 +52,7 @@ class PspCallbackControllerTest {
                 "127.0.0.1", "", "partial", "", 30000L);
         controller = new PspCallbackController(webhookEventService, new MoMoCallbackVerifier(momoProperties),
                 new VNPayCallbackVerifier(vnpayProperties), objectMapper);
+        when(webhookEventService.paymentCurrency(anyString())).thenReturn("VND");
     }
 
     @Test
@@ -63,6 +67,27 @@ class PspCallbackControllerTest {
         assertThat(carrier).contains("\"status\":\"CAPTURED\"");
         assertThat(carrier).contains("\"amount\":50000");
         assertThat(carrier).contains("144492817");
+    }
+
+    @Test
+    void momoCallback_carriesTheCurrencyOfThePaymentInTheCarrierPayload() {
+        Map<String, Object> body = momoBody("0", "Successful.", 144492817L);
+
+        controller.momoIpn(json(body));
+
+        assertThat(capturedCarrier("momo")).contains("\"currency\":\"VND\"");
+    }
+
+    @Test
+    void momoCallbackForAPaymentInAnotherCurrency_isRefused() {
+        when(webhookEventService.paymentCurrency(PAYMENT_ID)).thenReturn("USD");
+        Map<String, Object> body = momoBody("0", "Successful.", 144492817L);
+
+        assertThatThrownBy(() -> controller.momoIpn(json(body)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_CURRENCY_MISMATCH.getCode()));
+        verify(webhookEventService, never()).handle(any(), any());
     }
 
     @Test
@@ -108,6 +133,27 @@ class PspCallbackControllerTest {
         assertThat(carrier).contains(PAYMENT_ID);
         assertThat(carrier).contains("\"status\":\"CAPTURED\"");
         assertThat(carrier).contains("\"amount\":50000");
+    }
+
+    @Test
+    void vnpayCallback_carriesTheCurrencyOfThePaymentInTheCarrierPayload() {
+        Map<String, String> params = vnpayParams();
+
+        controller.vnpayIpn(params);
+
+        assertThat(capturedCarrier("vnpay")).contains("\"currency\":\"VND\"");
+    }
+
+    @Test
+    void vnpayCallbackForAPaymentInAnotherCurrency_isRefused() {
+        when(webhookEventService.paymentCurrency(PAYMENT_ID)).thenReturn("USD");
+        Map<String, String> params = vnpayParams();
+
+        assertThatThrownBy(() -> controller.vnpayIpn(params))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_CURRENCY_MISMATCH.getCode()));
+        verify(webhookEventService, never()).handle(any(), any());
     }
 
     @Test

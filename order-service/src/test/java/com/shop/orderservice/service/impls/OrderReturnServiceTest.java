@@ -31,6 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -121,19 +122,28 @@ class OrderReturnServiceTest {
                 .isInstanceOf(BusinessException.class);
     }
 
-    @Test
-    void reviewReturn_approve_triggersRefund() {
-        Order order = Order.builder().id(orderId).userId(userId).build();
-        OrderReturn existing = OrderReturn.builder()
+    private Order orderWithTotal(BigDecimal total, String currency) {
+        return Order.builder().id(orderId).userId(userId).total(total).currency(currency).build();
+    }
+
+    private OrderReturn requestedReturn(Order order, BigDecimal refundAmount, String currency) {
+        return OrderReturn.builder()
                 .id(returnId)
                 .order(order)
                 .userId(userId)
-                .refundAmount(BigDecimal.valueOf(100))
+                .refundAmount(refundAmount)
+                .currency(currency)
                 .status(ReturnStatus.REQUESTED)
                 .build();
+    }
+
+    @Test
+    void reviewReturn_approve_refundsTheApprovedAmountInTheOrderCurrency() {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn existing = requestedReturn(order, BigDecimal.valueOf(100), "VND");
         when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(paymentServiceClient.refundByOrderId(orderId)).thenReturn(true);
+        when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND")).thenReturn(true);
 
         OrderReturnReviewRequest review = new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager");
 
@@ -141,7 +151,90 @@ class OrderReturnServiceTest {
 
         assertThat(response.status()).isEqualTo(ReturnStatus.REFUNDED);
         assertThat(response.reviewedBy()).isEqualTo("admin_user");
-        verify(paymentServiceClient).refundByOrderId(orderId);
+        verify(paymentServiceClient).refundByOrderId(orderId, BigDecimal.valueOf(100), "VND");
+    }
+
+    @Test
+    void reviewReturn_approve_refundsOnlyTheApprovedAmountNotTheWholeOrder() {
+        Order order = orderWithTotal(new BigDecimal("2499.00"), "VND");
+        OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND")).thenReturn(true);
+
+        service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));
+
+        verify(paymentServiceClient).refundByOrderId(orderId, new BigDecimal("100.00"), "VND");
+        verify(paymentServiceClient, never()).refundByOrderId(orderId);
+    }
+
+    @Test
+    void reviewReturn_approve_refundsInTheCurrencyOfTheOrder() {
+        Order order = orderWithTotal(new BigDecimal("2499.00"), "USD");
+        OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "USD");
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "USD")).thenReturn(true);
+
+        service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));
+
+        verify(paymentServiceClient).refundByOrderId(orderId, new BigDecimal("100.00"), "USD");
+    }
+
+    @Test
+    void reviewReturn_approve_rejectsWhenTheApprovedAmountExceedsTheRemainingRefundableAmount() {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn existing = requestedReturn(order, BigDecimal.valueOf(100), "VND");
+        OrderReturn alreadyRefunded = OrderReturn.builder()
+                .id(UUID.randomUUID())
+                .order(order)
+                .userId(userId)
+                .refundAmount(BigDecimal.valueOf(150))
+                .currency("VND")
+                .status(ReturnStatus.REFUNDED)
+                .build();
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        when(orderReturnRepository.findByOrderId(orderId)).thenReturn(List.of(alreadyRefunded));
+
+        assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BAD_REQUEST.getCode()));
+
+        verify(paymentServiceClient, never()).refundByOrderId(any(), any(), any());
+        verify(paymentServiceClient, never()).refundByOrderId(any(UUID.class));
+    }
+
+    @Test
+    void reviewReturn_approve_rejectsWhenTheReturnCurrencyIsNotTheOrderCurrency() {
+        Order order = orderWithTotal(new BigDecimal("2499.00"), "USD");
+        OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        verify(paymentServiceClient, never()).refundByOrderId(any(), any(), any());
+        verify(paymentServiceClient, never()).refundByOrderId(any(UUID.class));
+    }
+
+    @Test
+    void reviewReturn_approve_rejectsAnApprovedAmountThatIsNotPositive() {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn existing = requestedReturn(order, BigDecimal.ZERO, "VND");
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        verify(paymentServiceClient, never()).refundByOrderId(any(), any(), any());
+        verify(paymentServiceClient, never()).refundByOrderId(any(UUID.class));
     }
 
     @Test

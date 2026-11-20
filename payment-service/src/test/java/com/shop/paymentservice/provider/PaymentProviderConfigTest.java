@@ -106,7 +106,7 @@ class PaymentProviderConfigTest {
                 }
 
                 @Override
-                public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
+                public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
                     throw new UnsupportedOperationException();
                 }
             };

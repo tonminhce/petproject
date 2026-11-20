@@ -2,6 +2,7 @@ package com.shop.orderservice.service.impls;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.orderservice.client.PaymentServiceClient;
@@ -295,6 +296,7 @@ public class OrderServiceImpl implements OrderService {
                 if (payment == null || !"CAPTURED".equals(payment.status())) {
                     throw BusinessException.of(ErrorCode.ORDER_PAYMENT_NOT_CAPTURED, orderId);
                 }
+                requirePaymentMatchesOrder(order, payment);
             }
 
             try {
@@ -325,6 +327,23 @@ public class OrderServiceImpl implements OrderService {
                 throw BusinessException.of(ErrorCode.CONFIRM_COMMIT_FAILED, orderId);
             }
             throw ex;
+        }
+    }
+
+    private void requirePaymentMatchesOrder(Order order, PaymentStatusSnapshot payment) {
+        BigDecimal orderTotal = order.getTotal();
+        BigDecimal paidAmount = payment.amount();
+        if (orderTotal == null || paidAmount == null || paidAmount.compareTo(orderTotal) != 0) {
+            log.warn("Rejected confirm for order {}: paid amount {} does not match the order total {}",
+                    order.getId(), paidAmount, orderTotal);
+            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, paidAmount, orderTotal);
+        }
+        String paidCurrency = PlatformCurrency.normalize(payment.currency());
+        String orderCurrency = PlatformCurrency.normalize(order.getCurrency());
+        if (paidCurrency == null || orderCurrency == null || !paidCurrency.equals(orderCurrency)) {
+            log.warn("Rejected confirm for order {}: paid currency {} does not match the order currency {}",
+                    order.getId(), paidCurrency, orderCurrency);
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, paidCurrency, orderCurrency);
         }
     }
 

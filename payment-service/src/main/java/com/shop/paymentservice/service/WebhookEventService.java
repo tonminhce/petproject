@@ -157,6 +157,7 @@ public class WebhookEventService {
             applyPartialRefund(payload, payment, event);
             return;
         }
+        requireSameCurrency(payload, payment);
         if (payload.amount() == null || payment.getAmount() == null
                 || payload.amount().compareTo(payment.getAmount()) != 0) {
             throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, payload.amount(), payment.getAmount());
@@ -184,6 +185,7 @@ public class WebhookEventService {
     }
 
     private void applyPartialRefund(WebhookPayload payload, Payment payment, PaymentEvent event) {
+        requireSameCurrency(payload, payment);
         BigDecimal already = payment.getRefundedAmount() == null
                 ? BigDecimal.ZERO : payment.getRefundedAmount();
         BigDecimal remaining = payment.getAmount() == null
@@ -201,6 +203,25 @@ public class WebhookEventService {
         writer.completeWithEvent(payment, event, outboxEventType(next));
         log.info("Partial refund applied to payment {}: {} of {} already refunded, {} returned now",
                 payment.getId(), already, payment.getAmount(), payload.amount());
+    }
+
+    private void requireSameCurrency(WebhookPayload payload, Payment payment) {
+        String callbackCurrency = payload.currency();
+        if (callbackCurrency == null || callbackCurrency.isBlank()) {
+            return;
+        }
+        String paymentCurrency = payment.getCurrency();
+        if (paymentCurrency == null || !callbackCurrency.equalsIgnoreCase(paymentCurrency)) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, callbackCurrency, paymentCurrency);
+        }
+    }
+
+    public String paymentCurrency(String paymentId) {
+        UUID parsed = parsePaymentIdOrNull(paymentId);
+        if (parsed == null) {
+            return null;
+        }
+        return paymentRepository.findById(parsed).map(Payment::getCurrency).orElse(null);
     }
 
     private byte[] toCarrierPayload(String eventId, String stripeType, String mappedStatus, byte[] rawBody) {

@@ -44,6 +44,9 @@ def _tracked_files() -> list[str]:
 
 
 def _scan_for_secrets() -> list[dict[str, str]]:
+    from ..git_delivery.delivery import secret_scan_exceptions
+
+    exceptions = secret_scan_exceptions()
     findings: list[dict[str, str]] = []
     repository = config.repository_root()
     for relative in _tracked_files():
@@ -60,17 +63,43 @@ def _scan_for_secrets() -> list[dict[str, str]]:
             content = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
+        allowed = _allowed_tokens(exceptions, relative)
         for match in TELEGRAM_TOKEN_LITERAL.finditer(content):
+            if _is_allowed(match.group(0), allowed):
+                continue
             findings.append({"file": relative, "kind": "telegram-bot-token", "detail": match.group(0)[:24] + "..."})
         for match in LIVE_STRIPE_KEY.finditer(content):
+            if _is_allowed(match.group(0), allowed):
+                continue
             findings.append({"file": relative, "kind": "stripe-live-key", "detail": match.group(0)[:12] + "..."})
         for match in ANY_BOT_TOKEN.finditer(content):
-            if "TELEGRAM_BOT_TOKEN" not in content[max(0, match.start() - 40):match.start()]:
-                findings.append({"file": relative, "kind": "unlabelled-bot-token", "detail": match.group(0)[:8] + "..."})
+            if "TELEGRAM_BOT_TOKEN" in content[max(0, match.start() - 40):match.start()]:
+                continue
+            if _is_allowed(match.group(0), allowed):
+                continue
+            findings.append({"file": relative, "kind": "unlabelled-bot-token", "detail": match.group(0)[:8] + "..."})
         for match in ANY_STRIPE_KEY.finditer(content):
-            if not any(token in content for token in ("STRIPE_SECRET_KEY", "STRIPE_API_KEY", "sk_test_placeholder")):
-                findings.append({"file": relative, "kind": "stripe-key-literal", "detail": match.group(0)[:8] + "..."})
+            if any(token in content for token in ("STRIPE_SECRET_KEY", "STRIPE_API_KEY", "sk_test_placeholder")):
+                continue
+            if _is_allowed(match.group(0), allowed):
+                continue
+            findings.append({"file": relative, "kind": "stripe-key-literal", "detail": match.group(0)[:8] + "..."})
     return findings
+
+
+def _allowed_tokens(exceptions: dict[str, list[str]], relative: str) -> list[str]:
+    tokens: list[str] = []
+    for key, values in exceptions.items():
+        if key.endswith("*"):
+            if relative.startswith(key[:-1]):
+                tokens.extend(values)
+        elif key == relative:
+            tokens.extend(values)
+    return [token for token in tokens if token]
+
+
+def _is_allowed(matched: str, allowed: list[str]) -> bool:
+    return any(candidate and candidate in matched for candidate in allowed)
 
 
 def _validate_template() -> tuple[dict[str, Any], list[str]]:

@@ -90,7 +90,7 @@ class PaymentCaptureConfirmationIT extends AbstractIntegrationTest {
         assertThat(row.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
         assertThat(row.getPreviousStatus()).isEqualTo(PaymentStatus.CAPTURED);
         assertThat(events(paymentId, REFUND_EVENT)).hasSize(1);
-        assertThat(scriptedProvider.refundCalls()).containsExactly(paymentId + ":pi_scripted_refund");
+        assertThat(scriptedProvider.refundCalls()).containsExactly(paymentId + ":USD:pi_scripted_refund");
     }
 
     @Test

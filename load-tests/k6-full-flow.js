@@ -73,7 +73,7 @@ export default function () {
       const paymentPayload = JSON.stringify({
         orderId: orderId,
         amount: orderData.total || 90.0,
-        currency: 'USD',
+        currency: orderData.currency || 'VND',
         idempotencyKey: `pay-${uuidv4()}`,
         provider: 'cod',
       });

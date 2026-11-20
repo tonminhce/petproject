@@ -1,5 +1,6 @@
 package com.shop.promotionservice.service;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.promotionservice.constant.CampaignStatus;
 import com.shop.promotionservice.constant.UsageStatus;
@@ -70,7 +71,15 @@ class CampaignServiceTest {
             CODE, "Save 10%", "PERCENT", new BigDecimal("10.00"),
             new BigDecimal("50.00"),
             Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-09-01T00:00:00Z"),
-            100, new BigDecimal("1000.00"), 1, CampaignStatus.ACTIVE);
+            100, new BigDecimal("1000.00"), "VND", 1, CampaignStatus.ACTIVE);
+    }
+
+    private CampaignRequest requestWithCurrency(String currency) {
+        return new CampaignRequest(
+            CODE, "Save 10%", "PERCENT", new BigDecimal("10.00"),
+            new BigDecimal("50.00"),
+            Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-09-01T00:00:00Z"),
+            100, new BigDecimal("1000.00"), currency, 1, CampaignStatus.ACTIVE);
     }
 
     private void assertBusinessException(Runnable call, String code, HttpStatus status) {
@@ -129,7 +138,7 @@ class CampaignServiceTest {
             .thenAnswer(inv -> inv.getArgument(0));
         CampaignRequest sparse = new CampaignRequest(
             CODE, "Save 10%", "FIXED", new BigDecimal("5.00"),
-            null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null);
 
         CampaignResponse response = service.create(sparse);
 
@@ -162,7 +171,7 @@ class CampaignServiceTest {
         when(campaignRepository.existsByCodeAndIdNot("SAVE20", campaignId)).thenReturn(true);
         CampaignRequest renamed = new CampaignRequest(
             "SAVE20", "Save 10%", "PERCENT", new BigDecimal("10.00"),
-            null, null, null, null, null, null, CampaignStatus.ACTIVE);
+            null, null, null, null, null, null, null, CampaignStatus.ACTIVE);
 
         assertBusinessException(() -> service.update(campaignId, renamed),
             "PRO-7002", HttpStatus.CONFLICT);
@@ -182,7 +191,7 @@ class CampaignServiceTest {
             CODE, "Renamed", "FIXED", new BigDecimal("7.50"),
             new BigDecimal("25.00"),
             Instant.parse("2026-08-02T00:00:00Z"), Instant.parse("2026-09-02T00:00:00Z"),
-            250, new BigDecimal("2000.00"), 2, CampaignStatus.INACTIVE);
+            250, new BigDecimal("2000.00"), "USD", 2, CampaignStatus.INACTIVE);
 
         CampaignResponse response = service.update(campaignId, edits);
 
@@ -231,7 +240,7 @@ class CampaignServiceTest {
             CODE, "Renamed", "PERCENT", new BigDecimal("10.00"),
             new BigDecimal("50.00"),
             Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-09-01T00:00:00Z"),
-            100, new BigDecimal("1000.00"), 1, null);
+            100, new BigDecimal("1000.00"), "VND", 1, null);
 
         CampaignResponse response = service.update(campaignId, edits);
 
@@ -258,6 +267,72 @@ class CampaignServiceTest {
             .isNotInstanceOf(java.util.NoSuchElementException.class);
 
         verify(campaignRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create carries the requested currency onto the campaign and into the response")
+    void createCarriesTheRequestedCurrency() {
+        when(campaignRepository.existsByCode(CODE)).thenReturn(false);
+        when(campaignRepository.save(any(Campaign.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+
+        CampaignResponse response = service.create(requestWithCurrency("USD"));
+
+        ArgumentCaptor<Campaign> captor = ArgumentCaptor.forClass(Campaign.class);
+        verify(campaignRepository).save(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo("USD");
+        assertThat(response.currency()).isEqualTo("USD");
+    }
+
+    @Test
+    @DisplayName("create without a currency falls back to the platform default")
+    void createWithoutCurrencyFallsBackToThePlatformDefault() {
+        when(campaignRepository.existsByCode(CODE)).thenReturn(false);
+        when(campaignRepository.save(any(Campaign.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+        CampaignRequest withoutCurrency = new CampaignRequest(
+            CODE, "Save 10%", "PERCENT", new BigDecimal("10.00"),
+            null, null, null, null, null, null, null, null);
+
+        CampaignResponse response = service.create(withoutCurrency);
+
+        ArgumentCaptor<Campaign> captor = ArgumentCaptor.forClass(Campaign.class);
+        verify(campaignRepository).save(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo(PlatformCurrency.DEFAULT);
+        assertThat(response.currency()).isEqualTo(PlatformCurrency.DEFAULT);
+    }
+
+    @Test
+    @DisplayName("update replaces the currency of the campaign")
+    void updateReplacesTheCampaignCurrency() {
+        Campaign existing = campaign();
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(existing));
+        when(campaignRepository.save(any(Campaign.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+
+        CampaignResponse response = service.update(campaignId, requestWithCurrency("USD"));
+
+        ArgumentCaptor<Campaign> captor = ArgumentCaptor.forClass(Campaign.class);
+        verify(campaignRepository).save(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo("USD");
+        assertThat(response.currency()).isEqualTo("USD");
+    }
+
+    @Test
+    @DisplayName("findById exposes the currency and the budget already used")
+    void findByIdExposesTheCurrencyAndTheBudgetUsed() {
+        Campaign existing = Campaign.builder()
+            .id(campaignId).code(CODE).name("Save 10%")
+            .discountType("PERCENT").discountValue(new BigDecimal("10.00"))
+            .currency("USD").budgetUsed(new BigDecimal("120.00"))
+            .status(CampaignStatus.ACTIVE)
+            .build();
+        when(campaignRepository.findById(campaignId)).thenReturn(Optional.of(existing));
+
+        CampaignResponse response = service.findById(campaignId);
+
+        assertThat(response.currency()).isEqualTo("USD");
+        assertThat(response.budgetUsed()).isEqualByComparingTo("120.00");
     }
 
     @Test

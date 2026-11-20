@@ -29,7 +29,7 @@ class MockProviderTest {
     @Test
     void refundReturnsMockUuidEventIdAndAccepts() {
         PaymentProvider.ProviderResult result = provider.refund(
-                UUID.randomUUID(), new BigDecimal("5.00"), "idem-2");
+                UUID.randomUUID(), new BigDecimal("5.00"), "USD", "idem-2");
 
         assertThat(result.accepted()).isTrue();
         assertThat(result.providerEventId()).startsWith("mock-");

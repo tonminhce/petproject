@@ -402,13 +402,25 @@ def e2e_report(run_id: str | None = None) -> dict[str, Any]:
         document = read_json(path, {}) or {}
         entries.append({"file": path.name, "state": document.get("state", "UNKNOWN"), "document": document})
     completed = [entry for entry in entries if entry.get("state") == "COMPLETED"]
+    executed = 0
+    for entry in entries:
+        document = entry.get("document", {})
+        recorded = document.get("executed_collections")
+        if recorded is not None:
+            executed = max(executed, int(recorded or 0))
+        if not document.get("run"):
+            continue
+        scope = str(document.get("scope") or "")
+        if scope and scope != "all":
+            continue
+        executions = (document.get("run") or {}).get("executions") or []
+        if executions:
+            executed = max(executed, 1)
     return {
         "generated_at": utc_now(),
         "run_id": identifier,
         "artifacts": entries,
         "e2e_verified": bool(completed),
         "verified_scopes": [entry["document"].get("scope") for entry in completed],
-        "executed_collections": sum(
-            int(entry.get("document", {}).get("executed_collections", 0) or 0) for entry in completed
-        ),
+        "executed_collections": executed,
     }

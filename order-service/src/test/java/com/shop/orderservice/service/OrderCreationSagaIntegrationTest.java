@@ -38,7 +38,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
     void happyPath_createsOrderAndPublishesEvent() {
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"%s","title":"Test Product","priceUnit":100.00}}
+                {"success":true,"code":"OK","data":{"id":"%s","title":"Test Product","priceUnit":100.00,"currency":"VND"}}
                 """.formatted(productId))));
 
         UUID reservationId = UUID.randomUUID();
@@ -75,7 +75,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
 
         productServer.stubFor(get(urlMatching("/api/v1/products/.*"))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"abc","title":"X","priceUnit":10}}
+                {"success":true,"code":"OK","data":{"id":"abc","title":"X","priceUnit":10,"currency":"VND"}}
                 """)));
         inventoryServer.stubFor(post(urlMatching("/api/v1/inventory/.*/reserve"))
             .willReturn(aResponse().withStatus(409)));
@@ -104,7 +104,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
 
         productServer.stubFor(get(urlMatching("/api/v1/products/.*"))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"abc","title":"X","priceUnit":10}}
+                {"success":true,"code":"OK","data":{"id":"abc","title":"X","priceUnit":10,"currency":"VND"}}
                 """)));
 
         UUID item1ReservationId = UUID.randomUUID();
@@ -136,7 +136,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
     void happyPath_withCoupon_reservesWithRealOrderId_andPersistsReservationId() {
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"%s","title":"Test Product","priceUnit":100.00}}
+                {"success":true,"code":"OK","data":{"id":"%s","title":"Test Product","priceUnit":100.00,"currency":"VND"}}
                 """.formatted(productId))));
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId + "/reserve"))
             .willReturn(okJson("""
@@ -172,7 +172,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
     void idempotencyReplay_returnsCachedResponse() {
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"%s","title":"Test","priceUnit":100}}
+                {"success":true,"code":"OK","data":{"id":"%s","title":"Test","priceUnit":100,"currency":"VND"}}
                 """.formatted(productId))));
         inventoryServer.stubFor(post(urlEqualTo("/api/v1/inventory/" + productId + "/reserve"))
             .willReturn(okJson("""
@@ -193,7 +193,7 @@ class OrderCreationSagaIntegrationTest extends AbstractOrderServiceIT {
     void productPriceCacheHit_returnsProductSnapshot() {
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"%s","title":"Cached","priceUnit":42.50}}
+                {"success":true,"code":"OK","data":{"id":"%s","title":"Cached","priceUnit":42.50,"currency":"VND"}}
                 """.formatted(productId))));
 
         var first = productServiceClient.getProduct(productId);

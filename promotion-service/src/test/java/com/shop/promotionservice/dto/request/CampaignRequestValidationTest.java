@@ -44,7 +44,13 @@ class CampaignRequestValidationTest {
     private CampaignRequest request(String discountType, String discountValue) {
         return new CampaignRequest(
             "SAVE10", "Save 10%", discountType, new BigDecimal(discountValue),
-            null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null);
+    }
+
+    private CampaignRequest requestWithCurrency(String currency) {
+        return new CampaignRequest(
+            "SAVE10", "Save 10%", "PERCENT", new BigDecimal("10.00"),
+            null, null, null, null, null, currency, null, null);
     }
 
     @Test
@@ -93,6 +99,26 @@ class CampaignRequestValidationTest {
     @DisplayName("FIXED discountValue = 0 → valid (lower bound applies to PERCENT only)")
     void fixedZeroDiscountValueIsValid() {
         assertThat(violations(request("FIXED", "0.00"))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a supported currency is accepted")
+    void supportedCurrencyIsAccepted() {
+        assertThat(messagesFor(requestWithCurrency("USD"), "currency")).isEmpty();
+        assertThat(messagesFor(requestWithCurrency("VND"), "currency")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("an unsupported currency is rejected")
+    void unsupportedCurrencyIsRejected() {
+        assertThat(messagesFor(requestWithCurrency("EUR"), "currency")).isNotEmpty();
+        assertThat(messagesFor(requestWithCurrency("xyz"), "currency")).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("a missing currency is accepted so the service can default it")
+    void missingCurrencyIsAccepted() {
+        assertThat(messagesFor(request("PERCENT", "10.00"), "currency")).isEmpty();
     }
 
     @Test

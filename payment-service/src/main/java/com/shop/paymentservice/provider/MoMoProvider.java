@@ -102,12 +102,16 @@ public class MoMoProvider implements PaymentProvider {
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        return refund(paymentId, amount, idempotencyKey, null);
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
+        return refund(paymentId, amount, currency, idempotencyKey, null);
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey,
+            String providerIntentId) {
+        if (!"VND".equalsIgnoreCase(currency)) {
+            return ProviderResult.rejected("MOMO_UNSUPPORTED_CURRENCY");
+        }
         if (!properties.isConfigured()) {
             return ProviderResult.indeterminate("MOMO_NOT_CONFIGURED");
         }

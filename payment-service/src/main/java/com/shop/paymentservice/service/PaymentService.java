@@ -5,6 +5,7 @@ import com.shop.paymentservice.dto.PaymentResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +16,8 @@ public interface PaymentService {
     PaymentResponse capture(UUID id);
 
     PaymentResponse refund(UUID id);
+
+    PaymentResponse refund(UUID id, BigDecimal amount, String currency);
 
     Page<PaymentResponse> findAllByOrderId(UUID orderId, Pageable pageable);
 

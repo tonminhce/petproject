@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -173,25 +174,56 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentResponse refund(UUID id) {
         Payment payment = requirePayment(id);
+        return refund(payment, payment.getAmount(), payment.getCurrency());
+    }
+
+    @Override
+    @Transactional
+    public PaymentResponse refund(UUID id, BigDecimal requestedAmount, String requestedCurrency) {
+        Payment payment = requirePayment(id);
+        return refund(payment, requestedAmount, requestedCurrency);
+    }
+
+    private PaymentResponse refund(Payment payment, BigDecimal requestedAmount, String requestedCurrency) {
         if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
         }
+        if (requestedAmount == null || requestedAmount.signum() <= 0) {
+            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, requestedAmount);
+        }
+        String currency = PlatformCurrency.normalize(requestedCurrency);
+        if (!currency.equals(PlatformCurrency.normalize(payment.getCurrency()))) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, payment.getCurrency(), currency);
+        }
+        BigDecimal alreadyRefunded = payment.getRefundedAmount() == null
+                ? BigDecimal.ZERO
+                : payment.getRefundedAmount();
+        BigDecimal refundable = payment.getAmount().subtract(alreadyRefunded);
+        if (requestedAmount.compareTo(refundable) > 0) {
+            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, refundable);
+        }
         PaymentProvider provider = resolveRegisteredProvider(payment.getProvider());
-        ProviderResult result = provider.refund(payment.getId(), payment.getAmount(), payment.getIdempotencyKey(),
-                payment.getProviderIntentId());
+        ProviderResult result = provider.refund(payment.getId(), requestedAmount, currency,
+                payment.getIdempotencyKey(), payment.getProviderIntentId());
         return switch (result.outcome()) {
-            case CONFIRMED -> refundConfirmed(payment);
+            case CONFIRMED -> refundConfirmed(payment, requestedAmount, currency);
             case INDETERMINATE -> throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, result.providerEventId());
             case REQUIRES_CONFIRMATION, REJECTED ->
                     throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
         };
     }
 
-    private PaymentResponse refundConfirmed(Payment payment) {
+    private PaymentResponse refundConfirmed(Payment payment, BigDecimal requestedAmount, String currency) {
+        BigDecimal alreadyRefunded = payment.getRefundedAmount() == null
+                ? BigDecimal.ZERO
+                : payment.getRefundedAmount();
+        BigDecimal refunded = alreadyRefunded.add(requestedAmount);
         payment.setPreviousStatus(PaymentStatus.CAPTURED);
-        payment.setStatus(PaymentStatus.REFUNDED);
-        payment.setRefundedAmount(payment.getAmount());
-        payment.setRefundedCurrency(payment.getCurrency());
+        payment.setRefundedAmount(refunded);
+        payment.setRefundedCurrency(currency);
+        payment.setStatus(refunded.compareTo(payment.getAmount()) == 0
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.PARTIALLY_REFUNDED);
         Payment saved = writer.save(payment);
         writer.publishLifecycleEvent(saved, "payment.refunded.v1");
         return PaymentResponse.from(saved);

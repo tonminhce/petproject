@@ -215,7 +215,7 @@ class StripeProviderTest {
                 .thenReturn(created);
 
         PaymentProvider.ProviderResult result = provider.refund(
-                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isTrue();
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
@@ -243,7 +243,7 @@ class StripeProviderTest {
                 .thenReturn(created);
 
         PaymentProvider.ProviderResult result = provider.refund(
-                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, "pi_stored");
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY, "pi_stored");
 
         assertThat(result.accepted()).isTrue();
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
@@ -274,11 +274,55 @@ class StripeProviderTest {
                 .thenReturn(created);
 
         PaymentProvider.ProviderResult result = provider.refund(
-                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
         assertThat(result.providerEventId()).isEqualTo("currency-mismatch");
+    }
+
+    @Test
+    void refundWhenThePaymentCurrencyDiffersFromTheOriginalTransaction_isRejectedWithoutRefunding() throws Exception {
+        PaymentIntent original = intent("pi_usd", "succeeded");
+        original.setCurrency("usd");
+        PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
+        matches.setData(List.of(original));
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
+                any(RequestOptions.class))).thenReturn(matches);
+
+        PaymentProvider.ProviderResult result = provider.refund(
+                PAYMENT_ID, new BigDecimal("100000"), "VND", IDEMPOTENCY_KEY);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
+        assertThat(result.providerEventId()).isEqualTo("currency-mismatch");
+        refundStatic.verifyNoInteractions();
+    }
+
+    @Test
+    void refundScalesTheAmountWithTheCurrencyOfTheRefundedPayment() throws Exception {
+        PaymentIntent original = intent("pi_vnd", "succeeded");
+        original.setCurrency("vnd");
+        PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
+        matches.setData(List.of(original));
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
+                any(RequestOptions.class))).thenReturn(matches);
+
+        Refund created = new Refund();
+        created.setId("re_vnd");
+        created.setStatus("succeeded");
+        created.setAmount(100000L);
+        refundStatic.when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
+                .thenReturn(created);
+
+        PaymentProvider.ProviderResult result = provider.refund(
+                PAYMENT_ID, new BigDecimal("100000"), "VND", IDEMPOTENCY_KEY);
+
+        assertThat(result.accepted()).isTrue();
+
+        ArgumentCaptor<RefundCreateParams> params = ArgumentCaptor.forClass(RefundCreateParams.class);
+        refundStatic.verify(() -> Refund.create(params.capture(), any(RequestOptions.class)));
+        assertThat(params.getValue().getAmount()).isEqualTo(100000L);
     }
 
     @Test
@@ -289,7 +333,7 @@ class StripeProviderTest {
                 any(RequestOptions.class))).thenReturn(noMatches);
 
         PaymentProvider.ProviderResult result = provider.refund(
-                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
@@ -307,7 +351,7 @@ class StripeProviderTest {
                 .thenThrow(new ApiConnectionException("network down"));
 
         PaymentProvider.ProviderResult result = provider.refund(
-                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);
@@ -324,7 +368,7 @@ class StripeProviderTest {
                 .thenThrow(new IdempotencyException("idempotency conflict", "req_refund_1", "idempotency_error", 400));
 
         PaymentProvider.ProviderResult result = provider.refund(
-                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
 
         assertThat(result.accepted()).isFalse();
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);

@@ -1,7 +1,10 @@
 package com.shop.promotionservice.service;
 
 import com.shop.common.core.exception.BusinessException;
+import com.shop.common.core.exception.ErrorCode;
+import com.shop.common.core.i18n.Messages;
 import com.shop.promotionservice.constant.CampaignStatus;
+import com.shop.promotionservice.constant.PromotionErrorCode;
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.dto.request.ReserveRequest;
 import com.shop.promotionservice.dto.response.ReservationResponse;
@@ -75,7 +78,11 @@ class CampaignReserveTest {
     }
 
     private ReserveRequest request(String orderAmount) {
-        return new ReserveRequest(userId, orderId, new BigDecimal(orderAmount), "VND");
+        return request(orderAmount, "VND");
+    }
+
+    private ReserveRequest request(String orderAmount, String currency) {
+        return new ReserveRequest(userId, orderId, new BigDecimal(orderAmount), currency);
     }
 
     private void stubHappyPath(Campaign campaign) {
@@ -202,6 +209,39 @@ class CampaignReserveTest {
         verifyNoInteractions(reservationRepository, eventPublisher);
     }
 
+
+    @Test
+    @DisplayName("currency mismatch → PROMOTION_CURRENCY_MISMATCH (PRO-7013), the min order amount is never compared")
+    void currencyMismatchIsRejectedBeforeTheMinOrderAmountComparison() {
+        when(campaignRepository.findByCode(CODE))
+            .thenReturn(Optional.of(baseCampaign().minOrderAmount(new BigDecimal("50000.00")).build()));
+
+        assertThatThrownBy(() -> service.reserve(CODE, request("100.00", "USD")))
+            .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                assertThat(ex.getErrorCode())
+                    .isEqualTo(PromotionErrorCode.PROMOTION_CURRENCY_MISMATCH.getCode())
+                    .isNotEqualTo(ErrorCode.MIN_ORDER_AMOUNT_NOT_MET.getCode());
+                assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+            });
+        verify(reservationRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @DisplayName("the currency mismatch carries the promotion domain code and message key")
+    void currencyMismatchUsesThePromotionDomainError() {
+        when(campaignRepository.findByCode(CODE)).thenReturn(Optional.of(activeCampaign()));
+
+        assertThatThrownBy(() -> service.reserve(CODE, request("199.99", "USD")))
+            .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                assertThat(ex.getErrorCode()).isEqualTo("PRO-7013");
+                assertThat(ex.getMessage())
+                    .isEqualTo(Messages.get(
+                            PromotionErrorCode.PROMOTION_CURRENCY_MISMATCH.getMessageKey(), "USD", "VND"))
+                    .isNotEqualTo(Messages.get(
+                            ErrorCode.PAYMENT_CURRENCY_MISMATCH.getMessageKey(), "USD", "VND"));
+            });
+    }
 
     @Test
     @DisplayName("per-user quota claim refused → PER_USER_LIMIT_EXCEEDED (PRO-7006)")

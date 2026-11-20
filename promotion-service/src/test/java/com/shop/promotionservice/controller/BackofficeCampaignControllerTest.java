@@ -70,7 +70,7 @@ class BackofficeCampaignControllerTest {
             campaignId, "SAVE10", "Save 10%", "PERCENT", new BigDecimal("10.00"),
             new BigDecimal("50.00"),
             Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-09-01T00:00:00Z"),
-            100, new BigDecimal("1000.00"), 1, CampaignStatus.ACTIVE,
+            100, new BigDecimal("1000.00"), "VND", new BigDecimal("120.00"), 1, CampaignStatus.ACTIVE,
             Instant.parse("2026-08-29T08:00:00Z"), Instant.parse("2026-08-29T08:00:00Z"));
     }
 
@@ -86,8 +86,8 @@ class BackofficeCampaignControllerTest {
             {"code": "SAVE10", "name": "Save 10%", "discountType": "PERCENT",
              "discountValue": 10.00, "minOrderAmount": 50.00,
              "startsAt": "2026-08-01T00:00:00Z", "endsAt": "2026-09-01T00:00:00Z",
-             "maxRedemptions": 100, "totalBudget": 1000.00, "perUserLimit": 1,
-             "status": "ACTIVE"}
+             "maxRedemptions": 100, "totalBudget": 1000.00, "currency": "VND",
+             "perUserLimit": 1, "status": "ACTIVE"}
             """;
     }
 
@@ -137,6 +137,8 @@ class BackofficeCampaignControllerTest {
             .andExpect(jsonPath("$.data.id").value(campaignId.toString()))
             .andExpect(jsonPath("$.data.code").value("SAVE10"))
             .andExpect(jsonPath("$.data.discountValue").value(10.00))
+            .andExpect(jsonPath("$.data.currency").value("VND"))
+            .andExpect(jsonPath("$.data.budgetUsed").value(120.00))
             .andExpect(jsonPath("$.data.perUserLimit").value(1));
     }
 
@@ -146,7 +148,7 @@ class BackofficeCampaignControllerTest {
                 "SAVE10", "Save 10%", "PERCENT", new BigDecimal("10.00"),
                 new BigDecimal("50.00"),
                 Instant.parse("2026-08-01T00:00:00Z"), Instant.parse("2026-09-01T00:00:00Z"),
-                100, new BigDecimal("1000.00"), 1, CampaignStatus.ACTIVE))))
+                100, new BigDecimal("1000.00"), "VND", 1, CampaignStatus.ACTIVE))))
             .thenReturn(sampleResponse());
 
         mockMvc.perform(post("/api/v1/backoffice/promotions")
@@ -167,7 +169,7 @@ class BackofficeCampaignControllerTest {
                 com.shop.promotionservice.dto.request.CampaignRequest.class)))
             .thenReturn(new CampaignResponse(
                 campaignId, "SAVE10", "Renamed", "PERCENT", new BigDecimal("15.00"),
-                null, null, null, null, null, 1, CampaignStatus.INACTIVE,
+                null, null, null, null, null, null, null, 1, CampaignStatus.INACTIVE,
                 null, null));
 
         mockMvc.perform(put("/api/v1/backoffice/promotions/{id}", campaignId)
@@ -283,6 +285,22 @@ class BackofficeCampaignControllerTest {
             .andExpect(jsonPath("$.code").value("ERR-0422-V"));
     }
 
+
+    @Test
+    void create_unsupportedCurrency_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/backoffice/promotions")
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("admin"))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"code": "SAVE10", "name": "Save 10%", "discountType": "PERCENT",
+                     "discountValue": 10.00, "currency": "EUR"}
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("ERR-0422-V"));
+    }
 
     @Test
     void create_duplicateCode_returns409WithPro7002() throws Exception {

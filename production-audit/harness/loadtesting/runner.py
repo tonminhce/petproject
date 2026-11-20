@@ -344,7 +344,7 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
         return False
     rate = failure / attempts
     document["business_failure_rate"] = round(rate, 6)
-    achieved = float(metrics.get("request_rate_per_second") or 0)
+    achieved = float(metrics.get("iteration_rate_per_second") or 0)
     target = float(document.get("target_requests_per_second") or 0)
     if target > 0:
         document["achieved_rate_ratio"] = round(achieved / target, 4)

@@ -4,6 +4,7 @@ import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.promotionservice.constant.CampaignStatus;
+import com.shop.promotionservice.constant.PromotionErrorCode;
 import com.shop.promotionservice.constant.UsageStatus;
 import com.shop.promotionservice.dto.request.ReserveRequest;
 import com.shop.promotionservice.dto.response.ReservationResponse;
@@ -52,13 +53,13 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
                 || (campaign.getEndsAt() != null && now.isAfter(campaign.getEndsAt()))) {
             throw BusinessException.of(ErrorCode.CAMPAIGN_NOT_ACTIVE, code);
         }
+        String currency = resolveCurrency(request.currency());
+        if (!currency.equals(campaign.getCurrency())) {
+            throw BusinessException.of(PromotionErrorCode.PROMOTION_CURRENCY_MISMATCH, currency, campaign.getCurrency());
+        }
         if (campaign.getMinOrderAmount() != null
                 && request.orderAmount().compareTo(campaign.getMinOrderAmount()) < 0) {
             throw BusinessException.of(ErrorCode.MIN_ORDER_AMOUNT_NOT_MET, request.orderAmount());
-        }
-        String currency = resolveCurrency(request.currency());
-        if (!currency.equals(campaign.getCurrency())) {
-            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, currency, campaign.getCurrency());
         }
 
         CouponUsageReservation existing = reservationRepository.findByOrderId(request.orderId()).orElse(null);

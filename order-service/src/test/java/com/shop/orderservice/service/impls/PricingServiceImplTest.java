@@ -1,5 +1,6 @@
 package com.shop.orderservice.service.impls;
 
+import com.shop.common.core.exception.BusinessException;
 import com.shop.orderservice.client.ProductServiceClient;
 import com.shop.orderservice.client.PromotionServiceClient;
 import com.shop.orderservice.client.TaxServiceClient;
@@ -70,6 +71,31 @@ class PricingServiceImplTest {
         assertThat(breakdown.subtotal()).isEqualByComparingTo(new BigDecimal("200.00"));
         assertThat(breakdown.discountAmount()).isEqualByComparingTo(new BigDecimal("20.00"));
         assertThat(breakdown.promotionReservationId()).isEqualTo(reservationId);
+    }
+
+    @Test
+    void calculate_productWithoutACurrency_failsClosedWithPay5010() {
+        when(productClient.getProduct(productId))
+            .thenReturn(new ProductSnapshot(productId, "Test Product", new BigDecimal("100.00"), null));
+
+        assertThatThrownBy(() -> service.calculate(orderId, userId, items, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        verify(taxClient, never()).calculate(any());
+        verify(promotionClient, never()).reserve(any());
+    }
+
+    @Test
+    void calculate_productWithABlankCurrency_failsClosedWithPay5010() {
+        when(productClient.getProduct(productId))
+            .thenReturn(new ProductSnapshot(productId, "Test Product", new BigDecimal("100.00"), "  "));
+
+        assertThatThrownBy(() -> service.calculate(orderId, userId, items, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        verify(taxClient, never()).calculate(any());
     }
 
     @Test

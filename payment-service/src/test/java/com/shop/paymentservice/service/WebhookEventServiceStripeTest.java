@@ -371,6 +371,24 @@ class WebhookEventServiceStripeTest {
     }
 
     @Test
+    void succeededEventInAnotherCurrency_marksEventFailedRetryable_stateUnchanged() {
+        byte[] raw = stripeEventBody("evt_currency", "payment_intent.succeeded", 9800, "eur");
+        happyPathStubs("evt_currency");
+        Payment pending = payment(PaymentStatus.PENDING);
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(pending));
+
+        assertThatCode(() -> service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET)))
+                .doesNotThrowAnyException();
+
+        ArgumentCaptor<PaymentEvent> saveCaptor = ArgumentCaptor.forClass(PaymentEvent.class);
+        verify(writer).saveEvent(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
+        assertThat(saveCaptor.getValue().getLastError()).contains("EUR").contains("USD");
+        verify(writer, never()).completeWithEvent(any(Payment.class), any(PaymentEvent.class), anyString());
+        assertThat(pending.getStatus()).isEqualTo(PaymentStatus.PENDING);
+    }
+
+    @Test
     void vndSucceededEvent_zeroDecimalAmountsMatchDirectly() {
         byte[] raw = stripeEventBody("evt_vnd", "payment_intent.succeeded", 100000, "vnd");
         happyPathStubs("evt_vnd");

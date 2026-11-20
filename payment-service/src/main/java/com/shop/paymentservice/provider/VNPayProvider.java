@@ -98,12 +98,16 @@ public class VNPayProvider implements PaymentProvider {
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        return refund(paymentId, amount, idempotencyKey, null);
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
+        return refund(paymentId, amount, currency, idempotencyKey, null);
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey,
+            String providerIntentId) {
+        if (!"VND".equalsIgnoreCase(currency)) {
+            return ProviderResult.rejected("VNPAY_UNSUPPORTED_CURRENCY");
+        }
         if (!properties.isConfigured()) {
             return ProviderResult.indeterminate("VNPAY_NOT_CONFIGURED");
         }

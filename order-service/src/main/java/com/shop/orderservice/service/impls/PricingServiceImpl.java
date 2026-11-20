@@ -121,7 +121,8 @@ public class PricingServiceImpl implements PricingService {
     private String resolveCurrency(ProductSnapshot snapshot) {
         String currency = snapshot.currency();
         if (currency == null || currency.isBlank()) {
-            return PlatformCurrency.DEFAULT;
+            log.warn("Refused to price product {}: the product carries no currency", snapshot.productId());
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, snapshot.productId(), currency);
         }
         return PlatformCurrency.normalize(currency);
     }

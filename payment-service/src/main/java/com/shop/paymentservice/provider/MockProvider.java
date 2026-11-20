@@ -21,7 +21,7 @@ public class MockProvider implements PaymentProvider {
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
         return ProviderResult.confirmed("mock-" + UUID.randomUUID());
     }
 }

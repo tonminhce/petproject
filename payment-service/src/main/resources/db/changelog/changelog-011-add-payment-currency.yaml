@@ -4,18 +4,42 @@ databaseChangeLog:
       id: 011-add-payment-currency
       author: shop-platform
       changes:
+        - sql:
+            sql: >-
+              UPDATE payments SET currency = 'VND'
+              WHERE currency IS NULL OR UPPER(TRIM(currency)) NOT IN ('VND', 'USD')
+
+        - sql:
+            sql: >-
+              UPDATE payments SET currency = UPPER(TRIM(currency))
+              WHERE currency IS NOT NULL AND UPPER(TRIM(currency)) IN ('VND', 'USD')
+              AND currency <> UPPER(TRIM(currency))
+
         - addColumn:
             tableName: payments
             columns:
               - column:
                   name: refunded_currency
                   type: varchar(3)
-                  defaultValue: 'VND'
                   constraints:
-                    nullable: false
+                    nullable: true
 
         - sql:
-            sql: ALTER TABLE payments ADD CONSTRAINT ck_payments_currency CHECK (currency IN ('VND', 'USD'))
+            sql: >-
+              UPDATE payments SET refunded_currency = currency WHERE refunded_currency IS NULL
 
         - sql:
-            sql: ALTER TABLE payments ADD CONSTRAINT ck_payments_refunded_currency CHECK (refunded_currency IN ('VND', 'USD'))
+            sql: >-
+              ALTER TABLE payments ALTER COLUMN refunded_currency SET NOT NULL
+
+        - sql:
+            sql: >-
+              ALTER TABLE payments ALTER COLUMN refunded_currency SET DEFAULT 'VND'
+
+        - sql:
+            sql: >-
+              ALTER TABLE payments ADD CONSTRAINT ck_payments_currency CHECK (currency IN ('VND', 'USD'))
+
+        - sql:
+            sql: >-
+              ALTER TABLE payments ADD CONSTRAINT ck_payments_refunded_currency CHECK (refunded_currency IN ('VND', 'USD'))

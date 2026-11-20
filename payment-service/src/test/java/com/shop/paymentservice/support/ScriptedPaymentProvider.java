@@ -27,14 +27,15 @@ public class ScriptedPaymentProvider implements PaymentProvider {
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey) {
-        refundCalls.add(paymentId + ":no-intent-id");
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey) {
+        refundCalls.add(paymentId + ":" + currency + ":no-intent-id");
         return refundResult.get();
     }
 
     @Override
-    public ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
-        refundCalls.add(paymentId + ":" + providerIntentId);
+    public ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey,
+            String providerIntentId) {
+        refundCalls.add(paymentId + ":" + currency + ":" + providerIntentId);
         return refundResult.get();
     }
 

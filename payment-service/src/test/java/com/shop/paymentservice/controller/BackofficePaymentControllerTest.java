@@ -60,6 +60,7 @@ class BackofficePaymentControllerTest {
     private PaymentResponse sampleResponse() {
         return new PaymentResponse(
             paymentId, orderId, new BigDecimal("98.00"), "USD",
+            new BigDecimal("10.00"), "USD",
             PaymentStatus.CAPTURED, PaymentStatus.PENDING, "mock", "pi_9001", "pi_secret_9001", "rcpt_12345",
             Instant.parse("2026-08-30T08:00:00Z"));
     }

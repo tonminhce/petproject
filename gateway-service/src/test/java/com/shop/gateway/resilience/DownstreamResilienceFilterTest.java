@@ -67,7 +67,7 @@ class DownstreamResilienceFilterTest {
         var route = Route.async()
                 .id(routeId)
                 .uri(URI.create("http://" + host + ":8080"))
-                .predicate(exchange -> true)
+                .predicate(candidate -> true)
                 .build();
         exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR, route);
         return exchange;
@@ -235,7 +235,7 @@ class DownstreamResilienceFilterTest {
         var breaker = breakerProperties();
         var filter = filter(breaker, bulkheadProperties(1), breakerRegistry(breaker), bulkheadRegistry(bulkheadProperties(1)));
         var inFlight = Sinks.<Void>empty();
-        when(chain.filter(any())).thenReturn(inFlight.asMono());
+        when(chain.filter(any())).thenReturn(inFlight.asMono(), Mono.empty());
 
         filter.filter(routedExchange("/api/v1/orders", "order-service", "order-service"), chain).subscribe();
 
@@ -252,7 +252,7 @@ class DownstreamResilienceFilterTest {
         var breaker = breakerProperties();
         var filter = filter(breaker, bulkheadProperties(1), breakerRegistry(breaker), bulkheadRegistry(bulkheadProperties(1)));
         var inFlight = Sinks.<Void>empty();
-        when(chain.filter(any())).thenReturn(inFlight.asMono());
+        when(chain.filter(any())).thenReturn(inFlight.asMono(), Mono.empty());
 
         filter.filter(routedExchange("/api/v1/orders", "order-service", "order-service"), chain).subscribe();
 

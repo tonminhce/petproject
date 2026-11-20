@@ -9,10 +9,11 @@ public interface PaymentProvider {
 
     ProviderResult capture(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey);
 
-    ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey);
+    ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey);
 
-    default ProviderResult refund(UUID paymentId, BigDecimal amount, String idempotencyKey, String providerIntentId) {
-        return refund(paymentId, amount, idempotencyKey);
+    default ProviderResult refund(UUID paymentId, BigDecimal amount, String currency, String idempotencyKey,
+            String providerIntentId) {
+        return refund(paymentId, amount, currency, idempotencyKey);
     }
 
     enum Outcome {

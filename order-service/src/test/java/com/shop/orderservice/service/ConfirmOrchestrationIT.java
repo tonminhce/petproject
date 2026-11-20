@@ -79,22 +79,22 @@ class ConfirmOrchestrationIT extends AbstractOrderServiceIT {
         Order saved = orderRepository.findById(response.id()).orElseThrow();
         assertThat(saved.getPromotionReservationId()).isEqualTo(promoReservationId);
 
-        stubCapturedPayment(response.id());
+        stubCapturedPayment(response);
         return response;
     }
 
     private void stubProduct(UUID productId) {
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"%s","title":"T","priceUnit":10}}
+                {"success":true,"code":"OK","data":{"id":"%s","title":"T","priceUnit":10,"currency":"VND"}}
                 """.formatted(productId))));
     }
 
-    private void stubCapturedPayment(UUID orderId) {
-        paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + orderId + "/captured"))
+    private void stubCapturedPayment(OrderResponse order) {
+        paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + order.id() + "/captured"))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"orderId":"%s","status":"CAPTURED","id":"%s"}}
-                """.formatted(orderId, UUID.randomUUID()))));
+                {"success":true,"code":"OK","data":{"orderId":"%s","status":"CAPTURED","id":"%s","amount":%s,"currency":"%s"}}
+                """.formatted(order.id(), UUID.randomUUID(), order.total(), order.currency()))));
     }
 
     private void stubNoCapturedPayment(UUID orderId) {

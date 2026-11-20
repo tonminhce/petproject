@@ -1,6 +1,7 @@
 package com.shop.promotionservice.dto.request;
 
 import com.shop.promotionservice.constant.CampaignStatus;
+import com.shop.promotionservice.validation.ValidCurrency;
 import com.shop.promotionservice.validation.ValidDiscountValue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -24,6 +25,7 @@ public record CampaignRequest(
     Instant endsAt,
     @Positive Integer maxRedemptions,
     @Positive BigDecimal totalBudget,
+    @ValidCurrency String currency,
     @PositiveOrZero Integer perUserLimit,
     CampaignStatus status
 ) {}

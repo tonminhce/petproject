@@ -2,6 +2,7 @@ package com.shop.orderservice.service.impls;
 
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
+import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
 import com.shop.orderservice.dto.request.OrderCreateRequest;
 import com.shop.orderservice.dto.response.OrderResponse;
 import com.shop.orderservice.entity.Order;
@@ -271,13 +272,16 @@ class OrderServiceImplTest {
         verify(commitCoordinator).commitForConfirm(order, List.of());
     }
 
+    private PaymentStatusSnapshot capturedPayment(BigDecimal amount, String currency) {
+        return new PaymentStatusSnapshot(orderId, "CAPTURED", UUID.randomUUID(), amount, currency, null);
+    }
+
     @Test
     void confirmOrder_flagOn_capturedPayment_proceedsToCommit() {
         stubConfirmHappy();
         when(paymentClient.isEnabled()).thenReturn(true);
         when(paymentClient.findCapturedByOrderId(orderId))
-            .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
-                orderId, "CAPTURED", UUID.randomUUID())));
+            .thenReturn(Optional.of(capturedPayment(BigDecimal.valueOf(110), "VND")));
 
         OrderResponse result = service.confirmOrder(orderId, actor, null);
 
@@ -287,12 +291,117 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void confirmOrder_flagOn_paymentAmountBelowTheOrderTotal_rejectedWithPay5007_beforeCommit() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(BigDecimal.valueOf(1), "VND")));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(order.getConfirmedAt()).isNull();
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+        verify(orderRepository, never()).save(any());
+        verify(orderEventPublisher, never()).publishStatusChanged(any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_paymentAmountAboveTheOrderTotal_rejectedWithPay5007_beforeCommit() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(new BigDecimal("2499.00"), "VND")));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_paymentAmountWithADifferentScale_isAccepted() {
+        stubConfirmHappy();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(new BigDecimal("110.00"), "VND")));
+
+        OrderResponse result = service.confirmOrder(orderId, actor, null);
+
+        assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
+        verify(commitCoordinator).commitForConfirm(order, List.of());
+    }
+
+    @Test
+    void confirmOrder_flagOn_paymentAmountOneCentOff_isRejected() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(new BigDecimal("110.01"), "VND")));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_paymentWithoutAnAmount_failsClosedWithPay5007() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(null, "VND")));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_paymentCurrencyIsNotTheOrderCurrency_rejectedWithPay5010_beforeCommit() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(BigDecimal.valueOf(110), "USD")));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrder_flagOn_paymentWithoutACurrency_failsClosedWithPay5010() {
+        stubConfirmLoad();
+        when(paymentClient.isEnabled()).thenReturn(true);
+        when(paymentClient.findCapturedByOrderId(orderId))
+            .thenReturn(Optional.of(capturedPayment(BigDecimal.valueOf(110), null)));
+
+        assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        verify(commitCoordinator, never()).commitForConfirm(any(), any());
+    }
+
+    @Test
     void confirmOrder_flagOn_pendingPayment_rejectedOrd4012_beforeCommit() {
         stubConfirmLoad();
         when(paymentClient.isEnabled()).thenReturn(true);
         when(paymentClient.findCapturedByOrderId(orderId))
-            .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
-                orderId, "PENDING", UUID.randomUUID())));
+            .thenReturn(Optional.of(new PaymentStatusSnapshot(
+                orderId, "PENDING", UUID.randomUUID(), BigDecimal.valueOf(110), "VND", null)));
 
         assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
@@ -310,8 +419,8 @@ class OrderServiceImplTest {
         stubConfirmLoad();
         when(paymentClient.isEnabled()).thenReturn(true);
         when(paymentClient.findCapturedByOrderId(orderId))
-            .thenReturn(Optional.of(new com.shop.orderservice.dto.internal.PaymentStatusSnapshot(
-                orderId, "REFUNDED", UUID.randomUUID())));
+            .thenReturn(Optional.of(new PaymentStatusSnapshot(
+                orderId, "REFUNDED", UUID.randomUUID(), BigDecimal.valueOf(110), "VND", null)));
 
         assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,

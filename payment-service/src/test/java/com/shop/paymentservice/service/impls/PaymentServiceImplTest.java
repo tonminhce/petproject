@@ -254,13 +254,13 @@ class PaymentServiceImplTest {
         Payment captured = payment(PaymentStatus.CAPTURED);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
         when(provider.name()).thenReturn("mock");
-        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null))
+        when(provider.refund(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY, null))
                 .thenReturn(PaymentProvider.ProviderResult.confirmed("mock-evt-2"));
         when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentResponse result = service.refund(PAYMENT_ID);
 
-        verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null);
+        verify(provider).refund(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY, null);
         verify(writer).save(captured);
         verify(writer).publishLifecycleEvent(captured, "payment.refunded.v1");
         assertThat(result.id()).isEqualTo(PAYMENT_ID);
@@ -275,14 +275,29 @@ class PaymentServiceImplTest {
         captured.setProviderIntentId("pi_stored_1");
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
         when(provider.name()).thenReturn("mock");
-        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, "pi_stored_1"))
+        when(provider.refund(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY, "pi_stored_1"))
                 .thenReturn(PaymentProvider.ProviderResult.confirmed("mock-evt-3"));
         when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentResponse result = service.refund(PAYMENT_ID);
 
-        verify(provider).refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, "pi_stored_1");
+        verify(provider).refund(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY, "pi_stored_1");
         assertThat(result.status()).isEqualTo(PaymentStatus.REFUNDED);
+    }
+
+    @Test
+    void refund_capturedPayment_handsTheCurrencyOfTheRefundedPaymentToTheProvider() {
+        Payment captured = payment(PaymentStatus.CAPTURED);
+        captured.setCurrency("VND");
+        when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
+        when(provider.name()).thenReturn("mock");
+        when(provider.refund(PAYMENT_ID, AMOUNT, "VND", IDEMPOTENCY_KEY, null))
+                .thenReturn(PaymentProvider.ProviderResult.confirmed("mock-evt-currency"));
+        when(writer.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.refund(PAYMENT_ID);
+
+        verify(provider).refund(PAYMENT_ID, AMOUNT, "VND", IDEMPOTENCY_KEY, null);
     }
 
     @Test
@@ -290,7 +305,7 @@ class PaymentServiceImplTest {
         Payment captured = payment(PaymentStatus.CAPTURED);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
         when(provider.name()).thenReturn("mock");
-        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null))
+        when(provider.refund(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY, null))
                 .thenReturn(PaymentProvider.ProviderResult.rejected("refund_failed"));
 
         assertThatThrownBy(() -> service.refund(PAYMENT_ID))
@@ -305,7 +320,7 @@ class PaymentServiceImplTest {
         Payment captured = payment(PaymentStatus.CAPTURED);
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
         when(provider.name()).thenReturn("mock");
-        when(provider.refund(PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY, null))
+        when(provider.refund(PAYMENT_ID, AMOUNT, CURRENCY, IDEMPOTENCY_KEY, null))
                 .thenReturn(PaymentProvider.ProviderResult.indeterminate("stripe-timeout"));
 
         assertThatThrownBy(() -> service.refund(PAYMENT_ID))

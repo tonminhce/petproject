@@ -46,7 +46,10 @@ const collectionVariables = [
   { key: "brandId", value: "" },
   { key: "productId", value: "" },
   { key: "orderId", value: "" },
+  { key: "orderCurrency", value: "VND" },
+  { key: "orderTotal", value: "0" },
   { key: "paymentId", value: "" },
+  { key: "stripePaymentId", value: "" },
   { key: "payKey", value: "" },
   { key: "shipmentId", value: "" },
   { key: "taxClassId", value: "" },
@@ -295,7 +298,9 @@ if (res.data && res.data.id) pm.collectionVariables.set("cartItemId", res.data.i
 const res = pm.response.json();
 pm.expect(res.data.id).to.be.a("string");
 pm.expect(res.data.status).to.be.oneOf(["PENDING", "PENDING_PAYMENT"]);
-pm.collectionVariables.set("orderId", res.data.id);`
+pm.collectionVariables.set("orderId", res.data.id);
+pm.collectionVariables.set("orderCurrency", res.data.currency || "VND");
+pm.collectionVariables.set("orderTotal", res.data.total);`
     ),
     makeReq(
       "4.4 Get Order Details (User)",
@@ -339,30 +344,30 @@ e2eFolders.push({
       "POST",
       "{{paymentUrl}}/api/v1/payments",
       { "Content-Type": "application/json", "Authorization": "Bearer {{adminToken}}" },
-      {
-        orderId: "{{orderId}}",
-        amount: 2499.00,
-        currency: "USD",
-        idempotencyKey: "{{payKey}}",
-        provider: "STRIPE"
-      },
+      `{
+        "orderId": "{{orderId}}",
+        "amount": {{orderTotal}},
+        "currency": "{{orderCurrency}}",
+        "idempotencyKey": "{{payKey}}",
+        "provider": "STRIPE"
+      }`,
       `const ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-STRIPE-" + ts);`,
       `pm.test("Payment intent created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));
 const res = pm.response.json();
-pm.collectionVariables.set("paymentId", res.data.id);`
+pm.collectionVariables.set("stripePaymentId", res.data.id);`
     ),
     makeReq(
       "6.2 Create Payment via VNPay",
       "POST",
       "{{paymentUrl}}/api/v1/payments",
       { "Content-Type": "application/json", "Authorization": "Bearer {{adminToken}}" },
-      {
-        orderId: "{{orderId}}",
-        amount: 2499.00,
-        currency: "VND",
-        idempotencyKey: "{{payKey}}",
-        provider: "VNPAY"
-      },
+      `{
+        "orderId": "{{orderId}}",
+        "amount": {{orderTotal}},
+        "currency": "{{orderCurrency}}",
+        "idempotencyKey": "{{payKey}}",
+        "provider": "VNPAY"
+      }`,
       `const ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-VNPAY-" + ts);`,
       `pm.test("VNPay payment created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     ),
@@ -371,13 +376,13 @@ pm.collectionVariables.set("paymentId", res.data.id);`
       "POST",
       "{{paymentUrl}}/api/v1/payments",
       { "Content-Type": "application/json", "Authorization": "Bearer {{adminToken}}" },
-      {
-        orderId: "{{orderId}}",
-        amount: 2499.00,
-        currency: "VND",
-        idempotencyKey: "{{payKey}}",
-        provider: "MOMO"
-      },
+      `{
+        "orderId": "{{orderId}}",
+        "amount": {{orderTotal}},
+        "currency": "{{orderCurrency}}",
+        "idempotencyKey": "{{payKey}}",
+        "provider": "MOMO"
+      }`,
       `const ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-MOMO-" + ts);`,
       `pm.test("MoMo payment created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     ),
@@ -386,15 +391,18 @@ pm.collectionVariables.set("paymentId", res.data.id);`
       "POST",
       "{{paymentUrl}}/api/v1/payments",
       { "Content-Type": "application/json", "Authorization": "Bearer {{adminToken}}" },
-      {
-        orderId: "{{orderId}}",
-        amount: 2499.00,
-        currency: "USD",
-        idempotencyKey: "{{payKey}}",
-        provider: "COD"
-      },
+      `{
+        "orderId": "{{orderId}}",
+        "amount": {{orderTotal}},
+        "currency": "{{orderCurrency}}",
+        "idempotencyKey": "{{payKey}}",
+        "provider": "COD"
+      }`,
       `const ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-COD-" + ts);`,
-      `pm.test("COD payment created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
+      `pm.test("COD payment created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));
+if (pm.response.code === 200 || pm.response.code === 201) {
+  pm.collectionVariables.set("paymentId", pm.response.json().data.id);
+}`
     ),
     makeReq(
       "6.5 Capture Payment (Admin/Service)",
@@ -404,6 +412,15 @@ pm.collectionVariables.set("paymentId", res.data.id);`
       null,
       null,
       `pm.test("Payment captured", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
+    ),
+    makeReq(
+      "6.6 Capture Payment via Stripe (credential gated)",
+      "POST",
+      "{{paymentUrl}}/api/v1/payments/{{stripePaymentId}}/capture",
+      { "Authorization": "Bearer {{adminToken}}" },
+      null,
+      null,
+      `pm.test("Stripe payment captured", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     )
   ]
 });

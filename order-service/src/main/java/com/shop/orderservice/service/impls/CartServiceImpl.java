@@ -51,6 +51,7 @@ public class CartServiceImpl implements CartService {
         Cart cart = getOrCreateCart(userId);
         ProductSnapshot snapshot = productClient.getProduct(request.productId());
         if (snapshot == null) throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, request.productId());
+        String currency = resolveCurrency(snapshot);
 
         CartItem existing = cartItemRepository.findByCartIdAndProductId(cart.getId(), request.productId()).orElse(null);
         int newQuantity;
@@ -62,7 +63,7 @@ public class CartServiceImpl implements CartService {
             existing.setQuantity(newQuantity);
             existing.setProductTitle(snapshot.title());
             existing.setUnitPrice(snapshot.unitPrice());
-            existing.setCurrency(resolveCurrency(snapshot));
+            existing.setCurrency(currency);
             cartItemRepository.save(existing);
         } else {
             newQuantity = request.quantity();
@@ -74,7 +75,7 @@ public class CartServiceImpl implements CartService {
                 .productId(request.productId())
                 .productTitle(snapshot.title())
                 .unitPrice(snapshot.unitPrice())
-                .currency(resolveCurrency(snapshot))
+                .currency(currency)
                 .quantity(request.quantity())
                 .build();
             cartItemRepository.save(item);
@@ -200,7 +201,9 @@ public class CartServiceImpl implements CartService {
     private String resolveCurrency(ProductSnapshot snapshot) {
         String currency = snapshot.currency();
         if (currency == null || currency.isBlank()) {
-            return PlatformCurrency.DEFAULT;
+            log.warn("Refused to price product {} in the cart: the product carries no currency",
+                    snapshot.productId());
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, snapshot.productId(), currency);
         }
         return PlatformCurrency.normalize(currency);
     }

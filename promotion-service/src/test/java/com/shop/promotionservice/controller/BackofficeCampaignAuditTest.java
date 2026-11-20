@@ -58,7 +58,7 @@ class BackofficeCampaignAuditTest {
     void create_emitsAuditLineWithAnnotatedAction() throws Exception {
         when(campaignService.create(any(com.shop.promotionservice.dto.request.CampaignRequest.class)))
             .thenReturn(new CampaignResponse(campaignId, "SAVE10", "Save 10", "PERCENT",
-                new BigDecimal("10"), null, null, null, null, null, null,
+                new BigDecimal("10"), null, null, null, null, null, null, null, null,
                 CampaignStatus.INACTIVE, Instant.parse("2026-08-31T10:00:00Z"),
                 Instant.parse("2026-08-31T10:00:00Z")));
 

@@ -245,15 +245,15 @@ class ConfirmCompensationLedgerIT extends AbstractOrderServiceIT {
 
         paymentServer.stubFor(get(urlEqualTo("/api/v1/payments/by-order/" + response.id() + "/captured"))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"orderId":"%s","status":"CAPTURED","id":"%s"}}
-                """.formatted(response.id(), UUID.randomUUID()))));
+                {"success":true,"code":"OK","data":{"orderId":"%s","status":"CAPTURED","id":"%s","amount":%s,"currency":"%s"}}
+                """.formatted(response.id(), UUID.randomUUID(), response.total(), response.currency()))));
         return response;
     }
 
     private void stubProduct(UUID productId) {
         productServer.stubFor(get(urlEqualTo("/api/v1/products/" + productId))
             .willReturn(okJson("""
-                {"success":true,"code":"OK","data":{"id":"%s","title":"T","priceUnit":10}}
+                {"success":true,"code":"OK","data":{"id":"%s","title":"T","priceUnit":10,"currency":"VND"}}
                 """.formatted(productId))));
     }
 

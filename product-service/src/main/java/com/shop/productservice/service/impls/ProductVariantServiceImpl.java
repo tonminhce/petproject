@@ -63,7 +63,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
             .sku(request.sku().trim())
             .title(request.title().trim())
             .price(request.price())
-            .currency(PlatformCurrency.DEFAULT)
+            .currency(resolveCurrency(product))
             .quantity(request.quantity())
             .attributes(request.attributes())
             .imageUrl(request.imageUrl())
@@ -120,6 +120,14 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         variant.markDeleted(AuditActor.require(auditorAware::getCurrentAuditor));
         productVariantRepository.save(variant);
         log.info("Deleted variant {} for product {}", variantId, productId);
+    }
+
+    private String resolveCurrency(Product product) {
+        String currency = product.getCurrency();
+        if (currency == null || currency.isBlank()) {
+            return PlatformCurrency.DEFAULT;
+        }
+        return PlatformCurrency.normalize(currency.trim());
     }
 
     private void ensureProductExists(UUID productId) {

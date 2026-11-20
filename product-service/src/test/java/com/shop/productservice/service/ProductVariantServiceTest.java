@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.data.domain.AuditorAware;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -132,6 +133,42 @@ class ProductVariantServiceTest {
 
         assertThat(response.id()).isEqualTo(variantId);
         assertThat(response.sku()).isEqualTo("SKU-NEW");
+    }
+
+    @Test
+    void create_inheritsTheCurrencyOfTheParentProduct() {
+        Product product = Product.builder().id(productId).currency("USD").build();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productVariantRepository.existsBySkuAndDeletedFalse("SKU-NEW")).thenReturn(false);
+        when(productVariantRepository.save(any(ProductVariant.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+
+        ProductVariantCreateRequest request = new ProductVariantCreateRequest(
+            "SKU-NEW", "New Variant", BigDecimal.valueOf(120), 5, null, null);
+
+        service.create(productId, request);
+
+        ArgumentCaptor<ProductVariant> captor = ArgumentCaptor.forClass(ProductVariant.class);
+        verify(productVariantRepository).save(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo("USD");
+    }
+
+    @Test
+    void create_fallsBackToThePlatformDefaultWhenTheProductHasNoCurrency() {
+        Product product = Product.builder().id(productId).currency(null).build();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productVariantRepository.existsBySkuAndDeletedFalse("SKU-NEW")).thenReturn(false);
+        when(productVariantRepository.save(any(ProductVariant.class)))
+            .thenAnswer(inv -> inv.getArgument(0));
+
+        ProductVariantCreateRequest request = new ProductVariantCreateRequest(
+            "SKU-NEW", "New Variant", BigDecimal.valueOf(120), 5, null, null);
+
+        service.create(productId, request);
+
+        ArgumentCaptor<ProductVariant> captor = ArgumentCaptor.forClass(ProductVariant.class);
+        verify(productVariantRepository).save(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo("VND");
     }
 
     @Test

@@ -9,6 +9,7 @@ import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.common.logging.audit.Audited;
 import com.shop.common.security.service.ServiceCallerGuard;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
+import com.shop.paymentservice.dto.PaymentRefundRequest;
 import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.service.PaymentService;
 import jakarta.validation.Valid;
@@ -56,10 +57,14 @@ public class PaymentController {
     @PostMapping("/{id}/refund")
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.refund", resourceType = "payment")
-    public ApiResponse<PaymentResponse> refund(@PathVariable UUID id) {
+    public ApiResponse<PaymentResponse> refund(@PathVariable UUID id,
+            @Valid @RequestBody(required = false) PaymentRefundRequest request) {
 
         serviceCallerGuard.requireCaller("order-service");
-        return ApiResponse.ok(paymentService.refund(id));
+        if (request == null) {
+            return ApiResponse.ok(paymentService.refund(id));
+        }
+        return ApiResponse.ok(paymentService.refund(id, request.amount(), request.currency()));
     }
 
     @GetMapping

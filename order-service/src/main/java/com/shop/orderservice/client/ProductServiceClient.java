@@ -26,7 +26,7 @@ public class ProductServiceClient {
         new ParameterizedTypeReference<>() {};
 
     @CircuitBreaker(name = "productService")
-    @Cacheable(value = "productPrice", key = "#productId")
+    @Cacheable(value = "productPrice", key = "#productId.toString() + ':v2'")
     public ProductSnapshot getProduct(UUID productId) {
         ApiResponse<ProductSnapshot> resp;
         try {

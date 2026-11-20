@@ -130,10 +130,20 @@ class VNPayProviderTest {
                 .andRespond(withSuccess("{\"vnp_ResponseCode\":\"00\",\"vnp_ResponseMessage\":\"Success\"}",
                         MediaType.APPLICATION_JSON));
 
-        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "key-1", txnRef);
+        PaymentProvider.ProviderResult result = provider.refund(paymentId, BigDecimal.valueOf(50000), "VND", "key-1", txnRef);
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.CONFIRMED);
         assertThat(result.providerEventId()).isEqualTo(txnRef);
+        server.verify();
+    }
+
+    @Test
+    void refund_rejectsACurrencyTheProviderDoesNotSupportWithoutCallingIt() {
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "USD",
+                "key-1", "txnref");
+
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
+        assertThat(result.providerEventId()).isEqualTo("VNPAY_UNSUPPORTED_CURRENCY");
         server.verify();
     }
 
@@ -143,7 +153,7 @@ class VNPayProviderTest {
                 .andRespond(withSuccess("{\"vnp_ResponseCode\":\"04\",\"vnp_ResponseMessage\":\"Invalid date\"}",
                         MediaType.APPLICATION_JSON));
 
-        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "key-1",
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "VND", "key-1",
                 "txnref");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
@@ -155,7 +165,7 @@ class VNPayProviderTest {
     void refund_isIndeterminateWhenTheProviderIsUnreachable() {
         server.expect(requestTo(TRANSACTION_URL)).andRespond(withServerError());
 
-        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "key-1",
+        PaymentProvider.ProviderResult result = provider.refund(UUID.randomUUID(), BigDecimal.valueOf(50000), "VND", "key-1",
                 "txnref");
 
         assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.INDETERMINATE);

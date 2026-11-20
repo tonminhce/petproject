@@ -1,5 +1,6 @@
 package com.shop.orderservice.client;
 
+import com.shop.common.core.exception.BusinessException;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
 import com.shop.orderservice.security.ServiceTokenProvider;
@@ -15,11 +16,14 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -35,6 +39,7 @@ class PaymentServiceClientTest {
     private static final UUID PAYMENT_CAPTURED = UUID.fromString("00000000-0000-0000-0000-0000000000bb");
     private static final String CAPTURED_URL =
             "http://payment.test/api/v1/payments/by-order/" + ORDER_ID + "/captured";
+    private static final BigDecimal CAPTURED_AMOUNT = new BigDecimal("2499.00");
 
     @Mock
     private ServiceTokenProvider serviceTokenProvider;
@@ -57,7 +62,7 @@ class PaymentServiceClientTest {
 
     private static String capturedJson() {
         return """
-            {"success":true,"code":"OK","data":{"id":"%s","orderId":"%s","status":"CAPTURED"}}
+            {"success":true,"code":"OK","data":{"id":"%s","orderId":"%s","status":"CAPTURED","amount":2499.00,"currency":"VND"}}
             """.formatted(PAYMENT_CAPTURED, ORDER_ID);
     }
 
@@ -75,6 +80,8 @@ class PaymentServiceClientTest {
         assertThat(snapshot.get().status()).isEqualTo("CAPTURED");
         assertThat(snapshot.get().id()).isEqualTo(PAYMENT_CAPTURED);
         assertThat(snapshot.get().orderId()).isEqualTo(ORDER_ID);
+        assertThat(snapshot.get().amount()).isEqualByComparingTo(CAPTURED_AMOUNT);
+        assertThat(snapshot.get().currency()).isEqualTo("VND");
     }
 
     @Test
@@ -155,6 +162,75 @@ class PaymentServiceClientTest {
             .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         assertThat(client.refundByOrderId(ORDER_ID)).isFalse();
+
+        server.verify();
+    }
+
+    @Test
+    void theFullRefundDeclaresTheCapturedAmountAndCurrency() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().json("{\"amount\":2499.00,\"currency\":\"VND\"}"))
+            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThat(client.refundByOrderId(ORDER_ID)).isTrue();
+
+        server.verify();
+    }
+
+    @Test
+    void theRefundPathSendsTheApprovedAmountAndCurrency() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().json("{\"amount\":100.00,\"currency\":\"VND\"}"))
+            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThat(client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND")).isTrue();
+
+        server.verify();
+    }
+
+    @Test
+    void theRefundPathRefusesAnAmountAboveTheRemainingRefundableAmount() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("3000.00"), "VND"))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        server.verify();
+    }
+
+    @Test
+    void theRefundPathRefusesANonPositiveAmount() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, BigDecimal.ZERO, "VND"))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
+
+        server.verify();
+    }
+
+    @Test
+    void theRefundPathRefusesACurrencyThatIsNotThePaymentCurrency() {
+        stubToken();
+        server.expect(requestTo(CAPTURED_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "USD"))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
 
         server.verify();
     }

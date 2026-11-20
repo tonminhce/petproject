@@ -156,6 +156,34 @@ class CartServiceImplTest {
 
 
     @Test
+    void addItem_productWithoutACurrency_failsClosedAndPersistsNothing() {
+        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        when(productClient.getProduct(productId))
+            .thenReturn(new ProductSnapshot(productId, "Widget", new BigDecimal("9.99"), null));
+
+        assertThatThrownBy(() -> service.addItem(userId, new CartItemAddRequest(productId, 2)))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        verify(cartItemRepository, never()).save(any(CartItem.class));
+        verify(cartRepository, never()).save(any(Cart.class));
+    }
+
+    @Test
+    void addItem_productWithABlankCurrency_failsClosedAndPersistsNothing() {
+        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        when(productClient.getProduct(productId))
+            .thenReturn(new ProductSnapshot(productId, "Widget", new BigDecimal("9.99"), "  "));
+
+        assertThatThrownBy(() -> service.addItem(userId, new CartItemAddRequest(productId, 2)))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        verify(cartItemRepository, never()).save(any(CartItem.class));
+        verify(cartRepository, never()).save(any(Cart.class));
+    }
+
+    @Test
     void updateItem_zeroQuantityRemovesItem() {
         CartItem item = CartItem.builder()
             .id(cartItemId).cartId(cartId).productId(productId)
