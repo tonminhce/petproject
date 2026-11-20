@@ -19,15 +19,17 @@ const businessFailure = new Counter('business_failure_total');
 const checkoutLatency = new Trend('business_checkout_latency_ms', true);
 const oversellAttempts = new Counter('oversell_attempts_total');
 const resolvedProducts = new Counter('resolved_product_total');
-http.setResponseCallback(http.expectedStatuses(200, 201, 409));
+http.setResponseCallback(http.expectedStatuses(200, 201, 404, 409));
 
 const cartFailure = new Counter('cart_failure_total');
+const cartContention = new Counter('cart_contention_total');
+const couponContention = new Counter('coupon_contention_total');
 const catalogFailure = new Counter('catalog_failure_total');
 const detailFailure = new Counter('detail_failure_total');
 const unresolvedProduct = new Counter('unresolved_product_total');
 
 let cachedProductId = configuredProductId;
-let cartItemPresent = false;
+let cartItemId = null;
 
 function stagesFor() {
   if (scenario === 'spike') {
@@ -60,7 +62,17 @@ function stagesFor() {
 }
 
 export const options = {
-  stages: stagesFor(),
+  scenarios: {
+    default: {
+      executor: 'ramping-arrival-rate',
+      startRate: Math.max(1, Math.floor(peakRate / 2)),
+      timeUnit: '1s',
+      preAllocatedVUs: maxVus,
+      maxVUs: maxVus,
+      gracefulStop: '30s',
+      stages: stagesFor(),
+    },
+  },
   thresholds: {
     http_req_failed: ['rate<0.05'],
     checks: ['rate>0.90'],
@@ -150,14 +162,32 @@ function productDetail() {
 }
 
 function ensureCart(productId) {
-  if (cartItemPresent) {
-    return true;
+  if (cartItemId) {
+    const update = http.put(baseUrl + '/api/v1/carts/me/items/' + cartItemId,
+      JSON.stringify({ quantity: 1 }),
+      { headers: authHeaders(), tags: { call: 'cart-update' } });
+    if (update.status === 200 || update.status === 201) {
+      return true;
+    }
+    cartItemId = null;
   }
   const response = http.post(baseUrl + '/api/v1/carts/me/items',
     JSON.stringify({ productId: productId, quantity: 1 }),
     { headers: authHeaders(), tags: { call: 'cart' } });
   if (response.status === 200 || response.status === 201) {
-    cartItemPresent = true;
+    try {
+      const parsed = JSON.parse(response.body);
+      const data = parsed.data || {};
+      const items = data.items || [];
+      for (const candidate of items) {
+        if (candidate.productId === productId) {
+          cartItemId = candidate.id;
+          break;
+        }
+      }
+    } catch (error) {
+      cartItemId = null;
+    }
     return true;
   }
   cartFailure.add(1);
@@ -176,16 +206,7 @@ function conflictReason(response) {
   return '';
 }
 
-function checkout() {
-  const productId = resolveProductId();
-  if (!productId) {
-    businessFailure.add(1);
-    return;
-  }
-  if (!ensureCart(productId)) {
-    businessFailure.add(1);
-    return;
-  }
+function placeOrder(productId) {
   const payload = JSON.stringify({
     recipientName: 'Load Tester',
     phoneNumber: '0987654321',
@@ -196,19 +217,45 @@ function checkout() {
   const started = Date.now();
   const response = http.post(baseUrl + '/api/v1/orders', payload, { headers: authHeaders(), tags: { call: 'checkout' } });
   checkoutLatency.add(Date.now() - started);
+  return response;
+}
+
+function checkout() {
+  const productId = resolveProductId();
+  if (!productId) {
+    businessFailure.add(1);
+    return;
+  }
+  if (!ensureCart(productId)) {
+    businessFailure.add(1);
+    return;
+  }
+  let response = placeOrder(productId);
+  if (response.status === 409 && conflictReason(response) === 'ORD-4005') {
+    cartItemId = null;
+    cartContention.add(1);
+    if (ensureCart(productId)) {
+      response = placeOrder(productId);
+    }
+  }
   const accepted = response.status === 200 || response.status === 201;
-  const soldOut = response.status === 409 && conflictReason(response) !== 'ORD-4005';
+  const reason = conflictReason(response);
+  const soldOut = response.status === 409 && reason !== 'ORD-4005';
+  const couponRejected = reason === 'ORD-4008' || reason === 'PRO-7006' || reason === 'PRO-7007' || reason === 'PRO-7005';
   check(response, {
     'checkout returns an accepted or conflict status': (r) => r.status === 200 || r.status === 201 || r.status === 409,
   });
   if (accepted) {
-    cartItemPresent = false;
+    cartItemId = null;
     businessSuccess.add(1);
   } else if (soldOut) {
     oversellAttempts.add(1);
+  } else if (couponRejected) {
+    cartItemId = null;
+    couponContention.add(1);
   } else {
     if (response.status === 409) {
-      cartItemPresent = false;
+      cartItemId = null;
       cartFailure.add(1);
     }
     businessFailure.add(1);

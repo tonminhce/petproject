@@ -26,8 +26,29 @@ class RoutesConfigTest {
 
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(29);
+        assertThat(routes).hasSize(30);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).hasSize(1));
+    }
+
+    @Test
+    void routesTheCartApiToTheOrderService() {
+        var routeLocator = createRoutes(new RateLimitProperties(false, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED));
+
+        var routes = routeLocator.getRoutes().collectList().block();
+
+        var cartRoute = routes.stream()
+                .filter(route -> route.getId().equals("order-cart"))
+                .findFirst();
+        assertThat(cartRoute)
+                .as("the cart api belongs to the order service and must be reachable through the gateway")
+                .isPresent();
+        assertThat(cartRoute.get().getUri()).hasToString("http://order-service:8084");
+        assertThat(cartRoute.get().getPredicate())
+                .as("the cart route must match the cart api path")
+                .isNotNull();
+        assertThat(cartRoute.get().getPredicate().toString())
+                .as("the cart route must match the cart api path")
+                .contains("/api/v1/carts");
     }
 
     @Test
@@ -36,7 +57,7 @@ class RoutesConfigTest {
 
         var routes = routeLocator.getRoutes().collectList().block();
 
-        assertThat(routes).hasSize(29);
+        assertThat(routes).hasSize(30);
         assertThat(routes).allSatisfy(route -> assertThat(route.getFilters()).isEmpty());
     }
 

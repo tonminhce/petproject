@@ -235,10 +235,14 @@ def verify(container: str = POSTGRES_CONTAINER, scenario: str = "") -> dict[str,
     failed = [item["id"] for item in results if item["status"] == "FAIL"]
     blocked = [item["id"] for item in results if item["status"] == "BLOCKED"]
     skipped = [item["id"] for item in results if item["status"] == "SKIPPED"]
+    passed = [item["id"] for item in results if item["status"] == "PASS"]
     if failed:
         status = "FAIL"
     elif blocked:
         status = "BLOCKED"
+    elif not passed:
+        status = "BLOCKED"
+        blocked = list(skipped)
     else:
         status = "PASS"
     return {
@@ -246,5 +250,6 @@ def verify(container: str = POSTGRES_CONTAINER, scenario: str = "") -> dict[str,
         "failed": failed,
         "blocked": blocked,
         "skipped": skipped,
+        "passed": passed,
         "invariants": results,
     }

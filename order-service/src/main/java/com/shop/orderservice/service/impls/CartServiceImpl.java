@@ -206,12 +206,21 @@ public class CartServiceImpl implements CartService {
     }
 
     private String resolveCartCurrency(Cart cart) {
+        String resolved = null;
         for (CartItem item : cartItemRepository.findByCartId(cart.getId())) {
-            if (item.getCurrency() != null && !item.getCurrency().isBlank()) {
-                return PlatformCurrency.normalize(item.getCurrency());
+            if (item.getCurrency() == null || item.getCurrency().isBlank()) {
+                continue;
+            }
+            String currency = PlatformCurrency.normalize(item.getCurrency());
+            if (resolved == null) {
+                resolved = currency;
+                continue;
+            }
+            if (!resolved.equals(currency)) {
+                throw BusinessException.of(ErrorCode.ORDER_PRICING_CURRENCY_MISMATCH, resolved, currency);
             }
         }
-        return PlatformCurrency.DEFAULT;
+        return resolved == null ? PlatformCurrency.DEFAULT : resolved;
     }
 
     private BigDecimal calculateSubtotal(Cart cart) {

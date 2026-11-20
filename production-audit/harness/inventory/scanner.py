@@ -274,7 +274,22 @@ def source_fingerprint(root: Path | None = None) -> str:
         digest.update(path.relative_to(repository).as_posix().encode("utf-8"))
         digest.update(b"\x00")
         digest.update(hashlib.sha256(payload).digest())
+    for path in sorted(_audit_configuration_files(repository), key=lambda item: item.as_posix()):
+        try:
+            payload = path.read_bytes()
+        except OSError:
+            continue
+        digest.update(path.relative_to(repository).as_posix().encode("utf-8"))
+        digest.update(b"\x00")
+        digest.update(hashlib.sha256(payload).digest())
     return digest.hexdigest()
+
+
+def _audit_configuration_files(repository: Path) -> list[Path]:
+    configuration_root = repository / "production-audit" / "config"
+    if not configuration_root.is_dir():
+        return []
+    return [path for path in configuration_root.rglob("*.json") if path.is_file()]
 
 
 def persist_inventory(document: dict[str, Any]) -> Path:

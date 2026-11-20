@@ -41,9 +41,10 @@ public final class DownstreamResilienceFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(final ServerWebExchange exchange, final GatewayFilterChain chain) {
+        final Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
         final String bucket = bucketName(exchange);
         final CircuitBreaker breaker = circuitBreakerRegistry.circuitBreaker(bucket);
-        final Bulkhead bulkhead = bulkheadRegistry.bulkhead(bucket);
+        final Bulkhead bulkhead = bulkheadRegistry.bulkhead(serviceBucket(route));
         return Mono.defer(() -> {
             if (bulkheadProperties.enabled() && !bulkhead.tryAcquirePermission()) {
                 return errorResponseWriter.writeRateLimited(exchange, BULKHEAD_RETRY_AFTER_SECONDS);
@@ -68,6 +69,14 @@ public final class DownstreamResilienceFilter implements GlobalFilter, Ordered {
     private String bucketName(final ServerWebExchange exchange) {
         final Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
         return route == null ? UNROUTED_BUCKET : route.getId();
+    }
+
+    private String serviceBucket(final Route route) {
+        if (route == null) {
+            return UNROUTED_BUCKET;
+        }
+        final String host = route.getUri().getHost();
+        return host == null || host.isBlank() ? route.getId() : "service:" + host;
     }
 
     private void recordOutcome(final CircuitBreaker breaker, final long startedAt,

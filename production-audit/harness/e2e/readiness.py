@@ -5,10 +5,9 @@ import subprocess
 import time
 from typing import Any
 
-HEALTHY_MARKER = "healthy"
-UNHEALTHY_MARKER = "health:"
 READY_TIMEOUT_SECONDS = 600
 POLL_SECONDS = 5
+RUNNING_PREFIXES = ("Up ", "Up(")
 
 
 def _running_services() -> list[tuple[str, str]]:
@@ -35,9 +34,35 @@ def _running_services() -> list[tuple[str, str]]:
     return services
 
 
+def _expected_services(services: list[str] | None) -> list[str] | None:
+    if services is not None:
+        return list(services)
+    if shutil.which("docker") is None:
+        return None
+    try:
+        result = subprocess.run(
+            ["docker", "compose", "config", "--services"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    declared = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return declared or None
+
+
 def _is_ready(status: str) -> bool:
-    if UNHEALTHY_MARKER in status:
-        return HEALTHY_MARKER in status
+    normalised = status.strip()
+    if not normalised.startswith(RUNNING_PREFIXES):
+        return False
+    if "(unhealthy)" in normalised:
+        return False
+    if "health:" in normalised:
+        return "(healthy)" in normalised
     return True
 
 
@@ -48,21 +73,27 @@ def wait_for_healthy(
 ) -> dict[str, Any]:
     deadline = time.time() + timeout_seconds
     last: list[tuple[str, str]] = []
+    expected = _expected_services(services)
+    missing: list[str] = []
     while time.time() < deadline:
         last = _running_services()
         if last:
+            present = {service for service, _ in last}
+            missing = sorted(service for service in (expected or []) if service not in present)
             pending = [
                 f"{service} ({status})"
                 for service, status in last
                 if (services is None or service in services) and not _is_ready(status)
             ]
-            if not pending:
+            if not pending and not missing:
                 return {
                     "status": "READY",
                     "services": [{"service": service, "status": status} for service, status in last],
                     "waited_seconds": round(timeout_seconds - (deadline - time.time()), 1),
                 }
         time.sleep(poll_seconds)
+    present = {service for service, _ in last}
+    missing = sorted(service for service in (expected or []) if service not in present)
     return {
         "status": "TIMEOUT",
         "services": [{"service": service, "status": status} for service, status in last],
@@ -71,4 +102,5 @@ def wait_for_healthy(
             for service, status in last
             if (services is None or service in services) and not _is_ready(status)
         ],
+        "missing": missing,
     }

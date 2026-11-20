@@ -9,11 +9,21 @@ from typing import Any
 
 DEFAULT_PREFIX = "loadtest"
 DEFAULT_REALM = "ecommerce"
-DEFAULT_PASSWORD = "LoadTest-Passw0rd!"
+PASSWORD_VARIABLE = "LOAD_TEST_CUSTOMER_PASSWORD"
 
 
 def _admin_password() -> str:
     return str(os.environ.get("KEYCLOAK_ADMIN_PASSWORD", "")).strip()
+
+
+def load_test_password() -> str:
+    password = str(os.environ.get(PASSWORD_VARIABLE, "")).strip()
+    if not password:
+        raise RuntimeError(
+            "the load test customer password is not configured, so the harness would create a customer with a "
+            "password that is written down in the source. Set " + PASSWORD_VARIABLE + " to a secret value."
+        )
+    return password
 
 
 def _token_url(realm: str) -> str:
@@ -72,7 +82,7 @@ def provision_customers(
                 "credentials": [
                     {
                         "type": "password",
-                        "value": DEFAULT_PASSWORD,
+                        "value": load_test_password(),
                         "temporary": False,
                     }
                 ],
@@ -111,7 +121,7 @@ def mint_tokens(
             {
                 "client_id": client_id,
                 "username": username,
-                "password": DEFAULT_PASSWORD,
+                "password": load_test_password(),
                 "grant_type": "password",
             }
         ).encode()

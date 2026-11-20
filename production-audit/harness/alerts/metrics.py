@@ -135,6 +135,29 @@ def exported_label_names(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[
     return sorted(str(name) for name in names), ""
 
 
+def scraped_applications(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[list[str] | None, str]:
+    try:
+        request = urllib.request.Request(url.rstrip("/") + "/api/v1/query?query=up")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError) as error:
+        return None, "prometheus is not reachable at " + url + ": " + str(error)
+    results = payload.get("data", {}).get("result")
+    if not isinstance(results, list):
+        return None, "prometheus returned an unexpected target inventory"
+    applications = set()
+    for entry in results:
+        labels = entry.get("metric", {})
+        application = str(labels.get("application", "")).strip()
+        if application:
+            applications.add(application)
+            continue
+        instance = str(labels.get("instance", "")).strip()
+        if instance:
+            applications.add(instance.split(":")[0])
+    return sorted(applications), ""
+
+
 def rule_metric_audit(rules_path: Any, url: str = PROMETHEUS_URL) -> dict[str, Any]:
     from .. import yamlmini
 
@@ -150,6 +173,9 @@ def rule_metric_audit(rules_path: Any, url: str = PROMETHEUS_URL) -> dict[str, A
     labels, label_reason = exported_label_names(url)
     if labels is None:
         return {"status": "BLOCKED", "reason": label_reason}
+    applications, application_reason = scraped_applications(url)
+    if applications is None:
+        return {"status": "BLOCKED", "reason": application_reason}
 
     known = set(exported)
     known_labels = set(labels)
@@ -175,6 +201,7 @@ def rule_metric_audit(rules_path: Any, url: str = PROMETHEUS_URL) -> dict[str, A
         "status": "FAIL" if failing else "PASS",
         "exported_metric_count": len(exported),
         "exported_label_count": len(known_labels),
+        "scraped_applications": applications,
         "rules": audit,
         "rules_with_unknown_metrics": [entry["alert"] for entry in audit if entry["unknown"]],
         "rules_with_unknown_groupings": [entry["alert"] for entry in audit if entry["unknown_groupings"]],

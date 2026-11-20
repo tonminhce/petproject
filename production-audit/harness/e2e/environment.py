@@ -130,22 +130,41 @@ def compose_available() -> tuple[bool, str]:
 def detect_dependencies() -> list[ComponentStatus]:
     statuses: list[ComponentStatus] = []
     compose_ok, compose_detail = compose_available()
+    running = _running_containers()
     for name in REQUIRED_COMPONENTS:
         if not compose_ok:
             statuses.append(ComponentStatus(name, False, compose_detail))
             continue
+        matches = sorted(container for container in running if name in container)
+        if not matches:
+            statuses.append(ComponentStatus(name, False, "no running container carries the name " + name))
+            continue
+        statuses.append(ComponentStatus(name, True, "running: " + ", ".join(matches)))
+    return statuses
+
+
+def _running_containers() -> list[str]:
+    try:
         probe = subprocess.run(
-            ["docker", "info", "--format", "{{.ServerVersion}}"],
+            ["docker", "ps", "--format", "{{.Names}}|{{.Status}}"],
             capture_output=True,
             text=True,
             check=False,
             timeout=60,
         )
-        if probe.returncode != 0:
-            statuses.append(ComponentStatus(name, False, f"docker daemon unavailable: {probe.stderr.strip()[:200]}"))
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if probe.returncode != 0:
+        return []
+    containers: list[str] = []
+    for line in probe.stdout.splitlines():
+        if "|" not in line:
             continue
-        statuses.append(ComponentStatus(name, True, f"docker server {probe.stdout.strip()}, {compose_detail}"))
-    return statuses
+        name, _, status = line.partition("|")
+        if "Up" not in status:
+            continue
+        containers.append(name.strip())
+    return containers
 
 
 def compose_files(root: Path | None = None) -> list[Path]:

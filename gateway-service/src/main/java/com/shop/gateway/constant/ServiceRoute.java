@@ -14,6 +14,7 @@ public enum ServiceRoute {
     INVENTORY("inventory-service", "inventory", "inventory-service", 8082),
     MEDIA("media-service", "medias", "media-service", 8083),
     ORDER("order-service", "orders", "order-service", 8084),
+    CART("order-cart", "carts", "order-service", 8084),
     PAYMENT("payment-service", "payments", "payment-service", 8085),
     PRODUCT("product-service", "products", "product-service", 8086),
     SHIPPING("shipping-service", "shipping", "shipping-service", 8087),

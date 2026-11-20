@@ -413,7 +413,11 @@ def delivery_report(path: Any = None) -> dict[str, Any]:
         "total": len(deliveries),
         "state_summary": summary,
         "deliveries": deliveries,
-        "unpushed": [entry for entry in deliveries if entry.get("state") == "PUSH_BLOCKED"],
+        "unpushed": [
+            entry for entry in deliveries
+            if entry.get("state") in ("PUSH_BLOCKED", "COMMITTED", "REJECTED_BY_GATES")
+        ],
+        "rejected": [entry for entry in deliveries if entry.get("state") == "REJECTED_BY_GATES"],
     }
 
 

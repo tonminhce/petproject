@@ -365,9 +365,23 @@ def command_load(arguments: argparse.Namespace) -> int:
 
     document = run_profile(action, scale=scale, base_url=arguments.base_url)
     append_event(config.events_path(), "load_" + action, {"status": document.get("status")})
-    if arguments.persist:
-        write_json(results_root() / (action + "-latest.json"), document)
-        write_json(config.state_root() / "performance-baselines.json", {"profile": action, "updated_at": utc_now(), "result": document})
+    write_json(results_root() / (action + "-latest.json"), document)
+    write_json(
+        config.state_root() / "performance-baselines.json",
+        {"profile": action, "updated_at": utc_now(), "result": document},
+    )
+    record_suite_result(
+        "performance",
+        {
+            "suite": "performance",
+            "status": "PASS" if document.get("status") == "PASS" else "FAIL",
+            "profile": action,
+            "measurement_valid": bool(document.get("measurement_valid")),
+            "metrics": document.get("metrics"),
+            "invariants": (document.get("invariants") or {}).get("status"),
+            "updated_at": utc_now(),
+        },
+    )
     emit(document)
     if document.get("status") == "PASS":
         invariants = document.get("invariants") or {}

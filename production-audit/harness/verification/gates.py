@@ -146,6 +146,29 @@ def _coverage_summary() -> dict[str, Any]:
     return {"total": total, "reviewed": fully}
 
 
+def _review_verdict(path: Path) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return "UNDECIDED"
+    for line in text.splitlines():
+        stripped = line.strip().lower()
+        if not stripped.startswith("verdict") and "verdict" not in stripped.split(":")[0]:
+            continue
+        if "fail" in stripped:
+            return "FAIL"
+        if "pass" in stripped or "approved" in stripped:
+            return "PASS"
+    for line in text.splitlines():
+        stripped = line.strip().lower()
+        if stripped.startswith("## verdict") or stripped.startswith("### verdict"):
+            if "fail" in stripped:
+                return "FAIL"
+            if "pass" in stripped:
+                return "PASS"
+    return "UNDECIDED"
+
+
 def _task_state_counts() -> dict[str, int]:
     from ..task_registry.registry import load_tasks, task_status_summary
 
@@ -188,7 +211,7 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     tasks = load_tasks()
     pattern_tasks = [task for task in tasks.values() if task.design_pattern]
     pattern_verified = [task for task in pattern_tasks if task.state == "VERIFIED"]
-    pattern_required = [task for task in pattern_tasks if task.state not in ("VERIFIED", "BLOCKED", "DISCOVERED")]
+    pattern_required = [task for task in pattern_tasks if task.state != "VERIFIED"]
     gates.append(
         Gate(
             id="GATE-3",
@@ -273,14 +296,34 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     reviews_root = config.run_root() / "independent-reviews"
     reviews = list(reviews_root.glob("*.md")) if reviews_root.exists() else []
-    reviews_pass = len(reviews) > 0
+    review_verdicts = [(review, _review_verdict(review)) for review in reviews]
+    failing_reviews = [review for review, verdict in review_verdicts if verdict == "FAIL"]
+    passing_reviews = [review for review, verdict in review_verdicts if verdict == "PASS"]
+    undecided_reviews = [review for review, verdict in review_verdicts if verdict == "UNDECIDED"]
+    if not reviews:
+        review_status = PENDING
+        review_detail = "no independent review artifacts"
+    elif failing_reviews:
+        review_status = FAIL
+        review_detail = str(len(failing_reviews)) + " of " + str(len(reviews)) + " independent reviews report a failing verdict"
+    elif undecided_reviews:
+        review_status = PENDING
+        review_detail = str(len(undecided_reviews)) + " independent reviews carry no verdict marker"
+    else:
+        review_status = PASS
+        review_detail = str(len(passing_reviews)) + " independent reviews report a passing verdict"
     gates.append(
         Gate(
             id="GATE-19",
             name="INDEPENDENT_REVIEW",
-            status=PASS if reviews_pass else PENDING,
-            evidence=[f"{len(reviews)} independent review artifacts"],
-            detail="independent review artifacts present" if reviews_pass else "no independent review artifacts",
+            status=review_status,
+            evidence=[
+                f"{len(reviews)} independent review artifacts",
+                f"passing verdicts: {len(passing_reviews)}",
+                f"failing verdicts: {len(failing_reviews)}",
+                f"without a verdict: {len(undecided_reviews)}",
+            ],
+            detail=review_detail,
         )
     )
 
@@ -288,13 +331,24 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     deliveries = delivery_report()
     has_commit = deliveries["total"] > 0
+    rejected = len(deliveries.get("rejected", []))
     gates.append(
         Gate(
             id="GATE-20",
             name="GIT_DELIVERY",
-            status=PASS if has_commit else PENDING,
-            evidence=[f"{deliveries['total']} delivery records", f"unpushed: {len(deliveries['unpushed'])}"],
-            detail="verified batches have traceable commits" if has_commit else "no delivery records",
+            status=PASS if has_commit and not rejected else (FAIL if rejected else PENDING),
+            evidence=[
+                f"{deliveries['total']} delivery records",
+                f"unpushed: {len(deliveries['unpushed'])}",
+                f"rejected by the gates: {rejected}",
+            ],
+            detail=(
+                "verified batches have traceable commits"
+                if has_commit and not rejected
+                else str(rejected) + " batches were rejected by the gates and are not delivered"
+                if rejected
+                else "no delivery records"
+            ),
         )
     )
 
@@ -364,12 +418,14 @@ def completion_predicate(gates: list[Gate]) -> dict[str, Any]:
         "GATE-24",
     ]
     gate_map = {gate.id: gate for gate in gates}
+    missing = [gate_id for gate_id in required if gate_id not in gate_map]
     results = {gate_id: gate_map[gate_id].status == PASS for gate_id in required if gate_id in gate_map}
-    production_ready = bool(results) and all(results.values())
+    production_ready = bool(results) and not missing and all(results.values())
     return {
         "evaluated_at": utc_now(),
         "production_ready": production_ready,
         "gate_results": results,
+        "missing_gates": missing,
         "failing_gates": [gate_id for gate_id, value in results.items() if not value],
         "note": "git delivery status is reported separately from technical readiness",
     }

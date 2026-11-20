@@ -8,6 +8,8 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.route.Route;
+import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
@@ -16,6 +18,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.URI;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +60,17 @@ class DownstreamResilienceFilterTest {
                                               final CircuitBreakerRegistry registry,
                                               final BulkheadRegistry bulkheadRegistry) {
         return new DownstreamResilienceFilter(breaker, bulkhead, registry, bulkheadRegistry, errorResponseWriter);
+    }
+
+    private MockServerWebExchange routedExchange(final String path, final String routeId, final String host) {
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get(path).build());
+        var route = Route.async()
+                .id(routeId)
+                .uri(URI.create("http://" + host + ":8080"))
+                .predicate(exchange -> true)
+                .build();
+        exchange.getAttributes().put(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR, route);
+        return exchange;
     }
 
     private MockServerWebExchange exchange() {
@@ -214,5 +228,39 @@ class DownstreamResilienceFilterTest {
         assertThat(first.getResponse().getStatusCode()).isNull();
         assertThat(second.getResponse().getStatusCode()).isNull();
         verify(chain, times(2)).filter(any(ServerWebExchange.class));
+    }
+
+    @Test
+    void twoRoutesToTheSameServiceShareOneBulkhead() {
+        var breaker = breakerProperties();
+        var filter = filter(breaker, bulkheadProperties(1), breakerRegistry(breaker), bulkheadRegistry(bulkheadProperties(1)));
+        var inFlight = Sinks.<Void>empty();
+        when(chain.filter(any())).thenReturn(inFlight.asMono());
+
+        filter.filter(routedExchange("/api/v1/orders", "order-service", "order-service"), chain).subscribe();
+
+        var rejected = routedExchange("/api/v1/carts/me/items", "cart-service", "order-service");
+        filter.filter(rejected, chain).block();
+
+        assertThat(rejected.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+
+        inFlight.tryEmitEmpty();
+    }
+
+    @Test
+    void routesToDifferentServicesDoNotShareABulkhead() {
+        var breaker = breakerProperties();
+        var filter = filter(breaker, bulkheadProperties(1), breakerRegistry(breaker), bulkheadRegistry(bulkheadProperties(1)));
+        var inFlight = Sinks.<Void>empty();
+        when(chain.filter(any())).thenReturn(inFlight.asMono());
+
+        filter.filter(routedExchange("/api/v1/orders", "order-service", "order-service"), chain).subscribe();
+
+        var other = routedExchange("/api/v1/products", "product-service", "product-service");
+        filter.filter(other, chain).block();
+
+        assertThat(other.getResponse().getStatusCode()).isNull();
+
+        inFlight.tryEmitEmpty();
     }
 }

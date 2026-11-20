@@ -140,6 +140,7 @@ def resolve_profile(name: str, scale: int = 1) -> Profile:
         description=base.description + " at " + str(scale) + "x",
         reaches_payment_provider=base.reaches_payment_provider,
         tags=base.tags,
+        max_business_failure_rate=base.max_business_failure_rate,
     )
 
 

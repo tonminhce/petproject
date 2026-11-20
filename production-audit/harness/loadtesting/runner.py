@@ -11,7 +11,7 @@ from typing import Any
 
 from .. import config
 from .environment import compose_services, host_snapshot
-from .limits import apply_load_test_rate_limits, restore_shipped_rate_limits
+from .limits import apply_load_test_rate_limits, restore_shipped_rate_limits, wait_for_gateway_traffic
 from .customers import mint_tokens, provision_customers
 from .settle import wait_for_quiet_host
 from .targets import resolve_coupon_code
@@ -20,6 +20,7 @@ from .profiles import Profile, enforce_safety, resolve_profile
 
 DEFAULT_NETWORK = "untitled5_ecommerce-network"
 DEFAULT_BASE_URL = "http://gateway-service:8080"
+CUSTOMER_POOL_LIMIT = 32
 K6_RUN_TIMEOUT_SECONDS = 2400
 
 
@@ -114,6 +115,26 @@ def run_profile(
     token: str | None = None,
     run_invariants: bool = True,
 ) -> dict[str, Any]:
+    document = _measure_profile(
+        name,
+        scale=scale,
+        base_url=base_url,
+        network=network,
+        token=token,
+        run_invariants=run_invariants,
+    )
+    document["rate_limit_restore"] = restore_shipped_rate_limits()
+    return document
+
+
+def _measure_profile(
+    name: str,
+    scale: int = 1,
+    base_url: str = DEFAULT_BASE_URL,
+    network: str | None = None,
+    token: str | None = None,
+    run_invariants: bool = True,
+) -> dict[str, Any]:
     try:
         profile: Profile = resolve_profile(name, scale)
     except (KeyError, ValueError) as error:
@@ -131,18 +152,9 @@ def run_profile(
     output = results_root() / (profile.name + "-" + str(int(time.time())))
     output.mkdir(parents=True, exist_ok=True)
     settle = wait_for_quiet_host()
+    limiter = apply_load_test_rate_limits()
     environment = host_snapshot()
     environment["host_settle"] = settle
-    limiter = apply_load_test_rate_limits()
-    coupon = resolve_coupon_code()
-    if profile.scenario == "promotion-storm" and coupon.get("status") not in ("RESOLVED", "CONFIGURED"):
-        return {
-            "status": "BLOCKED",
-            "profile": profile.name,
-            "reason": "the profile measures many users redeeming one coupon, so an active coupon is required and "
-                      + str(coupon.get("reason", "")),
-            "coupon": coupon,
-        }
     if limiter.get("status") == "ERROR":
         return {
             "status": "FAIL",
@@ -151,13 +163,35 @@ def run_profile(
                       "startup of the gateway instead of the platform",
             "rate_limit_override": limiter,
         }
+    coupon = resolve_coupon_code() if profile.scenario == "promotion-storm" else {"status": "NOT_APPLIED"}
+    if profile.scenario == "promotion-storm" and coupon.get("status") not in ("RESOLVED", "CONFIGURED"):
+        restore_shipped_rate_limits()
+        return {
+            "status": "BLOCKED",
+            "profile": profile.name,
+            "reason": "the profile measures many users redeeming one coupon, so an active coupon is required and "
+                      + str(coupon.get("reason", "")),
+            "coupon": coupon,
+        }
     resolved_network = network or _docker_network()
     resolved_token = token if token is not None else acquire_token()
+
+    traffic = wait_for_gateway_traffic(base_url, resolved_token)
+    if traffic.get("status") != "READY":
+        return {
+            "status": "FAIL",
+            "profile": profile.name,
+            "reason": "the gateway did not serve an authenticated request, so the measurement would have counted "
+                      "the startup of the gateway and of its key material as a business failure",
+            "gateway_traffic": traffic,
+            "rate_limit_override": limiter,
+        }
 
     customers: dict[str, Any] = {"status": "NOT_REQUIRED"}
     customer_tokens: list[str] = []
     if profile.scenario in ("full", "flash-sale", "promotion-storm"):
-        customers = provision_customers(profile.virtual_users)
+        pool_size = min(profile.virtual_users, CUSTOMER_POOL_LIMIT)
+        customers = provision_customers(pool_size)
         if customers.get("status") != "READY":
             return {
                 "status": "BLOCKED",
@@ -166,6 +200,7 @@ def run_profile(
                           "belongs to one customer, so the customer pool could not be provisioned: "
                           + str(customers.get("reason", "")),
                 "customers": customers,
+                "rate_limit_override": limiter,
             }
         minted = mint_tokens(customers.get("usernames", []))
         if minted.get("status") != "READY":
@@ -175,6 +210,7 @@ def run_profile(
                 "reason": "the access tokens for the load test customers could not be minted: "
                           + str(minted.get("reason", "")),
                 "customers": customers,
+                "rate_limit_override": limiter,
             }
         customer_tokens = minted.get("tokens", [])
 
@@ -260,7 +296,10 @@ def run_profile(
         "measurement_valid": not environment.get("contaminated")
         and environment.get("host_settle", {}).get("status") == "QUIET",
         "max_business_failure_rate": profile.max_business_failure_rate,
+        "target_requests_per_second": profile.requests_per_second,
+        "target_virtual_users": profile.virtual_users,
         "rate_limit_override": limiter,
+        "gateway_traffic": traffic,
         "coupon": coupon,
         "customer_pool": {
             "status": customers.get("status"),
@@ -271,7 +310,6 @@ def run_profile(
     }
     if run_invariants:
         document["invariants"] = verify(scenario=profile.scenario)
-    document["rate_limit_restore"] = restore_shipped_rate_limits()
     document["status"] = _final_status(document)
     (output / "result.json").write_text(json.dumps(document, indent=2, default=str), encoding="utf-8")
     (output / "summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
@@ -306,7 +344,12 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
         return False
     rate = failure / attempts
     document["business_failure_rate"] = round(rate, 6)
-    limit = float(document.get("max_business_failure_rate") or 0.05)
+    achieved = float(metrics.get("request_rate_per_second") or 0)
+    target = float(document.get("target_requests_per_second") or 0)
+    if target > 0:
+        document["achieved_rate_ratio"] = round(achieved / target, 4)
+    recorded_limit = document.get("max_business_failure_rate")
+    limit = 0.05 if recorded_limit is None else float(recorded_limit)
     if success <= 0:
         document["business_verdict"] = (
             "every business request failed, so the platform served no successful business operation"

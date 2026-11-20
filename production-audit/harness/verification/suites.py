@@ -27,20 +27,28 @@ def load_suites() -> dict[str, dict[str, Any]]:
 
 
 def build_command(suite_name: str, suite: dict[str, Any], repository: Path) -> list[str]:
-    patterns = [pattern for pattern in suite.get("patterns", []) if pattern not in suite.get("exclude", [])]
+    includes = list(suite.get("patterns", []))
+    excludes = list(suite.get("exclude", []))
     command = ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM)]
     if suite.get("include_integration"):
         command.append("verify")
     else:
         command.append("test")
-    if patterns:
-        command.append("-Dtest=" + ",".join(patterns))
+    selector = _test_selector(includes, excludes)
+    if selector:
+        command.append("-Dtest=" + selector)
         command.append("-Dsurefire.failIfNoSpecifiedTests=false")
     if suite.get("include_integration"):
-        command.append("-Dit.test=" + ",".join(patterns))
+        command.append("-Dit.test=" + selector)
         command.append("-Dfailsafe.failIfNoSpecifiedTests=false")
     command.extend(suite.get("extra_arguments", []))
     return command
+
+
+def _test_selector(includes: list[str], excludes: list[str]) -> str:
+    negated = ["!" + pattern for pattern in excludes]
+    parts = negated + list(includes)
+    return ",".join(parts)
 
 
 def run_suite(suite_name: str, repository: Path | None = None, run_id: str | None = None, modules: list[str] | None = None) -> dict[str, Any]:
