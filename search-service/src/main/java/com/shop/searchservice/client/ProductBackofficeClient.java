@@ -63,6 +63,7 @@ public class ProductBackofficeClient {
         String slug,
         String description,
         BigDecimal priceUnit,
+        String currency,
         String status,
         String imageUrl,
         BigDecimal avgRating,

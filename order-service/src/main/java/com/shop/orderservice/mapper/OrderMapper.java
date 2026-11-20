@@ -22,6 +22,7 @@ public class OrderMapper {
             order.getTaxAmount(),
             order.getDiscountAmount(),
             order.getTotal(),
+            order.getCurrency(),
             order.getCouponCode(),
             order.getCreatedAt(),
             order.getConfirmedAt(),
@@ -41,7 +42,8 @@ public class OrderMapper {
             item.getProductTitle(),
             item.getQuantity(),
             item.getUnitPrice(),
-            item.getLineTotal()
+            item.getLineTotal(),
+            item.getCurrency()
         );
     }
 }

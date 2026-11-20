@@ -40,7 +40,7 @@ class IdempotencyServiceImplTest {
     private final String requestHash = "abc123";
     private final OrderResponse response = new OrderResponse(
         UUID.randomUUID(), UUID.randomUUID(), OrderStatus.PENDING, List.of(),
-        BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, null,
+        BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, "VND", null,
         Instant.now(), null, null, null, null);
 
     @BeforeEach

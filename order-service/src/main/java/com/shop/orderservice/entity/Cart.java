@@ -1,5 +1,6 @@
 package com.shop.orderservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.data.AbstractMappedEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,4 +25,8 @@ public class Cart extends AbstractMappedEntity {
     @Column(nullable = false, precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 }

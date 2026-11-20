@@ -1,0 +1,15 @@
+{
+  "command": "./mvnw -B -ntp -T 1 test -Dtest=*Test -Dsurefire.failIfNoSpecifiedTests=false",
+  "description": "happy path business scenarios",
+  "duration_seconds": 246.665,
+  "errors": 0,
+  "exit_code": 0,
+  "failures": 0,
+  "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
+  "revision": "af002c36cab33c56a3b0739943fa232fb69d1295",
+  "skipped": 0,
+  "status": "PASS",
+  "suite": "happy",
+  "tests_run": 1878,
+  "updated_at": "2026-11-20T06:09:32Z"
+}

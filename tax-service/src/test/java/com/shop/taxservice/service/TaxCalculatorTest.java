@@ -11,7 +11,7 @@ class TaxCalculatorTest {
 
     @Test
     void standardAmountAndRate() {
-        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("100.00"), new BigDecimal("10.00"));
+        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("100.00"), new BigDecimal("10.00"), "VND");
 
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("10.00"));
         assertThat(response.appliedRate()).isEqualTo(new BigDecimal("10.00"));
@@ -19,28 +19,28 @@ class TaxCalculatorTest {
 
     @Test
     void zeroAmountYieldsZeroTax() {
-        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("0"), new BigDecimal("10"));
+        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("0"), new BigDecimal("10"), "VND");
 
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("0.00"));
     }
 
     @Test
     void exactHalfCentTieRoundsUp() {
-        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("0.05"), new BigDecimal("50"));
+        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("0.05"), new BigDecimal("50"), "VND");
 
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("0.03"));
     }
 
     @Test
     void exactNoTieRoundsDown() {
-        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("0.04"), new BigDecimal("50"));
+        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("0.04"), new BigDecimal("50"), "VND");
 
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("0.02"));
     }
 
     @Test
     void resultHasTwoDecimalScale() {
-        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("1"), new BigDecimal("7"));
+        TaxCalculateResponse response = TaxCalculator.calculate(new BigDecimal("1"), new BigDecimal("7"), "VND");
 
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("0.07"));
     }

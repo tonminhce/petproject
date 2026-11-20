@@ -20,3 +20,6 @@ databaseChangeLog:
   - include:
       file: changelog-007-promotion-outbox-claim-lease-owner.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-008-add-promotion-currency.yaml
+      relativeToChangelogFile: true

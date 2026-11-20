@@ -227,7 +227,7 @@ class ReindexIT extends AbstractSearchIntegrationTest {
             "ACTIVE", title, "Apple smartphone",
             UUID.fromString("11111111-1111-1111-1111-111111111111"), "Apple",
             UUID.fromString("22222222-2222-2222-2222-222222222222"), "Phones",
-            new BigDecimal("999.00"), "http://img/iphone.png",
+            new BigDecimal("999.00"), "VND", "http://img/iphone.png",
             new BigDecimal("4.50"), 12, occurredAt);
     }
 

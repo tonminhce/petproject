@@ -18,7 +18,7 @@ class CacheSerializerRoundTripTest {
             CacheConfig.productPriceSerializer(new ObjectMapper());
 
         ProductSnapshot original =
-            new ProductSnapshot(UUID.randomUUID(), "iPhone 15", new BigDecimal("999.00"));
+            new ProductSnapshot(UUID.randomUUID(), "iPhone 15", new BigDecimal("999.00"), "VND");
 
         byte[] bytes = serializer.serialize(original);
         Object back = serializer.deserialize(bytes);
@@ -33,7 +33,7 @@ class CacheSerializerRoundTripTest {
             CacheConfig.productPriceSerializer(new ObjectMapper());
 
         byte[] bytes = serializer.serialize(
-            new ProductSnapshot(UUID.randomUUID(), "X", BigDecimal.ONE));
+            new ProductSnapshot(UUID.randomUUID(), "X", BigDecimal.ONE, "VND"));
 
         assertThat(new String(bytes))
             .contains("@class")
@@ -47,7 +47,7 @@ class CacheSerializerRoundTripTest {
         CacheConfig.productPriceSerializer(shared);
 
         byte[] appJson = shared.writeValueAsBytes(
-            new ProductSnapshot(UUID.randomUUID(), "App", BigDecimal.ONE));
+            new ProductSnapshot(UUID.randomUUID(), "App", BigDecimal.ONE, "VND"));
         assertThat(new String(appJson)).doesNotContain("@class");
         assertThat(shared.readValue(appJson, ProductSnapshot.class).title()).isEqualTo("App");
     }

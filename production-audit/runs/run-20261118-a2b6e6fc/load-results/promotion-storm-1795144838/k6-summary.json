@@ -1,0 +1,153 @@
+{
+    "metrics": {
+        "business_failure_total": {
+            "count": 59859,
+            "rate": 351.9626443549265
+        },
+        "http_req_receiving": {
+            "p(95)": 13.595180949999987,
+            "avg": 2.7193927662986357,
+            "min": 0,
+            "med": 0,
+            "max": 459.464833,
+            "p(90)": 4.9985878
+        },
+        "oversell_attempts_total": {
+            "count": 29691,
+            "rate": 174.5789751506394
+        },
+        "vus_max": {
+            "max": 120,
+            "value": 120,
+            "min": 120
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_waiting": {
+            "avg": 139.52764877508656,
+            "min": 0,
+            "med": 0,
+            "max": 2292.388626,
+            "p(90)": 490.06200040000004,
+            "p(95)": 657.8479102999997
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 428.06561455804575,
+            "min": 10.184583,
+            "med": 365.280042,
+            "max": 2292.609251,
+            "p(90)": 764.821459,
+            "p(95)": 944.5283549999997
+        },
+        "data_sent": {
+            "count": 46391487,
+            "rate": 272775.5298297198
+        },
+        "http_req_sending": {
+            "avg": 0.06436735334002468,
+            "min": 0,
+            "med": 0,
+            "max": 176.082542,
+            "p(90)": 0.047,
+            "p(95)": 0.08218954999999983
+        },
+        "business_checkout_latency_ms": {
+            "p(90)": 766,
+            "p(95)": 946.4999999999986,
+            "avg": 428.9891886430231,
+            "min": 11,
+            "med": 366,
+            "max": 2293
+        },
+        "checks": {
+            "passes": 29691,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "iteration_duration": {
+            "avg": 143.72873325305477,
+            "min": 0.044459,
+            "med": 0.603166,
+            "max": 2293.93121,
+            "p(90)": 504.12346640000004,
+            "p(95)": 675.7725841499991
+        },
+        "iterations": {
+            "count": 89550,
+            "rate": 526.5416195055659
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0,
+            "max": 42.128916,
+            "p(90)": 0.008334,
+            "p(95)": 0.011542,
+            "avg": 0.012175174796475934
+        },
+        "vus": {
+            "max": 119,
+            "value": 2,
+            "min": 2
+        },
+        "http_req_failed": {
+            "passes": 59859,
+            "fails": 29811,
+            "thresholds": {
+                "rate<0.05": true
+            },
+            "value": 0.667547674807628
+        },
+        "http_req_connecting": {
+            "med": 0,
+            "max": 39.669709,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.002807401672800267,
+            "min": 0
+        },
+        "data_received": {
+            "count": 24731440,
+            "rate": 145417.44802127004
+        },
+        "http_reqs": {
+            "count": 89670,
+            "rate": 527.2472029152887
+        },
+        "http_req_duration": {
+            "med": 0,
+            "max": 2292.609251,
+            "p(90)": 500.54633340000004,
+            "p(95)": 670.3265961999998,
+            "avg": 142.311408894724,
+            "min": 0
+        },
+        "resolved_product_total": {
+            "count": 120,
+            "rate": 0.7055834097227014
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "checkout returns an accepted or conflict status": {
+                "name": "checkout returns an accepted or conflict status",
+                "path": "::checkout returns an accepted or conflict status",
+                "id": "840aecf6aa0ecb275a281bf30e8637e4",
+                "passes": 29691,
+                "fails": 0
+            }
+        }
+    }
+}

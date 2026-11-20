@@ -1,5 +1,6 @@
 package com.shop.promotionservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.data.AbstractMappedEntity;
 import com.shop.promotionservice.constant.CampaignStatus;
 import jakarta.persistence.*;
@@ -34,6 +35,10 @@ public class Campaign extends AbstractMappedEntity {
 
     @Column(name = "min_order_amount", precision = 19, scale = 2)
     private BigDecimal minOrderAmount;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Column(name = "starts_at")
     private Instant startsAt;

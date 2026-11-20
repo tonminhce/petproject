@@ -54,7 +54,7 @@ class SearchControllerTest {
         return new ProductSearchResponse(
             UUID.fromString("a1000000-0000-0000-0000-000000000001"), "Laser Mouse",
             "LogiTech", "Peripherals", "laser-mouse", "http://img.example/mouse.png",
-            new BigDecimal("10.00"), new BigDecimal("4.5"), 2);
+            new BigDecimal("10.00"), "VND", new BigDecimal("4.5"), 2);
     }
 
     private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor customer() {

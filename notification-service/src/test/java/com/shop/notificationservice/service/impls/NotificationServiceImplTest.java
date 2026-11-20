@@ -79,7 +79,7 @@ class NotificationServiceImplTest {
                 new BigDecimal("100.00"),
                 new BigDecimal("8.00"),
                 new BigDecimal("10.00"),
-                new BigDecimal("98.00"),
+                new BigDecimal("98.00"), "VND",
                 null, null, null,
                 List.of(Map.of("sku", "A"), Map.of("sku", "B")));
     }

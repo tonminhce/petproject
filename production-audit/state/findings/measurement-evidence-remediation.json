@@ -1,0 +1,248 @@
+{
+  "topic": "measurement-evidence-remediation",
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/final-change-review.md",
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-28 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The load runner measured the startup of the gateway as a business failure",
+      "concurrency_tests": [],
+      "current_implementation": "The runner recreated the gateway with the load test rate limits and started the measurement immediately, so the first part of every measured run ran while the gateway was not yet listening. Every such request was counted as a refused connection and therefore as a business failure, which is how the flash sale and the promotion storm were made to fail.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/limits.py"
+      ],
+      "id": "QA-28",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/limits.py"
+      ],
+      "notes": "The flash sale now completes with a zero business failure rate and the connection refusals disappear from the measured window. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/limits.py"
+      ],
+      "target_implementation": "The runner waits until the gateway reports healthy after the recreation and refuses to measure at all when the gateway never becomes ready.",
+      "technical_risk": "",
+      "title": "The load runner measured the startup of the gateway as a business failure"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-29 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "A counter that never fired was treated as missing evidence",
+      "concurrency_tests": [],
+      "current_implementation": "k6 only exports a custom counter that was incremented at least once, so a run with no business failure had no business failure counter and the harness read the absent metric as an unusable measurement and blocked a clean run.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "id": "QA-29",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "notes": "The spike profile is no longer blocked by an absent counter. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "target_implementation": "The failure and the oversell counters default to zero when the metric is absent, while the success counter stays required because a run without a successful business operation proves nothing.",
+      "technical_risk": "",
+      "title": "A counter that never fired was treated as missing evidence"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-30 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The measurement host guard blamed the measurement itself for the host load",
+      "concurrency_tests": [],
+      "current_implementation": "The guard compared the one minute load average taken before the run against a threshold, but the average still carried the load of the previous profile, so a correctly measured run was reported as contaminated without any build running.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/settle.py"
+      ],
+      "id": "QA-30",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/settle.py"
+      ],
+      "notes": "Every measured profile now reports a quiet host and a valid measurement. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/environment.py"
+      ],
+      "target_implementation": "The runner now waits until the host settles before it snapshots the host, and the load observation is reported separately from the contamination verdict, which is decided by the build processes and by the settle result.",
+      "technical_risk": "",
+      "title": "The measurement host guard blamed the measurement itself for the host load"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-31 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The end to end report accepted a scope in which nothing ran",
+      "concurrency_tests": [],
+      "current_implementation": "A scope whose folders exist in no collection reported every collection as skipped and still reported a completed run, and the readiness report then accepted the end to end suite as verified.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/cli/main.py"
+      ],
+      "id": "QA-31",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/cli/main.py"
+      ],
+      "notes": "The end to end suite result now reflects the collections that ran. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/e2e/environment.py"
+      ],
+      "target_implementation": "A scope that executes no collection reports its own state, and the suite result requires a collection that actually ran.",
+      "technical_risk": "",
+      "title": "The end to end report accepted a scope in which nothing ran"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-32 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The end to end harness measured a booting stack and used credentials that no longer existed",
+      "concurrency_tests": [],
+      "current_implementation": "The end to end run started the collection without waiting for the stack to report healthy and the collection carried hard coded account passwords, so every run failed with a connection reset and a rejected login and proved nothing about the platform.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/e2e/readiness.py",
+        "production-audit/harness/e2e/postman_environment.py"
+      ],
+      "id": "QA-32",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/e2e/readiness.py",
+        "production-audit/harness/e2e/postman_environment.py"
+      ],
+      "notes": "The end to end run reaches the order and the payment steps and the remaining failures are the payment provider steps. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "production-audit/harness/e2e/environment.py"
+      ],
+      "target_implementation": "The harness waits for the stack to report healthy, refuses to run without credentials and injects the real local credentials into a generated postman environment.",
+      "technical_risk": "",
+      "title": "The end to end harness measured a booting stack and used credentials that no longer existed"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-33 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "order-service",
+      "assigned_agent": "",
+      "business_risk": "A downstream authorisation failure was reported as an opaque server error",
+      "concurrency_tests": [],
+      "current_implementation": "The inventory client mapped every downstream status that was not a conflict or a not found to a generic internal server error, so a rejected service token produced an unexplained 500 to the caller and hid the real cause in the response.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java"
+      ],
+      "id": "QA-33",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java"
+      ],
+      "notes": "The order placement now fails with a dependency error instead of an unexplained server error. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java"
+      ],
+      "target_implementation": "An unauthorised or forbidden downstream answer and a downstream server error now map to the service unavailable error, so the caller sees the real dependency failure.",
+      "technical_risk": "",
+      "title": "A downstream authorisation failure was reported as an opaque server error"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-34 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "utils/common-spring",
+      "assigned_agent": "",
+      "business_risk": "The audience auto configuration was never registered, so the per service client id list was never applied",
+      "concurrency_tests": [],
+      "current_implementation": "The auto configuration was absent from the imports file and from every other registration point, so the bean factory post processor that publishes the per service client id list never ran. The fleet wide default was enforced everywhere, every service to service call was rejected with 401 and the order placement failed with an unexplained server error.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "id": "QA-34",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "notes": "The order placement succeeds against the deployed stack after the registration. Severity CRITICAL.",
+      "priority": 15,
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"
+      ],
+      "target_implementation": "The auto configuration is registered in the imports file and a test asserts the registration, so a missing registration now fails the build.",
+      "technical_risk": "",
+      "title": "The audience auto configuration was never registered, so the per service client id list was never applied"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-35 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "all services",
+      "assigned_agent": "",
+      "business_risk": "No money field carried a currency",
+      "concurrency_tests": [],
+      "current_implementation": "Every price, amount, total, discount, tax, refund and budget column in the fleet carried a bare number, so an amount was ambiguous the moment the platform served more than one currency and the amount that reached the payment provider carried no currency at all.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "product-service/src/test/java/com/shop/productservice/service/ProductCurrencyRegressionIT.java"
+      ],
+      "id": "QA-35",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "product-service/src/test/java/com/shop/productservice/service/ProductCurrencyRegressionIT.java"
+      ],
+      "notes": "The regression test proves a price without a currency cannot be persisted and that a client supplied currency is ignored. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/entity/Product.java"
+      ],
+      "target_implementation": "Every money table carries a three letter currency column with a check constraint on the supported set, every money entity carries the matching field, the currency is derived from the product price and propagated into the order, the cart, the discount, the tax, the payment and the refund, the provider call carries the currency and a mismatched currency is rejected on both the capture and the refund path.",
+      "technical_risk": "",
+      "title": "No money field carried a currency"
+    }
+  ]
+}

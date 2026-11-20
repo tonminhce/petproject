@@ -38,7 +38,7 @@ class ProductVariantControllerTest {
     @Test
     void findByProductId_returnsList() throws Exception {
         ProductVariantResponse response = new ProductVariantResponse(
-            variantId, productId, "SKU-1", "Variant 1", BigDecimal.valueOf(100), 5,
+            variantId, productId, "SKU-1", "Variant 1", BigDecimal.valueOf(100), "VND", 5,
             "{\"color\":\"black\"}", null, Instant.now(), Instant.now()
         );
 
@@ -53,7 +53,7 @@ class ProductVariantControllerTest {
     @Test
     void findById_returnsSingleVariant() throws Exception {
         ProductVariantResponse response = new ProductVariantResponse(
-            variantId, productId, "SKU-1", "Variant 1", BigDecimal.valueOf(100), 5,
+            variantId, productId, "SKU-1", "Variant 1", BigDecimal.valueOf(100), "VND", 5,
             "{\"color\":\"black\"}", null, Instant.now(), Instant.now()
         );
 

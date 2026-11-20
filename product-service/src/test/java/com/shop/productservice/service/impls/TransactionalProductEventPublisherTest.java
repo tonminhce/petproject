@@ -41,7 +41,7 @@ class TransactionalProductEventPublisherTest {
         "eventId", "eventType", "occurredAt", "productId",
         "slug", "status",
         "title", "description", "brandId", "brandName", "categoryId", "categoryName",
-        "price", "imageUrl", "avgRating", "ratingCount", "updatedAt");
+        "price", "currency", "imageUrl", "avgRating", "ratingCount", "updatedAt");
 
     @Mock OutboxEventRepository outboxRepository;
     @Mock ProductMetrics metrics;
@@ -122,6 +122,7 @@ class TransactionalProductEventPublisherTest {
         assertThat(payload.get("categoryId").asText()).isEqualTo(CATEGORY_ID.toString());
         assertThat(payload.get("categoryName").asText()).isEqualTo("Electronics");
         assertThat(payload.get("price").decimalValue()).isEqualByComparingTo("999.00");
+        assertThat(payload.get("currency").asText()).isEqualTo("VND");
         assertThat(payload.get("imageUrl").asText()).isEqualTo("http://img.example/ip15.png");
         assertThat(payload.get("avgRating").decimalValue()).isEqualByComparingTo("4.50");
         assertThat(payload.get("ratingCount").asInt()).isEqualTo(2);

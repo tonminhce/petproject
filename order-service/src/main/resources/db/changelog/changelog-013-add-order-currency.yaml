@@ -1,0 +1,70 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 013-add-order-currency
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: carts
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE carts ADD CONSTRAINT ck_carts_currency CHECK (currency IN ('VND', 'USD'))
+
+        - addColumn:
+            tableName: cart_items
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE cart_items ADD CONSTRAINT ck_cart_items_currency CHECK (currency IN ('VND', 'USD'))
+
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE orders ADD CONSTRAINT ck_orders_currency CHECK (currency IN ('VND', 'USD'))
+
+        - addColumn:
+            tableName: order_items
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE order_items ADD CONSTRAINT ck_order_items_currency CHECK (currency IN ('VND', 'USD'))
+
+        - addColumn:
+            tableName: order_returns
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE order_returns ADD CONSTRAINT ck_order_returns_currency CHECK (currency IN ('VND', 'USD'))

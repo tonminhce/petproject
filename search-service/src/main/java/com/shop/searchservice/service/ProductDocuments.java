@@ -20,20 +20,20 @@ public final class ProductDocuments {
     public static Map<String, Object> of(ProductLifecycleEvent event) {
         return of(event.productId(), event.title(), event.description(), event.brandId(),
             event.brandName(), event.categoryId(), event.categoryName(), event.slug(),
-            event.imageUrl(), event.price(), event.avgRating(), event.ratingCount(),
+            event.imageUrl(), event.price(), event.currency(), event.avgRating(), event.ratingCount(),
             event.status(), parseInstant(event.updatedAt()));
     }
 
     public static Map<String, Object> of(ProductBackofficeClient.ProductSnapshot snapshot) {
         return of(snapshot.id(), snapshot.title(), snapshot.description(), snapshot.brandId(),
             snapshot.brandName(), snapshot.categoryId(), snapshot.categoryTitle(), snapshot.slug(),
-            snapshot.imageUrl(), snapshot.priceUnit(), snapshot.avgRating(), snapshot.ratingCount(),
+            snapshot.imageUrl(), snapshot.priceUnit(), snapshot.currency(), snapshot.avgRating(), snapshot.ratingCount(),
             snapshot.status(), parseInstant(snapshot.updatedAt()));
     }
 
     private static Map<String, Object> of(UUID id, String title, String description,
             UUID brandId, String brandName, UUID categoryId, String categoryName,
-            String slug, String imageUrl, BigDecimal price, BigDecimal avgRating,
+            String slug, String imageUrl, BigDecimal price, String currency, BigDecimal avgRating,
             Integer ratingCount, String status, Instant updatedAt) {
         Map<String, Object> document = new LinkedHashMap<>();
         document.put("id", id.toString());
@@ -46,6 +46,7 @@ public final class ProductDocuments {
         document.put("slug", slug);
         document.put("imageUrl", imageUrl);
         document.put("price", price);
+        document.put("currency", currency);
         document.put("avgRating", avgRating);
         document.put("ratingCount", ratingCount);
         document.put("status", status);

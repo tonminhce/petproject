@@ -49,7 +49,7 @@ public class PromotionServiceClient {
     @CircuitBreaker(name = "promotionService")
     public PromotionReserveResponse reserve(PromotionReserveRequest request) {
         if (!props.promotion().isEnabled()) {
-            return new PromotionReserveResponse(null, BigDecimal.ZERO, request.orderAmount());
+            return new PromotionReserveResponse(null, BigDecimal.ZERO, request.orderAmount(), request.currency());
         }
         try {
             ApiResponse<PromotionReserveResponse> resp = restClient.post()

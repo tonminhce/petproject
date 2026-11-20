@@ -66,7 +66,7 @@ class BackofficeOrderReturnControllerTest {
     void reviewReturn_success() throws Exception {
         OrderReturnResponse response = new OrderReturnResponse(
                 returnId, orderId, userId, "Damaged", "Broken item",
-                ReturnStatus.REFUNDED, BigDecimal.valueOf(50), "Approved", "admin", Instant.now(), Instant.now());
+                ReturnStatus.REFUNDED, BigDecimal.valueOf(50), "VND", "Approved", "admin", Instant.now(), Instant.now());
 
         when(orderReturnService.reviewReturn(eq(returnId), eq("admin"), any(OrderReturnReviewRequest.class)))
                 .thenReturn(response);

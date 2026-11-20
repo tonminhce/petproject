@@ -10,8 +10,8 @@ public final class TaxCalculator {
     private TaxCalculator() {
     }
 
-    public static TaxCalculateResponse calculate(BigDecimal amount, BigDecimal ratePct) {
+    public static TaxCalculateResponse calculate(BigDecimal amount, BigDecimal ratePct, String currency) {
         BigDecimal taxAmount = amount.multiply(ratePct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        return new TaxCalculateResponse(taxAmount, ratePct);
+        return new TaxCalculateResponse(taxAmount, ratePct, currency);
     }
 }

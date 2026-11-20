@@ -1,0 +1,342 @@
+{
+  "topic": "coverage-review-remediation",
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/final-change-review.md",
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-17 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "utils/common-spring",
+      "assigned_agent": "",
+      "business_risk": "The audience auto configuration was never registered, so the per service client id list was never applied",
+      "concurrency_tests": [],
+      "current_implementation": "AudienceAutoConfiguration was absent from the auto configuration imports file and from every other registration point, so the bean factory post processor that publishes the per service client id list never ran. The fleet wide default ecommerce-client was enforced everywhere and the declared per service lists were dead configuration.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "id": "QA-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "notes": "The registration is asserted in the test and the order service reached the inventory service with a token whose azp is order-service after the fix. Severity CRITICAL.",
+      "priority": 15,
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"
+      ],
+      "target_implementation": "The auto configuration is registered in the imports file and a test asserts the registration, so a missing registration now fails the build.",
+      "technical_risk": "",
+      "title": "The audience auto configuration was never registered, so the per service client id list was never applied"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-18 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "utils/common-spring",
+      "assigned_agent": "",
+      "business_risk": "The audience test registered the auto configuration by class name and passed while the production wiring was missing",
+      "concurrency_tests": [],
+      "current_implementation": "The test used AutoConfigurations.of with the class literal, which bypasses the imports file discovery, so seven tests passed while the production wiring was absent.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "id": "QA-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "notes": "Removing the registration from the imports file now fails the test. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java"
+      ],
+      "target_implementation": "The test now asserts that the auto configuration is present in the imports resource on the classpath.",
+      "technical_risk": "",
+      "title": "The audience test registered the auto configuration by class name and passed while the production wiring was missing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-19 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "gateway-service",
+      "assigned_agent": "",
+      "business_risk": "A bulkhead rejection consumed a half open circuit breaker probe and opened the route for everyone",
+      "concurrency_tests": [],
+      "current_implementation": "The breaker permission was taken before the bulkhead permission. The half open state decrements the permitted probe counter on acquire and only restores it on release, so every bulkhead rejection permanently burned one probe until the route answered 503 to every caller although the downstream was healthy.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "gateway-service/src/test/java/com/shop/gateway/resilience/DownstreamResilienceFilterTest.java"
+      ],
+      "id": "QA-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "gateway-service/src/test/java/com/shop/gateway/resilience/DownstreamResilienceFilterTest.java"
+      ],
+      "notes": "The new test fails with 503 before the fix and passes with 429 after it. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceFilter.java"
+      ],
+      "target_implementation": "The bulkhead permission is taken first and the bulkhead permit is released when the breaker denies, so a rejection never consumes a probe.",
+      "technical_risk": "",
+      "title": "A bulkhead rejection consumed a half open circuit breaker probe and opened the route for everyone"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-20 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "utils/common-spring",
+      "assigned_agent": "",
+      "business_risk": "The audience boundary bean was dead and bound a different property than the one the validator enforces",
+      "concurrency_tests": [],
+      "current_implementation": "The boundary bean was bound to the audience allowed audiences list while the token validator chain reads the expected audiences, and no production code called the boundary, so the bean described a boundary that was never enforced.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceBoundary.java"
+      ],
+      "id": "QA-20",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceBoundary.java"
+      ],
+      "notes": "The boundary resolution is now on the production path of the customiser. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/AudienceAutoConfiguration.java"
+      ],
+      "target_implementation": "The boundary is built from the enforced security properties and the resolution logic moved into the boundary itself, so the customiser and the bean share one implementation.",
+      "technical_risk": "",
+      "title": "The audience boundary bean was dead and bound a different property than the one the validator enforces"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-21 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "search-service",
+      "assigned_agent": "",
+      "business_risk": "The credential contract test could not see any access key, api key or private key variable",
+      "concurrency_tests": [],
+      "current_implementation": "The credential segment list held multi word entries while the lookup split the variable name into single words, so every variable ending in an access key, an api key or a private key was silently exempted from the no credential value rule.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "search-service/src/test/java/com/shop/searchservice/deploy/DeploymentCredentialContractTest.java"
+      ],
+      "id": "QA-21",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "search-service/src/test/java/com/shop/searchservice/deploy/DeploymentCredentialContractTest.java"
+      ],
+      "notes": "The contract test passes with the corrected matching. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "search-service/src/test/java/com/shop/searchservice/deploy/DeploymentCredentialContractTest.java"
+      ],
+      "target_implementation": "The lookup now compares single segments and adjacent segment pairs, so a multi word segment is matched.",
+      "technical_risk": "",
+      "title": "The credential contract test could not see any access key, api key or private key variable"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-22 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "payment-service",
+      "assigned_agent": "",
+      "business_risk": "The live mode Stripe guard was only proven by reading its source and did not cover the restricted key form",
+      "concurrency_tests": [],
+      "current_implementation": "The contract test only searched the source text, the behavioural helper was never called and piped java source into a shell, and the guard recognised only the secret live key prefix, so a restricted live key was accepted.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripeLiveKeyGuardTest.java"
+      ],
+      "id": "QA-22",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripeLiveKeyGuardTest.java"
+      ],
+      "notes": "Four behavioural tests cover the live key, the restricted live key, the opt in and the test mode key. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/config/PaymentStripeLiveKeyGuard.java"
+      ],
+      "target_implementation": "The guard refuses the restricted live key prefix as well and a behavioural test in the module that owns the guard proves the startup failure and the explicit opt in.",
+      "technical_risk": "",
+      "title": "The live mode Stripe guard was only proven by reading its source and did not cover the restricted key form"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-23 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "gateway-service",
+      "assigned_agent": "",
+      "business_risk": "The fleet rate limiter test placed its clients on distinct lanes and could not catch the regression it claimed to guard",
+      "concurrency_tests": [
+        "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisFleetRateLimiterTest.java"
+      ],
+      "current_implementation": "The clients never shared a lane bucket, so removing the per client bucket left every assertion green.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisFleetRateLimiterTest.java"
+      ],
+      "id": "QA-23",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisFleetRateLimiterTest.java"
+      ],
+      "notes": "The new test fails without the configuration invariant and passes with it. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisFleetRateLimiterTest.java"
+      ],
+      "target_implementation": "The test now places two clients on the same lane and asserts the neighbour keeps its share, and the limiter configuration refuses a lane count that is not lower than the fair share client count so one client can never drain a lane.",
+      "technical_risk": "",
+      "title": "The fleet rate limiter test placed its clients on distinct lanes and could not catch the regression it claimed to guard"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-24 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "utils/common-storage",
+      "assigned_agent": "",
+      "business_risk": "The object storage bootstrap leaked its executor thread on every context start",
+      "concurrency_tests": [],
+      "current_implementation": "The single thread executor was created eagerly and was never shut down, so every context start leaked a thread.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-storage/src/test/java/com/shop/common/storage/config/ObjectStorageStartupResilienceTest.java"
+      ],
+      "id": "QA-24",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-storage/src/test/java/com/shop/common/storage/config/ObjectStorageStartupResilienceTest.java"
+      ],
+      "notes": "The storage startup test passes. Severity LOW.",
+      "priority": 45,
+      "severity": "LOW",
+      "source_evidence": [
+        "utils/common-storage/src/main/java/com/shop/common/storage/config/StorageBootstrap.java"
+      ],
+      "target_implementation": "The bootstrap now closes the executor it owns when the context is destroyed.",
+      "technical_risk": "",
+      "title": "The object storage bootstrap leaked its executor thread on every context start"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-25 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "payment-service",
+      "assigned_agent": "",
+      "business_risk": "The payment partition order test leaked a Kafka topic and a consumer group on every run",
+      "concurrency_tests": [
+        "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java"
+      ],
+      "current_implementation": "The test created a random topic and a random consumer group and never removed either.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java"
+      ],
+      "id": "QA-25",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java"
+      ],
+      "notes": "The partition order test passes. Severity LOW.",
+      "priority": 45,
+      "severity": "LOW",
+      "source_evidence": [
+        "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java"
+      ],
+      "target_implementation": "The test now deletes the topic when it finishes and reuses a single tracked consumer group.",
+      "technical_risk": "",
+      "title": "The payment partition order test leaked a Kafka topic and a consumer group on every run"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-26 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The end to end harness measured a booting stack and used collection credentials that no longer existed",
+      "concurrency_tests": [],
+      "current_implementation": "The end to end run started the collection without waiting for the stack to report healthy and the collection carried hard coded account passwords, so every run failed with a connection reset and a rejected login and proved nothing about the platform.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/e2e/readiness.py",
+        "production-audit/harness/e2e/postman_environment.py"
+      ],
+      "id": "QA-26",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/e2e/readiness.py",
+        "production-audit/harness/e2e/postman_environment.py"
+      ],
+      "notes": "The end to end run reaches the order and payment steps and the failures that remain are the payment provider steps. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "production-audit/harness/e2e/environment.py"
+      ],
+      "target_implementation": "The harness waits for the stack to report healthy, refuses to run without credentials and injects the real local credentials into a generated postman environment.",
+      "technical_risk": "",
+      "title": "The end to end harness measured a booting stack and used collection credentials that no longer existed"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-27 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "order-service",
+      "assigned_agent": "",
+      "business_risk": "A downstream authorisation failure was reported as an opaque server error",
+      "concurrency_tests": [],
+      "current_implementation": "The inventory client mapped every downstream status that was not a conflict or a not found to a generic internal server error, so a rejected service token produced an unexplained 500 to the caller and hid the real cause in the response.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java"
+      ],
+      "id": "QA-27",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java"
+      ],
+      "notes": "The order placement now fails with a dependency error instead of an unexplained server error. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/client/InventoryServiceClient.java"
+      ],
+      "target_implementation": "An unauthorised or forbidden downstream answer and a downstream server error now map to the service unavailable error, so the caller sees the real dependency failure.",
+      "technical_risk": "",
+      "title": "A downstream authorisation failure was reported as an opaque server error"
+    }
+  ]
+}

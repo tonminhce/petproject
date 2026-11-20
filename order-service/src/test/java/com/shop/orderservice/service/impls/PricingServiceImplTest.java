@@ -50,12 +50,12 @@ class PricingServiceImplTest {
     @Test
     void calculate_withCoupon_reservesWithRealOrderIdAndSubtotal_andPropagatesReservationId() {
         when(productClient.getProduct(productId))
-            .thenReturn(new ProductSnapshot(productId, "Test Product", new BigDecimal("100.00")));
+            .thenReturn(new ProductSnapshot(productId, "Test Product", new BigDecimal("100.00"), "VND"));
         when(promotionClient.isEnabled()).thenReturn(true);
         UUID reservationId = UUID.randomUUID();
         when(promotionClient.reserve(any(PromotionReserveRequest.class)))
-            .thenReturn(new PromotionReserveResponse(reservationId, new BigDecimal("20.00"), new BigDecimal("180.00")));
-        when(taxClient.calculate(any())).thenReturn(new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO));
+            .thenReturn(new PromotionReserveResponse(reservationId, new BigDecimal("20.00"), new BigDecimal("180.00"), "VND"));
+        when(taxClient.calculate(any())).thenReturn(new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO, "VND"));
 
         PricingBreakdown breakdown = service.calculate(orderId, userId, items, "SAVE10");
 
@@ -75,8 +75,8 @@ class PricingServiceImplTest {
     @Test
     void calculate_noCoupon_skipsReserveAndReturnsNullReservationId() {
         when(productClient.getProduct(productId))
-            .thenReturn(new ProductSnapshot(productId, "Test Product", new BigDecimal("100.00")));
-        when(taxClient.calculate(any())).thenReturn(new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO));
+            .thenReturn(new ProductSnapshot(productId, "Test Product", new BigDecimal("100.00"), "VND"));
+        when(taxClient.calculate(any())).thenReturn(new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO, "VND"));
 
         PricingBreakdown breakdown = service.calculate(orderId, userId, items, null);
 

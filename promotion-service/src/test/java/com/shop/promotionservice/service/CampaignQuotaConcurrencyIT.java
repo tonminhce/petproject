@@ -63,7 +63,7 @@ class CampaignQuotaConcurrencyIT extends AbstractIntegrationTest {
     }
 
     private ReserveRequest request(UUID userId, String orderAmount) {
-        return new ReserveRequest(userId, UUID.randomUUID(), new BigDecimal(orderAmount));
+        return new ReserveRequest(userId, UUID.randomUUID(), new BigDecimal(orderAmount), "VND");
     }
 
     private int usedCount(UUID campaignId) {

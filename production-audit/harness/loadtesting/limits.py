@@ -46,11 +46,24 @@ def apply_load_test_rate_limits(repository: Path | None = None) -> dict[str, Any
             "reason": "the gateway could not be recreated with the load test rate limits",
             "detail": applied.get("detail", ""),
         }
+
+    from ..e2e.readiness import wait_for_healthy
+
+    readiness = wait_for_healthy(services=[GATEWAY_SERVICE])
+    if readiness.get("status") != "READY":
+        return {
+            "status": "ERROR",
+            "reason": "the gateway did not report healthy after the recreation, so the measured run would have "
+                      "counted the startup of the gateway as a business failure",
+            "detail": str(readiness.get("pending", "")),
+        }
+
     return {
         "status": "APPLIED",
         "override": LOAD_OVERRIDE,
+        "readiness": readiness,
         "reason": "the shipped per client rate limit would throttle the measured traffic, so the gateway was "
-                  "recreated with the load test limits for the measured run",
+                  "recreated with the load test limits and the run started only after it reported healthy",
     }
 
 
@@ -60,7 +73,11 @@ def restore_shipped_rate_limits(repository: Path | None = None) -> dict[str, Any
         ["-f", BASE_COMPOSE, "up", "-d", "--no-deps", "--force-recreate", GATEWAY_SERVICE],
         root,
     )
+    from ..e2e.readiness import wait_for_healthy
+
+    readiness = wait_for_healthy(services=[GATEWAY_SERVICE])
     return {
-        "status": "OK" if restored.get("status") == "OK" else "ERROR",
+        "status": "OK" if restored.get("status") == "OK" and readiness.get("status") == "READY" else "ERROR",
+        "readiness": readiness,
         "detail": restored.get("detail", ""),
     }

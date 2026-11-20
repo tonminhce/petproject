@@ -1,0 +1,31 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 008-add-promotion-currency
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: campaign
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE campaign ADD CONSTRAINT ck_campaign_currency CHECK (currency IN ('VND', 'USD'))
+
+        - addColumn:
+            tableName: coupon_usage_reservation
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE coupon_usage_reservation ADD CONSTRAINT ck_cur_currency CHECK (currency IN ('VND', 'USD'))

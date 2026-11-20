@@ -2,7 +2,7 @@
 ## HỆ THỐNG KIẾN TRÚC VI DỊCH VỤ THƯƠNG MẠI ĐIỆN TỬ PETPROJECT PLATFORM
 ### TOÀN DIỆN 37 MỤC — SINH TỰ ĐỘNG TỪ BẰNG CHỨNG KIỂM ĐỊNH
 
-- **Thời điểm sinh báo cáo**: 2026-11-19T22:33:22Z
+- **Thời điểm sinh báo cáo**: 2026-11-20T08:07:10Z
 - **Nguồn dữ liệu**: trạng thái bền vững của harness, kết quả kiểm định, kết quả chạy tải, kết quả Stripe, kết quả Kubernetes và lịch sử phân phối Git.
 - **Nguyên tắc**: mọi khẳng định trong báo cáo này được sinh tự động từ bằng chứng đã lưu. Trường nào chưa có bằng chứng thì được ghi rõ là chưa xác minh.
 
@@ -13,7 +13,7 @@
 - **Quyết định nghiệm thu**: **CHƯA ĐẠT — CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT**.
 - **Cổng kiểm định**: 5/24 đạt, 2 không đạt, 17 chờ.
 - **Rà soát mã nguồn**: 97.09% (1366/1407 tập tin).
-- **Tác vụ còn mở mức HIGH**: 28 (MEDIUM: 103, LOW: 77).
+- **Tác vụ còn mở mức HIGH**: 1 (MEDIUM: 103, LOW: 77).
 - **Quyết định sản xuất theo completion predicate**: chưa đạt.
 - **Cổng đang không đạt**: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-12, GATE-13, GATE-14, GATE-15, GATE-16, GATE-17, GATE-18, GATE-21, GATE-22, GATE-23, GATE-24.
 - **Bằng chứng tải nặng**: yêu cầu không đo được, tần suất không đo được, p95 không đo được, tỷ lệ lỗi không đo được.
@@ -47,7 +47,7 @@
 ## 7. PHÁT HIỆN ĐỒNG THỜI & ĐÚNG ĐẮN PHÂN TÁN (CONCURRENCY FINDINGS)
 
 - Báo cáo đầy đủ: production-audit/reports/concurrency.md và production-audit/architecture/concurrency.md.
-- Bộ kiểm thử đồng thời: PASS, 85 test.
+- Bộ kiểm thử đồng thời: PASS, 33 test.
 
 ## 8. TÍNH ĐÚNG ĐẮN KHO HÀNG (INVENTORY CORRECTNESS)
 
@@ -58,7 +58,7 @@
 
 ## 10. SAGA CHECKOUT & BỒI ĐỀN (CHECKOUT SAGA)
 
-- Bộ kiểm thử Kafka/Outbox: PASS, 0 test.
+- Bộ kiểm thử Kafka/Outbox: PASS, 223 test.
 - Cơ chế bồi đền được kiểm chứng trong production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-authz-compensation-fix.md.
 
 ## 11. KAFKA & TRANSACTIONAL OUTBOX
@@ -83,7 +83,7 @@
 
 ## 15. XÁC MINH DOCKER COMPOSE (DOCKER COMPOSE VERIFICATION)
 
-- Bộ kiểm thử tích hợp: PASS, 240 test, hạ tầng: .
+- Bộ kiểm thử tích hợp: PASS, 347 test, hạ tầng: .
 
 ## 16. KIẾN TRÚC KUBERNETES (KUBERNETES ARCHITECTURE)
 
@@ -100,7 +100,7 @@
   - K8S-10 HOSTNAME_HYGIENE: PASS — no manifest points at a developer machine address
   - K8S-11 NAMESPACE_CONSISTENCY: PASS — every namespaced manifest uses shop-system
   - K8S-12 INGRESS_TLS: PASS — every ingress declares tls
-  - K8S-13 SCHEMA_VALIDATION: PASS — kubeconform validated every manifest against the published kubernetes schema
+  - K8S-13 SCHEMA_VALIDATION: PASS — kubeconform validated the manifests that have a published kubernetes schema
 
 ## 17. KẾT QUẢ HPA (HPA SCALING RESULTS)
 
@@ -119,8 +119,21 @@
 
 ## 20. THÔNG LƯỢNG NỀN TẢNG VS ĐỈNH (BASELINE VS PEAK THROUGHPUT)
 
-- baseline-1795105674 — kịch bản browse, trạng thái không ghi nhận: yêu cầu không đo được, không đo được, lượt lặp không đo được, p95 không đo được, tỷ lệ lỗi không đo được.
-- baseline-1795105953 — kịch bản browse, trạng thái không ghi nhận: yêu cầu không đo được, không đo được, lượt lặp không đo được, p95 không đo được, tỷ lệ lỗi không đo được.
+- baseline — kịch bản browse, trạng thái PASS: yêu cầu 18380, 108.01 req/s, lượt lặp 9180, p95 41.06 ms, tỷ lệ lỗi 0.00.
+  - Kết luận nghiệp vụ: the business failure rate 0.0047 is within the limit 0.0500.
+  - Số lần chạy đã lưu cho hồ sơ này: 7; bảng trên là lần chạy cuối cùng.
+- flash-sale — kịch bản flash-sale, trạng thái FAIL: yêu cầu 123052, 723.79 req/s, lượt lặp 61526, p95 603.40 ms, tỷ lệ lỗi 0.67.
+- promotion-storm — kịch bản promotion-storm, trạng thái FAIL: yêu cầu 76965, 452.61 req/s, lượt lặp 76965, p95 816.66 ms, tỷ lệ lỗi 0.69.
+  - **Phép đo không hợp lệ**: máy chủ đo bị nhiễu, kết quả không dùng để kết luận.
+- ramp — kịch bản full, trạng thái PASS: yêu cầu 52313, 227.30 req/s, lượt lặp 17421, p95 252.95 ms, tỷ lệ lỗi 0.00.
+  - Kết luận nghiệp vụ: the business failure rate 0.0032 is within the limit 0.0500.
+  - Số lần chạy đã lưu cho hồ sơ này: 2; bảng trên là lần chạy cuối cùng.
+- recovery — kịch bản browse, trạng thái PASS: yêu cầu 5376, 48.79 req/s, lượt lặp 2683, p95 29.63 ms, tỷ lệ lỗi 0.00.
+  - Kết luận nghiệp vụ: the business failure rate 0.0047 is within the limit 0.0500.
+  - Số lần chạy đã lưu cho hồ sơ này: 2; bảng trên là lần chạy cuối cùng.
+- spike — kịch bản full, trạng thái PASS: yêu cầu 43604, 256.33 req/s, lượt lặp 14468, p95 961.98 ms, tỷ lệ lỗi 0.01.
+  - Kết luận nghiệp vụ: the business failure rate 0.0106 is within the limit 0.0500.
+  - Số lần chạy đã lưu cho hồ sơ này: 2; bảng trên là lần chạy cuối cùng.
 
 ## 21. ĐỘ TRỄ & TỶ LỆ LỖI (LATENCY AND ERROR RATES)
 
@@ -172,30 +185,31 @@
 
 ## 31. SẴN SÀNG CẢNH BÁO PRODUCTION (PRODUCTION ALERTING READINESS)
 
-- Trạng thái kiểm định cấu hình cảnh báo: FAIL.
+- Trạng thái kiểm định cấu hình cảnh báo: BLOCKED.
 - Đường dẫn cấu hình: Prometheus đánh giá quy tắc trong config/observability/alertmanager/rules, Alertmanager gom nhóm và chống lặp trong config/observability/alertmanager, tuyến giao hàng CI là scripts/notify-telegram.sh và tuyến runtime là Telegram Bot API.
 - **Giao hàng thật trong môi trường production chưa được xác minh** vì không có quyền truy cập production và không có thông tin xác thực bot.
 
 ## 32. BUILD & KIỂM THỬ HỒI QUY (BUILD AND REGRESSION TESTS)
 
-- alerts: STALE — 1 failed and 1 blocked checks recorded against an earlier source revision
+- alerts: STALE — 0 failed and 1 blocked checks recorded against an earlier source revision
 - baseline: STALE — 1913 test recorded against an earlier source revision
 - build: STALE — recorded against an earlier source revision
 - comments: STALE — recorded against an earlier source revision
-- concurrency: STALE — 85 test recorded against an earlier source revision
+- concurrency: STALE — 33 test recorded against an earlier source revision
 - concurrency_inventory: STALE — 23 test recorded against an earlier source revision
-- e2e: STALE — every end to end scope reported a completed run recorded against an earlier source revision
-- edge: STALE — 380 test recorded against an earlier source revision
-- gateway: STALE — 115 test recorded against an earlier source revision
-- happy: STALE — 1540 test recorded against an earlier source revision
-- integration: STALE — 240 test recorded against an earlier source revision
+- e2e: STALE — end to end run state FAILED recorded against an earlier source revision
+- edge: STALE — 37 test recorded against an earlier source revision
+- gateway: STALE — 136 test recorded against an earlier source revision
+- happy: STALE — 1878 test recorded against an earlier source revision
+- integration: STALE — 347 test recorded against an earlier source revision
 - k8s: STALE — 0 kubernetes manifest checks failed recorded against an earlier source revision
-- kafka: STALE — 0 test recorded against an earlier source revision
+- kafka: STALE — 223 test recorded against an earlier source revision
 - operations: STALE — 7 of 7 observability checks passed recorded against an earlier source revision
-- payment: STALE — 249 test recorded against an earlier source revision
+- payment: STALE — 261 test recorded against an earlier source revision
 - performance: STALE — 1656 test recorded against an earlier source revision
-- security: STALE — 0 test recorded against an earlier source revision
-- Lệnh build: ./mvnw -B -ntp -T 1 clean verify, mã thoát 0, ? test, ? module, thời gian 1237.992 giây.
+- security: STALE — 153 test recorded against an earlier source revision
+- unit: STALE — 1878 test recorded against an earlier source revision
+- Lệnh build: ./mvnw -B -ntp -T 1 clean verify, mã thoát 0, ? test, ? module, thời gian 876.197 giây.
 
 ## 33. PHÁN QUYẾT QA ĐỘC LẬP (INDEPENDENT QA VERDICTS)
 
@@ -223,34 +237,7 @@
 
 | Mã | Mức | Nội dung |
 | --- | --- | --- |
-| CAT-02 | HIGH | Elasticsearch client dependency drift |
 | CAT-05 | HIGH | No currency on any money field in the fleet |
-| CAT-06 | HIGH | The compose Elasticsearch server was pinned to 8.15.0 while the managed Java client is 9.4.5, and Elasticsearch refuses a direct 8.15 to 9.4.5 upgrade |
-| GW-04 | HIGH | The "global" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas |
-| K8S-21 | HIGH | No startup probe on any kubernetes workload |
-| K8S-22 | HIGH | No container or pod security context on any kubernetes workload |
-| K8S-23 | HIGH | No pod disruption budget protects the multi replica deployments |
-| KAF-01 | HIGH | 6 of 8 outbox relays serialise: a second replica publishes nothing |
-| KAF-02 | HIGH | payment-service relay has no per-aggregate ordering barrier |
-| OBS-01 | HIGH | Implement the Prometheus to Alertmanager to Telegram runtime alert pipeline |
-| OBS-02 | HIGH | Add the CI Telegram notification workflow with failure grouping and secret isolation |
-| OBS-03 | HIGH | Verify real Telegram delivery for the CI and runtime routes |
-| OBS-05 | HIGH | The gateway service exposed no Prometheus metrics because the micrometer registry was missing from its module |
-| OBS-06 | HIGH | The Prometheus scrape configuration referenced exporter containers that did not exist, so every infrastructure rule fired spuriously |
-| OBS-07 | HIGH | The runtime alert rules divided by sentinel metric values and produced false positives on every service |
-| OBS-08 | HIGH | The compose stack held three different Redis passwords across the environment file and the running containers |
-| PAY-40 | HIGH | The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred |
-| PAY-41 | HIGH | Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential |
-| PERF-01 | HIGH | Load measurements taken while parallel Maven builds saturated the host produced invalid latency and throughput figures |
-| SEC-03 | HIGH | Committed literal credentials in `.env.example` for accounts the deployment *requires* |
-| SL-01 | HIGH | `KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call |
-| SL-02 | HIGH | `KeycloakAdminClient` silently falls back to the master-realm *password* grant |
-| SL-14 | HIGH | `CorrelationIdFilter` trusts an unvalidated client-supplied header and writes it into the MDC |
-| SL-15 | HIGH | `RequestUtils.getClientIp()` trusts client-supplied proxy headers unconditionally |
-| SL-16 | HIGH | `HttpLoggingFilter` buffers the **entire** response body in heap per request |
-| SL-28 | HIGH | `ObjectStorageAutoConfiguration` performs a **network call inside a `@Bean` method** |
-| SL-33 | HIGH | Keycloak clients bypass the application-configured `RestClient.Builder` |
-| SL-37 | HIGH | the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad |
 
 ### 35.2 Mức MEDIUM
 
@@ -385,7 +372,7 @@
 
 - **Quyết định**: CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT.
 - Các cổng chưa đạt: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-12, GATE-13, GATE-14, GATE-15, GATE-16, GATE-17, GATE-18, GATE-21, GATE-22, GATE-23, GATE-24
-- Số tác vụ HIGH đang mở: 28; MEDIUM: 103; LOW: 77.
-- Trạng thái tổng hợp tác vụ: BLOCKED=0, DISCOVERED=23, FAILED_VERIFICATION=0, IMPLEMENTED=0, IN_PROGRESS=0, NORMALIZED=0, READY=186, REOPENED=0, REQUIREMENT_CONFLICT=0, VERIFIED=59, VERIFYING=0.
+- Số tác vụ HIGH đang mở: 1; MEDIUM: 103; LOW: 77.
+- Trạng thái tổng hợp tác vụ: BLOCKED=3, DISCOVERED=8, FAILED_VERIFICATION=0, IMPLEMENTED=0, IN_PROGRESS=0, NORMALIZED=0, READY=173, REOPENED=0, REQUIREMENT_CONFLICT=0, VERIFIED=84, VERIFYING=0.
 - Báo cáo được sinh tự động tại /Users/tonminh-mac/IdeaProjects/untitled5/production-audit/reports/final-production-readiness-report.md.
 

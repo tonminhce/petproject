@@ -16,6 +16,7 @@ public record OrderResponse(
     BigDecimal taxAmount,
     BigDecimal discountAmount,
     BigDecimal total,
+    String currency,
     String couponCode,
     Instant createdAt,
     Instant confirmedAt,
@@ -29,9 +30,9 @@ public record OrderResponse(
 ) {
     public OrderResponse(UUID id, UUID userId, OrderStatus status, List<OrderItemResponse> items,
                          BigDecimal subtotal, BigDecimal taxAmount, BigDecimal discountAmount,
-                         BigDecimal total, String couponCode, Instant createdAt,
+                         BigDecimal total, String currency, String couponCode, Instant createdAt,
                          Instant confirmedAt, Instant shippedAt, Instant deliveredAt, Instant cancelledAt) {
-        this(id, userId, status, items, subtotal, taxAmount, discountAmount, total, couponCode,
+        this(id, userId, status, items, subtotal, taxAmount, discountAmount, total, currency, couponCode,
              createdAt, confirmedAt, shippedAt, deliveredAt, cancelledAt, null, null, null, null);
     }
 }

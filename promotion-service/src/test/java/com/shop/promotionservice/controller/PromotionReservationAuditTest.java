@@ -59,7 +59,7 @@ class PromotionReservationAuditTest {
             .thenReturn(new ReservationResponse(
                 UUID.fromString("00000000-0000-0000-0000-00000000a001"),
                 UUID.fromString("00000000-0000-0000-0000-00000000a002"),
-                "WELCOME10", new BigDecimal("5.00"), new BigDecimal("45.00"),
+                "WELCOME10", new BigDecimal("5.00"), new BigDecimal("45.00"), "VND",
                 "PENDING", Instant.parse("2026-01-01T00:15:00Z")));
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "WELCOME10")

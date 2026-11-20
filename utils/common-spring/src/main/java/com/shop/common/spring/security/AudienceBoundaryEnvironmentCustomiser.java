@@ -10,7 +10,6 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,23 +43,22 @@ public class AudienceBoundaryEnvironmentCustomiser implements BeanFactoryPostPro
             return;
         }
 
-        List<String> allowedClientIds = resolveAllowedClientIds(audience,
-                configurableEnvironment.getProperty(EXPECTED_CLIENT_IDS));
-        if (allowedClientIds.isEmpty()) {
+        AudienceBoundary boundary = AudienceBoundary.resolve(
+                audience,
+                configurableEnvironment.getProperty(EXPECTED_CLIENT_IDS),
+                configurableEnvironment.getProperty(EXPECTED_AUDIENCES));
+
+        if (!boundary.allowsAnyClient()) {
             throw new IllegalStateException(
                     EXPECTED_CLIENT_IDS + " must not be empty: declare the client ids allowed to call this service "
                             + "through shop.security.audience.allowed-client-ids or "
                             + "shop.security.audience.per-service-client-ids");
         }
 
-        List<String> allowedAudiences = audience.allowedAudiences().isEmpty()
-                ? split(configurableEnvironment.getProperty(EXPECTED_AUDIENCES))
-                : audience.allowedAudiences();
-
         Map<String, Object> published = new LinkedHashMap<>();
-        published.put(EXPECTED_CLIENT_IDS, String.join(",", allowedClientIds));
-        if (!allowedAudiences.isEmpty()) {
-            published.put(EXPECTED_AUDIENCES, String.join(",", allowedAudiences));
+        published.put(EXPECTED_CLIENT_IDS, String.join(",", boundary.allowedClientIds()));
+        if (!boundary.allowedAudiences().isEmpty()) {
+            published.put(EXPECTED_AUDIENCES, String.join(",", boundary.allowedAudiences()));
         }
         configurableEnvironment.getPropertySources()
                 .addFirst(new MapPropertySource("shopSecurityAudience", published));
@@ -69,33 +67,5 @@ public class AudienceBoundaryEnvironmentCustomiser implements BeanFactoryPostPro
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
-    }
-
-    static List<String> resolveAllowedClientIds(AudienceProperties audience, String configured) {
-        if (configured != null && !configured.equals(SHARED_DEFAULT_CLIENT_IDS)) {
-            return split(configured);
-        }
-        if (!audience.allowedClientIds().isEmpty()) {
-            return audience.allowedClientIds();
-        }
-        List<String> perService = audience.perServiceClientIdsFor(audience.clientId());
-        if (!perService.isEmpty()) {
-            return perService;
-        }
-        return split(configured);
-    }
-
-    static List<String> split(String value) {
-        List<String> entries = new ArrayList<>();
-        if (value == null || value.isBlank()) {
-            return entries;
-        }
-        for (String entry : value.split(",")) {
-            String trimmed = entry.trim();
-            if (!trimmed.isEmpty()) {
-                entries.add(trimmed);
-            }
-        }
-        return entries;
     }
 }

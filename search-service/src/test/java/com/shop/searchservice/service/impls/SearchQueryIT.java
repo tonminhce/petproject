@@ -89,7 +89,7 @@ class SearchQueryIT extends AbstractSearchIntegrationTest {
         productSearchService.index(new ProductLifecycleEvent(
             UUID.randomUUID().toString(), "ProductCreated", updatedAt, id,
             slugFor(title, id), "ACTIVE", title, description, brandId, brandName,
-            categoryId, categoryName, price != null ? new BigDecimal(price) : null,
+            categoryId, categoryName, price != null ? new BigDecimal(price) : null, "VND",
             "http://img.example/" + slugFor(title, id) + ".png",
             avgRating != null ? new BigDecimal(avgRating) : null, ratingCount, updatedAt));
     }

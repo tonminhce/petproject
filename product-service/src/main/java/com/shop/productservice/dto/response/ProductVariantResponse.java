@@ -10,6 +10,7 @@ public record ProductVariantResponse(
     String sku,
     String title,
     BigDecimal price,
+    String currency,
     Integer quantity,
     String attributes,
     String imageUrl,

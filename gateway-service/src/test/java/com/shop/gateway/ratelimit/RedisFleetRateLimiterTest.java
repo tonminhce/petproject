@@ -63,6 +63,20 @@ class RedisFleetRateLimiterTest {
         return allowed;
     }
 
+    private List<String> clientsOnTheSameLane(final FleetRateLimitBudget budget, final int count) {
+        var byLane = new LinkedHashMap<Integer, List<String>>();
+        for (int i = 1; i < 5000; i++) {
+            var candidate = "ip:203.0.113." + i;
+            byLane.computeIfAbsent(budget.laneIndex(candidate), key -> new ArrayList<>()).add(candidate);
+        }
+        for (var clients : byLane.values()) {
+            if (clients.size() >= count) {
+                return List.copyOf(clients.subList(0, count));
+            }
+        }
+        throw new IllegalStateException("no " + count + " clients on the same lane found");
+    }
+
     private List<String> clientsOnDistinctLanes(final FleetRateLimitBudget budget, final int count) {
         var byLane = new LinkedHashMap<Integer, String>();
         for (int i = 1; byLane.size() < count && i < 5000; i++) {
@@ -78,7 +92,7 @@ class RedisFleetRateLimiterTest {
     @Test
     @DisplayName("a single client cannot consume the fleet budget of the other clients")
     void aSingleClientCannotStarveTheOtherClients() {
-        var budget = budget(4, 400, 4, 4, 1);
+        var budget = budget(8, 800, 4, 8, 1);
         var limiter = limiter(budget);
         var flooder = clientsOnDistinctLanes(budget, 2).get(0);
         var victim = clientsOnDistinctLanes(budget, 2).get(1);
@@ -93,9 +107,30 @@ class RedisFleetRateLimiterTest {
     }
 
     @Test
+    @DisplayName("a client that shares a lane with another client cannot starve it")
+    void aClientThatSharesALaneCannotStarveItsNeighbour() {
+        var budget = budget(8, 800, 4, 8, 1);
+        var limiter = limiter(budget);
+        var neighbours = clientsOnTheSameLane(budget, 2);
+        var flooder = neighbours.get(0);
+        var victim = neighbours.get(1);
+        assertThat(budget.laneIndex(flooder)).isEqualTo(budget.laneIndex(victim));
+        var startedAt = System.nanoTime();
+
+        var flooderAdmitted = admitted(limiter, flooder, 150);
+        var victimAdmitted = admitted(limiter, victim, 150);
+
+        var ceiling = 100 + elapsedSeconds(startedAt) + 2;
+        assertThat(flooderAdmitted).isBetween(100, ceiling);
+        assertThat(victimAdmitted)
+            .as("the neighbour must keep its own share even though both clients share one lane bucket")
+            .isBetween(100, ceiling);
+    }
+
+    @Test
     @DisplayName("N clients share the fleet budget fairly")
     void nClientsShareTheFleetBudgetFairly() {
-        var budget = budget(4, 400, 4, 4, 1);
+        var budget = budget(8, 800, 4, 8, 1);
         var limiter = limiter(budget);
         var clients = clientsOnDistinctLanes(budget, 4);
 
@@ -126,8 +161,8 @@ class RedisFleetRateLimiterTest {
     @Test
     @DisplayName("the fleet budget is shared by the replicas and not divided by their count")
     void theFleetBudgetIsSharedByTheReplicas() {
-        var oneReplica = limiter(budget(4, 400, 4, 4, 1));
-        var tenReplicas = limiter(budget(4, 400, 4, 4, 10));
+        var oneReplica = limiter(budget(8, 800, 4, 8, 1));
+        var tenReplicas = limiter(budget(8, 800, 4, 8, 10));
         var clientKey = "ip:203.0.113.7";
 
         var startedAt = System.nanoTime();
@@ -166,7 +201,7 @@ class RedisFleetRateLimiterTest {
                 new RedisStandaloneConfiguration("127.0.0.1", 1), clientConfiguration);
         connectionFactory.afterPropertiesSet();
         var unreachableRedis = new ReactiveStringRedisTemplate(connectionFactory);
-        var limiter = new RedisFleetRateLimiter(unreachableRedis, budget(4, 400, 4, 4, 1));
+        var limiter = new RedisFleetRateLimiter(unreachableRedis, budget(8, 800, 4, 8, 1));
 
         var decision = limiter.acquire("ip:203.0.113.7").block();
 

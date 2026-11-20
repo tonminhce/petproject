@@ -1,0 +1,15 @@
+{
+  "command": "./mvnw -B -ntp -T 1 test -Dtest=*Test -Dsurefire.failIfNoSpecifiedTests=false",
+  "description": "surefire unit tests",
+  "duration_seconds": 257.69,
+  "errors": 0,
+  "exit_code": 0,
+  "failures": 0,
+  "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/unit.log",
+  "revision": "af002c36cab33c56a3b0739943fa232fb69d1295",
+  "skipped": 0,
+  "status": "PASS",
+  "suite": "unit",
+  "tests_run": 1878,
+  "updated_at": "2026-11-20T06:05:25Z"
+}

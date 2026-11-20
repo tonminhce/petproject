@@ -1,5 +1,6 @@
 package com.shop.paymentservice.service.impls;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.paymentservice.constant.PaymentStatus;
@@ -81,12 +82,14 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         PaymentProvider provider = resolveProviderForNewPayment(req.provider());
+        String currency = resolveCurrency(req.currency());
 
         Payment payment = Payment.builder()
                 .orderId(req.orderId())
                 .userId(req.userId())
                 .amount(req.amount())
-                .currency(req.currency())
+                .currency(currency)
+                .refundedCurrency(currency)
                 .status(PaymentStatus.PENDING)
                 .provider(provider.name())
                 .idempotencyKey(req.idempotencyKey())
@@ -112,10 +115,21 @@ public class PaymentServiceImpl implements PaymentService {
     private boolean samePayload(Payment payment, CreatePaymentRequest req) {
         return Objects.equals(payment.getOrderId(), req.orderId())
                 && Objects.equals(payment.getUserId(), req.userId())
-                && Objects.equals(payment.getCurrency(), req.currency())
+                && Objects.equals(payment.getCurrency(), resolveCurrency(req.currency()))
                 && payment.getAmount() != null
                 && req.amount() != null
                 && payment.getAmount().compareTo(req.amount()) == 0;
+    }
+
+    private String resolveCurrency(String requestedCurrency) {
+        if (requestedCurrency == null || requestedCurrency.isBlank()) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_UNSUPPORTED, requestedCurrency);
+        }
+        String currency = PlatformCurrency.normalize(requestedCurrency.trim());
+        if (!PlatformCurrency.isSupported(currency)) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_UNSUPPORTED, requestedCurrency);
+        }
+        return currency;
     }
 
     @Override
@@ -176,6 +190,8 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentResponse refundConfirmed(Payment payment) {
         payment.setPreviousStatus(PaymentStatus.CAPTURED);
         payment.setStatus(PaymentStatus.REFUNDED);
+        payment.setRefundedAmount(payment.getAmount());
+        payment.setRefundedCurrency(payment.getCurrency());
         Payment saved = writer.save(payment);
         writer.publishLifecycleEvent(saved, "payment.refunded.v1");
         return PaymentResponse.from(saved);

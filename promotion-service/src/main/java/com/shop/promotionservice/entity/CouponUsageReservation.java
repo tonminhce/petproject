@@ -1,5 +1,6 @@
 package com.shop.promotionservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.promotionservice.constant.UsageStatus;
 import jakarta.persistence.Version;
 import jakarta.persistence.Column;
@@ -47,6 +48,10 @@ public class CouponUsageReservation {
 
     @Column(name = "discount_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal discountAmount;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 10)

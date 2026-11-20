@@ -33,7 +33,7 @@ class ProductControllerTest {
 
     private ProductDetailResponse sample() {
         return new ProductDetailResponse(ID, "iPhone 15", "iphone-15", null, "IP15-001",
-            new BigDecimal("999.00"), 10, ProductStatus.ACTIVE, null, null, null, null, null,
+            new BigDecimal("999.00"), "VND", 10, ProductStatus.ACTIVE, null, null, null, null, null,
             null, null, null, null, null, null, null);
     }
 

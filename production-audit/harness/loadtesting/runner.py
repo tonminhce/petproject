@@ -11,7 +11,10 @@ from typing import Any
 
 from .. import config
 from .environment import compose_services, host_snapshot
-from .limits import apply_load_test_rate_limits
+from .limits import apply_load_test_rate_limits, restore_shipped_rate_limits
+from .customers import mint_tokens, provision_customers
+from .settle import wait_for_quiet_host
+from .targets import resolve_coupon_code
 from .invariants import verify
 from .profiles import Profile, enforce_safety, resolve_profile
 
@@ -67,14 +70,16 @@ def acquire_token() -> str:
     return str(payload.get("access_token", ""))
 
 
-def _metric_value(metrics: dict[str, Any], name: str, field: str = "count") -> Any:
+def _metric_value(metrics: dict[str, Any], name: str, field: str = "count", default: Any = None) -> Any:
     entry = metrics.get(name)
     if not isinstance(entry, dict):
-        return None
+        return default
     values = entry.get("values") or {}
     if field in values:
         return values.get(field)
-    return entry.get(field)
+    if field in entry:
+        return entry.get(field)
+    return default
 
 
 def summarise(summary: dict[str, Any]) -> dict[str, Any]:
@@ -94,8 +99,8 @@ def summarise(summary: dict[str, Any]) -> dict[str, Any]:
         "latency_p99_ms": _metric_value(metrics, "http_req_duration", "p(99)"),
         "latency_max_ms": _metric_value(metrics, "http_req_duration", "max"),
         "business_success": _metric_value(metrics, "business_success_total", "count"),
-        "business_failure": _metric_value(metrics, "business_failure_total", "count"),
-        "oversell_responses": _metric_value(metrics, "oversell_attempts_total", "count"),
+        "business_failure": _metric_value(metrics, "business_failure_total", "count", default=0),
+        "oversell_responses": _metric_value(metrics, "oversell_attempts_total", "count", default=0),
         "iterations": _metric_value(metrics, "iterations", "count"),
         "iteration_rate_per_second": _metric_value(metrics, "iterations", "rate"),
     }
@@ -125,10 +130,53 @@ def run_profile(
 
     output = results_root() / (profile.name + "-" + str(int(time.time())))
     output.mkdir(parents=True, exist_ok=True)
+    settle = wait_for_quiet_host()
     environment = host_snapshot()
+    environment["host_settle"] = settle
     limiter = apply_load_test_rate_limits()
+    coupon = resolve_coupon_code()
+    if profile.scenario == "promotion-storm" and coupon.get("status") not in ("RESOLVED", "CONFIGURED"):
+        return {
+            "status": "BLOCKED",
+            "profile": profile.name,
+            "reason": "the profile measures many users redeeming one coupon, so an active coupon is required and "
+                      + str(coupon.get("reason", "")),
+            "coupon": coupon,
+        }
+    if limiter.get("status") == "ERROR":
+        return {
+            "status": "FAIL",
+            "profile": profile.name,
+            "reason": "the gateway could not be prepared for the measured run, so the run would have measured the "
+                      "startup of the gateway instead of the platform",
+            "rate_limit_override": limiter,
+        }
     resolved_network = network or _docker_network()
     resolved_token = token if token is not None else acquire_token()
+
+    customers: dict[str, Any] = {"status": "NOT_REQUIRED"}
+    customer_tokens: list[str] = []
+    if profile.scenario in ("full", "flash-sale", "promotion-storm"):
+        customers = provision_customers(profile.virtual_users)
+        if customers.get("status") != "READY":
+            return {
+                "status": "BLOCKED",
+                "profile": profile.name,
+                "reason": "the profile places orders, and every virtual user needs its own customer because a cart "
+                          "belongs to one customer, so the customer pool could not be provisioned: "
+                          + str(customers.get("reason", "")),
+                "customers": customers,
+            }
+        minted = mint_tokens(customers.get("usernames", []))
+        if minted.get("status") != "READY":
+            return {
+                "status": "BLOCKED",
+                "profile": profile.name,
+                "reason": "the access tokens for the load test customers could not be minted: "
+                          + str(minted.get("reason", "")),
+                "customers": customers,
+            }
+        customer_tokens = minted.get("tokens", [])
 
     command = [
         "docker",
@@ -153,9 +201,11 @@ def run_profile(
         "-e",
         "TOKEN=" + resolved_token,
         "-e",
+        "CUSTOMER_TOKENS=" + ",".join(customer_tokens),
+        "-e",
         "HOT_PRODUCT_ID=" + str(os.environ.get("HOT_PRODUCT_ID", "")),
         "-e",
-        "COUPON_CODE=" + str(os.environ.get("COUPON_CODE", "")),
+        "COUPON_CODE=" + str(coupon.get("code", "")),
         "k6",
     ]
 
@@ -207,14 +257,21 @@ def run_profile(
         "elapsed_seconds": round(elapsed, 2),
         "output": str(output),
         "measurement_host": environment,
-        "measurement_valid": not environment.get("contaminated"),
+        "measurement_valid": not environment.get("contaminated")
+        and environment.get("host_settle", {}).get("status") == "QUIET",
         "max_business_failure_rate": profile.max_business_failure_rate,
         "rate_limit_override": limiter,
+        "coupon": coupon,
+        "customer_pool": {
+            "status": customers.get("status"),
+            "customers": len(customer_tokens),
+        },
         "services": compose_services(),
         "metrics": summarise(summary),
     }
     if run_invariants:
         document["invariants"] = verify(scenario=profile.scenario)
+    document["rate_limit_restore"] = restore_shipped_rate_limits()
     document["status"] = _final_status(document)
     (output / "result.json").write_text(json.dumps(document, indent=2, default=str), encoding="utf-8")
     (output / "summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")

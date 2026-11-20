@@ -25,7 +25,7 @@ class NotificationTemplatesTest {
                 OCCURRED_AT,
                 ORDER_ID,
                 USER_ID,
-                null, null, null, null, null,
+                null, null, null, null, null, "VND",
                 null, null, null, null);
     }
 
@@ -41,7 +41,7 @@ class NotificationTemplatesTest {
                 new BigDecimal("100.00"),
                 new BigDecimal("8.00"),
                 new BigDecimal("10.00"),
-                new BigDecimal("98.00"),
+                new BigDecimal("98.00"), "VND",
                 null, null, null,
                 List.of(Map.of("sku", "A"), Map.of("sku", "B")));
 
@@ -65,7 +65,7 @@ class NotificationTemplatesTest {
                 new BigDecimal("50.00"),
                 new BigDecimal("4.00"),
                 BigDecimal.ZERO,
-                new BigDecimal("54.00"),
+                new BigDecimal("54.00"), "VND",
                 null, null, null, null);
 
         NotificationTemplates.Draft draft = NotificationTemplates.build(e);
@@ -96,7 +96,7 @@ class NotificationTemplatesTest {
                 ORDER_ID,
                 null,
                 "PAID",
-                null, null, null, null,
+                null, null, null, null, "VND",
                 Instant.parse("2026-08-30T10:15:00Z"),
                 null, null, null);
 
@@ -115,7 +115,7 @@ class NotificationTemplatesTest {
                 OCCURRED_AT,
                 ORDER_ID,
                 null,
-                null, null, null, null, null,
+                null, null, null, null, null, "VND",
                 null,
                 Instant.parse("2026-08-30T11:00:00Z"),
                 Boolean.TRUE,

@@ -1,6 +1,7 @@
 package com.shop.productservice.service.impls;
 
 import com.shop.common.core.audit.AuditActor;
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.productservice.dto.request.ProductVariantCreateRequest;
@@ -62,6 +63,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
             .sku(request.sku().trim())
             .title(request.title().trim())
             .price(request.price())
+            .currency(PlatformCurrency.DEFAULT)
             .quantity(request.quantity())
             .attributes(request.attributes())
             .imageUrl(request.imageUrl())
@@ -133,6 +135,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
             variant.getSku(),
             variant.getTitle(),
             variant.getPrice(),
+            variant.getCurrency(),
             variant.getQuantity(),
             variant.getAttributes(),
             variant.getImageUrl(),

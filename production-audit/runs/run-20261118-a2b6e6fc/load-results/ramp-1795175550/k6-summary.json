@@ -1,0 +1,156 @@
+{
+    "metrics": {
+        "vus_max": {
+            "value": 50,
+            "min": 50,
+            "max": 50
+        },
+        "http_reqs": {
+            "count": 99899,
+            "rate": 434.0469730494305
+        },
+        "resolved_product_total": {
+            "count": 50,
+            "rate": 0.2172429018555894
+        },
+        "checks": {
+            "passes": 66566,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_sending": {
+            "max": 21.661458,
+            "p(90)": 0.034917,
+            "p(95)": 0.051625,
+            "avg": 0.023425622748976558,
+            "min": 0.001709,
+            "med": 0.01125
+        },
+        "http_req_failed": {
+            "passes": 33283,
+            "fails": 66616,
+            "thresholds": {
+                "rate<0.05": true
+            },
+            "value": 0.33316649816314475
+        },
+        "business_failure_total": {
+            "count": 33283,
+            "rate": 144.60991004919165
+        },
+        "data_sent": {
+            "count": 138758011,
+            "rate": 602883.8593069959
+        },
+        "cart_failure_total": {
+            "count": 33283,
+            "rate": 144.60991004919165
+        },
+        "http_req_connecting": {
+            "avg": 0.0003912518143324758,
+            "min": 0,
+            "med": 0,
+            "max": 3.102375,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_duration": {
+            "med": 3.992541,
+            "max": 572.687709,
+            "p(90)": 18.332275,
+            "p(95)": 30.30586599999993,
+            "avg": 8.430166070421206,
+            "min": 0.41725
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 37.6431557499999,
+            "avg": 10.64451268464036,
+            "min": 0.973625,
+            "med": 5.4299789999999994,
+            "max": 572.687709,
+            "p(90)": 22.899500500000006
+        },
+        "http_req_blocked": {
+            "p(90)": 0.008792,
+            "p(95)": 0.013167,
+            "avg": 0.006520597153124493,
+            "min": 0.000375,
+            "med": 0.002375,
+            "max": 66.746041
+        },
+        "http_req_receiving": {
+            "p(90)": 0.2045,
+            "p(95)": 0.3962960999999998,
+            "avg": 0.14967923025255184,
+            "min": -6.313222,
+            "med": 0.049417,
+            "max": 82.9835
+        },
+        "iteration_duration": {
+            "avg": 226.813671837604,
+            "min": 203.329958,
+            "med": 216.737459,
+            "max": 900.987209,
+            "p(90)": 256.5208254,
+            "p(95)": 284.948742
+        },
+        "http_req_waiting": {
+            "p(90)": 18.0021668,
+            "p(95)": 29.703329399999948,
+            "avg": 8.25706121741967,
+            "min": 0.3995,
+            "med": 3.894667,
+            "max": 568.164875
+        },
+        "business_success_total": {
+            "count": 66566,
+            "rate": 289.2198200983833
+        },
+        "data_received": {
+            "count": 179600394,
+            "rate": 780338.2153393438
+        },
+        "iterations": {
+            "count": 33283,
+            "rate": 144.60991004919165
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 49
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "catalog returns 200": {
+                "name": "catalog returns 200",
+                "path": "::catalog returns 200",
+                "id": "c52c153c79a7b882f6216c456d8374cd",
+                "passes": 33283,
+                "fails": 0
+            },
+            "product detail returns 200": {
+                "name": "product detail returns 200",
+                "path": "::product detail returns 200",
+                "id": "9daad55a5a84fd2a0364a6f709fad9e2",
+                "passes": 33283,
+                "fails": 0
+            }
+        }
+    }
+}

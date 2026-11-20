@@ -51,7 +51,14 @@ public class InventoryServiceClient {
             if (ex.getStatusCode() == HttpStatus.CONFLICT || ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new StockReservationFailedException(productId, ex);
             }
+            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+                throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
+            }
             throw BusinessException.of(ErrorCode.INTERNAL_SERVER_ERROR, "inventory");
+        } catch (HttpServerErrorException ex) {
+            log.warn("Inventory reserve failed for product {} with a downstream server error: {}",
+                productId, ex.getMessage());
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
         }
     }
 
@@ -112,6 +119,9 @@ public class InventoryServiceClient {
             log.warn("Inventory state lookup failed for reservation {}: {}", reservationId, ex.getMessage());
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw BusinessException.of(ErrorCode.RESERVATION_NOT_FOUND, reservationId);
+            }
+            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+                throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "inventory");
             }
             throw BusinessException.of(ErrorCode.INTERNAL_SERVER_ERROR, "inventory");
         }

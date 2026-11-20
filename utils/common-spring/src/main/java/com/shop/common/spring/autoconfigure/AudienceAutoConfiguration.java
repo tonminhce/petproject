@@ -10,6 +10,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
+import java.util.List;
+
 @AutoConfiguration
 @EnableConfigurationProperties({AudienceProperties.class, AudienceSecurityProperties.class})
 public class AudienceAutoConfiguration {
@@ -24,8 +26,7 @@ public class AudienceAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "shop.security", name = "enabled", havingValue = "true",
             matchIfMissing = true)
-    public AudienceBoundary audienceBoundary(AudienceSecurityProperties security,
-                                              AudienceProperties audience) {
-        return new AudienceBoundary(security.expectedClientIds(), audience.allowedAudiences());
+    public AudienceBoundary audienceBoundary(AudienceSecurityProperties security) {
+        return new AudienceBoundary(security.expectedClientIds(), List.of());
     }
 }

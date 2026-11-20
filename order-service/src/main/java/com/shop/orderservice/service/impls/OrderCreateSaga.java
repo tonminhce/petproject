@@ -161,6 +161,7 @@ public class OrderCreateSaga {
         order.setTaxAmount(pricing.taxAmount());
         order.setDiscountAmount(pricing.discountAmount());
         order.setTotal(pricing.total());
+        order.setCurrency(pricing.currency());
         order.setPromotionReservationId(pricing.promotionReservationId());
 
         List<OrderItem> orderItems = new ArrayList<>();
@@ -173,6 +174,7 @@ public class OrderCreateSaga {
                 .quantity(item.getQuantity())
                 .unitPrice(snapshot.unitPrice())
                 .lineTotal(snapshot.unitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .currency(pricing.currency())
                 .build();
             orderItems.add(orderItem);
         }

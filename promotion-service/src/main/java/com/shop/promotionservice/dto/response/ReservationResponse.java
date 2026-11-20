@@ -13,6 +13,7 @@ public record ReservationResponse(
     String code,
     BigDecimal discountAmount,
     BigDecimal finalAmount,
+    String currency,
     String status,
     Instant expiresAt
 ) {
@@ -24,6 +25,7 @@ public record ReservationResponse(
             c.getCode(),
             r.getDiscountAmount(),
             r.getOrderAmount().subtract(r.getDiscountAmount()),
+            r.getCurrency(),
             r.getStatus().name(),
             r.getExpiresAt()
         );

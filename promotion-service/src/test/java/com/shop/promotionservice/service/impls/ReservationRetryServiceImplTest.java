@@ -32,12 +32,12 @@ class ReservationRetryServiceImplTest {
     private final UUID orderId = UUID.randomUUID();
 
     private ReserveRequest request() {
-        return new ReserveRequest(userId, orderId, new BigDecimal("199.99"));
+        return new ReserveRequest(userId, orderId, new BigDecimal("199.99"), "VND");
     }
 
     private ReservationResponse response() {
         return new ReservationResponse(UUID.randomUUID(), UUID.randomUUID(), CODE,
-            new BigDecimal("20.00"), new BigDecimal("179.99"), "PENDING",
+            new BigDecimal("20.00"), new BigDecimal("179.99"), "VND", "PENDING",
             Instant.now().plusSeconds(900));
     }
 

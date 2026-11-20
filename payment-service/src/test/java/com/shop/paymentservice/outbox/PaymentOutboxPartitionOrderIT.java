@@ -43,6 +43,8 @@ class PaymentOutboxPartitionOrderIT extends AbstractIntegrationTest {
     @Value("${shop.kafka.bootstrap-servers}")
     String bootstrapServers;
 
+    private final String consumerGroup = "payment-partition-it-" + UUID.randomUUID();
+
     @BeforeEach
     void clearOutbox() {
         outboxRepo.deleteAll();
@@ -52,6 +54,7 @@ class PaymentOutboxPartitionOrderIT extends AbstractIntegrationTest {
     void eventsOfOnePayment_keepTheirOrderAndStayOnOnePartition() throws Exception {
         String topic = "shop.payment.partitiontest." + UUID.randomUUID().toString().replace("-", "");
         createTopic(topic, 4);
+        try {
         UUID payment = UUID.randomUUID();
         for (int sequence = 0; sequence < 12; sequence++) {
             seed(topic, payment, sequence);
@@ -85,6 +88,17 @@ class PaymentOutboxPartitionOrderIT extends AbstractIntegrationTest {
         assertThat(sequence)
                 .as("the events of one payment must be published in creation order")
                 .containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+        } finally {
+            deleteTopic(topic);
+        }
+    }
+
+    private void deleteTopic(String topic) {
+        try (AdminClient admin = AdminClient.create(
+                Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
+            admin.deleteTopics(List.of(topic)).all().get(60, TimeUnit.SECONDS);
+        } catch (Exception ignored) {
+        }
     }
 
     private void createTopic(String topic, int partitions) throws Exception {
@@ -112,7 +126,7 @@ class PaymentOutboxPartitionOrderIT extends AbstractIntegrationTest {
     private List<ConsumerRecord<String, String>> consume(String topic, int expected) {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "payment-partition-it-" + UUID.randomUUID());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroup);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());

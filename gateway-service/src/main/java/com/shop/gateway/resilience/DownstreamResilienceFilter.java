@@ -45,11 +45,12 @@ public final class DownstreamResilienceFilter implements GlobalFilter, Ordered {
         final CircuitBreaker breaker = circuitBreakerRegistry.circuitBreaker(bucket);
         final Bulkhead bulkhead = bulkheadRegistry.bulkhead(bucket);
         return Mono.defer(() -> {
-            if (circuitBreakerProperties.enabled() && !breaker.tryAcquirePermission()) {
-                return errorResponseWriter.writeServiceUnavailable(exchange, retryAfterSeconds());
-            }
             if (bulkheadProperties.enabled() && !bulkhead.tryAcquirePermission()) {
                 return errorResponseWriter.writeRateLimited(exchange, BULKHEAD_RETRY_AFTER_SECONDS);
+            }
+            if (circuitBreakerProperties.enabled() && !breaker.tryAcquirePermission()) {
+                release(bulkhead);
+                return errorResponseWriter.writeServiceUnavailable(exchange, retryAfterSeconds());
             }
             final long startedAt = System.nanoTime();
             return chain.filter(exchange)

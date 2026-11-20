@@ -1,5 +1,6 @@
 package com.shop.orderservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,6 +27,10 @@ public class CartItem {
 
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Column(nullable = false)
     private Integer quantity;

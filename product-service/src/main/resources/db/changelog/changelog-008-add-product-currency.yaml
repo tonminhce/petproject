@@ -1,0 +1,31 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 008-add-product-currency
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: products
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE products ADD CONSTRAINT ck_products_currency CHECK (currency IN ('VND', 'USD'))
+
+        - addColumn:
+            tableName: product_variants
+            columns:
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE product_variants ADD CONSTRAINT ck_product_variants_currency CHECK (currency IN ('VND', 'USD'))

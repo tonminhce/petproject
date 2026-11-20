@@ -1,0 +1,15 @@
+{
+  "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Race*Test,*Parallel*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Race*Test,*Parallel*Test -Dfailsafe.failIfNoSpecifiedTests=false",
+  "description": "concurrency and multi-instance scenarios",
+  "duration_seconds": 260.266,
+  "errors": 0,
+  "exit_code": 0,
+  "failures": 0,
+  "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency.log",
+  "revision": "af002c36cab33c56a3b0739943fa232fb69d1295",
+  "skipped": 0,
+  "status": "PASS",
+  "suite": "concurrency",
+  "tests_run": 33,
+  "updated_at": "2026-11-20T06:27:43Z"
+}

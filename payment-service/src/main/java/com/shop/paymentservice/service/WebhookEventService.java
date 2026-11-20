@@ -171,6 +171,7 @@ public class WebhookEventService {
             BigDecimal already = payment.getRefundedAmount() == null
                     ? BigDecimal.ZERO : payment.getRefundedAmount();
             payment.setRefundedAmount(payment.getAmount());
+            payment.setRefundedCurrency(payment.getCurrency());
             if (already.compareTo(payment.getAmount()) > 0) {
                 log.warn("Payment {} refunded amount {} exceeds the captured amount {}",
                         payment.getId(), already, payment.getAmount());
@@ -196,6 +197,7 @@ public class WebhookEventService {
         payment.setPreviousStatus(payment.getStatus());
         payment.setStatus(next);
         payment.setRefundedAmount(already.add(payload.amount()));
+        payment.setRefundedCurrency(payment.getCurrency());
         writer.completeWithEvent(payment, event, outboxEventType(next));
         log.info("Partial refund applied to payment {}: {} of {} already refunded, {} returned now",
                 payment.getId(), already, payment.getAmount(), payload.amount());

@@ -57,9 +57,9 @@ class CartControllerTest {
 
     private CartResponse sampleCart() {
         var item = new CartItemResponse(cartItemId, productId, "Test Product", 2,
-            new BigDecimal("19.99"), new BigDecimal("39.98"));
+            new BigDecimal("19.99"), new BigDecimal("39.98"), "VND");
         return new CartResponse(UUID.randomUUID(), userId, List.of(item),
-            new BigDecimal("39.98"), Instant.now(), Instant.now());
+            new BigDecimal("39.98"), "VND", Instant.now(), Instant.now());
     }
 
     @Test

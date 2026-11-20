@@ -503,8 +503,13 @@ def record_e2e_suite(action: str, document: dict[str, Any]) -> None:
         return
     if action == "report":
         verified = bool(document.get("e2e_verified"))
-        status = PASS if verified else FAIL
-        detail = "every end to end scope reported a completed run"
+        executed = int(document.get("executed_collections", 0) or 0)
+        status = PASS if verified and executed > 0 else FAIL
+        detail = (
+            f"{executed} end to end collections completed the run"
+            if verified and executed > 0
+            else "no end to end collection completed a run"
+        )
     else:
         state = document.get("state", "")
         status = PASS if state == "COMPLETED" else (FAIL if state == "FAILED" else PENDING)

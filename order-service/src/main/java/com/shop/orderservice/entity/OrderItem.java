@@ -1,5 +1,6 @@
 package com.shop.orderservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,6 +33,10 @@ public class OrderItem {
 
     @Column(name = "line_total", nullable = false, precision = 15, scale = 2)
     private BigDecimal lineTotal;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Column(name = "reservation_id")
     private UUID reservationId;

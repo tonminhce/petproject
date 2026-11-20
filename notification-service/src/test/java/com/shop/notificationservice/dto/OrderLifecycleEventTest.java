@@ -28,7 +28,7 @@ class OrderLifecycleEventTest {
                 .containsExactly(
                         "eventId", "eventType", "occurredAt", "orderId", "userId",
                         "status", "subtotal", "taxAmount", "discountAmount", "total",
-                        "transitionedAt", "cancelledAt", "refunded", "items");
+                        "currency", "transitionedAt", "cancelledAt", "refunded", "items");
     }
 
     @Test
@@ -54,7 +54,7 @@ class OrderLifecycleEventTest {
                 "evt-1", "order.created.v1", "2026-09-03T10:00:00Z",
                 orderId, userId, "NEW",
                 new BigDecimal("100.00"), new BigDecimal("8.00"),
-                new BigDecimal("0.00"), new BigDecimal("108.00"),
+                new BigDecimal("0.00"), new BigDecimal("108.00"), "VND",
                 transitionedAt, cancelledAt, Boolean.FALSE,
                 List.of(Map.of("sku", "SKU-1", "quantity", 2)));
 
@@ -72,6 +72,7 @@ class OrderLifecycleEventTest {
         assertThat(rebound.taxAmount().compareTo(new BigDecimal("8.00"))).isZero();
         assertThat(rebound.discountAmount().compareTo(new BigDecimal("0.00"))).isZero();
         assertThat(rebound.total().compareTo(new BigDecimal("108.00"))).isZero();
+        assertThat(rebound.currency()).isEqualTo("VND");
         assertThat(rebound.transitionedAt()).isEqualTo(transitionedAt);
         assertThat(rebound.cancelledAt()).isEqualTo(cancelledAt);
         assertThat(rebound.refunded()).isFalse();

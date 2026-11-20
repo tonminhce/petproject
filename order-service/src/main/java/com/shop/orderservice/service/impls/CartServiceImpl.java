@@ -1,5 +1,6 @@
 package com.shop.orderservice.service.impls;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.orderservice.client.ProductServiceClient;
@@ -61,6 +62,7 @@ public class CartServiceImpl implements CartService {
             existing.setQuantity(newQuantity);
             existing.setProductTitle(snapshot.title());
             existing.setUnitPrice(snapshot.unitPrice());
+            existing.setCurrency(resolveCurrency(snapshot));
             cartItemRepository.save(existing);
         } else {
             newQuantity = request.quantity();
@@ -72,11 +74,13 @@ public class CartServiceImpl implements CartService {
                 .productId(request.productId())
                 .productTitle(snapshot.title())
                 .unitPrice(snapshot.unitPrice())
+                .currency(resolveCurrency(snapshot))
                 .quantity(request.quantity())
                 .build();
             cartItemRepository.save(item);
         }
         cart.setSubtotal(calculateSubtotal(cart));
+        cart.setCurrency(resolveCartCurrency(cart));
         cartRepository.save(cart);
         return cartMapper.toResponse(cart, cartItemRepository.findByCartId(cart.getId()));
     }
@@ -100,6 +104,7 @@ public class CartServiceImpl implements CartService {
             cartItemRepository.save(item);
         }
         cart.setSubtotal(calculateSubtotal(cart));
+        cart.setCurrency(resolveCartCurrency(cart));
         cartRepository.save(cart);
         return cartMapper.toResponse(cart, cartItemRepository.findByCartId(cart.getId()));
     }
@@ -115,6 +120,7 @@ public class CartServiceImpl implements CartService {
         }
         cartItemRepository.delete(item);
         cart.setSubtotal(calculateSubtotal(cart));
+        cart.setCurrency(resolveCartCurrency(cart));
         cartRepository.save(cart);
     }
 
@@ -152,6 +158,7 @@ public class CartServiceImpl implements CartService {
                 item.setQuantity(mergedQty);
                 item.setUnitPrice(guestItem.getUnitPrice());
                 item.setProductTitle(guestItem.getProductTitle());
+                item.setCurrency(guestItem.getCurrency());
                 cartItemRepository.save(item);
             } else {
                 CartItem newItem = CartItem.builder()
@@ -159,6 +166,7 @@ public class CartServiceImpl implements CartService {
                         .productId(guestItem.getProductId())
                         .productTitle(guestItem.getProductTitle())
                         .unitPrice(guestItem.getUnitPrice())
+                        .currency(guestItem.getCurrency())
                         .quantity(guestItem.getQuantity())
                         .build();
                 cartItemRepository.save(newItem);
@@ -169,6 +177,7 @@ public class CartServiceImpl implements CartService {
         cartRepository.save(guestCart);
 
         userCart.setSubtotal(calculateSubtotal(userCart));
+        userCart.setCurrency(resolveCartCurrency(userCart));
         cartRepository.save(userCart);
         return cartMapper.toResponse(userCart, cartItemRepository.findByCartId(userCart.getId()));
     }
@@ -186,6 +195,23 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new IllegalStateException(
                     "Cart race: PK conflict but row not found", ex));
         }
+    }
+
+    private String resolveCurrency(ProductSnapshot snapshot) {
+        String currency = snapshot.currency();
+        if (currency == null || currency.isBlank()) {
+            return PlatformCurrency.DEFAULT;
+        }
+        return PlatformCurrency.normalize(currency);
+    }
+
+    private String resolveCartCurrency(Cart cart) {
+        for (CartItem item : cartItemRepository.findByCartId(cart.getId())) {
+            if (item.getCurrency() != null && !item.getCurrency().isBlank()) {
+                return PlatformCurrency.normalize(item.getCurrency());
+            }
+        }
+        return PlatformCurrency.DEFAULT;
     }
 
     private BigDecimal calculateSubtotal(Cart cart) {

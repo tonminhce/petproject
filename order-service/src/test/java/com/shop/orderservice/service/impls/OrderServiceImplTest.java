@@ -119,7 +119,7 @@ class OrderServiceImplTest {
     void createOrder_returnsCachedResponseOnReplay() throws Exception {
         OrderCreateRequest req = new OrderCreateRequest(null, null);
         OrderResponse cached = new OrderResponse(orderId, userId, OrderStatus.PENDING, List.of(),
-            BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, null,
+            BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, "VND", null,
             Instant.now(), null, null, null, null);
 
         when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
@@ -154,7 +154,7 @@ class OrderServiceImplTest {
         stubConfirmLoad();
         OrderResponse response = new OrderResponse(orderId, userId, OrderStatus.CONFIRMED,
             List.of(), BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO,
-            BigDecimal.valueOf(110), null, Instant.now(), Instant.now(), null, null, null);
+            BigDecimal.valueOf(110), "VND", null, Instant.now(), Instant.now(), null, null, null);
         when(orderMapper.toResponse(eq(order), any())).thenReturn(response);
         return response;
     }
@@ -209,7 +209,7 @@ class OrderServiceImplTest {
         OrderResponse first = stubConfirmHappy();
         OrderResponse cached = new OrderResponse(orderId, userId, OrderStatus.CONFIRMED,
             List.of(), BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO,
-            BigDecimal.valueOf(110), null, Instant.now(), Instant.now(), null, null, null);
+            BigDecimal.valueOf(110), "VND", null, Instant.now(), Instant.now(), null, null, null);
         when(idempotencyService.begin(eq(CONFIRM_KEY), eq(actor), eq(confirmHash())))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.of(cached));

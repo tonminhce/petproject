@@ -1,0 +1,167 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "catalog returns 200": {
+                "name": "catalog returns 200",
+                "path": "::catalog returns 200",
+                "id": "c52c153c79a7b882f6216c456d8374cd",
+                "passes": 2670,
+                "fails": 13
+            },
+            "a product id is resolvable": {
+                "id": "d9099f7c5deb4f40f6e0e5b97b880b9c",
+                "passes": 0,
+                "fails": 12,
+                "name": "a product id is resolvable",
+                "path": "::a product id is resolvable"
+            },
+            "product detail returns 200": {
+                "name": "product detail returns 200",
+                "path": "::product detail returns 200",
+                "id": "9daad55a5a84fd2a0364a6f709fad9e2",
+                "passes": 2671,
+                "fails": 0
+            }
+        }
+    },
+    "metrics": {
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "resolved_product_total": {
+            "count": 10,
+            "rate": 0.09075149547560751
+        },
+        "catalog_failure_total": {
+            "count": 13,
+            "rate": 0.11797694411828977
+        },
+        "iteration_duration": {
+            "avg": 225.9916126522557,
+            "min": 201.511458,
+            "med": 220.603376,
+            "max": 998.006334,
+            "p(90)": 241.6129918,
+            "p(95)": 254.0905875
+        },
+        "http_req_failed": {
+            "passes": 25,
+            "fails": 5351,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0.004650297619047619
+        },
+        "http_req_receiving": {
+            "avg": 0.19251763802083344,
+            "min": 0,
+            "med": 0.0956665,
+            "max": 15.407167,
+            "p(90)": 0.3606875000000002,
+            "p(95)": 0.5839479999999997
+        },
+        "http_req_duration{expected_response:true}": {
+            "max": 778.461209,
+            "p(90)": 19.576625,
+            "p(95)": 29.655083499999993,
+            "avg": 12.281367593907676,
+            "min": 1.802334,
+            "med": 8.83875
+        },
+        "data_received": {
+            "count": 12582014,
+            "rate": 114183.65865950304
+        },
+        "business_success_total": {
+            "count": 5341,
+            "rate": 48.470373733521974
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0.003875,
+            "max": 13.881709,
+            "p(90)": 0.012395500000000005,
+            "p(95)": 0.01834349999999999,
+            "avg": 0.01101454352678567
+        },
+        "checks": {
+            "passes": 5341,
+            "fails": 25,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 0.9953410361535594
+        },
+        "http_req_waiting": {
+            "med": 8.6241255,
+            "max": 776.432917,
+            "p(90)": 19.1941875,
+            "p(95)": 28.971207999999994,
+            "avg": 11.999216196800573,
+            "min": 0
+        },
+        "http_reqs": {
+            "count": 5376,
+            "rate": 48.7880039676866
+        },
+        "http_req_duration": {
+            "max": 778.461209,
+            "p(90)": 19.5333545,
+            "p(95)": 29.625593999999996,
+            "avg": 12.224255579427078,
+            "min": 0,
+            "med": 8.792770999999998
+        },
+        "unresolved_product_total": {
+            "count": 12,
+            "rate": 0.10890179457072902
+        },
+        "data_sent": {
+            "count": 7314708,
+            "rate": 66382.068996739
+        },
+        "iterations": {
+            "count": 2683,
+            "rate": 24.348626236105495
+        },
+        "vus_max": {
+            "value": 10,
+            "min": 10,
+            "max": 10
+        },
+        "http_req_sending": {
+            "avg": 0.03252174460565475,
+            "min": 0,
+            "med": 0.016334,
+            "max": 29.6315,
+            "p(90)": 0.04052050000000001,
+            "p(95)": 0.05939599999999998
+        },
+        "http_req_connecting": {
+            "avg": 0.0015789308035714285,
+            "min": 0,
+            "med": 0,
+            "max": 4.209541,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "business_failure_total": {
+            "count": 25,
+            "rate": 0.22687873868901878
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 10
+        }
+    }
+}

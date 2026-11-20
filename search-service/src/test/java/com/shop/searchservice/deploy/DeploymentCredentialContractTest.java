@@ -187,23 +187,16 @@ class DeploymentCredentialContractTest {
     @Test
     @DisplayName("the payment service refuses a live-mode Stripe credential")
     void thePaymentServiceRefusesALiveModeStripeCredential() throws Exception {
-        assertThat(guardSource())
-            .as("the payment service must refuse a live-mode key in the application itself")
-            .contains("sk_live_")
-            .contains("shop.payment.allow-live-stripe-keys");
-    }
-
-    @Test
-    @DisplayName("a live-mode Stripe credential is only allowed in an explicitly allowed context")
-    void aLiveModeStripeCredentialNeedsAnExplicitOptIn() throws Exception {
         String source = guardSource();
 
         assertThat(source)
-            .as("the opt-in must be read from the deployment configuration")
-            .contains("shop.payment.allow-live-stripe-keys:false");
-        assertThat(source)
-            .as("a live-mode key without the opt-in must fail the startup")
-            .contains("IllegalStateException");
+            .as("the payment service must refuse a live-mode key in the application itself")
+            .contains("sk_live_")
+            .contains("rk_live_")
+            .contains("shop.payment.allow-live-stripe-keys");
+        assertThat(guardBehaviourTest())
+            .as("the guard must be proven by a behavioural test in the module that owns it")
+            .exists();
     }
 
     @Test
@@ -219,7 +212,12 @@ class DeploymentCredentialContractTest {
             .containsKey("SHOP_PAYMENT_STRIPE_SECRET_KEY");
         assertThat(guardSource())
             .as("the guard must live in the payment service module, not only in the compose entrypoint")
-            .isNotEmpty();
+            .contains("class PaymentStripeLiveKeyGuard");
+    }
+
+    private static Path guardBehaviourTest() {
+        return REPO_ROOT.resolve("payment-service", "src", "test", "java", "com", "shop",
+            "paymentservice", "config", "PaymentStripeLiveKeyGuardTest.java");
     }
 
     private static String guardSource() throws Exception {
@@ -229,26 +227,6 @@ class DeploymentCredentialContractTest {
             .as("the payment service must own the live-mode Stripe guard")
             .isTrue();
         return Files.readString(guard);
-    }
-
-    @SuppressWarnings("unused")
-    private static int runGuard(String guard, Map<String, String> environment) throws Exception {
-        ProcessBuilder builder = new ProcessBuilder("sh", "-c", guard, "true");
-        builder.redirectErrorStream(true);
-        Map<String, String> processEnvironment = builder.environment();
-        processEnvironment.keySet().removeIf(key ->
-            key.equals("STRIPE_SECRET_KEY")
-                || key.equals("SHOP_PAYMENT_STRIPE_SECRET_KEY")
-                || key.equals("SHOP_PAYMENT_ALLOW_LIVE_STRIPE_KEYS"));
-        processEnvironment.putAll(environment);
-
-        Process process = builder.start();
-        process.getInputStream().readAllBytes();
-        if (!process.waitFor(30, TimeUnit.SECONDS)) {
-            process.destroyForcibly();
-            throw new IllegalStateException("the Stripe guard did not terminate");
-        }
-        return process.exitValue();
     }
 
     @SuppressWarnings("unchecked")
@@ -261,8 +239,13 @@ class DeploymentCredentialContractTest {
         if (!CREDENTIAL_KEY.matcher(key).matches()) {
             return false;
         }
-        for (String segment : key.split("_")) {
-            if (CREDENTIAL_SEGMENTS.contains(segment)) {
+        String[] segments = key.split("_");
+        for (int index = 0; index < segments.length; index++) {
+            if (CREDENTIAL_SEGMENTS.contains(segments[index])) {
+                return true;
+            }
+            if (index + 1 < segments.length
+                && CREDENTIAL_SEGMENTS.contains(segments[index] + "_" + segments[index + 1])) {
                 return true;
             }
         }

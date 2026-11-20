@@ -9,6 +9,7 @@ public record PricingBreakdown(
     BigDecimal taxAmount,
     BigDecimal discountAmount,
     BigDecimal total,
+    String currency,
     Map<UUID, ProductSnapshot> snapshots,
     UUID promotionReservationId
 ) {}

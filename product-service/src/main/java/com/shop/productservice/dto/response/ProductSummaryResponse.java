@@ -11,6 +11,7 @@ public record ProductSummaryResponse(
     String slug,
     String sku,
     BigDecimal priceUnit,
+    String currency,
     Integer quantity,
     ProductStatus status,
     String imageUrl,

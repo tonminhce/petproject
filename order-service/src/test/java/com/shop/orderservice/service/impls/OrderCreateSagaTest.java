@@ -109,10 +109,10 @@ class OrderCreateSagaTest {
             return o;
         });
         Map<UUID, ProductSnapshot> snapshots = new HashMap<>();
-        snapshots.put(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN));
+        snapshots.put(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN, "VND"));
         when(pricingService.calculate(any(), eq(userId), anyList(), eq("SAVE10")))
             .thenReturn(new PricingBreakdown(
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.valueOf(11),
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.valueOf(11), "VND",
                 snapshots, promoReservationId));
         when(stockReservationService.reserve(eq(productId), any())).thenReturn(reservationId);
         when(orderMapper.toResponse(any(), any())).thenReturn(null);
@@ -138,8 +138,8 @@ class OrderCreateSagaTest {
         when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(pricingService.calculate(any(), eq(userId), anyList(), any()))
             .thenReturn(new PricingBreakdown(
-                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
-                Map.of(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN)),
+                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, "VND",
+                Map.of(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN, "VND")),
                 promoReservationId));
         when(stockReservationService.reserve(eq(productId), any()))
             .thenThrow(new StockReservationFailedException(productId, null));
@@ -181,9 +181,9 @@ class OrderCreateSagaTest {
         when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(pricingService.calculate(any(), eq(userId), anyList(), any()))
             .thenReturn(new PricingBreakdown(
-                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN,
-                Map.of(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN),
-                        secondProductId, new ProductSnapshot(secondProductId, "Widget", BigDecimal.TEN)),
+                BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN, "VND",
+                Map.of(productId, new ProductSnapshot(productId, "Widget", BigDecimal.TEN, "VND"),
+                        secondProductId, new ProductSnapshot(secondProductId, "Widget", BigDecimal.TEN, "VND")),
                 promoReservationId));
 
         when(stockReservationService.reserve(any(), any()))

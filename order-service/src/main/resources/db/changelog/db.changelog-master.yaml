@@ -32,3 +32,6 @@ databaseChangeLog:
   - include:
       file: changelog-012-failed-compensation-sweeper.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-013-add-order-currency.yaml
+      relativeToChangelogFile: true

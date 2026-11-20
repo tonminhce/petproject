@@ -1,0 +1,488 @@
+{
+  "topic": "qa-review-remediation",
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/final-change-review.md",
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-01 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "harness",
+      "assigned_agent": "",
+      "business_risk": "The readiness gates ignored the alerting and kubernetes suites, so a failing alerting configuration still satisfied every gate",
+      "concurrency_tests": [],
+      "current_implementation": "No gate read the suites named alerts or k8s, so the completion predicate could not see a failing alerting configuration or a broken manifest set.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/verification/gates.py"
+      ],
+      "id": "QA-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/verification/gates.py"
+      ],
+      "notes": "The independent review reproduced the gap and the regenerated report now reports the failing gates. Severity CRITICAL.",
+      "priority": 15,
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "production-audit/harness/verification/gates.py"
+      ],
+      "target_implementation": "Two gates were added, GATE-23 for the alerting configuration and GATE-24 for the kubernetes manifests, and both were added to the completion predicate.",
+      "technical_risk": "",
+      "title": "The readiness gates ignored the alerting and kubernetes suites, so a failing alerting configuration still satisfied every gate"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-02 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "harness",
+      "assigned_agent": "",
+      "business_risk": "The final report asserted a production readiness that its own evidence contradicted",
+      "concurrency_tests": [],
+      "current_implementation": "Section 31 hard-coded that the alerting infrastructure was fully implemented while the persisted status was FAIL, and sections 32 and 36.1 printed suite passes that were recorded against an earlier source revision.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/reporting/final_report.py"
+      ],
+      "id": "QA-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/reporting/final_report.py"
+      ],
+      "notes": "The regenerated report reports the readiness decision from the gate evaluation only. Severity CRITICAL.",
+      "priority": 15,
+      "severity": "CRITICAL",
+      "source_evidence": [
+        "production-audit/reports/final-production-readiness-report.md"
+      ],
+      "target_implementation": "The report now derives the alerting status from the persisted result, marks evidence that no longer matches the working tree fingerprint as stale, and never states a success it cannot source.",
+      "technical_risk": "",
+      "title": "The final report asserted a production readiness that its own evidence contradicted"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-03 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "harness",
+      "assigned_agent": "",
+      "business_risk": "Suite evidence could certify readiness against a source revision that no longer existed",
+      "concurrency_tests": [],
+      "current_implementation": "A suite result carried only a git revision, so results recorded before an edit still satisfied the gates.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/inventory/scanner.py"
+      ],
+      "id": "QA-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/inventory/scanner.py"
+      ],
+      "notes": "A suite result recorded before an edit moves its gate to pending. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "production-audit/harness/verification/gates.py"
+      ],
+      "target_implementation": "Every suite result is stamped with a source fingerprint over the working tree and only evidence whose fingerprint still matches satisfies a gate.",
+      "technical_risk": "",
+      "title": "Suite evidence could certify readiness against a source revision that no longer existed"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-04 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "observability",
+      "assigned_agent": "",
+      "business_risk": "Thirteen alert rules referenced metrics the platform never publishes, and the validator could not see it",
+      "concurrency_tests": [],
+      "current_implementation": "Rules referenced metrics such as application_startup_failures_total, kafka_consumergroup_lag, outbox_pending_events_count and inventory_invariant_violations_total that exist nowhere in the source, and the validator only checked the rule category.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/alerts/metrics.py"
+      ],
+      "id": "QA-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/alerts/metrics.py"
+      ],
+      "notes": "The alerting validation reports ALT-02 PASS with the live catalogue as evidence and the rules pass promtool. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "config/observability/alertmanager/rules/runtime-alerts.yml"
+      ],
+      "target_implementation": "Every rule now uses a metric and a grouping label confirmed against the live catalogue, and the validator queries the live metric and label inventory and fails a rule that names something the platform does not publish.",
+      "technical_risk": "",
+      "title": "Thirteen alert rules referenced metrics the platform never publishes, and the validator could not see it"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-05 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "configuration",
+      "assigned_agent": "",
+      "business_risk": "The shared configuration never reached any service",
+      "concurrency_tests": [],
+      "current_implementation": "Every service ships its own application.yml at the same classpath root, which shadowed the shared document, so the metrics tags, the audience boundary, the trusted proxy policy and the forward header strategy never reached the fleet.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-config/src/main/resources/application-shared.yml"
+      ],
+      "id": "QA-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-config/src/main/resources/application-shared.yml"
+      ],
+      "notes": "The live scrape now carries an application label for every service and the histogram buckets are published. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml"
+      ],
+      "target_implementation": "The shared document moved into a dependency free module that every service imports with spring.config.import.",
+      "technical_risk": "",
+      "title": "The shared configuration never reached any service"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-06 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "gateway-service",
+      "assigned_agent": "",
+      "business_risk": "The circuit breaker state was never exported",
+      "concurrency_tests": [],
+      "current_implementation": "The gateway registered the circuit breaker registry but no meter binder, so resilience4j_circuitbreaker_state was never published and the rule could never fire.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceConfiguration.java"
+      ],
+      "id": "QA-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceConfiguration.java"
+      ],
+      "notes": "The live catalogue contains resilience4j_circuitbreaker_state and the rule evaluates without error. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceConfiguration.java"
+      ],
+      "target_implementation": "The gateway now registers the tagged circuit breaker meter binder.",
+      "technical_risk": "",
+      "title": "The circuit breaker state was never exported"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-07 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "observability",
+      "assigned_agent": "",
+      "business_risk": "The postgres exporter published no series at all",
+      "concurrency_tests": [],
+      "current_implementation": "The postgresql target was scraped with the default ten second timeout while the exporter needs far longer to collect sixteen databases, so every scrape timed out and no pg series existed.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "config/observability/prometheus.yml"
+      ],
+      "id": "QA-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "config/observability/prometheus.yml"
+      ],
+      "notes": "The live catalogue contains 339 postgres series and the deadlocks rule evaluates without error. Severity HIGH.",
+      "priority": 25,
+      "severity": "HIGH",
+      "source_evidence": [
+        "config/observability/prometheus.yml"
+      ],
+      "target_implementation": "The postgresql job now uses a scrape interval and a timeout that cover the exporter collection window.",
+      "technical_risk": "",
+      "title": "The postgres exporter published no series at all"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-08 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "harness",
+      "assigned_agent": "",
+      "business_risk": "The load runner read the wrong summary file and inverted the failure counter",
+      "concurrency_tests": [],
+      "current_implementation": "The runner looked for summary.json while k6 writes k6-summary.json, so no metric was ever read, and it read the fails member of the k6 rate metric, which counts the requests that did not fail, so a clean run was reported as a run with 18889 failures.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "id": "QA-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "notes": "The baseline run reports 27 failures out of 18916 requests and a check rate of 0.9986. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "target_implementation": "The runner reads the file k6 actually writes and maps the rate members to their real meaning.",
+      "technical_risk": "",
+      "title": "The load runner read the wrong summary file and inverted the failure counter"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-09 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "harness",
+      "assigned_agent": "",
+      "business_risk": "The load runner accepted a run in which every business operation failed",
+      "concurrency_tests": [],
+      "current_implementation": "The pass decision came from the k6 exit code alone, so a run that answered every request with an error still passed.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "id": "QA-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "notes": "The verdict is recorded with every run result. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "target_implementation": "The runner now fails a run that recorded no business request, that recorded no successful business operation, or whose business failure rate exceeds the profile limit.",
+      "technical_risk": "",
+      "title": "The load runner accepted a run in which every business operation failed"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-10 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "harness",
+      "assigned_agent": "",
+      "business_risk": "Three business invariants were vacuous or used enum values that do not exist",
+      "concurrency_tests": [],
+      "current_implementation": "INV-08 filtered on a reservation status that the enum does not contain, INV-07 excluded a payment status the enum does contain, and INV-06 asserted a uniqueness the schema never promised.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/invariants.py"
+      ],
+      "id": "QA-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/invariants.py"
+      ],
+      "notes": "All eight invariants execute real SQL and report a pass with zero violations against the live database. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/invariants.py"
+      ],
+      "target_implementation": "The invariants use the real enum values, assert a business rule the schema supports, and report the population they inspected.",
+      "technical_risk": "",
+      "title": "Three business invariants were vacuous or used enum values that do not exist"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-11 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "ci",
+      "assigned_agent": "",
+      "business_risk": "The telegram notification step reported success while delivering nothing",
+      "concurrency_tests": [],
+      "current_implementation": "A missing or malformed token made the script print that it was skipped and exit zero, so the continuous integration failure notification appeared to work while it delivered nothing.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "scripts/notify-telegram.sh"
+      ],
+      "id": "QA-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "scripts/notify-telegram.sh"
+      ],
+      "notes": "The script exits one when the credentials are absent. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "scripts/notify-telegram.sh"
+      ],
+      "target_implementation": "The script now fails when it was asked to deliver and could not, and the workflow also notifies on a cancelled run.",
+      "technical_risk": "",
+      "title": "The telegram notification step reported success while delivering nothing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-12 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "kubernetes",
+      "assigned_agent": "",
+      "business_risk": "The kubernetes manifests declared no startup probe, no pod security context and no disruption budget",
+      "concurrency_tests": [],
+      "current_implementation": "A container that cannot serve within the liveness delay is restarted in a loop and a voluntary disruption can evict every replica of a service at once.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "k8s/workload-protection.yaml"
+      ],
+      "id": "QA-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "k8s/workload-protection.yaml"
+      ],
+      "notes": "kubeconform validates all 53 resources and the harness reports 13 of 13 kubernetes checks as a pass. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "k8s/microservices.yaml"
+      ],
+      "target_implementation": "Every workload now declares a startup probe, a pod security context, a container security context that drops all capabilities and a pod disruption budget.",
+      "technical_risk": "",
+      "title": "The kubernetes manifests declared no startup probe, no pod security context and no disruption budget"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-13 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The stripe harness certified a placeholder credential",
+      "concurrency_tests": [],
+      "current_implementation": "The key classification accepted every string with the test prefix and the webhook check performed a local signature round trip with any configured secret and reported a pass.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/tests/test_stripe.py"
+      ],
+      "id": "QA-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/tests/test_stripe.py"
+      ],
+      "notes": "The harness reports the webhook check as blocked with the placeholder secret and the key as a placeholder. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/stripe/sandbox.py"
+      ],
+      "target_implementation": "The key classification requires the real secret key shape and reports a placeholder separately, and the webhook check refuses to certify a placeholder secret.",
+      "technical_risk": "",
+      "title": "The stripe harness certified a placeholder credential"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-14 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "outbox",
+      "assigned_agent": "",
+      "business_risk": "The outbox claim dropped the per aggregate order across relay instances",
+      "concurrency_tests": [
+        "product-service/src/test/java/com/shop/productservice/outbox/ProductOutboxAggregateOrderIT.java"
+      ],
+      "current_implementation": "The batch claim let a second instance take the events after the row another instance held, so two events of one aggregate could reach the broker out of order.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "product-service/src/test/java/com/shop/productservice/outbox/ProductOutboxAggregateOrderIT.java"
+      ],
+      "id": "QA-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "product-service/src/test/java/com/shop/productservice/outbox/ProductOutboxAggregateOrderIT.java"
+      ],
+      "notes": "The new ordering test blocks one relay inside the publish of an aggregate first event and proves the peer cannot publish the successor first. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java"
+      ],
+      "target_implementation": "Each relay now claims per aggregate under a transaction scoped advisory lock and refuses an aggregate that still has an event in flight, and the guarantee is written down in docs/OUTBOX-RELAY-CONTRACT.md.",
+      "technical_risk": "",
+      "title": "The outbox claim dropped the per aggregate order across relay instances"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-15 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "outbox",
+      "assigned_agent": "",
+      "business_risk": "A sending row without a claim timestamp was stranded forever",
+      "concurrency_tests": [],
+      "current_implementation": "The reclaim predicate matched only a claim timestamp older than the cutoff, so a sending row whose timestamp was null satisfied neither branch and was never re-armed.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "product-service/src/test/java/com/shop/productservice/outbox/OutboxRelayRecoveryIT.java"
+      ],
+      "id": "QA-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "product-service/src/test/java/com/shop/productservice/outbox/OutboxRelayRecoveryIT.java"
+      ],
+      "notes": "Each module recovery test proves a sending row without a claim timestamp is recovered and published. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java"
+      ],
+      "target_implementation": "The reclaim predicate also re-arms a sending row whose claim timestamp is null, in all eight outbox modules.",
+      "technical_risk": "",
+      "title": "A sending row without a claim timestamp was stranded forever"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for QA-16 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "outbox",
+      "assigned_agent": "",
+      "business_risk": "The shutdown release could publish a kafka message twice",
+      "concurrency_tests": [],
+      "current_implementation": "The shutdown release handed every leased row back to pending, including rows that had already been published but not yet marked sent.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "docs/OUTBOX-RELAY-CONTRACT.md"
+      ],
+      "id": "QA-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "docs/OUTBOX-RELAY-CONTRACT.md"
+      ],
+      "notes": "The unit test and the repository test prove a published lease is never handed back. Severity MEDIUM.",
+      "priority": 45,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-kafka/src/main/java/com/shop/common/kafka/producer/OutboxPublishLedger.java"
+      ],
+      "target_implementation": "A publish ledger now separates published, in flight and never handed over leases, and the shutdown only returns the leases that were never handed to the publisher.",
+      "technical_risk": "",
+      "title": "The shutdown release could publish a kafka message twice"
+    }
+  ]
+}

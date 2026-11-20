@@ -45,6 +45,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
         data.put("taxAmount", order.getTaxAmount());
         data.put("discountAmount", order.getDiscountAmount());
         data.put("total", order.getTotal());
+        data.put("currency", order.getCurrency());
         if (order.getCouponCode() != null) {
             data.put("couponCode", order.getCouponCode());
         }
@@ -109,6 +110,7 @@ public class OrderEventPublisherImpl implements OrderEventPublisher {
         map.put("quantity", item.getQuantity());
         map.put("unitPrice", item.getUnitPrice());
         map.put("lineTotal", item.getLineTotal());
+        map.put("currency", item.getCurrency());
         return map;
     }
 }

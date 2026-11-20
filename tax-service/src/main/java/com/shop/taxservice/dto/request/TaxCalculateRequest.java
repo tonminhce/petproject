@@ -11,5 +11,6 @@ public record TaxCalculateRequest(
     @NotNull UUID taxClassId,
     @NotNull @Pattern(regexp = "^[A-Z]{2}$") String country,
     String postalCode,
-    @NotNull @DecimalMin("0.00") BigDecimal amount
+    @NotNull @DecimalMin("0.00") BigDecimal amount,
+    String currency
 ) {}

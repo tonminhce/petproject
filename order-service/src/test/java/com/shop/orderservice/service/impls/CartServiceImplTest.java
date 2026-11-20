@@ -44,7 +44,7 @@ class CartServiceImplTest {
     private final UUID cartItemId = UUID.randomUUID();
     private final UUID otherCartId = UUID.randomUUID();
     private final ProductSnapshot snapshot =
-        new ProductSnapshot(productId, "Widget", new BigDecimal("9.99"));
+        new ProductSnapshot(productId, "Widget", new BigDecimal("9.99"), "VND");
 
     private Cart cart;
 
@@ -54,7 +54,7 @@ class CartServiceImplTest {
     }
 
     private CartResponse emptyResponse() {
-        return new CartResponse(cartId, userId, List.of(), BigDecimal.ZERO, null, null);
+        return new CartResponse(cartId, userId, List.of(), BigDecimal.ZERO, "VND", null, null);
     }
 
 

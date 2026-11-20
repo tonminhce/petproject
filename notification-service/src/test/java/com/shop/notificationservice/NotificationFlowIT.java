@@ -207,7 +207,7 @@ class NotificationFlowIT extends AbstractIntegrationTest {
                 new BigDecimal("100.00"),
                 new BigDecimal("8.00"),
                 new BigDecimal("0.00"),
-                new BigDecimal("108.00"),
+                new BigDecimal("108.00"), "VND",
                 transitionedAt,
                 cancelledAt,
                 refunded,

@@ -1,5 +1,6 @@
 package com.shop.paymentservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.data.AbstractMappedEntity;
 import com.shop.paymentservice.constant.PaymentStatus;
 import jakarta.persistence.*;
@@ -59,6 +60,10 @@ public class Payment extends AbstractMappedEntity {
     @Column(name = "refunded_amount", nullable = false, precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal refundedAmount = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "refunded_currency", nullable = false, length = 3)
+    private String refundedCurrency = PlatformCurrency.DEFAULT;
 
     @Version
     @Column(name = "version")

@@ -69,6 +69,7 @@ public class IndexProvisioner implements ApplicationRunner {
         fields.put("slug", Property.of(p -> p.keyword(k -> k)));
         fields.put("imageUrl", Property.of(p -> p.keyword(k -> k.index(false))));
         fields.put("price", Property.of(p -> p.double_(d -> d)));
+        fields.put("currency", Property.of(p -> p.keyword(k -> k)));
         fields.put("avgRating", Property.of(p -> p.halfFloat(h -> h)));
         fields.put("ratingCount", Property.of(p -> p.integer(i -> i)));
         fields.put("status", Property.of(p -> p.keyword(k -> k)));

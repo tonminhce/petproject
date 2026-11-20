@@ -1,5 +1,6 @@
 package com.shop.productservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.data.AbstractMappedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -46,6 +47,10 @@ public class ProductVariant extends AbstractMappedEntity {
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Column(nullable = false)
     @Builder.Default

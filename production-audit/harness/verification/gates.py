@@ -91,7 +91,10 @@ def interpret_test_exit(exit_code: int, stdout: str) -> dict[str, Any]:
     skipped = 0
     import re
 
-    matches = re.findall(r"Tests run:\s*(\d+),\s*Failures:\s*(\d+),\s*Errors:\s*(\d+),\s*Skipped:\s*(\d+)", stdout)
+    matches = re.findall(
+        r"Tests run:\s*(\d+),\s*Failures:\s*(\d+),\s*Errors:\s*(\d+),\s*Skipped:\s*(\d+)(?![^\n]*-- in)",
+        stdout,
+    )
     for run, fail, err, skip in matches:
         tests_run += int(run)
         failures += int(fail)

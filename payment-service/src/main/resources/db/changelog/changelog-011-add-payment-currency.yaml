@@ -1,0 +1,21 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 011-add-payment-currency
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: payments
+            columns:
+              - column:
+                  name: refunded_currency
+                  type: varchar(3)
+                  defaultValue: 'VND'
+                  constraints:
+                    nullable: false
+
+        - sql:
+            sql: ALTER TABLE payments ADD CONSTRAINT ck_payments_currency CHECK (currency IN ('VND', 'USD'))
+
+        - sql:
+            sql: ALTER TABLE payments ADD CONSTRAINT ck_payments_refunded_currency CHECK (refunded_currency IN ('VND', 'USD'))

@@ -9,6 +9,7 @@
 #  `FileNotFoundException` for services that pulled `common-spring` without
 #  pulling those optional modules (see commit history).
 # =============================================================================
+com.shop.common.spring.autoconfigure.AudienceAutoConfiguration
 com.shop.common.spring.autoconfigure.I18nAutoConfiguration
 com.shop.common.spring.autoconfigure.WebAutoConfiguration
 com.shop.common.spring.autoconfigure.TracingAutoConfiguration

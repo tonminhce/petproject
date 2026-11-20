@@ -1,0 +1,149 @@
+{
+    "metrics": {
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 47.5435,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.026538878829787237
+        },
+        "business_checkout_latency_ms": {
+            "p(90)": 1240,
+            "p(95)": 1608,
+            "avg": 683.4065310492506,
+            "min": 10,
+            "med": 582,
+            "max": 5057
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 18800,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "iteration_duration": {
+            "avg": 689.4683192047055,
+            "min": 9.537041,
+            "med": 585.5374375,
+            "max": 5326.839294,
+            "p(90)": 1256.0737093,
+            "p(95)": 1624.7341384999995
+        },
+        "resolved_product_total": {
+            "count": 120,
+            "rate": 0.7057845441980897
+        },
+        "http_req_duration": {
+            "p(95)": 1603.4115381499994,
+            "avg": 679.9117213196296,
+            "min": 8.922625,
+            "med": 577.71725,
+            "max": 5057.168919,
+            "p(90)": 1234.7195715
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 679.9117213196296,
+            "min": 8.922625,
+            "med": 577.71725,
+            "max": 5057.168919,
+            "p(90)": 1234.7195715,
+            "p(95)": 1603.4115381499994
+        },
+        "http_req_blocked": {
+            "avg": 0.09412493063829896,
+            "min": 0.000625,
+            "med": 0.006875,
+            "max": 99.956917,
+            "p(90)": 0.022713100000000017,
+            "p(95)": 0.04250419999999993
+        },
+        "http_req_receiving": {
+            "p(95)": 63.15539584999997,
+            "avg": 13.65671668946813,
+            "min": 0.01275,
+            "med": 1.9076045,
+            "max": 699.909876,
+            "p(90)": 34.50711260000001
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 119
+        },
+        "data_sent": {
+            "rate": 172019.455388312,
+            "count": 29247360
+        },
+        "oversell_attempts_total": {
+            "count": 18680,
+            "rate": 109.86712738016928
+        },
+        "iterations": {
+            "count": 18680,
+            "rate": 109.86712738016928
+        },
+        "checks": {
+            "passes": 18680,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "http_reqs": {
+            "count": 18800,
+            "rate": 110.57291192436738
+        },
+        "http_req_waiting": {
+            "med": 565.2081459999999,
+            "max": 5056.714586,
+            "p(90)": 1214.4643379000001,
+            "p(95)": 1569.4867245499997,
+            "avg": 665.8647796248913,
+            "min": 8.796666
+        },
+        "http_req_sending": {
+            "min": 0.003208,
+            "med": 0.0416875,
+            "max": 252.9285,
+            "p(90)": 0.21336730000000015,
+            "p(95)": 0.47660479999999966,
+            "avg": 0.3902250052659548
+        },
+        "data_received": {
+            "count": 15663357,
+            "rate": 92124.62734047463
+        },
+        "vus_max": {
+            "value": 120,
+            "min": 120,
+            "max": 120
+        }
+    },
+    "root_group": {
+        "checks": {
+            "checkout returns an accepted or conflict status": {
+                "passes": 18680,
+                "fails": 0,
+                "name": "checkout returns an accepted or conflict status",
+                "path": "::checkout returns an accepted or conflict status",
+                "id": "840aecf6aa0ecb275a281bf30e8637e4"
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

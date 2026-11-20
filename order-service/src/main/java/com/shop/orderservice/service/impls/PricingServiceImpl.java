@@ -1,5 +1,6 @@
 package com.shop.orderservice.service.impls;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.orderservice.client.ProductServiceClient;
@@ -74,6 +75,7 @@ public class PricingServiceImpl implements PricingService {
 
         Map<UUID, ProductSnapshot> snapshots = new HashMap<>();
         BigDecimal subtotal = BigDecimal.ZERO;
+        String currency = null;
         for (CartItem item : items) {
             ProductSnapshot snapshot;
             try {
@@ -84,33 +86,50 @@ public class PricingServiceImpl implements PricingService {
                 throw new IllegalStateException("Failed to fetch product snapshot for " + item.getProductId(), cause);
             }
             snapshots.put(item.getProductId(), snapshot);
+            String snapshotCurrency = resolveCurrency(snapshot);
+            if (currency == null) {
+                currency = snapshotCurrency;
+            } else if (!currency.equals(snapshotCurrency)) {
+                throw BusinessException.of(ErrorCode.ORDER_PRICING_CURRENCY_MISMATCH, currency, snapshotCurrency);
+            }
             BigDecimal lineTotal = snapshot.unitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             subtotal = subtotal.add(lineTotal);
+        }
+        if (currency == null) {
+            currency = PlatformCurrency.DEFAULT;
         }
 
         UUID promotionReservationId = null;
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (couponCode != null && !couponCode.isBlank()) {
             var promoResp = promotionClient.reserve(
-                new PromotionReserveRequest(couponCode, subtotal, userId, orderId)
+                new PromotionReserveRequest(couponCode, subtotal, currency, userId, orderId)
             );
             promotionReservationId = promoResp.reservationId();
             discountAmount = promoResp.discountAmount();
         }
 
         BigDecimal taxableAmount = subtotal.subtract(discountAmount);
-        var taxResp = calculateTaxSafely(taxableAmount, promotionReservationId);
+        var taxResp = calculateTaxSafely(taxableAmount, currency, promotionReservationId);
         BigDecimal taxAmount = taxResp.taxAmount();
 
         BigDecimal total = taxableAmount.add(taxAmount);
 
-        return new PricingBreakdown(subtotal, taxAmount, discountAmount, total, snapshots, promotionReservationId);
+        return new PricingBreakdown(subtotal, taxAmount, discountAmount, total, currency, snapshots, promotionReservationId);
     }
 
-    private TaxCalculateResponse calculateTaxSafely(BigDecimal taxableAmount, UUID promotionReservationId) {
+    private String resolveCurrency(ProductSnapshot snapshot) {
+        String currency = snapshot.currency();
+        if (currency == null || currency.isBlank()) {
+            return PlatformCurrency.DEFAULT;
+        }
+        return PlatformCurrency.normalize(currency);
+    }
+
+    private TaxCalculateResponse calculateTaxSafely(BigDecimal taxableAmount, String currency, UUID promotionReservationId) {
         try {
             return taxClient.calculate(
-                new TaxCalculateRequest(null, null, null, taxableAmount)
+                new TaxCalculateRequest(null, null, null, taxableAmount, currency)
             );
         } catch (RuntimeException ex) {
             if (promotionReservationId != null) {

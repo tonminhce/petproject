@@ -81,7 +81,7 @@ class TaxCatalogIT extends AbstractIntegrationTest {
         taxClassService.delete(taxClass.id());
 
         assertThatThrownBy(() -> taxCalculationService.calculate(
-            new TaxCalculateRequest(taxClass.id(), "DE", null, new BigDecimal("100.00"))))
+            new TaxCalculateRequest(taxClass.id(), "DE", null, new BigDecimal("100.00"), "VND")))
             .isInstanceOfSatisfying(BusinessException.class, ex ->
                 assertThat(ex.getErrorCode()).isEqualTo("TAX-8001"));
     }

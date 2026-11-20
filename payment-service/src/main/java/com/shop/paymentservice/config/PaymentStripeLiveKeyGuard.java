@@ -10,6 +10,7 @@ import java.util.Locale;
 public class PaymentStripeLiveKeyGuard {
 
     private static final String LIVE_KEY_PREFIX = "sk_live_";
+    private static final String RESTRICTED_LIVE_KEY_PREFIX = "rk_live_";
 
     private final PaymentStripeProperties stripeProperties;
     private final boolean allowLiveKeys;
@@ -28,7 +29,7 @@ public class PaymentStripeLiveKeyGuard {
             return;
         }
         String normalized = secretKey.trim().toLowerCase(Locale.ROOT);
-        if (!normalized.startsWith(LIVE_KEY_PREFIX)) {
+        if (!normalized.startsWith(LIVE_KEY_PREFIX) && !normalized.startsWith(RESTRICTED_LIVE_KEY_PREFIX)) {
             return;
         }
         if (allowLiveKeys) {

@@ -11,6 +11,7 @@ public record ProductSearchResponse(
     String slug,
     String imageUrl,
     BigDecimal price,
+    String currency,
     BigDecimal avgRating,
     Integer ratingCount
 ) {

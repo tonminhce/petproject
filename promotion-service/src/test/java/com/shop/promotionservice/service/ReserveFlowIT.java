@@ -72,7 +72,7 @@ class ReserveFlowIT extends AbstractIntegrationTest {
     }
 
     private ReserveRequest request(UUID userId, String orderAmount) {
-        return new ReserveRequest(userId, UUID.randomUUID(), new BigDecimal(orderAmount));
+        return new ReserveRequest(userId, UUID.randomUUID(), new BigDecimal(orderAmount), "VND");
     }
 
     private CouponUsageReservation seedReservation(UUID campaignId, UUID userId, UsageStatus status,

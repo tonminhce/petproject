@@ -1,0 +1,148 @@
+{
+    "metrics": {
+        "vus_max": {
+            "min": 10,
+            "max": 10,
+            "value": 10
+        },
+        "http_req_tls_handshaking": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0
+        },
+        "http_req_waiting": {
+            "p(90)": 26.901396000000002,
+            "p(95)": 37.424384999999994,
+            "avg": 13.54378368066593,
+            "min": 1.978583,
+            "med": 9.090896,
+            "max": 721.73825
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 10
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 13.81171035471057,
+            "min": 2.029042,
+            "med": 9.2874795,
+            "max": 725.122667,
+            "p(90)": 27.46629200000001,
+            "p(95)": 38.173437749999984
+        },
+        "data_sent": {
+            "count": 7225842,
+            "rate": 65578.15376416103
+        },
+        "iterations": {
+            "rate": 23.941178014943695,
+            "count": 2638
+        },
+        "http_reqs": {
+            "count": 5286,
+            "rate": 47.973111064060795
+        },
+        "business_success_total": {
+            "rate": 47.88235602988739,
+            "count": 5276
+        },
+        "http_req_sending": {
+            "p(95)": 0.0680942499999999,
+            "avg": 0.0358395183503595,
+            "min": 0.002833,
+            "med": 0.017125,
+            "max": 7.5235,
+            "p(90)": 0.045604000000000006
+        },
+        "checks": {
+            "passes": 5276,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "http_req_failed": {
+            "fails": 5286,
+            "passes": 0,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_blocked": {
+            "avg": 0.01135676541808545,
+            "min": 0.000625,
+            "med": 0.004292,
+            "max": 4.710375,
+            "p(90)": 0.012875,
+            "p(95)": 0.01895875
+        },
+        "resolved_product_total": {
+            "count": 10,
+            "rate": 0.09075503417340294
+        },
+        "http_req_receiving": {
+            "p(90)": 0.3699585000000001,
+            "p(95)": 0.6231774999999995,
+            "avg": 0.2320871556942866,
+            "min": 0.010791,
+            "med": 0.097417,
+            "max": 48.847458
+        },
+        "data_received": {
+            "count": 12924290,
+            "rate": 117294.43806169699
+        },
+        "http_req_duration": {
+            "avg": 13.81171035471057,
+            "min": 2.029042,
+            "med": 9.2874795,
+            "max": 725.122667,
+            "p(90)": 27.46629200000001,
+            "p(95)": 38.173437749999984
+        },
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 2.193125,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.0013684023836549378
+        },
+        "iteration_duration": {
+            "p(95)": 276.2101938,
+            "avg": 229.66372931122083,
+            "min": 205.525459,
+            "med": 221.569167,
+            "max": 987.990333,
+            "p(90)": 253.282092
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "catalog returns 200": {
+                "id": "c52c153c79a7b882f6216c456d8374cd",
+                "passes": 2638,
+                "fails": 0,
+                "name": "catalog returns 200",
+                "path": "::catalog returns 200"
+            },
+            "product detail returns 200": {
+                "id": "9daad55a5a84fd2a0364a6f709fad9e2",
+                "passes": 2638,
+                "fails": 0,
+                "name": "product detail returns 200",
+                "path": "::product detail returns 200"
+            }
+        }
+    }
+}

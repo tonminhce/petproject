@@ -9,6 +9,8 @@ from typing import Any
 
 from .. import config
 from ..persistence.store import read_json, utc_now, write_json
+from .postman_environment import write_postman_environment
+from .readiness import wait_for_healthy
 from ..verification.gates import run_command
 
 REQUIRED_COMPONENTS = {
@@ -275,6 +277,31 @@ def e2e_run(scope: str = "all", root: Path | None = None, run_id: str | None = N
         write_json(log_dir / f"run-{scope}.json", document)
         return document
 
+    readiness = wait_for_healthy()
+    if readiness.get("status") != "READY":
+        document = {
+            "generated_at": utc_now(),
+            "state": "BLOCKED",
+            "scope": scope,
+            "reason": "the compose stack did not report every service healthy, so the collection would measure a booting environment",
+            "readiness": readiness,
+        }
+        write_json(log_dir / f"run-{scope}.json", document)
+        return document
+
+    environment_path, environment_document = write_postman_environment(log_dir)
+    missing_credentials = environment_document.get("missing_credentials", [])
+    if missing_credentials:
+        document = {
+            "generated_at": utc_now(),
+            "state": "BLOCKED",
+            "scope": scope,
+            "reason": "the collection needs credentials that the local environment does not provide, so the run would only measure a rejected login",
+            "missing_credentials": missing_credentials,
+        }
+        write_json(log_dir / f"run-{scope}.json", document)
+        return document
+
     newman = shutil.which("newman")
     collections = discover_collections(repository)
     if newman is None:
@@ -308,7 +335,7 @@ def e2e_run(scope: str = "all", root: Path | None = None, run_id: str | None = N
                 }
             )
             continue
-        command = [newman, "run", str(collection), "--reporters", "cli,json", "--reporter-json-export", str(log_dir / f"{collection.stem}.{scope}.json")]
+        command = [newman, "run", str(collection), "--environment", str(environment_path), "--reporters", "cli,json", "--reporter-json-export", str(log_dir / f"{collection.stem}.{scope}.json")]
         for folder in selected:
             command.extend(["--folder", folder])
         command.extend(extra_arguments or [])
@@ -324,10 +351,23 @@ def e2e_run(scope: str = "all", root: Path | None = None, run_id: str | None = N
             }
         )
 
+    executed = [entry for entry in results if entry["status"] != "SKIPPED"]
+    if not executed:
+        state = "NO_SCOPE"
+        reason = "no collection in this repository contains a folder for the requested scope, so the run executed nothing"
+    elif all(entry["exit_code"] == 0 for entry in executed):
+        state = "COMPLETED"
+        reason = "every collection that owns a folder for this scope passed"
+    else:
+        state = "FAILED"
+        reason = "at least one collection that owns a folder for this scope failed"
+
     document = {
         "generated_at": utc_now(),
-        "state": "COMPLETED" if all(entry["exit_code"] == 0 for entry in results) else "FAILED",
+        "state": state,
+        "reason": reason,
         "scope": scope,
+        "executed_collections": len(executed),
         "collections": results,
         "scenario_inventory": collect_scenarios(collections),
     }
@@ -342,9 +382,14 @@ def e2e_report(run_id: str | None = None) -> dict[str, Any]:
     for path in sorted(log_dir.glob("*.json")) if log_dir.exists() else []:
         document = read_json(path, {}) or {}
         entries.append({"file": path.name, "state": document.get("state", "UNKNOWN"), "document": document})
+    completed = [entry for entry in entries if entry.get("state") == "COMPLETED"]
     return {
         "generated_at": utc_now(),
         "run_id": identifier,
         "artifacts": entries,
-        "e2e_verified": any(entry.get("state") == "COMPLETED" for entry in entries),
+        "e2e_verified": bool(completed),
+        "verified_scopes": [entry["document"].get("scope") for entry in completed],
+        "executed_collections": sum(
+            int(entry.get("document", {}).get("executed_collections", 0) or 0) for entry in completed
+        ),
     }

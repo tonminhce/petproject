@@ -24,6 +24,24 @@ class AudienceBoundaryTest {
             .withConfiguration(AutoConfigurations.of(AudienceAutoConfiguration.class));
 
     @Test
+    @DisplayName("the audience auto configuration is registered for discovery")
+    void theAudienceAutoConfigurationIsRegisteredForDiscovery() throws Exception {
+        var imports = getClass().getClassLoader()
+                .getResourceAsStream("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
+        assertThat(imports)
+                .as("the auto configuration imports file must be on the classpath")
+                .isNotNull();
+        String registered;
+        try (imports) {
+            registered = new String(imports.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+
+        assertThat(registered)
+                .as("the audience boundary must be discovered by the spring boot auto configuration import")
+                .contains("com.shop.common.spring.autoconfigure.AudienceAutoConfiguration");
+    }
+
+    @Test
     @DisplayName("the per-service audience is published for the security validator chain")
     void thePerServiceAudienceIsPublishedForTheSecurityValidatorChain() {
         runner.withPropertyValues(

@@ -70,7 +70,7 @@ class OrderReturnControllerTest {
     void requestReturn_success() throws Exception {
         OrderReturnResponse response = new OrderReturnResponse(
                 returnId, orderId, userId, "Damaged", "Broken item",
-                ReturnStatus.REQUESTED, BigDecimal.valueOf(50), null, null, null, Instant.now());
+                ReturnStatus.REQUESTED, BigDecimal.valueOf(50), "VND", null, null, null, Instant.now());
 
         when(orderReturnService.requestReturn(eq(userId), eq(orderId), any(OrderReturnCreateRequest.class)))
                 .thenReturn(response);
@@ -95,7 +95,7 @@ class OrderReturnControllerTest {
     void findByOrderId_returnsList() throws Exception {
         OrderReturnResponse response = new OrderReturnResponse(
                 returnId, orderId, userId, "Damaged", "Broken item",
-                ReturnStatus.REQUESTED, BigDecimal.valueOf(50), null, null, null, Instant.now());
+                ReturnStatus.REQUESTED, BigDecimal.valueOf(50), "VND", null, null, null, Instant.now());
 
         when(orderReturnService.findByOrderId(userId, orderId)).thenReturn(List.of(response));
 
@@ -108,7 +108,7 @@ class OrderReturnControllerTest {
     void findMyReturns_returnsPagedList() throws Exception {
         OrderReturnResponse response = new OrderReturnResponse(
                 returnId, orderId, userId, "Damaged", "Broken item",
-                ReturnStatus.REQUESTED, BigDecimal.valueOf(50), null, null, null, Instant.now());
+                ReturnStatus.REQUESTED, BigDecimal.valueOf(50), "VND", null, null, null, Instant.now());
 
         when(orderReturnService.findMyReturns(eq(userId), any()))
                 .thenReturn(PageResponse.of(List.of(response), 0, 10, 1));

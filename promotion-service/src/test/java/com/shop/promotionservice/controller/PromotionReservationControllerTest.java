@@ -56,20 +56,20 @@ class PromotionReservationControllerTest {
     private ReservationResponse sampleResponse() {
         return new ReservationResponse(
             reservationId, campaignId, "SUMMER10",
-            new BigDecimal("10.00"), new BigDecimal("90.00"),
+            new BigDecimal("10.00"), new BigDecimal("90.00"), "VND",
             "PENDING", Instant.now().plusSeconds(900));
     }
 
     private String reserveBody() {
         return """
-            {"userId": "%s", "orderId": "%s", "orderAmount": 100.00}
+            {"userId": "%s", "orderId": "%s", "orderAmount": 100.00, "currency": "VND"}
             """.formatted(userId, reservationId);
     }
 
     @Test
     void reserve_serviceRole_returnsCreatedWithReservation() throws Exception {
         when(reservationService.reserveWithRetry("SUMMER10",
-                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"))))
+                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"), "VND")))
             .thenReturn(sampleResponse());
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")
@@ -90,7 +90,7 @@ class PromotionReservationControllerTest {
     @Test
     void reserve_adminRole_returnsCreated() throws Exception {
         when(reservationService.reserveWithRetry("SUMMER10",
-                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"))))
+                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"), "VND")))
             .thenReturn(sampleResponse());
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")
@@ -198,7 +198,7 @@ class PromotionReservationControllerTest {
     @Test
     void reserve_perUserLimitExceeded_returns409WithPro7006() throws Exception {
         when(reservationService.reserveWithRetry("SUMMER10",
-                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"))))
+                new ReserveRequest(userId, reservationId, new BigDecimal("100.00"), "VND")))
             .thenThrow(BusinessException.of(ErrorCode.PER_USER_LIMIT_EXCEEDED, 3L));
 
         mockMvc.perform(post("/api/v1/promotions/{code}/reserve", "SUMMER10")

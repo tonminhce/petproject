@@ -1,11 +1,13 @@
 package com.shop.productservice.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
+@JsonIgnoreProperties("currency")
 public record ProductVariantUpdateRequest(
     @Size(max = 50)
     String sku,

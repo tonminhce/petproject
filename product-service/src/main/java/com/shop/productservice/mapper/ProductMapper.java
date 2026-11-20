@@ -1,6 +1,7 @@
 package com.shop.productservice.mapper;
 
 import com.shop.common.core.constants.ApiPaths;
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.productservice.dto.request.ProductCreateRequest;
 import com.shop.productservice.dto.request.ProductUpdateRequest;
 import com.shop.productservice.dto.response.ProductDetailResponse;
@@ -27,6 +28,7 @@ public class ProductMapper {
             product.getSlug(),
             product.getSku(),
             product.getPriceUnit(),
+            product.getCurrency(),
             product.getQuantity(),
             product.getStatus(),
             resolveImage(product),
@@ -48,6 +50,7 @@ public class ProductMapper {
             product.getDescription(),
             product.getSku(),
             product.getPriceUnit(),
+            product.getCurrency(),
             product.getQuantity(),
             product.getStatus(),
             resolveImage(product),
@@ -68,6 +71,7 @@ public class ProductMapper {
     public Product toEntity(ProductCreateRequest request) {
         Product p = modelMapper.map(request, Product.class);
         p.setId(null);
+        p.setCurrency(PlatformCurrency.DEFAULT);
         return p;
     }
 

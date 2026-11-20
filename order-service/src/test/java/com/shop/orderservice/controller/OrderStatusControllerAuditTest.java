@@ -55,7 +55,7 @@ class OrderStatusControllerAuditTest {
         when(orderService.shipOrder(orderId))
             .thenReturn(new OrderResponse(orderId,
                 UUID.fromString("00000000-0000-0000-0000-00000000f002"),
-                OrderStatus.SHIPPED, List.of(), null, null, null, null,
+                OrderStatus.SHIPPED, List.of(), null, null, null, null, "VND",
                 null, null, null, null, null, null));
 
         mockMvc.perform(post("/api/v1/orders/{orderId}/ship", orderId)
@@ -84,7 +84,7 @@ class OrderStatusControllerAuditTest {
         when(orderService.deliverOrder(orderId))
             .thenReturn(new OrderResponse(orderId,
                 UUID.fromString("00000000-0000-0000-0000-00000000f002"),
-                OrderStatus.DELIVERED, List.of(), null, null, null, null,
+                OrderStatus.DELIVERED, List.of(), null, null, null, null, "VND",
                 null, null, null, null, null, null));
 
         mockMvc.perform(post("/api/v1/orders/{orderId}/deliver", orderId)
@@ -110,7 +110,7 @@ class OrderStatusControllerAuditTest {
         when(orderService.confirmOrder(orderId, "service:fulfillment-service", null))
             .thenReturn(new OrderResponse(orderId,
                 UUID.fromString("00000000-0000-0000-0000-00000000f002"),
-                OrderStatus.CONFIRMED, List.of(), null, null, null, null,
+                OrderStatus.CONFIRMED, List.of(), null, null, null, null, "VND",
                 null, null, null, null, null, null));
 
         mockMvc.perform(post("/api/v1/orders/{orderId}/confirm", orderId)

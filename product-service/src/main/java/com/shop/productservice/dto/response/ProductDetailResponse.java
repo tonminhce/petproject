@@ -13,6 +13,7 @@ public record ProductDetailResponse(
     String description,
     String sku,
     BigDecimal priceUnit,
+    String currency,
     Integer quantity,
     ProductStatus status,
     String imageUrl,

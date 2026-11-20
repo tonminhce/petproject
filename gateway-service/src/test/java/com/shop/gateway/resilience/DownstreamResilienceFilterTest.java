@@ -107,6 +107,37 @@ class DownstreamResilienceFilterTest {
     }
 
     @Test
+    void aBulkheadRejectionDoesNotConsumeAHalfOpenProbe() throws Exception {
+        var breaker = breakerProperties();
+        var registry = breakerRegistry(breaker);
+        var filter = filter(breaker, bulkheadProperties(1), registry, bulkheadRegistry(bulkheadProperties(1)));
+        when(chain.filter(any())).thenReturn(Mono.error(new IllegalStateException("downstream down")));
+        for (int i = 0; i < 4; i++) {
+            filter.filter(exchange(), chain).onErrorResume(error -> Mono.empty()).block();
+        }
+        assertThat(registry.circuitBreaker(DownstreamResilienceFilter.UNROUTED_BUCKET).getState())
+                .isEqualTo(CircuitBreaker.State.OPEN);
+
+        Thread.sleep(300);
+        var inFlight = Sinks.<Void>empty();
+        when(chain.filter(any())).thenReturn(inFlight.asMono());
+        filter.filter(exchange(), chain).subscribe();
+
+        for (int i = 0; i < 10; i++) {
+            var rejected = exchange();
+            filter.filter(rejected, chain).block();
+            assertThat(rejected.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        }
+
+        assertThat(registry.circuitBreaker(DownstreamResilienceFilter.UNROUTED_BUCKET).getState())
+                .isEqualTo(CircuitBreaker.State.HALF_OPEN);
+        assertThat(registry.circuitBreaker(DownstreamResilienceFilter.UNROUTED_BUCKET)
+                .getMetrics().getNumberOfNotPermittedCalls()).isEqualTo(0);
+
+        inFlight.tryEmitEmpty();
+    }
+
+    @Test
     void theBulkheadRejectsTheExcessConcurrencyWithABoundedResponse() throws Exception {
         var breaker = breakerProperties();
         var filter = filter(breaker, bulkheadProperties(1), breakerRegistry(breaker), bulkheadRegistry(bulkheadProperties(1)));

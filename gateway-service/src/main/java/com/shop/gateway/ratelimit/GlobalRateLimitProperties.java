@@ -21,5 +21,11 @@ public record GlobalRateLimitProperties(
         if (burstCapacity < requestedTokens) {
             throw new IllegalArgumentException("burstCapacity must be >= requestedTokens");
         }
+        if (enabled && lanes > 1 && fairShareClients <= lanes) {
+            throw new IllegalArgumentException(
+                    "gateway.rate-limit.global.fair-share-clients must be greater than the number of lanes, "
+                            + "otherwise one client can consume the whole lane bucket and starve the clients "
+                            + "that share that lane");
+        }
     }
 }

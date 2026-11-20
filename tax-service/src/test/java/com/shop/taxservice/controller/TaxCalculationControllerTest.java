@@ -52,19 +52,19 @@ class TaxCalculationControllerTest {
     private final UUID taxClassId = UUID.fromString("00000000-0000-0000-0000-00000000a001");
 
     private TaxCalculateRequest request() {
-        return new TaxCalculateRequest(taxClassId, "DE", "10115", new BigDecimal("100.00"));
+        return new TaxCalculateRequest(taxClassId, "DE", "10115", new BigDecimal("100.00"), "VND");
     }
 
     private String calculateBody() {
         return """
-            {"taxClassId": "%s", "country": "DE", "postalCode": "10115", "amount": 100.00}
+            {"taxClassId": "%s", "country": "DE", "postalCode": "10115", "amount": 100.00, "currency": "VND"}
             """.formatted(taxClassId);
     }
 
     @Test
     void calculate_serviceRole_returns200WithPinnedFields() throws Exception {
         when(taxCalculationService.calculate(request()))
-            .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
+            .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00"), "VND"));
 
         mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("service-client").claim("azp", "order-service"))
@@ -80,7 +80,7 @@ class TaxCalculationControllerTest {
     @Test
     void calculate_adminRole_returns200() throws Exception {
         when(taxCalculationService.calculate(request()))
-            .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00")));
+            .thenReturn(new TaxCalculateResponse(new BigDecimal("19.00"), new BigDecimal("19.00"), "VND"));
 
         mockMvc.perform(post("/api/v1/tax/calculate")
                 .with(jwt().jwt(j -> j.subject("admin"))

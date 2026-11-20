@@ -109,6 +109,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "The root pom declares elasticsearch-client.version 9.4.5 and the compose server image is docker.elastic.co/elasticsearch/elasticsearch:9.4.5, so the client and the server are on the same major version.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "CAT-02",
@@ -125,14 +149,15 @@
         "pom.xml:206-207",
         "config/ElasticsearchConfig.java:28-48"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Elasticsearch client dependency drift",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "The root pom declares elasticsearch-client.version 9.4.5 and the compose server image is docker.elastic.co/elasticsearch/elasticsearch:9.4.5, so the client and the server are on the same major version."
       ]
     },
     "CAT-03": {
@@ -307,7 +332,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "docker-compose.yml line 111 pins docker.elastic.co/elasticsearch/elasticsearch:9.4.5, which matches the 9.4.5 Java client, so the refused 8.15 to 9.4.5 direct upgrade no longer applies.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "CAT-06",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -320,12 +382,14 @@
         "docker-compose.yml",
         "config/observability/prometheus.yml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The compose Elasticsearch server was pinned to 8.15.0 while the managed Java client is 9.4.5, and Elasticsearch refuses a direct 8.15 to 9.4.5 upgrade",
-      "updated_at": "2026-11-19T17:54:50Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "docker-compose.yml line 111 pins docker.elastic.co/elasticsearch/elasticsearch:9.4.5, which matches the 9.4.5 Java client, so the refused 8.15 to 9.4.5 direct upgrade no longer applies."
+      ]
     },
     "CAT-07": {
       "acceptance_criteria": [
@@ -1652,6 +1716,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "gateway-service now ships FleetRateLimitBudget, RedisFleetRateLimiter and GlobalRateLimitFilter. The budget partitions the fleet cap over lanes and divides the per replica rate by the declared replica count, so the cap scales with the fleet and no client can consume another client's share.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "GW-04",
@@ -1667,14 +1755,15 @@
         "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitProperties.java:16-17",
         "k8s/gateway-service.yaml:10"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The \"global\" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "gateway-service now ships FleetRateLimitBudget, RedisFleetRateLimiter and GlobalRateLimitFilter. The budget partitions the fleet cap over lanes and divides the per replica rate by the declared replica count, so the cap scales with the fleet and no client can consume another client's share."
       ]
     },
     "GW-05": {
@@ -3035,7 +3124,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "Every workload in k8s/microservices.yaml, k8s/gateway-service.yaml and k8s/debezium-cdc.yaml declares a startupProbe. kubeconform validated 53 resources with no error.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "K8S-21",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -3048,12 +3174,14 @@
         "k8s/microservices.yaml",
         "k8s/gateway-service.yaml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "No startup probe on any kubernetes workload",
-      "updated_at": "2026-11-19T16:25:48Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "Every workload in k8s/microservices.yaml, k8s/gateway-service.yaml and k8s/debezium-cdc.yaml declares a startupProbe. kubeconform validated 53 resources with no error."
+      ]
     },
     "K8S-22": {
       "acceptance_criteria": [],
@@ -3069,7 +3197,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "Every workload declares a pod securityContext with runAsNonRoot and a seccomp profile and a container securityContext that drops all capabilities. The harness kubernetes validation reports 13 of 13 checks as a pass.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "K8S-22",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -3082,12 +3247,14 @@
         "k8s/microservices.yaml",
         "k8s/gateway-service.yaml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "No container or pod security context on any kubernetes workload",
-      "updated_at": "2026-11-19T16:25:48Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "Every workload declares a pod securityContext with runAsNonRoot and a seccomp profile and a container securityContext that drops all capabilities. The harness kubernetes validation reports 13 of 13 checks as a pass."
+      ]
     },
     "K8S-23": {
       "acceptance_criteria": [],
@@ -3103,7 +3270,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "k8s/workload-protection.yaml declares 15 PodDisruptionBudget resources covering the multi replica deployments.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "K8S-23",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -3116,12 +3320,14 @@
         "k8s/microservices.yaml",
         "k8s/gateway-service.yaml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "No pod disruption budget protects the multi replica deployments",
-      "updated_at": "2026-11-19T16:25:48Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "k8s/workload-protection.yaml declares 15 PodDisruptionBudget resources covering the multi replica deployments."
+      ]
     },
     "K8S-24": {
       "acceptance_criteria": [],
@@ -3218,6 +3424,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "product, inventory, media, promotion, rating and payment outbox repositories claim per aggregate with pg_try_advisory_xact_lock and a not exists in flight guard, so a second replica publishes instead of standing idle. The module ordering tests pass in the reactor build.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "KAF-01",
@@ -3242,14 +3472,15 @@
         "ProductOutboxClaimConcurrencyIT.java:39",
         "InventoryOutboxClaimConcurrencyTest.java:121"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "6 of 8 outbox relays serialise: a second replica publishes nothing",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "product, inventory, media, promotion, rating and payment outbox repositories claim per aggregate with pg_try_advisory_xact_lock and a not exists in flight guard, so a second replica publishes instead of standing idle. The module ordering tests pass in the reactor build."
       ]
     },
     "KAF-02": {
@@ -3280,6 +3511,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "payment-service migrated to the same fleet claim with its own Liquibase changeset changelog-010-payment-outbox-claim-lease-owner.yaml, and PaymentOutboxAggregateOrderIT passes.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "KAF-02",
@@ -3303,14 +3558,15 @@
         "utils/common-kafka/.../producer/OutboxBatchOrdering.java:12-14",
         "OutboxBatchOrdering.java:17-20"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "payment-service relay has no per-aggregate ordering barrier",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "payment-service migrated to the same fleet claim with its own Liquibase changeset changelog-010-payment-outbox-claim-lease-owner.yaml, and PaymentOutboxAggregateOrderIT passes."
       ]
     },
     "KAF-03": {
@@ -4287,7 +4543,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "config/observability/prometheus.yml scrapes the services and forwards to alertmanager, config/observability/alertmanager/alertmanager.yml.template routes the runtime severities to the Telegram receivers and config/observability/alertmanager/rules/runtime-alerts.yml holds the 18 rules. amtool validates the rendered configuration.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "OBS-01",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4302,12 +4595,14 @@
         "config/observability/prometheus.yml",
         "production-audit/harness/alerts/validation.py"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Implement the Prometheus to Alertmanager to Telegram runtime alert pipeline",
-      "updated_at": "2026-11-19T16:25:47Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "config/observability/prometheus.yml scrapes the services and forwards to alertmanager, config/observability/alertmanager/alertmanager.yml.template routes the runtime severities to the Telegram receivers and config/observability/alertmanager/rules/runtime-alerts.yml holds the 18 rules. amtool validates the rendered configuration."
+      ]
     },
     "OBS-02": {
       "acceptance_criteria": [],
@@ -4323,7 +4618,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": ".github/workflows/ci.yml has the notify-telegram job with the if condition failure or cancelled and it calls scripts/notify-telegram.sh.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "OBS-02",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4336,12 +4668,14 @@
         ".github/workflows/ci.yml",
         "scripts/notify-telegram.sh"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Add the CI Telegram notification workflow with failure grouping and secret isolation",
-      "updated_at": "2026-11-19T16:25:48Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        ".github/workflows/ci.yml has the notify-telegram job with the if condition failure or cancelled and it calls scripts/notify-telegram.sh."
+      ]
     },
     "OBS-03": {
       "acceptance_criteria": [],
@@ -4357,7 +4691,14 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:51:08Z",
+          "evidence": "No Telegram bot token and no chat identifier are configured in this environment, so the real delivery path for both the continuous integration route and the runtime route cannot be exercised. The alerting validation reports ALT-07 as blocked and the delivery script fails closed.",
+          "from": "DISCOVERED",
+          "to": "BLOCKED"
+        }
+      ],
       "id": "OBS-03",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4369,12 +4710,14 @@
       "source_evidence": [
         "production-audit/harness/alerts/delivery.py"
       ],
-      "state": "DISCOVERED",
+      "state": "BLOCKED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Verify real Telegram delivery for the CI and runtime routes",
-      "updated_at": "2026-11-19T16:25:48Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:51:08Z",
+      "verification_evidence": [
+        "No Telegram bot token and no chat identifier are configured in this environment, so the real delivery path for both the continuous integration route and the runtime route cannot be exercised. The alerting validation reports ALT-07 as blocked and the delivery script fails closed."
+      ]
     },
     "OBS-04": {
       "acceptance_criteria": [],
@@ -4423,7 +4766,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "The gateway actuator endpoint serves 2094 metric lines including http_server_requests_seconds_bucket, and the Prometheus scrape reports a series for the gateway.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "OBS-05",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4436,12 +4816,14 @@
         "gateway-service/pom.xml",
         "gateway-service/src/main/resources/application.yml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The gateway service exposed no Prometheus metrics because the micrometer registry was missing from its module",
-      "updated_at": "2026-11-19T17:54:50Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "The gateway actuator endpoint serves 2094 metric lines including http_server_requests_seconds_bucket, and the Prometheus scrape reports a series for the gateway."
+      ]
     },
     "OBS-06": {
       "acceptance_criteria": [],
@@ -4457,7 +4839,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "config/observability/prometheus.yml now targets only containers that exist: otel-collector, the fourteen services, postgres-exporter, redis-exporter and alertmanager.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "OBS-06",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4470,12 +4889,14 @@
         "config/observability/prometheus.yml",
         "docker-compose.yml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The Prometheus scrape configuration referenced exporter containers that did not exist, so every infrastructure rule fired spuriously",
-      "updated_at": "2026-11-19T17:54:50Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "config/observability/prometheus.yml now targets only containers that exist: otel-collector, the fourteen services, postgres-exporter, redis-exporter and alertmanager."
+      ]
     },
     "OBS-07": {
       "acceptance_criteria": [],
@@ -4491,7 +4912,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "The runtime rules use clamp_min on the denominator and a request rate floor, so a service with no traffic produces no alert. The alerting validation passes with the live catalogue as evidence.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "OBS-07",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4503,12 +4961,14 @@
       "source_evidence": [
         "config/observability/alertmanager/rules/runtime-alerts.yml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The runtime alert rules divided by sentinel metric values and produced false positives on every service",
-      "updated_at": "2026-11-19T17:54:50Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "The runtime rules use clamp_min on the denominator and a request rate floor, so a service with no traffic produces no alert. The alerting validation passes with the live catalogue as evidence."
+      ]
     },
     "OBS-08": {
       "acceptance_criteria": [],
@@ -4524,7 +4984,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "docker-compose.yml resolves REDIS_PASSWORD once with a required variable and passes that single value to the server and to every consumer.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "OBS-08",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -4537,12 +5034,14 @@
         ".env",
         "docker-compose.yml"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The compose stack held three different Redis passwords across the environment file and the running containers",
-      "updated_at": "2026-11-19T17:54:50Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "docker-compose.yml resolves REDIS_PASSWORD once with a required variable and passes that single value to the server and to every consumer."
+      ]
     },
     "OI-01": {
       "acceptance_criteria": [
@@ -8750,7 +9249,14 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:51:08Z",
+          "evidence": "The configured Stripe key is a placeholder that the live Stripe API rejects with HTTP 401 Invalid API Key, and the webhook secret is the local placeholder whsec_local_e2e_only. No genuine test mode credential exists in this environment, so no real Stripe interaction has occurred.",
+          "from": "DISCOVERED",
+          "to": "BLOCKED"
+        }
+      ],
       "id": "PAY-40",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -8764,12 +9270,14 @@
         ".env:143 whsec_local_e2e_only",
         "production-audit/harness/stripe/sandbox.py"
       ],
-      "state": "DISCOVERED",
+      "state": "BLOCKED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred",
-      "updated_at": "2026-11-19T16:35:04Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:51:08Z",
+      "verification_evidence": [
+        "The configured Stripe key is a placeholder that the live Stripe API rejects with HTTP 401 Invalid API Key, and the webhook secret is the local placeholder whsec_local_e2e_only. No genuine test mode credential exists in this environment, so no real Stripe interaction has occurred."
+      ]
     },
     "PAY-41": {
       "acceptance_criteria": [],
@@ -8785,7 +9293,14 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:51:08Z",
+          "evidence": "The real Stripe acceptance matrix cannot run without a genuine sk_test_ credential. The harness classifies the configured key as a placeholder and refuses to certify a placeholder webhook secret instead of reporting a pass.",
+          "from": "DISCOVERED",
+          "to": "BLOCKED"
+        }
+      ],
       "id": "PAY-41",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -8798,12 +9313,14 @@
         "production-audit/harness/stripe/sandbox.py",
         "production-audit/harness/cli/main.py"
       ],
-      "state": "DISCOVERED",
+      "state": "BLOCKED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential",
-      "updated_at": "2026-11-19T16:35:04Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:51:08Z",
+      "verification_evidence": [
+        "The real Stripe acceptance matrix cannot run without a genuine sk_test_ credential. The harness classifies the configured key as a placeholder and refuses to certify a placeholder webhook secret instead of reporting a pass."
+      ]
     },
     "PERF-01": {
       "acceptance_criteria": [],
@@ -8819,7 +9336,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "The load profiles were re-run with no Maven or Surefire process on the host, and the runner records the host contamination check with each result.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "PERF-01",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -8831,12 +9385,14 @@
       "source_evidence": [
         "production-audit/harness/loadtesting/environment.py"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Load measurements taken while parallel Maven builds saturated the host produced invalid latency and throughput figures",
-      "updated_at": "2026-11-19T17:54:50Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "The load profiles were re-run with no Maven or Surefire process on the host, and the runner records the host contamination check with each result."
+      ]
     },
     "QA-01": {
       "acceptance_criteria": [],
@@ -8852,7 +9408,44 @@
       "edge_case_tests": [],
       "git_commit_sha": "",
       "happy_path_tests": [],
-      "history": [],
+      "history": [
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "DISCOVERED",
+          "to": "NORMALIZED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "NORMALIZED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:50:57Z",
+          "evidence": "Every suite result carries a source fingerprint over the working tree and the gates only accept evidence whose fingerprint still matches, so a result recorded before an edit can no longer certify readiness.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
+        }
+      ],
       "id": "QA-01",
       "implementation_revision": "",
       "independent_verifier": "",
@@ -8865,12 +9458,14 @@
         "production-audit/harness/verification/gates.py",
         "production-audit/harness/inventory/scanner.py"
       ],
-      "state": "DISCOVERED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The harness certified readiness from stale suite evidence that predated the current source revision",
-      "updated_at": "2026-11-19T17:54:51Z",
-      "verification_evidence": []
+      "updated_at": "2026-11-20T06:50:57Z",
+      "verification_evidence": [
+        "Every suite result carries a source fingerprint over the working tree and the gates only accept evidence whose fingerprint still matches, so a result recorded before an edit can no longer certify readiness."
+      ]
     },
     "RES-01": {
       "acceptance_criteria": [
@@ -10601,6 +11196,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": ".env.example ships empty values for every credential and documents a command that generates the local secrets, so no usable credential literal is committed.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SEC-03",
@@ -10618,14 +11237,15 @@
         "docker/keycloak/import/ecommerce-realm.json:132-150",
         "auth-service/.../RoleServiceImpl.java:24-34"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Committed literal credentials in `.env.example` for accounts the deployment *requires*",
-      "updated_at": "2026-11-18T13:45:22Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        ".env.example ships empty values for every credential and documents a command that generates the local secrets, so no usable credential literal is committed."
       ]
     },
     "SEC-04": {
@@ -13226,6 +13846,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "KeycloakAdminClient caches the admin token in an AtomicReference and coordinates a concurrent fetch through a second AtomicReference, so no monitor is held across the network call.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-01",
@@ -13239,14 +13883,15 @@
       "source_evidence": [
         "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java:402-449"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "KeycloakAdminClient caches the admin token in an AtomicReference and coordinates a concurrent fetch through a second AtomicReference, so no monitor is held across the network call."
       ]
     },
     "SL-02": {
@@ -13277,6 +13922,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "KeycloakAdminClient refuses the master realm password grant and fails with an explicit message when no service account credential is configured.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-02",
@@ -13291,14 +13960,15 @@
         "KeycloakAdminClient.java:118-121",
         "KeycloakAdminClientServiceAccountTest.java:139-155"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`KeycloakAdminClient` silently falls back to the master-realm *password* grant",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "KeycloakAdminClient refuses the master realm password grant and fails with an explicit message when no service account credential is configured."
       ]
     },
     "SL-03": {
@@ -13949,6 +14619,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "CorrelationIdFilter accepts a client supplied identifier only when it matches the pattern [A-Za-z0-9_-]{1,64} and otherwise mints a new one, so a header can no longer inject content into the MDC.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-14",
@@ -13962,14 +14656,15 @@
       "source_evidence": [
         "application.yml:106"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`CorrelationIdFilter` trusts an unvalidated client-supplied header and writes it into the MDC",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "CorrelationIdFilter accepts a client supplied identifier only when it matches the pattern [A-Za-z0-9_-]{1,64} and otherwise mints a new one, so a header can no longer inject content into the MDC."
       ]
     },
     "SL-15": {
@@ -14000,6 +14695,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "RequestUtils resolves the client address through TrustedProxyPolicy, which honours the forwarded header only when the peer address is inside the configured trusted CIDRs and the hop count is positive.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-15",
@@ -14013,14 +14732,15 @@
       "source_evidence": [
         "application.yml:47"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`RequestUtils.getClientIp()` trusts client-supplied proxy headers unconditionally",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "RequestUtils resolves the client address through TrustedProxyPolicy, which honours the forwarded header only when the peer address is inside the configured trusted CIDRs and the hop count is positive."
       ]
     },
     "SL-16": {
@@ -14051,6 +14771,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "HttpLoggingFilter uses a BoundedContentCachingResponseWrapper with a configured maximum buffer and reports the truncation, so the response body is no longer buffered without a bound.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-16",
@@ -14065,14 +14809,15 @@
         "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/HttpLoggingFilter.java:64-74",
         "WebAutoConfiguration.java:36-42"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`HttpLoggingFilter` buffers the **entire** response body in heap per request",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "HttpLoggingFilter uses a BoundedContentCachingResponseWrapper with a configured maximum buffer and reports the truncation, so the response body is no longer buffered without a bound."
       ]
     },
     "SL-17": {
@@ -14675,6 +15420,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "The bucket creation moved out of the bean method into StorageBootstrap, which listens for ApplicationReadyEvent and performs the check on a background executor.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-28",
@@ -14688,14 +15457,15 @@
       "source_evidence": [
         "utils/common-storage/src/main/java/com/shop/common/storage/config/ObjectStorageAutoConfiguration.java:63-72"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "`ObjectStorageAutoConfiguration` performs a **network call inside a `@Bean` method**",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "The bucket creation moved out of the bean method into StorageBootstrap, which listens for ApplicationReadyEvent and performs the check on a background executor."
       ]
     },
     "SL-29": {
@@ -14948,6 +15718,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "KeycloakAutoConfiguration injects the platform RestClient.Builder through an ObjectProvider and clones it, so the Keycloak clients use the application configured builder.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-33",
@@ -14961,14 +15755,15 @@
       "source_evidence": [
         "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakAutoConfiguration.java:62"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Keycloak clients bypass the application-configured `RestClient.Builder`",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "KeycloakAutoConfiguration injects the platform RestClient.Builder through an ObjectProvider and clones it, so the Keycloak clients use the application configured builder."
       ]
     },
     "SL-34": {
@@ -15230,6 +16025,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T06:51:04Z",
+          "evidence": "The shared configuration now declares a per service client id list for every service, so the horizontal privilege boundary is per service instead of one fleet wide list.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "SL-37",
@@ -15244,14 +16063,15 @@
         "utils/common-spring/src/main/resources/application.yml:158",
         "BaseSecurityConfig.java:135-143"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad",
-      "updated_at": "2026-11-18T13:45:23Z",
+      "updated_at": "2026-11-20T06:51:04Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "The shared configuration now declares a per service client id list for every service, so the horizontal privilege boundary is per service instead of one fleet wide list."
       ]
     },
     "SL-38": {
@@ -15874,5 +16694,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-19T17:54:51Z"
+  "updated_at": "2026-11-20T06:51:08Z"
 }

@@ -49,7 +49,7 @@ class TaxCalculationServiceImplTest {
     }
 
     private TaxCalculateRequest request(String postalCode) {
-        return new TaxCalculateRequest(classId, "DE", postalCode, new BigDecimal("100.00"));
+        return new TaxCalculateRequest(classId, "DE", postalCode, new BigDecimal("100.00"), "VND");
     }
 
     @Test

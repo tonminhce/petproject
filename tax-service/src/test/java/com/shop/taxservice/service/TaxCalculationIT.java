@@ -64,7 +64,7 @@ class TaxCalculationIT extends AbstractIntegrationTest {
     @Test
     void tier1PostalSpecificRateWins() {
         TaxCalculateResponse response = taxCalculationService.calculate(
-            new TaxCalculateRequest(standard.getId(), "DE", "10115", new BigDecimal("100.00")));
+            new TaxCalculateRequest(standard.getId(), "DE", "10115", new BigDecimal("100.00"), "VND"));
 
         assertThat(response.appliedRate()).isEqualTo(new BigDecimal("7.00"));
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("7.00"));
@@ -73,7 +73,7 @@ class TaxCalculationIT extends AbstractIntegrationTest {
     @Test
     void tier2CountryWideRateWhenPostalMisses() {
         TaxCalculateResponse response = taxCalculationService.calculate(
-            new TaxCalculateRequest(standard.getId(), "DE", "80331", new BigDecimal("100.00")));
+            new TaxCalculateRequest(standard.getId(), "DE", "80331", new BigDecimal("100.00"), "VND"));
 
         assertThat(response.appliedRate()).isEqualTo(new BigDecimal("9.50"));
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("9.50"));
@@ -82,7 +82,7 @@ class TaxCalculationIT extends AbstractIntegrationTest {
     @Test
     void tier3ClassDefaultWhenCountryMisses() {
         TaxCalculateResponse response = taxCalculationService.calculate(
-            new TaxCalculateRequest(standard.getId(), "FR", null, new BigDecimal("100.00")));
+            new TaxCalculateRequest(standard.getId(), "FR", null, new BigDecimal("100.00"), "VND"));
 
         assertThat(response.appliedRate()).isEqualTo(new BigDecimal("19.00"));
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("19.00"));
@@ -91,7 +91,7 @@ class TaxCalculationIT extends AbstractIntegrationTest {
     @Test
     void roundingIsHalfUpAgainstRealNumerics() {
         TaxCalculateResponse response = taxCalculationService.calculate(
-            new TaxCalculateRequest(standard.getId(), "CH", null, new BigDecimal("0.05")));
+            new TaxCalculateRequest(standard.getId(), "CH", null, new BigDecimal("0.05"), "VND"));
 
         assertThat(response.appliedRate()).isEqualTo(new BigDecimal("50.00"));
         assertThat(response.taxAmount()).isEqualTo(new BigDecimal("0.03"));
@@ -108,7 +108,7 @@ class TaxCalculationIT extends AbstractIntegrationTest {
                 noDefaultClassId, "IT Calc NoDefault " + noDefaultClassId);
 
             assertThatThrownBy(() -> taxCalculationService.calculate(
-                new TaxCalculateRequest(noDefaultClassId, "US", "99999", new BigDecimal("10.00"))))
+                new TaxCalculateRequest(noDefaultClassId, "US", "99999", new BigDecimal("10.00"), "VND")))
                 .isInstanceOfSatisfying(BusinessException.class, ex ->
                     assertThat(ex.getErrorCode()).isEqualTo("TAX-8002"));
         } finally {
@@ -120,7 +120,7 @@ class TaxCalculationIT extends AbstractIntegrationTest {
     @Test
     void unknownClassThrowsTax8001() {
         assertThatThrownBy(() -> taxCalculationService.calculate(
-            new TaxCalculateRequest(UUID.randomUUID(), "DE", "10115", new BigDecimal("100.00"))))
+            new TaxCalculateRequest(UUID.randomUUID(), "DE", "10115", new BigDecimal("100.00"), "VND")))
             .isInstanceOfSatisfying(BusinessException.class, ex ->
                 assertThat(ex.getErrorCode()).isEqualTo("TAX-8001"));
     }

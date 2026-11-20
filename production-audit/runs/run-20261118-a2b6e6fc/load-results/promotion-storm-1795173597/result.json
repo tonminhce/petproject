@@ -1,0 +1,551 @@
+{
+  "status": "BLOCKED",
+  "profile": "promotion-storm",
+  "scenario": "promotion-storm",
+  "scale": 1,
+  "requests_per_second": 120,
+  "virtual_users": 200,
+  "duration_seconds": 120,
+  "base_url": "http://gateway-service:8080",
+  "network": "untitled5_ecommerce-network",
+  "authenticated": true,
+  "k6_exit_code": 0,
+  "elapsed_seconds": 173.54,
+  "output": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/load-results/promotion-storm-1795173597",
+  "measurement_host": {
+    "cpu_count": 10,
+    "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
+    "load_average": [
+      19.42,
+      17.22,
+      14.22
+    ],
+    "load_per_cpu": 1.94,
+    "contaminated": true,
+    "reasons": [
+      "the one minute load average is 19.42 on 10 cores, which is 1.94 per core and above the 1.5 threshold used to detect an unloaded measurement host"
+    ],
+    "concurrent_builds": []
+  },
+  "measurement_valid": false,
+  "max_business_failure_rate": 0.05,
+  "rate_limit_override": {
+    "status": "APPLIED",
+    "override": "docker-compose.loadtest.yml",
+    "readiness": {
+      "status": "READY",
+      "services": [
+        {
+          "service": "alertmanager",
+          "status": "Up 18 hours (healthy)"
+        },
+        {
+          "service": "alloy",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "auth-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "elasticsearch",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "favourite-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "gateway-service",
+          "status": "Up 5 seconds (healthy)"
+        },
+        {
+          "service": "grafana",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "inventory-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "kafka",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "keycloak",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "loki",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "media-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "notification-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "order-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "otel-collector",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "payment-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "postgres",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "postgres-exporter",
+          "status": "Up 18 hours"
+        },
+        {
+          "service": "product-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "prometheus",
+          "status": "Up 18 hours (healthy)"
+        },
+        {
+          "service": "promotion-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "rating-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "redis",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "redis-exporter",
+          "status": "Up 18 hours"
+        },
+        {
+          "service": "rustfs",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "search-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "shipping-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "tax-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "tempo",
+          "status": "Up 20 hours (healthy)"
+        }
+      ],
+      "waited_seconds": 5.7
+    },
+    "reason": "the shipped per client rate limit would throttle the measured traffic, so the gateway was recreated with the load test limits and the run started only after it reported healthy"
+  },
+  "services": [
+    {
+      "service": "alertmanager",
+      "state": "running",
+      "status": "Up 18 hours (healthy)"
+    },
+    {
+      "service": "alloy",
+      "state": "running",
+      "status": "Up 20 hours (healthy)"
+    },
+    {
+      "service": "auth-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "elasticsearch",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "favourite-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "gateway-service",
+      "state": "running",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "grafana",
+      "state": "running",
+      "status": "Up 20 hours (healthy)"
+    },
+    {
+      "service": "inventory-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "kafka",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "keycloak",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "loki",
+      "state": "running",
+      "status": "Up 20 hours (healthy)"
+    },
+    {
+      "service": "media-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "notification-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "order-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "otel-collector",
+      "state": "running",
+      "status": "Up 20 hours (healthy)"
+    },
+    {
+      "service": "payment-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "postgres",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "postgres-exporter",
+      "state": "running",
+      "status": "Up 18 hours"
+    },
+    {
+      "service": "product-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "prometheus",
+      "state": "running",
+      "status": "Up 18 hours (healthy)"
+    },
+    {
+      "service": "promotion-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "rating-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "redis",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "redis-exporter",
+      "state": "running",
+      "status": "Up 18 hours"
+    },
+    {
+      "service": "rustfs",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "search-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "shipping-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "tax-service",
+      "state": "running",
+      "status": "Up About an hour (healthy)"
+    },
+    {
+      "service": "tempo",
+      "state": "running",
+      "status": "Up 20 hours (healthy)"
+    }
+  ],
+  "metrics": {
+    "requests": 18800,
+    "request_rate_per_second": 110.57291192436738,
+    "failed_requests": 0,
+    "successful_requests": 18800,
+    "failure_rate": 0,
+    "check_rate": 1,
+    "latency_avg_ms": 679.9117213196296,
+    "latency_min_ms": 8.922625,
+    "latency_p50_ms": 577.71725,
+    "latency_p90_ms": 1234.7195715,
+    "latency_p95_ms": 1603.4115381499994,
+    "latency_p99_ms": null,
+    "latency_max_ms": 5057.168919,
+    "business_success": null,
+    "business_failure": 0,
+    "oversell_responses": 18680,
+    "iterations": 18680,
+    "iteration_rate_per_second": 109.86712738016928
+  },
+  "invariants": {
+    "status": "BLOCKED",
+    "failed": [],
+    "blocked": [
+      "INV-06",
+      "INV-08"
+    ],
+    "skipped": [],
+    "invariants": [
+      {
+        "id": "INV-01",
+        "name": "NO_OVERSELLING",
+        "description": "no inventory row may hold a negative available or reserved quantity",
+        "database": "inventoryservice",
+        "databases": "inventoryservice",
+        "violations": 0,
+        "population": 40,
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "id": "INV-02",
+        "name": "COUPON_QUOTA_RESPECTED",
+        "description": "a campaign must never record more redemptions than its quota",
+        "database": "promotionservice",
+        "databases": "promotionservice",
+        "violations": 0,
+        "population": 25,
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "id": "INV-03",
+        "name": "ORDER_STATUS_VALID",
+        "description": "every order must hold a declared order status",
+        "database": "orderservice",
+        "databases": "orderservice",
+        "violations": 0,
+        "population": 30,
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "id": "INV-04",
+        "name": "SINGLE_TERMINAL_PAYMENT",
+        "description": "an order must never hold more than one terminal payment",
+        "database": "paymentservice",
+        "databases": "paymentservice",
+        "violations": 0,
+        "population": 98,
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "id": "INV-05",
+        "name": "PAYMENT_IDEMPOTENCY_UNIQUE",
+        "description": "one idempotency key must never be reused across different orders",
+        "database": "paymentservice",
+        "databases": "paymentservice",
+        "violations": 0,
+        "population": 98,
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "id": "INV-06",
+        "name": "COUPON_RESERVATION_UNIQUE",
+        "description": "a user must never hold more committed coupon reservations than the campaign per user limit",
+        "database": "promotionservice",
+        "databases": "promotionservice",
+        "violations": 0,
+        "population": 0,
+        "status": "BLOCKED",
+        "detail": "the invariant inspected zero rows, so it cannot prove anything about the exercised traffic"
+      },
+      {
+        "id": "INV-07",
+        "name": "PAYMENT_ORDER_CONSISTENCY",
+        "description": "a confirmed order must have a payment that captured, was partially refunded or was refunded",
+        "database": "orderservice",
+        "databases": "orderservice+paymentservice",
+        "violations": 0,
+        "population": 18,
+        "status": "PASS",
+        "detail": ""
+      },
+      {
+        "id": "INV-08",
+        "name": "EXPIRED_RESERVATION_RELEASED",
+        "description": "an expired coupon reservation must not stay pending indefinitely",
+        "database": "promotionservice",
+        "databases": "promotionservice",
+        "violations": 0,
+        "population": 0,
+        "status": "BLOCKED",
+        "detail": "the invariant inspected zero rows, so it cannot prove anything about the exercised traffic"
+      }
+    ]
+  },
+  "rate_limit_restore": {
+    "status": "OK",
+    "readiness": {
+      "status": "READY",
+      "services": [
+        {
+          "service": "alertmanager",
+          "status": "Up 18 hours (healthy)"
+        },
+        {
+          "service": "alloy",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "auth-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "elasticsearch",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "favourite-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "gateway-service",
+          "status": "Up 10 seconds (healthy)"
+        },
+        {
+          "service": "grafana",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "inventory-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "kafka",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "keycloak",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "loki",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "media-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "notification-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "order-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "otel-collector",
+          "status": "Up 20 hours (healthy)"
+        },
+        {
+          "service": "payment-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "postgres",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "postgres-exporter",
+          "status": "Up 18 hours"
+        },
+        {
+          "service": "product-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "prometheus",
+          "status": "Up 18 hours (healthy)"
+        },
+        {
+          "service": "promotion-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "rating-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "redis",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "redis-exporter",
+          "status": "Up 18 hours"
+        },
+        {
+          "service": "rustfs",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "search-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "shipping-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "tax-service",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "service": "tempo",
+          "status": "Up 20 hours (healthy)"
+        }
+      ],
+      "waited_seconds": 10.8
+    },
+    "detail": "Container gateway-service Recreate \n Container gateway-service Recreated \n Container gateway-service Starting \n Container gateway-service Started"
+  }
+}

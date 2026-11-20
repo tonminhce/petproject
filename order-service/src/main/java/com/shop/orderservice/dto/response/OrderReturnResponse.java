@@ -14,6 +14,7 @@ public record OrderReturnResponse(
     String description,
     ReturnStatus status,
     BigDecimal refundAmount,
+    String currency,
     String adminNotes,
     String reviewedBy,
     Instant reviewedAt,

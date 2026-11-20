@@ -260,6 +260,7 @@ public class SearchQueryServiceImpl implements SearchQueryService {
             str(doc, "slug"),
             str(doc, "imageUrl"),
             decimal(doc, "price"),
+            str(doc, "currency"),
             decimal(doc, "avgRating"),
             integer(doc, "ratingCount"));
     }

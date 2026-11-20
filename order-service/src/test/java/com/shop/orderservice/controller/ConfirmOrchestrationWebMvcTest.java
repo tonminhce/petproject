@@ -60,7 +60,7 @@ class ConfirmOrchestrationWebMvcTest {
     private OrderResponse sampleConfirmed() {
         return new OrderResponse(orderId, UUID.randomUUID(), OrderStatus.CONFIRMED,
             List.of(), new BigDecimal("10.00"), new BigDecimal("1.00"), BigDecimal.ZERO,
-            new BigDecimal("11.00"), null, Instant.now(), Instant.now(), null, null, null);
+            new BigDecimal("11.00"), "VND", null, Instant.now(), Instant.now(), null, null, null);
     }
 
     @Test

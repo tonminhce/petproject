@@ -20,6 +20,7 @@ public record OrderLifecycleEvent(
         BigDecimal taxAmount,
         BigDecimal discountAmount,
         BigDecimal total,
+        String currency,
         Instant transitionedAt,
         Instant cancelledAt,
         Boolean refunded,

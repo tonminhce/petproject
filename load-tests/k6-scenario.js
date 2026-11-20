@@ -1,3 +1,4 @@
+import exec from 'k6/execution';
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
@@ -6,6 +7,7 @@ import { Counter, Trend } from 'k6/metrics';
 const scenario = __ENV.SCENARIO || 'browse';
 const baseUrl = __ENV.BASE_URL || 'http://gateway-service:8080';
 const token = __ENV.TOKEN || '';
+const customerTokens = (__ENV.CUSTOMER_TOKENS || '').split(',').filter(function (value) { return value.length > 0; });
 const peakRate = parseInt(__ENV.RATE || '20', 10);
 const maxVus = parseInt(__ENV.VUS || '50', 10);
 const duration = __ENV.DURATION || '2m';
@@ -19,11 +21,13 @@ const oversellAttempts = new Counter('oversell_attempts_total');
 const resolvedProducts = new Counter('resolved_product_total');
 http.setResponseCallback(http.expectedStatuses(200, 201, 409));
 
+const cartFailure = new Counter('cart_failure_total');
 const catalogFailure = new Counter('catalog_failure_total');
 const detailFailure = new Counter('detail_failure_total');
 const unresolvedProduct = new Counter('unresolved_product_total');
 
 let cachedProductId = configuredProductId;
+let cartItemPresent = false;
 
 function stagesFor() {
   if (scenario === 'spike') {
@@ -68,10 +72,19 @@ const headers = {
   'Accept': 'application/json',
 };
 
+function customerToken() {
+  if (customerTokens.length === 0) {
+    return token;
+  }
+  const index = exec.vu.idInTest % customerTokens.length;
+  return customerTokens[index];
+}
+
 function authHeaders() {
   const result = Object.assign({}, headers);
-  if (token) {
-    result.Authorization = 'Bearer ' + token;
+  const current = customerToken();
+  if (current) {
+    result.Authorization = 'Bearer ' + current;
   }
   result['Idempotency-Key'] = 'k6-' + uuidv4();
   return result;
@@ -136,9 +149,40 @@ function productDetail() {
   }
 }
 
+function ensureCart(productId) {
+  if (cartItemPresent) {
+    return true;
+  }
+  const response = http.post(baseUrl + '/api/v1/carts/me/items',
+    JSON.stringify({ productId: productId, quantity: 1 }),
+    { headers: authHeaders(), tags: { call: 'cart' } });
+  if (response.status === 200 || response.status === 201) {
+    cartItemPresent = true;
+    return true;
+  }
+  cartFailure.add(1);
+  return false;
+}
+
+function conflictReason(response) {
+  try {
+    const parsed = JSON.parse(response.body);
+    if (parsed && parsed.code) {
+      return parsed.code;
+    }
+  } catch (error) {
+    return '';
+  }
+  return '';
+}
+
 function checkout() {
   const productId = resolveProductId();
   if (!productId) {
+    businessFailure.add(1);
+    return;
+  }
+  if (!ensureCart(productId)) {
     businessFailure.add(1);
     return;
   }
@@ -153,15 +197,20 @@ function checkout() {
   const response = http.post(baseUrl + '/api/v1/orders', payload, { headers: authHeaders(), tags: { call: 'checkout' } });
   checkoutLatency.add(Date.now() - started);
   const accepted = response.status === 200 || response.status === 201;
-  const soldOut = response.status === 409;
+  const soldOut = response.status === 409 && conflictReason(response) !== 'ORD-4005';
   check(response, {
     'checkout returns an accepted or conflict status': (r) => r.status === 200 || r.status === 201 || r.status === 409,
   });
   if (accepted) {
+    cartItemPresent = false;
     businessSuccess.add(1);
   } else if (soldOut) {
     oversellAttempts.add(1);
   } else {
+    if (response.status === 409) {
+      cartItemPresent = false;
+      cartFailure.add(1);
+    }
     businessFailure.add(1);
   }
 }

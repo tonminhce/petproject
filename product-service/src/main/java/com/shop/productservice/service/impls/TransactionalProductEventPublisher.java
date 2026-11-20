@@ -68,6 +68,7 @@ public class TransactionalProductEventPublisher implements ProductEventPublisher
         payload.put("categoryId", p.getCategory() != null ? p.getCategory().getId() : null);
         payload.put("categoryName", p.getCategory() != null ? p.getCategory().getTitle() : null);
         payload.put("price", p.getPriceUnit());
+        payload.put("currency", p.getCurrency());
         payload.put("imageUrl", p.getMediaId() != null
             ? ApiPaths.MEDIAS + "/" + p.getMediaId()
             : p.getImageUrl());

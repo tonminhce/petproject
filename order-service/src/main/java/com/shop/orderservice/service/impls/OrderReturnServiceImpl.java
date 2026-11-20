@@ -72,6 +72,7 @@ public class OrderReturnServiceImpl implements OrderReturnService {
                 .reason(request.reason())
                 .description(request.description())
                 .refundAmount(request.refundAmount())
+                .currency(order.getCurrency())
                 .status(ReturnStatus.REQUESTED)
                 .build();
 
@@ -102,6 +103,7 @@ public class OrderReturnServiceImpl implements OrderReturnService {
                 .reason(REASON_SHIPPED_CANCELLATION)
                 .description("Admin cancelled the order after shipment; the refund is driven by the return review.")
                 .refundAmount(order.getTotal())
+                .currency(order.getCurrency())
                 .status(ReturnStatus.REQUESTED)
                 .build();
 
@@ -173,6 +175,7 @@ public class OrderReturnServiceImpl implements OrderReturnService {
                 entity.getDescription(),
                 entity.getStatus(),
                 entity.getRefundAmount(),
+                entity.getCurrency(),
                 entity.getAdminNotes(),
                 entity.getReviewedBy(),
                 entity.getReviewedAt(),

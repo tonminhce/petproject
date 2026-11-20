@@ -1,5 +1,6 @@
 package com.shop.promotionservice.service.impls;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.promotionservice.constant.CampaignStatus;
@@ -55,6 +56,10 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
                 && request.orderAmount().compareTo(campaign.getMinOrderAmount()) < 0) {
             throw BusinessException.of(ErrorCode.MIN_ORDER_AMOUNT_NOT_MET, request.orderAmount());
         }
+        String currency = resolveCurrency(request.currency());
+        if (!currency.equals(campaign.getCurrency())) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, currency, campaign.getCurrency());
+        }
 
         CouponUsageReservation existing = reservationRepository.findByOrderId(request.orderId()).orElse(null);
         if (existing != null) {
@@ -87,6 +92,7 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
             .orderId(request.orderId())
             .orderAmount(request.orderAmount())
             .discountAmount(discount)
+            .currency(currency)
             .status(UsageStatus.PENDING)
             .expiresAt(now.plusSeconds(reservationTtlSeconds))
             .reservedAt(now)
@@ -173,6 +179,13 @@ public class CampaignReservationServiceImpl implements CampaignReservationServic
         CouponUsageReservation reservation = loadReservation(id);
         Campaign campaign = loadCampaign(reservation);
         return ReservationResponse.from(campaign, reservation);
+    }
+
+    private String resolveCurrency(String currency) {
+        if (currency == null || currency.isBlank()) {
+            return PlatformCurrency.DEFAULT;
+        }
+        return PlatformCurrency.normalize(currency);
     }
 
     private CouponUsageReservation loadReservation(UUID id) {

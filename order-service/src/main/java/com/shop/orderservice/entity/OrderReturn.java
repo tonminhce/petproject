@@ -1,5 +1,6 @@
 package com.shop.orderservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.data.AbstractMappedEntity;
 import com.shop.orderservice.constant.ReturnStatus;
 import jakarta.persistence.Column;
@@ -58,6 +59,10 @@ public class OrderReturn extends AbstractMappedEntity {
 
     @Column(name = "refund_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal refundAmount;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Column(name = "admin_notes", columnDefinition = "TEXT")
     private String adminNotes;

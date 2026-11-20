@@ -10,6 +10,7 @@ public record CartResponse(
     UUID userId,
     List<CartItemResponse> items,
     BigDecimal subtotal,
+    String currency,
     Instant createdAt,
     Instant updatedAt
 ) {}

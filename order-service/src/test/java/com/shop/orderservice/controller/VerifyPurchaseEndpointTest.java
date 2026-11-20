@@ -57,7 +57,7 @@ class VerifyPurchaseEndpointTest {
 
     private OrderItemResponse item() {
         return new OrderItemResponse(productId, "Widget", 2,
-            new BigDecimal("19.99"), new BigDecimal("39.98"));
+            new BigDecimal("19.99"), new BigDecimal("39.98"), "VND");
     }
 
     private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor serviceClient() {

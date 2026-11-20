@@ -15,12 +15,23 @@ def _state(path: Path) -> dict[str, Any]:
     return read_json(path, {}) or {}
 
 
+def _load_directory_order(path: Any) -> tuple[str, int]:
+    name = path.name
+    prefix = name.rsplit("-", 1)[0]
+    suffix = name.rsplit("-", 1)[-1]
+    try:
+        stamp = int(suffix)
+    except ValueError:
+        stamp = 0
+    return prefix, stamp
+
+
 def _load_results() -> list[dict[str, Any]]:
     root = config.run_root() / "load-results"
     results: list[dict[str, Any]] = []
     if not root.exists():
         return results
-    for path in sorted(root.iterdir()):
+    for path in sorted(root.iterdir(), key=_load_directory_order, reverse=True):
         result = path / "result.json"
         latest = path / "summary.json"
         if result.exists():
@@ -307,7 +318,15 @@ def write_final_report(path: Path | None = None) -> Path:
 
     add("## 20. THÔNG LƯỢNG NỀN TẢNG VS ĐỈNH (BASELINE VS PEAK THROUGHPUT)")
     add("")
+    latest_by_profile: dict[str, dict[str, Any]] = {}
+    attempts: dict[str, int] = {}
     for row in load_rows:
+        profile = str(row.get("profile") or row.get("directory")).rsplit("-", 1)[0]
+        attempts[profile] = attempts.get(profile, 0) + 1
+        if profile not in latest_by_profile:
+            latest_by_profile[profile] = row
+    ordered = sorted(latest_by_profile.values(), key=lambda row: str(row.get("profile") or row.get("directory")))
+    for row in ordered:
         metrics = row.get("metrics", {})
         profile = str(row.get("profile") or row.get("directory"))
         add("- " + profile + " — kịch bản " + str(row.get("scenario")) + ", trạng thái " + str(row.get("status") or "không ghi nhận") + ": yêu cầu " + _metric(metrics.get("requests")) + ", " + _metric(metrics.get("request_rate_per_second"), " req/s") + ", lượt lặp " + _metric(metrics.get("iterations")) + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _metric(metrics.get("failure_rate")) + ".")
@@ -315,6 +334,9 @@ def write_final_report(path: Path | None = None) -> Path:
             add("  - Kết luận nghiệp vụ: " + str(row.get("business_verdict")) + ".")
         if row.get("measurement_valid") is False:
             add("  - **Phép đo không hợp lệ**: máy chủ đo bị nhiễu, kết quả không dùng để kết luận.")
+        profile_name = str(row.get("profile") or row.get("directory"))
+        if attempts.get(profile_name, 0) > 1:
+            add("  - Số lần chạy đã lưu cho hồ sơ này: " + str(attempts.get(profile_name)) + "; bảng trên là lần chạy cuối cùng.")
     if load_result:
         add("- Lần chạy đã lưu: hồ sơ " + str(load_result.get("profile")) + ", " + str(load_result.get("requests_per_second")) + " req/s nhắm, " + str(load_result.get("virtual_users")) + " VU, trạng thái " + str(load_result.get("status")) + ".")
         host = load_result.get("measurement_host") or {}

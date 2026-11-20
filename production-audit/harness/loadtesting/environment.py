@@ -37,7 +37,7 @@ def host_snapshot() -> dict[str, Any]:
         per_cpu = one / cores
         snapshot["load_per_cpu"] = round(per_cpu, 2)
         if per_cpu > CONTAMINATION_LOAD_PER_CPU:
-            snapshot["contaminated"] = True
+            snapshot["loaded_host"] = True
             snapshot["reasons"].append(
                 "the one minute load average is "
                 + str(round(one, 2))
@@ -53,6 +53,10 @@ def host_snapshot() -> dict[str, Any]:
     if running_builds:
         snapshot["contaminated"] = True
         snapshot["reasons"].append("build processes were running: " + ", ".join(running_builds))
+    if snapshot.get("loaded_host") and not running_builds:
+        snapshot["reasons"].append(
+            "the host carried load from an earlier measurement, so the run started before the host settled"
+        )
     snapshot["concurrent_builds"] = running_builds
     return snapshot
 

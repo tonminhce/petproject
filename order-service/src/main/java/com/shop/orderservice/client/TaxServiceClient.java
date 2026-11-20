@@ -34,7 +34,7 @@ public class TaxServiceClient {
     @CircuitBreaker(name = "taxService")
     public TaxCalculateResponse calculate(TaxCalculateRequest request) {
         if (!props.tax().isEnabled()) {
-            return new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO);
+            return new TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO, request.currency());
         }
         try {
             ApiResponse<TaxCalculateResponse> resp = restClient.post()

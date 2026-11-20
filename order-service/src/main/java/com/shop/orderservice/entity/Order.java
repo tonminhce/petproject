@@ -1,5 +1,6 @@
 package com.shop.orderservice.entity;
 
+import com.shop.common.core.constants.PlatformCurrency;
 import com.shop.common.core.data.AbstractMappedEntity;
 import com.shop.orderservice.constant.OrderStatus;
 import jakarta.persistence.*;
@@ -43,6 +44,10 @@ public class Order extends AbstractMappedEntity {
     @Column(name = "total", nullable = false, precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal total = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency = PlatformCurrency.DEFAULT;
 
     @Column(name = "coupon_code", length = 50)
     private String couponCode;

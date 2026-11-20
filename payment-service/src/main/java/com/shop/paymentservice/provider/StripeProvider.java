@@ -126,7 +126,7 @@ public class StripeProvider implements PaymentProvider {
                     .setAmount(refundMinorUnits)
                     .build();
             Refund refund = createRefund(params, refundKey);
-            return refundOutcome(refund, refundMinorUnits);
+            return refundOutcome(refund, refundMinorUnits, original.getCurrency());
         } catch (IdempotencyException e) {
             log.info("Stripe replayed a cached refund for idempotency key {} - the refund outcome is unknown",
                     idempotencyKey);
@@ -173,12 +173,17 @@ public class StripeProvider implements PaymentProvider {
         return ProviderResult.confirmed(intentId);
     }
 
-    private ProviderResult refundOutcome(Refund refund, long expectedMinorUnits) {
+    private ProviderResult refundOutcome(Refund refund, long expectedMinorUnits, String expectedCurrency) {
         String status = refund.getStatus() == null ? "" : refund.getStatus().toLowerCase(Locale.ROOT);
         if ("succeeded".equals(status)) {
             Long reportedAmount = refund.getAmount();
             if (reportedAmount == null || reportedAmount.longValue() != expectedMinorUnits) {
                 return ProviderResult.rejected("amount-mismatch");
+            }
+            String reportedCurrency = refund.getCurrency();
+            if (reportedCurrency != null && expectedCurrency != null
+                    && !reportedCurrency.equalsIgnoreCase(expectedCurrency)) {
+                return ProviderResult.rejected("currency-mismatch");
             }
             return ProviderResult.confirmed(refund.getId());
         }

@@ -1,6 +1,7 @@
 package com.shop.productservice.dto.request;
 
 import com.shop.productservice.constant.ProductStatus;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@JsonIgnoreProperties("currency")
 public record ProductUpdateRequest(
     @Size(max = 200)             String title,
     @Size(max = 200)             String slug,

@@ -20,6 +20,7 @@ public record ProductLifecycleEvent(
     UUID categoryId,
     String categoryName,
     BigDecimal price,
+    String currency,
     String imageUrl,
     BigDecimal avgRating,
     Integer ratingCount,

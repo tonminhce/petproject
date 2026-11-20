@@ -28,7 +28,7 @@ def load_suites() -> dict[str, dict[str, Any]]:
 
 def build_command(suite_name: str, suite: dict[str, Any], repository: Path) -> list[str]:
     patterns = [pattern for pattern in suite.get("patterns", []) if pattern not in suite.get("exclude", [])]
-    command = ["./mvnw", "-B", "-ntp", "-T1C"]
+    command = ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM)]
     if suite.get("include_integration"):
         command.append("verify")
     else:
@@ -63,7 +63,12 @@ def run_suite(suite_name: str, repository: Path | None = None, run_id: str | Non
 
     log_path = config.run_root(identifier) / "test-results" / f"{suite_name}.log"
     result = run_command(command, root, log_path)
-    interpretation = interpret_test_exit(result.exit_code, result.stdout_tail + result.stderr_tail)
+    logged = ""
+    try:
+        logged = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        logged = ""
+    interpretation = interpret_test_exit(result.exit_code, logged or (result.stdout_tail + result.stderr_tail))
     revision = run_command(["git", "-C", str(root), "rev-parse", "HEAD"], root).stdout_tail.strip()
 
     document = {

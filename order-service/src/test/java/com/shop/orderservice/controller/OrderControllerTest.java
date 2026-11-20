@@ -56,10 +56,10 @@ class OrderControllerTest {
 
     private OrderResponse sampleOrder() {
         var item = new OrderItemResponse(UUID.randomUUID(), "Product", 3,
-            new BigDecimal("29.99"), new BigDecimal("89.97"));
+            new BigDecimal("29.99"), new BigDecimal("89.97"), "VND");
         return new OrderResponse(UUID.randomUUID(), userId, OrderStatus.PENDING,
             List.of(item), new BigDecimal("89.97"), new BigDecimal("7.20"),
-            new BigDecimal("0"), new BigDecimal("97.17"), null,
+            new BigDecimal("0"), new BigDecimal("97.17"), "VND", null,
             Instant.now(), null, null, null, null);
     }
 

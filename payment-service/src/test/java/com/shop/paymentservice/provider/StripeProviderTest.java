@@ -91,6 +91,21 @@ class StripeProviderTest {
     }
 
     @Test
+    void captureWithMismatchedCurrency_isRejected() throws Exception {
+        PaymentIntent mismatched = intent("pi_currency", "succeeded");
+        mismatched.setCurrency("vnd");
+        paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
+                any(RequestOptions.class))).thenReturn(mismatched);
+
+        PaymentProvider.ProviderResult result = provider.capture(
+                PAYMENT_ID, AMOUNT, "USD", IDEMPOTENCY_KEY);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
+        assertThat(result.providerEventId()).isEqualTo("currency-mismatch");
+    }
+
+    @Test
     void captureRequiresActionIntent_requiresClientConfirmation_andCarriesTheClientSecret() throws Exception {
 
         paymentIntentStatic.when(() -> PaymentIntent.create(any(PaymentIntentCreateParams.class),
@@ -239,6 +254,31 @@ class StripeProviderTest {
         assertThat(params.getValue().getPaymentIntent()).isEqualTo("pi_stored");
         paymentIntentStatic.verify(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
                 any(RequestOptions.class)), never());
+    }
+
+    @Test
+    void refundWithMismatchedCurrency_isRejected() throws Exception {
+        PaymentIntent original = intent("pi_currency", "succeeded");
+        original.setCurrency("usd");
+        PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
+        matches.setData(List.of(original));
+        paymentIntentStatic.when(() -> PaymentIntent.search(any(PaymentIntentSearchParams.class),
+                any(RequestOptions.class))).thenReturn(matches);
+
+        Refund created = new Refund();
+        created.setId("re_currency");
+        created.setStatus("succeeded");
+        created.setAmount(9800L);
+        created.setCurrency("vnd");
+        refundStatic.when(() -> Refund.create(any(RefundCreateParams.class), any(RequestOptions.class)))
+                .thenReturn(created);
+
+        PaymentProvider.ProviderResult result = provider.refund(
+                PAYMENT_ID, AMOUNT, IDEMPOTENCY_KEY);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.outcome()).isEqualTo(PaymentProvider.Outcome.REJECTED);
+        assertThat(result.providerEventId()).isEqualTo("currency-mismatch");
     }
 
     @Test

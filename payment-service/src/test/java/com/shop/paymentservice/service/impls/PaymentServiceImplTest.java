@@ -106,6 +106,35 @@ class PaymentServiceImplTest {
     }
 
     @Test
+    void create_withUnsupportedCurrency_isRejectedAndNothingIsPersisted() {
+        when(repository.findByIdempotencyKey(IDEMPOTENCY_KEY)).thenReturn(Optional.empty());
+
+        CreatePaymentRequest request = new CreatePaymentRequest(
+                ORDER_ID, AMOUNT, "EUR", IDEMPOTENCY_KEY);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PAYMENT_CURRENCY_UNSUPPORTED.getCode()));
+
+        verifyNoInteractions(writer);
+    }
+
+    @Test
+    void create_withLowercaseCurrency_normalizesToTheUppercaseCode() {
+        when(repository.findByIdempotencyKey(IDEMPOTENCY_KEY)).thenReturn(Optional.empty());
+        when(provider.name()).thenReturn("mock");
+        when(writer.insertIsolated(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(new CreatePaymentRequest(ORDER_ID, AMOUNT, "usd", IDEMPOTENCY_KEY));
+
+        ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
+        verify(writer).insertIsolated(captor.capture());
+        assertThat(captor.getValue().getCurrency()).isEqualTo("USD");
+        assertThat(captor.getValue().getRefundedCurrency()).isEqualTo("USD");
+    }
+
+    @Test
     void capture_nonPendingPayment_throwsPay5004() {
         when(repository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
 

@@ -1,0 +1,160 @@
+{
+    "metrics": {
+        "checks": {
+            "passes": 49228,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "http_req_sending": {
+            "p(90)": 0.07967930000000005,
+            "p(95)": 0.15818574999999974,
+            "avg": 0.13959584515371168,
+            "min": 0.002667,
+            "med": 0.023583,
+            "max": 147.224833
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 149
+        },
+        "http_req_receiving": {
+            "avg": 6.071741902102184,
+            "min": 0.008583,
+            "med": 0.5912915000000001,
+            "max": 695.27925,
+            "p(90)": 15.194667000000003,
+            "p(95)": 28.80757504999999
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 49378,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "iteration_duration": {
+            "p(90)": 1065.5294919,
+            "p(95)": 1257.5690321499999,
+            "avg": 655.0218200743085,
+            "min": 10.395958,
+            "med": 624.4483755,
+            "max": 2914.455627
+        },
+        "vus_max": {
+            "value": 150,
+            "min": 150,
+            "max": 150
+        },
+        "http_req_connecting": {
+            "avg": 0.006992322005751551,
+            "min": 0,
+            "med": 0,
+            "max": 36.682083,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "business_checkout_latency_ms": {
+            "p(95)": 784,
+            "avg": 370.22678150645976,
+            "min": 6,
+            "med": 323,
+            "max": 2378,
+            "p(90)": 647
+        },
+        "data_sent": {
+            "rate": 426093.52011982014,
+            "count": 72445340
+        },
+        "http_req_duration": {
+            "med": 282.9518335,
+            "max": 2377.189584,
+            "p(90)": 583.674742,
+            "p(95)": 701.7195830499999,
+            "avg": 324.80482527445355,
+            "min": 3.046667
+        },
+        "business_success_total": {
+            "count": 24614,
+            "rate": 144.76936548616175
+        },
+        "http_req_blocked": {
+            "avg": 0.028799057981287627,
+            "min": 0.000541,
+            "med": 0.004917,
+            "max": 69.09925,
+            "p(90)": 0.012292,
+            "p(95)": 0.022416149999999996
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 3.046667,
+            "med": 282.9518335,
+            "max": 2377.189584,
+            "p(90)": 583.674742,
+            "p(95)": 701.7195830499999,
+            "avg": 324.80482527445355
+        },
+        "http_req_waiting": {
+            "avg": 318.5934875271976,
+            "min": 2.986834,
+            "med": 277.73920899999996,
+            "max": 2376.847459,
+            "p(90)": 573.264525,
+            "p(95)": 686.6633688
+        },
+        "http_reqs": {
+            "count": 49378,
+            "rate": 290.4209689191393
+        },
+        "resolved_product_total": {
+            "rate": 0.8822379468158065,
+            "count": 150
+        },
+        "data_received": {
+            "count": 54021455,
+            "rate": 317731.85028801655
+        },
+        "oversell_attempts_total": {
+            "count": 24614,
+            "rate": 144.76936548616175
+        },
+        "iterations": {
+            "count": 24614,
+            "rate": 144.76936548616175
+        }
+    },
+    "root_group": {
+        "checks": {
+            "product detail returns 200": {
+                "fails": 0,
+                "name": "product detail returns 200",
+                "path": "::product detail returns 200",
+                "id": "9daad55a5a84fd2a0364a6f709fad9e2",
+                "passes": 24614
+            },
+            "checkout returns an accepted or conflict status": {
+                "name": "checkout returns an accepted or conflict status",
+                "path": "::checkout returns an accepted or conflict status",
+                "id": "840aecf6aa0ecb275a281bf30e8637e4",
+                "passes": 24614,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

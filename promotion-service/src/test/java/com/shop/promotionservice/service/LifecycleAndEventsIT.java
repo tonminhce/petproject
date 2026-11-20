@@ -83,7 +83,7 @@ class LifecycleAndEventsIT extends AbstractIntegrationTest {
 
     private ReservationResponse reserve(String code) {
         return reservationService.reserveWithRetry(code,
-            new ReserveRequest(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("500.00")));
+            new ReserveRequest(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("500.00"), "VND"));
     }
 
     private CouponUsageReservation reload(UUID reservationId) {

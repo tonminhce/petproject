@@ -37,7 +37,7 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         if (ratePct == null) {
             throw BusinessException.of(ErrorCode.NO_MATCHING_RATE, req.country() + " " + req.postalCode());
         }
-        return TaxCalculator.calculate(req.amount(), ratePct);
+        return TaxCalculator.calculate(req.amount(), ratePct, req.currency());
     }
 
     private Optional<BigDecimal> resolveRatePct(UUID classId, String country, String postalCode) {

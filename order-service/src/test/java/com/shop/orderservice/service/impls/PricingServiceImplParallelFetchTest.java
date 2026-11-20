@@ -38,7 +38,7 @@ class PricingServiceImplParallelFetchTest {
     void fiveProductsFetchedInParallelWallTimeCloseToSlowestNotSum() {
         when(promotionClient.isEnabled()).thenReturn(false);
         when(taxClient.calculate(any())).thenReturn(
-            new com.shop.orderservice.dto.internal.TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO));
+            new com.shop.orderservice.dto.internal.TaxCalculateResponse(BigDecimal.ZERO, BigDecimal.ZERO, "VND"));
 
         List<CartItem> items = new ArrayList<>();
         List<UUID> productIds = new ArrayList<>();
@@ -49,7 +49,7 @@ class PricingServiceImplParallelFetchTest {
             final int idx = i;
             when(productClient.getProduct(pid)).thenAnswer(inv -> {
                 Thread.sleep(PER_FETCH_LATENCY_MS);
-                return new ProductSnapshot(pid, "Product-" + idx, BigDecimal.valueOf(10 + idx));
+                return new ProductSnapshot(pid, "Product-" + idx, BigDecimal.valueOf(10 + idx), "VND");
             });
         }
 

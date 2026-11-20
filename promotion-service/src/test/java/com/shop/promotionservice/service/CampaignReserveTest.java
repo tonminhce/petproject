@@ -75,7 +75,7 @@ class CampaignReserveTest {
     }
 
     private ReserveRequest request(String orderAmount) {
-        return new ReserveRequest(userId, orderId, new BigDecimal(orderAmount));
+        return new ReserveRequest(userId, orderId, new BigDecimal(orderAmount), "VND");
     }
 
     private void stubHappyPath(Campaign campaign) {

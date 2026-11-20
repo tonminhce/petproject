@@ -21,6 +21,7 @@ public class CartMapper {
             cart.getUserId(),
             itemResponses,
             cart.getSubtotal(),
+            cart.getCurrency(),
             cart.getCreatedAt(),
             cart.getUpdatedAt()
         );
@@ -33,7 +34,8 @@ public class CartMapper {
             item.getProductTitle(),
             item.getQuantity(),
             item.getUnitPrice(),
-            item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+            item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
+            item.getCurrency()
         );
     }
 }

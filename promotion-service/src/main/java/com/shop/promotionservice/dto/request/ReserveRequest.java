@@ -9,5 +9,6 @@ import java.util.UUID;
 public record ReserveRequest(
     @NotNull UUID userId,
     @NotNull UUID orderId,
-    @NotNull @Positive BigDecimal orderAmount
+    @NotNull @Positive BigDecimal orderAmount,
+    String currency
 ) {}
