@@ -1,8 +1,5 @@
 
 spring:
-  application:
-    name: shop-service
-
   profiles:
     active: dev
 
@@ -20,9 +17,8 @@ spring:
       leak-detection-threshold: ${HIKARI_LEAK_DETECTION_THRESHOLD_MS:10000}
 
 server:
-  port: ${SERVER_PORT:8080}
   shutdown: graceful
-  forward-headers-strategy: framework
+  forward-headers-strategy: none
   error:
     include-message: never
     include-binding-errors: always
@@ -49,9 +45,8 @@ management:
   metrics:
     distribution:
       percentiles-histogram:
-        http:
-          server:
-            requests: true
+        http.server.requests: true
+        all: true
     tags:
       application: ${spring.application.name}
 
@@ -66,6 +61,9 @@ shop:
   web:
     correlation:
       enabled: ${WEB_CORRELATION_ENABLED:true}
+    trusted-proxy:
+      cidrs: ${SHOP_WEB_TRUSTED_PROXY_CIDRS:}
+      hops: ${SHOP_WEB_TRUSTED_PROXY_HOPS:0}
     logging:
       request:
         enabled: ${WEB_LOG_REQUEST_ENABLED:false}
@@ -75,6 +73,7 @@ shop:
         enabled: ${WEB_LOG_RESPONSE_ENABLED:false}
         include-body: false
         max-body-bytes: 4096
+        max-buffer-bytes: ${WEB_LOG_RESPONSE_MAX_BUFFER_BYTES:65536}
       performance:
         enabled: ${PERF_LOG_ENABLED:true}
         threshold-ms: ${PERF_LOG_THRESHOLD_MS:50}
@@ -92,8 +91,50 @@ shop:
     issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
     csrf-disabled: true
     stateless-session: true
-    expected-client-ids: ${SHOP_SECURITY_EXPECTED_CLIENT_IDS:ecommerce-client,order-service,rating-service,search-service,product-service,media-service}
+    expected-client-ids: ${SHOP_SECURITY_EXPECTED_CLIENT_IDS:ecommerce-client}
     expected-audiences: ${SHOP_SECURITY_EXPECTED_AUDIENCES:}
+    audience:
+      enabled: ${SHOP_SECURITY_AUDIENCE_ENABLED:true}
+      client-id: ${SHOP_SECURITY_AUDIENCE_CLIENT_ID:${spring.application.name}}
+      allowed-client-ids: ${SHOP_SECURITY_AUDIENCE_ALLOWED_CLIENT_IDS:}
+      allowed-audiences: ${SHOP_SECURITY_AUDIENCE_ALLOWED_AUDIENCES:}
+      per-service-client-ids:
+        auth-service:
+          - ecommerce-client
+        favourite-service:
+          - ecommerce-client
+        inventory-service:
+          - ecommerce-client
+          - order-service
+          - product-service
+        media-service:
+          - ecommerce-client
+          - product-service
+        notification-service:
+          - ecommerce-client
+        order-service:
+          - ecommerce-client
+          - rating-service
+        payment-service:
+          - ecommerce-client
+          - order-service
+        product-service:
+          - ecommerce-client
+          - order-service
+          - search-service
+          - media-service
+        promotion-service:
+          - ecommerce-client
+          - order-service
+        rating-service:
+          - ecommerce-client
+        search-service:
+          - ecommerce-client
+        shipping-service:
+          - ecommerce-client
+        tax-service:
+          - ecommerce-client
+          - order-service
     cors:
       enabled: ${ECOMMERCE_CORS_ENABLED:true}
       allowed-origin-patterns:

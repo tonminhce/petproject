@@ -4,6 +4,8 @@ server:
   forward-headers-strategy: none
 
 spring:
+  config:
+    import: "classpath:/application-shared.yml"
   application:
     name: gateway-service
   main:
@@ -31,7 +33,7 @@ shop:
 gateway:
   keycloak-issuer-uri: ${JWT_ISSUER_URI:http://keycloak:8080/realms/ecommerce}
   security:
-    expected-client-ids: ${GATEWAY_EXPECTED_CLIENT_IDS:ecommerce-client,order-service,rating-service,search-service,product-service,media-service}
+    expected-client-ids: ${GATEWAY_EXPECTED_CLIENT_IDS:ecommerce-client}
   cors-allowed-origin-patterns:
     - ${CORS_ALLOWED_ORIGIN_PATTERNS:?CORS_ALLOWED_ORIGIN_PATTERNS must be set explicitly}
   public-endpoints:
@@ -74,10 +76,28 @@ gateway:
       replenish-rate: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE:2000}
       burst-capacity: ${GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY:4000}
       requested-tokens: ${GATEWAY_GLOBAL_RATE_LIMIT_REQUESTED_TOKENS:1}
+      lanes: ${GATEWAY_GLOBAL_RATE_LIMIT_LANES:8}
+      fair-share-clients: ${GATEWAY_GLOBAL_RATE_LIMIT_FAIR_SHARE_CLIENTS:20}
+      replicas: ${GATEWAY_GLOBAL_RATE_LIMIT_REPLICAS:1}
   edge-rate-limit:
     enabled: ${GATEWAY_EDGE_RATE_LIMIT_ENABLED:true}
     backoffice-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_BACKOFFICE_RPM:10}
     search-requests-per-minute: ${GATEWAY_EDGE_RATE_LIMIT_SEARCH_RPM:60}
+  pre-auth-rate-limit:
+    enabled: ${GATEWAY_PRE_AUTH_RATE_LIMIT_ENABLED:true}
+    requests-per-minute: ${GATEWAY_PRE_AUTH_RATE_LIMIT_RPM:3000}
+  resilience:
+    circuit-breaker:
+      enabled: ${GATEWAY_CIRCUIT_BREAKER_ENABLED:true}
+      failure-rate-threshold: ${GATEWAY_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD:50}
+      sliding-window-size: ${GATEWAY_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE:100}
+      minimum-number-of-calls: ${GATEWAY_CIRCUIT_BREAKER_MINIMUM_NUMBER_OF_CALLS:20}
+      wait-duration-in-open-state: ${GATEWAY_CIRCUIT_BREAKER_WAIT_DURATION_IN_OPEN_STATE:10s}
+      permitted-calls-in-half-open-state: ${GATEWAY_CIRCUIT_BREAKER_PERMITTED_CALLS_IN_HALF_OPEN_STATE:5}
+      slow-call-duration-threshold: ${GATEWAY_CIRCUIT_BREAKER_SLOW_CALL_DURATION_THRESHOLD:2s}
+    bulkhead:
+      enabled: ${GATEWAY_BULKHEAD_ENABLED:true}
+      max-concurrent-calls: ${GATEWAY_BULKHEAD_MAX_CONCURRENT_CALLS:200}
   admin-ip-allowlist:
     cidrs: ${ADMIN_IP_ALLOWLIST:}
     required: ${GATEWAY_REQUIRE_ADMIN_IP_ALLOWLIST:false}

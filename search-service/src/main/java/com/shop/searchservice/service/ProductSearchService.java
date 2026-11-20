@@ -12,7 +12,6 @@ import com.shop.searchservice.search.IndexProvisioner;
 import com.shop.searchservice.search.ProductEventVersion;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.elasticsearch.client.ResponseException;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -68,14 +67,6 @@ public class ProductSearchService {
                 .version(version)
                 .versionType(VersionType.External)
                 .document(document));
-        } catch (ResponseException ex) {
-            if (statusOf(ex) == VERSION_CONFLICT) {
-                log.info("Stale product event for {} rejected by the index version precondition", productId);
-                return;
-            }
-            throw BusinessException.of(
-                ErrorCode.SEARCH_INDEX_FAILED,
-                productId);
         } catch (ElasticsearchException ex) {
             if (ex.status() == VERSION_CONFLICT) {
                 log.info("Stale product event for {} rejected by the index version precondition", productId);
@@ -91,12 +82,6 @@ public class ProductSearchService {
         }
     }
 
-    private static int statusOf(ResponseException ex) {
-        return ex.getResponse() == null || ex.getResponse().getStatusLine() == null
-                ? -1
-                : ex.getResponse().getStatusLine().getStatusCode();
-    }
-
     private void delete(UUID productId, Long version) {
         try {
             DeleteResponse response = version == null
@@ -108,17 +93,6 @@ public class ProductSearchService {
             if (response.result() == Result.NotFound) {
                 log.debug("Delete for missing product doc {} — nothing to do", productId);
             }
-        } catch (ResponseException ex) {
-            int status = statusOf(ex);
-            if (status == VERSION_CONFLICT) {
-                log.info("Stale product delete for {} rejected by the index version precondition", productId);
-                return;
-            }
-            if (status != 404) {
-                throw BusinessException.of(
-                    ErrorCode.SEARCH_DELETE_FAILED, productId);
-            }
-            log.debug("Delete for missing product doc {} — nothing to do", productId);
         } catch (ElasticsearchException ex) {
             if (ex.status() == VERSION_CONFLICT) {
                 log.info("Stale product delete for {} rejected by the index version precondition", productId);

@@ -1,0 +1,257 @@
+groups:
+  - name: petproject.application
+    rules:
+      - alert: ServiceDown
+        expr: "label_replace(up{job=\"petproject-services\"} == 0, \"application\", \"$1\", \"instance\", \"([^:]+):.*\")"
+        for: 60s
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "Service {{ $labels.application }} is unreachable"
+          impact: "the service cannot accept traffic"
+          metric: "up == 0 for 1m"
+          runbook: "docs/PRODUCTION-READINESS.md#service-down"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: ServiceRestartLoop
+        expr: "changes(process_start_time_seconds{job=\"petproject-services\"}[15m]) > 2"
+        for: 300s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Service {{ $labels.instance }} restarted repeatedly"
+          impact: "the service is restarting and may not be stable"
+          metric: "more than 2 restarts in 15m"
+          runbook: "docs/PRODUCTION-READINESS.md#service-restart-loop"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: HighHttp5xxRate
+        expr: "(sum by (application) (rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) / clamp_min(sum by (application) (rate(http_server_requests_seconds_count[5m])), 0.001) > 0.05) and (sum by (application) (rate(http_server_requests_seconds_count[5m])) > 0.5)"
+        for: 180s
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "HTTP 5xx rate above 5 percent on {{ $labels.application }}"
+          impact: "more than 5 percent of requests fail while the service is under real traffic"
+          metric: "5xx ratio {{ $value | humanizePercentage }}"
+          runbook: "docs/PRODUCTION-READINESS.md#high-5xx-rate"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: HighRequestLatency
+        expr: "(histogram_quantile(0.99, sum by (application, le) (rate(http_server_requests_seconds_bucket[5m]))) > 2) and (sum by (application) (rate(http_server_requests_seconds_count[5m])) > 0.5)"
+        for: 300s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "p99 latency above 2s on {{ $labels.application }}"
+          impact: "p99 request latency is degraded while the service is under real traffic"
+          metric: "p99 {{ $value | humanizeDuration }}"
+          runbook: "docs/PRODUCTION-READINESS.md#high-latency"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: CircuitBreakerOpen
+        expr: "resilience4j_circuitbreaker_state{state=\"open\"} == 1"
+        for: 60s
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "Circuit breaker open for {{ $labels.name }} on {{ $labels.application }}"
+          impact: "calls to a degraded dependency are rejected"
+          metric: "state open"
+          runbook: "docs/PRODUCTION-READINESS.md#circuit-breaker-open"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: OutboxBacklogGrowing
+        expr: "max by (application) ({__name__=~\".*_outbox_pending_count\"}) > 1000"
+        for: 300s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Outbox backlog {{ $value }} on {{ $labels.application }}"
+          impact: "the transactional outbox is not draining"
+          metric: "{{ $value }} pending events"
+          runbook: "docs/PRODUCTION-READINESS.md#outbox-backlog"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: OrderCommitStuck
+        expr: "order_commit_stuck > 0"
+        for: 60s
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "Order saga commit is stuck on {{ $labels.application }}"
+          impact: "orders cannot complete their commit step"
+          metric: "{{ $value }} stuck orders"
+          runbook: "docs/PRODUCTION-READINESS.md#order-commit-stuck"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: PaymentWebhookFailure
+        expr: "increase(payment_webhook_failed_permanent_total[10m]) > 0"
+        for: 60s
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "Permanent payment webhook failures on {{ $labels.application }}"
+          impact: "provider callbacks are being rejected permanently"
+          metric: "{{ $value }} failures in 10m"
+          runbook: "docs/PRODUCTION-READINESS.md#payment-webhook"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: NotificationPermanentFailure
+        expr: "increase(notification_failed_permanent_total[15m]) > 0"
+        for: 300s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Permanent notification delivery failures on {{ $labels.application }}"
+          impact: "users are not receiving notifications"
+          metric: "{{ $value }} failures in 15m"
+          runbook: "docs/PRODUCTION-READINESS.md#notification-failure"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: StaleInFlightShipments
+        expr: "shipping_stale_inflight > 0"
+        for: 600s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Stale in-flight shipments on {{ $labels.application }}"
+          impact: "shipments are stuck in an in-flight state"
+          metric: "{{ $value }} stale shipments"
+          runbook: "docs/PRODUCTION-READINESS.md#stale-shipments"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: CpuSaturation
+        expr: "process_cpu_usage > 0.9"
+        for: 600s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "CPU saturation on {{ $labels.application }}"
+          impact: "the process is close to saturating a single core"
+          metric: "{{ $value | humanizePercentage }} of one core"
+          runbook: "docs/PRODUCTION-READINESS.md#cpu-saturation"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: HighMemoryPressure
+        expr: "(jvm_memory_used_bytes{area=\"heap\"} / jvm_memory_max_bytes{area=\"heap\"} > 0.85) and (jvm_memory_max_bytes{area=\"heap\"} > 0)"
+        for: 300s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Heap usage above 85 percent on {{ $labels.application }}"
+          impact: "the process is close to its heap limit"
+          metric: "{{ $value | humanizePercentage }} of the heap in use"
+          runbook: "docs/PRODUCTION-READINESS.md#memory-pressure"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+  - name: petproject.database
+    rules:
+      - alert: DatabasePoolSaturation
+        expr: "(hikaricp_connections_active / hikaricp_connections_max > 0.9) and (hikaricp_connections_max > 0)"
+        for: 120s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Database connection pool above 90 percent on {{ $labels.application }}"
+          impact: "requests wait for a database connection"
+          metric: "{{ $value | humanizePercentage }} of the pool in use"
+          runbook: "docs/PRODUCTION-READINESS.md#pool-saturation"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: DatabaseConnectionWait
+        expr: "hikaricp_connections_pending > 0"
+        for: 120s
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Threads are waiting for a database connection on {{ $labels.application }}"
+          impact: "the database connection pool is exhausted"
+          metric: "{{ $value }} pending connections"
+          runbook: "docs/PRODUCTION-READINESS.md#pool-pending"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: DatabaseDeadlocks
+        expr: "increase(pg_stat_database_deadlocks[15m]) > 0"
+        for: 60s
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database deadlocks detected"
+          impact: "transactions are being rolled back by the database"
+          metric: "{{ $value }} deadlocks in 15m"
+          runbook: "docs/PRODUCTION-READINESS.md#database-deadlocks"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: DatabaseUnavailable
+        expr: "up{job=\"postgresql\"} == 0"
+        for: 60s
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL is unreachable"
+          impact: "services cannot reach their database"
+          metric: "up == 0"
+          runbook: "docs/PRODUCTION-READINESS.md#database-unavailable"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: RedisUnavailable
+        expr: "up{job=\"redis\"} == 0"
+        for: 60s
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Redis is unreachable"
+          impact: "rate limiting and shared state fail"
+          metric: "up == 0"
+          runbook: "docs/PRODUCTION-READINESS.md#redis-unavailable"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"
+      - alert: RedisEvictionPressure
+        expr: "increase(redis_evicted_keys_total[10m]) > 0"
+        for: 300s
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Redis is evicting keys"
+          impact: "shared state is being discarded because the instance is under memory pressure"
+          metric: "{{ $value }} evicted keys in 10m"
+          runbook: "docs/PRODUCTION-READINESS.md#redis-eviction"
+          grafana: "http://localhost:3000/d/fleet-overview"
+          logs: "http://localhost:3100"
+          traces: "http://localhost:3200"

@@ -292,6 +292,183 @@ def command_operations(arguments: argparse.Namespace) -> int:
     return config.EXIT_OK if status == PASS else config.EXIT_GATE_FAILED
 
 
+def command_k8s(arguments: argparse.Namespace) -> int:
+    from ..kubernetes.validation import validate_manifests
+    from ..persistence.store import append_event
+
+    action = arguments.action
+    if action == "validate":
+        document = validate_manifests()
+        record_suite_result(
+            "k8s",
+            {
+                "suite": "k8s",
+                "status": PASS if document["status"] == "PASS" else FAIL,
+                "detail": str(len(document["failed_checks"])) + " kubernetes manifest checks failed",
+                "checks": document["checks"],
+                "updated_at": utc_now(),
+            },
+        )
+        append_event(config.events_path(), "k8s_validate", {"status": document["status"]})
+        write_json(config.state_root() / "k8s-results.json", {"action": "validate", "updated_at": utc_now(), "result": document})
+        emit(document)
+        return config.EXIT_OK if document["status"] == "PASS" else config.EXIT_GATE_FAILED
+
+    emit(
+        {
+            "action": action,
+            "status": "BLOCKED",
+            "reason": "a reachable kubernetes cluster is required for this command and none is configured",
+        }
+    )
+    return config.EXIT_BLOCKED
+
+
+def command_load(arguments: argparse.Namespace) -> int:
+    from ..loadtesting.invariants import verify
+    from ..loadtesting.profiles import describe_profiles, enforce_safety, resolve_profile
+    from ..loadtesting.runner import results_root, run_profile
+    from ..persistence.store import append_event, write_json
+
+    action = arguments.action
+    if action == "profiles":
+        emit({"profiles": describe_profiles()})
+        return config.EXIT_OK
+    if action == "invariants":
+        document = verify()
+        emit(document)
+        return config.EXIT_OK if document["status"] == "PASS" else config.EXIT_GATE_FAILED
+    if action == "report":
+        collected = []
+        root = results_root()
+        if root.exists():
+            for path in sorted(root.iterdir()):
+                summary = path / "summary.json"
+                if summary.exists():
+                    import json
+
+                    document = json.loads(summary.read_text(encoding="utf-8"))
+                    collected.append({"directory": path.name, "metrics": document.get("metrics", {})})
+        emit({"runs": collected})
+        return config.EXIT_OK
+
+    scale = arguments.scale
+    try:
+        profile = resolve_profile(action, scale)
+    except (KeyError, ValueError) as error:
+        emit({"status": "FAIL", "reason": str(error)})
+        return config.EXIT_USAGE
+    violations = enforce_safety(profile)
+    if violations:
+        emit({"status": "BLOCKED", "profile": action, "violations": violations})
+        return config.EXIT_BLOCKED
+
+    document = run_profile(action, scale=scale, base_url=arguments.base_url)
+    append_event(config.events_path(), "load_" + action, {"status": document.get("status")})
+    if arguments.persist:
+        write_json(results_root() / (action + "-latest.json"), document)
+        write_json(config.state_root() / "performance-baselines.json", {"profile": action, "updated_at": utc_now(), "result": document})
+    emit(document)
+    if document.get("status") == "PASS":
+        invariants = document.get("invariants") or {}
+        if invariants.get("status") == "FAIL":
+            return config.EXIT_GATE_FAILED
+        return config.EXIT_OK
+    if document.get("status") == "BLOCKED":
+        return config.EXIT_BLOCKED
+    return config.EXIT_GATE_FAILED
+
+
+def command_stripe(arguments: argparse.Namespace) -> int:
+    from ..persistence.store import append_event
+    from ..stripe.sandbox import reconcile, test_payment, test_webhooks, verify_configuration
+
+    action = arguments.action
+    if action == "verify-config":
+        document = verify_configuration()
+    elif action == "sandbox-smoke":
+        document = verify_configuration()
+    elif action == "test-payment":
+        document = test_payment()
+    elif action == "test-webhooks":
+        document = test_webhooks()
+    elif action == "reconcile":
+        document = reconcile()
+    else:
+        emit({"status": "FAIL", "reason": "unknown action"})
+        return config.EXIT_USAGE
+    append_event(config.events_path(), "stripe_" + action, {"status": document.get("status")})
+    write_json(config.state_root() / "stripe-results.json", {"action": action, "updated_at": utc_now(), "result": document})
+    emit(document)
+    if document.get("status") == "PASS":
+        return config.EXIT_OK
+    if document.get("status") == "BLOCKED":
+        return config.EXIT_BLOCKED
+    return config.EXIT_GATE_FAILED
+
+
+def command_alerts(arguments: argparse.Namespace) -> int:
+    from ..alerts.delivery import (
+        run_ci_alert_test,
+        run_dedup_test,
+        run_recovery_test,
+        run_runtime_alert_test,
+        run_security_probe,
+    )
+    from ..alerts.render import write_rendered_config
+    from ..alerts.state import alert_gate_statuses, load_alert_results
+    from ..alerts.validation import validate_alerting
+    from ..persistence.store import append_event
+
+    action = arguments.action
+    if action == "validate":
+        document = validate_alerting()
+        record_suite_result(
+            "alerts",
+            {
+                "suite": "alerts",
+                "status": PASS if document["status"] == "PASS" else (PENDING if document["status"] == "BLOCKED" else FAIL),
+                "detail": str(len(document["failed_checks"])) + " failed and " + str(len(document["blocked_checks"])) + " blocked checks",
+                "checks": document["checks"],
+                "updated_at": utc_now(),
+            },
+        )
+        append_event(config.events_path(), "alerts_validate", {"status": document["status"]})
+        write_json(config.state_root() / "alerting-results.json", {"action": "validate", "updated_at": utc_now(), "result": document})
+        emit(document)
+        if document["status"] == "PASS":
+            return config.EXIT_OK
+        if document["status"] == "BLOCKED":
+            return config.EXIT_BLOCKED
+        return config.EXIT_GATE_FAILED
+
+    if action == "status":
+        document = load_alert_results()
+        emit({"gates": alert_gate_statuses(), "results": document.get("results", [])})
+        return config.EXIT_OK
+
+    if action == "render":
+        target = write_rendered_config()
+        emit({"rendered": str(target), "note": "the rendered file holds the live credential and must stay out of git"})
+        return config.EXIT_OK
+
+    runners = {
+        "test-ci": run_ci_alert_test,
+        "test-runtime": run_runtime_alert_test,
+        "test-recovery": run_recovery_test,
+        "test-dedup": run_dedup_test,
+        "test-security": run_security_probe,
+    }
+    result = runners[action]()
+    append_event(config.events_path(), "alert_" + action, {"status": result["status"]})
+    emit(result)
+    if result["status"] == "PASS":
+        return config.EXIT_OK
+    if result["status"] == "BLOCKED":
+        return config.EXIT_BLOCKED
+    return config.EXIT_GATE_FAILED
+
+
 def command_test(arguments: argparse.Namespace) -> int:
     result = run_suite(arguments.suite, config.repository_root(), modules=arguments.modules)
     record_suite_result(arguments.suite, result)
@@ -597,6 +774,67 @@ def build_parser() -> argparse.ArgumentParser:
     test.add_argument("--suite", required=True, choices=sorted(load_suites().keys()))
     test.add_argument("--modules", nargs="*", default=[])
     test.set_defaults(handler=command_test)
+
+    load = subparsers.add_parser("load", help="black friday workload profiles")
+    load.add_argument(
+        "action",
+        choices=(
+            "baseline",
+            "ramp",
+            "spike",
+            "sustained-peak",
+            "flash-sale",
+            "promotion-storm",
+            "soak",
+            "recovery",
+            "kafka-backlog",
+            "failure-during-peak",
+            "profiles",
+            "invariants",
+            "report",
+        ),
+    )
+    load.add_argument("--scale", type=int, default=1)
+    load.add_argument("--base-url", default="http://gateway-service:8080")
+    load.add_argument("--persist", action="store_true")
+    load.set_defaults(handler=command_load)
+
+    stripe = subparsers.add_parser("stripe", help="real stripe sandbox verification")
+    stripe.add_argument(
+        "action",
+        choices=("verify-config", "sandbox-smoke", "test-payment", "test-webhooks", "reconcile"),
+    )
+    stripe.set_defaults(handler=command_stripe)
+
+    k8s = subparsers.add_parser("k8s", help="kubernetes manifest and cluster operations")
+    k8s.add_argument(
+        "action",
+        choices=(
+            "validate",
+            "deploy-staging",
+            "readiness",
+            "hpa-status",
+            "keda-status",
+            "rollout-status",
+        ),
+    )
+    k8s.set_defaults(handler=command_k8s)
+
+    alerts = subparsers.add_parser("alerts", help="telegram alerting configuration and delivery verification")
+    alerts.add_argument(
+        "action",
+        choices=(
+            "validate",
+            "test-ci",
+            "test-runtime",
+            "test-recovery",
+            "test-dedup",
+            "test-security",
+            "status",
+            "render",
+        ),
+    )
+    alerts.set_defaults(handler=command_alerts)
 
     operations = subparsers.add_parser("operations", help="observability operations checks")
     operations.add_argument("action", choices=("check",))

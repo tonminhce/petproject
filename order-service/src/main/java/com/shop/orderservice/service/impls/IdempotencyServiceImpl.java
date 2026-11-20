@@ -10,7 +10,6 @@ import com.shop.orderservice.repository.IdempotencyKeyRepository;
 import com.shop.orderservice.service.IdempotencyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -51,21 +50,19 @@ public class IdempotencyServiceImpl implements IdempotencyService {
         if (key == null) return Optional.empty();
 
         Optional<OrderResponse> result = requiresNewTemplate.execute(status -> {
-            Optional<IdempotencyKey> preExisting = repository.findByActorAndKey(actor, key);
-            if (preExisting.isPresent()) {
-                return resolve(preExisting.get(), requestHash, key);
-            }
-            IdempotencyKey ik = newInFlight(key, actor, requestHash);
-            try {
-                repository.saveAndFlush(ik);
+            int claimed = repository.insertIfAbsent(actor, key, requestHash, expiresAt());
+            if (claimed == 1) {
                 return Optional.<OrderResponse>empty();
-            } catch (DataIntegrityViolationException ex) {
-                IdempotencyKey winner = repository.findByActorAndKey(actor, key)
-                    .orElseThrow(() -> ex);
-                return resolve(winner, requestHash, key);
             }
+            IdempotencyKey winner = repository.findByActorAndKey(actor, key)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key));
+            return resolve(winner, requestHash, key);
         });
         return result == null ? Optional.empty() : result;
+    }
+
+    private Instant expiresAt() {
+        return Instant.now().plus(ttlHours, ChronoUnit.HOURS);
     }
 
     private Optional<OrderResponse> resolve(IdempotencyKey existing, String requestHash, String key) {
@@ -76,18 +73,6 @@ public class IdempotencyServiceImpl implements IdempotencyService {
             return Optional.of(deserialize(existing.getResponseBody()));
         }
         throw BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, key);
-    }
-
-    private IdempotencyKey newInFlight(String key, String actor, String requestHash) {
-        IdempotencyKey ik = new IdempotencyKey();
-        ik.setActor(actor);
-        ik.setKey(key);
-        ik.setRequestHash(requestHash);
-        ik.setResponseStatus(0);
-        ik.setResponseBody("");
-        ik.setCreatedAt(Instant.now());
-        ik.setExpiresAt(Instant.now().plus(ttlHours, ChronoUnit.HOURS));
-        return ik;
     }
 
     @Override

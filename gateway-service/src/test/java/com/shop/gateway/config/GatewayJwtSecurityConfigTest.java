@@ -1,5 +1,6 @@
 package com.shop.gateway.config;
 
+import jakarta.validation.Validation;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -9,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class GatewayJwtSecurityConfigTest {
 
@@ -33,6 +35,40 @@ class GatewayJwtSecurityConfigTest {
         OAuth2TokenValidator<Jwt> validator = validator(
                 new GatewayJwtProperties(List.of("ecommerce-client"), List.of()));
         assertThat(hasErrors(validator, jwtWithAzp("ecommerce-client", "http://evil/realms/x"))).isTrue();
+    }
+
+    @Test
+    void theAzpCheckIsNeverSkipped() throws Exception {
+        OAuth2TokenValidator<Jwt> validator = validator(
+                new GatewayJwtProperties(List.of("ecommerce-client"), List.of()));
+
+        assertThat(hasErrors(validator, jwtWithAzp(null))).isTrue();
+        assertThat(hasErrors(validator, jwtWithAzp(""))).isTrue();
+    }
+
+    @Test
+    void anEmptyExpectedClientIdListFailsFast() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GatewayJwtProperties(List.of(), List.of()))
+                .withMessageContaining("expected-client-ids");
+    }
+
+    @Test
+    void anEmptyExpectedClientIdListIsRejectedByTheConfigurationValidation() {
+        var validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+        var violations = validator.validate(new GatewayJwtProperties(List.of("ecommerce-client"), List.of()));
+
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void aBlankExpectedClientIdIsRejectedByTheConfigurationValidation() {
+        var validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+        var violations = validator.validate(new GatewayJwtProperties(List.of(" "), List.of()));
+
+        assertThat(violations).isNotEmpty();
     }
 
     private boolean hasErrors(OAuth2TokenValidator<Jwt> validator, Jwt jwt) {

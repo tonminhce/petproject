@@ -11,7 +11,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.Optional;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -48,84 +49,27 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
             .build();
     }
 
-    @Test
-    void concurrentClaim_lockedOutPeerGetsEmptyNeverTheSameRow() throws Exception {
-        Long rowId = outboxRepo.save(pendingEvent()).getId();
-        TransactionTemplate tx = new TransactionTemplate(txManager);
-
-        CountDownLatch aClaimed = new CountDownLatch(1);
-        CountDownLatch bLockedOut = new CountDownLatch(1);
-        CountDownLatch aCommitted = new CountDownLatch(1);
-        AtomicReference<Optional<OutboxEvent>> claimA = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
-
-        Thread claimerA = new Thread(() -> {
-            try {
-                tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
-                    aClaimed.countDown();
-                    try {
-                        bLockedOut.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
-            } finally {
-                aCommitted.countDown();
-            }
-        });
-        Thread claimerB = new Thread(() -> {
-            try {
-                if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                bLockedOut.countDown();
-            }
-            try {
-                if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-        claimerA.start();
-        claimerB.start();
-        claimerA.join(20_000);
-        claimerB.join(20_000);
-
-        assertThat(claimerA.isAlive()).isFalse();
-        assertThat(claimerB.isAlive()).isFalse();
-
-        assertThat(claimA.get()).isPresent();
-        assertThat(claimA.get().map(OutboxEvent::getId)).contains(rowId);
-        assertThat(claimBWhileLocked.get()).isEmpty();
-        assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(rowId);
-
-        outboxRepo.deleteById(rowId);
+    private List<String> claimableStatuses() {
+        return List.of(OutboxStatus.PENDING.name());
     }
 
     @Test
-    void twoPendingRows_secondRowClaimedConcurrentlyWhileHeadRowLocked() throws Exception {
-        Long row1 = outboxRepo.save(pendingEvent()).getId();
-        Long row2 = outboxRepo.save(pendingEvent()).getId();
+    void concurrentClaim_lockedOutPeerGetsEmptyNeverTheSameRow() throws Exception {
+        OutboxEvent row = outboxRepo.saveAndFlush(pendingEvent());
         TransactionTemplate tx = new TransactionTemplate(txManager);
 
         CountDownLatch aClaimed = new CountDownLatch(1);
         CountDownLatch bLockedOut = new CountDownLatch(1);
         CountDownLatch aCommitted = new CountDownLatch(1);
-        AtomicReference<Optional<OutboxEvent>> claimA = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
+        AtomicReference<List<OutboxEvent>> claimA = new AtomicReference<>();
+        AtomicReference<List<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
+        AtomicReference<List<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
 
         Thread claimerA = new Thread(() -> {
             try {
                 tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOnePending(OutboxStatus.PENDING));
+                    claimA.set(outboxRepo.claimAggregateEvents(row.getAggregateId(), claimableStatuses(),
+                            OutboxStatus.SENDING.name(), 1));
                     aClaimed.countDown();
                     try {
                         bLockedOut.await(10, TimeUnit.SECONDS);
@@ -140,7 +84,8 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         Thread claimerB = new Thread(() -> {
             try {
                 if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimAggregateEvents(
+                            row.getAggregateId(), claimableStatuses(), OutboxStatus.SENDING.name(), 1)));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -149,7 +94,8 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
             }
             try {
                 if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOnePending(OutboxStatus.PENDING)));
+                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimAggregateEvents(
+                            row.getAggregateId(), claimableStatuses(), OutboxStatus.SENDING.name(), 1)));
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -163,12 +109,103 @@ class PaymentOutboxClaimConcurrencyIT extends AbstractIntegrationTest {
         assertThat(claimerA.isAlive()).isFalse();
         assertThat(claimerB.isAlive()).isFalse();
 
-        assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        assertThat(claimBWhileLocked.get().map(OutboxEvent::getId)).contains(row2);
-        assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
-        assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
+        assertThat(claimA.get()).hasSize(1);
+        assertThat(claimA.get()).extracting(OutboxEvent::getId).containsExactly(row.getId());
+        assertThat(claimBWhileLocked.get())
+                .as("a locked aggregate must never be claimed by a second instance")
+                .isEmpty();
+        assertThat(claimBAfterCommit.get()).extracting(OutboxEvent::getId).containsExactly(row.getId());
 
-        outboxRepo.deleteById(row1);
-        outboxRepo.deleteById(row2);
+        outboxRepo.deleteById(row.getId());
+    }
+
+    @Test
+    void twoPendingRows_secondAggregateClaimedConcurrentlyWhileFirstAggregateLocked() throws Exception {
+        OutboxEvent first = outboxRepo.saveAndFlush(pendingEvent());
+        OutboxEvent second = outboxRepo.saveAndFlush(pendingEvent());
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+
+        CountDownLatch aClaimed = new CountDownLatch(1);
+        CountDownLatch bLockedOut = new CountDownLatch(1);
+        CountDownLatch aCommitted = new CountDownLatch(1);
+        AtomicReference<List<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
+        AtomicReference<List<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
+
+        Thread claimerA = new Thread(() -> {
+            try {
+                tx.executeWithoutResult(status -> {
+                    outboxRepo.claimAggregateEvents(first.getAggregateId(), claimableStatuses(),
+                            OutboxStatus.SENDING.name(), 1);
+                    aClaimed.countDown();
+                    try {
+                        bLockedOut.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+            } finally {
+                aCommitted.countDown();
+            }
+        });
+        Thread claimerB = new Thread(() -> {
+            try {
+                if (aClaimed.await(10, TimeUnit.SECONDS)) {
+                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimAggregateEvents(
+                            second.getAggregateId(), claimableStatuses(), OutboxStatus.SENDING.name(), 1)));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                bLockedOut.countDown();
+            }
+            try {
+                if (aCommitted.await(10, TimeUnit.SECONDS)) {
+                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimAggregateEvents(
+                            first.getAggregateId(), claimableStatuses(), OutboxStatus.SENDING.name(), 1)));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        claimerA.start();
+        claimerB.start();
+        claimerA.join(20_000);
+        claimerB.join(20_000);
+
+        assertThat(claimerA.isAlive()).isFalse();
+        assertThat(claimerB.isAlive()).isFalse();
+
+        assertThat(claimBWhileLocked.get())
+                .as("a locked aggregate must not block the claim of another aggregate")
+                .extracting(OutboxEvent::getId)
+                .containsExactly(second.getId());
+        assertThat(claimBAfterCommit.get())
+                .extracting(OutboxEvent::getId)
+                .containsExactly(first.getId());
+
+        outboxRepo.deleteById(first.getId());
+        outboxRepo.deleteById(second.getId());
+    }
+
+    @Test
+    void anAggregateWithAnEventInFlight_isNotClaimedAgain() {
+        OutboxEvent inFlight = outboxRepo.saveAndFlush(pendingEvent());
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+
+        tx.executeWithoutResult(status -> {
+            List<OutboxEvent> claimed = outboxRepo.claimAggregateEvents(inFlight.getAggregateId(),
+                    claimableStatuses(), OutboxStatus.SENDING.name(), 1);
+            assertThat(claimed).hasSize(1);
+            claimed.get(0).setStatus(OutboxStatus.SENDING);
+            claimed.get(0).setClaimedAt(Instant.now());
+            outboxRepo.saveAll(claimed);
+        });
+
+        List<OutboxEvent> second = tx.execute(t -> outboxRepo.claimAggregateEvents(inFlight.getAggregateId(),
+                claimableStatuses(), OutboxStatus.SENDING.name(), 1));
+
+        assertThat(second)
+                .as("an aggregate with an event in flight must not be claimed again")
+                .isEmpty();
     }
 }

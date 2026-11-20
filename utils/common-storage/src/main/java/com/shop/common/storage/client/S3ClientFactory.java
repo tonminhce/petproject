@@ -3,6 +3,7 @@ package com.shop.common.storage.client;
 import com.shop.common.storage.config.StorageProperties;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -26,6 +27,7 @@ public final class S3ClientFactory {
                 .region(Region.of(props.getRegion()))
                 .credentialsProvider(credentials(props))
                 .forcePathStyle(props.isPathStyleAccess())
+                .overrideConfiguration(overrideConfiguration(props))
                 .build();
     }
 
@@ -37,6 +39,13 @@ public final class S3ClientFactory {
                 .serviceConfiguration(S3Configuration.builder()
                         .pathStyleAccessEnabled(props.isPathStyleAccess())
                         .build())
+                .build();
+    }
+
+    private static ClientOverrideConfiguration overrideConfiguration(StorageProperties props) {
+        return ClientOverrideConfiguration.builder()
+                .apiCallTimeout(props.getApiCallTimeout())
+                .apiCallAttemptTimeout(props.getApiCallAttemptTimeout())
                 .build();
     }
 }

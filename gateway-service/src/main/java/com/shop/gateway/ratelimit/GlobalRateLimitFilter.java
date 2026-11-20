@@ -4,42 +4,46 @@ import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import com.shop.gateway.filter.RateLimitHeaders;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
-import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
+import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.core.Ordered;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 public final class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
-    private static final String GLOBAL_ROUTE_ID = "gateway-system";
-    private static final String GLOBAL_KEY = "system";
-
-    private final RateLimiter<?> rateLimiter;
+    private final FleetRateLimiter fleetRateLimiter;
+    private final KeyResolver keyResolver;
     private final RateLimitProperties rateLimitProperties;
-    private final GlobalRateLimitProperties globalRateLimitProperties;
+    private final FleetRateLimitBudget budget;
     private final GatewayErrorResponseWriter errorResponseWriter;
     private final RateLimitOutageGuard outageGuard;
 
-    public GlobalRateLimitFilter(final RateLimiter<?> rateLimiter,
+    public GlobalRateLimitFilter(final FleetRateLimiter fleetRateLimiter,
+                                 final KeyResolver keyResolver,
                                  final RateLimitProperties rateLimitProperties,
-                                 final GlobalRateLimitProperties globalRateLimitProperties,
+                                 final FleetRateLimitBudget budget,
                                  final GatewayErrorResponseWriter errorResponseWriter,
                                  final RateLimitOutageGuard outageGuard) {
-        this.rateLimiter = rateLimiter;
+        this.fleetRateLimiter = fleetRateLimiter;
+        this.keyResolver = keyResolver;
         this.rateLimitProperties = rateLimitProperties;
-        this.globalRateLimitProperties = globalRateLimitProperties;
+        this.budget = budget;
         this.errorResponseWriter = errorResponseWriter;
         this.outageGuard = outageGuard;
     }
 
     @Override
     public Mono<Void> filter(final ServerWebExchange exchange, final GatewayFilterChain chain) {
-        if (!rateLimitProperties.enabled() || !globalRateLimitProperties.enabled()) {
+        if (!rateLimitProperties.enabled() || !budget.enabled()) {
             return chain.filter(exchange);
         }
 
-        return rateLimiter.isAllowed(GLOBAL_ROUTE_ID, GLOBAL_KEY)
-                .flatMap(response -> decide(exchange, chain, response));
+        return keyResolver.resolve(exchange)
+                .defaultIfEmpty("")
+                .flatMap(clientKey -> clientKey.isBlank()
+                        ? errorResponseWriter.writeRateLimited(exchange, retryAfterSeconds())
+                        : fleetRateLimiter.acquire(clientKey)
+                                .flatMap(decision -> decide(exchange, chain, decision)));
     }
 
     @Override
@@ -49,21 +53,21 @@ public final class GlobalRateLimitFilter implements GlobalFilter, Ordered {
 
     private Mono<Void> decide(final ServerWebExchange exchange,
                               final GatewayFilterChain chain,
-                              final RateLimiter.Response response) {
-        if (outageGuard.isOutage(response.getHeaders())) {
+                              final FleetRateLimitDecision decision) {
+        if (decision.isOutage()) {
             return outageGuard.handle(exchange, retryAfterSeconds(), () -> chain.filter(exchange));
         }
-        if (!response.isAllowed()) {
+        if (!decision.allowed()) {
             return errorResponseWriter.writeRateLimited(exchange, retryAfterSeconds());
         }
         exchange.getResponse().getHeaders().set(RateLimitHeaders.REMAINING,
-                RateLimitHeaders.remainingValue(response.getHeaders()));
+                Long.toString(decision.remaining()));
         return chain.filter(exchange);
     }
 
     private int retryAfterSeconds() {
-        final int replenishRate = globalRateLimitProperties.replenishRate();
-        final int requestedTokens = globalRateLimitProperties.requestedTokens();
-        return (int) Math.max(1, Math.ceil((double) requestedTokens / replenishRate));
+        final int clientReplenishRate = budget.clientReplenishRate();
+        final int requestedTokens = budget.requestedTokens();
+        return (int) Math.max(1, Math.ceil((double) requestedTokens / clientReplenishRate));
     }
 }

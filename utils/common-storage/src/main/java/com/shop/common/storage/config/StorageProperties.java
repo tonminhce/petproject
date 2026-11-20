@@ -25,6 +25,10 @@ public class StorageProperties {
 
     private Duration presignDuration = Duration.ofHours(1);
 
+    private Duration apiCallTimeout = Duration.ofSeconds(10);
+
+    private Duration apiCallAttemptTimeout = Duration.ofSeconds(5);
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -95,5 +99,21 @@ public class StorageProperties {
 
     public void setPresignDuration(Duration presignDuration) {
         this.presignDuration = presignDuration;
+    }
+
+    public Duration getApiCallTimeout() {
+        return apiCallTimeout;
+    }
+
+    public void setApiCallTimeout(Duration apiCallTimeout) {
+        this.apiCallTimeout = apiCallTimeout;
+    }
+
+    public Duration getApiCallAttemptTimeout() {
+        return apiCallAttemptTimeout;
+    }
+
+    public void setApiCallAttemptTimeout(Duration apiCallAttemptTimeout) {
+        this.apiCallAttemptTimeout = apiCallAttemptTimeout;
     }
 }

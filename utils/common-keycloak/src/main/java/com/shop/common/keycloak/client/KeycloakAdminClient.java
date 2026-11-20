@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames.*;
@@ -29,8 +31,6 @@ import static org.springframework.security.oauth2.core.endpoint.OAuth2ParameterN
 public class KeycloakAdminClient {
 
     private static final Logger log = LoggerFactory.getLogger(KeycloakAdminClient.class);
-    private static final String USERNAME = "username";
-    private static final String PASSWORD = "password";
     private static final String CLIENT_CREDENTIALS = "client_credentials";
     private static final String BEARER = "Bearer ";
     private static final ParameterizedTypeReference<Map<String, Object>> MAP_TYPE =
@@ -113,6 +113,10 @@ public class KeycloakAdminClient {
         this.adminPassword = adminPassword;
         this.adminClientSecret = adminClientSecret;
         this.serviceAccountTokenEndpoint = serviceAccountTokenEndpoint;
+        if (adminUsername != null && !adminUsername.isBlank()) {
+            log.warn("Keycloak admin username credentials are configured but the master-realm password grant is no "
+                    + "longer supported; the token endpoint {} will not be used", adminTokenEndpoint);
+        }
     }
 
     public boolean hasServiceAccountCredentials() {
@@ -120,7 +124,15 @@ public class KeycloakAdminClient {
                 && serviceAccountTokenEndpoint != null && !serviceAccountTokenEndpoint.isBlank();
     }
 
-    private String getServiceAccountAccessToken() {
+    private boolean hasServiceAccountSecret() {
+        return adminClientSecret != null && !adminClientSecret.isBlank();
+    }
+
+    private boolean hasServiceAccountTokenEndpoint() {
+        return serviceAccountTokenEndpoint != null && !serviceAccountTokenEndpoint.isBlank();
+    }
+
+    private CachedAdminToken requestServiceAccountToken() {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add(GRANT_TYPE, CLIENT_CREDENTIALS);
         form.add(CLIENT_ID, serviceAccountClientId);
@@ -139,10 +151,7 @@ public class KeycloakAdminClient {
                         HttpStatus.UNAUTHORIZED);
             }
 
-            long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
-            cachedToken.set(new CachedAdminToken(response.accessToken(), Instant.now().plusSeconds(ttl)));
-
-            return response.accessToken();
+            return new CachedAdminToken(response.accessToken(), expiryOf(response));
         } catch (RestClientResponseException e) {
             log.error("Keycloak service-account token request failed: {}", e.getResponseBodyAsString());
             throw new KeycloakClientException(
@@ -151,6 +160,11 @@ public class KeycloakAdminClient {
                     e
             );
         }
+    }
+
+    private static Instant expiryOf(KeycloakTokenResponse response) {
+        long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
+        return Instant.now().plusSeconds(ttl);
     }
 
     public boolean hasAdminCredentials() {
@@ -315,57 +329,95 @@ public class KeycloakAdminClient {
     }
 
     private static final long SKEW_SECONDS = 30L;
+    private static final long FAILURE_RETRY_DELAY_MILLIS = 10_000L;
     private final AtomicReference<CachedAdminToken> cachedToken = new AtomicReference<>();
+    private final AtomicReference<TokenFetch> pendingToken = new AtomicReference<>();
 
     private record CachedAdminToken(String token, Instant expiresAt) {}
 
+    private static final class TokenFetch {
+        private final CompletableFuture<CachedAdminToken> future = new CompletableFuture<>();
+        private volatile Instant failedAt;
+    }
+
     private String getAdminAccessToken() {
-        CachedAdminToken current = cachedToken.get();
-        if (current != null && current.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS))) {
-            return current.token();
-        }
-
-        synchronized (this) {
-            current = cachedToken.get();
-            if (current != null && current.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS))) {
-                return current.token();
+        while (true) {
+            CachedAdminToken cached = cachedToken.get();
+            if (isUsable(cached)) {
+                return cached.token();
             }
 
-            if (hasServiceAccountCredentials()) {
-                return getServiceAccountAccessToken();
-            }
-
-            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-            form.add(GRANT_TYPE, PASSWORD);
-            form.add(CLIENT_ID, adminClientId);
-            form.add(USERNAME, adminUsername);
-            form.add(PASSWORD, adminPassword);
-
-            try {
-                KeycloakTokenResponse response = restClient.post()
-                        .uri(adminTokenEndpoint)
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .body(form)
-                        .retrieve()
-                        .body(KeycloakTokenResponse.class);
-
-                if (response == null || response.accessToken() == null) {
-                    throw new KeycloakClientException("Failed to obtain admin access token", HttpStatus.UNAUTHORIZED);
+            TokenFetch fetch = pendingToken.get();
+            if (fetch == null) {
+                TokenFetch candidate = new TokenFetch();
+                if (!pendingToken.compareAndSet(null, candidate)) {
+                    continue;
                 }
-
-                long ttl = (response.expiresIn() != null && response.expiresIn() > 0) ? response.expiresIn() : 300L;
-                cachedToken.set(new CachedAdminToken(response.accessToken(), Instant.now().plusSeconds(ttl)));
-
-                return response.accessToken();
-            } catch (RestClientResponseException e) {
-                log.error("Keycloak admin token request failed: {}", e.getResponseBodyAsString());
-                throw new KeycloakClientException(
-                        "Admin token request failed: " + e.getResponseBodyAsString(),
-                        HttpStatus.valueOf(e.getStatusCode().value()),
-                        e
-                );
+                try {
+                    CachedAdminToken fetched = requestAdminToken();
+                    cachedToken.set(fetched);
+                    candidate.future.complete(fetched);
+                    pendingToken.compareAndSet(candidate, null);
+                    return fetched.token();
+                } catch (RuntimeException | Error failure) {
+                    candidate.failedAt = Instant.now();
+                    candidate.future.completeExceptionally(failure);
+                    throw failure;
+                }
             }
+
+            if (isRetryable(fetch) && pendingToken.compareAndSet(fetch, null)) {
+                continue;
+            }
+
+            return awaitToken(fetch.future);
         }
+    }
+
+    private static boolean isRetryable(TokenFetch fetch) {
+        Instant failedAt = fetch.failedAt;
+        return failedAt != null
+                && fetch.future.isCompletedExceptionally()
+                && failedAt.isBefore(Instant.now().minusMillis(FAILURE_RETRY_DELAY_MILLIS));
+    }
+
+    private static boolean isUsable(CachedAdminToken token) {
+        return token != null && token.expiresAt().isAfter(Instant.now().plusSeconds(SKEW_SECONDS));
+    }
+
+    private static String awaitToken(CompletableFuture<CachedAdminToken> pending) {
+        try {
+            return pending.join().token();
+        } catch (CompletionException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            }
+            if (cause instanceof Error errorFailure) {
+                throw errorFailure;
+            }
+            throw failure;
+        }
+    }
+
+    private CachedAdminToken requestAdminToken() {
+        if (!hasServiceAccountSecret()) {
+            throw new KeycloakClientException(
+                    "No Keycloak service-account credential is configured: the master-realm password grant is not "
+                            + "supported, set shop.keycloak.admin-client-secret with a service-account token endpoint",
+                    HttpStatus.UNAUTHORIZED
+            );
+        }
+
+        if (!hasServiceAccountTokenEndpoint()) {
+            throw new KeycloakClientException(
+                    "Keycloak service-account secret is configured but no service-account token endpoint is set; "
+                            + "refusing to fall back to the master-realm password grant",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        return requestServiceAccountToken();
     }
 
     public void assignRealmRole(String userId, String roleName) {

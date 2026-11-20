@@ -13,7 +13,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
@@ -61,25 +60,31 @@ class IdempotencyServiceImplTest {
     }
 
     @Test
-    void begin_successSavesRowReturnsEmpty() {
-        when(repository.saveAndFlush(any(IdempotencyKey.class))).thenAnswer(inv -> inv.getArgument(0));
+    void begin_claimsTheKeyAtomically() {
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any()))
+            .thenReturn(1);
 
         Optional<OrderResponse> result = service.begin(key, actor, requestHash);
 
         assertThat(result).isEmpty();
-        ArgumentCaptor<IdempotencyKey> captor = ArgumentCaptor.forClass(IdempotencyKey.class);
-        verify(repository).saveAndFlush(captor.capture());
-        IdempotencyKey saved = captor.getValue();
-        assertThat(saved.getActor()).isEqualTo(actor);
-        assertThat(saved.getKey()).isEqualTo(key);
-        assertThat(saved.getRequestHash()).isEqualTo(requestHash);
-        assertThat(saved.getResponseStatus()).isEqualTo(0);
-        assertThat(saved.getExpiresAt()).isAfter(saved.getCreatedAt());
+        verify(repository).insertIfAbsent(eq(actor), eq(key), eq(requestHash), any());
+    }
+
+    @Test
+    void begin_neverClaimsTheKeyThroughMergeSemantics() {
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any()))
+            .thenReturn(1);
+
+        service.begin(key, actor, requestHash);
+
+        verify(repository, never()).save(any(IdempotencyKey.class));
+        verify(repository, never()).saveAndFlush(any(IdempotencyKey.class));
     }
 
     @Test
     void begin_collisionWithCompleteReturnsCached() throws Exception {
         IdempotencyKey existing = completedRow(requestHash);
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any())).thenReturn(0);
         when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
         when(objectMapper.readValue(existing.getResponseBody(), OrderResponse.class)).thenReturn(response);
 
@@ -92,6 +97,7 @@ class IdempotencyServiceImplTest {
     @Test
     void begin_collisionWithDifferentPayloadThrows409() {
         IdempotencyKey existing = completedRow("abc");
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any())).thenReturn(0);
         when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.begin(key, actor, requestHash))
@@ -102,6 +108,7 @@ class IdempotencyServiceImplTest {
     @Test
     void begin_collisionInFlightThrows() {
         IdempotencyKey existing = inFlightRow(requestHash);
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any())).thenReturn(0);
         when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.begin(key, actor, requestHash))
@@ -112,11 +119,9 @@ class IdempotencyServiceImplTest {
 
     @Test
     void begin_lostRace_replaysCompletedWinner() throws Exception {
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any())).thenReturn(0);
         when(repository.findByActorAndKey(actor, key))
-            .thenReturn(Optional.empty())
             .thenReturn(Optional.of(completedRow(requestHash)));
-        when(repository.saveAndFlush(any(IdempotencyKey.class)))
-            .thenThrow(new DataIntegrityViolationException("uk_idempotency"));
         when(objectMapper.readValue(anyString(), eq(OrderResponse.class))).thenReturn(response);
 
         Optional<OrderResponse> result = service.begin(key, actor, requestHash);
@@ -127,11 +132,9 @@ class IdempotencyServiceImplTest {
 
     @Test
     void begin_lostRace_inFlightWinnerThrows409() {
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any())).thenReturn(0);
         when(repository.findByActorAndKey(actor, key))
-            .thenReturn(Optional.empty())
             .thenReturn(Optional.of(inFlightRow(requestHash)));
-        when(repository.saveAndFlush(any(IdempotencyKey.class)))
-            .thenThrow(new DataIntegrityViolationException("uk_idempotency"));
 
         assertThatThrownBy(() -> service.begin(key, actor, requestHash))
             .isInstanceOfSatisfying(BusinessException.class,
@@ -139,15 +142,13 @@ class IdempotencyServiceImplTest {
     }
 
     @Test
-    void begin_lostRace_rowVanished_rethrowsOriginal() {
-        when(repository.findByActorAndKey(actor, key))
-            .thenReturn(Optional.empty())
-            .thenReturn(Optional.empty());
-        DataIntegrityViolationException dive = new DataIntegrityViolationException("uk_idempotency");
-        when(repository.saveAndFlush(any(IdempotencyKey.class))).thenThrow(dive);
+    void begin_lostRace_rowVanishedReportsDuplicate() {
+        when(repository.insertIfAbsent(eq(actor), eq(key), eq(requestHash), any())).thenReturn(0);
+        when(repository.findByActorAndKey(actor, key)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.begin(key, actor, requestHash))
-            .isSameAs(dive);
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ORD-4010"));
     }
 
 

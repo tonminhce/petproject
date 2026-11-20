@@ -20,7 +20,7 @@ class ServerErrorDefaultsTest {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> errorDefaults() throws Exception {
-        ClassPathResource resource = new ClassPathResource("application.yml");
+        ClassPathResource resource = new ClassPathResource("application-shared.yml");
         try (InputStream in = resource.getInputStream()) {
             Map<String, Object> root = new Yaml().load(in);
             Map<String, Object> server = (Map<String, Object>) root.get("server");

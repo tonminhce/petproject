@@ -2,6 +2,7 @@ package com.shop.common.spring.web.filter;
 
 import com.shop.common.core.constants.MdcKey;
 import com.shop.common.spring.web.util.RequestUtils;
+import com.shop.common.spring.web.util.TrustedProxyPolicy;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,7 +15,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
-import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -32,9 +32,15 @@ public class HttpLoggingFilter extends OncePerRequestFilter implements Ordered {
     );
 
     private final HttpLogProperties props;
+    private final TrustedProxyPolicy trustedProxyPolicy;
 
     public HttpLoggingFilter(HttpLogProperties props) {
+        this(props, TrustedProxyPolicy.none());
+    }
+
+    public HttpLoggingFilter(HttpLogProperties props, TrustedProxyPolicy trustedProxyPolicy) {
         this.props = props;
+        this.trustedProxyPolicy = trustedProxyPolicy == null ? TrustedProxyPolicy.none() : trustedProxyPolicy;
     }
 
     @Override
@@ -54,22 +60,22 @@ public class HttpLoggingFilter extends OncePerRequestFilter implements Ordered {
                                     @NonNull FilterChain chain) throws ServletException, IOException {
         ContentCachingRequestWrapper req = new ContentCachingRequestWrapper(
                 request, props.getRequest().getMaxBodyBytes());
-        ContentCachingResponseWrapper res = new ContentCachingResponseWrapper(response);
+        BoundedContentCachingResponseWrapper res = new BoundedContentCachingResponseWrapper(
+                response, props.getResponse().getMaxBufferBytes());
 
         long start = System.currentTimeMillis();
         try {
             chain.doFilter(req, res);
         } finally {
             writeLine(req, res, System.currentTimeMillis() - start);
-            res.copyBodyToResponse();
         }
     }
 
     private void writeLine(ContentCachingRequestWrapper req,
-                           ContentCachingResponseWrapper res,
+                           BoundedContentCachingResponseWrapper res,
                            long durationMs) {
         int status = res.getStatus();
-        String ip = RequestUtils.getClientIp(req);
+        String ip = RequestUtils.getClientIp(req, trustedProxyPolicy);
         String corrId = MDC.get(MdcKey.CORRELATION_ID);
         String ua = req.getHeader("User-Agent");
         String referer = req.getHeader("Referer");
@@ -92,6 +98,9 @@ public class HttpLoggingFilter extends OncePerRequestFilter implements Ordered {
         }
         if (props.getResponse().isEnabled() && props.getResponse().isIncludeBody()) {
             appendBody(sb, "res", res.getContentAsByteArray(), props.getResponse().getMaxBodyBytes());
+        }
+        if (res.isTruncated()) {
+            sb.append(" | resBuffer=truncated");
         }
 
         String line = sb.toString();

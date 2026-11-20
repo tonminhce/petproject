@@ -27,8 +27,8 @@ x-jwt: &jwt
   SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
 
 x-pg-creds: &pg-creds
-  POSTGRES_USER: ${POSTGRES_USER}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
 
 x-healthcheck-defaults: &hc-defaults
   interval: 20s
@@ -45,8 +45,8 @@ services:
     <<: [*restart, *logging]
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     command: ["postgres", "-c", "max_connections=300"]
     ports:
       - "${POSTGRES_PORT}:5432"
@@ -65,7 +65,7 @@ services:
     image: redis:7.4-alpine
     container_name: redis
     <<: [*restart, *logging]
-    command: redis-server --requirepass "${REDIS_PASSWORD}" --appendonly yes
+    command: redis-server --requirepass "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}" --appendonly yes
     ports:
       - "${REDIS_PORT}:6379"
     volumes:
@@ -108,7 +108,7 @@ services:
       - ecommerce-network
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.5
     container_name: elasticsearch
     <<: [*restart, *logging]
     environment:
@@ -116,9 +116,9 @@ services:
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
       - xpack.security.http.ssl.client_authentication=none
-      - ELASTIC_PASSWORD=${ES_ADMIN_PASSWORD}
-      - ES_ADMIN_PASSWORD=${ES_ADMIN_PASSWORD}
-      - ES_ADMIN_USERNAME=${ES_ADMIN_USERNAME}
+      - ELASTIC_PASSWORD=${ES_ADMIN_PASSWORD:?ES_ADMIN_PASSWORD must be set}
+      - ES_ADMIN_PASSWORD=${ES_ADMIN_PASSWORD:?ES_ADMIN_PASSWORD must be set}
+      - ES_ADMIN_USERNAME=${ES_ADMIN_USERNAME:?ES_ADMIN_USERNAME must be set}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - cluster.routing.allocation.disk.threshold_enabled=false
     entrypoint: ["/bin/bash", "-c"]
@@ -137,7 +137,7 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -u ${ES_ADMIN_USERNAME}:${ES_ADMIN_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -u ${ES_ADMIN_USERNAME:?ES_ADMIN_USERNAME must be set}:${ES_ADMIN_PASSWORD:?ES_ADMIN_PASSWORD must be set} http://localhost:9200/_cluster/health || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 40
@@ -154,8 +154,8 @@ services:
       RUSTFS_ADDRESS: 0.0.0.0:9000
       RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
       RUSTFS_CONSOLE_ENABLE: "true"
-      RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
-      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY must be set}
+      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY must be set}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -218,7 +218,7 @@ services:
       <<: [*jwt, *otel, *management]
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:?required}
       GATEWAY_RATE_LIMIT_ENABLED: ${GATEWAY_RATE_LIMIT_ENABLED:-true}
       GATEWAY_RATE_LIMIT_REPLENISH_RATE: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:-100}
@@ -262,7 +262,7 @@ services:
       SHOP_KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID: ${KEYCLOAK_SERVICE_ACCOUNT_CLIENT_ID:-ecommerce-admin}
       SHOP_KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       SHOP_KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      SHOP_KEYCLOAK_ADMIN_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET}
+      SHOP_KEYCLOAK_ADMIN_CLIENT_SECRET: ${ADMIN_SERVICE_CLIENT_SECRET:?ADMIN_SERVICE_CLIENT_SECRET must be set}
       AUTH_MAIL_ENABLED: ${AUTH_MAIL_ENABLED:-false}
       AUTH_MAIL_FROM: ${AUTH_MAIL_FROM:-}
       AUTH_RESET_BASE_URL: ${AUTH_RESET_BASE_URL:-http://localhost:3000/reset-password}
@@ -273,7 +273,7 @@ services:
       KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_ADMIN_REALM}
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
       KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set}
       SSO_BACKEND_CALLBACK_URL: http://localhost:8088/api/v1/auth/callback
       SSO_DEFAULT_FRONTEND_REDIRECT: http://localhost:3000/auth/callback
       SSO_ALLOWED_REDIRECT_URIS: http://localhost:3000/auth/callback,http://localhost:3001/auth/callback
@@ -305,7 +305,7 @@ services:
       MEDIA_SERVICE_URL: http://media-service:8083
       INVENTORY_SERVICE_URL: http://inventory-service:8082
       PRODUCT_SERVICE_CLIENT_ID: product-service
-      PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:-}
+      PRODUCT_SERVICE_CLIENT_SECRET: ${PRODUCT_SERVICE_CLIENT_SECRET:?PRODUCT_SERVICE_CLIENT_SECRET must be set}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
       SHOP_SECURITY_ISSUER_URI: http://keycloak:8080/realms/ecommerce
     depends_on:
@@ -342,7 +342,7 @@ services:
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_SERVICE_CLIENT_ID: order-service
-      ORDER_SERVICE_CLIENT_SECRET: ${ORDER_SERVICE_CLIENT_SECRET:-}
+      ORDER_SERVICE_CLIENT_SECRET: ${ORDER_SERVICE_CLIENT_SECRET:?ORDER_SERVICE_CLIENT_SECRET must be set}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       postgres:
@@ -369,7 +369,7 @@ services:
       SHOP_PAYMENT_PRODUCTION_MODE: ${SHOP_PAYMENT_PRODUCTION_MODE:-false}
       SHOP_PAYMENT_STRIPE_API_BASE: ${SHOP_PAYMENT_STRIPE_API_BASE:-}
       SHOP_PAYMENT_STRIPE_SECRET_KEY: ${SHOP_PAYMENT_STRIPE_SECRET_KEY:-stripe_sandbox_key}
-      SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:-whsec_local_e2e_only}
+      SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET: ${SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET:?SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET must be set}
       SHOP_PAYMENT_STRIPE_SANDBOX: ${SHOP_PAYMENT_STRIPE_SANDBOX:-true}
       SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX: ${SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX:-true}
       SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD: ${SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD:-pm_card_visa}
@@ -389,8 +389,8 @@ services:
       SHOP_PAYMENT_VNPAY_NOTIFY_URL: ${SHOP_PAYMENT_VNPAY_NOTIFY_URL:-}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?required}
       STORAGE_ENDPOINT: http://rustfs:9000
-      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
-      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY must be set}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY must be set}
       STORAGE_BUCKET: shop-payments
     depends_on:
       postgres:
@@ -486,8 +486,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mediaservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_ENDPOINT: http://rustfs:9000
-      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
-      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY must be set}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY must be set}
       STORAGE_BUCKET: ${STORAGE_BUCKET:-media}
       MEDIA_MAX_UPLOAD: ${MEDIA_MAX_UPLOAD:-10MB}
       MEDIA_MAX_DECODED_BYTES: ${MEDIA_MAX_DECODED_BYTES:-64MB}
@@ -558,7 +558,7 @@ services:
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_SERVICE_URL: http://order-service:8084
       RATING_SERVICE_CLIENT_ID: rating-service
-      RATING_SERVICE_CLIENT_SECRET: ${RATING_SERVICE_CLIENT_SECRET:-}
+      RATING_SERVICE_CLIENT_SECRET: ${RATING_SERVICE_CLIENT_SECRET:?RATING_SERVICE_CLIENT_SECRET must be set}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       postgres:
@@ -580,12 +580,12 @@ services:
     environment:
       <<: [*jwt, *otel, *management]
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: ${ES_ADMIN_USERNAME}
-      ELASTICSEARCH_PASSWORD: ${ES_ADMIN_PASSWORD}
+      ELASTICSEARCH_USERNAME: ${ES_ADMIN_USERNAME:?ES_ADMIN_USERNAME must be set}
+      ELASTICSEARCH_PASSWORD: ${ES_ADMIN_PASSWORD:?ES_ADMIN_PASSWORD must be set}
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       PRODUCT_SERVICE_URL: http://product-service:8086
       SEARCH_SERVICE_CLIENT_ID: search-service
-      SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:-}
+      SEARCH_SERVICE_CLIENT_SECRET: ${SEARCH_SERVICE_CLIENT_SECRET:?SEARCH_SERVICE_CLIENT_SECRET must be set}
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/token
     depends_on:
       elasticsearch:
@@ -609,7 +609,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notificationservice
       SHOP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       SMTP_ENABLED: ${SMTP_ENABLED:-false}
       SMTP_FALLBACK_RECIPIENT: ${SMTP_FALLBACK_RECIPIENT:-ops@example.com}
     depends_on:
@@ -651,12 +651,78 @@ services:
       - "--web.enable-lifecycle"
     volumes:
       - ./config/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/observability/alertmanager/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9095:9090"
     healthcheck:
       <<: *hc-defaults
       test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy > /dev/null 2>&1 || exit 1"]
+    networks:
+      - ecommerce-network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    profiles: [observability]
+    <<: [*restart, *logging]
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/ecommerce?sslmode=disable"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    profiles: [observability]
+    <<: [*restart, *logging]
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - ecommerce-network
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    profiles: [observability]
+    <<: [*restart, *logging]
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_CI_CHAT_ID: ${TELEGRAM_CI_CHAT_ID:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -n "$$TELEGRAM_BOT_TOKEN" ]; then
+          printf '%s' "$$TELEGRAM_BOT_TOKEN" | grep -Eq '^[0-9]{6,12}:[A-Za-z0-9_-]{20,}$$' || { echo "TELEGRAM_BOT_TOKEN does not match the expected bot token format" >&2; exit 1; }
+          printf '%s' "$$TELEGRAM_CHAT_ID" | grep -Eq '^-?[0-9]{1,20}$$' || { echo "TELEGRAM_CHAT_ID is not a valid Telegram chat identifier" >&2; exit 1; }
+          escape() { printf '%s' "$$1" | sed -e 's/[\\&|]/\\&/g'; }
+          token=$(escape "$$TELEGRAM_BOT_TOKEN")
+          chat=$(escape "$$TELEGRAM_CHAT_ID")
+          sed -e "s|__TELEGRAM_BOT_TOKEN__|$$token|g" \
+              -e "s|__TELEGRAM_CHAT_ID__|$$chat|g" \
+              /etc/alertmanager/template/alertmanager.yml.template > /tmp/alertmanager.yml
+        else
+          echo "TELEGRAM_BOT_TOKEN is not set, so the alertmanager groups alerts without a telegram receiver" >&2
+          cp /etc/alertmanager/template/alertmanager.inactive.yml.template /tmp/alertmanager.yml
+        fi
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    volumes:
+      - ./config/observability/alertmanager:/etc/alertmanager/template:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy > /dev/null 2>&1 || exit 1"]
     networks:
       - ecommerce-network
 
@@ -747,12 +813,46 @@ services:
     networks:
       - ecommerce-network
 
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    profiles: [loadtest]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        export SCENARIO="$${SCENARIO:-browse}"
+        export RATE="$${RATE:-20}"
+        export VUS="$${VUS:-20}"
+        export DURATION="$${DURATION:-60s}"
+        export BASE_URL="$${BASE_URL:-http://gateway-service:8080}"
+        export TOKEN="$${TOKEN:-}"
+        export HOT_PRODUCT_ID="$${HOT_PRODUCT_ID:-}"
+        export COUPON_CODE="$${COUPON_CODE:-}"
+        exec k6 run --summary-export /results/k6-summary.json /load-tests/k6-scenario.js
+    environment:
+      SCENARIO: ${LOAD_SCENARIO:-browse}
+      RATE: ${LOAD_RATE:-20}
+      VUS: ${LOAD_VUS:-20}
+      DURATION: ${LOAD_DURATION:-60s}
+      BASE_URL: ${LOAD_BASE_URL:-http://gateway-service:8080}
+      TOKEN: ${LOAD_TOKEN:-}
+      HOT_PRODUCT_ID: ${HOT_PRODUCT_ID:-}
+      COUPON_CODE: ${COUPON_CODE:-}
+    volumes:
+      - ./load-tests:/load-tests:ro
+      - load-results:/results
+    networks:
+      - ecommerce-network
+
 networks:
   ecommerce-network:
     driver: bridge
 
 volumes:
+  load-results:
   prometheus_data:
+  alertmanager_data:
   tempo_data:
   loki_data:
   alloy_data:

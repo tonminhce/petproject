@@ -22,6 +22,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +34,7 @@ class RateLimitRejectionContractTest {
     private RateLimitOutageGuard outageGuard;
     private RateLimiter rateLimiter;
     private KeyResolver keyResolver;
+    private FleetRateLimiter fleetRateLimiter;
     private EdgeRateLimiter edgeRateLimiter;
     private GatewayFilterChain chain;
 
@@ -42,6 +44,7 @@ class RateLimitRejectionContractTest {
         outageGuard = new RateLimitOutageGuard(RedisOutagePolicy.FAIL_CLOSED, errorResponseWriter);
         rateLimiter = mock(RateLimiter.class);
         keyResolver = mock(KeyResolver.class);
+        fleetRateLimiter = mock(FleetRateLimiter.class);
         edgeRateLimiter = mock(EdgeRateLimiter.class);
         chain = mock(GatewayFilterChain.class);
         when(chain.filter(any())).thenReturn(Mono.empty());
@@ -52,6 +55,7 @@ class RateLimitRejectionContractTest {
     void everyLimiterLayerRejectsWithTheSameStatusBodyAndHeaders() throws Exception {
         when(rateLimiter.isAllowed(any(), any()))
                 .thenReturn(Mono.just(new RateLimiter.Response(false, Map.of("X-RateLimit-Remaining", "0"))));
+        when(fleetRateLimiter.acquire(anyString())).thenReturn(Mono.just(FleetRateLimitDecision.rejected()));
         when(edgeRateLimiter.acquire(any(), any(), anyInt()))
                 .thenReturn(Mono.just(EdgeRateLimitDecision.rejected()));
 
@@ -70,6 +74,7 @@ class RateLimitRejectionContractTest {
     void everyLimiterLayerFailsTheSameWayWhenRedisIsUnreachable() throws Exception {
         when(rateLimiter.isAllowed(any(), any()))
                 .thenReturn(Mono.just(new RateLimiter.Response(true, Map.of("X-RateLimit-Remaining", "-1"))));
+        when(fleetRateLimiter.acquire(anyString())).thenReturn(Mono.just(FleetRateLimitDecision.outage()));
         when(edgeRateLimiter.acquire(any(), any(), anyInt()))
                 .thenReturn(Mono.just(EdgeRateLimitDecision.outage()));
 
@@ -79,9 +84,7 @@ class RateLimitRejectionContractTest {
 
         new RouteRateLimitFilter("product-service", rateLimiter, keyResolver,
                 rateLimitProperties(), errorResponseWriter, outageGuard).filter(routeLayer, chain).block();
-        new GlobalRateLimitFilter(rateLimiter, rateLimitProperties(),
-                new GlobalRateLimitProperties(true, 2_000, 4_000, 1), errorResponseWriter, outageGuard)
-                .filter(globalLayer, chain).block();
+        globalFilter(outageGuard).filter(globalLayer, chain).block();
         edgeFilter().filter(edgeLayer, chain).block();
 
         assertOutageContract(routeLayer);
@@ -96,6 +99,7 @@ class RateLimitRejectionContractTest {
         var openGuard = new RateLimitOutageGuard(RedisOutagePolicy.FAIL_OPEN, errorResponseWriter);
         when(rateLimiter.isAllowed(any(), any()))
                 .thenReturn(Mono.just(new RateLimiter.Response(true, Map.of("X-RateLimit-Remaining", "-1"))));
+        when(fleetRateLimiter.acquire(anyString())).thenReturn(Mono.just(FleetRateLimitDecision.outage()));
         when(edgeRateLimiter.acquire(any(), any(), anyInt()))
                 .thenReturn(Mono.just(EdgeRateLimitDecision.outage()));
 
@@ -105,9 +109,7 @@ class RateLimitRejectionContractTest {
 
         new RouteRateLimitFilter("product-service", rateLimiter, keyResolver,
                 rateLimitProperties(), errorResponseWriter, openGuard).filter(routeLayer, chain).block();
-        new GlobalRateLimitFilter(rateLimiter, rateLimitProperties(),
-                new GlobalRateLimitProperties(true, 2_000, 4_000, 1), errorResponseWriter, openGuard)
-                .filter(globalLayer, chain).block();
+        globalFilter(openGuard).filter(globalLayer, chain).block();
         new RateLimitFilter(new EdgeRateLimitProperties(true, 10, 60), errorResponseWriter,
                 new ClientIpResolver(new TrustedProxyPolicy(List.of(), 0)), edgeRateLimiter, openGuard)
                 .filter(edgeLayer, chain).block();
@@ -124,6 +126,12 @@ class RateLimitRejectionContractTest {
         return new RateLimitProperties(true, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED);
     }
 
+    private GlobalRateLimitFilter globalFilter(final RateLimitOutageGuard guard) {
+        return new GlobalRateLimitFilter(fleetRateLimiter, keyResolver, rateLimitProperties(),
+                FleetRateLimitBudget.from(new GlobalRateLimitProperties(true, 2_000, 4_000, 1, 8, 20, 1)),
+                errorResponseWriter, guard);
+    }
+
     private RateLimitFilter edgeFilter() {
         return new RateLimitFilter(new EdgeRateLimitProperties(true, 10, 60), errorResponseWriter,
                 new ClientIpResolver(new TrustedProxyPolicy(List.of(), 0)), edgeRateLimiter, outageGuard);
@@ -138,9 +146,7 @@ class RateLimitRejectionContractTest {
 
     private MockServerWebExchange rejectWithGlobalLayer() {
         var exchange = globalLayerExchange();
-        new GlobalRateLimitFilter(rateLimiter, rateLimitProperties(),
-                new GlobalRateLimitProperties(true, 2_000, 4_000, 1), errorResponseWriter, outageGuard)
-                .filter(exchange, chain).block();
+        globalFilter(outageGuard).filter(exchange, chain).block();
         return exchange;
     }
 

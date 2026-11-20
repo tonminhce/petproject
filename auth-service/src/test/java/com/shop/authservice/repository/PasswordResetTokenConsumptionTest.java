@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Duration;
 
 @DataJpaTest
 @Testcontainers
@@ -48,7 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PasswordResetTokenConsumptionTest {
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine").withStartupTimeout(Duration.ofMinutes(5))
             .withDatabaseName("auth_reset_token")
             .withUsername("auth")
             .withPassword("auth");

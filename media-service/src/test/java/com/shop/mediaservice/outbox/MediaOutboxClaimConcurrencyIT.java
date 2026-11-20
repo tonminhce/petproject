@@ -1,18 +1,28 @@
 package com.shop.mediaservice.outbox;
 
 import com.shop.common.core.constants.OutboxStatus;
+import com.shop.common.kafka.producer.KafkaMessagePublisher;
+import com.shop.common.kafka.producer.KafkaMessagePublisher.BatchOutcome;
+import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
+import com.shop.mediaservice.outbox.OutboxEvent;
+import com.shop.mediaservice.outbox.OutboxEventRepository;
 import com.shop.mediaservice.support.AbstractMediaIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +32,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
 
-    private static final List<OutboxStatus> DUE = List.of(OutboxStatus.PENDING, OutboxStatus.FAILED);
+    private static final List<String> DUE_STATUS_NAMES =
+            List.of(OutboxStatus.PENDING.name(), OutboxStatus.FAILED.name());
+
+    private static final int BATCH_SIZE = 4;
+    private static final int PENDING_EVENTS = 12;
 
     @DynamicPropertySource
     static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
@@ -33,144 +47,225 @@ class MediaOutboxClaimConcurrencyIT extends AbstractMediaIntegrationTest {
     @Autowired PlatformTransactionManager txManager;
 
     @BeforeEach
-    void clearDueRows() {
-        outboxRepo.deleteAll(outboxRepo.findByStatusInOrderByIdAsc(DUE, PageRequest.of(0, 10_000)));
+    void clearOutbox() {
+        outboxRepo.deleteAll();
     }
 
-    private OutboxEvent dueEvent(OutboxStatus status) {
+    @Test
+    void twoRelayInstances_publishDisjointEventsAndEveryEventExactlyOnce() throws Exception {
+        RecordingPublisher publisherA = new RecordingPublisher();
+        RecordingPublisher publisherB = new RecordingPublisher();
+        MediaOutboxRelay relayA = relayWith(publisherA);
+        MediaOutboxRelay relayB = relayWith(publisherB);
+
+        List<String> pending = seedPendingEvents(PENDING_EVENTS);
+
+        for (int round = 0; round < PENDING_EVENTS; round++) {
+            relayConcurrently(relayA, relayB);
+            if (dueCount() == 0) {
+                break;
+            }
+        }
+
+        List<String> publishedByA = publisherA.payloads();
+        List<String> publishedByB = publisherB.payloads();
+        List<String> published = new ArrayList<>(publishedByA);
+        published.addAll(publishedByB);
+
+        assertThat(publishedByA).as("the first replica must publish its own share").isNotEmpty();
+        assertThat(publishedByB).as("the second replica must publish its own share").isNotEmpty();
+        assertThat(published).as("no event may be published twice").doesNotHaveDuplicates();
+        assertThat(new HashSet<>(published))
+                .as("the union of both replicas must cover every pending event")
+                .containsExactlyInAnyOrderElementsOf(pending);
+        assertThat(dueCount())
+                .as("every pending event must leave the outbox").isZero();
+        assertThat(sentCount())
+                .as("every pending event must be marked sent exactly once")
+                .isEqualTo(PENDING_EVENTS);
+    }
+
+    @Test
+    void aClaimOnOneAggregateDoesNotBlockAnotherAggregate() throws Exception {
+        OutboxEvent locked = outboxRepo.saveAndFlush(pendingEvent());
+        OutboxEvent other = outboxRepo.saveAndFlush(pendingEvent());
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+
+        CountDownLatch headLocked = new CountDownLatch(1);
+        CountDownLatch peerClaimed = new CountDownLatch(1);
+        CountDownLatch holderCommitted = new CountDownLatch(1);
+        AtomicReference<List<OutboxEvent>> claimWhileLocked = new AtomicReference<>();
+        AtomicReference<List<OutboxEvent>> claimAfterCommit = new AtomicReference<>();
+
+        Thread holder = new Thread(() -> {
+            tx.executeWithoutResult(status -> {
+                outboxRepo.claimAggregateEvents(locked.getAggregateId(), pendingStatuses(),
+                        OutboxStatus.SENDING.name(), 1);
+                headLocked.countDown();
+                await(peerClaimed);
+            });
+            holderCommitted.countDown();
+        });
+        Thread peer = new Thread(() -> {
+            await(headLocked);
+            claimWhileLocked.set(tx.execute(t -> outboxRepo.claimAggregateEvents(
+                    other.getAggregateId(), pendingStatuses(), OutboxStatus.SENDING.name(), 1)));
+            peerClaimed.countDown();
+            await(holderCommitted);
+            claimAfterCommit.set(tx.execute(t -> outboxRepo.claimAggregateEvents(
+                    locked.getAggregateId(), pendingStatuses(), OutboxStatus.SENDING.name(), 1)));
+        });
+        holder.start();
+        peer.start();
+        holder.join(30_000);
+        peer.join(30_000);
+
+        assertThat(holder.isAlive()).isFalse();
+        assertThat(peer.isAlive()).isFalse();
+
+        assertThat(claimWhileLocked.get())
+                .as("a locked aggregate must not block the claim of another aggregate")
+                .extracting(OutboxEvent::getId)
+                .containsExactly(other.getId());
+        assertThat(claimAfterCommit.get())
+                .as("the locked aggregate must be claimable again once the lock is released")
+                .extracting(OutboxEvent::getId)
+                .containsExactly(locked.getId());
+    }
+
+    @Test
+    void anAggregateThatIsInFlightIsNotClaimedByAnotherInstance() {
+        OutboxEvent inFlight = outboxRepo.saveAndFlush(pendingEvent());
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+
+        tx.executeWithoutResult(status -> {
+            List<OutboxEvent> claimed = outboxRepo.claimAggregateEvents(inFlight.getAggregateId(),
+                    pendingStatuses(), OutboxStatus.SENDING.name(), 1);
+            assertThat(claimed).hasSize(1);
+            claimed.get(0).setStatus(OutboxStatus.SENDING);
+            claimed.get(0).setClaimedAt(Instant.now());
+            outboxRepo.saveAll(claimed);
+        });
+
+        List<OutboxEvent> second = tx.execute(t -> outboxRepo.claimAggregateEvents(inFlight.getAggregateId(),
+                pendingStatuses(), OutboxStatus.SENDING.name(), 1));
+
+        assertThat(second)
+                .as("an aggregate with an event in flight must not be claimed again")
+                .isEmpty();
+    }
+
+    private List<String> pendingStatuses() {
+        return List.of(OutboxStatus.PENDING.name());
+    }
+
+    private MediaOutboxRelay relayWith(RecordingPublisher publisher) {
+        MediaOutboxRelay relay = new MediaOutboxRelay(outboxRepo, publisher, txManager);
+        ReflectionTestUtils.setField(relay, "batchSize", BATCH_SIZE);
+        ReflectionTestUtils.setField(relay, "maxRetries", 10);
+        ReflectionTestUtils.setField(relay, "publishTimeoutMs", 5_000L);
+        ReflectionTestUtils.setField(relay, "claimLeaseMs", 60_000L);
+        return relay;
+    }
+
+    private void relayConcurrently(MediaOutboxRelay relayA, MediaOutboxRelay relayB) throws Exception {
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicReference<Throwable> failureA = new AtomicReference<>();
+        AtomicReference<Throwable> failureB = new AtomicReference<>();
+        Thread a = new Thread(() -> {
+            await(start);
+            try {
+                relayA.relay();
+            } catch (Throwable failure) {
+                failureA.set(failure);
+            }
+        });
+        Thread b = new Thread(() -> {
+            await(start);
+            try {
+                relayB.relay();
+            } catch (Throwable failure) {
+                failureB.set(failure);
+            }
+        });
+        a.start();
+        b.start();
+        start.countDown();
+        a.join(30_000);
+        b.join(30_000);
+        assertThat(a.isAlive()).isFalse();
+        assertThat(b.isAlive()).isFalse();
+        assertThat(failureA.get()).isNull();
+        assertThat(failureB.get()).isNull();
+    }
+
+    private long dueCount() {
+        return outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.PENDING, PageRequest.of(0, 1000)).size()
+                + outboxRepo.findByStatusInOrderByIdAsc(
+                        List.of(OutboxStatus.FAILED), PageRequest.of(0, 1000)).size();
+    }
+
+    private long sentCount() {
+        return outboxRepo.findByStatusOrderByIdAsc(OutboxStatus.SENT, PageRequest.of(0, 1000)).size();
+    }
+
+    private List<String> seedPendingEvents(int count) {
+        List<String> payloads = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            OutboxEvent event = pendingEvent();
+            outboxRepo.saveAndFlush(event);
+            payloads.add(event.getPayload());
+        }
+        return payloads;
+    }
+
+    private OutboxEvent pendingEvent() {
         return OutboxEvent.builder()
-            .eventId(UUID.randomUUID().toString())
-            .aggregateType("media")
-            .aggregateId(UUID.randomUUID())
-            .eventType("MediaCreated")
-            .topic("media.lifecycle.v1")
-            .payload("{}")
-            .status(status)
-            .retryCount(0)
-            .build();
+                .eventId(UUID.randomUUID().toString())
+                .aggregateType("media")
+                .aggregateId(UUID.randomUUID())
+                .eventType("MediaCreated")
+                .topic("media.lifecycle.v1")
+                .payload("{\"payload\":\"" + UUID.randomUUID() + "\"}")
+                .status(OutboxStatus.PENDING)
+                .retryCount(0)
+                .build();
     }
 
-    @Test
-    void concurrentClaim_lockedOutPeerGetsEmptyNeverTheSameRow() throws Exception {
-        Long rowId = outboxRepo.save(dueEvent(OutboxStatus.PENDING)).getId();
-        TransactionTemplate tx = new TransactionTemplate(txManager);
-
-        CountDownLatch aClaimed = new CountDownLatch(1);
-        CountDownLatch bLockedOut = new CountDownLatch(1);
-        CountDownLatch aCommitted = new CountDownLatch(1);
-        AtomicReference<Optional<OutboxEvent>> claimA = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
-
-        Thread claimerA = new Thread(() -> {
-            try {
-                tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOneDue(DUE));
-                    aClaimed.countDown();
-                    try {
-                        bLockedOut.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
-            } finally {
-                aCommitted.countDown();
-            }
-        });
-        Thread claimerB = new Thread(() -> {
-            try {
-                if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOneDue(DUE)));
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                bLockedOut.countDown();
-            }
-            try {
-                if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOneDue(DUE)));
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-        claimerA.start();
-        claimerB.start();
-        claimerA.join(20_000);
-        claimerB.join(20_000);
-
-        assertThat(claimerA.isAlive()).isFalse();
-        assertThat(claimerB.isAlive()).isFalse();
-
-        assertThat(claimA.get()).isPresent();
-        assertThat(claimA.get().map(OutboxEvent::getId)).contains(rowId);
-        assertThat(claimBWhileLocked.get()).isEmpty();
-        assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(rowId);
-
-        outboxRepo.deleteById(rowId);
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
-    @Test
-    void twoPendingRows_secondRowUntouchedWhileHeadRowLocked() throws Exception {
-        Long row1 = outboxRepo.save(dueEvent(OutboxStatus.PENDING)).getId();
-        Long row2 = outboxRepo.save(dueEvent(OutboxStatus.PENDING)).getId();
-        TransactionTemplate tx = new TransactionTemplate(txManager);
+    static final class RecordingPublisher extends KafkaMessagePublisher {
 
-        CountDownLatch aClaimed = new CountDownLatch(1);
-        CountDownLatch bLockedOut = new CountDownLatch(1);
-        CountDownLatch aCommitted = new CountDownLatch(1);
-        AtomicReference<Optional<OutboxEvent>> claimA = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBWhileLocked = new AtomicReference<>();
-        AtomicReference<Optional<OutboxEvent>> claimBAfterCommit = new AtomicReference<>();
+        private final List<OutboxMessage> published = Collections.synchronizedList(new ArrayList<>());
 
-        Thread claimerA = new Thread(() -> {
-            try {
-                tx.executeWithoutResult(status -> {
-                    claimA.set(outboxRepo.claimOneDue(DUE));
-                    aClaimed.countDown();
-                    try {
-                        bLockedOut.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
-            } finally {
-                aCommitted.countDown();
+        RecordingPublisher() {
+            super((KafkaTemplate<String, String>) null);
+        }
+
+        @Override
+        public BatchOutcome publishBatch(List<OutboxMessage> records, long timeout, TimeUnit unit) {
+            published.addAll(records);
+            List<BatchOutcome.RecordOutcome> outcomes = new ArrayList<>();
+            for (int i = 0; i < records.size(); i++) {
+                outcomes.add(new BatchOutcome.RecordOutcome(i, true, null));
             }
-        });
-        Thread claimerB = new Thread(() -> {
-            try {
-                if (aClaimed.await(10, TimeUnit.SECONDS)) {
-                    claimBWhileLocked.set(tx.execute(s -> outboxRepo.claimOneDue(DUE)));
+            return new BatchOutcome(records.size(), records.size(), true, outcomes);
+        }
+
+        List<String> payloads() {
+            List<String> values = new ArrayList<>();
+            synchronized (published) {
+                for (OutboxMessage message : published) {
+                    values.add(String.valueOf(message.value()));
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                bLockedOut.countDown();
             }
-            try {
-                if (aCommitted.await(10, TimeUnit.SECONDS)) {
-                    claimBAfterCommit.set(tx.execute(s -> outboxRepo.claimOneDue(DUE)));
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-        claimerA.start();
-        claimerB.start();
-        claimerA.join(20_000);
-        claimerB.join(20_000);
-
-        assertThat(claimerA.isAlive()).isFalse();
-        assertThat(claimerB.isAlive()).isFalse();
-
-        assertThat(claimA.get().map(OutboxEvent::getId)).contains(row1);
-        assertThat(claimBWhileLocked.get()).isEmpty();
-        assertThat(claimBAfterCommit.get().map(OutboxEvent::getId)).contains(row1);
-        assertThat(outboxRepo.findById(row2).map(OutboxEvent::getStatus)).contains(OutboxStatus.PENDING);
-
-        outboxRepo.deleteById(row1);
-        outboxRepo.deleteById(row2);
+            return values;
+        }
     }
 }

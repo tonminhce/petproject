@@ -117,15 +117,22 @@ def save_verification(document: dict[str, Any], path: Any = None) -> Path:
 
 
 def record_suite_result(suite: str, result: dict[str, Any], path: Any = None) -> dict[str, Any]:
+    from ..inventory.scanner import source_fingerprint
+
     document = load_verification(path)
     suites = document.setdefault("suites", {})
     suites[suite] = {
         "updated_at": utc_now(),
+        "source_fingerprint": source_fingerprint(),
         **result,
     }
     document["revision"] = result.get("revision", "")
     save_verification(document, path)
     return document
+
+
+def evidence_is_fresh(entry: dict[str, Any], fingerprint: str) -> bool:
+    return bool(entry.get("source_fingerprint")) and entry.get("source_fingerprint") == fingerprint
 
 
 def _coverage_summary() -> dict[str, Any]:
@@ -191,12 +198,23 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     verification = load_verification()
     suites = verification.get("suites", {})
+    from ..inventory.scanner import source_fingerprint
+
+    fingerprint = source_fingerprint(repository)
+    stale_suites: list[str] = []
 
     def suite_status(name: str) -> str:
         entry = suites.get(name)
         if not entry:
             return PENDING
+        if not evidence_is_fresh(entry, fingerprint):
+            if name not in stale_suites:
+                stale_suites.append(name)
+            return PENDING
         if entry.get("status") == PASS:
+            tests_run = entry.get("tests_run")
+            if tests_run is not None and int(tests_run) == 0:
+                return INSUFFICIENT_EVIDENCE
             return PASS
         if entry.get("status") == FAIL:
             return FAIL
@@ -225,14 +243,19 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     )
 
     build_suite = suites.get("build", {})
-    build_pass = build_suite.get("status") in (PASS, "PASSED")
+    build_recorded = build_suite.get("status") in (PASS, "PASSED")
+    build_fresh = evidence_is_fresh(build_suite, fingerprint)
+    build_pass = build_recorded and build_fresh
     gates.append(
         Gate(
             id="GATE-12",
             name="BUILD",
             status=PASS if build_pass else PENDING,
-            evidence=[f"build exit={build_suite.get('exit_code', 'n/a')}"],
-            detail="full reactor build succeeded" if build_pass else "reactor build not yet verified",
+            evidence=[
+                f"build exit={build_suite.get('exit_code', 'n/a')}",
+                f"build evidence fresh={build_fresh}",
+            ],
+            detail="full reactor build succeeded" if build_pass else ("reactor build evidence is stale" if build_recorded else "reactor build not yet verified"),
         )
     )
 
@@ -242,6 +265,8 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     gates.append(Gate(id="GATE-16", name="REAL_E2E", status=suite_status("e2e"), evidence=[f"suite e2e: {suite_status('e2e')}"]))
     gates.append(Gate(id="GATE-17", name="PERFORMANCE", status=suite_status("performance"), evidence=[f"suite performance: {suite_status('performance')}"]))
     gates.append(Gate(id="GATE-18", name="OBSERVABILITY_OPERATIONS", status=suite_status("operations"), evidence=[f"suite operations: {suite_status('operations')}"]))
+    gates.append(Gate(id="GATE-23", name="ALERTING_CONFIGURATION", status=suite_status("alerts"), evidence=[f"suite alerts: {suite_status('alerts')}"]))
+    gates.append(Gate(id="GATE-24", name="KUBERNETES_MANIFESTS", status=suite_status("k8s"), evidence=[f"suite k8s: {suite_status('k8s')}"]))
 
     reviews_root = config.run_root() / "independent-reviews"
     reviews = list(reviews_root.glob("*.md")) if reviews_root.exists() else []
@@ -270,27 +295,38 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
         )
     )
 
-    blocking = [task for task in tasks.values() if task.severity == "CRITICAL" and task.state not in ("VERIFIED",)]
+    blocking = [
+        task
+        for task in tasks.values()
+        if task.severity in ("CRITICAL", "HIGH") and task.state not in ("VERIFIED",)
+    ]
     gates.append(
         Gate(
             id="GATE-21",
             name="ZERO_RELEASE_BLOCKERS",
             status=PASS if tasks and not blocking else (PENDING if not tasks else FAIL),
-            evidence=[f"{len(blocking)} unresolved CRITICAL tasks"],
+            evidence=[f"{len(blocking)} unresolved CRITICAL or HIGH tasks"],
             detail="no unresolved release blocker" if tasks and not blocking else "release blockers remain",
         )
     )
 
     manifest_revision = manifest.get("revision", "")
     head_revision = subprocess.run(["git", "-C", str(repository), "rev-parse", "HEAD"], capture_output=True, text=True, check=False).stdout.strip()
-    current = bool(manifest_revision) and manifest_revision == head_revision
+    manifest_fingerprint = manifest.get("source_fingerprint", "")
+    revision_matches = bool(manifest_revision) and manifest_revision == head_revision
+    tree_matches = bool(manifest_fingerprint) and manifest_fingerprint == fingerprint
+    current = revision_matches and tree_matches
     gates.append(
         Gate(
             id="GATE-22",
             name="FINAL_RECONCILIATION",
             status=PASS if current and manifest_total > 0 else PENDING,
-            evidence=[f"manifest revision={manifest_revision}", f"HEAD={head_revision}"],
-            detail="evidence matches current revision" if current else "evidence does not match current revision",
+            evidence=[
+                f"manifest revision={manifest_revision}",
+                f"HEAD={head_revision}",
+                f"manifest fingerprint matches working tree={tree_matches}",
+            ],
+            detail="evidence matches current revision" if current else "evidence does not match the current revision and working tree",
         )
     )
 
@@ -321,6 +357,8 @@ def completion_predicate(gates: list[Gate]) -> dict[str, Any]:
         "GATE-20",
         "GATE-21",
         "GATE-22",
+        "GATE-23",
+        "GATE-24",
     ]
     gate_map = {gate.id: gate for gate in gates}
     results = {gate_id: gate_map[gate_id].status == PASS for gate_id in required if gate_id in gate_map}

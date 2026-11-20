@@ -8,16 +8,19 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.lang.NonNull;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public final class CorrelationIdFilter extends OncePerRequestFilter implements Ordered {
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
+
+    static final int MAX_IDENTIFIER_LENGTH = 64;
+    static final Pattern SAFE_IDENTIFIER = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
     @Override
     public int getOrder() {
@@ -28,8 +31,8 @@ public final class CorrelationIdFilter extends OncePerRequestFilter implements O
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain chain) throws ServletException, IOException {
-        String correlationId = headerOrNew(request, CORRELATION_ID_HEADER);
-        String requestId = headerOrNew(request, REQUEST_ID_HEADER);
+        String correlationId = validatedIdentifierOrNew(request, CORRELATION_ID_HEADER);
+        String requestId = validatedIdentifierOrNew(request, REQUEST_ID_HEADER);
 
         MDC.put(MdcKey.CORRELATION_ID, correlationId);
         MDC.put(MdcKey.REQUEST_ID, requestId);
@@ -50,8 +53,11 @@ public final class CorrelationIdFilter extends OncePerRequestFilter implements O
         }
     }
 
-    private static String headerOrNew(HttpServletRequest request, String header) {
+    static String validatedIdentifierOrNew(HttpServletRequest request, String header) {
         String value = request.getHeader(header);
-        return StringUtils.hasText(value) ? value : UUID.randomUUID().toString();
+        if (value != null && SAFE_IDENTIFIER.matcher(value).matches()) {
+            return value;
+        }
+        return UUID.randomUUID().toString();
     }
 }

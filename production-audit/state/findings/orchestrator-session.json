@@ -1,0 +1,590 @@
+{
+  "topic": "orchestrator-session",
+  "source_report": "production-audit/runs/run-20261118-a2b6e6fc/independent-reviews/orchestrator-change-review.md",
+  "findings": [
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-01 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "order-service",
+      "assigned_agent": "",
+      "business_risk": "The idempotency claim was not atomic, so two concurrent confirms could both orchestrate the same order",
+      "concurrency_tests": [
+        "order-service/src/test/java/com/shop/orderservice/service/IdempotencyClaimIT.java"
+      ],
+      "current_implementation": "idempotencyService.begin relied on saveAndFlush raising DataIntegrityViolationException. JPA merges an entity with an assigned id instead of inserting it, so the exception never fired; the late claimant silently adopted and reset the winner record and begin returned an empty Optional, telling the caller it owned the key.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "order-service/src/test/java/com/shop/orderservice/service/IdempotencyClaimIT.java"
+      ],
+      "id": "ORC-01",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "order-service/src/test/java/com/shop/orderservice/service/IdempotencyClaimIT.java"
+      ],
+      "notes": "The reproduction printed stored.responseStatus=0 stored.responseBody=[] for a record that had been completed with status 200, which proves the merge reset it. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "order-service/src/main/java/com/shop/orderservice/service/impls/IdempotencyServiceImpl.java:begin"
+      ],
+      "target_implementation": "The claim now runs as a single INSERT ON CONFLICT DO NOTHING that returns the affected row count, so exactly one transaction can own a key.",
+      "technical_risk": "",
+      "title": "The idempotency claim was not atomic, so two concurrent confirms could both orchestrate the same order"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-02 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "observability",
+      "assigned_agent": "",
+      "business_risk": "Thirteen alert rules referenced metrics the platform never publishes, and the validator never checked metric existence",
+      "concurrency_tests": [],
+      "current_implementation": "Rules referenced application_startup_failures_total, kafka_consumergroup_lag, outbox_pending_events_count, payment_webhook_processing_failures_total, inventory_invariant_violations_total and other names that exist nowhere in the source.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/alerts/metrics.py",
+        "production-audit/harness/tests/test_alerts.py"
+      ],
+      "id": "ORC-02",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/alerts/metrics.py",
+        "production-audit/harness/tests/test_alerts.py"
+      ],
+      "notes": "The rewritten rule set passes promtool check rules with 18 rules and the live metric audit reports no unknown metric. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "config/observability/alertmanager/rules/runtime-alerts.yml"
+      ],
+      "target_implementation": "Every rule now uses a metric confirmed against the live Prometheus inventory, and the validator queries the live metric catalogue and fails a rule that names an unpublished metric.",
+      "technical_risk": "",
+      "title": "Thirteen alert rules referenced metrics the platform never publishes, and the validator never checked metric existence"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-03 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The final report hard-coded an alerting success claim and printed stale suite results as verified",
+      "concurrency_tests": [],
+      "current_implementation": "Section 31 asserted that the alerting infrastructure was fully implemented while the persisted status was FAIL, and sections 32 and 36.1 printed suite PASSes recorded against an earlier source revision.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/reporting/final_report.py"
+      ],
+      "id": "ORC-03",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/reporting/final_report.py"
+      ],
+      "notes": "The report no longer contains a hard-coded alerting sentence. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "production-audit/harness/reporting/final_report.py"
+      ],
+      "target_implementation": "The report derives the alerting status from the persisted result, marks evidence that no longer matches the working tree fingerprint as stale, and never states a success it cannot source.",
+      "technical_risk": "",
+      "title": "The final report hard-coded an alerting success claim and printed stale suite results as verified"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-04 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "Suite evidence could certify production readiness against a source revision that no longer existed",
+      "concurrency_tests": [],
+      "current_implementation": "A suite result carried only a git revision, so results recorded before an edit still satisfied the gates.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/inventory/scanner.py",
+        "production-audit/harness/verification/gates.py"
+      ],
+      "id": "ORC-04",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/inventory/scanner.py",
+        "production-audit/harness/verification/gates.py"
+      ],
+      "notes": "A stale suite result now moves its gate to PENDING. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "production-audit/harness/verification/gates.py"
+      ],
+      "target_implementation": "Every suite result is stamped with a source fingerprint over the working tree, and a gate only accepts evidence whose fingerprint still matches.",
+      "technical_risk": "",
+      "title": "Suite evidence could certify production readiness against a source revision that no longer existed"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-05 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "Three business invariants were vacuous or used enum values that do not exist",
+      "concurrency_tests": [],
+      "current_implementation": "INV-08 filtered on status RESERVED although the reservation status enum is PENDING, COMMITTED, RELEASED and EXPIRED; INV-07 excluded PARTIALLY_REFUNDED although the payment status enum contains it; INV-06 asserted a uniqueness the schema never promised.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/invariants.py"
+      ],
+      "id": "ORC-05",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/invariants.py"
+      ],
+      "notes": "All eight invariants now execute real SQL and report PASS with zero violations against the live database. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/invariants.py"
+      ],
+      "target_implementation": "The invariants now use the real enum values and assert a business rule the schema actually supports.",
+      "technical_risk": "",
+      "title": "Three business invariants were vacuous or used enum values that do not exist"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-06 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The load runner reported PASS when the measurement host was contaminated or the invariants were blocked",
+      "concurrency_tests": [],
+      "current_implementation": "The runner returned PASS regardless of the host contamination guard and the invariant outcome.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "id": "ORC-06",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "notes": "A contaminated run no longer produces a PASS status. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/loadtesting/runner.py"
+      ],
+      "target_implementation": "The runner now derives FAIL, BLOCKED or PASS from the k6 exit code, the measurement validity and the invariant outcome.",
+      "technical_risk": "",
+      "title": "The load runner reported PASS when the measurement host was contaminated or the invariants were blocked"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-07 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The YAML subset parser silently dropped a sequence declared at the same indentation as its key",
+      "concurrency_tests": [],
+      "current_implementation": "A mapping key whose value was a sequence at the same indentation parsed as a null value instead of raising, which lets a manifest validate as correct while a list is missing.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/yamlmini.py"
+      ],
+      "id": "ORC-07",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/yamlmini.py"
+      ],
+      "notes": "The parser rejects the construct rather than returning a null. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/yamlmini.py"
+      ],
+      "target_implementation": "The parser now raises a YamlError for that construct instead of dropping the value.",
+      "technical_risk": "",
+      "title": "The YAML subset parser silently dropped a sequence declared at the same indentation as its key"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-08 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "ci",
+      "assigned_agent": "",
+      "business_risk": "The continuous integration workflow was red on arrival",
+      "concurrency_tests": [],
+      "current_implementation": "The kubernetes validation job failed four checks, the alerting validation job exited 2 on the missing credential check, and a new Stripe unit test failed deterministically.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        ".github/workflows/ci.yml"
+      ],
+      "id": "ORC-08",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        ".github/workflows/ci.yml"
+      ],
+      "notes": "Every job in the workflow is green on the current tree. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        ".github/workflows/ci.yml"
+      ],
+      "target_implementation": "The kubernetes checks were repaired, the alerting job treats a blocked credential check as a skip, the Stripe test no longer depends on a local environment file, and the workflow installs the offline schema validator.",
+      "technical_risk": "",
+      "title": "The continuous integration workflow was red on arrival"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-09 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "kubernetes",
+      "assigned_agent": "",
+      "business_risk": "The Kubernetes manifests declared no startup probe, no pod security context and no disruption budget",
+      "concurrency_tests": [],
+      "current_implementation": "A container that cannot serve within the liveness delay would be restarted in a loop, and a voluntary disruption could evict every replica of a service at once.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "k8s/workload-protection.yaml"
+      ],
+      "id": "ORC-09",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "k8s/workload-protection.yaml"
+      ],
+      "notes": "kubeconform validates 53 resources with 0 errors and the harness reports 13 of 13 kubernetes checks PASS. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "k8s/microservices.yaml, k8s/gateway-service.yaml, k8s/debezium-cdc.yaml"
+      ],
+      "target_implementation": "Every workload now declares a startup probe, a pod security context with runAsNonRoot and a seccomp profile, a container security context that drops all capabilities, and a pod disruption budget per service.",
+      "technical_risk": "",
+      "title": "The Kubernetes manifests declared no startup probe, no pod security context and no disruption budget"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-10 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "gateway-service",
+      "assigned_agent": "",
+      "business_risk": "The circuit breaker state was never exported, so the gateway outage rule could never fire",
+      "concurrency_tests": [],
+      "current_implementation": "The resilience4j micrometer binder was absent from the dependency tree, so resilience4j_circuitbreaker_state was never registered.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "pom.xml",
+        "gateway-service/pom.xml"
+      ],
+      "id": "ORC-10",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "pom.xml",
+        "gateway-service/pom.xml"
+      ],
+      "notes": "The metric audit confirms the rule resolves against the published catalogue once the fleet is rebuilt. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "config/observability/alertmanager/rules/runtime-alerts.yml"
+      ],
+      "target_implementation": "The binder is declared in the dependency management and in the gateway service.",
+      "technical_risk": "",
+      "title": "The circuit breaker state was never exported, so the gateway outage rule could never fire"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-11 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "utils/common-spring",
+      "assigned_agent": "",
+      "business_risk": "Request latency percentiles were unmeasurable because the histogram buckets were never published",
+      "concurrency_tests": [],
+      "current_implementation": "The distribution configuration only enabled buckets for the server request timer, so the quantile rule had no bucket series to read.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "utils/common-spring/src/main/resources/application.yml"
+      ],
+      "id": "ORC-11",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "utils/common-spring/src/main/resources/application.yml"
+      ],
+      "notes": "The latency rule resolves against the published catalogue once the fleet is rebuilt. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "utils/common-spring/src/main/resources/application.yml"
+      ],
+      "target_implementation": "The distribution configuration now enables histogram buckets for every meter.",
+      "technical_risk": "",
+      "title": "Request latency percentiles were unmeasurable because the histogram buckets were never published"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-12 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "observability",
+      "assigned_agent": "",
+      "business_risk": "The rendered Alertmanager configuration that carries the live bot token was not ignored by git",
+      "concurrency_tests": [],
+      "current_implementation": "The rendering step writes the bot token into config/observability/alertmanager/alertmanager.yml inside the repository.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        ".gitignore"
+      ],
+      "id": "ORC-12",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        ".gitignore"
+      ],
+      "notes": "git status no longer reports the rendered configuration. Severity LOW.",
+      "priority": 60,
+      "severity": "LOW",
+      "source_evidence": [
+        ".gitignore"
+      ],
+      "target_implementation": "The rendered file is now listed in the git ignore rules.",
+      "technical_risk": "",
+      "title": "The rendered Alertmanager configuration that carries the live bot token was not ignored by git"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-13 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "observability",
+      "assigned_agent": "",
+      "business_risk": "The Alertmanager template rendering corrupted any value that contained an ampersand",
+      "concurrency_tests": [],
+      "current_implementation": "The awk substitution treats an ampersand in the replacement as the matched text, so a chat identifier containing an ampersand produced a corrupted configuration.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "docker-compose.yml"
+      ],
+      "id": "ORC-13",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "docker-compose.yml"
+      ],
+      "notes": "A token containing an ampersand and a pipe renders literally. Severity LOW.",
+      "priority": 60,
+      "severity": "LOW",
+      "source_evidence": [
+        "docker-compose.yml"
+      ],
+      "target_implementation": "The rendering now escapes the backslash, ampersand and delimiter characters and validates the chat identifier before it is written.",
+      "technical_risk": "",
+      "title": "The Alertmanager template rendering corrupted any value that contained an ampersand"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-14 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The Stripe harness treated any test key prefix as a real credential and certified a placeholder webhook secret",
+      "concurrency_tests": [],
+      "current_implementation": "classify_key accepted every string that started with the test prefix, and the webhook check performed a local signature round trip with whatever secret was configured and reported PASS.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/tests/test_stripe.py"
+      ],
+      "id": "ORC-14",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/tests/test_stripe.py"
+      ],
+      "notes": "The harness now reports the webhook check as BLOCKED with the placeholder secret and the key as a placeholder. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/stripe/sandbox.py"
+      ],
+      "target_implementation": "The key classification requires the real secret key shape and reports a placeholder separately, and the webhook check refuses to certify a placeholder secret.",
+      "technical_risk": "",
+      "title": "The Stripe harness treated any test key prefix as a real credential and certified a placeholder webhook secret"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-15 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "production-audit",
+      "assigned_agent": "",
+      "business_risk": "The credential scan ignored untracked files and only recognised two credential shapes",
+      "concurrency_tests": [],
+      "current_implementation": "The scan used git ls-files without the untracked set and only matched a labelled bot token and a live stripe key, so a credential committed as an unlabelled literal escaped.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "production-audit/harness/alerts/validation.py"
+      ],
+      "id": "ORC-15",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "production-audit/harness/alerts/validation.py"
+      ],
+      "notes": "The scan reports the file count it examined and the scope it applied. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "production-audit/harness/alerts/validation.py"
+      ],
+      "target_implementation": "The scan covers the tracked and untracked working tree and matches unlabelled bot tokens and stripe keys in any configuration file.",
+      "technical_risk": "",
+      "title": "The credential scan ignored untracked files and only recognised two credential shapes"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-16 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "deployment",
+      "assigned_agent": "",
+      "business_risk": "The deployment template shipped usable credential literals for every account the stack requires",
+      "concurrency_tests": [],
+      "current_implementation": "The template carried postgres, redis, keycloak, storage, elasticsearch, mail, payment and webhook credentials that a copy and start would provision, including the seeded realm administrator password.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        ".env.example",
+        "docker-compose.yml",
+        "docker/keycloak/import/entrypoint.sh"
+      ],
+      "id": "ORC-16",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        ".env.example",
+        "docker-compose.yml",
+        "docker/keycloak/import/entrypoint.sh"
+      ],
+      "notes": "The deployment credential contract test proves the template ships no value and that compose names every missing variable. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        ".env.example"
+      ],
+      "target_implementation": "The template now carries no credential value, compose requires every named credential, the realm bootstrap refuses placeholder values and the payment service refuses a live mode stripe key.",
+      "technical_risk": "",
+      "title": "The deployment template shipped usable credential literals for every account the stack requires"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-17 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "search-service",
+      "assigned_agent": "",
+      "business_risk": "The search client was pinned to the previous elasticsearch major while the fleet client was on the current one",
+      "concurrency_tests": [],
+      "current_implementation": "The module pinned the elasticsearch java client at the previous major and added the legacy transport era rest client, so the fleet ran two client majors against one server.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "search-service/src/main/java/com/shop/searchservice/config/ElasticsearchConfig.java"
+      ],
+      "id": "ORC-17",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "search-service/src/main/java/com/shop/searchservice/config/ElasticsearchConfig.java"
+      ],
+      "notes": "The search module suite passes against the managed server version and a contract test proves no module pins its own client version. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "search-service/pom.xml"
+      ],
+      "target_implementation": "The module inherits the managed client version, the legacy rest client is gone and the client is built through the current transport.",
+      "technical_risk": "",
+      "title": "The search client was pinned to the previous elasticsearch major while the fleet client was on the current one"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-18 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "outbox",
+      "assigned_agent": "",
+      "business_risk": "The outbox claim collapsed the candidate range to a single row, so a second replica published nothing",
+      "concurrency_tests": [
+        "product-service/src/test/java/com/shop/productservice/outbox/ProductOutboxClaimConcurrencyIT.java"
+      ],
+      "current_implementation": "The claim used a MIN(id) subquery that pinned exactly one candidate, so the skip locked range had nothing to advance past and the relay stopped on the first empty claim.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "product-service/src/test/java/com/shop/productservice/outbox/ProductOutboxClaimConcurrencyIT.java"
+      ],
+      "id": "ORC-18",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "product-service/src/test/java/com/shop/productservice/outbox/ProductOutboxClaimConcurrencyIT.java"
+      ],
+      "notes": "Two relay replicas publish disjoint events and every pending row is published exactly once. Severity HIGH.",
+      "priority": 20,
+      "severity": "HIGH",
+      "source_evidence": [
+        "the product, inventory, media, rating and promotion service outbox repositories"
+      ],
+      "target_implementation": "Each relay now claims a skippable range per tick inside one short transaction that also stamps the lease, and a stale lease is re-armed by the recovery scan.",
+      "technical_risk": "",
+      "title": "The outbox claim collapsed the candidate range to a single row, so a second replica published nothing"
+    },
+    {
+      "acceptance_criteria": [
+        "The behaviour reported for ORC-19 no longer reproduces and a regression test proves it"
+      ],
+      "affected_service": "payment-service",
+      "assigned_agent": "",
+      "business_risk": "The payment relay marked every record by its own outcome, which reordered one partition",
+      "concurrency_tests": [],
+      "current_implementation": "A failed capture left a later refund of the same payment marked as sent, so the same aggregate was published out of order.",
+      "dependencies": [],
+      "design_pattern": "",
+      "edge_case_tests": [],
+      "happy_path_tests": [
+        "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java"
+      ],
+      "id": "ORC-19",
+      "independent_verifier": "",
+      "integration_e2e_coverage": [
+        "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java"
+      ],
+      "notes": "Twelve events of one payment reach the broker on one partition in creation order. Severity MEDIUM.",
+      "priority": 40,
+      "severity": "MEDIUM",
+      "source_evidence": [
+        "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentOutboxRelay.java"
+      ],
+      "target_implementation": "The payment relay now uses the fleet ordering barrier so a failed record blocks only the later records of the same aggregate, and a failed record returns to pending for another attempt.",
+      "technical_risk": "",
+      "title": "The payment relay marked every record by its own outcome, which reordered one partition"
+    }
+  ]
+}

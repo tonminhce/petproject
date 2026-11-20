@@ -16,6 +16,7 @@
         <jib.skip>true</jib.skip>
     </properties>
     <modules>
+        <module>common-config</module>
         <module>common-core</module>
         <module>common-security</module>
         <module>common-logging</module>

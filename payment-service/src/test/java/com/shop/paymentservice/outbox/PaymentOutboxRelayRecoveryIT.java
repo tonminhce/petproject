@@ -64,7 +64,7 @@ class PaymentOutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aRowStrandedInSending_isRecoveredAndPublishedByTheRelay() {
         String topic = uniqueTopic();
         OutboxEvent stranded = seed(topic, "{\"payment\":\"captured\"}", OutboxStatus.SENDING);
-        ageClaim(stranded.getId(), Instant.now().minusSeconds(3600));
+        ageClaim(stranded, Instant.now().minusSeconds(3600));
 
         relay.relay();
 
@@ -83,6 +83,7 @@ class PaymentOutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aFreshSendingRow_isLeftAloneBecauseItsPublishMayStillBeInFlight() {
         String topic = uniqueTopic();
         OutboxEvent inFlight = seed(topic, "{\"payment\":\"in-flight\"}", OutboxStatus.SENDING);
+        ageClaim(inFlight, Instant.now());
 
         relay.relay();
 
@@ -91,6 +92,24 @@ class PaymentOutboxRelayRecoveryIT extends AbstractIntegrationTest {
                 .isEmpty();
         assertThat(outboxRepo.findById(inFlight.getId()).orElseThrow().getStatus())
                 .isEqualTo(OutboxStatus.SENDING);
+    }
+
+    @Test
+    void aSendingRowWithoutAClaimTimestamp_isRecoveredAndPublished() {
+        String topic = uniqueTopic();
+        OutboxEvent stranded = seed(topic, "{\"payment\":\"stranded-without-lease\"}", OutboxStatus.SENDING);
+
+        assertThat(stranded.getClaimedAt())
+                .as("the row must enter SENDING without a lease timestamp")
+                .isNull();
+
+        relay.relay();
+
+        assertThat(consumed(topic, 1))
+                .as("a SENDING row without a lease timestamp must be re-armed, not stranded forever")
+                .containsExactly("{\"payment\":\"stranded-without-lease\"}");
+        assertThat(outboxRepo.findById(stranded.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.SENT);
     }
 
     @Test
@@ -168,13 +187,8 @@ class PaymentOutboxRelayRecoveryIT extends AbstractIntegrationTest {
         return event;
     }
 
-    private void ageClaim(Long id, Instant when) {
-        new org.springframework.transaction.support.TransactionTemplate(txManager)
-                .executeWithoutResult(tx -> entityManager.createNativeQuery(
-                        "UPDATE outbox_events SET updated_at = ?1 WHERE id = ?2")
-                        .setParameter(1, when)
-                        .setParameter(2, id)
-                        .executeUpdate());
-        entityManager.clear();
+    private void ageClaim(OutboxEvent event, Instant when) {
+        event.setClaimedAt(when);
+        outboxRepo.saveAndFlush(event);
     }
 }

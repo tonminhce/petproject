@@ -125,20 +125,20 @@ class AdminServiceAccountRealmContractTest {
     }
 
     @Test
-    @DisplayName("the shared application.yml defaults to the provisioned public client")
+    @DisplayName("the shared application-shared.yml defaults to the provisioned public client")
     void theSharedApplicationYmlDefaultsToTheProvisionedPublicClient() throws IOException {
         Path module = Path.of("").toAbsolutePath();
         Path current = module;
         Path sharedYml = null;
         while (current != null) {
-            Path probe = current.resolve("utils/common-spring/src/main/resources/application.yml");
+            Path probe = current.resolve("utils/common-config/src/main/resources/application-shared.yml");
             if (Files.exists(probe)) {
                 sharedYml = probe;
                 break;
             }
             current = current.getParent();
         }
-        assertThat(sharedYml).as("the shared application.yml was not found").isNotNull();
+        assertThat(sharedYml).as("the shared application-shared.yml was not found").isNotNull();
 
         String yaml = Files.readString(sharedYml);
         assertThat(yaml)

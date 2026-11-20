@@ -1,32 +1,47 @@
 # Remaining Tasks
 
-Generated: 2026-11-19T16:03:53Z
+Generated: 2026-11-19T22:33:06Z
 
-- Registered tasks: 253
+- Registered tasks: 268
 
 | State | Count |
 | --- | --- |
 | BLOCKED | 0 |
-| DISCOVERED | 5 |
+| DISCOVERED | 23 |
 | FAILED_VERIFICATION | 0 |
 | IMPLEMENTED | 0 |
 | IN_PROGRESS | 0 |
 | NORMALIZED | 0 |
-| READY | 187 |
+| READY | 186 |
 | REOPENED | 0 |
 | REQUIREMENT_CONFLICT | 0 |
-| VERIFIED | 61 |
+| VERIFIED | 59 |
 | VERIFYING | 0 |
 
 ## Open tasks by severity
 
 | ID | Severity | Area | Title |
 | --- | --- | --- | --- |
+| QA-01 | CRITICAL | harness | The harness certified readiness from stale suite evidence that predated the current source revision |
 | CAT-02 | HIGH |  | Elasticsearch client dependency drift |
 | CAT-05 | HIGH |  | No currency on any money field in the fleet |
+| CAT-06 | HIGH | infrastructure | The compose Elasticsearch server was pinned to 8.15.0 while the managed Java client is 9.4.5, and Elasticsearch refuses a direct 8.15 to 9.4.5 upgrade |
 | GW-04 | HIGH |  | The "global" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas |
+| K8S-21 | HIGH | kubernetes | No startup probe on any kubernetes workload |
+| K8S-22 | HIGH | kubernetes | No container or pod security context on any kubernetes workload |
+| K8S-23 | HIGH | kubernetes | No pod disruption budget protects the multi replica deployments |
 | KAF-01 | HIGH |  | 6 of 8 outbox relays serialise: a second replica publishes nothing |
 | KAF-02 | HIGH |  | payment-service relay has no per-aggregate ordering barrier |
+| OBS-01 | HIGH | observability | Implement the Prometheus to Alertmanager to Telegram runtime alert pipeline |
+| OBS-02 | HIGH | ci | Add the CI Telegram notification workflow with failure grouping and secret isolation |
+| OBS-03 | HIGH | observability | Verify real Telegram delivery for the CI and runtime routes |
+| OBS-05 | HIGH | gateway-service | The gateway service exposed no Prometheus metrics because the micrometer registry was missing from its module |
+| OBS-06 | HIGH | observability | The Prometheus scrape configuration referenced exporter containers that did not exist, so every infrastructure rule fired spuriously |
+| OBS-07 | HIGH | observability | The runtime alert rules divided by sentinel metric values and produced false positives on every service |
+| OBS-08 | HIGH | infrastructure | The compose stack held three different Redis passwords across the environment file and the running containers |
+| PAY-40 | HIGH | payment-service | The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred |
+| PAY-41 | HIGH | payment-service | Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential |
+| PERF-01 | HIGH | harness | Load measurements taken while parallel Maven builds saturated the host produced invalid latency and throughput figures |
 | SEC-03 | HIGH |  | Committed literal credentials in `.env.example` for accounts the deployment *requires* |
 | SL-01 | HIGH |  | `KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call |
 | SL-02 | HIGH |  | `KeycloakAdminClient` silently falls back to the master-realm *password* grant |
@@ -38,7 +53,6 @@ Generated: 2026-11-19T16:03:53Z
 | SL-37 | HIGH |  | the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad |
 | CAT-03 | MEDIUM |  | Mutable, non-volatile pagination state on a singleton scheduled bean |
 | CAT-04 | MEDIUM |  | Money stored as an IEEE-754 double in the search index |
-| CAT-06 | MEDIUM |  | Product-variant changes emit no lifecycle event |
 | CAT-08 | MEDIUM |  | Reindex lock is in-process only |
 | CAT-09 | MEDIUM |  | Product outbox claim lease piggy-backs on the `updated_at` audit column |
 | CAT-10 | MEDIUM |  | `FAILED` outbox rows are terminal in product, rating and promotion (no replay, no DEAD aging) |
@@ -59,6 +73,8 @@ Generated: 2026-11-19T16:03:53Z
 | GW-26 | MEDIUM |  | Duplicate/ambiguous `X-RateLimit-Remaining` header (merged with GW-07 above as the header part) |
 | GW-27 | MEDIUM |  | No circuit breaker and no bulkhead anywhere in the gateway |
 | GW-29 | MEDIUM |  | INFO — Scope/bypass asymmetry between the IP allowlist and the edge rate limiter |
+| K8S-24 | MEDIUM | kubernetes | No service account is declared for the platform workloads |
+| K8S-25 | MEDIUM | kubernetes | The Kubernetes deployment set covers only a subset of the fourteen platform services |
 | KAF-03 | MEDIUM |  | `BaseKafkaConsumer` / `KafkaProperties` javadoc contradicts the code on poison handling |
 | KAF-04 | MEDIUM |  | `shop.kafka.retry.*` is bindable but has zero effect |
 | KAF-05 | MEDIUM |  | product-service's media listener has no error handler, hence no DLT |
@@ -67,6 +83,7 @@ Generated: 2026-11-19T16:03:53Z
 | KAF-08 | MEDIUM |  | search-service's DLT depends on an optional bean and fails open |
 | KAF-09 | MEDIUM |  | notification-service's dedup key silently depends on the event id being a parseable UUID |
 | KAF-20 | MEDIUM |  | The DLT replay endpoint is disabled in every service: the DLT is a write-only bucket |
+| OBS-04 | MEDIUM | harness | Expose the compose, load and stripe harness command families required by the operating contract |
 | OI-03 | MEDIUM |  | A failure of the saga's final transaction leaks every stock reservation |
 | OI-04 | MEDIUM |  | `idempotencyService.complete()` failing after the order is committed frees the key and lets a retry create a second order |
 | OI-05 | MEDIUM |  | The duplicate-checkout protection is opt-in: a checkout without an `Idempotency-Key` header gets none |

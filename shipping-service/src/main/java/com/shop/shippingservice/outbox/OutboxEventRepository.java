@@ -41,7 +41,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
          + "e.status = CASE WHEN e.retryCount + 1 >= :maxRetries THEN :failed ELSE :pending END, "
          + "e.retryCount = e.retryCount + 1, "
          + "e.lastError = :reason "
-         + "WHERE e.status = :sending AND e.claimedAt < :cutoff")
+         + "WHERE e.status = :sending AND (e.claimedAt IS NULL OR e.claimedAt < :cutoff)")
     int reclaimStaleSending(@Param("sending") OutboxStatus sending,
                              @Param("pending") OutboxStatus pending,
                              @Param("failed") OutboxStatus failed,

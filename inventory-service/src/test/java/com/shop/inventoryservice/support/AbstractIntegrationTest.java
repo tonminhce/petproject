@@ -16,6 +16,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import java.time.Duration;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class})
@@ -26,7 +27,7 @@ public abstract class AbstractIntegrationTest {
         .withUsername("test")
         .withPassword("test");
 
-    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0")).withStartupTimeout(Duration.ofMinutes(5));
 
     static {
         postgres.start();

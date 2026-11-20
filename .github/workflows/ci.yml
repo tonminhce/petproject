@@ -2,13 +2,19 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, "audit/**" ]
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+env:
+  ALERT_ENVIRONMENT: ci
+
 jobs:
   validate-and-test:
-    name: Build, Checkstyle & Test
+    name: Build, Checkstyle & Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -18,7 +24,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: 'temurin'
+          distribution: temurin
           cache: maven
 
       - name: Validate & Enforce Checkstyle
@@ -26,3 +32,141 @@ jobs:
 
       - name: Compile & Run Unit Tests
         run: ./mvnw -T1C test
+
+      - name: Enforce the no-comment source policy
+        run: python3 production-audit/bin/harness comments scan
+
+      - name: Run the harness unit tests
+        run: python3 -m unittest discover -s production-audit/harness/tests -t production-audit
+
+  concurrency-tests:
+    name: Concurrency & Multi-instance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Run the concurrency suite
+        run: python3 production-audit/bin/harness test --suite concurrency
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Run the integration suite
+        run: python3 production-audit/bin/harness test --suite integration
+
+  container-build:
+    name: Container Image Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Build the gateway image
+        run: docker build -f gateway-service/Dockerfile -t petproject/gateway-service:ci .
+
+      - name: Build the order image
+        run: docker build -f order-service/Dockerfile -t petproject/order-service:ci .
+
+  kubernetes-validation:
+    name: Kubernetes Manifest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate the Prometheus alert rules
+        run: |
+          docker run --rm --entrypoint promtool \
+            -v "$PWD/config/observability/alertmanager/rules:/rules:ro" \
+            prom/prometheus:latest check rules /rules/runtime-alerts.yml
+
+      - name: Validate the Alertmanager configuration
+        run: |
+          sed -e "s|__TELEGRAM_BOT_TOKEN__|123456789:AAEciValidationTokenValueOnlyForParsing|g" \
+              -e "s|__TELEGRAM_CHAT_ID__|-1001234567890|g" \
+              -e "s|__TELEGRAM_CI_CHAT_ID__|-1009876543210|g" \
+              config/observability/alertmanager/alertmanager.yml.template > /tmp/alertmanager.yml
+          docker run --rm --entrypoint amtool \
+            -v /tmp/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro \
+            prom/alertmanager:latest check-config /etc/alertmanager/alertmanager.yml
+
+      - name: Install the offline kubernetes schema validator
+        run: |
+          curl -sSL -o /usr/local/bin/kubeconform \
+            https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin kubeconform
+
+      - name: Validate the Kubernetes manifests
+        run: python3 production-audit/bin/harness k8s validate
+
+  alerting-validation:
+    name: Alerting Configuration Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate the alerting configuration
+        run: |
+          python3 production-audit/bin/harness alerts validate
+          status=$?
+          if [ "$status" -eq 2 ]; then
+            echo "the alerting configuration is valid but no delivery credentials are configured in this runner"
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+
+  notify-telegram:
+    name: Notify Telegram
+    if: ${{ failure() || cancelled() }}
+    needs:
+      - validate-and-test
+      - concurrency-tests
+      - integration-tests
+      - container-build
+      - kubernetes-validation
+      - alerting-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Send the Telegram notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CI_CHAT_ID: ${{ secrets.TELEGRAM_CI_CHAT_ID }}
+          FAILED_STAGE: ${{ github.job }}
+          FAILURE_CATEGORY: ${{ github.job }}
+        run: sh scripts/notify-telegram.sh

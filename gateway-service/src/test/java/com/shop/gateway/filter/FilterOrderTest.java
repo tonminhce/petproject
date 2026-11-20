@@ -12,11 +12,17 @@ class FilterOrderTest {
         assertThat(FilterOrder.ADMIN_IP_ALLOWLIST).isEqualTo(Ordered.HIGHEST_PRECEDENCE);
         assertThat(FilterOrder.RATE_LIMIT).isEqualTo(Ordered.HIGHEST_PRECEDENCE + 10);
         assertThat(FilterOrder.ADMIN_ROLE_GATE).isEqualTo(Ordered.HIGHEST_PRECEDENCE + 20);
+        assertThat(FilterOrder.DOWNSTREAM_RESILIENCE).isEqualTo(Ordered.HIGHEST_PRECEDENCE + 30);
     }
 
     @Test
     void executionOrderIsIpThenRateThenRole() {
         assertThat(FilterOrder.ADMIN_IP_ALLOWLIST).isLessThan(FilterOrder.RATE_LIMIT);
         assertThat(FilterOrder.RATE_LIMIT).isLessThan(FilterOrder.ADMIN_ROLE_GATE);
+    }
+
+    @Test
+    void theResilienceLayerRunsAfterTheRoleGate() {
+        assertThat(FilterOrder.ADMIN_ROLE_GATE).isLessThan(FilterOrder.DOWNSTREAM_RESILIENCE);
     }
 }

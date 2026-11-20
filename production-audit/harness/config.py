@@ -4,6 +4,41 @@ import os
 from pathlib import Path
 
 
+def load_local_environment(root: Path | None = None) -> dict[str, str]:
+    repository = root or repository_root()
+    source = repository / ".env"
+    values: dict[str, str] = {}
+    if not source.exists():
+        return values
+    try:
+        content = source.read_text(encoding="utf-8")
+    except OSError:
+        return values
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        key = key.strip()
+        if not key:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        values[key] = value
+    for key, value in values.items():
+        os.environ.setdefault(key, value)
+    if not os.environ.get("KEYCLOAK_PASSWORD") and values.get("KEYCLOAK_TEST_USER_PASSWORD"):
+        os.environ["KEYCLOAK_PASSWORD"] = values["KEYCLOAK_TEST_USER_PASSWORD"]
+    if not os.environ.get("KEYCLOAK_USERNAME"):
+        os.environ["KEYCLOAK_USERNAME"] = "testuser"
+    if not os.environ.get("KEYCLOAK_TOKEN_URL"):
+        os.environ["KEYCLOAK_TOKEN_URL"] = "http://localhost:9090/realms/ecommerce/protocol/openid-connect/token"
+    if not os.environ.get("KEYCLOAK_CLIENT_ID"):
+        os.environ["KEYCLOAK_CLIENT_ID"] = values.get("KEYCLOAK_CLIENT_ID", "ecommerce-client")
+    return values
+
+
 def repository_root() -> Path:
     override = os.environ.get("HARNESS_REPO_ROOT")
     if override:

@@ -139,7 +139,7 @@ public class ReindexServiceImpl implements ReindexService {
     }
 
     private List<String> listGenerationIndices() throws IOException {
-        return client.indices().get(g -> g.index(IndexProvisioner.INDEX_PATTERN)).result().keySet().stream().toList();
+        return client.indices().get(g -> g.index(IndexProvisioner.INDEX_PATTERN)).indices().keySet().stream().toList();
     }
 
     private void createIndex(String newIndex) {
@@ -189,7 +189,7 @@ public class ReindexServiceImpl implements ReindexService {
     private String currentAliasTarget() {
         try {
             return client.indices().getAlias(a -> a.name(IndexProvisioner.ALIAS))
-                .result().keySet().stream().findFirst().orElse("none");
+                .aliases().keySet().stream().findFirst().orElse("none");
         } catch (ElasticsearchException ex) {
             if (ex.status() == 404) {
                 return "none";

@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import java.time.Duration;
 
 @DataJpaTest
 @Testcontainers
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class InventoryRepositoryTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16").withStartupTimeout(Duration.ofMinutes(5))
         .withDatabaseName("inventory_test")
         .withUsername("test")
         .withPassword("test");

@@ -47,7 +47,7 @@ class PaymentOutboxStrandedClaimIT extends AbstractIntegrationTest {
                 .retryCount(0)
                 .build();
         outboxRepo.saveAndFlush(row);
-        ageClaim(row.getId(), Instant.now().minusSeconds(3600));
+        ageClaim(row, Instant.now().minusSeconds(3600));
 
         int reclaimed = outboxRepo.reclaimStaleSending(
                 OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,
@@ -75,7 +75,7 @@ class PaymentOutboxStrandedClaimIT extends AbstractIntegrationTest {
                 .retryCount(9)
                 .build();
         outboxRepo.saveAndFlush(row);
-        ageClaim(row.getId(), Instant.now().minusSeconds(3600));
+        ageClaim(row, Instant.now().minusSeconds(3600));
 
         int reclaimed = outboxRepo.reclaimStaleSending(
                 OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,
@@ -90,7 +90,7 @@ class PaymentOutboxStrandedClaimIT extends AbstractIntegrationTest {
 
     @Test
     @Transactional
-    void aFreshSendingRow_isNotReclaimed() {
+    void aSendingRowWithoutAClaimTimestamp_isReclaimed() {
         OutboxEvent row = OutboxEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .aggregateType("payment")
@@ -108,16 +108,41 @@ class PaymentOutboxStrandedClaimIT extends AbstractIntegrationTest {
                 Instant.now().minusSeconds(60), 10, "lease expired");
         entityManager.clear();
 
+        assertThat(reclaimed)
+                .as("a row in SENDING without a lease timestamp must be re-armed, not stranded forever")
+                .isEqualTo(1);
+        assertThat(outboxRepo.findById(row.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.PENDING);
+    }
+
+    @Test
+    @Transactional
+    void aFreshSendingRow_isNotReclaimed() {
+        OutboxEvent row = OutboxEvent.builder()
+                .eventId(UUID.randomUUID().toString())
+                .aggregateType("payment")
+                .aggregateId(UUID.randomUUID())
+                .eventType("payment.captured.v1")
+                .topic("shop.payment.lifecycle.v1")
+                .payload("{}")
+                .status(OutboxStatus.SENDING)
+                .retryCount(0)
+                .build();
+        outboxRepo.saveAndFlush(row);
+        ageClaim(row, Instant.now());
+
+        int reclaimed = outboxRepo.reclaimStaleSending(
+                OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,
+                Instant.now().minusSeconds(60), 10, "lease expired");
+        entityManager.clear();
+
         assertThat(reclaimed).isZero();
         assertThat(outboxRepo.findById(row.getId()).orElseThrow().getStatus())
                 .isEqualTo(OutboxStatus.SENDING);
     }
 
-    private void ageClaim(Long id, Instant when) {
-        entityManager.createNativeQuery("UPDATE outbox_events SET updated_at = ?1 WHERE id = ?2")
-                .setParameter(1, when)
-                .setParameter(2, id)
-                .executeUpdate();
-        entityManager.clear();
+    private void ageClaim(OutboxEvent event, Instant when) {
+        event.setClaimedAt(when);
+        outboxRepo.saveAndFlush(event);
     }
 }

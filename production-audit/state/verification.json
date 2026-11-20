@@ -1,6 +1,93 @@
 {
   "revision": "",
   "suites": {
+    "alerts": {
+      "checks": [
+        {
+          "detail": "alertmanager template is complete and contains no committed credential",
+          "evidence": [
+            "receivers: telegram-runtime-critical, telegram-runtime-warning",
+            "telegram receivers: 2",
+            "runtime routes: 2",
+            "routed receivers: telegram-runtime-critical, telegram-runtime-warning",
+            "inhibit rules: 2",
+            "group_by: alertname, application, environment"
+          ],
+          "id": "ALT-01",
+          "name": "ALERTMANAGER_TEMPLATE",
+          "status": "PASS"
+        },
+        {
+          "detail": "runtime alert rules cover every required incident category and reference only published metrics",
+          "evidence": [
+            "rules: 18",
+            "categories: application, database",
+            "metric audit: 838 published metrics and 103 published labels checked"
+          ],
+          "id": "ALT-02",
+          "name": "RUNTIME_ALERT_RULES",
+          "status": "PASS"
+        },
+        {
+          "detail": "prometheus evaluates rules and forwards alerts to alertmanager",
+          "evidence": [
+            "rule_files: /etc/prometheus/rules/*.yml",
+            "alertmanager targets: alertmanager:9093"
+          ],
+          "id": "ALT-03",
+          "name": "PROMETHEUS_ROUTING",
+          "status": "PASS"
+        },
+        {
+          "detail": "the compose stack runs alertmanager and evaluates the runtime rules",
+          "evidence": [
+            "alertmanager service present: True",
+            "rules mounted by prometheus: True"
+          ],
+          "id": "ALT-04",
+          "name": "COMPOSE_ALERTMANAGER",
+          "status": "PASS"
+        },
+        {
+          "detail": "CI failures are reported through the telegram notification step",
+          "evidence": [
+            "notification step present: True",
+            "failure condition present: True",
+            "secrets referenced: True"
+          ],
+          "id": "ALT-05",
+          "name": "CI_NOTIFICATION",
+          "status": "PASS"
+        },
+        {
+          "detail": "no committed telegram token or live stripe key was found",
+          "evidence": [
+            "tracked files scanned: 1602",
+            "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
+          ],
+          "id": "ALT-06",
+          "name": "SECRET_HYGIENE",
+          "status": "PASS"
+        },
+        {
+          "detail": "telegram delivery credentials are not available in this environment",
+          "evidence": [
+            "alerts enabled: True",
+            "bot token present: False",
+            "chat identifier present: False",
+            "ci chat identifier present: False"
+          ],
+          "id": "ALT-07",
+          "name": "DELIVERY_CREDENTIALS",
+          "status": "BLOCKED"
+        }
+      ],
+      "detail": "0 failed and 1 blocked checks",
+      "source_fingerprint": "eb935775e86ad691fed0f4dd41fe1ad1874a5e07653c853cd53b13a5452f6072",
+      "status": "PENDING",
+      "suite": "alerts",
+      "updated_at": "2026-11-20T02:34:58Z"
+    },
     "baseline": {
       "command": "./mvnw -B -ntp -T1C clean verify",
       "duration_seconds": 644,
@@ -17,17 +104,16 @@
       "updated_at": "2026-11-18T13:32:07Z"
     },
     "build": {
-      "command": "./mvnw -B -ntp clean verify",
-      "duration_seconds": 830,
-      "errors": 0,
+      "command": "./mvnw -B -ntp -T 1 clean verify",
+      "duration_seconds": 804.078,
       "exit_code": 0,
-      "failures": 0,
-      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/full-reactor-build-20261119.log",
-      "modules": 23,
-      "skipped": 0,
-      "status": "PASSED",
-      "tests_run": 2092,
-      "updated_at": "2026-11-19T13:08:27+07:00"
+      "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
+      "mode": "clean-verify",
+      "revision": "ff6e578e5ecc3c319a56f5191491954be97ba35f",
+      "source_fingerprint": "346a9fe7bcf6b252bdbd1f30a27a70deb6fe4d70b216eae5859e4b507f3e78f0",
+      "status": "PASS",
+      "suite": "build",
+      "updated_at": "2026-11-20T02:29:10Z"
     },
     "comments": {
       "prohibited_comments": 0,
@@ -35,6 +121,19 @@
       "status": "PASS",
       "suite": "comments",
       "updated_at": "2026-11-19T05:52:26Z"
+    },
+    "concurrency": {
+      "command": "./mvnw -B -ntp verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test",
+      "description": "concurrency, reservation and multi-instance scenarios",
+      "duration_seconds": 120,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency.log",
+      "status": "PASS",
+      "suite": "concurrency",
+      "tests_run": 85,
+      "updated_at": "2026-11-19T15:56:32Z"
     },
     "concurrency_inventory": {
       "command": "./mvnw -B -ntp -T1C verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dfailsafe.failIfNoSpecifiedTests=false -pl inventory-service -am",
@@ -57,6 +156,19 @@
       "suite": "e2e",
       "updated_at": "2026-11-19T11:02:51Z"
     },
+    "edge": {
+      "command": "./mvnw -B -ntp test -Dtest=*Validation*Test,*Negative*Test,*Boundary*Test",
+      "description": "edge and negative scenario validation",
+      "duration_seconds": 210,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/edge.log",
+      "status": "PASS",
+      "suite": "edge",
+      "tests_run": 380,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
     "gateway": {
       "command": "./mvnw -B -ntp -T1C verify -Dtest=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl gateway-service -am",
       "description": "gateway routing, rate limiting and redis behaviour",
@@ -72,6 +184,19 @@
       "tests_run": 115,
       "updated_at": "2026-11-19T13:33:50Z"
     },
+    "happy": {
+      "command": "./mvnw -B -ntp clean test",
+      "description": "happy path business scenarios verified across all 14 microservices",
+      "duration_seconds": 420,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
+      "status": "PASS",
+      "suite": "happy",
+      "tests_run": 1540,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
     "integration": {
       "command": "docker compose ps && curl live microservices and database instances",
       "description": "integration tests against real Docker Compose infrastructure (Postgres 16, Kafka 3.9, Redis 7.4, Keycloak 26, Stripe Sandbox)",
@@ -84,6 +209,120 @@
       "suite": "integration",
       "tests_run": 240,
       "updated_at": "2026-11-19T15:56:32Z"
+    },
+    "k8s": {
+      "checks": [
+        {
+          "detail": "every manifest parses",
+          "evidence": [
+            "documents: 53"
+          ],
+          "id": "K8S-01",
+          "name": "MANIFEST_PARSING",
+          "status": "PASS"
+        },
+        {
+          "detail": "the required resource kinds are present",
+          "evidence": [
+            "kinds present: ConfigMap, Deployment, HorizontalPodAutoscaler, Ingress, Namespace, PodDisruptionBudget, PrometheusRule, Secret, Service, ServiceAccount"
+          ],
+          "id": "K8S-02",
+          "name": "RESOURCE_COVERAGE",
+          "status": "PASS"
+        },
+        {
+          "detail": "every container declares startup, readiness and liveness probes",
+          "evidence": [
+            "deployments: 15"
+          ],
+          "id": "K8S-03",
+          "name": "HEALTH_PROBES",
+          "status": "PASS"
+        },
+        {
+          "detail": "every container declares cpu and memory requests and limits",
+          "evidence": [
+            "deployments: 15"
+          ],
+          "id": "K8S-04",
+          "name": "RESOURCE_BUDGET",
+          "status": "PASS"
+        },
+        {
+          "detail": "every workload declares a security context",
+          "evidence": [],
+          "id": "K8S-05",
+          "name": "SECURITY_CONTEXT",
+          "status": "PASS"
+        },
+        {
+          "detail": "every service selects a declared deployment",
+          "evidence": [
+            "services: 15"
+          ],
+          "id": "K8S-06",
+          "name": "SERVICE_SELECTORS",
+          "status": "PASS"
+        },
+        {
+          "detail": "every autoscaler targets a declared deployment with bounded replicas and metrics",
+          "evidence": [
+            "autoscalers: 1"
+          ],
+          "id": "K8S-07",
+          "name": "AUTOSCALING",
+          "status": "PASS"
+        },
+        {
+          "detail": "every multi replica deployment is protected by a pod disruption budget",
+          "evidence": [],
+          "id": "K8S-08",
+          "name": "DISRUPTION_BUDGET",
+          "status": "PASS"
+        },
+        {
+          "detail": "no manifest embeds a credential literal",
+          "evidence": [],
+          "id": "K8S-09",
+          "name": "SECRET_HYGIENE",
+          "status": "PASS"
+        },
+        {
+          "detail": "no manifest points at a developer machine address",
+          "evidence": [],
+          "id": "K8S-10",
+          "name": "HOSTNAME_HYGIENE",
+          "status": "PASS"
+        },
+        {
+          "detail": "every namespaced manifest uses shop-system",
+          "evidence": [],
+          "id": "K8S-11",
+          "name": "NAMESPACE_CONSISTENCY",
+          "status": "PASS"
+        },
+        {
+          "detail": "every ingress declares tls",
+          "evidence": [],
+          "id": "K8S-12",
+          "name": "INGRESS_TLS",
+          "status": "PASS"
+        },
+        {
+          "detail": "kubeconform validated the manifests that have a published kubernetes schema",
+          "evidence": [
+            "Summary: 53 resources found in 9 files - Valid: 52, Invalid: 0, Errors: 0, Skipped: 1"
+          ],
+          "id": "K8S-13",
+          "name": "SCHEMA_VALIDATION",
+          "status": "PASS"
+        }
+      ],
+      "detail": "0 kubernetes manifest checks failed",
+      "source_fingerprint": "eb935775e86ad691fed0f4dd41fe1ad1874a5e07653c853cd53b13a5452f6072",
+      "status": "PASS",
+      "suite": "k8s",
+      "updated_at": "2026-11-20T02:35:13Z"
     },
     "kafka": {
       "command": "./mvnw -B -ntp -T1C verify -Dtest=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -252,6 +491,22 @@
       "tests_run": 249,
       "updated_at": "2026-11-19T13:27:03Z"
     },
+    "performance": {
+      "checks_failed": 0,
+      "checks_succeeded": 3312,
+      "command": "docker run --rm --network untitled5_ecommerce-network grafana/k6:latest run /load-tests/k6-order-saga.js",
+      "description": "hikari pool stress testing at 200 req/s with 200 concurrent VUs",
+      "duration_seconds": 63.5,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "http_req_failed_rate": 0.0,
+      "log": "load-tests/k6-order-saga.log",
+      "status": "PASS",
+      "suite": "performance",
+      "tests_run": 1656,
+      "updated_at": "2026-11-19T15:56:32Z"
+    },
     "security": {
       "command": "./mvnw -B -ntp -T1C verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "authentication, authorisation and token handling",
@@ -266,62 +521,7 @@
       "suite": "security",
       "tests_run": 0,
       "updated_at": "2026-11-19T13:38:19Z"
-    },
-    "happy": {
-      "command": "./mvnw -B -ntp clean test",
-      "description": "happy path business scenarios verified across all 14 microservices",
-      "duration_seconds": 420,
-      "errors": 0,
-      "exit_code": 0,
-      "failures": 0,
-      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
-      "status": "PASS",
-      "suite": "happy",
-      "tests_run": 1540,
-      "updated_at": "2026-11-19T15:56:32Z"
-    },
-    "edge": {
-      "command": "./mvnw -B -ntp test -Dtest=*Validation*Test,*Negative*Test,*Boundary*Test",
-      "description": "edge and negative scenario validation",
-      "duration_seconds": 210,
-      "errors": 0,
-      "exit_code": 0,
-      "failures": 0,
-      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/edge.log",
-      "status": "PASS",
-      "suite": "edge",
-      "tests_run": 380,
-      "updated_at": "2026-11-19T15:56:32Z"
-    },
-    "concurrency": {
-      "command": "./mvnw -B -ntp verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test",
-      "description": "concurrency, reservation and multi-instance scenarios",
-      "duration_seconds": 120,
-      "errors": 0,
-      "exit_code": 0,
-      "failures": 0,
-      "log": "production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency.log",
-      "status": "PASS",
-      "suite": "concurrency",
-      "tests_run": 85,
-      "updated_at": "2026-11-19T15:56:32Z"
-    },
-    "performance": {
-      "command": "docker run --rm --network untitled5_ecommerce-network grafana/k6:latest run /load-tests/k6-order-saga.js",
-      "description": "hikari pool stress testing at 200 req/s with 200 concurrent VUs",
-      "duration_seconds": 63.5,
-      "errors": 0,
-      "exit_code": 0,
-      "failures": 0,
-      "log": "load-tests/k6-order-saga.log",
-      "status": "PASS",
-      "suite": "performance",
-      "tests_run": 1656,
-      "checks_succeeded": 3312,
-      "checks_failed": 0,
-      "http_req_failed_rate": 0.0,
-      "updated_at": "2026-11-19T15:56:32Z"
     }
   },
-  "updated_at": "2026-11-19T15:50:43Z"
+  "updated_at": "2026-11-20T02:35:14Z"
 }

@@ -4,7 +4,7 @@ import com.shop.gateway.filter.GatewayErrorResponseWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.cloud.gateway.filter.ratelimit.RateLimiter;
+import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -13,10 +13,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.Map;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -24,47 +23,62 @@ import static org.mockito.Mockito.when;
 
 class GlobalRateLimitFilterTest {
 
-    private RateLimiter rateLimiter;
+    private static final String CLIENT_KEY = "ip:203.0.113.7";
+
+    private FleetRateLimiter fleetRateLimiter;
+    private KeyResolver keyResolver;
     private GatewayFilterChain chain;
     private RateLimitProperties properties;
-    private GlobalRateLimitProperties globalProperties;
+    private FleetRateLimitBudget budget;
     private GatewayErrorResponseWriter errorResponseWriter;
     private RateLimitOutageGuard outageGuard;
 
     @BeforeEach
     void setUp() {
-        rateLimiter = mock(RateLimiter.class);
+        fleetRateLimiter = mock(FleetRateLimiter.class);
+        keyResolver = mock(KeyResolver.class);
         chain = mock(GatewayFilterChain.class);
         properties = new RateLimitProperties(true, 100, 200, 1, RedisOutagePolicy.FAIL_CLOSED);
-        globalProperties = new GlobalRateLimitProperties(true, 2_000, 4_000, 1);
+        budget = FleetRateLimitBudget.from(new GlobalRateLimitProperties(true, 2_000, 4_000, 1, 8, 20, 1));
         errorResponseWriter = new GatewayErrorResponseWriter(new ObjectMapper());
         outageGuard = new RateLimitOutageGuard(RedisOutagePolicy.FAIL_CLOSED, errorResponseWriter);
         when(chain.filter(any())).thenReturn(Mono.empty());
+        when(keyResolver.resolve(any())).thenReturn(Mono.just(CLIENT_KEY));
     }
 
     @Test
     void allowedRequestContinuesToRouteChain() {
         var filter = filter(outageGuard);
         var exchange = exchange();
-        when(rateLimiter.isAllowed("gateway-system", "system"))
-                .thenReturn(Mono.just(new RateLimiter.Response(true, Map.of("X-RateLimit-Remaining", "42"))));
-        when(chain.filter(exchange)).thenReturn(Mono.empty());
+        when(fleetRateLimiter.acquire(CLIENT_KEY))
+                .thenReturn(Mono.just(FleetRateLimitDecision.allowed(42)));
 
         filter.filter(exchange, chain).block();
 
         verify(chain).filter(exchange);
-        verify(rateLimiter).isAllowed("gateway-system", "system");
+        verify(fleetRateLimiter).acquire(CLIENT_KEY);
         assertThat(exchange.getResponse().getHeaders().getFirst("X-RateLimit-Remaining")).isEqualTo("42");
+    }
+
+    @Test
+    void everyClientIsMeteredOnItsOwnFleetBudget() {
+        var filter = filter(outageGuard);
+        when(fleetRateLimiter.acquire(anyString())).thenReturn(Mono.just(FleetRateLimitDecision.allowed(1)));
+        when(keyResolver.resolve(any()))
+                .thenReturn(Mono.just("user:user-42"), Mono.just("user:user-43"));
+
+        filter.filter(exchange(), chain).block();
+        filter.filter(exchange(), chain).block();
+
+        verify(fleetRateLimiter).acquire("user:user-42");
+        verify(fleetRateLimiter).acquire("user:user-43");
     }
 
     @Test
     void deniedRequestReturns429WithTheUniformContract() throws Exception {
         var filter = filter(outageGuard);
         var exchange = exchange();
-        when(rateLimiter.isAllowed("gateway-system", "system"))
-                .thenReturn(Mono.just(new RateLimiter.Response(false, Map.of(
-                        "X-RateLimit-Remaining", "0",
-                        "X-RateLimit-Replenish-Rate", "2000"))));
+        when(fleetRateLimiter.acquire(CLIENT_KEY)).thenReturn(Mono.just(FleetRateLimitDecision.rejected()));
 
         filter.filter(exchange, chain).block();
 
@@ -79,11 +93,23 @@ class GlobalRateLimitFilterTest {
     }
 
     @Test
+    void anUnresolvableClientIsRejectedWithTheRateLimitContract() {
+        var filter = filter(outageGuard);
+        var exchange = exchange();
+        when(keyResolver.resolve(any())).thenReturn(Mono.empty());
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        verify(fleetRateLimiter, never()).acquire(anyString());
+        verify(chain, never()).filter(any(ServerWebExchange.class));
+    }
+
+    @Test
     void redisOutageFailsClosedWithTheServiceUnavailableEnvelope() throws Exception {
         var filter = filter(outageGuard);
         var exchange = exchange();
-        when(rateLimiter.isAllowed("gateway-system", "system"))
-                .thenReturn(Mono.just(new RateLimiter.Response(true, Map.of("X-RateLimit-Remaining", "-1"))));
+        when(fleetRateLimiter.acquire(CLIENT_KEY)).thenReturn(Mono.just(FleetRateLimitDecision.outage()));
 
         filter.filter(exchange, chain).block();
 
@@ -100,8 +126,7 @@ class GlobalRateLimitFilterTest {
         var openGuard = new RateLimitOutageGuard(RedisOutagePolicy.FAIL_OPEN, errorResponseWriter);
         var filter = filter(openGuard);
         var exchange = exchange();
-        when(rateLimiter.isAllowed("gateway-system", "system"))
-                .thenReturn(Mono.just(new RateLimiter.Response(true, Map.of("X-RateLimit-Remaining", "-1"))));
+        when(fleetRateLimiter.acquire(CLIENT_KEY)).thenReturn(Mono.just(FleetRateLimitDecision.outage()));
 
         filter.filter(exchange, chain).block();
 
@@ -111,16 +136,16 @@ class GlobalRateLimitFilterTest {
 
     @Test
     void disabledGlobalLimiterContinuesWithoutCallingRedis() {
-        var disabledProperties = new GlobalRateLimitProperties(false, 2_000, 4_000, 1);
+        var disabledBudget = FleetRateLimitBudget.from(new GlobalRateLimitProperties(false, 2_000, 4_000, 1, 8, 20, 1));
         var filter = new GlobalRateLimitFilter(
-                rateLimiter, properties, disabledProperties, errorResponseWriter, outageGuard);
+                fleetRateLimiter, keyResolver, properties, disabledBudget, errorResponseWriter, outageGuard);
         var exchange = exchange();
         when(chain.filter(exchange)).thenReturn(Mono.empty());
 
         filter.filter(exchange, chain).block();
 
         verify(chain).filter(exchange);
-        verifyNoRateLimiterCall();
+        verifyNoFleetLimiterCall();
     }
 
     @Test
@@ -131,14 +156,14 @@ class GlobalRateLimitFilterTest {
     }
 
     private GlobalRateLimitFilter filter(final RateLimitOutageGuard guard) {
-        return new GlobalRateLimitFilter(rateLimiter, properties, globalProperties, errorResponseWriter, guard);
+        return new GlobalRateLimitFilter(fleetRateLimiter, keyResolver, properties, budget, errorResponseWriter, guard);
     }
 
     private MockServerWebExchange exchange() {
         return MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/products").build());
     }
 
-    private void verifyNoRateLimiterCall() {
-        verify(rateLimiter, never()).isAllowed(any(String.class), any(String.class));
+    private void verifyNoFleetLimiterCall() {
+        verify(fleetRateLimiter, never()).acquire(anyString());
     }
 }

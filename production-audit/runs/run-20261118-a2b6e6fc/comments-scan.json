@@ -9,7 +9,7 @@
       "path": ".github/workflows/ci.yml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8dba46d51dc33f4b8ce3ce29451748dd2179cbb3da61e5eb74a456d8318cfe80",
+      "sha256": "dc6dd524a9360672c6d506c462b81e2e084b52bb0d85a605a7f74f0870ae5d76",
       "total_comments": 0
     },
     {
@@ -856,6 +856,90 @@
       "category": "INFRASTRUCTURE",
       "exempt": false,
       "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/alertmanager/rules/runtime-alerts.yml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "c37cd31e0d9a70d57fecfe321c0dac4637755b4a73042b076cda63812c577f7c",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/grafana/provisioning/dashboards/dashboards.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "f69ddf7318d6c8ac123a371b9dc2079332775c8eccd6d7ce35277d44dc183ff3",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/grafana/provisioning/datasources/datasources.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "182b0f97f8b34fcd4c4045c5805165f712b59a2603afba3b26cd9394f6a1c5f7",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/loki.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "0baa4e874fc1df909af174a1e1bcdb71be986890301ac35a2ad526e055a381a2",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/otel-collector-config.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "0c0af045c27c01ac4434c9e643c05b62120bf89215318c7a59ca49b936d9bafc",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/prometheus.yml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "e1e12ea86aa0fdaf1620088a3277c6cfdf7da7b03eb326717147be18c9d74b02",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "config",
+      "path": "config/observability/tempo.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "96c7355df1f2c8de49889b31e02179aac86ca038ba11d48faf4a52ed74dda52e",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
       "language": "shell",
       "module": "docker",
       "path": "docker/keycloak/import/entrypoint.sh",
@@ -871,7 +955,7 @@
         }
       ],
       "prohibited": [],
-      "sha256": "7089b6827ff222432b2d103c3d88e94f7acb170cb95f74b0aa5efd6c5ad09b6b",
+      "sha256": "5a036186589cfbb0fba46276df5d9b1b9792c32c114dba4589afac3694b1bf6a",
       "total_comments": 1
     },
     {
@@ -907,7 +991,7 @@
       "path": "docker-compose.prod.yml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "a13fcd128a8cafcaf90e43c2bdaab2cf18cff56e3bad161c7004e09105ab8c16",
+      "sha256": "b40f2e60260bca653176dc8c2888b9c5cd9c4b010f0c6899ac937c9f3e33d037",
       "total_comments": 0
     },
     {
@@ -931,7 +1015,7 @@
       "path": "docker-compose.yml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8fe439b0cf653eb1d87d2e3e13766f7a2dad159e565f9f60651a0a98d72ea8c5",
+      "sha256": "90d4d71a5cae35fe68854e2510a6741681d3648c8ae3385e236df1773e037487",
       "total_comments": 0
     },
     {
@@ -1147,7 +1231,7 @@
       "path": "gateway-service/pom.xml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8566728c603c65855368b8d06c0fbbe68a6077cfdb7e8b94c16a9fd2844b87e1",
+      "sha256": "408a2506cd9bdcf5f2f573c9a2ccb602a5b5138f633e13b905c81fdec54eadf6",
       "total_comments": 0
     },
     {
@@ -1171,7 +1255,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/config/EdgeFiltersConfiguration.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8e58be7b977466038324a3ef06a6a716c13ec4805726372c92dda3b855a7c25b",
+      "sha256": "e3caf332e6dcc5cec41d86cb48b763e1ea4f7cd41603dec00bc0cd55cbc50af6",
       "total_comments": 0
     },
     {
@@ -1183,7 +1267,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/config/GatewayJwtProperties.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "051e9b168d821596b319b35f16b398b9004bf79d9f6b0cf7f5e6df9793c4437c",
+      "sha256": "63f150ed66da4b67dc290a10572cac4daf61b972d479d651805aa24784dbfffb",
       "total_comments": 0
     },
     {
@@ -1195,7 +1279,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/config/GatewayJwtSecurityConfig.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d72933a914ac1de079c03499ca621b0540f12175cdefbff07e6f2375be854364",
+      "sha256": "1f9384ddd50eac4e4a4474dcb0f5ff8db1f5a2c1862d49294eeb79d6155e7677",
       "total_comments": 0
     },
     {
@@ -1267,7 +1351,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/config/SecurityConfig.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "c1159391985d74288002b048ceef56b47c25f84f4a4dc0151bd9de7f303d51e3",
+      "sha256": "80dfee10a28c0c61a8ee776c80b62100b1cc5322a7b0ffa25294a046a14283df",
       "total_comments": 0
     },
     {
@@ -1363,7 +1447,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/filter/FilterOrder.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "508fcb6f847cde589da22b2021dad3c82f12e319fdef27c3a5ed978a8b311a00",
+      "sha256": "ed906717a6ff86a1e611163748f906f7e1c55fccbf577b71fc1fc7caabf62c49",
       "total_comments": 0
     },
     {
@@ -1388,6 +1472,30 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "c84adcfc8c788bd34d2cbd4eee31aaeb986587f6a6cbb5ed2be02c67fed1f64e",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/filter/PreAuthRateLimitFilter.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "6fa7e1d16f1da44847d2293212375fb96328184753244921e93cd5d1c5cfc681",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/filter/PreAuthRateLimitProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "84075601438eb09963b51ae6d0997d16a1ae8627abf5a49212db8f7a389351e1",
       "total_comments": 0
     },
     {
@@ -1480,10 +1588,46 @@
       "exempt_reason": "",
       "language": "java",
       "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/FleetRateLimitBudget.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "6f4d3ead3516b380690b9ede21d1fafc058c83291b27f6e37b78f41b1e21062c",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/FleetRateLimitDecision.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "64394308b9d2be0943e218a3f0e2cfd2c4885ac15cfe502621ee4bf4747fd519",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/FleetRateLimiter.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "eb39344dc1267cca4a73e7982548e6c848ea8d4ca238ed513fb27042f4fdfb03",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
       "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "7f85ba99367ef77de31a7555b144d8c8d4bb401bc4c0c4c90aea93bda89333ef",
+      "sha256": "b73d6e2d040372e7157dcbf72d81a12d80edb3dbc68b7f5d0162ab43d71a1c7a",
       "total_comments": 0
     },
     {
@@ -1495,7 +1639,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitProperties.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "0fe2dc8d50036703a77ee88dc4c327f2856b0fe6a0b879d2e10d85a3759e3194",
+      "sha256": "2b57f0d142135a80bae091d67dde393a2f301cf5074d8269a929d35bb2ab5035",
       "total_comments": 0
     },
     {
@@ -1507,7 +1651,7 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/RateLimitConfiguration.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "14e98f5ecf6b8f20b8b915f96e2179eb76fb1f5d75cf8ad82b04b0515d73f893",
+      "sha256": "31c4055674c716e7b7bb020da4025977761c5fbd999126ec0568beb0690aedcc",
       "total_comments": 0
     },
     {
@@ -1555,7 +1699,19 @@
       "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiter.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "0a98dddf5bcc812ed5e548a7426d9878c9fa0f00ad0e850a29ba9cf07d34e0e2",
+      "sha256": "2a1291095b04e33dae5497d0e36f63f6a368a4fbc081992e3c5d1dc63dc27ba8",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisFleetRateLimiter.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d2d4d0c27afbe586182c8db822c4164fd76b49f477b7fc39d33d2d3c575a0774",
       "total_comments": 0
     },
     {
@@ -1588,6 +1744,66 @@
       "exempt_reason": "",
       "language": "java",
       "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/resilience/BulkheadProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "268219cbd934b4a209a1d73e947673917c968966e6be06ffb05dc21bc35176a4",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/resilience/CircuitBreakerProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "6291361818646faa45abef75b17ea1db9b7b72d9e0ec7517f254d937a7d03499",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceConfiguration.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "b2190da6a898bff63d5b1805d617d873e30a8e53236af99b4869f864d702820e",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceFilter.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "67f6a3fb5f80c83b4b0321e5d757bd2901be24869c22aea7f438ff93dab2cdec",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamServerErrorException.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "bf059e97546eb510994a31ef463a9e125ec3cfbe2e3988c2e5eb72ec0061cc60",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
       "path": "gateway-service/src/main/java/com/shop/gateway/routing/ApiPaths.java",
       "preserved": [],
       "prohibited": [],
@@ -1603,7 +1819,7 @@
       "path": "gateway-service/src/main/resources/application.yml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8dac5c5d45a9a6a2170ef144df1cfac653e8a9c2654d9fc3a67adf56a79d392f",
+      "sha256": "780e3fb6f6bc698f83a7247bd75a2dabeba700fbd3516b4bb80acc22cdbc9132",
       "total_comments": 0
     },
     {
@@ -1627,7 +1843,7 @@
       "path": "gateway-service/src/test/java/com/shop/gateway/GatewayRateLimitContextTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "5612d1e3cf6f5abffeedccf42282a51f4b1bf103ba76f8f986a29f0a6eac5300",
+      "sha256": "aa82bc1c63535c1433b3f340614e23f35a33fd5aa5084db77048d4ac790b3625",
       "total_comments": 0
     },
     {
@@ -1639,7 +1855,7 @@
       "path": "gateway-service/src/test/java/com/shop/gateway/KeycloakRealmImportIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "ff6faaebc886ecdc17d4915b920457e10b77878b388aaffbf702a54bf554f469",
+      "sha256": "85aa6e0279817ed984bd0c7271d09b2feeaca6a61f10bf0debdfdac93a47d712",
       "total_comments": 0
     },
     {
@@ -1684,10 +1900,22 @@
       "exempt_reason": "",
       "language": "java",
       "module": "gateway-service",
+      "path": "gateway-service/src/test/java/com/shop/gateway/WebFluxUnauthenticatedRateLimitTests.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "0dd81cfb661ca9a751a1d54bb691fef1d15e3c79616a8f7369ba7001c46ce36d",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
       "path": "gateway-service/src/test/java/com/shop/gateway/config/GatewayJwtSecurityConfigTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "01e52cffd7eb21f3df64c38baf1ece11f26e4daeecc6151ec425fc54274c7e20",
+      "sha256": "0d666c8bd4a1373ddf39d4f4e928674ba760241300a87786dfb633fa46625d48",
       "total_comments": 0
     },
     {
@@ -1771,7 +1999,7 @@
       "path": "gateway-service/src/test/java/com/shop/gateway/filter/FilterOrderTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b416c9a07f9207f8b7ace8bfbcce687bfcd5877b475ef612eb7a84f4eea1bb22",
+      "sha256": "b386dc55a5a03f445662e3b1e321812cf473733ec5531927ad52f072f7a0bed1",
       "total_comments": 0
     },
     {
@@ -1804,6 +2032,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "gateway-service",
+      "path": "gateway-service/src/test/java/com/shop/gateway/filter/PreAuthRateLimitFilterTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "902aaef7db66347c8c8221fcec0144d37a30cddad3157602025b0ea6abebddcd",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
       "path": "gateway-service/src/test/java/com/shop/gateway/filter/RateLimitFilterTest.java",
       "preserved": [],
       "prohibited": [],
@@ -1828,10 +2068,22 @@
       "exempt_reason": "",
       "language": "java",
       "module": "gateway-service",
+      "path": "gateway-service/src/test/java/com/shop/gateway/ratelimit/FleetRateLimitBudgetTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "016635271279f060c0c679406021e751d87ed43ea66860796f21377b9824ba68",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
       "path": "gateway-service/src/test/java/com/shop/gateway/ratelimit/GlobalRateLimitFilterTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "dc75db1f4e61a63285fc7763ee20baff1941f57b169302ad6725852ba748f2bf",
+      "sha256": "b43f728abe242d18ff1ff16f9e01ff39e4c5f430c099dd9d792250381b45a700",
       "total_comments": 0
     },
     {
@@ -1843,7 +2095,7 @@
       "path": "gateway-service/src/test/java/com/shop/gateway/ratelimit/GlobalRateLimitPropertiesTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d6b9c26fa5fed11153700ce0b996d07d02c3c466565301f9a645a6d92e2e3d91",
+      "sha256": "2771397476ffa7ed39e8774ee954db01ace202e6cb23e2b434220f3b13f7fdd8",
       "total_comments": 0
     },
     {
@@ -1879,7 +2131,7 @@
       "path": "gateway-service/src/test/java/com/shop/gateway/ratelimit/RateLimitRejectionContractTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "ec00eada004835002bc309db402868a6414479b2c098eea6cdf7229c40dd2af4",
+      "sha256": "8106e24353a034d75c8a1ac024f306a41abf9e968c94e4264e3d644552ebe29f",
       "total_comments": 0
     },
     {
@@ -1891,7 +2143,19 @@
       "path": "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisEdgeRateLimiterTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d935f7201dd0491e17f478662aa3d00f35c94f0fd8454089af0fd563d0fa4954",
+      "sha256": "a18309c64da62e78547430d216fe7356b4c96b9ef6c37d4479fae70610227325",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisFleetRateLimiterTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "05d70551152f6404a03c7bdb98b0aa5ef3b8d508b27f93e99b0b5cdbc59ba4ae",
       "total_comments": 0
     },
     {
@@ -1904,6 +2168,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "7485bc4e99239d1fe1f6fd1b9cfee5fc6114851e779bc610cc0a4c66b3d9616f",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "gateway-service",
+      "path": "gateway-service/src/test/java/com/shop/gateway/resilience/DownstreamResilienceFilterTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "705530ddc3b61cd634c0e05d8fb062847387a44edf406732af19996c3de4d122",
       "total_comments": 0
     },
     {
@@ -2083,7 +2359,7 @@
       "path": "inventory-service/src/main/java/com/shop/inventoryservice/entity/OutboxEvent.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "20d74beb8beb64f2b8dc1ff8ff73d953d583c7b8e31c972fcfe81a7d8b3529b1",
+      "sha256": "f96f11e4f2f8b80b0a92efbff2ffb816a86f4b810ecad65702f9cf16f7021b1b",
       "total_comments": 0
     },
     {
@@ -2131,7 +2407,7 @@
       "path": "inventory-service/src/main/java/com/shop/inventoryservice/repository/OutboxEventRepository.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "e7f2f7a437566a9f4875f4fb3c3a03f14869250d242bf1da228e48765cd11767",
+      "sha256": "27f5aeacf8c204d7e11ccbea99dc86f131dc165ea40ca75cb3df4de3b2f2667d",
       "total_comments": 0
     },
     {
@@ -2191,7 +2467,7 @@
       "path": "inventory-service/src/main/java/com/shop/inventoryservice/service/InventoryOutboxRelay.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "9072b0f2440e53ebbfa4b5a37c5322cffa35dcdc63d66f8d37e2a56f3c1706c9",
+      "sha256": "1f8487d651f33a38304fe0eaef16f673f8a5ced9ce7334f833a621504a358f67",
       "total_comments": 0
     },
     {
@@ -2368,10 +2644,22 @@
       "exempt_reason": "",
       "language": "yaml",
       "module": "inventory-service",
+      "path": "inventory-service/src/main/resources/db/changelog/changelog-008-inventory-outbox-claim-lease-owner.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "6700c3864a45286a9d2ac0935c7e4d165968785eb6f5f95cdf2d00ddad360ac5",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "inventory-service",
       "path": "inventory-service/src/main/resources/db/changelog/db.changelog-master.yaml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "7fd4da1d5cae2522b7f5a145fa5c8f646d032fab658a21eb2595cf02558d9d6d",
+      "sha256": "0b27cc7e25bd5ebb112a71129afefbb08317c813236d727db0b8a4ce42590e60",
       "total_comments": 0
     },
     {
@@ -2491,7 +2779,7 @@
       "path": "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxClaimConcurrencyTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "4de27ad7912277d065d924ce549718489942ba5ccd05b3684b4aed7d0f378258",
+      "sha256": "3ebcf6985cee7d8e74896ab1b9dd36dfd8a2a3fc307c703ed415ee1ba2eb9a5d",
       "total_comments": 0
     },
     {
@@ -2515,7 +2803,7 @@
       "path": "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxRelayRecoveryIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "649736e7539fa265097e0c883087df02212405974a6456253842d9fc556f4465",
+      "sha256": "ec348ca602046076f0717494daa4d8a238ce7b54f51f561a0f0e64aaf2532743",
       "total_comments": 0
     },
     {
@@ -2527,7 +2815,7 @@
       "path": "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxRelayTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "a14f0acaab3795890f323b7a00af5311361f48ff0be32e9745e095b8c56a3151",
+      "sha256": "a7269a30595c35a9e5747be45e77332cbbd4e8bdb605b45a792f170ac2d160cc",
       "total_comments": 0
     },
     {
@@ -2671,7 +2959,7 @@
       "path": "k8s/microservices.yaml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "85eeb7e00bf2ebca0d405b7922f4f4ee9fdc7de6e5e63d5993960e46910e6170",
+      "sha256": "a8c1dedc0270eefd8190e57567e546aabadabcfad00f7b26ca6102b9801a955e",
       "total_comments": 0
     },
     {
@@ -2731,7 +3019,31 @@
       "path": "load-tests/k6-order-saga.js",
       "preserved": [],
       "prohibited": [],
-      "sha256": "44f5833f586a5b8768b3d9379769ea0e99d57f5e122caa6b9e82294af69f14f5",
+      "sha256": "7779199564de531bf3b2f000f5890507d1073ba7ac57b2dc28300e3968a181d3",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "javascript",
+      "module": "load-tests",
+      "path": "load-tests/k6-scenario.js",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "c81cb180452b48a6584fff09dcd1076d1b282e56f41f0d7ee908858ca16ea2fe",
+      "total_comments": 0
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "python",
+      "module": "load-tests",
+      "path": "load-tests/run.py",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "462726e1336fa6c855721963f249e620663d2e1484a14ee3540f4bb3d80ab1de",
       "total_comments": 0
     },
     {
@@ -2959,7 +3271,7 @@
       "path": "media-service/src/main/java/com/shop/mediaservice/outbox/MediaOutboxRelay.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "7a92bd224f57ef356a1166fecf62177cf47d088dd586266ff6350b30a3854f16",
+      "sha256": "5a2f87097a1eeaed0e65170a575547997ff9d55d770015710c2f9996d184c44e",
       "total_comments": 0
     },
     {
@@ -2983,7 +3295,7 @@
       "path": "media-service/src/main/java/com/shop/mediaservice/outbox/OutboxEvent.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "f65e3922fdd7161605d00a22620caab186f35fe863c01680470767b627e74ac2",
+      "sha256": "b707862035f1016e611b810367add10f8f84b2a8a68a2bfa38fbb54c7778acb6",
       "total_comments": 0
     },
     {
@@ -2995,7 +3307,7 @@
       "path": "media-service/src/main/java/com/shop/mediaservice/outbox/OutboxEventRepository.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "ce6a3f2256fb555ad733161833da06b3a64518b00784f4c33795feb41b459ff8",
+      "sha256": "4731dbebec2b435328c2a5f76585ff6d6aae1fc3620d827c596815213363afb0",
       "total_comments": 0
     },
     {
@@ -3232,10 +3544,22 @@
       "exempt_reason": "",
       "language": "yaml",
       "module": "media-service",
+      "path": "media-service/src/main/resources/db/changelog/changelog-005-media-outbox-claim-lease-owner.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "4ebb6489da1b6e62b32c393dfd0ad589e0be4fd1741451afa7c748bde19bc3e9",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "media-service",
       "path": "media-service/src/main/resources/db/changelog/db.changelog-master.yaml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "e5373963dd608f7b2b7d7876991086ada65769edded9510bde011338f5b12275",
+      "sha256": "0fc78ec3cd9ce1c208ffcc90e11fd2367f207421a022170ebf06e1aac611d94b",
       "total_comments": 0
     },
     {
@@ -3391,7 +3715,7 @@
       "path": "media-service/src/test/java/com/shop/mediaservice/outbox/MediaOutboxClaimConcurrencyIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "6fc1e1a19cd309a66b6c625ba547f94b1404f5e07d37e13259739734c124ed6d",
+      "sha256": "ecb11c0878e3e0710fc67c7c22ccd0bcd9030e379fff064b99c02327794d5d40",
       "total_comments": 0
     },
     {
@@ -3427,7 +3751,7 @@
       "path": "media-service/src/test/java/com/shop/mediaservice/outbox/MediaOutboxRelayTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "9f905f92f80438ed5181863ba6d64472780adc4fdba75a5fa7cd1809c6bff437",
+      "sha256": "2294eb61f9ca5996fd33fa67ec6e024bddc4e9910d98f0029e347198076a74e7",
       "total_comments": 0
     },
     {
@@ -6064,10 +6388,82 @@
       "exempt_reason": "",
       "language": "java",
       "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/MoMoProviderConfiguredCondition.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "f162f690fdb00954723a08e85bdb2de2ac1ca5ffb4c13753d68c9abd85380484",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentMoMoProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "16c36aff2ce659a53be18efb0bd634c7daeac543b9e82f5b33bee90908bb40a4",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentProviderProductionGuard.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d48511eb57dec5d1a450a01004f8b7ac405db6afa026af03f679a5995caddbdd",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentPspRestClientConfig.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "bf3f3d04f8af07a119e388bdc7c745c42da9598d74832b0bfdbad08253328645",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentStripeProperties.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b8b7f491548b981cf28c261651483a81f47d16eaef6e750ee264c64cb5b21832",
+      "sha256": "38a64c9932442c8aca22332039104acfe69b8d58093553701848fea7936efc52",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/PaymentVNPayProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "56103e883bc8eddb2120b1d2989b349e0b5e93f8fc4058c8c8a5edc0017cbc5a",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/config/VNPayProviderConfiguredCondition.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "1988421b3d912ab76f57e5e718be43428e61340629102f7939d4da8476e71d39",
       "total_comments": 0
     },
     {
@@ -6211,7 +6607,7 @@
       "path": "payment-service/src/main/java/com/shop/paymentservice/outbox/PaymentOutboxRelay.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "806b3d5b51605cf264fd47fca2f0474d065695fd89dafd5eec2d2b59975fdea5",
+      "sha256": "1d40a6dd3d6c01bb8a76bc4fcd68bce82b8773ee7d0ec67bdb5b0eb246f04fc5",
       "total_comments": 0
     },
     {
@@ -6235,7 +6631,7 @@
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/MoMoProvider.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b1350ecf763c339d65ac19ed2f2208c401e355ca17d19ba33baf762e394e26dc",
+      "sha256": "3f8e04e2505e808ef5096003fd9edee095b284987caed6376c9fa8f9116c97a5",
       "total_comments": 0
     },
     {
@@ -6307,7 +6703,7 @@
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/StripeHealthIndicator.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "9fedc3870380b1c90d93be91f6f9057c8d5f804521d4d71062159c032bff50de",
+      "sha256": "c32f48ac4475d699ada23b77751d7358af6ca8d1c6e56547de97c90797d330fc",
       "total_comments": 0
     },
     {
@@ -6319,7 +6715,19 @@
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/StripeProvider.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b623cc53f7d2db6b66d773c0fc6b43fc9fc4c0bffdd7678313bd7711951e6a20",
+      "sha256": "9e0ea825c90fb8bff98a0eb6c92951909ccff9d5325b5c83140c9e100414eccf",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayEncoding.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "528e510bc08935ee797b7b4c9f72671595df7786b553f192ed7b03e9514bf3fa",
       "total_comments": 0
     },
     {
@@ -6331,7 +6739,7 @@
       "path": "payment-service/src/main/java/com/shop/paymentservice/provider/VNPayProvider.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "07da1da78bda13295b23c03ebc2cda6c7c9d3373cf5ba0f963932dce7bae799f",
+      "sha256": "4d5c7367f19cac53cc6efabb94f732876c056d40b1ac05b27986b0eb38f739bc",
       "total_comments": 0
     },
     {
@@ -6448,10 +6856,46 @@
       "exempt_reason": "",
       "language": "java",
       "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/MoMoCallbackVerifier.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "bae28f2d09d7176f9f3d75d26f5857e0eb551f038cbc2644378358717fc3bedc",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
       "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/PaymentWebhookController.java",
       "preserved": [],
       "prohibited": [],
       "sha256": "74bf41b0934556d6d87ed6e578a37fcd7d355b338be80eaf89d5f0d8ecb95463",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/PspCallbackController.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "c3d7008632a24189cd625a583d7caecf5aad256442cd8d6377400085adcea750",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
+      "path": "payment-service/src/main/java/com/shop/paymentservice/webhook/VNPayCallbackVerifier.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "dc3a39df758760ade741f1abef013328dddaaff6edfcc1ebaab5f5db534931f6",
       "total_comments": 0
     },
     {
@@ -6487,7 +6931,7 @@
       "path": "payment-service/src/main/resources/application.yml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b02d7a4b265fd06d1c97d9c2f8aa7e87ea4a2f450244ab5a1aaaab09b6a61dff",
+      "sha256": "9c63e9f73fb63a4e9f056afa3b5b72735ddbd15e6bb0af9cf280381f5080e9c6",
       "total_comments": 0
     },
     {
@@ -6676,10 +7120,22 @@
       "exempt_reason": "",
       "language": "java",
       "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/config/PaymentProviderProductionGuardTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "72af66f671acd3ff00314df9cad5547f47eb3f11ed5b901958c87b3a38f58301",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripePropertiesTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "50faafd91bb3b2842f3c827e4db873be5ee74592befcf911ecb77dd344a8458a",
+      "sha256": "09ea8e002cc4335c7204c365683c7a59ab6572e4a34e54f627045438d96e44cb",
       "total_comments": 0
     },
     {
@@ -6751,7 +7207,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxBatchAsyncIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "96a37150bb8f75e937a60feefd809cf1a15528461d4987ea297266637d6b4850",
+      "sha256": "7c5a72e40e1932681272a549155b5ba4ee4aa789ec4fd69afc0d57cdcae922bc",
       "total_comments": 0
     },
     {
@@ -6772,10 +7228,22 @@
       "exempt_reason": "",
       "language": "java",
       "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "665c38cb40f30006860a4a5fcf1beda13cff7d351c7c0df376e54faa6777d5b1",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxRelayOrderTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "15682487c8a2f60757a6eb2c992dac398b94c87e7607c0186a138bce42cd1fd1",
+      "sha256": "fb46918e1cc242a8520ed3a6c51ff59f010721e53a09441d9be8532ea23915fa",
       "total_comments": 0
     },
     {
@@ -6811,7 +7279,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/MoMoProviderTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "0d9add75485e190efdce1d8ccf5d48b8206929d07b49ff915984303e64d4a104",
+      "sha256": "906f9b06ca24ae155d0b8a57b876430d61ce909388ad4a1b796dc571fc402c45",
       "total_comments": 0
     },
     {
@@ -6844,6 +7312,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/provider/PaymentProviderRegistrationTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "e4378004527b89e13784f9260478db634031353b8e4d1bd30a9aa449f53c9ce3",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/PaymentProviderRoutingTest.java",
       "preserved": [],
       "prohibited": [],
@@ -6859,7 +7339,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/StripeHealthIndicatorTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "940f81f278fc43c68f379e65522356a0fec1cb7eec5fa9f14095b54233d8514e",
+      "sha256": "18297618a6fa408d8a631b05299cf98d6ad2470a283191f71b712d9ba62c6448",
       "total_comments": 0
     },
     {
@@ -6871,7 +7351,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/StripeProviderTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8483526cd7c339ceb3662fabbe6ad53875c1d42667e3a8001fa9c3b306e2eb01",
+      "sha256": "b5fa27069327ffdd64f06ae46237bc312de546b6605686fcfad506b3a6343d72",
       "total_comments": 0
     },
     {
@@ -6883,7 +7363,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/provider/VNPayProviderTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "caaac98c396d27a21eae6688f40a5bfa52bdc6f84c5e6233a4e46acbf50d9246",
+      "sha256": "685996b718d775fecafb82faa8acc322e1b37a92795143ab8060b8ed6a6d95fc",
       "total_comments": 0
     },
     {
@@ -6955,7 +7435,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceStripeTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "50c87abaf7b0934d475a606c6cbe5e226c5599638344f5af4ae33e37868443df",
+      "sha256": "da3453ddf02a6f75b6074b9911dc94c2d27c7c2459fd7887629d7fdc033c5054",
       "total_comments": 0
     },
     {
@@ -6967,7 +7447,7 @@
       "path": "payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "4e4e3453172781929aafdb5315f269c1c068f5742f41c21262990fe359e14e94",
+      "sha256": "a191ba7fd60924063276ca6b28cd88f08a5a230e68d63b37adfa4c1685ce7ea8",
       "total_comments": 0
     },
     {
@@ -7048,6 +7528,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "payment-service",
+      "path": "payment-service/src/test/java/com/shop/paymentservice/webhook/PspCallbackControllerTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d1679f770c1090af1cfefc5c82574ce1d2d8800b71756faa4cd748de59c0a78a",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/webhook/WebhookSignatureVerifierTest.java",
       "preserved": [],
       "prohibited": [],
@@ -7063,7 +7555,7 @@
       "path": "pom.xml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "714869711a10cda6c7a33a60f76eed1415be7078d2bdd514da39f0792a23c790",
+      "sha256": "167085cbb35df1347d7f8ee6f7fb22fdff51013b3d1c0c18406fba6520d1ade5",
       "total_comments": 0
     },
     {
@@ -7553,7 +8045,7 @@
       "path": "product-service/src/main/java/com/shop/productservice/entity/OutboxEvent.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d1f4c9d870e1798b69df96db8a3f0e60ad5542ae93d088d78217ee01a5a8525d",
+      "sha256": "313693ff5a974584e027e67bd2bc466bb8537040c5ad23eef02a885cee937a59",
       "total_comments": 0
     },
     {
@@ -7733,7 +8225,7 @@
       "path": "product-service/src/main/java/com/shop/productservice/repository/OutboxEventRepository.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "203b64422107381ddec55492f4293c693b17236faa7547098955af885c1b9aa9",
+      "sha256": "97846d197260f76250a6404ce0661f28b4a0e9f0ad9feeb494dbdb536299e796",
       "total_comments": 0
     },
     {
@@ -7829,7 +8321,7 @@
       "path": "product-service/src/main/java/com/shop/productservice/service/OutboxRelay.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "2a2244622afdb94700528e3c2f7fb0a062cb47770952b0fca1b0f56e29f5a6a6",
+      "sha256": "40f81cfef075731b26aebfb17ece9d6ca9c911b0bee29580aff92e175c158364",
       "total_comments": 0
     },
     {
@@ -8090,10 +8582,22 @@
       "exempt_reason": "",
       "language": "yaml",
       "module": "product-service",
+      "path": "product-service/src/main/resources/db/changelog/changelog-007-product-outbox-claim-lease-owner.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "daaea566bfa8ec56259e20ac40a461bc56b808b35b00575130861c1883d6a2c8",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "product-service",
       "path": "product-service/src/main/resources/db/changelog/db.changelog-master.yaml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "1d4a5b861579b541a2c96e1498d5e82509cdd2458216026183892b68641cb564",
+      "sha256": "99ce8d4a92d66b8e98de3fb8e86b9b6330b5412381d70edcc6de79256d2ffb30",
       "total_comments": 0
     },
     {
@@ -8393,7 +8897,7 @@
       "path": "product-service/src/test/java/com/shop/productservice/service/OutboxRelayTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b506156b3902563efeedd173fe4814aaefc16ff0e1401b121f33aafb0a9047b5",
+      "sha256": "b700b5b468cdc97d6dabe9de1f45410c6821444f74556bbb423ee8ad13c4dbc0",
       "total_comments": 0
     },
     {
@@ -8417,7 +8921,7 @@
       "path": "product-service/src/test/java/com/shop/productservice/service/ProductOutboxClaimConcurrencyIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "a12c6f500ee88f5c27d874ee0ccec7e3f6b2ceba4fabaff896748d12ce4b6e28",
+      "sha256": "27f116c1d103f20830f48287f2b358c90e817daddd1da99b3eebafc3be5d2464",
       "total_comments": 0
     },
     {
@@ -8753,7 +9257,7 @@
       "path": "promotion-service/src/main/java/com/shop/promotionservice/entity/OutboxEvent.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "289375f524f5dc6181895046230c047e965ecca53010ce6596959e5b65015f34",
+      "sha256": "6ad7790c4e98a21e56fce467e46b7a0e382b9f310c7af9d01b50d68c9c5a6a4b",
       "total_comments": 0
     },
     {
@@ -8801,7 +9305,7 @@
       "path": "promotion-service/src/main/java/com/shop/promotionservice/repository/OutboxEventRepository.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "60f342bf6923efe33bc8b13bc9a49e11cfae3a9d35b7045cd90916ae84fc8565",
+      "sha256": "d368e3cb51c89e7b542101404cd1319a74f1cc7232287a2908b7416408cd6a3a",
       "total_comments": 0
     },
     {
@@ -8885,7 +9389,7 @@
       "path": "promotion-service/src/main/java/com/shop/promotionservice/service/PromotionOutboxRelay.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "e0e49987b205e9608c48433538457b01454f8122d2db5231f68555d64a2591a9",
+      "sha256": "4fb6d498ccc6541491ecf6cede29869a2087881523384d13ce9ea22309332c00",
       "total_comments": 0
     },
     {
@@ -9074,10 +9578,22 @@
       "exempt_reason": "",
       "language": "yaml",
       "module": "promotion-service",
+      "path": "promotion-service/src/main/resources/db/changelog/changelog-007-promotion-outbox-claim-lease-owner.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "752c2d8f35ed5fc0f646f4c1c84dd258dda38f345c927b0c8bdcdb49687763c4",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "promotion-service",
       "path": "promotion-service/src/main/resources/db/changelog/db.changelog-master.yaml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d39ab3fc9389ed62f09fd4448f985be64f003b105646cf19dfa2a7b437ef7e5b",
+      "sha256": "7decd1750b60b7159c8362cb4eb5b05aa2b4a81141daac036d4d21ba4e197a2f",
       "total_comments": 0
     },
     {
@@ -9233,7 +9749,7 @@
       "path": "promotion-service/src/test/java/com/shop/promotionservice/service/PromotionOutboxClaimConcurrencyIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "1e2945c36c45b54ba758b40e0818673b347e2e345dd9ec3781b94739080408bc",
+      "sha256": "baca5f0ed86bac825770dc169560043ced9d116e9356f6419a9a6d141498ad1e",
       "total_comments": 0
     },
     {
@@ -9257,7 +9773,7 @@
       "path": "promotion-service/src/test/java/com/shop/promotionservice/service/PromotionOutboxRelayTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "30cdee9a5f6ae3ee25ae05f191800eccea85a80f5b9a273c80a291d38c458e8e",
+      "sha256": "f9823f53c14ce177577e299ef2a2777cde3bb0e865090e4523600e2f699090bb",
       "total_comments": 0
     },
     {
@@ -9497,7 +10013,7 @@
       "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxEvent.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "be9eb7b227e30d375ce16440d5f4550b8cbf24a641577a7d2b7a1f1fe3596cad",
+      "sha256": "5230d43835b12750af1ec8e0d63cb63c0be7bc7d7eece1c0314faf649ee51516",
       "total_comments": 0
     },
     {
@@ -9509,7 +10025,7 @@
       "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/OutboxEventRepository.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d65265da136b52f4085c731eef08bb8491037efbbd0d0f7c29fed01327aed5bd",
+      "sha256": "79c9608e1360202e463755e5460505ba75a452360c05dd4984104891c9b52b65",
       "total_comments": 0
     },
     {
@@ -9533,7 +10049,7 @@
       "path": "rating-service/src/main/java/com/shop/ratingservice/outbox/RatingOutboxRelay.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "55b74f2a33d15b4f5553e5b80c5d150357b5cf689f5039144a950466c69e8e31",
+      "sha256": "2469ef9e135648adb813bec2b75c20709ecfccafbdb79e2b21c872454b57b9ad",
       "total_comments": 0
     },
     {
@@ -9638,10 +10154,22 @@
       "exempt_reason": "",
       "language": "yaml",
       "module": "rating-service",
+      "path": "rating-service/src/main/resources/db/changelog/changelog-003-rating-outbox-claim-lease-owner.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "26736ac12765798092bf759a06035741cd5c5155155da22a0f58ed28b2dc2f4a",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "rating-service",
       "path": "rating-service/src/main/resources/db/changelog/db.changelog-master.yaml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "04887dd6fd0cc30c3be60cb770429c8522d4a41306c96a3d54e64326ca7405bc",
+      "sha256": "53f85271469c0a85aab9810997dc0df71b1d4934f7c03894b475ebf6db601a77",
       "total_comments": 0
     },
     {
@@ -9761,7 +10289,7 @@
       "path": "rating-service/src/test/java/com/shop/ratingservice/outbox/RatingOutboxClaimConcurrencyIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "472b8d4c899ab058c8ca1e7ecb29a24c27d8f375b795e87f7416092a968321c7",
+      "sha256": "902122484606d6e6e309e2d8c45f01f4a2142ab56d5a9bd30adbb2f547b7ad79",
       "total_comments": 0
     },
     {
@@ -9785,7 +10313,7 @@
       "path": "rating-service/src/test/java/com/shop/ratingservice/outbox/RatingOutboxRelayTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "048992d062c9b38a666e511cb4a7a2602808b19e2259d5999b154daa7a44daa7",
+      "sha256": "2eafd76fa60d18dc40249d819e72f18d96c0160fbc9ee2360c5a9161e1893abf",
       "total_comments": 0
     },
     {
@@ -9888,6 +10416,28 @@
       "exempt_reason": "",
       "language": "shell",
       "module": "scripts",
+      "path": "scripts/notify-telegram.sh",
+      "preserved": [
+        {
+          "category": "SHEBANG",
+          "end_line": 1,
+          "excerpt": "#!/usr/bin/env sh",
+          "line": 1,
+          "path": "scripts/notify-telegram.sh",
+          "reason": "interpreter directive preserved",
+          "style": "HASH"
+        }
+      ],
+      "prohibited": [],
+      "sha256": "4e84e7fa0a9f8b49fcd3b169a384a6269d21d9913cd308e14980c2f0391574ff",
+      "total_comments": 1
+    },
+    {
+      "category": "INFRASTRUCTURE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "shell",
+      "module": "scripts",
       "path": "scripts/run-sonar-scan.sh",
       "preserved": [
         {
@@ -9944,7 +10494,7 @@
       "path": "search-service/pom.xml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "46da558fea3519fa1cac4a05677760d45f3c91ce8fc7bedc677619d7a1dd9135",
+      "sha256": "4cd0bacc16f99a5b6e9767e987a4e25566d0dd450909dec775a74ae771c964d8",
       "total_comments": 0
     },
     {
@@ -9980,7 +10530,7 @@
       "path": "search-service/src/main/java/com/shop/searchservice/config/ElasticsearchConfig.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b0816fc613c6806af157d77c2a6aa616ff05ea07405b38535cff03ff9a0a5d04",
+      "sha256": "f80e56de3cb216b77024a411cc33dcff80d2442d711db93f578e451598795c8b",
       "total_comments": 0
     },
     {
@@ -10196,7 +10746,7 @@
       "path": "search-service/src/main/java/com/shop/searchservice/service/ProductSearchService.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "e91b5aeb5f3e7cf2e48d47b9db8a11d0d4dfc3df45f6381efa0477e3e599a7cd",
+      "sha256": "5e9861946b5369823fab3cee5e56d8270c35542be32c2b737ae5389decb6b29c",
       "total_comments": 0
     },
     {
@@ -10232,7 +10782,7 @@
       "path": "search-service/src/main/java/com/shop/searchservice/service/impls/ReindexServiceImpl.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d648836651d9f709e973b4af846cf4103e611f6732b00d24f7a8cf0f50eb5275",
+      "sha256": "a4183302feb16b2597da97cfa65c7c44a98f2d509cc66ea774ec36e2e3a636fe",
       "total_comments": 0
     },
     {
@@ -10277,6 +10827,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "search-service",
+      "path": "search-service/src/test/java/com/shop/searchservice/config/ElasticsearchConfigTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "9fcb2955d31695a6889b932c33af1c525a9475617ef2346bc195de570210fcda",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "search-service",
       "path": "search-service/src/test/java/com/shop/searchservice/controller/BackofficeSearchAuditTest.java",
       "preserved": [],
       "prohibited": [],
@@ -10313,6 +10875,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "search-service",
+      "path": "search-service/src/test/java/com/shop/searchservice/deploy/DeploymentCredentialContractTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "196f324aac99e49cb7cd9131f7f0c42ef368fa6625c90c3a53e13d5cbdc88322",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "search-service",
       "path": "search-service/src/test/java/com/shop/searchservice/kafka/ProductSearchIngestionIT.java",
       "preserved": [],
       "prohibited": [],
@@ -10340,7 +10914,7 @@
       "path": "search-service/src/test/java/com/shop/searchservice/search/SearchIndexProvisioningIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "cd81643c1ebc220b02484b6f7c8a8d8bd732613f9537228ba32c8d9c9e3067a2",
+      "sha256": "1b853036c89f418d64936dd1637e6bafafa249899d2fa860bbef5ba3f68d8eaa",
       "total_comments": 0
     },
     {
@@ -10352,7 +10926,7 @@
       "path": "search-service/src/test/java/com/shop/searchservice/service/impls/ReindexIT.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "2e4246191581537da45a7e1a1ec71f51a537aea1fb1065cbdb466bb55c48bbe9",
+      "sha256": "0c37cd04756ad06bec70a4601030f2148e46f5b8d83e3d0938aa3e6452302cc0",
       "total_comments": 0
     },
     {
@@ -10388,7 +10962,7 @@
       "path": "search-service/src/test/java/com/shop/searchservice/service/impls/SearchQueryServiceTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "03e9905e90a3b4d4bdfe583cc51c76c6bd8cee86ec6c99485abb438451147a0a",
+      "sha256": "897690afd119d1a46293be44abc2724dd0464be5719621387bd2342bab758f53",
       "total_comments": 0
     },
     {
@@ -10400,7 +10974,7 @@
       "path": "search-service/src/test/java/com/shop/searchservice/support/AbstractSearchIntegrationTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "1b159940a04af1e3b68e221dfc22a7507dee6ea0f5e996451cb30300d059b7c2",
+      "sha256": "9e5117079657143baab82cc8f3870f4eedb7849bafbcb742301100e56e7baf32",
       "total_comments": 0
     },
     {
@@ -10461,6 +11035,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "c1eedfcf3fb6da523608fda559dd17280f8133d894d9666269511e3902e05ba5",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizer.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "44d842dc109ce766448b9600e75bd46db51614e5bb15e52e82bc88acc28b113c",
       "total_comments": 0
     },
     {
@@ -10565,6 +11151,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/constant/ShipmentCreationStatus.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "5485f3bff1e4ac2f1c78e478a7e2799fd0529983783465db393dfe0676dbc0ef",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
       "path": "shipping-service/src/main/java/com/shop/shippingservice/constant/ShipmentStatus.java",
       "preserved": [],
       "prohibited": [],
@@ -10641,6 +11239,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "cf964116f4d9e48d2e3d2339f297fbf0c911081bb050247bfadcfbcbb7da489e",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/entity/ShipmentCreationTask.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "5f3a94b07dffe2c66ed083e61cd070d44ba24325487b5579ae6aae8013553489",
       "total_comments": 0
     },
     {
@@ -10757,6 +11367,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/repository/ShipmentCreationTaskRepository.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "0e5358690e5b2491a1141ae9ff8c8ba250c22c7d3c35a0d6f615c83cf1a1183a",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
       "path": "shipping-service/src/main/java/com/shop/shippingservice/repository/ShipmentEventRepository.java",
       "preserved": [],
       "prohibited": [],
@@ -10793,10 +11415,46 @@
       "exempt_reason": "",
       "language": "java",
       "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/scheduler/ShipmentCreationRetryScheduler.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "7b7f0fade6bf14f706faa747cd081d59fe9b748b905bdb715d788cd0d986d6ac",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
       "path": "shipping-service/src/main/java/com/shop/shippingservice/scheduler/WebhookRetryScheduler.java",
       "preserved": [],
       "prohibited": [],
       "sha256": "5da74ce0061a60c9402eae63910d4a93c66ff6945f4f43e2c97fb1bbf4850a3d",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationService.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d00011d3bf64d8d8392aefadcd50b17a1cfaa027c5c810464f7a395d215ee2c1",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/java/com/shop/shippingservice/service/ShipmentCreationWriter.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "53ff8e9df69b471aeae06b00baf458eeb4c550827b339aacbf597400a72f62f1",
       "total_comments": 0
     },
     {
@@ -10880,7 +11538,7 @@
       "path": "shipping-service/src/main/java/com/shop/shippingservice/service/impls/ShipmentServiceImpl.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "8807ce78e77f8ca2c9318f62c49eb7f5ddf6b0d8147c6dd06f6684d95c549985",
+      "sha256": "39c9a52e90fd7aa5558fae8804786dbfe54adbfa9a467ea6f290fdc88a202fe6",
       "total_comments": 0
     },
     {
@@ -10985,6 +11643,18 @@
       "exempt_reason": "",
       "language": "yaml",
       "module": "shipping-service",
+      "path": "shipping-service/src/main/resources/db/changelog/changelog-002b-expand-events-status-check-pre.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "dbd66dc0f5914d4b35f01f2a86229e4c7e31aaac90ba6123faec896329a3459e",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "shipping-service",
       "path": "shipping-service/src/main/resources/db/changelog/changelog-003-webhook-retry.yaml",
       "preserved": [],
       "prohibited": [],
@@ -11013,6 +11683,42 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "319d2e5f4c00dce1493ef11f65caf1d105d062123f5bd33efb0829e522e8f7f5",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/resources/db/changelog/changelog-007-shipment-creation-tasks.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "b2aab114b8ec3cb2904b35ae794cfd56e501143e16657f21303fdb2ca92894eb",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/resources/db/changelog/changelog-008-webhook-retry-claim-and-index.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "366a25262815fb10422067eba18596432e7c2cd855486a4fb5b75da4979d5975",
+      "total_comments": 0
+    },
+    {
+      "category": "PRODUCTION_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "shipping-service",
+      "path": "shipping-service/src/main/resources/db/changelog/changelog-009-shipment-event-shipment-fk.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "4615f5e16c81e0a12fbc56bafe8f601a37780634409a188988f94985dd73f2f7",
       "total_comments": 0
     },
     {
@@ -11061,6 +11767,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "046824414f537cbc99431cc2fc896d2f30449ccd0b3eda6ad5296b09d4add79e",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/carrier/CarrierRestClientCustomizerTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "90d3743b2dad3c498e4bae0fc1c9a88583b9ece777a01bb53427f3ee36207336",
       "total_comments": 0
     },
     {
@@ -11165,6 +11883,30 @@
       "exempt_reason": "",
       "language": "java",
       "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogContractTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d9fe583d41a4061c944ec0821184fb4767315cbcb453d8be91443d82e8059574",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/db/ShippingChangelogIT.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "43748941a351d4829383adae523cf71904b519ced9f8c8edfcd0be9b0015d4e5",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
       "path": "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingEventPublisherImplTest.java",
       "preserved": [],
       "prohibited": [],
@@ -11213,10 +11955,34 @@
       "exempt_reason": "",
       "language": "java",
       "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/outbox/ShippingOutboxRetentionSchedulerTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "8222991daa2af9e9ef13469d72a32579fb99efa60086db9db59eeba5ba587232",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
       "path": "shipping-service/src/test/java/com/shop/shippingservice/scheduler/ReconciliationSchedulerTest.java",
       "preserved": [],
       "prohibited": [],
       "sha256": "f190ff7eeb95c5cbb4804a28f9b4594ddf4adf4954345acdf99ca1eb92a6b11d",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/scheduler/ShipmentCreationRetrySchedulerTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "7dbb3bebae42ddb09188a2e6e0775a3bffe7c6f1fd2f83a6ded2c4f048ed6139",
       "total_comments": 0
     },
     {
@@ -11237,10 +12003,34 @@
       "exempt_reason": "",
       "language": "java",
       "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentCreationServiceTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "378200108a457aa2018b66057bce47bd556d5547ea7843eb6292199f198d6dff",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
       "path": "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentStateMachineTest.java",
       "preserved": [],
       "prohibited": [],
       "sha256": "95baff7043a138416d25a888258ac1a3062e47821db2781205fd1607fa7e52d4",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "shipping-service",
+      "path": "shipping-service/src/test/java/com/shop/shippingservice/service/ShipmentStatusWriteGuardTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "84f30528544f74f222122b5b59f55d26b613f2d55cf21ca005669e908b8ca89b",
       "total_comments": 0
     },
     {
@@ -11325,6 +12115,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "85f327fa2d35b26b436cb66ffaa41d455b6df6d6a70256ecd0c77a95f6eead51",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "yaml",
+      "module": "shipping-service",
+      "path": "shipping-service/src/test/resources/db/changelog/seed-base-changelog.yaml",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "3be706d1bf8d43290a61a683df10f9f188af31a96ea3b0cd9357e6a612820638",
       "total_comments": 0
     },
     {
@@ -12508,7 +13310,19 @@
       "path": "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakAdminClient.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b6c4af51ca370515f930cd67f191c2caf02ec092e866b33a6f4f539be0446e2d",
+      "sha256": "8016bcacd288f9fcd24d3bdc31bb371ef642ab898a0fa4bcd6355d99de0829da",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-keycloak",
+      "path": "utils/common-keycloak/src/main/java/com/shop/common/keycloak/client/KeycloakServiceTokenProvider.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "89cd4eae6f2caccf09022ecc6f9ebed8d5147b158e085a2bbf2d27de0536f31f",
       "total_comments": 0
     },
     {
@@ -12532,7 +13346,7 @@
       "path": "utils/common-keycloak/src/main/java/com/shop/common/keycloak/config/KeycloakAutoConfiguration.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "74101f4f923c56bf27878dc9020b075e66658edf57b3458d4c8828c75396b389",
+      "sha256": "193bf899e23d1cb6723011875b20d501ee47d2ed89bf104ed06bb2a54a8b861a",
       "total_comments": 0
     },
     {
@@ -12572,6 +13386,30 @@
       "total_comments": 0
     },
     {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-keycloak",
+      "path": "utils/common-keycloak/src/main/java/com/shop/common/keycloak/exception/KeycloakServiceTokenException.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d1801b38be91391c0a890f4c5b9a74484765223f5439e30874f0a3e2693c6f78",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-keycloak",
+      "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientCredentialPostureTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "a8e09aae9e384e549afe34d7ea7abfcac18313a6e228c4984cdb183eaa70aa7c",
+      "total_comments": 0
+    },
+    {
       "category": "TEST_CODE",
       "exempt": false,
       "exempt_reason": "",
@@ -12580,7 +13418,7 @@
       "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "925117dfa44a34abf4d55f3cc4e80170e3fc04cc21ac38e1668cb0915cf6fee2",
+      "sha256": "b48e2c60f05ef4462f0e1e04b0839128459c0e1d8c8d17ffe527122dbc3b50ae",
       "total_comments": 0
     },
     {
@@ -12592,7 +13430,7 @@
       "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientRoleMappingTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "649dc159ac125a82920dd215fdf4366b011e6f751f608cf4cc0cfcf8e4d7f2cc",
+      "sha256": "d84c62fc8e3cb010b74fd2ceb33e0ae4d2c318d16f82898cbb120f37c5a50066",
       "total_comments": 0
     },
     {
@@ -12604,7 +13442,31 @@
       "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "c2df8ed39fb9c8d801265d8cfdbf1eb91c8db2a0149a4ade97782cc73ef2d66c",
+      "sha256": "d8404ef6924ae4481a2b46c7aebd4ef77f0ff13a1ebc5bd0b6513a4d9d7092ad",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-keycloak",
+      "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientTokenConcurrencyTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d615f1dacb2ad0e1c63512ae00da386d9a9ce548c8d2f4565e0d99eb9ecd5dc7",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-keycloak",
+      "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "deefa0c19ec2332f43bc6882a39c95644a30d9f05118a19a2e47af9a9c90bedf",
       "total_comments": 0
     },
     {
@@ -12617,6 +13479,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "aab26f7a2883d42cd4077c83fff280d420ff9e406e3dd5c4f98f91d3e66864f5",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-keycloak",
+      "path": "utils/common-keycloak/src/test/java/com/shop/common/keycloak/config/KeycloakAutoConfigurationRestClientBuilderTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "3efaa6e7a6a96204f0da27078e2872f197c24d083b44bbb904e445f75c460c45",
       "total_comments": 0
     },
     {
@@ -13153,6 +14027,18 @@
       "exempt_reason": "",
       "language": "java",
       "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/AudienceAutoConfiguration.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "3bc457a3b9886f63a8bbcfa8cf4870cff1a931b22c6a3c39151e5ec6a464abf5",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/I18nAutoConfiguration.java",
       "preserved": [],
       "prohibited": [],
@@ -13204,7 +14090,7 @@
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/TracingAutoConfiguration.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "447ea7995dfcd100a3ef2254991690e0c850bf14b188c53f0e4699560beafaaf",
+      "sha256": "51a204a1eb865636899dd561f143cc78a6259e54107341db0d3efa4dc6bf8ec7",
       "total_comments": 0
     },
     {
@@ -13216,7 +14102,7 @@
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/WebAutoConfiguration.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "3f2f8fb7536d63f14fb8a0cda543064cf229c6a9afa3684ed152f4b299010ed0",
+      "sha256": "99f56275c48a8274b6d285ca82979ba76e58fc783cc97af336ffa14357b44cf8",
       "total_comments": 0
     },
     {
@@ -13229,6 +14115,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "8cbdd336b225fe043cc284b450e3b750972296bf21c7751d396277df6c6eb690",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/config/TrustedProxyProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "029470267ca0374166d7feee891d9b1c6e8b7bc32437734717048f4c426964d4",
       "total_comments": 0
     },
     {
@@ -13285,6 +14183,54 @@
       "exempt_reason": "",
       "language": "java",
       "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceBoundary.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "3120d221dc8a274a948d3ef91e749721a8c68f1ca02886bf96c0f9f6e35523be",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceBoundaryEnvironmentCustomiser.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "a458c9f459f56b10af5f9c46f06265c5b43505dc6d323866fb7a47995053056b",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "a8454392513056f1abead8f32226c3d75b643f02771df1a1b4edb760522015a9",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceSecurityProperties.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "f10517c6734795c3e4907f951635be13c5a40fcbff50ea76a5ccd44b61f2d65a",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/tracing/MdcOtelCurrentTraceContext.java",
       "preserved": [],
       "prohibited": [],
@@ -13321,10 +14267,22 @@
       "exempt_reason": "",
       "language": "java",
       "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/BoundedContentCachingResponseWrapper.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "9454a8fa4ebe5bb52884d394509e06e7343ff5e6258bc67bd2b2b82dd87fcc95",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/CorrelationIdFilter.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "7549d508d72d689e5971a9ab3b0543b88457e9664c61fe9c0fc00517e0a3bc7f",
+      "sha256": "98a0301727c49c777546f2135b3503fb10614add627b059d531cc24e495e25c1",
       "total_comments": 0
     },
     {
@@ -13336,7 +14294,7 @@
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/HttpLogProperties.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "5c1cc5ad19e3367121413c0317af4e205e3a4ad6b68678dc53fd20620778a679",
+      "sha256": "81353d267c5c0fd95a51b649fc1096f2c46cdf5b9e72176b4401a22e5c23ed40",
       "total_comments": 0
     },
     {
@@ -13348,7 +14306,7 @@
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/HttpLoggingFilter.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d3e440886a9f2ea633069328e260abe12e2ef8158607fb3a246ccf916976d0b3",
+      "sha256": "c56dec64b701e6b11a27921010deec96224d5243d1237fa7a03363edb1723b6a",
       "total_comments": 0
     },
     {
@@ -13372,7 +14330,19 @@
       "path": "utils/common-spring/src/main/java/com/shop/common/spring/web/util/RequestUtils.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "b860026b981704ae5325c8fcd47c6f00ceeedfb37790ba79c5d23675933885be",
+      "sha256": "6a38636966088fb10756cc76254a53d43958a6afa4db484d77d32f9e1ecfe3a1",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/main/java/com/shop/common/spring/web/util/TrustedProxyPolicy.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "207585da9e82db775c26645ea22769dcf79d6cd394f9c8f6dd8ac626337eabf6",
       "total_comments": 0
     },
     {
@@ -13384,7 +14354,7 @@
       "path": "utils/common-spring/src/main/resources/application.yml",
       "preserved": [],
       "prohibited": [],
-      "sha256": "39ab4f30d32fc60a97c373ed4c2fd56e3992c07aa8130440f5172c1b27c4ebd0",
+      "sha256": "332993e8b2064c7abf6c4d6a4199eedbee2ce497728349b72793e3e71d9b145e",
       "total_comments": 0
     },
     {
@@ -13456,7 +14426,7 @@
       "path": "utils/common-spring/src/test/java/com/shop/common/spring/autoconfigure/TracingAutoConfigurationTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "6448582e7cc61898c426ed7d46ec5a19d96e434ac8b68ca7e2d7dfac241206c5",
+      "sha256": "910674d1e2e78e6b54a983a8872813a1713c63d6b5a01d77584a63f09608cfe7",
       "total_comments": 0
     },
     {
@@ -13481,6 +14451,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "e7935a3ba996aa1a18ebde7250dae9aa57af47c0c41c536c269e07af1367ea5d",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "07399ee02d1435016159feebd9027c4c23f3f86260f8dfc8b591dd20a262daaf",
       "total_comments": 0
     },
     {
@@ -13540,7 +14522,7 @@
       "path": "utils/common-spring/src/test/java/com/shop/common/spring/web/SharedDefaultsSecurityTest.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "1d62d8836e019807f0066d6340c5def4eb1102ca37e70ca80f4e312e0f1a373e",
+      "sha256": "dbe046313db9011d4b30a9c2463c42c36bed9063f82dcbc899145c2294474149",
       "total_comments": 0
     },
     {
@@ -13553,6 +14535,42 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "1541568e20bedc2250a996e90b1719c9480a08a51af275deb303e0e63482ef47",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/test/java/com/shop/common/spring/web/filter/CorrelationIdFilterTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "c17dd93ef59e66e423f1a1439d725a3d3edc5e2826ebbe3c3e0fe54a107cb6fa",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/test/java/com/shop/common/spring/web/filter/HttpLoggingFilterBoundedBufferTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "4b52f54167be9d070f8e98ed78f3863d892da037355bebc5be1b93dac89ca49d",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-spring",
+      "path": "utils/common-spring/src/test/java/com/shop/common/spring/web/util/RequestUtilsTrustedProxyTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "c896b00aa6841ca18fde5598f59baaf485f25b7a8639e5ff1f1d12f46310770b",
       "total_comments": 0
     },
     {
@@ -13576,7 +14594,7 @@
       "path": "utils/common-storage/src/main/java/com/shop/common/storage/client/S3ClientFactory.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "1ecc459890fd42d575b255b0470286b7934a50a48896a1a6904695f07d126e25",
+      "sha256": "dbd2dbb652df797a8d4a2d02b528705356ffb5042768b7be98bb2c73ec14f603",
       "total_comments": 0
     },
     {
@@ -13588,7 +14606,19 @@
       "path": "utils/common-storage/src/main/java/com/shop/common/storage/config/ObjectStorageAutoConfiguration.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "d64e68af7b49d55dad1dcbee8d752341bb9489aeebd1d19eeb6f4bbaaca9e35c",
+      "sha256": "201ece8dc9f2674654aa832bc4274968016be3a10a70e99aa621d2c630042d7d",
+      "total_comments": 0
+    },
+    {
+      "category": "SHARED_LIBRARY",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-storage",
+      "path": "utils/common-storage/src/main/java/com/shop/common/storage/config/StorageBootstrap.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d72968e27eb2523f2fb80cb61e4a27574aae46de5edb999ce0bcc3cf5f53ee21",
       "total_comments": 0
     },
     {
@@ -13600,7 +14630,7 @@
       "path": "utils/common-storage/src/main/java/com/shop/common/storage/config/StorageProperties.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "530f8ace8b5710bca3df3ad46163b82055e95214d9694ed795e6a6a299bf699c",
+      "sha256": "e8f10c325993fcba3a1103b221d6cc2e1cdac099ff8969ede14dbd9d3dc27e28",
       "total_comments": 0
     },
     {
@@ -13648,7 +14678,7 @@
       "path": "utils/common-storage/src/main/java/com/shop/common/storage/service/S3ObjectStorageService.java",
       "preserved": [],
       "prohibited": [],
-      "sha256": "810bf8adf060e4524e43438b5a423f0ccfb4d2fbe9a9e7cb7f5d70c983dcee08",
+      "sha256": "fcf195a3fac2e88cdb41075804607c9879d2231106c1772514a603da92142e99",
       "total_comments": 0
     },
     {
@@ -13661,6 +14691,18 @@
       "preserved": [],
       "prohibited": [],
       "sha256": "10ffe1c5f9be78e02985776ae232ea1ac55b824e0b027f70c5501550cd4cf44d",
+      "total_comments": 0
+    },
+    {
+      "category": "TEST_CODE",
+      "exempt": false,
+      "exempt_reason": "",
+      "language": "java",
+      "module": "utils/common-storage",
+      "path": "utils/common-storage/src/test/java/com/shop/common/storage/config/ObjectStorageStartupResilienceTest.java",
+      "preserved": [],
+      "prohibited": [],
+      "sha256": "d27bf2a2a802217aee1ddb8c5f978076a6b899af136ae7a8ac2095d0bd9d90ab",
       "total_comments": 0
     },
     {
@@ -13723,7 +14765,7 @@
     }
   ],
   "files_with_violations": 0,
-  "generated_at": "2026-11-19T05:57:32Z",
+  "generated_at": "2026-11-19T16:49:52Z",
   "policy": {
     "exempt_paths": [],
     "exempt_suffixes": [],
@@ -13788,10 +14830,10 @@
       "noqa"
     ]
   },
-  "preserved_comments": 9,
+  "preserved_comments": 10,
   "prohibited_comments": 0,
   "repository_root": "/Users/tonminh-mac/IdeaProjects/untitled5",
-  "scanned_files": 1136,
-  "total_comments": 9,
+  "scanned_files": 1222,
+  "total_comments": 10,
   "violations": []
 }

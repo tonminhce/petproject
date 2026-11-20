@@ -85,24 +85,17 @@ class KeycloakAdminClientServiceAccountTest {
     }
 
     @Test
-    @DisplayName("without a service-account secret the master-realm password grant is used")
-    void withoutAServiceAccountSecretTheMasterRealmPasswordGrantIsUsed() {
+    @DisplayName("without a service-account secret the master-realm password grant is refused")
+    void withoutAServiceAccountSecretTheMasterRealmPasswordGrantIsRefused() {
         KeycloakAdminClient client = new KeycloakAdminClient(builder,MASTER_TOKEN_ENDPOINT, USERS_ENDPOINT,
                 ROLES_ENDPOINT, "admin-cli", "admin", "admin-password", null, REALM_TOKEN_ENDPOINT);
 
         assertThat(client.hasServiceAccountCredentials()).isFalse();
 
-        server.expect(requestTo(MASTER_TOKEN_ENDPOINT))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\"access_token\":\"master-token\",\"expires_in\":300}",
-                        MediaType.APPLICATION_JSON));
-        expectRoleLookup();
+        assertThatThrownBy(() -> client.assignRealmRole("kc-123", "MANAGER"))
+                .isInstanceOfSatisfying(KeycloakClientException.class, ex ->
+                        assertThat(ex.getMessage()).contains("master-realm password grant is not supported"));
 
-        client.assignRealmRole("kc-123", "MANAGER");
-
-        assertThat(tokenRequestBody.get())
-                .contains("grant_type=password")
-                .contains("username=admin");
         server.verify();
     }
 
@@ -159,24 +152,16 @@ class KeycloakAdminClientServiceAccountTest {
     }
 
     @Test
-    @DisplayName("the master-realm password grant keeps the master-realm admin client")
-    void theMasterRealmPasswordGrantKeepsTheMasterRealmAdminClient() {
+    @DisplayName("the master-realm password grant is never used, whichever admin client is configured")
+    void theMasterRealmPasswordGrantIsNeverUsed() {
         KeycloakAdminClient client = new KeycloakAdminClient(builder, MASTER_TOKEN_ENDPOINT, USERS_ENDPOINT,
                 ROLES_ENDPOINT, "admin-cli", "ecommerce-admin", "admin", "admin-password", null,
                 REALM_TOKEN_ENDPOINT, "http://keycloak/admin/realms/ecommerce/clients");
 
-        server.expect(requestTo(MASTER_TOKEN_ENDPOINT))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\"access_token\":\"master-token\",\"expires_in\":300}",
-                        MediaType.APPLICATION_JSON));
-        expectRoleLookup();
+        assertThatThrownBy(() -> client.assignRealmRole("kc-123", "MANAGER"))
+                .isInstanceOfSatisfying(KeycloakClientException.class, ex ->
+                        assertThat(ex.getMessage()).contains("master-realm password grant is not supported"));
 
-        client.assignRealmRole("kc-123", "MANAGER");
-
-        assertThat(tokenRequestBody.get())
-                .contains("grant_type=password")
-                .contains("client_id=admin-cli")
-                .doesNotContain("client_id=ecommerce-admin");
         server.verify();
     }
 

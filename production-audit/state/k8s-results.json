@@ -1,0 +1,130 @@
+{
+  "action": "validate",
+  "result": {
+    "checks": [
+      {
+        "detail": "every manifest parses",
+        "evidence": [
+          "documents: 53"
+        ],
+        "id": "K8S-01",
+        "name": "MANIFEST_PARSING",
+        "status": "PASS"
+      },
+      {
+        "detail": "the required resource kinds are present",
+        "evidence": [
+          "kinds present: ConfigMap, Deployment, HorizontalPodAutoscaler, Ingress, Namespace, PodDisruptionBudget, PrometheusRule, Secret, Service, ServiceAccount"
+        ],
+        "id": "K8S-02",
+        "name": "RESOURCE_COVERAGE",
+        "status": "PASS"
+      },
+      {
+        "detail": "every container declares startup, readiness and liveness probes",
+        "evidence": [
+          "deployments: 15"
+        ],
+        "id": "K8S-03",
+        "name": "HEALTH_PROBES",
+        "status": "PASS"
+      },
+      {
+        "detail": "every container declares cpu and memory requests and limits",
+        "evidence": [
+          "deployments: 15"
+        ],
+        "id": "K8S-04",
+        "name": "RESOURCE_BUDGET",
+        "status": "PASS"
+      },
+      {
+        "detail": "every workload declares a security context",
+        "evidence": [],
+        "id": "K8S-05",
+        "name": "SECURITY_CONTEXT",
+        "status": "PASS"
+      },
+      {
+        "detail": "every service selects a declared deployment",
+        "evidence": [
+          "services: 15"
+        ],
+        "id": "K8S-06",
+        "name": "SERVICE_SELECTORS",
+        "status": "PASS"
+      },
+      {
+        "detail": "every autoscaler targets a declared deployment with bounded replicas and metrics",
+        "evidence": [
+          "autoscalers: 1"
+        ],
+        "id": "K8S-07",
+        "name": "AUTOSCALING",
+        "status": "PASS"
+      },
+      {
+        "detail": "every multi replica deployment is protected by a pod disruption budget",
+        "evidence": [],
+        "id": "K8S-08",
+        "name": "DISRUPTION_BUDGET",
+        "status": "PASS"
+      },
+      {
+        "detail": "no manifest embeds a credential literal",
+        "evidence": [],
+        "id": "K8S-09",
+        "name": "SECRET_HYGIENE",
+        "status": "PASS"
+      },
+      {
+        "detail": "no manifest points at a developer machine address",
+        "evidence": [],
+        "id": "K8S-10",
+        "name": "HOSTNAME_HYGIENE",
+        "status": "PASS"
+      },
+      {
+        "detail": "every namespaced manifest uses shop-system",
+        "evidence": [],
+        "id": "K8S-11",
+        "name": "NAMESPACE_CONSISTENCY",
+        "status": "PASS"
+      },
+      {
+        "detail": "every ingress declares tls",
+        "evidence": [],
+        "id": "K8S-12",
+        "name": "INGRESS_TLS",
+        "status": "PASS"
+      },
+      {
+        "detail": "kubeconform validated the manifests that have a published kubernetes schema",
+        "evidence": [
+          "Summary: 53 resources found in 9 files - Valid: 52, Invalid: 0, Errors: 0, Skipped: 1"
+        ],
+        "id": "K8S-13",
+        "name": "SCHEMA_VALIDATION",
+        "status": "PASS"
+      }
+    ],
+    "failed_checks": [],
+    "passed_checks": [
+      "K8S-01",
+      "K8S-02",
+      "K8S-03",
+      "K8S-04",
+      "K8S-05",
+      "K8S-06",
+      "K8S-07",
+      "K8S-08",
+      "K8S-09",
+      "K8S-10",
+      "K8S-11",
+      "K8S-12",
+      "K8S-13"
+    ],
+    "status": "PASS"
+  },
+  "updated_at": "2026-11-20T02:35:14Z"
+}

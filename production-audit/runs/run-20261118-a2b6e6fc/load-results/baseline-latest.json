@@ -1,0 +1,121 @@
+{
+  "authenticated": false,
+  "base_url": "http://gateway-service:8080",
+  "duration_seconds": 120,
+  "elapsed_seconds": 172.26,
+  "invariants": {
+    "blocked": [],
+    "failed": [],
+    "invariants": [
+      {
+        "database": "inventoryservice",
+        "databases": "inventoryservice",
+        "description": "no inventory row may hold a negative available or reserved quantity",
+        "detail": "",
+        "id": "INV-01",
+        "name": "NO_OVERSELLING",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "promotionservice",
+        "databases": "promotionservice",
+        "description": "a campaign must never record more redemptions than its quota",
+        "detail": "",
+        "id": "INV-02",
+        "name": "COUPON_QUOTA_RESPECTED",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "orderservice",
+        "databases": "orderservice",
+        "description": "every order must hold a declared order status",
+        "detail": "",
+        "id": "INV-03",
+        "name": "ORDER_STATUS_VALID",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "paymentservice",
+        "databases": "paymentservice",
+        "description": "an order must never hold more than one terminal payment",
+        "detail": "",
+        "id": "INV-04",
+        "name": "SINGLE_TERMINAL_PAYMENT",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "paymentservice",
+        "databases": "paymentservice",
+        "description": "a repeated idempotency key must never create a second payment row",
+        "detail": "",
+        "id": "INV-05",
+        "name": "PAYMENT_IDEMPOTENCY_UNIQUE",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "promotionservice",
+        "databases": "promotionservice",
+        "description": "an order must never hold more than one coupon usage reservation",
+        "detail": "",
+        "id": "INV-06",
+        "name": "COUPON_RESERVATION_UNIQUE",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "orderservice",
+        "databases": "orderservice+paymentservice",
+        "description": "a confirmed order must have a terminal payment that is captured or refunded",
+        "detail": "",
+        "id": "INV-07",
+        "name": "PAYMENT_ORDER_CONSISTENCY",
+        "status": "PASS",
+        "violations": 0
+      },
+      {
+        "database": "promotionservice",
+        "databases": "promotionservice",
+        "description": "an expired coupon reservation must not stay reserved indefinitely",
+        "detail": "",
+        "id": "INV-08",
+        "name": "EXPIRED_RESERVATION_RELEASED",
+        "status": "PASS",
+        "violations": 0
+      }
+    ],
+    "status": "PASS"
+  },
+  "k6_exit_code": 99,
+  "metrics": {
+    "business_failure": 3575,
+    "business_success": 10955,
+    "check_rate": 0.7539573296627667,
+    "failed_requests": 10975,
+    "failure_rate": 0.24570446735395188,
+    "iteration_rate_per_second": 42.68767125064746,
+    "iterations": 7265,
+    "latency_avg_ms": 42.25232950886595,
+    "latency_max_ms": 5801.575628,
+    "latency_min_ms": 0.428542,
+    "latency_p50_ms": 8.346958,
+    "latency_p90_ms": 47.728242300000005,
+    "latency_p95_ms": 98.79688339999996,
+    "latency_p99_ms": null,
+    "oversell_responses": null,
+    "request_rate_per_second": 85.49285845793814,
+    "requests": 14550
+  },
+  "network": "untitled5_ecommerce-network",
+  "output": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/load-results/baseline-1795105953",
+  "profile": "baseline",
+  "requests_per_second": 20,
+  "scale": 1,
+  "scenario": "browse",
+  "status": "FAIL",
+  "virtual_users": 20
+}

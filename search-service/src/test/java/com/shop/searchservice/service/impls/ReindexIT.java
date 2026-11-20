@@ -274,11 +274,11 @@ class ReindexIT extends AbstractSearchIntegrationTest {
     }
 
     private List<String> generationIndices() throws Exception {
-        return client.indices().get(g -> g.index("products-v*")).result().keySet().stream().sorted().toList();
+        return client.indices().get(g -> g.index("products-v*")).indices().keySet().stream().sorted().toList();
     }
 
     private Set<String> aliasIndices() throws Exception {
-        return client.indices().getAlias(a -> a.name("products")).result().keySet();
+        return client.indices().getAlias(a -> a.name("products")).aliases().keySet();
     }
 
     private Map<String, Object> docViaAlias(UUID productId) throws Exception {

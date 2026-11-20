@@ -171,7 +171,7 @@ class RateLimitFilterTest {
 
         var keys = redis.keys("gateway:edge-rate-limit:*").collectList().block();
         assertThat(keys).hasSize(2);
-        assertThat(keys).allSatisfy(key -> assertThat(key).contains("gateway:edge-rate-limit:BACKOFFICE:203.0.113.7:"));
+        assertThat(keys).allSatisfy(key -> assertThat(key).contains("gateway:edge-rate-limit:{BACKOFFICE.203.0.113.7}:"));
     }
 
     @Test

@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-payment-outbox-claim-lease-owner
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: claimed_at
+                  type: TIMESTAMP
+              - column:
+                  name: lease_owner
+                  type: VARCHAR(64)
+        - sql:
+            sql: UPDATE outbox_events SET claimed_at = updated_at WHERE claimed_at IS NULL
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_lease_owner
+            columns:
+              - column: { name: lease_owner }
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_claimed_at
+            columns:
+              - column: { name: claimed_at }

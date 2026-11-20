@@ -32,7 +32,7 @@ class KeycloakAdminClientGrantPostureTest {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         client = new KeycloakAdminClient(builder, TOKEN_ENDPOINT, USERS_ENDPOINT, ROLES_ENDPOINT,
-                "admin-cli", "admin", "admin-password", null, TOKEN_ENDPOINT, CLIENTS_ENDPOINT);
+                "admin-cli", "ecommerce-admin", "admin", "admin-password", "s3cret", TOKEN_ENDPOINT, CLIENTS_ENDPOINT);
     }
 
     private void expectAdminToken() {

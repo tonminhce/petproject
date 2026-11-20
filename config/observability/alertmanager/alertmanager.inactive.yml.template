@@ -1,0 +1,45 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: telegram-disabled
+  group_by:
+    - alertname
+    - application
+    - environment
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: telegram-disabled
+      matchers:
+        - severity="critical"
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 1h
+    - receiver: telegram-disabled
+      matchers:
+        - severity="warning"
+      group_wait: 60s
+      group_interval: 10m
+      repeat_interval: 12h
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - application
+      - environment
+  - source_matchers:
+      - alertname="ServiceDown"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - application
+      - environment
+
+receivers:
+  - name: telegram-disabled

@@ -16,6 +16,13 @@ spec:
       labels:
         app.kubernetes.io/name: debezium-connect
     spec:
+      serviceAccountName: shop-system
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: debezium-connect
           image: quay.io/debezium/connect:2.7.3.Final
@@ -52,6 +59,20 @@ spec:
               port: 8083
             initialDelaySeconds: 30
             periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /

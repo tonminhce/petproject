@@ -32,6 +32,7 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
     @DynamicPropertySource
     static void quiesceScheduledRelay(DynamicPropertyRegistry registry) {
         registry.add("shop.shipping.outbox.poll-millis", () -> "3600000");
+        registry.add("shop.shipping.outbox.publish-timeout-ms", () -> "60000");
     }
 
     @Autowired
@@ -58,7 +59,7 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aRowStrandedInSending_isRecoveredAndPublishedByTheRelay() {
         String topic = uniqueTopic();
         OutboxEvent stranded = seed(topic, "{\"seq\":\"stranded\"}", OutboxStatus.SENDING);
-        ageClaim(stranded.getId(), Instant.now().minusSeconds(3600));
+        ageClaim(stranded, Instant.now().minusSeconds(3600));
 
         relay.relay();
 
@@ -77,6 +78,7 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aFreshSendingRow_isLeftAloneBecauseItsPublishMayStillBeInFlight() {
         String topic = uniqueTopic();
         OutboxEvent inFlight = seed(topic, "{\"seq\":\"in-flight\"}", OutboxStatus.SENDING);
+        ageClaim(inFlight, Instant.now());
 
         relay.relay();
 
@@ -112,6 +114,24 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
         assertThat(consumed(topic, 3))
                 .as("same-aggregate events must reach the consumer in production order")
                 .containsExactly("{\"seq\":1}", "{\"seq\":2}", "{\"seq\":3}");
+    }
+
+    @Test
+    void aSendingRowWithoutAClaimTimestamp_isRecoveredAndPublished() {
+        String topic = uniqueTopic();
+        OutboxEvent stranded = seed(topic, "{\"shipment\":\"stranded-without-lease\"}", OutboxStatus.SENDING);
+
+        assertThat(stranded.getClaimedAt())
+                .as("the row must enter SENDING without a lease timestamp")
+                .isNull();
+
+        relay.relay();
+
+        assertThat(consumed(topic, 1))
+                .as("a SENDING row without a lease timestamp must be re-armed, not stranded forever")
+                .containsExactly("{\"shipment\":\"stranded-without-lease\"}");
+        assertThat(outboxRepo.findById(stranded.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.SENT);
     }
 
     private String uniqueTopic() {
@@ -162,13 +182,8 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
         return event;
     }
 
-    private void ageClaim(Long id, Instant when) {
-        new TransactionTemplate(txManager)
-                .executeWithoutResult(tx -> entityManager.createNativeQuery(
-                        "UPDATE outbox_events SET claimed_at = ?1 WHERE id = ?2")
-                        .setParameter(1, when)
-                        .setParameter(2, id)
-                        .executeUpdate());
-        entityManager.clear();
+    private void ageClaim(OutboxEvent event, Instant when) {
+        event.setClaimedAt(when);
+        outboxRepo.saveAndFlush(event);
     }
 }

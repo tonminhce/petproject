@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       file: changelog-004-media-outbox-claim-lease.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-005-media-outbox-claim-lease-owner.yaml
+      relativeToChangelogFile: true

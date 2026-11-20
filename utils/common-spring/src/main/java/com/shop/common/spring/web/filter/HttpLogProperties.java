@@ -43,6 +43,7 @@ public class HttpLogProperties {
         private boolean enabled = false;
         private boolean includeBody = false;
         private int maxBodyBytes = 4096;
+        private int maxBufferBytes = 65536;
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -52,5 +53,8 @@ public class HttpLogProperties {
 
         public int getMaxBodyBytes() { return maxBodyBytes; }
         public void setMaxBodyBytes(int maxBodyBytes) { this.maxBodyBytes = maxBodyBytes; }
+
+        public int getMaxBufferBytes() { return maxBufferBytes; }
+        public void setMaxBufferBytes(int maxBufferBytes) { this.maxBufferBytes = maxBufferBytes; }
     }
 }

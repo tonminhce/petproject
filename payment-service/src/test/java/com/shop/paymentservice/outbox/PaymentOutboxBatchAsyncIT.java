@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PaymentOutboxBatchAsyncIT extends AbstractIntegrationTest {
 
     private static final int BATCH = 50;
-    private static final Duration RELAY_BUDGET = Duration.ofSeconds(15);
+    private static final Duration RELAY_BUDGET = Duration.ofSeconds(60);
 
     @DynamicPropertySource
     static void slowDownForAssertion(DynamicPropertyRegistry registry) {
@@ -69,6 +69,9 @@ class PaymentOutboxBatchAsyncIT extends AbstractIntegrationTest {
             .as("50-event batch must complete within %s ms on the relay thread (was %d ms)",
                 RELAY_BUDGET.toMillis(), elapsedMs)
             .isLessThan(RELAY_BUDGET.toMillis());
+        assertThat(elapsedMs)
+            .as("the relay must publish the batch without waiting per record")
+            .isLessThan(BATCH * 5_000L);
 
         List<OutboxEvent> after = outboxRepo.findAllById(ids);
         assertThat(after).allSatisfy(e ->

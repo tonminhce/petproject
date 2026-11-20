@@ -1,0 +1,8 @@
+{
+  "action": "test-webhooks",
+  "result": {
+    "reason": "the configured webhook secret is a local placeholder, so the signature check would only prove that a self signed payload round trips",
+    "status": "BLOCKED"
+  },
+  "updated_at": "2026-11-19T21:24:03Z"
+}

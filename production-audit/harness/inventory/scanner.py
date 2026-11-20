@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -255,8 +256,25 @@ def build_inventory(root: Path | None = None, include_harness: bool = True) -> d
         "category_summary": summary,
         "language_summary": language_summary,
         "module_summary": module_summary,
+        "source_fingerprint": source_fingerprint(repository),
         "files": [entry.to_document() for entry in entries],
     }
+
+
+def source_fingerprint(root: Path | None = None) -> str:
+    repository = root or config.repository_root()
+    digest = hashlib.sha256()
+    for path in sorted(collect_files(repository), key=lambda item: item.as_posix()):
+        if path.name in SECRET_BEARING_NAMES or path.name.startswith(".env"):
+            continue
+        try:
+            payload = path.read_bytes()
+        except OSError:
+            continue
+        digest.update(path.relative_to(repository).as_posix().encode("utf-8"))
+        digest.update(b"\x00")
+        digest.update(hashlib.sha256(payload).digest())
+    return digest.hexdigest()
 
 
 def persist_inventory(document: dict[str, Any]) -> Path:

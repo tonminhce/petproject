@@ -59,7 +59,7 @@ def run_suite(suite_name: str, repository: Path | None = None, run_id: str | Non
     suite = suites[suite_name]
     command = build_command(suite_name, suite, root)
     if modules:
-        command = ["./mvnw", "-B", "-ntp", "-T1C", "-pl", ",".join(modules), "-am"] + command[4:]
+        command = ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM), "-pl", ",".join(modules), "-am"] + command[4:]
 
     log_path = config.run_root(identifier) / "test-results" / f"{suite_name}.log"
     result = run_command(command, root, log_path)
@@ -85,11 +85,14 @@ def run_suite(suite_name: str, repository: Path | None = None, run_id: str | Non
     return document
 
 
+BUILD_PARALLELISM = 1
+
+
 def build_command_full(repository: Path | None = None, quick: bool = False) -> list[str]:
     root = repository or config.repository_root()
     if quick:
         return ["./mvnw", "-B", "-ntp", "-T1C", "validate"]
-    return ["./mvnw", "-B", "-ntp", "-T1C", "clean", "verify"]
+    return ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM), "clean", "verify"]
 
 
 def run_build(repository: Path | None = None, run_id: str | None = None, quick: bool = False, modules: list[str] | None = None) -> dict[str, Any]:
@@ -97,7 +100,7 @@ def run_build(repository: Path | None = None, run_id: str | None = None, quick: 
     identifier = run_id or config.run_identifier()
     command = build_command_full(root, quick)
     if modules:
-        command = ["./mvnw", "-B", "-ntp", "-T1C", "-pl", ",".join(modules), "-am"] + command[4:]
+        command = ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM), "-pl", ",".join(modules), "-am"] + command[4:]
     suffix = "-".join(modules) if modules else ("validate" if quick else "verify")
     log_path = config.run_root(identifier) / "test-results" / f"build-{suffix}.log"
     result = run_command(command, root, log_path)

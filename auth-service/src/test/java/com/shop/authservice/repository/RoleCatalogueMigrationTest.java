@@ -20,12 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Duration;
 
 @Testcontainers
 class RoleCatalogueMigrationTest {
 
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine").withStartupTimeout(Duration.ofMinutes(5))
             .withDatabaseName("auth_roles")
             .withUsername("auth")
             .withPassword("auth");

@@ -47,6 +47,12 @@ public class OutboxEvent {
     @Column(name = "sent_at")
     private Instant sentAt;
 
+    @Column(name = "claimed_at")
+    private Instant claimedAt;
+
+    @Column(name = "lease_owner", length = 64)
+    private String leaseOwner;
+
     @Column(name = "last_error", length = 1000)
     private String lastError;
 

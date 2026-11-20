@@ -49,10 +49,14 @@ public class ObjectStorageAutoConfiguration {
     @ConditionalOnMissingBean
     public ObjectStorageService objectStorageService(
             S3Client s3Client, S3Presigner presigner, StorageProperties props) {
-        S3ObjectStorageService service = new S3ObjectStorageService(s3Client, presigner, props);
-        if (props.isAutoCreateBucket()) {
-            service.ensureBucketExists(props.getBucket());
-        }
-        return service;
+        return new S3ObjectStorageService(s3Client, presigner, props);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "shop.storage", name = "auto-create-bucket", havingValue = "true",
+            matchIfMissing = true)
+    public StorageBootstrap storageBootstrap(ObjectStorageService storage, StorageProperties props) {
+        return new StorageBootstrap(storage, props);
     }
 }

@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: changelog-007-reservations-idempotency-key.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-008-inventory-outbox-claim-lease-owner.yaml
+      relativeToChangelogFile: true

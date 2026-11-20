@@ -29,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.shop.productservice.config.TestLiquibaseConfig;
+import java.time.Duration;
 
 @DataJpaTest
 @Testcontainers
@@ -41,7 +42,7 @@ import com.shop.productservice.config.TestLiquibaseConfig;
 class ProductRepositoryTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16").withStartupTimeout(Duration.ofMinutes(5))
         .withDatabaseName("product_test")
         .withUsername("test")
         .withPassword("test");

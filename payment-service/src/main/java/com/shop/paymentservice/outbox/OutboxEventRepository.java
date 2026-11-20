@@ -12,20 +12,50 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
 
     List<OutboxEvent> findByStatusOrderByIdAsc(OutboxStatus status, Pageable pageable);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
-    Optional<OutboxEvent> findFirstByStatusOrderByIdAsc(OutboxStatus status);
+    @Query(value = "SELECT aggregate_id FROM outbox_events WHERE status IN (:statuses) "
+            + "ORDER BY id LIMIT :limit", nativeQuery = true)
+    List<UUID> findClaimableAggregates(@Param("statuses") Collection<String> statuses, @Param("limit") int limit);
 
-    default Optional<OutboxEvent> claimOnePending(OutboxStatus status) {
-        return findFirstByStatusOrderByIdAsc(status);
-    }
+    @Query(value = "SELECT e.* FROM outbox_events e "
+            + "WHERE e.aggregate_id = :aggregateId "
+            + "AND e.status IN (:statuses) "
+            + "AND pg_try_advisory_xact_lock(hashtextextended(e.aggregate_id::text, 0)) "
+            + "AND NOT EXISTS (SELECT 1 FROM outbox_events s "
+            + "WHERE s.aggregate_id = e.aggregate_id AND s.status = :sending) "
+            + "ORDER BY e.id LIMIT :limit FOR UPDATE", nativeQuery = true)
+    List<OutboxEvent> claimAggregateEvents(@Param("aggregateId") UUID aggregateId,
+                                            @Param("statuses") Collection<String> statuses,
+                                            @Param("sending") String sending,
+                                            @Param("limit") int limit);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE OutboxEvent e SET e.status = :pending, e.leaseOwner = null, e.claimedAt = null "
+         + "WHERE e.status = :sending AND e.leaseOwner = :owner AND e.id NOT IN :excludedIds")
+    int releaseOwnedClaims(@Param("sending") OutboxStatus sending,
+                           @Param("pending") OutboxStatus pending,
+                           @Param("owner") String owner,
+                           @Param("excludedIds") List<Long> excludedIds);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE OutboxEvent e SET e.status = :sent, e.sentAt = :sentAt, "
+         + "e.leaseOwner = null, e.claimedAt = null, e.lastError = null "
+         + "WHERE e.status = :sending AND e.leaseOwner = :owner AND e.id IN :ids")
+    int finalisePublishedClaims(@Param("ids") List<Long> ids,
+                                @Param("sending") OutboxStatus sending,
+                                @Param("sent") OutboxStatus sent,
+                                @Param("owner") String owner,
+                                @Param("sentAt") Instant sentAt);
+
+    long countByStatus(OutboxStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
@@ -44,8 +74,10 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Query("UPDATE OutboxEvent e SET "
          + "e.status = CASE WHEN e.retryCount + 1 >= :maxRetries THEN :failed ELSE :pending END, "
          + "e.retryCount = e.retryCount + 1, "
+         + "e.claimedAt = null, "
+         + "e.leaseOwner = null, "
          + "e.lastError = :reason "
-         + "WHERE e.status = :sending AND e.updatedAt < :cutoff")
+         + "WHERE e.status = :sending AND (e.claimedAt IS NULL OR e.claimedAt < :cutoff)")
     int reclaimStaleSending(@Param("sending") OutboxStatus sending,
                              @Param("pending") OutboxStatus pending,
                              @Param("failed") OutboxStatus failed,

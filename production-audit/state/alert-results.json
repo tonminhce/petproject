@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "evidence": {
+        "alertmanager_count": 0,
+        "alertmanager_url": "http://127.0.0.1:9093",
+        "detail": "identical alerts must collapse into a single grouped alert",
+        "grouped_alerts": 1,
+        "submitted": 5
+      },
+      "gate": "QA-ALERT-04",
+      "recorded_at": "2026-11-19T17:35:31Z",
+      "status": "PASS"
+    }
+  ],
+  "updated_at": "2026-11-19T17:35:31Z"
+}

@@ -11,7 +11,10 @@ public record GlobalRateLimitProperties(
         @DefaultValue("true") boolean enabled,
         @DefaultValue("2000") @Positive int replenishRate,
         @DefaultValue("4000") @Positive long burstCapacity,
-        @DefaultValue("1") @Positive int requestedTokens
+        @DefaultValue("1") @Positive int requestedTokens,
+        @DefaultValue("8") @Positive int lanes,
+        @DefaultValue("20") @Positive int fairShareClients,
+        @DefaultValue("1") @Positive int replicas
 ) {
 
     public GlobalRateLimitProperties {

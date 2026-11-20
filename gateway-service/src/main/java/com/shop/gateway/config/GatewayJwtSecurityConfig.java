@@ -58,18 +58,13 @@ public class GatewayJwtSecurityConfig {
             log.info("Gateway JWT audience validation enabled for {}", properties.expectedAudiences());
         }
 
-        if (!properties.expectedClientIds().isEmpty()) {
-            validators.add(new JwtClaimValidator<Object>("azp", azp -> {
-                if (!(azp instanceof String clientId) || clientId.isBlank()) {
-                    return false;
-                }
-                return properties.expectedClientIds().contains(clientId);
-            }));
-            log.info("Gateway JWT client (azp) validation enabled for {}", properties.expectedClientIds());
-        } else {
-            log.warn("Gateway JWT client validation is DISABLED - a token minted for any client "
-                    + "in the realm is accepted at the edge. Set gateway.security.expected-client-ids.");
-        }
+        validators.add(new JwtClaimValidator<Object>("azp", azp -> {
+            if (!(azp instanceof String clientId) || clientId.isBlank()) {
+                return false;
+            }
+            return properties.expectedClientIds().contains(clientId);
+        }));
+        log.info("Gateway JWT client (azp) validation enabled for {}", properties.expectedClientIds());
 
         return new DelegatingOAuth2TokenValidator<>(validators);
     }

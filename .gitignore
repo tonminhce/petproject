@@ -15,6 +15,9 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/.mvn/wrapper/maven-wrapper.jar
 
+# rendered Alertmanager configuration carries the live bot token
+config/observability/alertmanager/alertmanager.yml
+
 # ============================================================
 # Environment & secrets
 # ============================================================

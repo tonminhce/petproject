@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-inventory-outbox-claim-lease-owner
+      author: shop-platform
+      changes:
+        - addColumn:
+            tableName: outbox_events
+            columns:
+              - column:
+                  name: lease_owner
+                  type: VARCHAR(64)
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_lease_owner
+            columns:
+              - column: { name: lease_owner }

@@ -76,7 +76,7 @@ class StripeWebhookIT {
             .withPassword("test");
 
     @SuppressWarnings("resource")
-    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0")).withStartupTimeout(Duration.ofMinutes(5));
 
     static {
         postgres.start();

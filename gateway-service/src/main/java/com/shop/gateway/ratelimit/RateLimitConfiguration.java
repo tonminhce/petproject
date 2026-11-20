@@ -9,6 +9,7 @@ import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 
 @Configuration(proxyBeanMethods = false)
 public class RateLimitConfiguration {
@@ -22,12 +23,15 @@ public class RateLimitConfiguration {
                 properties.requestedTokens());
     }
 
+    @Bean
+    public FleetRateLimitBudget fleetRateLimitBudget(final GlobalRateLimitProperties properties) {
+        return FleetRateLimitBudget.from(properties);
+    }
+
     @Bean("globalRateLimiter")
-    public RedisRateLimiter globalRateLimiter(final GlobalRateLimitProperties properties) {
-        return new RedisRateLimiter(
-                properties.replenishRate(),
-                properties.burstCapacity(),
-                properties.requestedTokens());
+    public FleetRateLimiter globalRateLimiter(final ReactiveStringRedisTemplate redis,
+                                               final FleetRateLimitBudget budget) {
+        return new RedisFleetRateLimiter(redis, budget);
     }
 
     @Bean
@@ -43,12 +47,13 @@ public class RateLimitConfiguration {
 
     @Bean
     public GlobalRateLimitFilter globalRateLimitFilter(
-            @Qualifier("globalRateLimiter") final RateLimiter<?> rateLimiter,
+            @Qualifier("globalRateLimiter") final FleetRateLimiter fleetRateLimiter,
+            final KeyResolver keyResolver,
             final RateLimitProperties rateLimitProperties,
-            final GlobalRateLimitProperties globalRateLimitProperties,
+            final FleetRateLimitBudget budget,
             final GatewayErrorResponseWriter errorResponseWriter,
             final RateLimitOutageGuard outageGuard) {
-        return new GlobalRateLimitFilter(rateLimiter, rateLimitProperties, globalRateLimitProperties,
+        return new GlobalRateLimitFilter(fleetRateLimiter, keyResolver, rateLimitProperties, budget,
                 errorResponseWriter, outageGuard);
     }
 }

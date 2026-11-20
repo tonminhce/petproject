@@ -58,7 +58,7 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aRowStrandedInSending_isRecoveredAndPublishedByTheRelay() {
         String topic = uniqueTopic();
         OutboxEvent stranded = seed(topic, "{\"product\":\"stranded\"}", OutboxStatus.SENDING);
-        ageClaim(stranded.getId(), Instant.now().minusSeconds(3600));
+        ageClaim(stranded, Instant.now().minusSeconds(3600));
 
         relay.relay();
 
@@ -77,6 +77,7 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
     void aFreshSendingRow_isLeftAloneBecauseItsPublishMayStillBeInFlight() {
         String topic = uniqueTopic();
         OutboxEvent inFlight = seed(topic, "{\"product\":\"in-flight\"}", OutboxStatus.SENDING);
+        ageClaim(inFlight, Instant.now());
 
         relay.relay();
 
@@ -112,6 +113,48 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
         assertThat(consumed(topic, 3))
                 .as("same-aggregate events must reach the consumer in production order")
                 .containsExactly("{\"seq\":1}", "{\"seq\":2}", "{\"seq\":3}");
+    }
+
+    @Test
+    void aSendingRowWithoutAClaimTimestamp_isRecoveredAndPublished() {
+        String topic = uniqueTopic();
+        OutboxEvent stranded = seed(topic, "{\"product\":\"stranded-without-lease\"}", OutboxStatus.SENDING);
+
+        assertThat(stranded.getClaimedAt())
+                .as("the row must enter SENDING without a lease timestamp")
+                .isNull();
+
+        relay.relay();
+
+        assertThat(consumed(topic, 1))
+                .as("a SENDING row without a lease timestamp must be re-armed, not stranded forever")
+                .containsExactly("{\"product\":\"stranded-without-lease\"}");
+        assertThat(outboxRepo.findById(stranded.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.SENT);
+    }
+
+    @Test
+    void releaseOwnClaims_neverHandsBackTheLeaseOfAPublishedEvent() {
+        OutboxEvent published = seed(uniqueTopic(), "{\"product\":\"published\"}", OutboxStatus.SENDING);
+        OutboxEvent unpublished = seed(uniqueTopic(), "{\"product\":\"unpublished\"}", OutboxStatus.SENDING);
+        lease(published, "owner-a");
+        lease(unpublished, "owner-a");
+
+        int released = new TransactionTemplate(txManager).execute(status -> outboxRepo.releaseOwnedClaims(
+                OutboxStatus.SENDING, OutboxStatus.PENDING, "owner-a", List.of(published.getId())));
+
+        assertThat(released).isEqualTo(1);
+        assertThat(outboxRepo.findById(published.getId()).orElseThrow().getStatus())
+                .as("a lease whose event was already published must not go back to PENDING")
+                .isEqualTo(OutboxStatus.SENDING);
+        assertThat(outboxRepo.findById(unpublished.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.PENDING);
+    }
+
+    private void lease(OutboxEvent event, String owner) {
+        event.setClaimedAt(Instant.now());
+        event.setLeaseOwner(owner);
+        outboxRepo.saveAndFlush(event);
     }
 
     private String uniqueTopic() {
@@ -162,13 +205,8 @@ class OutboxRelayRecoveryIT extends AbstractIntegrationTest {
         return event;
     }
 
-    private void ageClaim(Long id, Instant when) {
-        new TransactionTemplate(txManager)
-                .executeWithoutResult(tx -> entityManager.createNativeQuery(
-                        "UPDATE outbox_events SET updated_at = ?1 WHERE id = ?2")
-                        .setParameter(1, when)
-                        .setParameter(2, id)
-                        .executeUpdate());
-        entityManager.clear();
+    private void ageClaim(OutboxEvent event, Instant when) {
+        event.setClaimedAt(when);
+        outboxRepo.saveAndFlush(event);
     }
 }

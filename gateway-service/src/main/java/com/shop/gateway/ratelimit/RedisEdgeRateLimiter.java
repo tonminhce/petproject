@@ -16,6 +16,8 @@ public final class RedisEdgeRateLimiter implements EdgeRateLimiter {
 
     private static final String KEY_PREFIX = "gateway:edge-rate-limit:";
 
+    static final String HASH_TAG_SEPARATOR = ".";
+
     static final String TOKEN_BUCKET_SCRIPT = """
             local capacity = tonumber(ARGV[1])
             local rate = tonumber(ARGV[2])
@@ -59,12 +61,17 @@ public final class RedisEdgeRateLimiter implements EdgeRateLimiter {
         this.properties = properties;
     }
 
+    static List<String> bucketKeys(final String scope, final String clientIp) {
+        final String hashTag = "{" + scope + HASH_TAG_SEPARATOR + clientIp + "}";
+        return List.of(
+                KEY_PREFIX + hashTag + ":tokens",
+                KEY_PREFIX + hashTag + ":timestamp");
+    }
+
     @Override
     public Mono<EdgeRateLimitDecision> acquire(final String scope, final String clientIp, final int requestsPerMinute) {
         final double rate = requestsPerMinute / 60.0d;
-        final List<String> keys = List.of(
-                KEY_PREFIX + scope + ":" + clientIp + ":tokens",
-                KEY_PREFIX + scope + ":" + clientIp + ":timestamp");
+        final List<String> keys = bucketKeys(scope, clientIp);
         return redis.execute(TOKEN_BUCKET, keys,
                         Integer.toString(requestsPerMinute),
                         Double.toString(rate),

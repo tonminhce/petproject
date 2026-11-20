@@ -269,14 +269,28 @@ mismatched between compose and per-service yml.
 ## R12. Outbox + claim lock
 
 **Rule:**
-- Every `OutboxEventRepository.claimOnePending(...)` uses `PESSIMISTIC_WRITE
-  + SKIP LOCKED` and runs the publish inside the claim transaction.
+- Every outbox relay claims per aggregate, never per table head: the claim
+  takes a transaction scoped advisory lock on the aggregate id and refuses an
+  aggregate that still has an event in `SENDING`. The events of one aggregate
+  therefore reach the broker in ascending outbox id order, also when several
+  relay instances publish concurrently.
+- A claim stamps the lease `status = SENDING`, `claimed_at = now()` and
+  `lease_owner = <instance>`.
 - A scheduler reclaims rows still in `SENDING` past a heartbeat horizon
   (crash-mid-send recovery: without it the row strands in `SENDING`, same
-  loss class as the original notification C12).
+  loss class as the original notification C12). The reclaim also re-arms rows in
+  `SENDING` whose `claimed_at` is NULL.
+- A graceful shutdown hands back only the leases that were never published;
+  a lease whose delivery was confirmed is finalised as `SENT`.
+
+The full contract, the failure modes and the regression tests are documented in
+[OUTBOX-RELAY-CONTRACT.md](OUTBOX-RELAY-CONTRACT.md).
 
 **Failure mode caught:** An `OutboxEventRelay` selecting pending rows
-without `SKIP LOCKED`, or processing them outside the claim tx.
+without `SKIP LOCKED`, or processing them outside the claim tx; a claim that
+lets two instances publish the events of one aggregate concurrently; a recovery
+scan that leaves a `SENDING` row without a lease timestamp stranded forever;
+a shutdown that hands back a lease whose event is already on the broker.
 
 ---
 

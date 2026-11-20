@@ -20,13 +20,16 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -82,17 +85,19 @@ class PromotionOutboxRelayTest {
     }
 
     private void stubClaim(OutboxEvent... events) {
-        Optional<OutboxEvent>[] sequence = new Optional[events.length + 1];
-        for (int i = 0; i < events.length; i++) {
-            sequence[i] = Optional.of(events[i]);
-        }
-        sequence[events.length] = Optional.empty();
-        when(outboxRepo.claimOnePending(OutboxStatus.PENDING))
-                .thenReturn(sequence[0], Arrays.copyOfRange(sequence, 1, sequence.length));
+        List<UUID> aggregates = new ArrayList<>(new LinkedHashSet<>(List.of(events).stream()
+                .map(OutboxEvent::getAggregateId).toList()));
+        when(outboxRepo.findClaimableAggregates(anyCollection(), anyInt())).thenReturn(aggregates);
+        when(outboxRepo.claimAggregateEvents(any(UUID.class), anyCollection(), anyString(), anyInt()))
+                .thenAnswer(invocation -> {
+                    UUID aggregateId = invocation.getArgument(0);
+                    return List.of(events).stream()
+                            .filter(event -> event.getAggregateId().equals(aggregateId))
+                            .toList();
+                });
     }
 
     private void stubBatch(List<OutboxEvent> rows, boolean... delivered) {
-        when(outboxRepo.findAllById(anyList())).thenReturn(rows);
         List<BatchOutcome.RecordOutcome> outcomes = new ArrayList<>();
         for (int i = 0; i < rows.size(); i++) {
             outcomes.add(new BatchOutcome.RecordOutcome(i, i < delivered.length && delivered[i],
@@ -185,7 +190,7 @@ class PromotionOutboxRelayTest {
 
     @Test
     void relay_emptyPending_noPublishNoSave() {
-        when(outboxRepo.claimOnePending(OutboxStatus.PENDING)).thenReturn(Optional.empty());
+        when(outboxRepo.findClaimableAggregates(anyCollection(), anyInt())).thenReturn(List.of());
 
         relay.relay();
 

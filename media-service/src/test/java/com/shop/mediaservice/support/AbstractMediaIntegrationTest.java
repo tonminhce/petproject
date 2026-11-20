@@ -11,6 +11,7 @@ import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
+import java.time.Duration;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({JpaAuditingAutoConfiguration.class, TestSecurityConfig.class})
@@ -25,7 +26,7 @@ public abstract class AbstractMediaIntegrationTest {
         .withPassword("test");
 
     @SuppressWarnings("resource")
-    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+    static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0")).withStartupTimeout(Duration.ofMinutes(5));
 
     @SuppressWarnings("resource")
     static final GenericContainer<?> rustfs = new GenericContainer<>(

@@ -2,7 +2,7 @@
 
 Every finding was produced by reading the first-party source, not the documentation.
 
-Registry size: 278 findings.
+Registry size: 297 findings.
 
 | ID | Severity | Area | Title |
 | --- | --- | --- | --- |
@@ -22,6 +22,13 @@ Registry size: 278 findings.
 | KAF-02 | HIGH | kafka-outbox | payment-service relay has no per-aggregate ordering barrier |
 | OI-01 | HIGH | order-inventory | The inventory `reserve` API is not idempotent: duplicate holds and 900-second orphan holds |
 | OI-02 | HIGH | order-inventory | A failed `releaseCommitted` in the confirm-compensation path is dropped: no ledger, no retry, stock permanently consumed |
+| ORC-01 | HIGH | orchestrator-session | The idempotency claim was not atomic, so two concurrent confirms could both orchestrate the same order |
+| ORC-02 | HIGH | orchestrator-session | Thirteen alert rules referenced metrics the platform never publishes, and the validator never checked metric existence |
+| ORC-03 | HIGH | orchestrator-session | The final report hard-coded an alerting success claim and printed stale suite results as verified |
+| ORC-04 | HIGH | orchestrator-session | Suite evidence could certify production readiness against a source revision that no longer existed |
+| ORC-16 | HIGH | orchestrator-session | The deployment template shipped usable credential literals for every account the stack requires |
+| ORC-17 | HIGH | orchestrator-session | The search client was pinned to the previous elasticsearch major while the fleet client was on the current one |
+| ORC-18 | HIGH | orchestrator-session | The outbox claim collapsed the candidate range to a single row, so a second replica published nothing |
 | PAY-03 | HIGH | payment | State machine allows self-transitions so a re-processed webhook publishes a duplicate payment.captured.v1 |
 | PAY-04 | HIGH | payment | Webhook dedup key includes the attacker-controlled provider path segment so one signed body replays across provider labels |
 | PAY-05 | HIGH | payment | Webhook retry scheduler has no claim lease so two replicas replay the same event concurrently |
@@ -112,6 +119,16 @@ Registry size: 278 findings.
 | OI-14 | MEDIUM | order-inventory | The return flow's cumulative-refund and pending-return checks are unlocked read-modify-write |
 | OI-28 | MEDIUM | order-inventory | INFO — YAML/code drift on three scheduler knobs |
 | OI-29 | MEDIUM | order-inventory | INFO — `ReturnStatus.APPROVED` is a dead state and the return flow has no transition table |
+| ORC-05 | MEDIUM | orchestrator-session | Three business invariants were vacuous or used enum values that do not exist |
+| ORC-06 | MEDIUM | orchestrator-session | The load runner reported PASS when the measurement host was contaminated or the invariants were blocked |
+| ORC-07 | MEDIUM | orchestrator-session | The YAML subset parser silently dropped a sequence declared at the same indentation as its key |
+| ORC-08 | MEDIUM | orchestrator-session | The continuous integration workflow was red on arrival |
+| ORC-09 | MEDIUM | orchestrator-session | The Kubernetes manifests declared no startup probe, no pod security context and no disruption budget |
+| ORC-10 | MEDIUM | orchestrator-session | The circuit breaker state was never exported, so the gateway outage rule could never fire |
+| ORC-11 | MEDIUM | orchestrator-session | Request latency percentiles were unmeasurable because the histogram buckets were never published |
+| ORC-14 | MEDIUM | orchestrator-session | The Stripe harness treated any test key prefix as a real credential and certified a placeholder webhook secret |
+| ORC-15 | MEDIUM | orchestrator-session | The credential scan ignored untracked files and only recognised two credential shapes |
+| ORC-19 | MEDIUM | orchestrator-session | The payment relay marked every record by its own outcome, which reordered one partition |
 | PAY-11 | MEDIUM | payment | The REST capture and refund path bypasses the payment state machine and never sets refunded_amount |
 | PAY-12 | MEDIUM | payment | Optimistic lock failures after a provider side effect surface as a server error |
 | PAY-13 | MEDIUM | payment | The bare-hex signature branch has no timestamp and no nonce so signed webhooks replay forever |
@@ -244,6 +261,8 @@ Registry size: 278 findings.
 | OI-25 | LOW | order-inventory | The reconciliation sweeper decides on a stale detached snapshot |
 | OI-26 | LOW | order-inventory | `GuestCartCleanupScheduler` purges active carts of real users and is unbounded |
 | OI-27 | LOW | order-inventory | The tracking abuse brake under-counts under concurrency |
+| ORC-12 | LOW | orchestrator-session | The rendered Alertmanager configuration that carries the live bot token was not ignored by git |
+| ORC-13 | LOW | orchestrator-session | The Alertmanager template rendering corrupted any value that contained an ampersand |
 | PAY-20 | LOW | payment | The default provider is chosen non-deterministically when the configured provider is absent |
 | PAY-21 | LOW | payment | The public webhook endpoint has no body size limit and no service level rate limit |
 | PAY-22 | LOW | payment | Dead code in the webhook event service and an unreachable status value |

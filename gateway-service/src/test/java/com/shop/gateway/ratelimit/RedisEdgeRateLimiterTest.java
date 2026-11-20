@@ -108,15 +108,43 @@ class RedisEdgeRateLimiterTest {
         var redisNow = redis.getConnectionFactory().getReactiveConnection()
                 .serverCommands().time(java.util.concurrent.TimeUnit.SECONDS).block();
 
-        redis.opsForValue().set("gateway:edge-rate-limit:SEARCH:198.51.100.9:tokens", "0").block();
-        redis.opsForValue()
-                .set("gateway:edge-rate-limit:SEARCH:198.51.100.9:timestamp", Long.toString(redisNow - 60))
-                .block();
+        var bucketKeys = RedisEdgeRateLimiter.bucketKeys("SEARCH", "198.51.100.9");
+        redis.opsForValue().set(bucketKeys.get(0), "0").block();
+        redis.opsForValue().set(bucketKeys.get(1), Long.toString(redisNow - 60)).block();
 
         var decision = limiter.acquire("SEARCH", "198.51.100.9", 60).block();
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.remaining()).isEqualTo(59);
+    }
+
+    @Test
+    @DisplayName("both keys of one bucket carry the same Redis Cluster hash tag")
+    void bothKeysOfABucketShareTheSameHashTag() {
+        var keys = RedisEdgeRateLimiter.bucketKeys("BACKOFFICE", "203.0.113.7");
+
+        assertThat(keys).hasSize(2);
+        assertThat(keys.get(0)).isEqualTo("gateway:edge-rate-limit:{BACKOFFICE.203.0.113.7}:tokens");
+        assertThat(keys.get(1)).isEqualTo("gateway:edge-rate-limit:{BACKOFFICE.203.0.113.7}:timestamp");
+        assertThat(hashTag(keys.get(0))).isEqualTo(hashTag(keys.get(1)));
+        assertThat(hashTag(keys.get(0))).isEqualTo("{BACKOFFICE.203.0.113.7}");
+    }
+
+    @Test
+    @DisplayName("the hash tag isolates the buckets of different scopes and clients")
+    void theHashTagIsolatesScopesAndClients() {
+        var backoffice = RedisEdgeRateLimiter.bucketKeys("BACKOFFICE", "203.0.113.7");
+        var search = RedisEdgeRateLimiter.bucketKeys("SEARCH", "203.0.113.7");
+        var otherClient = RedisEdgeRateLimiter.bucketKeys("BACKOFFICE", "203.0.113.8");
+
+        assertThat(hashTag(backoffice.get(0))).isNotEqualTo(hashTag(search.get(0)));
+        assertThat(hashTag(backoffice.get(0))).isNotEqualTo(hashTag(otherClient.get(0)));
+    }
+
+    private static String hashTag(final String key) {
+        final int start = key.indexOf('{');
+        final int end = key.indexOf('}', start);
+        return key.substring(start, end + 1);
     }
 
     @Test

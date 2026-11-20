@@ -1,0 +1,84 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: telegram-runtime-warning
+  group_by:
+    - alertname
+    - application
+    - environment
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: telegram-runtime-critical
+      matchers:
+        - severity="critical"
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 1h
+    - receiver: telegram-runtime-warning
+      matchers:
+        - severity="warning"
+      group_wait: 60s
+      group_interval: 10m
+      repeat_interval: 12h
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - application
+      - environment
+  - source_matchers:
+      - alertname="ServiceDown"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - application
+      - environment
+
+receivers:
+  - name: telegram-runtime-critical
+    telegram_configs:
+      - bot_token: __TELEGRAM_BOT_TOKEN__
+        chat_id: __TELEGRAM_CHAT_ID__
+        send_resolved: true
+        message: |-
+          <b>Runtime incident</b>
+          <b>Severity:</b> {{ .CommonLabels.severity }}
+          <b>Environment:</b> {{ .CommonLabels.environment }}
+          <b>Service:</b> {{ .CommonLabels.application }}
+          <b>Issue:</b> {{ .CommonAnnotations.summary }}
+          <b>Started:</b> {{ .StartsAt }}
+          <b>Impact:</b> {{ .CommonAnnotations.impact }}
+          <b>Current metric:</b> {{ .CommonAnnotations.metric }}
+          <b>Runbook:</b> {{ .CommonAnnotations.runbook }}
+          <b>Grafana:</b> {{ .CommonAnnotations.grafana }}
+          <b>Logs:</b> {{ .CommonAnnotations.logs }}
+          <b>Traces:</b> {{ .CommonAnnotations.traces }}
+          <b>Status:</b> {{ if eq .Status "resolved" }}resolved{{ else }}firing{{ end }}
+
+  - name: telegram-runtime-warning
+    telegram_configs:
+      - bot_token: __TELEGRAM_BOT_TOKEN__
+        chat_id: __TELEGRAM_CHAT_ID__
+        send_resolved: true
+        message: |-
+          <b>Runtime incident</b>
+          <b>Severity:</b> {{ .CommonLabels.severity }}
+          <b>Environment:</b> {{ .CommonLabels.environment }}
+          <b>Service:</b> {{ .CommonLabels.application }}
+          <b>Issue:</b> {{ .CommonAnnotations.summary }}
+          <b>Started:</b> {{ .StartsAt }}
+          <b>Impact:</b> {{ .CommonAnnotations.impact }}
+          <b>Current metric:</b> {{ .CommonAnnotations.metric }}
+          <b>Runbook:</b> {{ .CommonAnnotations.runbook }}
+          <b>Grafana:</b> {{ .CommonAnnotations.grafana }}
+          <b>Logs:</b> {{ .CommonAnnotations.logs }}
+          <b>Traces:</b> {{ .CommonAnnotations.traces }}
+          <b>Status:</b> {{ if eq .Status "resolved" }}resolved{{ else }}firing{{ end }}
+

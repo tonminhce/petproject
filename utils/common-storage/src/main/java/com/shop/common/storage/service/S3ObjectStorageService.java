@@ -63,8 +63,20 @@ public class S3ObjectStorageService implements ObjectStorageService {
             s3Client.createBucket(b -> b.bucket(bucket));
             log.info("Created object-storage bucket '{}'", bucket);
         } catch (S3Exception e) {
+            if (isAlreadyOwned(bucket, e)) {
+                log.info("Object-storage bucket '{}' already exists", bucket);
+                return;
+            }
             throw new StorageException("Failed to create bucket: " + bucket, e);
         }
+    }
+
+    private static boolean isAlreadyOwned(String bucket, S3Exception failure) {
+        if (failure.statusCode() == 409) {
+            return true;
+        }
+        return failure.awsErrorDetails() != null
+                && "BucketAlreadyOwnedByYou".equals(failure.awsErrorDetails().errorCode());
     }
 
     @Override

@@ -14,6 +14,10 @@
     <dependencies>
         <dependency>
             <groupId>com.shop.microservices</groupId>
+            <artifactId>common-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.shop.microservices</groupId>
             <artifactId>common-core</artifactId>
         </dependency>
         <dependency>

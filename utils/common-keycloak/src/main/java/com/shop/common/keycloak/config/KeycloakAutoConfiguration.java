@@ -6,11 +6,11 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.TextMapSetter;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
@@ -25,24 +25,15 @@ import java.time.Duration;
 public class KeycloakAutoConfiguration {
 
     private static final TextMapSetter<HttpHeaders> TRACE_HEADERS_SETTER = HttpHeaders::set;
-
-    private static RestClient.Builder traceAware(RestClient.Builder builder) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
-        requestFactory.setReadTimeout(Duration.ofSeconds(5));
-        return builder.requestFactory(requestFactory).requestInitializer(req -> {
-            Context current = Context.current();
-            if (Span.fromContext(current).getSpanContext().isValid()) {
-                W3CTraceContextPropagator.getInstance().inject(current, req.getHeaders(), TRACE_HEADERS_SETTER);
-            }
-        });
-    }
+    private static final Duration STANDALONE_CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration STANDALONE_READ_TIMEOUT = Duration.ofSeconds(5);
 
     @Bean
     @ConditionalOnMissingBean(KeycloakTokenClient.class)
-    public KeycloakTokenClient keycloakTokenClient(KeycloakProperties properties) {
+    public KeycloakTokenClient keycloakTokenClient(KeycloakProperties properties,
+                                                   ObjectProvider<RestClient.Builder> platformBuilders) {
         return new KeycloakTokenClient(
-                traceAware(RestClient.builder()),
+                platformRestClient(platformBuilders.getIfAvailable()),
                 properties.tokenEndpoint(),
                 properties.logoutEndpoint(),
                 properties.getClientId(),
@@ -54,9 +45,10 @@ public class KeycloakAutoConfiguration {
     @ConditionalOnMissingBean(KeycloakAdminClient.class)
     @ConditionalOnExpression("'${shop.keycloak.admin-username:}' != '' "
             + "|| '${shop.keycloak.admin-client-secret:}' != ''")
-    public KeycloakAdminClient keycloakAdminClient(KeycloakProperties properties) {
+    public KeycloakAdminClient keycloakAdminClient(KeycloakProperties properties,
+                                                   ObjectProvider<RestClient.Builder> platformBuilders) {
         return new KeycloakAdminClient(
-                traceAware(RestClient.builder()),
+                platformRestClient(platformBuilders.getIfAvailable()),
                 properties.adminTokenEndpoint(),
                 properties.usersEndpoint(),
                 properties.rolesEndpoint(),
@@ -68,5 +60,28 @@ public class KeycloakAutoConfiguration {
                 properties.serviceAccountTokenEndpoint(),
                 properties.clientsEndpoint()
         );
+    }
+
+    private static RestClient.Builder platformRestClient(RestClient.Builder platformBuilder) {
+        if (platformBuilder == null) {
+            return traceAware(standaloneRestClientBuilder());
+        }
+        return traceAware(platformBuilder.clone());
+    }
+
+    private static RestClient.Builder standaloneRestClientBuilder() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(STANDALONE_CONNECT_TIMEOUT);
+        requestFactory.setReadTimeout(STANDALONE_READ_TIMEOUT);
+        return RestClient.builder().requestFactory(requestFactory);
+    }
+
+    private static RestClient.Builder traceAware(RestClient.Builder builder) {
+        return builder.requestInitializer(req -> {
+            Context current = Context.current();
+            if (Span.fromContext(current).getSpanContext().isValid()) {
+                W3CTraceContextPropagator.getInstance().inject(current, req.getHeaders(), TRACE_HEADERS_SETTER);
+            }
+        });
     }
 }

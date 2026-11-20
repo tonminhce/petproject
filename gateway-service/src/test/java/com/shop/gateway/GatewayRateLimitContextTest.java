@@ -1,5 +1,7 @@
 package com.shop.gateway;
 
+import com.shop.gateway.ratelimit.FleetRateLimitBudget;
+import com.shop.gateway.ratelimit.FleetRateLimiter;
 import com.shop.gateway.ratelimit.RateLimitKeyResolver;
 import com.shop.gateway.ratelimit.RateLimitProperties;
 import com.shop.gateway.ratelimit.GlobalRateLimitFilter;
@@ -39,13 +41,16 @@ class GatewayRateLimitContextTest {
 
     @Autowired
     @Qualifier("globalRateLimiter")
-    private RedisRateLimiter globalRateLimiter;
+    private FleetRateLimiter globalRateLimiter;
 
     @Autowired
     private GlobalRateLimitFilter globalRateLimitFilter;
 
     @Autowired
     private GlobalRateLimitProperties globalRateLimitProperties;
+
+    @Autowired
+    private FleetRateLimitBudget fleetRateLimitBudget;
 
     @Autowired
     private KeyResolver keyResolver;
@@ -61,6 +66,24 @@ class GatewayRateLimitContextTest {
         assertThat(globalRateLimitFilter.getOrder()).isEqualTo(Integer.MIN_VALUE);
         assertThat(rateLimitProperties.enabled()).isTrue();
         assertThat(globalRateLimitProperties.enabled()).isTrue();
+        assertThat(fleetRateLimitBudget.fleetReplenishRate())
+                .isEqualTo(globalRateLimitProperties.replenishRate());
+        assertThat(fleetRateLimitBudget.lanes()).isEqualTo(globalRateLimitProperties.lanes());
+        assertThat(fleetRateLimitBudget.fairShareClients()).isEqualTo(globalRateLimitProperties.fairShareClients());
+    }
+
+    @Test
+    void theFleetBudgetDoesNotDependOnTheReplicaCount() {
+        var oneReplica = FleetRateLimitBudget.from(new GlobalRateLimitProperties(true, 2_000, 4_000, 1, 8, 20, 1));
+        var manyReplicas = FleetRateLimitBudget.from(new GlobalRateLimitProperties(true, 2_000, 4_000, 1, 8, 20, 10));
+
+        assertThat(manyReplicas.fleetReplenishRate()).isEqualTo(oneReplica.fleetReplenishRate());
+        assertThat(manyReplicas.laneReplenishRate()).isEqualTo(oneReplica.laneReplenishRate());
+        assertThat(manyReplicas.clientReplenishRate()).isEqualTo(oneReplica.clientReplenishRate());
+        assertThat(manyReplicas.laneBurstCapacity()).isEqualTo(oneReplica.laneBurstCapacity());
+        assertThat(manyReplicas.clientBurstCapacity()).isEqualTo(oneReplica.clientBurstCapacity());
+        assertThat(oneReplica.perReplicaReplenishRate()).isEqualTo(2_000);
+        assertThat(manyReplicas.perReplicaReplenishRate()).isEqualTo(200);
     }
 
     @Test

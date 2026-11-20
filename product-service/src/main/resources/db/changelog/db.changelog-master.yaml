@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: changelog-006-product-variants.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-007-product-outbox-claim-lease-owner.yaml
+      relativeToChangelogFile: true

@@ -84,7 +84,9 @@ class SearchQueryServiceTest {
 
         when(client.openPointInTime(any(co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest.class)))
             .thenReturn(co.elastic.clients.elasticsearch.core.OpenPointInTimeResponse
-                .of(b -> b.id("pit-id-abc")));
+                .of(b -> b.id("pit-id-abc")
+                    .shards(co.elastic.clients.elasticsearch._types.ShardStatistics
+                        .of(s -> s.failed(0).successful(1).total(1)))));
 
         java.util.Map<String, Object> doc = java.util.Map.of(
             "id", "a1000000-0000-0000-0000-000000000099",

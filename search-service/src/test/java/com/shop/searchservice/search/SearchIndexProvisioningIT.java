@@ -20,7 +20,7 @@ class SearchIndexProvisioningIT extends AbstractSearchIntegrationTest {
         assertThat(client.indices().exists(e -> e.index("products-v1")).value()).isTrue();
 
         var alias = client.indices().getAlias(g -> g.name("products"));
-        assertThat(alias.result()).containsKey("products-v1");
+        assertThat(alias.aliases()).containsKey("products-v1");
 
         assertThat(client.indices().existsIndexTemplate(t -> t.name("products-template")).value()).isTrue();
     }
@@ -30,7 +30,7 @@ class SearchIndexProvisioningIT extends AbstractSearchIntegrationTest {
         indexProvisioner.provision();
 
         var alias = client.indices().getAlias(g -> g.name("products"));
-        assertThat(alias.result()).containsOnlyKeys("products-v1");
+        assertThat(alias.aliases()).containsOnlyKeys("products-v1");
         assertThat(client.indices().exists(e -> e.index("products-v1")).value()).isTrue();
         assertThat(client.indices().existsIndexTemplate(t -> t.name("products-template")).value()).isTrue();
     }

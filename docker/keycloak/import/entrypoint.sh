@@ -13,6 +13,12 @@ for v in ORDER_SERVICE_CLIENT_SECRET RATING_SERVICE_CLIENT_SECRET SEARCH_SERVICE
         echo "ERROR: $v is not set; refusing to boot Keycloak with default secrets." >&2
         exit 1
     fi
+    case "$(printf '%s' "$val" | tr '[:upper:]' '[:lower:]')" in
+        change_me|change-me|changeme|change_in_prod|generate-me|generate_me|placeholder|xxx)
+            echo "ERROR: $v still carries a placeholder value; refusing to boot Keycloak with default secrets." >&2
+            exit 1
+            ;;
+    esac
 done
 
 if [ ! -f "$src" ]; then

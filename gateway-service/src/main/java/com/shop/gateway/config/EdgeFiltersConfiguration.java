@@ -6,6 +6,8 @@ import com.shop.gateway.filter.AdminRoleGateFilter;
 import com.shop.gateway.filter.ClientIpResolver;
 import com.shop.gateway.filter.EdgeRateLimitProperties;
 import com.shop.gateway.filter.GatewayErrorResponseWriter;
+import com.shop.gateway.filter.PreAuthRateLimitFilter;
+import com.shop.gateway.filter.PreAuthRateLimitProperties;
 import com.shop.gateway.filter.RateLimitFilter;
 import com.shop.gateway.filter.TrustedProxyPolicy;
 import com.shop.gateway.ratelimit.EdgeRateLimiter;
@@ -55,6 +57,17 @@ public class EdgeFiltersConfiguration {
                                                final EdgeRateLimiter edgeRateLimiter,
                                                final RateLimitOutageGuard outageGuard) {
         return new RateLimitFilter(properties, errorResponseWriter, clientIpResolver, edgeRateLimiter, outageGuard);
+    }
+
+    @Bean
+    public PreAuthRateLimitFilter preAuthRateLimitFilter(final PreAuthRateLimitProperties properties,
+                                                          final EdgeRateLimitProperties edgeRateLimitProperties,
+                                                          final EdgeRateLimiter edgeRateLimiter,
+                                                          final ClientIpResolver clientIpResolver,
+                                                          final GatewayErrorResponseWriter errorResponseWriter,
+                                                          final RateLimitOutageGuard outageGuard) {
+        return new PreAuthRateLimitFilter(properties, edgeRateLimitProperties, edgeRateLimiter,
+                clientIpResolver, errorResponseWriter, outageGuard);
     }
 
     @Bean
