@@ -244,6 +244,8 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
             return PASS
         if entry.get("status") == FAIL:
             return FAIL
+        if entry.get("status") == "BLOCKED":
+            return "BLOCKED"
         return INSUFFICIENT_EVIDENCE
 
     gates.append(Gate(id="GATE-4", name="BUSINESS_CORRECTNESS", status=suite_status("happy"), evidence=[f"suite happy: {suite_status('happy')}"]))
@@ -330,25 +332,48 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     from ..git_delivery.delivery import delivery_report
 
     deliveries = delivery_report()
-    has_commit = deliveries["total"] > 0
     rejected = len(deliveries.get("rejected", []))
+    from ..git_delivery.delivery import repository_status
+
+    status = repository_status(repository)
+    branch = status.get("branch", "")
+    protected = bool(status.get("protected"))
+    commit = status.get("commit", "")
+    ahead_behind = str(status.get("ahead_behind", "")).strip()
+    unpushed = "no upstream"
+    if ahead_behind and "no upstream" not in ahead_behind:
+        parts = ahead_behind.split()
+        if len(parts) == 2:
+            unpushed = parts[0]
+    pushed = commit and not protected and unpushed in ("0", "0", "")
+    if protected:
+        delivery_status = FAIL
+        delivery_detail = "the branch is protected, so the change would have been delivered to a branch that must not receive it"
+    elif not commit:
+        delivery_status = PENDING
+        delivery_detail = "no commit exists"
+    elif unpushed == "no upstream":
+        delivery_status = PENDING
+        delivery_detail = "the branch has no upstream, so the commit cannot be shown to be delivered"
+    elif unpushed != "0":
+        delivery_status = FAIL
+        delivery_detail = str(unpushed) + " commits are not on the remote branch"
+    else:
+        delivery_status = PASS
+        delivery_detail = "the current commit is on the remote branch " + branch
     gates.append(
         Gate(
             id="GATE-20",
             name="GIT_DELIVERY",
-            status=PASS if has_commit and not rejected else (FAIL if rejected else PENDING),
+            status=delivery_status,
             evidence=[
-                f"{deliveries['total']} delivery records",
-                f"unpushed: {len(deliveries['unpushed'])}",
-                f"rejected by the gates: {rejected}",
+                f"branch: {branch}",
+                f"commit: {commit[:12]}",
+                f"commits ahead of the remote: {unpushed}",
+                f"protected branch: {protected}",
+                f"{deliveries['total']} delivery records, {rejected} of them rejected by the gates",
             ],
-            detail=(
-                "verified batches have traceable commits"
-                if has_commit and not rejected
-                else str(rejected) + " batches were rejected by the gates and are not delivered"
-                if rejected
-                else "no delivery records"
-            ),
+            detail=delivery_detail,
         )
     )
 

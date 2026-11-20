@@ -441,7 +441,7 @@ def command_alerts(arguments: argparse.Namespace) -> int:
             "alerts",
             {
                 "suite": "alerts",
-                "status": PASS if document["status"] == "PASS" else (PENDING if document["status"] == "BLOCKED" else FAIL),
+                "status": PASS if document["status"] == "PASS" else ("BLOCKED" if document["status"] == "BLOCKED" else FAIL),
                 "detail": str(len(document["failed_checks"])) + " failed and " + str(len(document["blocked_checks"])) + " blocked checks",
                 "checks": document["checks"],
                 "updated_at": utc_now(),

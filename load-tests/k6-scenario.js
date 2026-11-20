@@ -7,7 +7,19 @@ import { Counter, Trend } from 'k6/metrics';
 const scenario = __ENV.SCENARIO || 'browse';
 const baseUrl = __ENV.BASE_URL || 'http://gateway-service:8080';
 const token = __ENV.TOKEN || '';
-const customerTokens = (__ENV.CUSTOMER_TOKENS || '').split(',').filter(function (value) { return value.length > 0; });
+function loadCustomerTokens() {
+  const inline = (__ENV.CUSTOMER_TOKENS || '').split(',').filter(function (value) { return value.length > 0; });
+  if (inline.length > 0) {
+    return inline;
+  }
+  try {
+    return open('/results/customer-tokens.txt').split('\n').filter(function (value) { return value.length > 0; });
+  } catch (error) {
+    return [];
+  }
+}
+
+const customerTokens = loadCustomerTokens();
 const peakRate = parseInt(__ENV.RATE || '20', 10);
 const maxVus = parseInt(__ENV.VUS || '50', 10);
 const duration = __ENV.DURATION || '2m';
@@ -24,6 +36,8 @@ http.setResponseCallback(http.expectedStatuses(200, 201, 404, 409));
 const cartFailure = new Counter('cart_failure_total');
 const cartContention = new Counter('cart_contention_total');
 const couponContention = new Counter('coupon_contention_total');
+const businessRefusal = new Counter('business_refusal_total');
+const shedRequests = new Counter('shed_requests_total');
 const catalogFailure = new Counter('catalog_failure_total');
 const detailFailure = new Counter('detail_failure_total');
 const unresolvedProduct = new Counter('unresolved_product_total');
@@ -194,6 +208,11 @@ function ensureCart(productId) {
   return false;
 }
 
+function resetCart() {
+  cartItemId = null;
+  http.del(baseUrl + '/api/v1/carts/me', null, { headers: authHeaders(), tags: { call: 'cart-reset' } });
+}
+
 function conflictReason(response) {
   try {
     const parsed = JSON.parse(response.body);
@@ -232,7 +251,7 @@ function checkout() {
   }
   let response = placeOrder(productId);
   if (response.status === 409 && conflictReason(response) === 'ORD-4005') {
-    cartItemId = null;
+    resetCart();
     cartContention.add(1);
     if (ensureCart(productId)) {
       response = placeOrder(productId);
@@ -240,24 +259,33 @@ function checkout() {
   }
   const accepted = response.status === 200 || response.status === 201;
   const reason = conflictReason(response);
-  const soldOut = response.status === 409 && reason !== 'ORD-4005';
   const couponRejected = reason === 'ORD-4008' || reason === 'PRO-7006' || reason === 'PRO-7007' || reason === 'PRO-7005';
+  const stockRefused = reason === 'ORD-4007' || reason === 'ORD-4009' || reason === 'INV-4001';
+  const refused = response.status === 409 || response.status === 400;
+  const shed = response.status >= 500;
   check(response, {
-    'checkout returns an accepted or conflict status': (r) => r.status === 200 || r.status === 201 || r.status === 409,
+    'checkout returns an accepted or a refusal status': (r) => r.status === 200 || r.status === 201 || r.status === 409 || r.status === 400,
   });
   if (accepted) {
     cartItemId = null;
     businessSuccess.add(1);
-  } else if (soldOut) {
-    oversellAttempts.add(1);
   } else if (couponRejected) {
-    cartItemId = null;
+    resetCart();
     couponContention.add(1);
+  } else if (stockRefused) {
+    resetCart();
+    oversellAttempts.add(1);
+  } else if (refused) {
+    resetCart();
+    cartFailure.add(1);
+    businessRefusal.add(1);
   } else {
-    if (response.status === 409) {
-      cartItemId = null;
-      cartFailure.add(1);
+    if (shed) {
+      shedRequests.add(1);
+      resetCart();
+      return;
     }
+    resetCart();
     businessFailure.add(1);
   }
 }

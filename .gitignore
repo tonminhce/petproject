@@ -180,6 +180,7 @@ production-audit/runs/**/e2e-results/*.log
 production-audit/runs/**/benchmarks/*.log
 production-audit/runs/**/e2e-results/petproject-*.json
 production-audit/runs/**/e2e-results/postman-environment.json
+production-audit/runs/**/load-results/**/customer-tokens.txt
 
 # Python bytecode cache
 __pycache__/

@@ -291,6 +291,30 @@
           "evidence": "acceptance criteria and source evidence present",
           "from": "NORMALIZED",
           "to": "READY"
+        },
+        {
+          "at": "2026-11-20T21:44:38Z",
+          "evidence": "The currency work was implemented across the fleet: every money table carries a currency column with a check constraint, the currency is derived from the product price and propagated into the cart, the order, the discount, the tax, the payment and the refund, a mixed currency basket is rejected and a price without a currency fails closed.",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-20T21:44:38Z",
+          "evidence": "The implementation is complete and committed in 37014fe7. The regression test is product-service/src/test/java/com/shop/productservice/service/ProductCurrencyRegressionIT.java and the payment contract has its own test at payment-service/src/test/java/com/shop/paymentservice/db/PaymentCurrencyChangelogIT.java.",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-20T21:44:38Z",
+          "evidence": "The reactor build is green with the currency work and the end to end collection confirms an order against a payment whose amount and currency match the order.",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-20T21:44:38Z",
+          "evidence": "Every money table now carries a three letter currency column with a check constraint on the supported set, the currency is derived from the product price and propagated into the cart, the order, the discount, the tax, the payment and the refund, a mixed currency basket is rejected with ORDER_PRICING_CURRENCY_MISMATCH and a price without a currency fails closed. The tax request and the tax response carry the currency. Evidence: commit 37014fe7, the regression tests and the green reactor build.",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "CAT-05",
@@ -308,14 +332,18 @@
         "tax-service/.../service/TaxCalculator.java:13-16",
         "rating-service/.../entity/Rating.java:40"
       ],
-      "state": "READY",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "No currency on any money field in the fleet",
-      "updated_at": "2026-11-18T13:45:21Z",
+      "updated_at": "2026-11-20T21:44:38Z",
       "verification_evidence": [
         "normalized from discovered",
-        "acceptance criteria and source evidence present"
+        "acceptance criteria and source evidence present",
+        "The currency work was implemented across the fleet: every money table carries a currency column with a check constraint, the currency is derived from the product price and propagated into the cart, the order, the discount, the tax, the payment and the refund, a mixed currency basket is rejected and a price without a currency fails closed.",
+        "The implementation is complete and committed in 37014fe7. The regression test is product-service/src/test/java/com/shop/productservice/service/ProductCurrencyRegressionIT.java and the payment contract has its own test at payment-service/src/test/java/com/shop/paymentservice/db/PaymentCurrencyChangelogIT.java.",
+        "The reactor build is green with the currency work and the end to end collection confirms an order against a payment whose amount and currency match the order.",
+        "Every money table now carries a three letter currency column with a check constraint on the supported set, the currency is derived from the product price and propagated into the cart, the order, the discount, the tax, the payment and the refund, a mixed currency basket is rejected with ORDER_PRICING_CURRENCY_MISMATCH and a price without a currency fails closed. The tax request and the tax response carry the currency. Evidence: commit 37014fe7, the regression tests and the green reactor build."
       ]
     },
     "CAT-06": {
@@ -16694,5 +16722,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-20T06:51:08Z"
+  "updated_at": "2026-11-20T21:44:38Z"
 }

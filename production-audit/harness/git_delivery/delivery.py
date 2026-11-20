@@ -421,6 +421,14 @@ def delivery_report(path: Any = None) -> dict[str, Any]:
     }
 
 
+def _ahead_behind(root: Path) -> str:
+    upstream = run_git(root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).stdout.strip()
+    if not upstream or "@{u}" in upstream:
+        return "no upstream"
+    counts = run_git(root, ["rev-list", "--left-right", "--count", "HEAD...@{u}"]).stdout.strip()
+    return counts or "no upstream"
+
+
 def repository_status(root: Path) -> dict[str, Any]:
     branch = current_branch(root)
     return {
@@ -429,5 +437,5 @@ def repository_status(root: Path) -> dict[str, Any]:
         "protected": is_protected_branch(branch),
         "remotes": [line.strip() for line in run_git(root, ["remote", "-v"]).stdout.splitlines()],
         "working_tree": run_git(root, ["status", "--porcelain=v1"]).stdout.splitlines(),
-        "ahead_behind": run_git(root, ["rev-list", "--left-right", "--count", "HEAD...@{u}"]).stdout.strip() if "@{u}" in run_git(root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).stdout else "no upstream",
+        "ahead_behind": _ahead_behind(root),
     }

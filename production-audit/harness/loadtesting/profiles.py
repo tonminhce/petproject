@@ -22,6 +22,8 @@ class Profile:
     description: str
     reaches_payment_provider: bool = False
     max_business_failure_rate: float = 0.05
+    max_shed_rate: float = 0.01
+    max_shed_rate: float = 0.01
     tags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -30,7 +32,7 @@ PROFILES: dict[str, Profile] = {
         name="baseline",
         scenario="browse",
         requests_per_second=20,
-        virtual_users=20,
+        virtual_users=80,
         duration_seconds=120,
         description="PROFILE A representative normal traffic",
         tags=("profile-a",),
@@ -39,7 +41,7 @@ PROFILES: dict[str, Profile] = {
         name="ramp",
         scenario="full",
         requests_per_second=50,
-        virtual_users=50,
+        virtual_users=200,
         duration_seconds=180,
         description="PROFILE B gradually increasing request rate and concurrency",
         tags=("profile-b",),
@@ -48,7 +50,7 @@ PROFILES: dict[str, Profile] = {
         name="spike",
         scenario="full",
         requests_per_second=200,
-        virtual_users=200,
+        virtual_users=400,
         duration_seconds=120,
         description="PROFILE C black friday spike",
         tags=("profile-c",),
@@ -66,7 +68,7 @@ PROFILES: dict[str, Profile] = {
         name="flash-sale",
         scenario="flash-sale",
         requests_per_second=150,
-        virtual_users=250,
+        virtual_users=400,
         duration_seconds=120,
         description="PROFILE E many users race for one limited stock product",
         tags=("profile-e",),
@@ -75,7 +77,7 @@ PROFILES: dict[str, Profile] = {
         name="promotion-storm",
         scenario="promotion-storm",
         requests_per_second=120,
-        virtual_users=200,
+        virtual_users=400,
         duration_seconds=120,
         description="PROFILE F many users redeem the same coupon at once",
         tags=("profile-f",),
@@ -141,6 +143,7 @@ def resolve_profile(name: str, scale: int = 1) -> Profile:
         reaches_payment_provider=base.reaches_payment_provider,
         tags=base.tags,
         max_business_failure_rate=base.max_business_failure_rate,
+        max_shed_rate=base.max_shed_rate,
     )
 
 

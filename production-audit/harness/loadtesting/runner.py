@@ -20,7 +20,8 @@ from .profiles import Profile, enforce_safety, resolve_profile
 
 DEFAULT_NETWORK = "untitled5_ecommerce-network"
 DEFAULT_BASE_URL = "http://gateway-service:8080"
-CUSTOMER_POOL_LIMIT = 32
+CUSTOMER_POOL_LIMIT = 128
+RATE_SHORTFALL_RATIO = 0.8
 K6_RUN_TIMEOUT_SECONDS = 2400
 
 
@@ -101,6 +102,10 @@ def summarise(summary: dict[str, Any]) -> dict[str, Any]:
         "latency_max_ms": _metric_value(metrics, "http_req_duration", "max"),
         "business_success": _metric_value(metrics, "business_success_total", "count"),
         "business_failure": _metric_value(metrics, "business_failure_total", "count", default=0),
+        "business_refusal": _metric_value(metrics, "business_refusal_total", "count", default=0),
+        "shed_requests": _metric_value(metrics, "shed_requests_total", "count", default=0),
+        "coupon_contention": _metric_value(metrics, "coupon_contention_total", "count", default=0),
+        "cart_contention": _metric_value(metrics, "cart_contention_total", "count", default=0),
         "oversell_responses": _metric_value(metrics, "oversell_attempts_total", "count", default=0),
         "iterations": _metric_value(metrics, "iterations", "count"),
         "iteration_rate_per_second": _metric_value(metrics, "iterations", "rate"),
@@ -214,6 +219,10 @@ def _measure_profile(
             }
         customer_tokens = minted.get("tokens", [])
 
+    (output / "customer-tokens.txt").write_text(
+        "\n".join(customer_tokens) + ("\n" if customer_tokens else ""), encoding="utf-8"
+    )
+
     command = [
         "docker",
         "compose",
@@ -236,8 +245,6 @@ def _measure_profile(
         "BASE_URL=" + base_url,
         "-e",
         "TOKEN=" + resolved_token,
-        "-e",
-        "CUSTOMER_TOKENS=" + ",".join(customer_tokens),
         "-e",
         "HOT_PRODUCT_ID=" + str(os.environ.get("HOT_PRODUCT_ID", "")),
         "-e",
@@ -296,6 +303,7 @@ def _measure_profile(
         "measurement_valid": not environment.get("contaminated")
         and environment.get("host_settle", {}).get("status") == "QUIET",
         "max_business_failure_rate": profile.max_business_failure_rate,
+        "max_shed_rate": profile.max_shed_rate,
         "target_requests_per_second": profile.requests_per_second,
         "target_virtual_users": profile.virtual_users,
         "rate_limit_override": limiter,
@@ -317,11 +325,16 @@ def _measure_profile(
 
 
 def _final_status(document: dict[str, Any]) -> str:
+    outcome_acceptable = _business_outcome_is_acceptable(document)
     if document.get("k6_exit_code") != 0:
+        document["status_detail"] = (
+            "the load generator reported that a threshold was crossed, so the measured run did not meet its "
+            "own acceptance criteria"
+        )
         return "FAIL"
     if not document.get("measurement_valid"):
         return "BLOCKED"
-    if not _business_outcome_is_acceptable(document):
+    if not outcome_acceptable:
         return "FAIL"
     invariants = document.get("invariants") or {}
     if invariants:
@@ -336,20 +349,39 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
     metrics = document.get("metrics") or {}
     success = float(metrics.get("business_success") or 0)
     failure = float(metrics.get("business_failure") or 0)
+    refusals = float(metrics.get("business_refusal") or 0)
+    shed = float(metrics.get("shed_requests") or 0)
+    contention = float(metrics.get("coupon_contention") or 0) + float(metrics.get("cart_contention") or 0)
     attempts = success + failure
-    if attempts <= 0:
+    if attempts <= 0 and refusals + shed + contention <= 0:
         document["business_verdict"] = (
             "no business request was recorded, so the run proves nothing about the business behaviour"
         )
         return False
-    rate = failure / attempts
+    rate = failure / attempts if attempts > 0 else 0.0
     document["business_failure_rate"] = round(rate, 6)
     achieved = float(metrics.get("iteration_rate_per_second") or 0)
     target = float(document.get("target_requests_per_second") or 0)
     if target > 0:
         document["achieved_rate_ratio"] = round(achieved / target, 4)
+    served = success + failure + refusals + shed
+    shed_rate = shed / served if served > 0 else 0.0
+    document["shed_rate"] = round(shed_rate, 6)
     recorded_limit = document.get("max_business_failure_rate")
     limit = 0.05 if recorded_limit is None else float(recorded_limit)
+    shed_limit = document.get("max_shed_rate")
+    shed_limit = 0.01 if shed_limit is None else float(shed_limit)
+    if success <= 0 and refusals + contention + shed > 0:
+        document["business_verdict"] = (
+            "the platform completed no business request: it refused "
+            + format(refusals, ".0f")
+            + " orders as a business refusal, refused "
+            + format(contention, ".0f")
+            + " as a contention on the cart or the coupon and shed "
+            + format(shed, ".0f")
+            + " requests, so it did not serve the requested load"
+        )
+        return False
     if success <= 0:
         document["business_verdict"] = (
             "every business request failed, so the platform served no successful business operation"
@@ -360,7 +392,34 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
             "the business failure rate " + format(rate, ".4f") + " exceeds the limit " + format(limit, ".4f")
         )
         return False
+    if shed_rate > shed_limit:
+        document["business_verdict"] = (
+            "the business failure rate "
+            + format(rate, ".4f")
+            + " is within the limit "
+            + format(limit, ".4f")
+            + " but the platform shed "
+            + format(shed_rate, ".4f")
+            + " of the requests, which exceeds the limit "
+            + format(shed_limit, ".4f")
+        )
+        return False
     document["business_verdict"] = (
-        "the business failure rate " + format(rate, ".4f") + " is within the limit " + format(limit, ".4f")
+        "the business failure rate "
+        + format(rate, ".4f")
+        + " is within the limit "
+        + format(limit, ".4f")
+        + " and the platform shed "
+        + format(shed_rate, ".4f")
+        + " of the requests"
     )
+    if target > 0 and achieved > 0 and achieved / target < RATE_SHORTFALL_RATIO:
+        document["business_verdict"] = (
+            document["business_verdict"]
+            + ", but the platform delivered only "
+            + format(achieved / target, ".2f")
+            + " of the requested "
+            + format(target, ".0f")
+            + " iterations per second, so it did not sustain the requested rate"
+        )
     return True
