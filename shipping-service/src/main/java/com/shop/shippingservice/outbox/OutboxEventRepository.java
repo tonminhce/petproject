@@ -31,6 +31,20 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.claimedAt < :cutoff")
     int deleteByStatusAndClaimedAtBefore(@Param("status") OutboxStatus status, @Param("cutoff") Instant cutoff);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE OutboxEvent e SET "
+         + "e.status = CASE WHEN e.retryCount + 1 >= :maxRetries THEN :dead ELSE :pending END, "
+         + "e.retryCount = e.retryCount + 1, "
+         + "e.claimedAt = null, "
+         + "e.lastError = :reason "
+         + "WHERE e.status = :sending AND e.id IN :ids")
+    int releaseClaims(@Param("ids") List<Long> ids,
+                      @Param("sending") OutboxStatus sending,
+                      @Param("pending") OutboxStatus pending,
+                      @Param("dead") OutboxStatus dead,
+                      @Param("maxRetries") int maxRetries,
+                      @Param("reason") String reason);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
     @Query("SELECT e FROM OutboxEvent e WHERE e.id = :id")

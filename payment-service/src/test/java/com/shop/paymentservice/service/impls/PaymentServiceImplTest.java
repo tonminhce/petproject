@@ -457,6 +457,7 @@ class PaymentServiceImplTest {
         PaymentResponse result = service.refund(PAYMENT_ID, AMOUNT, CURRENCY, REFUND_REFERENCE);
 
         assertThat(result.refundedAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(result.refundedReference()).isEqualTo(REFUND_REFERENCE.toString());
         verifyNoInteractions(provider);
         verifyNoInteractions(writer);
         verify(refundRepository, never()).save(any(PaymentRefund.class));
@@ -554,10 +555,44 @@ class PaymentServiceImplTest {
         when(repository.findRefundableByOrderId(eq(ORDER_ID), any()))
                 .thenReturn(List.of(partial));
 
-        var found = service.findRefundableByOrderId(ORDER_ID);
+        var found = service.findRefundableByOrderId(ORDER_ID, REFUND_REFERENCE);
 
         assertThat(found).isPresent();
         assertThat(found.get().id()).isEqualTo(PAYMENT_ID);
         assertThat(found.get().status()).isEqualTo(PaymentStatus.PARTIALLY_REFUNDED);
+        assertThat(found.get().refundedReference()).isNull();
+    }
+
+    @Test
+    void findRefundableByOrderId_findsThePaymentThatAlreadyCarriesTheConfirmedRefundOfTheApproval() {
+        Payment refunded = payment(PaymentStatus.REFUNDED);
+        refunded.setRefundedAmount(AMOUNT);
+        when(refundRepository.findByRefundReference(REFUND_REFERENCE.toString()))
+                .thenReturn(List.of(confirmedRefund(REFUND_REFERENCE, AMOUNT)));
+        when(repository.findByOrderIdAndIdIn(ORDER_ID, List.of(PAYMENT_ID)))
+                .thenReturn(List.of(refunded));
+
+        var found = service.findRefundableByOrderId(ORDER_ID, REFUND_REFERENCE);
+
+        assertThat(found).isPresent();
+        assertThat(found.get().id()).isEqualTo(PAYMENT_ID);
+        assertThat(found.get().status()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(found.get().refundedAmount()).isEqualByComparingTo(AMOUNT);
+        assertThat(found.get().refundedReference()).isEqualTo(REFUND_REFERENCE.toString());
+    }
+
+    @Test
+    void findRefundableByOrderId_keepsTheRefundablePaymentWhenTheApprovalHasNoConfirmedRefund() {
+        Payment partial = payment(PaymentStatus.PARTIALLY_REFUNDED);
+        when(refundRepository.findByRefundReference(OTHER_REFUND_REFERENCE.toString()))
+                .thenReturn(List.of());
+        when(repository.findRefundableByOrderId(eq(ORDER_ID), any()))
+                .thenReturn(List.of(partial));
+
+        var found = service.findRefundableByOrderId(ORDER_ID, OTHER_REFUND_REFERENCE);
+
+        assertThat(found).isPresent();
+        assertThat(found.get().status()).isEqualTo(PaymentStatus.PARTIALLY_REFUNDED);
+        assertThat(found.get().refundedReference()).isNull();
     }
 }

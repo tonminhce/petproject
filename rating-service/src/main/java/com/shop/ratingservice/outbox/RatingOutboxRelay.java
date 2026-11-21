@@ -60,9 +60,7 @@ public class RatingOutboxRelay {
 
     @Scheduled(fixedDelayString = "${shop.rating.outbox.poll-millis:2000}", initialDelayString = "${shop.rating.outbox.poll-millis:2000}")
     public void relay() {
-        recoverStrandedClaims();
-
-        List<OutboxEvent> rows = orderById(new ArrayList<>(claimPendingBatch()));
+        List<OutboxEvent> rows = orderById(claimPendingBatch());
         if (rows.isEmpty()) {
             return;
         }
@@ -79,6 +77,7 @@ public class RatingOutboxRelay {
         try {
             outcome = kafkaPublisher.publishBatch(messages, publishTimeoutMs, TimeUnit.MILLISECONDS);
         } catch (RuntimeException ex) {
+            releaseFailedClaims(claimedIds);
             publishLedger.settle(claimedIds);
             throw ex;
         }
@@ -114,34 +113,54 @@ public class RatingOutboxRelay {
     }
 
     private List<OutboxEvent> claimPendingBatch() {
-        List<OutboxEvent> claimed = transactionTemplate.execute(tx -> {
-            List<UUID> aggregates = outboxRepo.findClaimableAggregates(CLAIMABLE_STATUSES, aggregateWindow());
-            if (aggregates == null || aggregates.isEmpty()) {
-                return List.<OutboxEvent>of();
+        List<UUID> aggregates = transactionTemplate.execute(tx ->
+                outboxRepo.findClaimableAggregates(CLAIMABLE_STATUSES, aggregateWindow()));
+        if (aggregates == null || aggregates.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<OutboxEvent> claimedRows = new ArrayList<>();
+        for (UUID aggregateId : distinctAggregates(aggregates)) {
+            if (claimedRows.size() >= batchSize) {
+                break;
             }
-            Instant now = Instant.now();
-            List<OutboxEvent> claimedRows = new ArrayList<>();
-            for (UUID aggregateId : distinctAggregates(aggregates)) {
-                if (claimedRows.size() >= batchSize) {
-                    break;
-                }
-                List<OutboxEvent> rows = outboxRepo.claimAggregateEvents(aggregateId, CLAIMABLE_STATUSES,
-                        OutboxStatus.SENDING.name(), batchSize - claimedRows.size());
-                if (rows == null || rows.isEmpty()) {
-                    continue;
-                }
-                for (OutboxEvent event : rows) {
-                    event.setStatus(OutboxStatus.SENDING);
-                    event.setClaimedAt(now);
-                    event.setLeaseOwner(leaseOwner);
-                    event.setLastError(null);
-                }
-                outboxRepo.saveAll(rows);
+            List<OutboxEvent> rows = transactionTemplate.execute(tx ->
+                    claimAggregate(aggregateId, batchSize - claimedRows.size()));
+            if (rows != null) {
                 claimedRows.addAll(rows);
             }
-            return claimedRows;
-        });
-        return claimed == null ? List.of() : claimed;
+        }
+        return claimedRows;
+    }
+
+    private List<OutboxEvent> claimAggregate(UUID aggregateId, int limit) {
+        List<OutboxEvent> rows = outboxRepo.claimAggregateEvents(aggregateId, CLAIMABLE_STATUSES,
+                OutboxStatus.SENDING.name(), limit);
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+        Instant now = Instant.now();
+        for (OutboxEvent event : rows) {
+            event.setStatus(OutboxStatus.SENDING);
+            event.setClaimedAt(now);
+            event.setLeaseOwner(leaseOwner);
+            event.setLastError(null);
+        }
+        outboxRepo.saveAll(rows);
+        return rows;
+    }
+
+    private void releaseFailedClaims(List<Long> claimedIds) {
+        Set<Long> published = publishLedger.publishedEventIds();
+        List<Long> releasable = claimedIds.stream().filter(id -> !published.contains(id)).toList();
+        if (releasable.isEmpty()) {
+            return;
+        }
+        Integer released = transactionTemplate.execute(tx -> outboxRepo.releaseClaims(releasable,
+                OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED, leaseOwner, maxRetries,
+                "the broker publish failed - the claim went back to the retry set"));
+        if (released != null && released > 0) {
+            log.warn("Released {} outbox claim(s) after the broker publish failed", released);
+        }
     }
 
     private int aggregateWindow() {
@@ -174,7 +193,9 @@ public class RatingOutboxRelay {
         }
     }
 
-    private void recoverStrandedClaims() {
+    @Scheduled(fixedDelayString = "${shop.rating.outbox.recovery-poll-millis:30000}",
+            initialDelayString = "${shop.rating.outbox.recovery-initial-delay-millis:30000}")
+    public void recoverStrandedClaims() {
         Instant cutoff = Instant.now().minusMillis(claimLeaseMs);
         Integer reclaimed = transactionTemplate.execute(tx -> outboxRepo.reclaimStaleSending(
                 OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,

@@ -61,6 +61,7 @@ shop:
     payment:
       url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
       timeout-ms: 3000
+      refund-timeout-ms: 45000
       enabled: ${PAYMENT_SERVICE_ENABLED:true}
     keycloak:
       token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/ecommerce/protocol/openid-connect/token}

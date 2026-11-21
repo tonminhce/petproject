@@ -61,6 +61,7 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
         OutboxEvent stranded = seed(topic, "{\"seq\":\"stranded\"}", OutboxStatus.SENDING);
         ageClaim(stranded, Instant.now().minusSeconds(3600));
 
+        relay.recoverStrandedClaims();
         relay.relay();
 
         assertThat(consumed(topic, 1))
@@ -80,6 +81,7 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
         OutboxEvent inFlight = seed(topic, "{\"seq\":\"in-flight\"}", OutboxStatus.SENDING);
         ageClaim(inFlight, Instant.now());
 
+        relay.recoverStrandedClaims();
         relay.relay();
 
         assertThat(consumed(topic, 1))
@@ -125,6 +127,7 @@ class ShippingOutboxRelayRecoveryIT extends AbstractIntegrationTest {
                 .as("the row must enter SENDING without a lease timestamp")
                 .isNull();
 
+        relay.recoverStrandedClaims();
         relay.relay();
 
         assertThat(consumed(topic, 1))

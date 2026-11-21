@@ -5,6 +5,7 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.orderservice.client.PaymentServiceClient;
+import com.shop.orderservice.client.RefundOutcome;
 import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.constant.ReturnStatus;
 import com.shop.orderservice.dto.request.OrderReturnCreateRequest;
@@ -180,12 +181,13 @@ public class OrderReturnServiceImpl implements OrderReturnService {
         orderReturn.setReviewedAt(Instant.now());
 
         if (request.status() == ReturnStatus.APPROVED || request.status() == ReturnStatus.REFUNDED) {
-            boolean refunded = paymentServiceClient.refundByOrderId(order.getId(), approvedAmount, orderCurrency,
+            RefundOutcome outcome = paymentServiceClient.refundByOrderId(order.getId(), approvedAmount, orderCurrency,
                     orderReturn.getId());
-            if (!refunded) {
+            if (outcome == RefundOutcome.NO_PAYMENT) {
                 throw BusinessException.badRequest("order.return.refund.gateway.failed");
             }
             orderReturn.setStatus(ReturnStatus.REFUNDED);
+            log.info("The refund of {} {} for return {} is {}", approvedAmount, orderCurrency, returnId, outcome);
         }
 
         OrderReturn updated = orderReturnRepository.save(orderReturn);

@@ -21,7 +21,7 @@ public interface PaymentService {
 
     Optional<PaymentResponse> findCapturedByOrderId(UUID orderId);
 
-    Optional<PaymentResponse> findRefundableByOrderId(UUID orderId);
+    Optional<PaymentResponse> findRefundableByOrderId(UUID orderId, UUID refundReference);
 
     PaymentResponse findById(UUID id);
 }

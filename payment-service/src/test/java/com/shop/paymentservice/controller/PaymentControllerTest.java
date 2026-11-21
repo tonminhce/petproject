@@ -28,10 +28,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -291,6 +293,38 @@ class PaymentControllerTest {
                 .content(createBody()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("PENDING"));
+    }
+
+    @Test
+    void refundableLookup_withTheApprovalReference_returns200WithTheConfirmedRefund() throws Exception {
+        UUID refundReference = UUID.fromString("00000000-0000-0000-0000-000000009005");
+        when(paymentService.findRefundableByOrderId(orderId, refundReference))
+                .thenReturn(Optional.of(capturedPayment()));
+
+        mockMvc.perform(get("/api/v1/payments/by-order/{orderId}/refundable", orderId)
+                .param("refundReference", refundReference.toString())
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.id").value(paymentId.toString()))
+            .andExpect(jsonPath("$.data.status").value("CAPTURED"));
+
+        verify(paymentService).findRefundableByOrderId(orderId, refundReference);
+    }
+
+    @Test
+    void refundableLookup_withoutAPayment_returns404WithPay5002() throws Exception {
+        when(paymentService.findRefundableByOrderId(eq(orderId), isNull()))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/payments/by-order/{orderId}/refundable", orderId)
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE"))))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("PAY-5002"));
     }
 
     @Test

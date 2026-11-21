@@ -31,7 +31,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
             + "AND pg_try_advisory_xact_lock(hashtextextended(e.aggregate_id::text, 0)) "
             + "AND NOT EXISTS (SELECT 1 FROM outbox_events s "
             + "WHERE s.aggregate_id = e.aggregate_id AND s.status = :sending) "
-            + "ORDER BY e.id LIMIT :limit FOR UPDATE", nativeQuery = true)
+            + "ORDER BY e.id LIMIT :limit FOR UPDATE SKIP LOCKED", nativeQuery = true)
     List<OutboxEvent> claimAggregateEvents(@Param("aggregateId") UUID aggregateId,
                                             @Param("statuses") Collection<String> statuses,
                                             @Param("sending") String sending,
@@ -54,6 +54,22 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
                                 @Param("sent") OutboxStatus sent,
                                 @Param("owner") String owner,
                                 @Param("sentAt") Instant sentAt);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE OutboxEvent e SET "
+         + "e.status = CASE WHEN e.retryCount + 1 >= :maxRetries THEN :failed ELSE :pending END, "
+         + "e.retryCount = e.retryCount + 1, "
+         + "e.claimedAt = null, "
+         + "e.leaseOwner = null, "
+         + "e.lastError = :reason "
+         + "WHERE e.status = :sending AND e.leaseOwner = :owner AND e.id IN :ids")
+    int releaseClaims(@Param("ids") List<Long> ids,
+                      @Param("sending") OutboxStatus sending,
+                      @Param("pending") OutboxStatus pending,
+                      @Param("failed") OutboxStatus failed,
+                      @Param("owner") String owner,
+                      @Param("maxRetries") int maxRetries,
+                      @Param("reason") String reason);
 
     long countByStatus(OutboxStatus status);
 

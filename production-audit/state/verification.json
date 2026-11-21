@@ -1,5 +1,5 @@
 {
-  "revision": "781f46c999249933346414b558d0f155cc444fcc",
+  "revision": "",
   "suites": {
     "alerts": {
       "checks": [
@@ -62,7 +62,7 @@
         {
           "detail": "no committed telegram token or live stripe key was found",
           "evidence": [
-            "tracked files scanned: 1907",
+            "tracked files scanned: 1916",
             "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
           ],
           "id": "ALT-06",
@@ -83,10 +83,11 @@
         }
       ],
       "detail": "0 failed and 1 blocked checks",
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
-      "status": "PENDING",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
+      "status": "BLOCKED",
       "suite": "alerts",
-      "updated_at": "2026-11-20T21:41:20Z"
+      "updated_at": "2026-11-21T01:29:36Z"
     },
     "baseline": {
       "command": "./mvnw -B -ntp -T1C clean verify",
@@ -105,16 +106,16 @@
     },
     "build": {
       "command": "./mvnw -B -ntp -T 1 clean verify",
-      "duration_seconds": 991.412,
+      "duration_seconds": 946.818,
       "exit_code": 0,
-      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
       "mode": "clean-verify",
-      "revision": "781f46c999249933346414b558d0f155cc444fcc",
-      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "build",
-      "updated_at": "2026-11-20T22:16:22Z"
+      "updated_at": "2026-11-21T00:33:29Z"
     },
     "comments": {
       "prohibited_comments": 0,
@@ -126,107 +127,112 @@
     "concurrency": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Race*Test,*Parallel*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Race*Test,*Parallel*Test -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "concurrency and multi-instance scenarios",
-      "duration_seconds": 243.412,
+      "duration_seconds": 251.555,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "concurrency",
-      "tests_run": 33,
-      "updated_at": "2026-11-20T21:28:15Z"
+      "tests_run": 36,
+      "updated_at": "2026-11-21T01:04:18Z"
     },
     "concurrency_inventory": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dfailsafe.failIfNoSpecifiedTests=false -pl inventory-service -am",
       "description": "inventory reservation safety under concurrency",
-      "duration_seconds": 28.92,
+      "duration_seconds": 31.105,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency_inventory.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "concurrency_inventory",
       "tests_run": 23,
-      "updated_at": "2026-11-20T21:24:11Z"
+      "updated_at": "2026-11-21T01:00:06Z"
     },
     "e2e": {
       "detail": "2 end to end collections completed the run",
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "e2e",
-      "updated_at": "2026-11-20T21:41:41Z"
+      "updated_at": "2026-11-21T01:29:33Z"
     },
     "edge": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Edge*Test,*Negative*Test,*Validation*Test,*Boundary*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "edge and negative scenarios",
-      "duration_seconds": 10.914,
+      "duration_seconds": 12.95,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
-      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/edge.log",
-      "revision": "781f46c999249933346414b558d0f155cc444fcc",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "edge",
       "tests_run": 41,
-      "updated_at": "2026-11-20T22:28:42Z"
+      "updated_at": "2026-11-21T00:45:49Z"
     },
     "gateway": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl gateway-service -am",
       "description": "gateway routing, rate limiting and redis behaviour",
-      "duration_seconds": 21.691,
+      "duration_seconds": 25.014,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/gateway.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "gateway",
       "tests_run": 141,
-      "updated_at": "2026-11-20T21:13:55Z"
+      "updated_at": "2026-11-21T00:49:49Z"
     },
     "happy": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=!*Edge*,!*Negative*,!*Concurrency*,!*Race*,*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "happy path business scenarios",
-      "duration_seconds": 259.285,
+      "duration_seconds": 267.696,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
-      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
-      "revision": "781f46c999249933346414b558d0f155cc444fcc",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "happy",
-      "tests_run": 1926,
-      "updated_at": "2026-11-20T22:28:30Z"
+      "tests_run": 1949,
+      "updated_at": "2026-11-21T00:45:35Z"
     },
     "integration": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "integration tests against real infrastructure",
-      "duration_seconds": 748.311,
-      "errors": 0,
-      "exit_code": 0,
+      "duration_seconds": 798.052,
+      "errors": 2,
+      "exit_code": 1,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/integration.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
-      "status": "PASS",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
+      "status": "FAIL",
       "suite": "integration",
-      "tests_run": 352,
-      "updated_at": "2026-11-20T21:40:44Z"
+      "tests_run": 174,
+      "updated_at": "2026-11-21T01:17:37Z"
     },
     "k8s": {
       "checks": [
@@ -337,31 +343,33 @@
         }
       ],
       "detail": "0 kubernetes manifest checks failed",
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "k8s",
-      "updated_at": "2026-11-20T21:41:21Z"
+      "updated_at": "2026-11-21T01:29:39Z"
     },
     "kafka": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "kafka producers, consumers, outbox relays and idempotent handling",
-      "duration_seconds": 585.758,
+      "duration_seconds": 584.302,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/kafka.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "kafka",
       "tests_run": 223,
-      "updated_at": "2026-11-20T21:23:42Z"
+      "updated_at": "2026-11-21T00:59:34Z"
     },
     "operations": {
       "checks": [
         {
-          "detail": "14 service targets up, 32 request metric series",
+          "detail": "14 service targets up, 45 request metric series",
           "evidence": {
             "request_series": [
               "gateway-service",
@@ -376,10 +384,6 @@
               "rating-service"
             ],
             "service_targets_up": [
-              "auth-service:8088",
-              "product-service:8086",
-              "order-service:8084",
-              "payment-service:8085",
               "shipping-service:8087",
               "media-service:8083",
               "promotion-service:8093",
@@ -389,7 +393,11 @@
               "rating-service:8089",
               "search-service:8094",
               "notification-service:8090",
-              "gateway-service:8080"
+              "gateway-service:8080",
+              "auth-service:8088",
+              "product-service:8086",
+              "order-service:8084",
+              "payment-service:8085"
             ]
           },
           "id": "OBS-01",
@@ -403,15 +411,12 @@
           "passed": true
         },
         {
-          "detail": "10 log streams, 50 samples",
+          "detail": "3 log streams, 50 samples",
           "evidence": {
             "containers": [
-              "alloy",
-              "keycloak",
-              "recursing_khayyam",
-              "tempo",
-              "testcontainers-ryuk-3afd5fcc-fef1-439c-b7ac-8606e4aa79f9",
-              "testcontainers-ryuk-fd70ee35-da26-4145-a242-108aa499a8a2"
+              "kafka",
+              "notification-service",
+              "search-service"
             ]
           },
           "id": "OBS-02",
@@ -419,22 +424,23 @@
           "passed": true
         },
         {
-          "detail": "20 traces from 6 services",
+          "detail": "20 traces from 7 services",
           "evidence": {
             "services": [
               "inventory-service",
               "media-service",
+              "notification-service",
               "order-service",
               "payment-service",
-              "rating-service",
-              "shipping-service"
+              "promotion-service",
+              "rating-service"
             ],
             "trace_ids": [
-              "17f808b3b89b3fa9f4deda0f3834ab43",
-              "15688d192f0dd8e80c973a6ca885514f",
-              "2b11c9b319e86b020a1f718f09afdeb4",
-              "f86a7a05522f2bcfbded7fd1be92d56",
-              "92af653f73d101e700d4a79f3867f1a5"
+              "51fb5edabde8185e0cad80c370adfedc",
+              "cdb44d253c8e03ef97a47379eec8f3f",
+              "7202080a38154d1df60c5ad7f287eee9",
+              "667c7d59bb968cc00b3e2afcb9a004b5",
+              "2106c443e610b5c708bf7e9fb03ddca9"
             ]
           },
           "id": "OBS-03",
@@ -488,30 +494,32 @@
         }
       ],
       "detail": "7 of 7 observability checks passed",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "not_verified": [
         "OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically",
         "OBS-05 a controlled failure is visible in the backends but the check is not automated"
       ],
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "operations",
-      "updated_at": "2026-11-20T21:40:46Z"
+      "updated_at": "2026-11-21T01:17:46Z"
     },
     "payment": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl payment-service -am",
       "description": "payment capture, refund, provider adapters and webhook handling",
-      "duration_seconds": 74.946,
+      "duration_seconds": 74.681,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/payment.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "payment",
-      "tests_run": 283,
-      "updated_at": "2026-11-20T21:13:33Z"
+      "tests_run": 299,
+      "updated_at": "2026-11-21T00:49:23Z"
     },
     "performance": {
       "invariants": "PASS",
@@ -549,36 +557,37 @@
     "security": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "authentication, authorisation and token handling",
-      "duration_seconds": 111.046,
+      "duration_seconds": 138.219,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/security.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "security",
       "tests_run": 153,
-      "updated_at": "2026-11-20T21:12:17Z"
+      "updated_at": "2026-11-21T00:48:08Z"
     },
     "unit": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "surefire unit tests",
-      "duration_seconds": 279.667,
+      "duration_seconds": 284.503,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
-      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
+      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/unit.log",
-      "revision": "781f46c999249933346414b558d0f155cc444fcc",
+      "revision": "5edfa4e57a8afa488c83db50977b0e3f9f79a4dd",
       "skipped": 0,
-      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
+      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
       "status": "PASS",
       "suite": "unit",
-      "tests_run": 1942,
-      "updated_at": "2026-11-20T22:24:11Z"
+      "tests_run": 1965,
+      "updated_at": "2026-11-21T00:41:07Z"
     }
   },
-  "updated_at": "2026-11-20T22:28:42Z"
+  "updated_at": "2026-11-21T01:29:40Z"
 }

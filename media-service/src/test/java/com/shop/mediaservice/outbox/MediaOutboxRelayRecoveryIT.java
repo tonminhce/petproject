@@ -58,6 +58,7 @@ class MediaOutboxRelayRecoveryIT extends AbstractMediaIntegrationTest {
         OutboxEvent stranded = seed(topic, "{\"media\":\"stranded\"}", OutboxStatus.SENDING);
         ageClaim(stranded, Instant.now().minusSeconds(3600));
 
+        relay.recoverStrandedClaims();
         relay.relay();
 
         assertThat(consumed(topic, 1))
@@ -77,6 +78,7 @@ class MediaOutboxRelayRecoveryIT extends AbstractMediaIntegrationTest {
         OutboxEvent inFlight = seed(topic, "{\"media\":\"in-flight\"}", OutboxStatus.SENDING);
         ageClaim(inFlight, Instant.now());
 
+        relay.recoverStrandedClaims();
         relay.relay();
 
         assertThat(consumed(topic, 1))
@@ -122,6 +124,7 @@ class MediaOutboxRelayRecoveryIT extends AbstractMediaIntegrationTest {
                 .as("the row must enter SENDING without a lease timestamp")
                 .isNull();
 
+        relay.recoverStrandedClaims();
         relay.relay();
 
         assertThat(consumed(topic, 1))

@@ -89,8 +89,9 @@ public class PaymentController {
 
     @GetMapping("/by-order/{orderId}/refundable")
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
-    public ApiResponse<PaymentResponse> findRefundableByOrderId(@PathVariable UUID orderId) {
-        return paymentService.findRefundableByOrderId(orderId)
+    public ApiResponse<PaymentResponse> findRefundableByOrderId(@PathVariable UUID orderId,
+            @RequestParam(required = false) UUID refundReference) {
+        return paymentService.findRefundableByOrderId(orderId, refundReference)
                 .map(ApiResponse::ok)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, orderId));
     }

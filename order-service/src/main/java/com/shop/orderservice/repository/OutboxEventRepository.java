@@ -24,6 +24,20 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")})
     Optional<OutboxEvent> findFirstByStatusOrderByIdAsc(OutboxStatus status);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE OutboxEvent e SET "
+         + "e.status = CASE WHEN e.retryCount + 1 >= :maxRetries THEN :failed ELSE :pending END, "
+         + "e.retryCount = e.retryCount + 1, "
+         + "e.claimedAt = null, "
+         + "e.lastError = :reason "
+         + "WHERE e.status = :sending AND e.id IN :ids")
+    int releaseClaims(@Param("ids") List<Long> ids,
+                      @Param("sending") OutboxStatus sending,
+                      @Param("pending") OutboxStatus pending,
+                      @Param("failed") OutboxStatus failed,
+                      @Param("maxRetries") int maxRetries,
+                      @Param("reason") String reason);
+
     long countByStatus(OutboxStatus status);
 
     @Modifying(clearAutomatically = true)

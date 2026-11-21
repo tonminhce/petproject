@@ -12,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseCreator;
 import org.springframework.test.web.client.response.MockRestResponseCreators;
@@ -45,6 +44,10 @@ class PaymentServiceClientTest {
             "http://payment.test/api/v1/payments/by-order/" + ORDER_ID + "/captured";
     private static final String REFUNDABLE_URL =
             "http://payment.test/api/v1/payments/by-order/" + ORDER_ID + "/refundable";
+    private static final String REFUNDABLE_WITH_REFERENCE_URL =
+            REFUNDABLE_URL + "?refundReference=" + REFUND_REFERENCE;
+    private static final String REFUNDABLE_WITH_ORDER_REFERENCE_URL =
+            REFUNDABLE_URL + "?refundReference=" + ORDER_ID;
     private static final String REFUND_URL =
             "http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund";
     private static final BigDecimal CAPTURED_AMOUNT = new BigDecimal("2499.00");
@@ -53,15 +56,18 @@ class PaymentServiceClientTest {
     private ServiceTokenProvider serviceTokenProvider;
 
     private MockRestServiceServer server;
+    private MockRestServiceServer refundServer;
     private PaymentServiceClient client;
 
     @BeforeEach
     void setUp() {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://payment.test");
         server = MockRestServiceServer.bindTo(builder).build();
+        RestClient.Builder refundBuilder = RestClient.builder().baseUrl("http://payment.test");
+        refundServer = MockRestServiceServer.bindTo(refundBuilder).build();
         ShopServicesProperties props = new ShopServicesProperties(null, null, null, null,
-            new ShopServicesProperties.Service("http://payment.test", 3000, true), null);
-        client = new PaymentServiceClient(props, builder.build(), serviceTokenProvider);
+            new ShopServicesProperties.Payment("http://payment.test", 3000, true, 45000), null);
+        client = new PaymentServiceClient(props, builder.build(), refundBuilder.build(), serviceTokenProvider);
     }
 
     private void stubToken() {
@@ -74,6 +80,11 @@ class PaymentServiceClientTest {
 
     private static String partiallyRefundedJson() {
         return "{\"success\":true,\"code\":\"OK\",\"data\":{\"id\":\"%s\",\"orderId\":\"%s\",\"status\":\"PARTIALLY_REFUNDED\",\"amount\":2499.00,\"currency\":\"VND\",\"refundedAmount\":1000.00}}".formatted(PAYMENT_CAPTURED, ORDER_ID);
+    }
+
+    private static String refundedWithReferenceJson() {
+        return "{\"success\":true,\"code\":\"OK\",\"data\":{\"id\":\"%s\",\"orderId\":\"%s\",\"status\":\"REFUNDED\",\"amount\":2499.00,\"currency\":\"VND\",\"refundedAmount\":2499.00,\"refundedReference\":\"%s\"}}"
+                .formatted(PAYMENT_CAPTURED, ORDER_ID, REFUND_REFERENCE);
     }
 
     private static ResponseCreator errorResponse(HttpStatus status, String code) {
@@ -160,10 +171,10 @@ class PaymentServiceClientTest {
     @Test
     void aPartiallyRefundedPaymentIsRefundable() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(partiallyRefundedJson(), MediaType.APPLICATION_JSON));
 
-        Optional<PaymentStatusSnapshot> snapshot = client.findRefundableByOrderId(ORDER_ID);
+        Optional<PaymentStatusSnapshot> snapshot = client.findRefundableByOrderId(ORDER_ID, REFUND_REFERENCE);
 
         assertThat(snapshot).isPresent();
         assertThat(snapshot.get().status()).isEqualTo("PARTIALLY_REFUNDED");
@@ -171,26 +182,39 @@ class PaymentServiceClientTest {
     }
 
     @Test
-    void theRefundPathFindsTheRefundablePaymentThroughTheRefundableEndpoint() {
+    void theRefundableLookupAsksThePaymentServiceAboutTheApprovalReference() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo(REFUND_URL))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        assertThat(client.refundByOrderId(ORDER_ID)).isTrue();
+        client.findRefundableByOrderId(ORDER_ID, REFUND_REFERENCE);
 
         server.verify();
     }
 
     @Test
+    void theRefundPathFindsTheRefundablePaymentThroughTheRefundableEndpoint() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_ORDER_REFERENCE_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        refundServer.expect(requestTo(REFUND_URL))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThat(client.refundByOrderId(ORDER_ID)).isEqualTo(RefundOutcome.REFUNDED);
+
+        server.verify();
+        refundServer.verify();
+    }
+
+    @Test
     void theRefundPathDoesNotRefundAnOrderWithoutARefundablePayment() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_ORDER_REFERENCE_URL))
             .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertThat(client.refundByOrderId(ORDER_ID)).isFalse();
+        assertThat(client.refundByOrderId(ORDER_ID)).isEqualTo(RefundOutcome.NO_PAYMENT);
 
         server.verify();
     }
@@ -198,39 +222,40 @@ class PaymentServiceClientTest {
     @Test
     void theFullRefundDeclaresTheCapturedAmountCurrencyAndTheApprovalReference() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_ORDER_REFERENCE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo(REFUND_URL))
+        refundServer.expect(requestTo(REFUND_URL))
             .andExpect(method(HttpMethod.POST))
             .andExpect(content().json("{\"amount\":2499.00,\"currency\":\"VND\",\"refundReference\":\"%s\"}"
                     .formatted(ORDER_ID)))
             .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        assertThat(client.refundByOrderId(ORDER_ID)).isTrue();
+        assertThat(client.refundByOrderId(ORDER_ID)).isEqualTo(RefundOutcome.REFUNDED);
 
-        server.verify();
+        refundServer.verify();
     }
 
     @Test
     void theRefundPathSendsTheApprovedAmountCurrencyAndApprovalReference() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo(REFUND_URL))
+        refundServer.expect(requestTo(REFUND_URL))
             .andExpect(method(HttpMethod.POST))
             .andExpect(content().json("{\"amount\":100.00,\"currency\":\"VND\",\"refundReference\":\"%s\"}"
                     .formatted(REFUND_REFERENCE)))
             .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        assertThat(client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND", REFUND_REFERENCE)).isTrue();
+        assertThat(client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND", REFUND_REFERENCE))
+                .isEqualTo(RefundOutcome.REFUNDED);
 
-        server.verify();
+        refundServer.verify();
     }
 
     @Test
     void theRefundPathRefusesAnAmountAboveTheRemainingRefundableAmount() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("3000.00"), "VND",
@@ -244,7 +269,7 @@ class PaymentServiceClientTest {
     @Test
     void theRefundPathRefusesANonPositiveAmount() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, BigDecimal.ZERO, "VND", REFUND_REFERENCE))
@@ -257,7 +282,7 @@ class PaymentServiceClientTest {
     @Test
     void theRefundPathRefusesACurrencyThatIsNotThePaymentCurrency() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "USD",
@@ -271,9 +296,97 @@ class PaymentServiceClientTest {
     @Test
     void theRefundPathPropagatesTheRefusalOfThePaymentService() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(partiallyRefundedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo(REFUND_URL))
+        refundServer.expect(requestTo(REFUND_URL))
+            .andRespond(errorResponse(HttpStatus.CONFLICT, "PAY-5006"));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5006"));
+
+        refundServer.verify();
+    }
+
+    @Test
+    void aFailedPaymentServiceIsReportedAsServiceUnavailable() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        refundServer.expect(requestTo(REFUND_URL))
+            .andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ERR-0503"));
+
+        refundServer.verify();
+    }
+
+    @Test
+    void theRetryOfAReviewAfterATimeoutFindsTheConfirmedRefundAndMovesNoMoney() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withSuccess(refundedWithReferenceJson(), MediaType.APPLICATION_JSON));
+
+        RefundOutcome outcome = client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE);
+
+        assertThat(outcome).isEqualTo(RefundOutcome.ALREADY_REFUNDED);
+        server.verify();
+        refundServer.verify();
+    }
+
+    @Test
+    void aTimeoutOfTheRefundIsReportedAsServiceUnavailableSoTheReviewCanBeRetried() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        refundServer.expect(requestTo(REFUND_URL))
+            .andRespond(withException(new IOException("read timed out")));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ERR-0503"));
+
+        refundServer.verify();
+    }
+
+    @Test
+    void aFailedRefundableLookupIsReportedAsServiceUnavailableAndNotAsADenial() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ERR-0503"));
+
+        server.verify();
+    }
+
+    @Test
+    void aTimeoutOfTheRefundableLookupIsReportedAsServiceUnavailableAndNotAsADenial() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withException(new IOException("read timed out")));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ERR-0503"));
+
+        server.verify();
+    }
+
+    @Test
+    void aRefusedRefundableLookupIsPropagatedAsTheRefusalOfThePaymentService() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(errorResponse(HttpStatus.CONFLICT, "PAY-5006"));
 
         assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
@@ -285,19 +398,17 @@ class PaymentServiceClientTest {
     }
 
     @Test
-    void aFailedPaymentServiceIsReportedAsServiceUnavailable() {
+    void theLookupKeepsTheShortTimeoutAndTheRefundUsesTheDedicatedRefundClient() {
         stubToken();
-        server.expect(requestTo(REFUNDABLE_URL))
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo(REFUND_URL))
-            .andRespond(withServerError());
+        refundServer.expect(requestTo(REFUND_URL))
+            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
-                REFUND_REFERENCE))
-            .isInstanceOfSatisfying(BusinessException.class,
-                ex -> assertThat(ex.getErrorCode()).isEqualTo("ERR-0503"));
+        client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND", REFUND_REFERENCE);
 
         server.verify();
+        refundServer.verify();
     }
 
     private Optional<PaymentStatusSnapshot> findFailingClosed() {

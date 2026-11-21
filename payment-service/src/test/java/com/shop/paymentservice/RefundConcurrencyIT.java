@@ -139,6 +139,59 @@ class RefundConcurrencyIT extends AbstractIntegrationTest {
         assertThat(paymentRefundRepository.findByPaymentId(paymentId)).hasSize(1);
     }
 
+    @Test
+    @DisplayName("4. a confirmed refund is observable through the refundable lookup and is never paid twice")
+    void theConfirmedRefundOfAnApprovalIsObservableAndIsNotPaidTwice() {
+        UUID orderId = UUID.randomUUID();
+        UUID paymentId = createPayment(orderId);
+        paymentService.capture(paymentId);
+        UUID reference = UUID.randomUUID();
+
+        paymentService.refund(paymentId, PAYMENT_AMOUNT, "USD", reference);
+
+        var lookup = paymentService.findRefundableByOrderId(orderId, reference);
+
+        assertThat(lookup)
+                .as("the refunded payment must still be found for the approval that paid it")
+                .isPresent();
+        assertThat(lookup.get().status()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(lookup.get().refundedAmount()).isEqualByComparingTo(PAYMENT_AMOUNT);
+        assertThat(lookup.get().refundedReference()).isEqualTo(reference.toString());
+
+        var replay = paymentService.refund(paymentId, PAYMENT_AMOUNT, "USD", reference);
+
+        assertThat(replay.refundedAmount()).isEqualByComparingTo(PAYMENT_AMOUNT);
+        assertThat(scriptedProvider.refundKeys())
+                .as("the repeated approval must not reach the provider again")
+                .hasSize(1);
+        assertThat(paymentRefundRepository.findByPaymentId(paymentId))
+                .as("the repeated approval must not record a second refund")
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("5. a partial refund keeps the payment refundable and a repeated approval is not paid twice")
+    void aPartialRefundIsObservableAndTheRepeatedApprovalIsNotPaidTwice() {
+        UUID orderId = UUID.randomUUID();
+        UUID paymentId = createPayment(orderId);
+        paymentService.capture(paymentId);
+        UUID reference = UUID.randomUUID();
+
+        paymentService.refund(paymentId, new BigDecimal("40.00"), "USD", reference);
+
+        var lookup = paymentService.findRefundableByOrderId(orderId, reference);
+
+        assertThat(lookup).isPresent();
+        assertThat(lookup.get().status()).isEqualTo(PaymentStatus.PARTIALLY_REFUNDED);
+        assertThat(lookup.get().refundedReference()).isEqualTo(reference.toString());
+
+        var replay = paymentService.refund(paymentId, new BigDecimal("40.00"), "USD", reference);
+
+        assertThat(replay.refundedAmount()).isEqualByComparingTo(new BigDecimal("40.00"));
+        assertThat(scriptedProvider.refundKeys()).hasSize(1);
+        assertThat(paymentRefundRepository.findByPaymentId(paymentId)).hasSize(1);
+    }
+
     private Throwable refundAfter(CountDownLatch start, UUID paymentId, UUID reference) {
         try {
             start.await(30, TimeUnit.SECONDS);
@@ -153,8 +206,12 @@ class RefundConcurrencyIT extends AbstractIntegrationTest {
     }
 
     private UUID createPayment() {
+        return createPayment(UUID.randomUUID());
+    }
+
+    private UUID createPayment(UUID orderId) {
         var created = paymentService.create(new CreatePaymentRequest(
-                UUID.randomUUID(), PAYMENT_AMOUNT, "USD", UUID.randomUUID().toString(), null, SCRIPTED));
+                orderId, PAYMENT_AMOUNT, "USD", UUID.randomUUID().toString(), null, SCRIPTED));
         return created.id();
     }
 }

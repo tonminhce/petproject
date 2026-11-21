@@ -40,5 +40,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     List<Payment> findRefundableByOrderId(@Param("orderId") UUID orderId,
             @Param("statuses") Collection<PaymentStatus> statuses);
 
+    List<Payment> findByOrderIdAndIdIn(UUID orderId, Collection<UUID> ids);
+
     boolean existsByOrderId(UUID orderId);
 }

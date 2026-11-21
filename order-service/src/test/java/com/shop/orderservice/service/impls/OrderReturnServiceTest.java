@@ -4,6 +4,7 @@ import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.PageResponse;
 import com.shop.orderservice.client.PaymentServiceClient;
+import com.shop.orderservice.client.RefundOutcome;
 import com.shop.orderservice.constant.OrderStatus;
 import com.shop.orderservice.constant.ReturnStatus;
 import com.shop.orderservice.dto.request.OrderReturnCreateRequest;
@@ -147,7 +148,7 @@ class OrderReturnServiceTest {
         when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
-                .thenReturn(true);
+                .thenReturn(RefundOutcome.REFUNDED);
 
         OrderReturnReviewRequest review = new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager");
 
@@ -165,7 +166,7 @@ class OrderReturnServiceTest {
         when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId))
-                .thenReturn(true);
+                .thenReturn(RefundOutcome.REFUNDED);
 
         service.reviewReturn(returnId, "admin_user",
                 new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));
@@ -181,12 +182,46 @@ class OrderReturnServiceTest {
         when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "USD", returnId))
-                .thenReturn(true);
+                .thenReturn(RefundOutcome.REFUNDED);
 
         service.reviewReturn(returnId, "admin_user",
                 new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));
 
         verify(paymentServiceClient).refundByOrderId(orderId, new BigDecimal("100.00"), "USD", returnId);
+    }
+
+    @Test
+    void reviewReturn_theRetryAfterATimeoutFindsTheConfirmedRefundAndMarksTheReturnRefunded() {
+        Order order = orderWithTotal(new BigDecimal("2499.00"), "VND");
+        OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing));
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId))
+                .thenReturn(RefundOutcome.ALREADY_REFUNDED);
+
+        OrderReturnResponse response = service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));
+
+        assertThat(response.status()).isEqualTo(ReturnStatus.REFUNDED);
+        verify(paymentServiceClient).refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId);
+    }
+
+    @Test
+    void reviewReturn_aTimeoutOfTheRefundIsPropagatedAndTheReturnIsNotMarkedRefunded() {
+        Order order = orderWithTotal(new BigDecimal("2499.00"), "VND");
+        OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
+        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing));
+        when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId))
+                .thenThrow(BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "payment"));
+
+        assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SERVICE_UNAVAILABLE.getCode()));
+
+        verify(orderReturnRepository, never()).save(any(OrderReturn.class));
     }
 
     @Test
@@ -251,7 +286,7 @@ class OrderReturnServiceTest {
         when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
-                .thenReturn(true);
+                .thenReturn(RefundOutcome.REFUNDED);
 
         service.reviewReturn(returnId, "admin_user",
                 new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));

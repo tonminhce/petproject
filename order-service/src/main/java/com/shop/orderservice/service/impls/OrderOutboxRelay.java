@@ -5,6 +5,7 @@ import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.BatchOutcome;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
 import com.shop.common.kafka.producer.OutboxBatchOrdering;
+import com.shop.common.kafka.producer.OutboxPublishLedger;
 import com.shop.orderservice.entity.OutboxEvent;
 import com.shop.orderservice.repository.OutboxEventRepository;
 import com.shop.orderservice.service.OrderMetrics;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -31,6 +33,7 @@ public class OrderOutboxRelay {
     private final KafkaMessagePublisher kafkaPublisher;
     private final OrderMetrics metrics;
     private final TransactionTemplate transactionTemplate;
+    private final OutboxPublishLedger publishLedger = new OutboxPublishLedger();
 
     @Value("${order.outbox.batch-size:100}")
     private int batchSize;
@@ -63,27 +66,8 @@ public class OrderOutboxRelay {
         Instant started = Instant.now();
         try {
             metrics.setPendingOutboxCount((int) outboxRepo.countByStatus(OutboxStatus.PENDING));
-            recoverStrandedClaims();
 
-            List<Long> claimedIds = new ArrayList<>();
-            for (int drained = 0; drained < batchSize; drained++) {
-                Long claimed = transactionTemplate.execute(tx -> {
-                    Optional<OutboxEvent> locked = outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING);
-                    if (locked.isEmpty()) {
-                        return null;
-                    }
-                    OutboxEvent event = locked.get();
-                    event.setStatus(OutboxStatus.SENDING);
-                    event.setClaimedAt(Instant.now());
-                    event.setLastError(null);
-                    outboxRepo.save(event);
-                    return event.getId();
-                });
-                if (claimed == null) {
-                    break;
-                }
-                claimedIds.add(claimed);
-            }
+            List<Long> claimedIds = claimPendingBatch();
             if (claimedIds.isEmpty()) {
                 return;
             }
@@ -96,17 +80,30 @@ public class OrderOutboxRelay {
                 keys.add(key);
                 messages.add(new OutboxMessage(e.getTopic(), key, e.getPayload()));
             }
-            BatchOutcome outcome = kafkaPublisher.publishBatch(
-                    messages, publishTimeoutMs, TimeUnit.MILLISECONDS);
+            publishLedger.beginPublish(claimedIds);
+            BatchOutcome outcome;
+            try {
+                outcome = kafkaPublisher.publishBatch(messages, publishTimeoutMs, TimeUnit.MILLISECONDS);
+            } catch (RuntimeException ex) {
+                releaseFailedClaims(claimedIds);
+                publishLedger.settle(claimedIds);
+                throw ex;
+            }
             List<Boolean> delivered = new ArrayList<>(rows.size());
             List<String> errors = new ArrayList<>(rows.size());
+            List<Long> deliveredIds = new ArrayList<>(rows.size());
             for (int i = 0; i < rows.size(); i++) {
                 BatchOutcome.RecordOutcome record = (outcome != null && outcome.outcomes().size() == rows.size())
                         ? outcome.outcomes().get(i)
                         : null;
-                delivered.add(record != null && record.success());
+                boolean ok = record != null && record.success();
+                delivered.add(ok);
+                if (ok) {
+                    deliveredIds.add(rows.get(i).getId());
+                }
                 errors.add(record == null ? "publish did not complete before the deadline" : record.error());
             }
+            publishLedger.confirmPublished(deliveredIds);
             log.debug("Outbox batch sent={} success={} completed={}",
                     outcome == null ? 0 : outcome.sent(),
                     outcome == null ? 0 : outcome.success(),
@@ -120,12 +117,52 @@ public class OrderOutboxRelay {
                 final String error = errors.get(i);
                 transactionTemplate.executeWithoutResult(tx -> markFinalState(row, sent, error));
             }
+            publishLedger.settle(claimedIds);
         } finally {
             metrics.recordRelayDuration(Duration.between(started, Instant.now()));
         }
     }
 
-    private void recoverStrandedClaims() {
+    private List<Long> claimPendingBatch() {
+        List<Long> claimedIds = new ArrayList<>();
+        for (int drained = 0; drained < batchSize; drained++) {
+            Long claimed = transactionTemplate.execute(tx -> {
+                Optional<OutboxEvent> locked = outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING);
+                if (locked.isEmpty()) {
+                    return null;
+                }
+                OutboxEvent event = locked.get();
+                event.setStatus(OutboxStatus.SENDING);
+                event.setClaimedAt(Instant.now());
+                event.setLastError(null);
+                outboxRepo.save(event);
+                return event.getId();
+            });
+            if (claimed == null) {
+                break;
+            }
+            claimedIds.add(claimed);
+        }
+        return claimedIds;
+    }
+
+    private void releaseFailedClaims(List<Long> claimedIds) {
+        Set<Long> published = publishLedger.publishedEventIds();
+        List<Long> releasable = claimedIds.stream().filter(id -> !published.contains(id)).toList();
+        if (releasable.isEmpty()) {
+            return;
+        }
+        Integer released = transactionTemplate.execute(tx -> outboxRepo.releaseClaims(releasable,
+                OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED, maxRetries,
+                "the broker publish failed - the claim went back to the retry set"));
+        if (released != null && released > 0) {
+            log.warn("Released {} outbox claim(s) after the broker publish failed", released);
+        }
+    }
+
+    @Scheduled(fixedDelayString = "${order.outbox.recovery-poll-millis:30000}",
+            initialDelayString = "${order.outbox.recovery-initial-delay-millis:30000}")
+    public void recoverStrandedClaims() {
         Instant cutoff = Instant.now().minusMillis(claimLeaseMs);
         Integer reclaimed = transactionTemplate.execute(tx -> outboxRepo.reclaimStaleSending(
                 OutboxStatus.SENDING, OutboxStatus.PENDING, OutboxStatus.FAILED,

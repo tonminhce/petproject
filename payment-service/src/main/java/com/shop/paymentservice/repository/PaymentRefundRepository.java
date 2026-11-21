@@ -12,4 +12,6 @@ public interface PaymentRefundRepository extends JpaRepository<PaymentRefund, UU
     Optional<PaymentRefund> findByPaymentIdAndRefundReference(UUID paymentId, String refundReference);
 
     List<PaymentRefund> findByPaymentId(UUID paymentId);
+
+    List<PaymentRefund> findByRefundReference(String refundReference);
 }

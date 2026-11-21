@@ -9,4 +9,5 @@ public record PaymentStatusSnapshot(
         UUID id,
         BigDecimal amount,
         String currency,
-        BigDecimal refundedAmount) {}
+        BigDecimal refundedAmount,
+        String refundedReference) {}

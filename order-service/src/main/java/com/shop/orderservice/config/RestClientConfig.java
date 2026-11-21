@@ -46,6 +46,11 @@ public class RestClientConfig {
         return baseRestClient(restClientBuilder, props.payment().url(), props.payment().timeoutMs());
     }
 
+    @Bean("paymentRefundRestClient")
+    public RestClient paymentRefundRestClient(ShopServicesProperties props, RestClient.Builder restClientBuilder) {
+        return baseRestClient(restClientBuilder, props.payment().url(), props.payment().refundTimeout());
+    }
+
     private RestClient baseRestClient(RestClient.Builder builder, String baseUrl, int timeoutMs) {
         ClientHttpRequestFactory factory = createPooledRequestFactory(timeoutMs);
 

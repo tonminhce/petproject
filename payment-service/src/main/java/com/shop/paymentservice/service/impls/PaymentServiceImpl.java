@@ -196,8 +196,10 @@ public class PaymentServiceImpl implements PaymentService {
             throw BusinessException.of(ErrorCode.BAD_REQUEST, refundReference);
         }
         String reference = refundReference.toString();
-        if (refundRepository.findByPaymentIdAndRefundReference(payment.getId(), reference).isPresent()) {
-            return PaymentResponse.from(payment);
+        Optional<PaymentRefund> recorded =
+                refundRepository.findByPaymentIdAndRefundReference(payment.getId(), reference);
+        if (recorded.isPresent()) {
+            return PaymentResponse.from(payment, recorded.get().getRefundReference());
         }
         PaymentStatus currentStatus = payment.getStatus();
         if (currentStatus != PaymentStatus.CAPTURED && currentStatus != PaymentStatus.PARTIALLY_REFUNDED) {
@@ -262,7 +264,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStateMachine.transition(previousStatus, nextStatus));
         Payment saved = writer.save(payment);
         writer.publishLifecycleEvent(saved, "payment.refunded.v1");
-        return PaymentResponse.from(saved);
+        return PaymentResponse.from(saved, refundReference);
     }
 
     private BigDecimal confirmedRefundedAmount(UUID paymentId) {
@@ -293,13 +295,33 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<PaymentResponse> findRefundableByOrderId(UUID orderId) {
+    public Optional<PaymentResponse> findRefundableByOrderId(UUID orderId, UUID refundReference) {
         if (orderId == null) {
             return Optional.empty();
+        }
+        Optional<Payment> confirmed = paymentWithConfirmedRefund(orderId, refundReference);
+        if (confirmed.isPresent()) {
+            return Optional.of(PaymentResponse.from(confirmed.get(), refundReference.toString()));
         }
         return repository.findRefundableByOrderId(orderId, REFUNDABLE_STATUSES).stream()
                 .findFirst()
                 .map(PaymentResponse::from);
+    }
+
+    private Optional<Payment> paymentWithConfirmedRefund(UUID orderId, UUID refundReference) {
+        if (refundReference == null) {
+            return Optional.empty();
+        }
+        List<UUID> paymentIds = refundRepository.findByRefundReference(refundReference.toString()).stream()
+                .map(PaymentRefund::getPaymentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (paymentIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return repository.findByOrderIdAndIdIn(orderId, paymentIds).stream()
+                .findFirst();
     }
 
     @Override

@@ -273,7 +273,7 @@ class OrderServiceImplTest {
     }
 
     private PaymentStatusSnapshot capturedPayment(BigDecimal amount, String currency) {
-        return new PaymentStatusSnapshot(orderId, "CAPTURED", UUID.randomUUID(), amount, currency, null);
+        return new PaymentStatusSnapshot(orderId, "CAPTURED", UUID.randomUUID(), amount, currency, null, null);
     }
 
     @Test
@@ -401,7 +401,7 @@ class OrderServiceImplTest {
         when(paymentClient.isEnabled()).thenReturn(true);
         when(paymentClient.findCapturedByOrderId(orderId))
             .thenReturn(Optional.of(new PaymentStatusSnapshot(
-                orderId, "PENDING", UUID.randomUUID(), BigDecimal.valueOf(110), "VND", null)));
+                orderId, "PENDING", UUID.randomUUID(), BigDecimal.valueOf(110), "VND", null, null)));
 
         assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
@@ -420,7 +420,7 @@ class OrderServiceImplTest {
         when(paymentClient.isEnabled()).thenReturn(true);
         when(paymentClient.findCapturedByOrderId(orderId))
             .thenReturn(Optional.of(new PaymentStatusSnapshot(
-                orderId, "REFUNDED", UUID.randomUUID(), BigDecimal.valueOf(110), "VND", null)));
+                orderId, "REFUNDED", UUID.randomUUID(), BigDecimal.valueOf(110), "VND", null, null)));
 
         assertThatThrownBy(() -> service.confirmOrder(orderId, actor, null))
             .isInstanceOfSatisfying(BusinessException.class,
