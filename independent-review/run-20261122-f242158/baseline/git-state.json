@@ -1,0 +1,40 @@
+{
+  "runId": "run-20261122-f242158",
+  "capturedAt": "2026-11-22T01:41+07:00",
+  "recreatedAt": "2026-11-22T02:26+07:00 after external wipe of audit tree at 02:00 local (19:00Z)",
+  "gitRoot": "/Users/tonminh-mac/IdeaProjects/untitled5",
+  "repository": "petproject (shop-microservices)",
+  "headRevision": "f242158265163d65ef73d378331d2bd7a92479ee",
+  "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+  "workingTree": {
+    "modifiedFiles": 14,
+    "untrackedPaths": 86,
+    "nonProductionAuditChanges": 0,
+    "note": "All dirty paths are inside production-audit/ (prior harness artifacts). First-party application source is clean at HEAD."
+  },
+  "buildSystem": {
+    "tool": "Maven 3.9.16 via ./mvnw wrapper",
+    "javaTarget": "25",
+    "jdkInstalled": "OpenJDK 26.0.1 (build 26.0.1+8-34)",
+    "springBootParent": "4.1.1",
+    "springCloud": "2025.1.0",
+    "rootArtifact": "com.shop.microservices:shop-microservices:1.0-SNAPSHOT",
+    "reactorModules": 24
+  },
+  "mavenModules": {
+    "services": ["auth-service", "product-service", "order-service", "payment-service", "inventory-service", "shipping-service", "notification-service", "rating-service", "search-service", "promotion-service", "tax-service", "favourite-service", "media-service", "gateway-service"],
+    "sharedLibs": ["common-config", "common-core", "common-security", "common-logging", "common-keycloak", "common-kafka", "common-spring", "common-storage"],
+    "discrepancies": ["common-patterns: untracked directory with stale target/ residue only; deleted from git in commit 5d6ba251; not in utils/pom.xml modules; README.md:612 still advertises it (verified by arch-design agent)"]
+  },
+  "javaFileCounts": { "total": 1106, "main": 676, "test": 430 },
+  "manifestFileCount": 1301,
+  "runtimeEnvironment": {
+    "docker": "29.7.2",
+    "composeStackUp": true,
+    "containers": ["gateway-service", "auth-service", "product-service", "order-service", "payment-service", "payment-service-stripe-acceptance", "shipping-service", "inventory-service", "favourite-service", "media-service", "notification-service", "promotion-service", "rating-service", "search-service", "tax-service", "postgres", "kafka", "redis", "keycloak", "rustfs", "elasticsearch", "prometheus", "grafana", "loki", "tempo", "otel-collector", "alloy", "alertmanager"],
+    "containerImagesBuiltAt": "2026-11-21T18:00-18:41Z",
+    "kubernetes": { "kubectlClient": "v1.36.2", "currentContext": null, "note": "No cluster context configured - K8s runtime behavior cannot be verified; manifests only" },
+    "externalOperator": "Another session/process actively restarts containers (gateway recreated repeatedly 18:41/19:06/19:10/19:22 UTC) and runs intermittent k6 checkout bursts; wiped the audit tree at 19:00Z"
+  },
+  "stripeCredentials": { "testModeKeysPresentInDotEnv": true, "keyTypeObserved": "sk_test_* (redacted)", "apiBase": "https://api.stripe.com" }
+}

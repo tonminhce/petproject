@@ -1,5 +1,5 @@
 {
-  "revision": "",
+  "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
   "suites": {
     "alerts": {
       "checks": [
@@ -62,7 +62,7 @@
         {
           "detail": "no committed telegram token or live stripe key was found",
           "evidence": [
-            "tracked files scanned: 2042",
+            "tracked files scanned: 2075",
             "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
           ],
           "id": "ALT-06",
@@ -108,11 +108,11 @@
         }
       ],
       "detail": "0 failed and 0 blocked checks",
-      "harness_fingerprint": "6c8dec86814867a7bd6e4280e848fb503e536b0bc004681e0d2a28cee22218d5",
-      "source_fingerprint": "3094513e22f24a48cd8c185b6d166347ec666d921429c0c93cbc168dc0ea7256",
+      "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
+      "source_fingerprint": "db2373143bde2f88edf10e529c4d138350491acf79ec89f5256a1b762f78ec6f",
       "status": "PASS",
       "suite": "alerts",
-      "updated_at": "2026-11-21T18:41:07Z"
+      "updated_at": "2026-11-21T19:18:27Z"
     },
     "baseline": {
       "command": "./mvnw -B -ntp -T1C clean verify",
@@ -152,19 +152,19 @@
     "concurrency": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Race*Test,*Parallel*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Race*Test,*Parallel*Test -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "concurrency and multi-instance scenarios",
-      "duration_seconds": 216.267,
+      "duration_seconds": 639.546,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
-      "harness_fingerprint": "6c8dec86814867a7bd6e4280e848fb503e536b0bc004681e0d2a28cee22218d5",
+      "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency.log",
-      "revision": "7e18740b48f41f91e6a94bf9a13976c4e8f28b90",
+      "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
       "skipped": 0,
-      "source_fingerprint": "3094513e22f24a48cd8c185b6d166347ec666d921429c0c93cbc168dc0ea7256",
+      "source_fingerprint": "8dedd67606cd894592e627e7c992abf1fe48d3249cc0487a6c9a4a913619a223",
       "status": "PASS",
       "suite": "concurrency",
       "tests_run": 38,
-      "updated_at": "2026-11-21T18:27:07Z"
+      "updated_at": "2026-11-21T19:12:01Z"
     },
     "concurrency_inventory": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dfailsafe.failIfNoSpecifiedTests=false -pl inventory-service -am",
@@ -245,19 +245,19 @@
     "integration": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "integration tests against real infrastructure",
-      "duration_seconds": 691.261,
+      "duration_seconds": 674.551,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
-      "harness_fingerprint": "6c8dec86814867a7bd6e4280e848fb503e536b0bc004681e0d2a28cee22218d5",
+      "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/integration.log",
-      "revision": "7e18740b48f41f91e6a94bf9a13976c4e8f28b90",
+      "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
       "skipped": 0,
-      "source_fingerprint": "3094513e22f24a48cd8c185b6d166347ec666d921429c0c93cbc168dc0ea7256",
+      "source_fingerprint": "0c8894a39fa5eb0edba1b5450033a3e5bec38599eec4edd4289a7647330bca0a",
       "status": "PASS",
       "suite": "integration",
       "tests_run": 362,
-      "updated_at": "2026-11-21T18:38:39Z"
+      "updated_at": "2026-11-21T19:54:46Z"
     },
     "k8s": {
       "checks": [
@@ -378,11 +378,11 @@
         }
       ],
       "detail": "0 kubernetes manifest checks failed",
-      "harness_fingerprint": "6c8dec86814867a7bd6e4280e848fb503e536b0bc004681e0d2a28cee22218d5",
-      "source_fingerprint": "3094513e22f24a48cd8c185b6d166347ec666d921429c0c93cbc168dc0ea7256",
+      "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
+      "source_fingerprint": "db2373143bde2f88edf10e529c4d138350491acf79ec89f5256a1b762f78ec6f",
       "status": "PASS",
       "suite": "k8s",
-      "updated_at": "2026-11-21T18:39:22Z"
+      "updated_at": "2026-11-21T19:18:29Z"
     },
     "kafka": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -404,7 +404,7 @@
     "operations": {
       "checks": [
         {
-          "detail": "14 service targets up, 31 request metric series",
+          "detail": "14 service targets up, 135 request metric series",
           "evidence": {
             "request_series": [
               "gateway-service",
@@ -419,6 +419,8 @@
               "tax-service"
             ],
             "service_targets_up": [
+              "notification-service:8090",
+              "gateway-service:8080",
               "auth-service:8088",
               "product-service:8086",
               "media-service:8083",
@@ -430,9 +432,7 @@
               "shipping-service:8087",
               "favourite-service:8081",
               "promotion-service:8093",
-              "rating-service:8089",
-              "notification-service:8090",
-              "gateway-service:8080"
+              "rating-service:8089"
             ]
           },
           "id": "OBS-01",
@@ -446,14 +446,16 @@
           "passed": true
         },
         {
-          "detail": "7 log streams, 50 samples",
+          "detail": "10 log streams, 50 samples",
           "evidence": {
             "containers": [
               "alloy",
+              "eloquent_kare",
+              "eloquent_wilson",
               "grafana",
-              "pensive_neumann",
-              "testcontainers-ryuk-56cb74a1-b313-4f21-b18a-2e9402910c2e",
-              "testcontainers-ryuk-e2465394-413b-4801-9323-d48368726655"
+              "inventory-service",
+              "tempo",
+              "testcontainers-ryuk-c17733f7-cb57-4cf6-8433-53ef0a82b22e"
             ]
           },
           "id": "OBS-02",
@@ -461,24 +463,25 @@
           "passed": true
         },
         {
-          "detail": "20 traces from 8 services",
+          "detail": "20 traces from 9 services",
           "evidence": {
             "services": [
+              "favourite-service",
               "inventory-service",
               "media-service",
-              "notification-service",
+              "order-service",
               "payment-service",
               "product-service",
               "promotion-service",
-              "rating-service",
+              "search-service",
               "shipping-service"
             ],
             "trace_ids": [
-              "27c7fd0c1be4c299fcbae50f6a4a9fdb",
-              "2c368beeddd69435055ba898ce7422ca",
-              "83d62487d910dfb06949b2205698edc",
-              "26331a5fc41fd601f74e53b749904634",
-              "23ec8f21acdc73a702f97d65359f03a8"
+              "9249ff779d8cb2f20a1384845bb45e21",
+              "91a487119098a8bd0852b5425717d972",
+              "fced9d8ebaad83dff38b34fc6c07b603",
+              "9ef1ae175a5230610129e3d4348de155",
+              "158114f651305def05d436a93731c5d0"
             ]
           },
           "id": "OBS-03",
@@ -532,15 +535,15 @@
         }
       ],
       "detail": "7 of 7 observability checks passed",
-      "harness_fingerprint": "6c8dec86814867a7bd6e4280e848fb503e536b0bc004681e0d2a28cee22218d5",
+      "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "not_verified": [
         "OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically",
         "OBS-05 a controlled failure is visible in the backends but the check is not automated"
       ],
-      "source_fingerprint": "3094513e22f24a48cd8c185b6d166347ec666d921429c0c93cbc168dc0ea7256",
+      "source_fingerprint": "db2373143bde2f88edf10e529c4d138350491acf79ec89f5256a1b762f78ec6f",
       "status": "PASS",
       "suite": "operations",
-      "updated_at": "2026-11-21T18:38:41Z"
+      "updated_at": "2026-11-21T19:18:26Z"
     },
     "payment": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl payment-service -am",
@@ -560,14 +563,14 @@
       "updated_at": "2026-11-21T18:13:35Z"
     },
     "performance": {
-      "harness_fingerprint": "d1ba39f2cd7e84af7a72cf4ddfa28e1cda43b2e49e4f735ba387c355a5809075",
+      "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "invariants": "PASS",
       "measurement_valid": true,
       "metrics": {
-        "achieved_rate_ratio": 0.8861,
+        "achieved_rate_ratio": 0.8201,
         "business_failure": 0,
         "business_refusal": 0,
-        "business_success": 638,
+        "business_success": 3916,
         "cart_contention": 0,
         "cart_failure": 0,
         "check_rate": 1,
@@ -575,30 +578,30 @@
         "credential_error": 0,
         "failed_requests": 0,
         "failure_rate": 0,
-        "iteration_rate_per_second": 2.8999871574068736,
-        "iterations": 319,
-        "latency_avg_ms": 23.32311851543207,
-        "latency_max_ms": 269.101375,
-        "latency_min_ms": 3.55,
-        "latency_p50_ms": 15.350479,
-        "latency_p90_ms": 45.418783000000005,
-        "latency_p95_ms": 62.12071414999999,
+        "iteration_rate_per_second": 8.343231500910571,
+        "iterations": 1919,
+        "latency_avg_ms": 48.85308594041386,
+        "latency_max_ms": 1353.858876,
+        "latency_min_ms": 2.208625,
+        "latency_p50_ms": 13.390833,
+        "latency_p90_ms": 132.99614160000002,
+        "latency_p95_ms": 227.7563841999998,
         "latency_p99_ms": null,
-        "oversell_responses": 0,
-        "planned_iteration_rate_per_second": 3.2727,
+        "oversell_responses": 1841,
+        "planned_iteration_rate_per_second": 10.1739,
         "platform_errors": null,
         "rate_unit": "iterations per second",
-        "request_rate_per_second": 5.890883003133712,
-        "requests": 648,
+        "request_rate_per_second": 42.24657659945181,
+        "requests": 9717,
         "shed_requests": 0,
-        "successful_requests": 648,
+        "successful_requests": 9717,
         "unexpected_responses": null
       },
-      "profile": "recovery",
-      "source_fingerprint": "d25673c3c6268695b605c6f6b937457e9dd251125e599c5d0ccd32741548348b",
+      "profile": "ramp",
+      "source_fingerprint": "81efcf6547720d9ad2e8ef3ceea5d7e2e238680d4199f7ecee2ec14634b81185",
       "status": "PASS",
       "suite": "performance",
-      "updated_at": "2026-11-21T14:26:53Z"
+      "updated_at": "2026-11-21T19:23:06Z"
     },
     "security": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -635,5 +638,5 @@
       "updated_at": "2026-11-21T18:06:29Z"
     }
   },
-  "updated_at": "2026-11-21T18:41:07Z"
+  "updated_at": "2026-11-21T19:54:46Z"
 }

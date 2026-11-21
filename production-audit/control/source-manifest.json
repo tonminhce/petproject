@@ -224,17 +224,17 @@
       "tracked": true
     },
     {
-      "bytes": 3410,
+      "bytes": 6237,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "3670d35b5d3ff9a0785d50a7d162fdfb05d5890e",
+      "git_blob": "bba4b60a025903f84315ec19b84795422444ca68",
       "language": "markdown",
-      "lines": 53,
+      "lines": 103,
       "module": "AGENTS.md",
       "path": "AGENTS.md",
       "reviewed_lines": [],
-      "sha256": "9057d4e341b851ed97a72860fc86e9a97854f6e62ea632d5391ecea76ca3b2bb",
+      "sha256": "49e290550a44ac81a77606523f1ac3eccf84d40f72b4a04f6617c4d0a821a620",
       "tracked": true
     },
     {
@@ -12814,7 +12814,7 @@
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "829ff2a51c99139bf713119fcafea66c32d6260a",
+      "git_blob": "f44ecda5ad1604c789f5ac0e49673234252a0a65",
       "language": "python",
       "lines": 231,
       "module": "production-audit",
@@ -13230,17 +13230,17 @@
       "tracked": true
     },
     {
-      "bytes": 26039,
+      "bytes": 26330,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "2008c526319c7037f7261b00038a6105fe97d4f6",
       "language": "python",
-      "lines": 625,
+      "lines": 629,
       "module": "production-audit",
       "path": "production-audit/harness/loadtesting/runner.py",
       "reviewed_lines": [],
-      "sha256": "c555a262e4caa10bdb158a19f62b66f466516cefc6ee071cf7e6c46c88e080cf",
+      "sha256": "35627693578a9af7b250bd2a632a08f0be5fc9f7e4c5e68f6ecdf805087bcd2b",
       "tracked": true
     },
     {
@@ -13342,17 +13342,17 @@
       "tracked": true
     },
     {
-      "bytes": 56635,
+      "bytes": 57768,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "249436435e38f25b764dc32b45f4aa3cd2e4e3f0",
+      "git_blob": "36fe7ebdb3da7bcb2c84df3a8cf1cc583474e5e4",
       "language": "python",
-      "lines": 885,
+      "lines": 895,
       "module": "production-audit",
       "path": "production-audit/harness/reporting/final_report.py",
       "reviewed_lines": [],
-      "sha256": "3010c544b158bb245f69acbb06a8c63e37c1bdffe51b36e95f5568ed0f54eece",
+      "sha256": "b13e75f17dcf436221bc42307d685a3c88b64e0923dc4bb24c21ddbeb52cb5a8",
       "tracked": true
     },
     {
@@ -13580,17 +13580,17 @@
       "tracked": true
     },
     {
-      "bytes": 41333,
+      "bytes": 53122,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "80f96bf7126002f871462f3529ffb951d5153b62",
+      "git_blob": "7301c3f456462f072d7d1391cee93ba4c46bfae6",
       "language": "python",
-      "lines": 980,
+      "lines": 1197,
       "module": "production-audit",
       "path": "production-audit/harness/stripe/acceptance.py",
       "reviewed_lines": [],
-      "sha256": "d2fe86c149d997cc4ca63b4d5ac3237ee846861d660d9c09bba9f82ecce28e2f",
+      "sha256": "933d00cee9b425576352a8b78a800fb06910eda0d82460ca251acdf7c5a0c917",
       "tracked": true
     },
     {
@@ -20776,7 +20776,7 @@
       "tracked": true
     }
   ],
-  "generated_at": "2026-11-21T17:47:10Z",
+  "generated_at": "2026-11-21T18:59:48Z",
   "language_summary": {
     "html": 8,
     "java": 1106,
@@ -20844,7 +20844,7 @@
     "utils/pom.xml": 1
   },
   "repository_root": "/Users/tonminh-mac/IdeaProjects/untitled5",
-  "revision": "c3bd495a8ca5b7db47e6f9b935f1f3496ec213dc",
-  "source_fingerprint": "d25673c3c6268695b605c6f6b937457e9dd251125e599c5d0ccd32741548348b",
-  "total_lines": 221852
+  "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
+  "source_fingerprint": "3094513e22f24a48cd8c185b6d166347ec666d921429c0c93cbc168dc0ea7256",
+  "total_lines": 222133
 }

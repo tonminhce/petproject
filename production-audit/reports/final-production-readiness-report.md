@@ -2,7 +2,7 @@
 ## HỆ THỐNG KIẾN TRÚC VI DỊCH VỤ THƯƠNG MẠI ĐIỆN TỬ PETPROJECT PLATFORM
 ### TOÀN DIỆN 37 MỤC — SINH TỰ ĐỘNG TỪ BẰNG CHỨNG KIỂM ĐỊNH
 
-- **Thời điểm sinh báo cáo**: 2026-11-21T17:47:22Z
+- **Thời điểm sinh báo cáo**: 2026-11-21T18:51:57Z
 - **Nguồn dữ liệu**: trạng thái bền vững của harness, kết quả kiểm định, kết quả chạy tải, kết quả Stripe, kết quả Kubernetes và lịch sử phân phối Git.
 - **Nguyên tắc**: mọi khẳng định trong báo cáo này được sinh tự động từ bằng chứng đã lưu. Trường nào chưa có bằng chứng thì được ghi rõ là chưa xác minh.
 
@@ -11,21 +11,21 @@
 ## 1. TỔNG QUAN ĐIỀU HÀNH & KẾT LUẬN CUỐI CÙNG (EXECUTIVE SUMMARY)
 
 - **Quyết định nghiệm thu**: **CHƯA ĐẠT — CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT**.
-- **Cổng kiểm định**: 9/25 đạt, 6 không đạt, 9 chờ, 1 bị chặn.
-- **Rà soát mã nguồn**: 99.66% (1478/1483 tập tin).
-- **Tác vụ còn mở mức HIGH**: 2 (CRITICAL: 0, MEDIUM: 103, LOW: 77).
+- **Cổng kiểm định**: 8/25 đạt, 2 không đạt, 15 chờ.
+- **Rà soát mã nguồn**: 99.87% (1483/1485 tập tin).
+- **Tác vụ còn mở mức HIGH**: 0 (CRITICAL: 0, MEDIUM: 103, LOW: 77).
 - **Quyết định sản xuất theo completion predicate**: chưa đạt.
-- **Cổng đang không đạt**: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-13, GATE-14, GATE-15, GATE-16, GATE-18, GATE-19, GATE-21, GATE-24.
-- **Bằng chứng tải nặng** (lần chạy mới nhất: recovery — PASS, thư mục recovery-1795271066): yêu cầu 648, tần suất 5.89 req/s, p95 62.12 ms, tỷ lệ lỗi 0.0000.
-- **Giới hạn dung lượng đo được**: 13.9867 req/s (6.7581 lượt lặp/giây), hồ sơ baseline, thư mục baseline-1795269895 — xem mục 20.
-- **Stripe sandbox thực**: trạng thái BLOCKED — xem mục 12 và 13.
+- **Cổng đang không đạt**: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-12, GATE-13, GATE-14, GATE-15, GATE-16, GATE-18, GATE-19, GATE-23, GATE-24.
+- **Bằng chứng tải nặng** (lần chạy mới nhất: ramp — PASS, thư mục ramp-1795286502): yêu cầu 9733, tần suất 42.24 req/s, p95 72.36 ms, tỷ lệ lỗi 0.0000.
+- **Giới hạn dung lượng đo được**: 42.2400 req/s (8.3326 lượt lặp/giây), hồ sơ ramp, thư mục ramp-1795286502 — xem mục 20.
+- **Stripe sandbox thực**: trạng thái kiểm định cấu hình BLOCKED, nghiệm thu thanh toán PROVEN_AGAINST_REAL_STRIPE_API — xem mục 12 và 13.
 - **Cảnh báo Telegram**: 6 cổng cảnh báo đã được ghi nhận — xem mục 29, 30 và 31.
 
 ## 2. KIỂM TOÁN TOÀN BỘ MÃ NGUỒN (FULL SOURCE AUDIT)
 
-- Tổng số tập tin trong phạm vi: **1483**; đã rà soát: **1478**.
-- Tỷ lệ rà soát mã thực thi: **99.77%** (1284/1287).
-- Phân bố theo nhóm: BUILD=1, DOCUMENTATION=90, GENERATED=8, HARNESS=85, INFRASTRUCTURE=42, PRODUCTION_CODE=691, SHARED_LIBRARY=119, TEST_CODE=434, VENDORED_TOOLING=13.
+- Tổng số tập tin trong phạm vi: **1485**; đã rà soát: **1483**.
+- Tỷ lệ rà soát mã thực thi: **99.84%** (1287/1289).
+- Phân bố theo nhóm: BUILD=1, DOCUMENTATION=90, GENERATED=8, HARNESS=85, INFRASTRUCTURE=44, PRODUCTION_CODE=691, SHARED_LIBRARY=119, TEST_CODE=434, VENDORED_TOOLING=13.
 
 ## 3. KIẾN TRÚC HIỆN TẠI (CURRENT ARCHITECTURE)
 
@@ -82,11 +82,11 @@
 
 ## 13. KIỂM THỬ ĐẦU-CUỐI THANH TOÁN STRIPE THỰC TẾ (REAL STRIPE PAYMENT E2E)
 
-- **Chưa xác minh được**: the configured webhook secret is a local placeholder, so the signature check would only prove that a self signed payload round trips.
-- Không dùng khóa live-mode, không giả lập phản hồi Stripe, không dùng Stripe mock làm bằng chứng tích hợp thật.
-- Nghiệm thu thanh toán đã ghi nhận: trạng thái PROVEN_AGAINST_OFFICIAL_STRIPE_MOCK, máy chủ Stripe bị kiểm định official-stripe-mock 0.206.0 tại http://stripe-mock-acceptance:12111; tổng số 8 trường hợp, 7 proven, 0 thất bại, 1 chưa chứng minh được.
-- Các trường hợp nghiệm thu chưa được chứng minh: declined_card_refusal.
-- Cổng GATE-6 (PAYMENT_CORRECTNESS): BLOCKED — the payment acceptance is NOT verified against the real Stripe: it ran against the official Stripe mock 0.206.0 (7 of 8 cases proven; outstanding: declined_card_refusal); a genuine test-mode key against api.stripe.com is still required; the payment suite reports PENDING.
+- **Đã xác minh trên Stripe thật (api.stripe.com) qua bằng chứng nghiệm thu đã lưu**: trạng thái PROVEN_AGAINST_REAL_STRIPE_API, khóa chế độ test, tổng số 8 trường hợp với 8 proven.
+- Các trường hợp đã được chứng minh: authorisation_and_capture, capture_webhook_signature_verified, refund, refund_idempotent_replay, partial_refund, second_partial_refund, declined_card_refusal, currency_mismatch_refusal.
+- Không dùng khóa live-mode và không dùng Stripe mock làm bằng chứng tích hợp thật.
+- Nghiệm thu thanh toán đã ghi nhận: trạng thái PROVEN_AGAINST_REAL_STRIPE_API, máy chủ Stripe bị kiểm định real-stripe-api 2026-11-18.endive tại https://api.stripe.com; tổng số 8 trường hợp, 8 proven, 0 thất bại, 0 chưa chứng minh được.
+- Cổng GATE-6 (PAYMENT_CORRECTNESS): PENDING — the payment acceptance ran against api.stripe.com with a genuine test-mode key and every case was proven; the payment suite reports PENDING.
 
 ## 14. XÁC MINH WEBHOOK & HOÀN TIỀN (WEBHOOK AND REFUND VERIFICATION)
 
@@ -97,7 +97,7 @@
 
 ## 15. XÁC MINH DOCKER COMPOSE (DOCKER COMPOSE VERIFICATION)
 
-- Bộ kiểm thử tích hợp: STALE, 357 test.
+- Bộ kiểm thử tích hợp: STALE, 362 test.
 - Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 
 ## 16. KIẾN TRÚC KUBERNETES (KUBERNETES ARCHITECTURE)
@@ -143,10 +143,10 @@
 
 ## 20. THÔNG LƯỢNG NỀN TẢNG VS ĐỈNH (BASELINE VS PEAK THROUGHPUT)
 
-- **Giới hạn dung lượng đo được (measured capacity limit)**: 13.9867 req/s (6.7581 lượt lặp/giây) — hồ sơ baseline, thư mục baseline-1795269895: 2298 thành công, 0 thất bại, 0 từ chối, 0 yêu cầu bị gateway loại bỏ, 0 vi phạm bất biến.
+- **Giới hạn dung lượng đo được (measured capacity limit)**: 42.2400 req/s (8.3326 lượt lặp/giây) — hồ sơ ramp, thư mục ramp-1795286502: 3907 thành công, 0 thất bại, 0 từ chối, 0 yêu cầu bị gateway loại bỏ, 0 vi phạm bất biến.
 - Quy tắc suy ra (ghi trong trạng thái đã lưu): the highest rate the platform delivered in the last complete measured run with zero business failures and zero invariant violations.
-- Lần chạy đo đầy đủ cuối cùng: 2026-11-21T11:58:06Z đến 2026-11-21T14:24:26Z, các thư mục: flash-sale-1795262286, spike-1795268516, promotion-storm-1795269071, baseline-1795269895, ramp-1795270107, recovery-1795271066.
-- Nơi nền tảng ngừng giữ được: flash-sale ở 21.5188 req/s với 791 thất bại nghiệp vụ, 0 từ chối, 783 yêu cầu bị gateway loại bỏ; promotion-storm ở 11.2870 req/s với 1261 thất bại nghiệp vụ, 0 từ chối, 0 yêu cầu bị gateway loại bỏ; ramp ở 12.5141 req/s với 29 thất bại nghiệp vụ, 0 từ chối, 742 yêu cầu bị gateway loại bỏ; spike ở 10.1242 req/s với 32 thất bại nghiệp vụ, 0 từ chối, 68 yêu cầu bị gateway loại bỏ.
+- Lần chạy đo đầy đủ cuối cùng: 2026-11-21T11:58:06Z đến 2026-11-21T18:41:42Z, các thư mục: flash-sale-1795262286, spike-1795268516, promotion-storm-1795269071, baseline-1795269895, recovery-1795271066, ramp-1795286502.
+- Nơi nền tảng ngừng giữ được: flash-sale ở 21.5188 req/s với 791 thất bại nghiệp vụ, 0 từ chối, 783 yêu cầu bị gateway loại bỏ; promotion-storm ở 11.2870 req/s với 1261 thất bại nghiệp vụ, 0 từ chối, 0 yêu cầu bị gateway loại bỏ; spike ở 10.1242 req/s với 32 thất bại nghiệp vụ, 0 từ chối, 68 yêu cầu bị gateway loại bỏ.
 - **Phép đo đã ghi nhận không còn gắn với mã nguồn hiện tại** (lý do ghi trong trạng thái đã lưu): the recorded results do not hold the fields the current harness records (platform_error_rate, transport_failure_rate), so they were produced by a harness whose measurement differs from the current one.
 - Bằng chứng đầy đủ: production-audit/runs/run-20261118-a2b6e6fc/load-results/capacity-limit.md.
 - Nguồn của con số: recorded state production-audit/state/performance-baselines.json.
@@ -162,9 +162,10 @@
 - promotion-storm — kịch bản promotion-storm, trạng thái BLOCKED: yêu cầu 1942, 11.29 req/s, lượt lặp 1942, p95 60574.17 ms, tỷ lệ lỗi 0.5299.
   - Kế hoạch: 60.0000 lượt lặp/giây (120.0000 req/s); đã giao: 11.2870 lượt lặp/giây, 11.2870 req/s; tỷ lệ giao/nhắm không đo được (mẫu số: planned_iteration_rate_per_second); thành công 0, thất bại 1261, từ chối 0, gateway loại 0, vi phạm bất biến 0.
   - Số lần chạy đã lưu cho hồ sơ này: 21; bảng trên là lần chạy cuối cùng.
-- ramp — kịch bản full, trạng thái BLOCKED: yêu cầu 3257, 12.51 req/s, lượt lặp 757, p95 39436.19 ms, tỷ lệ lỗi 0.1197.
-  - Kế hoạch: 12.0000 lượt lặp/giây (48.0000 req/s); đã giao: 2.9086 lượt lặp/giây, 12.5141 req/s; tỷ lệ giao/nhắm không đo được (mẫu số: planned_iteration_rate_per_second); thành công 825, thất bại 29, từ chối 0, gateway loại 742, vi phạm bất biến 0.
-  - Số lần chạy đã lưu cho hồ sơ này: 21; bảng trên là lần chạy cuối cùng.
+- ramp — kịch bản full, trạng thái PASS: yêu cầu 9733, 42.24 req/s, lượt lặp 1920, p95 72.36 ms, tỷ lệ lỗi 0.0000.
+  - Kế hoạch: 12.0000 lượt lặp/giây (48.0000 req/s); đã giao: 8.3326 lượt lặp/giây, 42.2400 req/s; tỷ lệ giao/nhắm 0.8190 (mẫu số: planned_iteration_rate_per_second); thành công 3907, thất bại 0, từ chối 0, gateway loại 0, vi phạm bất biến 0.
+  - Kết luận nghiệp vụ: the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.82 of the planned 10.17 iterations per second.
+  - Số lần chạy đã lưu cho hồ sơ này: 22; bảng trên là lần chạy cuối cùng.
 - recovery — kịch bản browse, trạng thái PASS: yêu cầu 648, 5.89 req/s, lượt lặp 319, p95 62.12 ms, tỷ lệ lỗi 0.0000.
   - Kế hoạch: 5.0000 lượt lặp/giây (10.0000 req/s); đã giao: 2.9000 lượt lặp/giây, 5.8909 req/s; tỷ lệ giao/nhắm 0.8861 (mẫu số: planned_iteration_rate_per_second); thành công 638, thất bại 0, từ chối 0, gateway loại 0, vi phạm bất biến 0.
   - Kết luận nghiệp vụ: the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.89 of the planned 3.27 iterations per second.
@@ -173,20 +174,20 @@
   - Kế hoạch: 50.0000 lượt lặp/giây (200.0000 req/s); đã giao: 0.9222 lượt lặp/giây, 10.1242 req/s; tỷ lệ giao/nhắm 0.0232 (mẫu số: planned_iteration_rate_per_second); thành công 722, thất bại 32, từ chối 0, gateway loại 68, vi phạm bất biến 0.
   - Kết luận nghiệp vụ: the business failure rate 0.0424 is within the limit 0.0500 but the platform shed 0.0827 of the requests, which exceeds the limit 0.0100.
   - Số lần chạy đã lưu cho hồ sơ này: 16; bảng trên là lần chạy cuối cùng.
-- Lần chạy đã lưu (mới nhất): hồ sơ recovery, 10 req/s nhắm, 10 VU, trạng thái PASS, thư mục recovery-1795271066.
+- Lần chạy đã lưu (mới nhất): hồ sơ ramp, 50 req/s nhắm, 200 VU, trạng thái PASS, thư mục ramp-1795286502.
 - **Tính hợp lệ của phép đo**: hợp lệ.
 
 ## 21. ĐỘ TRỄ & TỶ LỆ LỖI (LATENCY AND ERROR RATES)
 
-- Nguồn: lần chạy mới nhất recovery — PASS, thư mục recovery-1795271066.
-- p50 15.35 ms, p90 45.42 ms, p95 62.12 ms, p99 không đo được, trung bình 23.32 ms, lớn nhất 269.10 ms.
+- Nguồn: lần chạy mới nhất ramp — PASS, thư mục ramp-1795286502.
+- p50 10.55 ms, p90 41.49 ms, p95 72.36 ms, p99 không đo được, trung bình 22.15 ms, lớn nhất 957.42 ms.
 - Tỷ lệ lỗi HTTP: 0.0000 (0 yêu cầu lỗi).
 - Tỷ lệ kiểm tra nghiệp vụ đạt: 1.0000.
 
 ## 22. BÃO HÒA TÀI NGUYÊN (RESOURCE SATURATION)
 
-- Máy đo: 10 lõi, tải trung bình [11.74, 14.48, 14.95].
-- Phép đo của lần chạy mới nhất (recovery) là hợp lệ.
+- Máy đo: 10 lõi, tải trung bình [3.09, 5.08, 6.45].
+- Phép đo của lần chạy mới nhất (ramp) là hợp lệ.
 - HikariCP, CPU, bộ nhớ, Kafka lag và Redis: lần chạy tải không ghi nhận các chỉ số này, xem trạng thái cổng kiểm định tại production-audit/state/verification.json.
 
 ## 23. KẾT QUẢ FLASH-SALE TRÊN KHO HÀNG (FLASH-SALE INVENTORY RESULTS)
@@ -229,7 +230,8 @@
 
 ## 30. KẾT QUẢ CẢNH BÁO TELEGRAM RUNTIME (RUNTIME TELEGRAM ALERT RESULTS)
 
-- Cổng kiểm định cảnh báo (GATE-23): PASS — 0 failed and 0 blocked checks.
+- Cổng kiểm định cảnh báo (GATE-23): STALE — 0 failed and 0 blocked checks recorded against an earlier source revision.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 - QA-ALERT-02: PASS — controlled runtime incident delivered to the runtime destination 
 - QA-ALERT-03: PASS — recovery notification delivered 
 - QA-ALERT-04: PASS — identical alerts must collapse into a single grouped alert 
@@ -248,36 +250,30 @@
 
 ## 32. BUILD & KIỂM THỬ HỒI QUY (BUILD AND REGRESSION TESTS)
 
-- alerts: PASS — 0 failed and 0 blocked checks
+- alerts: STALE — 0 failed and 0 blocked checks recorded against an earlier source revision
 - baseline: STALE — 1913 test recorded against an earlier source revision
-- build: PASS
+- build: STALE — recorded against an earlier source revision
 - comments: STALE — recorded against an earlier source revision
 - concurrency: STALE — 38 test recorded against an earlier source revision
 - concurrency_inventory: STALE — 23 test recorded against an earlier source revision
 - e2e: STALE — 2 end to end collections completed the run recorded against an earlier source revision
-- edge: FAIL — 33 test
+- edge: STALE — 41 test recorded against an earlier source revision
 - gateway: STALE — 141 test recorded against an earlier source revision
-- happy: FAIL — 497 test
-- integration: STALE — 357 test recorded against an earlier source revision
+- happy: STALE — 2014 test recorded against an earlier source revision
+- integration: STALE — 362 test recorded against an earlier source revision
 - k8s: STALE — 0 kubernetes manifest checks failed recorded against an earlier source revision
 - kafka: STALE — 263 test recorded against an earlier source revision
 - operations: STALE — 7 of 7 observability checks passed recorded against an earlier source revision
-- payment: STALE — 308 test recorded against an earlier source revision
+- payment: STALE — 310 test recorded against an earlier source revision
 - performance: PASS
 - security: STALE — 153 test recorded against an earlier source revision
-- unit: PASS — 2030 test
-- Lệnh build: ./mvnw -B -ntp -T 1 clean verify, mã thoát 0, thời gian 880.881 giây, ghi nhận lúc 2026-11-21T14:42:33Z tại revision c3bd495a8ca5.
+- unit: STALE — 2030 test recorded against an earlier source revision
+- Lệnh build: ./mvnw -B -ntp -T 1 clean verify, mã thoát 0, thời gian 764.01 giây, ghi nhận lúc 2026-11-21T18:00:08Z tại revision 7e18740b48f4 — bằng chứng đã cũ so với mã nguồn hiện tại, phải chạy lại và ghi nhận lại.
 
 ## 33. PHÁN QUYẾT QA ĐỘC LẬP (INDEPENDENT QA VERDICTS)
 
-- PAY-15-30-psp-integration-review-2.md (41084 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
-- PAY-15-30-psp-integration-review-3.md (13571 byte) — phán quyết đã ghi nhận trong văn bản: PASS.
-- PAY-15-psp-integration-review.md (33342 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
 - final-candidate-review.md (39103 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
-- final-change-review.md (43648 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
-- high-batch-acceptance-criteria.md (88525 byte) — phán quyết đã ghi nhận trong văn bản: PASS.
-- orchestrator-change-review.md (62068 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
-- Cổng GATE-19 (INDEPENDENT_REVIEW): FAIL — 5 of 7 independent reviews report a failing verdict (2 đạt, 5 không đạt, 0 không có phán quyết rõ).
+- Cổng GATE-19 (INDEPENDENT_REVIEW): FAIL — 1 of 1 independent reviews report a failing verdict (0 đạt, 1 không đạt, 0 không có phán quyết rõ).
 - **Có bản đánh giá độc lập ghi phán quyết không đạt**: cổng GATE-19 đang không đạt nên báo cáo này không thể kết luận nghiệm thu.
 
 ## 34. COMMIT & KẾT QUẢ PUSH (GIT COMMITS AND PUSH OUTCOMES)
@@ -316,10 +312,7 @@
 
 ### 35.1 Mức HIGH
 
-| Mã | Mức | Trạng thái | Nội dung |
-| --- | --- | --- | --- |
-| PAY-40 | HIGH | BLOCKED | The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred |
-| PAY-41 | HIGH | BLOCKED | Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential |
+- Không có tác vụ HIGH nào đang mở.
 
 ### 35.2 Mức MEDIUM
 
@@ -437,15 +430,15 @@
 
 ### 36.1 ĐÃ XÁC MINH BẰNG BẰNG CHỨNG
 
-- Rà soát mã nguồn: 1478/1483 tập tin đã được rà soát; 5 tập tin chưa rà soát (cổng GATE-1 chưa đạt: 5 files not yet fully reviewed).
+- Rà soát mã nguồn: 1483/1485 tập tin đã được rà soát; 2 tập tin chưa rà soát (cổng GATE-1 chưa đạt: 2 files not yet fully reviewed).
 - Chính sách không chú thích: STALE — recorded against an earlier source revision.
 - Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
-- Build reactor: PASS.
-- Bất biến nghiệp vụ dưới tải (lần chạy recovery — PASS): PASS — 8 bất biến kiểm tra, 8 đạt, 0 không đạt, 0 bỏ qua, 0 vi phạm.
+- Build reactor: bằng chứng đã cũ.
+- Bất biến nghiệp vụ dưới tải (lần chạy ramp — PASS): PASS — 8 bất biến kiểm tra, 8 đạt, 0 không đạt, 0 bỏ qua, 0 vi phạm.
 
 ### 36.2 CHƯA XÁC MINH
 
-- Tích hợp Stripe sandbox thật (api.stripe.com với khóa test thật): cổng GATE-6 đang BLOCKED — the payment acceptance is NOT verified against the real Stripe: it ran against the official Stripe mock 0.206.0 (7 of 8 cases proven; outstanding: declined_card_refusal); a genuine test-mode key against api.stripe.com is still required; the payment suite reports PENDING; nghiệm thu đã ghi nhận chạy trên official-stripe-mock tại http://stripe-mock-acceptance:12111.
+- Tích hợp Stripe sandbox thật (api.stripe.com với khóa test thật): cổng GATE-6 đang PENDING — the payment acceptance ran against api.stripe.com with a genuine test-mode key and every case was proven; the payment suite reports PENDING; nghiệm thu đã ghi nhận chạy trên real-stripe-api tại https://api.stripe.com.
 - Giao hàng Telegram thật trong môi trường production: các cổng QA-ALERT-00, QA-ALERT-01, QA-ALERT-02, QA-ALERT-03 đã giao thành công qua Telegram Bot API công khai trong môi trường kiểm định; việc giao hàng trong production vẫn chưa được xác minh.
 - Cấp nhân tự động HPA trên cụm thật: đã quan sát và ghi nhận (mục 17); KEDA thì chưa triển khai (mục 18), nên cấp nhân theo KEDA trên cụm thật chưa thể xác minh.
 - Thông lượng thanh toán cấp nhà cung cấp: phụ thuộc giới hạn tần suất của Stripe và cấu hình tài khoản.
@@ -454,8 +447,8 @@
 ## 37. QUYẾT ĐỊNH SẴN SÀNG TRIỂN KHAI SẢN XUẤT (PRODUCTION READINESS DECISION)
 
 - **Quyết định**: CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT.
-- Các cổng chưa đạt: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-13, GATE-14, GATE-15, GATE-16, GATE-18, GATE-19, GATE-21, GATE-24.
-- Số tác vụ HIGH đang mở: 2 (CRITICAL: 0); MEDIUM: 103; LOW: 77.
-- Trạng thái tổng hợp tác vụ: BLOCKED=2, DISCOVERED=8, FAILED_VERIFICATION=0, IMPLEMENTED=0, IN_PROGRESS=0, NORMALIZED=0, READY=172, REOPENED=0, REQUIREMENT_CONFLICT=0, VERIFIED=86, VERIFYING=0.
+- Các cổng chưa đạt: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-12, GATE-13, GATE-14, GATE-15, GATE-16, GATE-18, GATE-19, GATE-23, GATE-24.
+- Số tác vụ HIGH đang mở: 0 (CRITICAL: 0); MEDIUM: 103; LOW: 77.
+- Trạng thái tổng hợp tác vụ: BLOCKED=0, DISCOVERED=8, FAILED_VERIFICATION=0, IMPLEMENTED=0, IN_PROGRESS=0, NORMALIZED=0, READY=172, REOPENED=0, REQUIREMENT_CONFLICT=0, VERIFIED=88, VERIFYING=0.
 - Báo cáo được sinh tự động tại /Users/tonminh-mac/IdeaProjects/untitled5/production-audit/reports/final-production-readiness-report.md.
 

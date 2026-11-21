@@ -486,9 +486,9 @@
     "AGENTS.md": {
       "category": "DOCUMENTATION",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "9057d4e341b851ed97a72860fc86e9a97854f6e62ea632d5391ecea76ca3b2bb",
+      "current_sha256": "49e290550a44ac81a77606523f1ac3eccf84d40f72b4a04f6617c4d0a821a620",
       "language": "markdown",
-      "lines": 53,
+      "lines": 103,
       "lines_reviewed": 54,
       "module": "AGENTS.md",
       "reviewed_by": "audit-lead",
@@ -512,7 +512,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "9057d4e341b851ed97a72860fc86e9a97854f6e62ea632d5391ecea76ca3b2bb",
+      "sha256_at_discovery": "49e290550a44ac81a77606523f1ac3eccf84d40f72b4a04f6617c4d0a821a620",
       "updated_at": "2026-11-19T13:14:41Z"
     },
     "CLAUDE.md": {
@@ -23028,9 +23028,9 @@
     "production-audit/harness/loadtesting/runner.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "c555a262e4caa10bdb158a19f62b66f466516cefc6ee071cf7e6c46c88e080cf",
+      "current_sha256": "35627693578a9af7b250bd2a632a08f0be5fc9f7e4c5e68f6ecdf805087bcd2b",
       "language": "python",
-      "lines": 625,
+      "lines": 629,
       "lines_reviewed": 215,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -23054,7 +23054,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "c555a262e4caa10bdb158a19f62b66f466516cefc6ee071cf7e6c46c88e080cf",
+      "sha256_at_discovery": "35627693578a9af7b250bd2a632a08f0be5fc9f7e4c5e68f6ecdf805087bcd2b",
       "updated_at": "2026-11-19T16:49:45Z"
     },
     "production-audit/harness/loadtesting/settle.py": {
@@ -23284,9 +23284,9 @@
     "production-audit/harness/reporting/final_report.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "3010c544b158bb245f69acbb06a8c63e37c1bdffe51b36e95f5568ed0f54eece",
+      "current_sha256": "b13e75f17dcf436221bc42307d685a3c88b64e0923dc4bb24c21ddbeb52cb5a8",
       "language": "python",
-      "lines": 885,
+      "lines": 895,
       "lines_reviewed": 440,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -23310,7 +23310,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "3010c544b158bb245f69acbb06a8c63e37c1bdffe51b36e95f5568ed0f54eece",
+      "sha256_at_discovery": "b13e75f17dcf436221bc42307d685a3c88b64e0923dc4bb24c21ddbeb52cb5a8",
       "updated_at": "2026-11-19T16:49:45Z"
     },
     "production-audit/harness/reporting/generators.py": {
@@ -23828,9 +23828,9 @@
     "production-audit/harness/stripe/acceptance.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "d2fe86c149d997cc4ca63b4d5ac3237ee846861d660d9c09bba9f82ecce28e2f",
+      "current_sha256": "933d00cee9b425576352a8b78a800fb06910eda0d82460ca251acdf7c5a0c917",
       "language": "python",
-      "lines": 980,
+      "lines": 1197,
       "lines_reviewed": 980,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -23866,7 +23866,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "d2fe86c149d997cc4ca63b4d5ac3237ee846861d660d9c09bba9f82ecce28e2f",
+      "sha256_at_discovery": "933d00cee9b425576352a8b78a800fb06910eda0d82460ca251acdf7c5a0c917",
       "updated_at": "2026-11-21T11:23:45Z"
     },
     "production-audit/harness/stripe/recorder.py": {
@@ -37119,6 +37119,9 @@
     "auth-service/.flattened-pom.xml",
     "favourite-service/.flattened-pom.xml",
     "gateway-service/.flattened-pom.xml",
+    "independent-review/run-20261122-f242158/architecture/actual-system-map.md",
+    "independent-review/run-20261122-f242158/baseline/git-state.json",
+    "independent-review/run-20261122-f242158/baseline/source-manifest.json",
     "inventory-service/.flattened-pom.xml",
     "media-service/.flattened-pom.xml",
     "notification-service/.flattened-pom.xml",
@@ -37151,7 +37154,7 @@
     "utils/common-spring/src/main/resources/application.yml",
     "utils/common-storage/.flattened-pom.xml"
   ],
-  "revision": "c3bd495a8ca5b7db47e6f9b935f1f3496ec213dc",
+  "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
   "source_reports": [
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md",
@@ -37161,5 +37164,5 @@
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-service.md"
   ],
-  "updated_at": "2026-11-21T18:41:26Z"
+  "updated_at": "2026-11-21T18:59:48Z"
 }

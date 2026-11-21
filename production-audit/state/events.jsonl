@@ -225,3 +225,14 @@
 {"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T18:39:21Z", "type": "alerts_validate"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-21T18:39:22Z", "type": "k8s_validate"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-21T18:41:07Z", "type": "alerts_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T18:46:19Z", "type": "load_ramp"}
+{"payload": {"file_count": 1485, "revision": "f242158265163d65ef73d378331d2bd7a92479ee"}, "timestamp": "2026-11-21T18:47:02Z", "type": "inventory"}
+{"payload": {"file_count": 1485, "revision": "f242158265163d65ef73d378331d2bd7a92479ee"}, "timestamp": "2026-11-21T18:48:54Z", "type": "inventory"}
+{"payload": {"file_count": 1484, "revision": "f242158265163d65ef73d378331d2bd7a92479ee"}, "timestamp": "2026-11-21T18:59:32Z", "type": "inventory"}
+{"payload": {"file_count": 1483, "revision": "f242158265163d65ef73d378331d2bd7a92479ee"}, "timestamp": "2026-11-21T18:59:48Z", "type": "inventory"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T19:04:03Z", "type": "load_spike"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T19:10:43Z", "type": "load_flash-sale"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T19:17:21Z", "type": "load_promotion-storm"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T19:18:27Z", "type": "alerts_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T19:18:30Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T19:23:06Z", "type": "load_ramp"}

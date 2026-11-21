@@ -431,6 +431,10 @@ def _measure_profile(
 
 
 def _final_status(document: dict[str, Any]) -> str:
+    metrics = document.get("metrics") or {}
+    document["transport_failure_rate"] = metrics.get("failure_rate")
+    requests = float(metrics.get("requests") or 0)
+    document["platform_error_rate"] = round(float(metrics.get("platform_errors") or 0) / requests, 6) if requests > 0 else 0.0
     shared = _customer_pool_shared(document)
     if shared:
         document["status_detail"] = shared

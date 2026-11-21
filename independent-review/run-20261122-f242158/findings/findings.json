@@ -1,0 +1,57 @@
+{
+  "runId": "run-20261122-f242158",
+  "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
+  "consolidatedAt": "2026-11-22T02:29+07:00",
+  "totals": {
+    "P0": 3, "P1": 17, "P2": 38, "P3": 41, "total": 99,
+    "note": "Counts from per-agent reports plus orchestrator runtime findings; detail lives in the per-area files. QA challenge (findings/qa-challenge.md) may adjust verdicts - see that file for final status per finding."
+  },
+  "p0": [
+    {"id": "ORCH-1", "title": "Business 4xx rejections (sellout 409s) trip order-service circuit breakers -> platform-wide checkout outage", "confidence": "CONFIRMED_BY_REPRODUCTION", "evidence": "evidence/load/breaker-incident.md; InventoryServiceClient.java:39; StockReservationFailedException.java:8; no ignoreExceptions anywhere; live: resilience4j_circuitbreaker_state{state=open} for inventory/product/payment/rating/tax; checkout ORD-4007 fail-fast at 19:22Z"},
+    {"id": "ORD-1", "title": "Captured payment + user cancel while PENDING = money kept, no refund; late captured event skipped", "confidence": "CONFIRMED_FROM_SOURCE (qa-challenge pending)", "evidence": "findings/order-saga.md#ord-1; OrderServiceImpl.java:187-233; PaymentLifecycleConsumer.java:36-39"},
+    {"id": "ORD-2", "title": "Duplicate orders on concurrent identical checkouts (optional Idempotency-Key + cart lock window)", "confidence": "PARTIALLY_REFUTED_BY_RUNTIME (20-racer same-cart race produced exactly 1 completed order but 4 ghost zero-total PENDING orders + orphan reservations); qa-challenge pending for multi-instance variant", "evidence": "findings/order-saga.md#ord-2; evidence/load/load-results.md A3"}
+  ],
+  "p1": [
+    {"id": "ORD-3", "title": "No guard that an order has at most one captured payment (double capture possible)"},
+    {"id": "ORD-4", "title": "PSP HTTP calls inside @Transactional (locks/connections held across remote calls)"},
+    {"id": "ORD-5", "title": "Reconciliation auto-cancel ignores payment state (captured money auto-cancelled without refund)"},
+    {"id": "ORD-6", "title": "Remote commits before @Version-guarded status flip; lost races leave remote state inconsistent"},
+    {"id": "ORD-7", "title": "Tax integration broken when enabled (wrong URL + null required fields) and silently zero by default"},
+    {"id": "ORD-8", "title": "Discounts never clamped; no non-negative invariant on totals"},
+    {"id": "ORD-15", "title": "Cancelled orders can still ship; delivered event then dropped"},
+    {"id": "ORD-16", "title": "COD provider registered for caller selection with instant CONFIRMED capture"},
+    {"id": "PRD-1", "title": "Product has no @Version; detached full-row merge silently reverts concurrent writes (rating/media/price)"},
+    {"id": "PRD-2", "title": "Checkout prices from 10-minute Redis cache with no invalidation"},
+    {"id": "ARCH-1", "title": "k8s gateway trusted-proxy hops=0/empty CIDRs: per-client rate limiting collapses to ingress IP; admin IP allowlist silently inactive"},
+    {"id": "ARCH-2", "title": "resilience4j-bulkhead versionless/unmanaged; 2.3.0/2.4.0 split resilience4j classpath in last packaged jar"},
+    {"id": "QA-1", "title": "inventory-service (and auth-, favourite-service) *IT tests silently dead under mvn test/verify"},
+    {"id": "QA-2", "title": "No coverage or SCA gate bound anywhere (jacoco/OWASP dead config)"},
+    {"id": "QA-3", "title": "CI concurrency/integration jobs are harness-driven self-selected suites that can pass with zero tests"},
+    {"id": "ORCH-2", "title": "Genuine Stripe webhook delivery structurally unverifiable (registered endpoint = example.com placeholder; zero real evt_* processed in payment_events)"},
+    {"id": "ORCH-3", "title": "5 critical alerts firing with only telegram-disabled receiver (alertmanager container started without token) - no incident notifications"}
+  ],
+  "p2_highlights": [
+    "INV-1..4: reserve idempotency, terminal-replay, sweeper phantom releases, fixed 15-min TTL vs paid-order window",
+    "PROM-1: commit ignores campaign deactivation",
+    "PRD-3: public dead quantity fields never synced with inventory (product 100 vs inventory accounting)",
+    "PRD-5: ES indexing FAILED events terminal without reconciliation",
+    "ARCH-3/5/6: no downstream timeouts, deprecated serializer with toString() fallback, Keycloak client without timeouts",
+    "ARCH-9: no NetworkPolicy",
+    "KFK-1/3/4/9: poison ack-skip, FAILED terminal without DLT/metrics, dead-end DLT, unmanaged topics (1 partition, RF=1)",
+    "KFK-6/AUTH-2/AUTH-3: fallback mailbox for all order emails, no brute-force lockout with ROPC enabled, changeme secret defaults",
+    "QA-4..9,15: concurrency-test gaps (2-thread races, no expiry-vs-commit race, security-disabled ITs, no real PSP e2e)",
+    "ORCH-4: gateway public-path split-brain (search/ratings/medias anonymous 401; carts gateway-public)",
+    "ORCH-5: checkout partial-failure leaves user-visible ghost PENDING orders + stranded reservations (self-heals <=30 min via reconciliation)",
+    "ORCH-6: no HPA on any app service in k8s (gateway only), no KEDA",
+    "ORCH-7: false-positive DatabaseUnavailable/RedisUnavailable alerts from optional exporters being down"
+  ],
+  "sources": {
+    "order-saga": "findings/order-saga.md (22 findings)",
+    "inventory-promo": "findings/inventory-promo.md (21 findings)",
+    "arch-design": "findings/arch-design.md (21 findings)",
+    "kafka-messaging": "findings/kafka-messaging.md (17 findings)",
+    "qa-test-forensics": "findings/qa-test-forensics.md (15 findings)",
+    "orchestrator-runtime": "evidence/load/breaker-incident.md, evidence/load/load-results.md, evidence/stripe/e2e-run-log.md, evidence/k8s/k8s-manifest-review.md",
+    "qa-challenge": "findings/qa-challenge.md (independent challenge of all P0/P1)"
+  }
+}

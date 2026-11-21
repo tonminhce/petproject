@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -448,5 +449,62 @@ class OrderReturnServiceTest {
         OrderReturnResponse response = service.requestReturn(userId, orderId, request);
         assertThat(response.id()).isEqualTo(returnId);
         assertThat(response.refundAmount()).isEqualTo(BigDecimal.valueOf(80));
+    }
+
+    @Test
+    void anApprovalAndARejectionRacingOnTheSameReturnProduceOneDecisionAndTheMoneyMovesOnce() throws Exception {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn shared = requestedReturn(order, BigDecimal.valueOf(100), "VND");
+        java.util.concurrent.locks.ReentrantLock databaseLock = new java.util.concurrent.locks.ReentrantLock();
+        java.util.concurrent.CountDownLatch bothEntered = new java.util.concurrent.CountDownLatch(2);
+        stubLockedReturnWithLock(shared, databaseLock, bothEntered);
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
+                .thenAnswer(invocation -> {
+                    Thread.sleep(120);
+                    return RefundOutcome.REFUNDED;
+                });
+
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<?> approval = pool.submit(() -> service.reviewReturn(returnId, "admin",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "approve")));
+            java.util.concurrent.Future<?> rejection = pool.submit(() -> service.reviewReturn(returnId, "admin",
+                new OrderReturnReviewRequest(ReturnStatus.REJECTED, "reject")));
+            java.util.List<Throwable> failures = new java.util.ArrayList<>();
+            int decided = 0;
+            for (java.util.concurrent.Future<?> outcome : java.util.List.of(approval, rejection)) {
+                try {
+                    outcome.get(30, java.util.concurrent.TimeUnit.SECONDS);
+                    decided++;
+                } catch (java.util.concurrent.ExecutionException failure) {
+                    failures.add(failure.getCause());
+                }
+            }
+            assertThat(decided).as("exactly one review decision is applied").isEqualTo(1);
+            assertThat(failures).as("the other decision is refused with a business failure").hasSize(1);
+            verify(paymentServiceClient, times(1)).refundByOrderId(any(), any(), any(), any());
+            assertThat(shared.getStatus()).isEqualTo(ReturnStatus.REFUNDED);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private void stubLockedReturnWithLock(OrderReturn existing,
+            java.util.concurrent.locks.Lock databaseLock, java.util.concurrent.CountDownLatch entered) {
+        when(orderReturnRepository.findOrderIdByReturnId(returnId)).thenReturn(java.util.Optional.of(orderId));
+        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenAnswer(invocation -> {
+            databaseLock.lock();
+            try {
+                entered.countDown();
+                Thread.sleep(150);
+                return java.util.List.of(existing);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                return java.util.List.of(existing);
+            } finally {
+                databaseLock.unlock();
+            }
+        });
     }
 }

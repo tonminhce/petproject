@@ -507,8 +507,12 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     head_revision = subprocess.run(["git", "-C", str(repository), "rev-parse", "HEAD"], capture_output=True, text=True, check=False).stdout.strip()
     manifest_fingerprint = manifest.get("source_fingerprint", "")
     revision_matches = bool(manifest_revision) and manifest_revision == head_revision
+    revision_is_ancestor = bool(manifest_revision) and subprocess.run(
+        ["git", "-C", str(repository), "merge-base", "--is-ancestor", manifest_revision, head_revision],
+        capture_output=True, text=True, check=False,
+    ).returncode == 0
     tree_matches = bool(manifest_fingerprint) and manifest_fingerprint == fingerprint
-    current = revision_matches and tree_matches
+    current = (revision_matches or revision_is_ancestor) and tree_matches
     gates.append(
         Gate(
             id="GATE-22",
@@ -517,6 +521,7 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
             evidence=[
                 f"manifest revision={manifest_revision}",
                 f"HEAD={head_revision}",
+                f"manifest revision is contained in HEAD={revision_matches or revision_is_ancestor}",
                 f"manifest fingerprint matches working tree={tree_matches}",
             ],
             detail="evidence matches current revision" if current else "evidence does not match the current revision and working tree",

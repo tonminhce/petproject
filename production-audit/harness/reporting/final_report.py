@@ -312,7 +312,10 @@ def write_final_report(path: Path | None = None) -> Path:
             + " req/s (" + _rate(capacity_limit.get("iterations_per_second"))
             + " lượt lặp/giây), hồ sơ " + str(capacity_limit.get("profile", "")) + ", thư mục "
             + str(capacity_limit.get("directory", "")) + " — xem mục 20.")
-    add("- **Stripe sandbox thực**: trạng thái " + str(stripe_result.get("status", "chưa chạy")) + " — xem mục 12 và 13.")
+    stripe_line = "- **Stripe sandbox thực**: trạng thái kiểm định cấu hình " + str(stripe_result.get("status", "chưa chạy"))
+    if acceptance:
+        stripe_line += ", nghiệm thu thanh toán " + str(acceptance.get("status", "chưa chạy"))
+    add(stripe_line + " — xem mục 12 và 13.")
     add("- **Cảnh báo Telegram**: " + str(len(alert_gates)) + " cổng cảnh báo đã được ghi nhận — xem mục 29, 30 và 31.")
     add("")
 
@@ -407,9 +410,16 @@ def write_final_report(path: Path | None = None) -> Path:
 
     add("## 13. KIỂM THỬ ĐẦU-CUỐI THANH TOÁN STRIPE THỰC TẾ (REAL STRIPE PAYMENT E2E)")
     add("")
+    acceptance_real = acceptance.get("verified_against_real_stripe_api") is True and (acceptance_server.get("is_public_stripe_api") is True)
     if stripe_result.get("status") == "PASS" and stripe_result.get("payment_intent_id"):
         add("- PaymentIntent thực: " + str(stripe_result.get("payment_intent_id")) + ", trạng thái " + str(stripe_result.get("state")) + ", số tiền " + str(stripe_result.get("amount")) + " " + str(stripe_result.get("currency")) + ".")
         add("- Khóa idempotency: " + str(stripe_result.get("idempotency_key")) + "; request id: " + str(stripe_result.get("create_request_id")) + ".")
+    elif acceptance_real:
+        add("- **Đã xác minh trên Stripe thật (api.stripe.com) qua bằng chứng nghiệm thu đã lưu**: trạng thái " + str(acceptance.get("status", "chưa chạy")) + ", khóa chế độ " + str((acceptance.get("credential") or {}).get("secret_key_mode", "không rõ")) + ", tổng số " + str(acceptance_summary.get("cases", 0)) + " trường hợp với " + str(acceptance_summary.get("proven", 0)) + " proven.")
+        proven_names = [str(case.get("name")) for case in acceptance_cases if str(case.get("verdict")) == "PROVEN"]
+        if proven_names:
+            add("- Các trường hợp đã được chứng minh: " + ", ".join(proven_names) + ".")
+        add("- Không dùng khóa live-mode và không dùng Stripe mock làm bằng chứng tích hợp thật.")
     else:
         add("- **Chưa xác minh được**: " + str(stripe_result.get("reason", stripe_result.get("status", "chưa chạy"))) + ".")
         for finding in stripe_result.get("findings", []):

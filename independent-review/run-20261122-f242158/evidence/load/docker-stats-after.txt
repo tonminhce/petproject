@@ -1,0 +1,8 @@
+gateway-service	120.24%	354.7MiB / 11.42GiB
+order-service	89.72%	725.3MiB / 11.42GiB
+product-service	10.00%	663.7MiB / 11.42GiB
+inventory-service	5.10%	518.2MiB / 11.42GiB
+promotion-service	1.48%	479.9MiB / 11.42GiB
+postgres	10.57%	180.1MiB / 11.42GiB
+kafka	16.35%	257.7MiB / 11.42GiB
+redis	6.02%	3.637MiB / 11.42GiB
