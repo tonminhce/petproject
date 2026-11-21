@@ -43,6 +43,35 @@ This project is indexed by GitNexus as **petproject** (19227 symbols, 42358 rela
 
 <!-- gitnexus:end -->
 
+
+## Container And Resource Hygiene
+
+The development machine has 16 GB of RAM and 10 cores, and Docker competes with
+everything else on it. These rules keep the footprint small enough to work in.
+
+1. One container per service. The compose stack at docker-compose.yml is the only
+   source of kafka, redis and postgres. Never start a second one by hand and
+   never leave a Testcontainers container behind.
+2. Testcontainers are ephemeral. After a test run, and especially after an
+   interrupted one, run: docker container prune -f. A run that is killed leaves
+   its containers behind and they keep holding memory.
+3. The exporters are opt in. postgres-exporter and redis-exporter live in the
+   observability profile and no alert rule references them. Do not start them
+   unless the audit is specifically about exporter metrics.
+4. Never prune volumes. docker volume prune deletes the database data of every
+   service whose container happens to be stopped at that moment.
+5. Prune the safe things after a build: docker image prune -f for the dangling
+   layers and docker builder prune -f for the build cache. Do not run
+   docker image prune -a: it deletes the tagged images that the compose stack and
+   the integration tests need.
+6. One heavy thing at a time. Do not run a maven build while a load profile or a
+   suite is running, and do not run two load profiles at once. The build needs the
+   memory that the containers hold, which is why the verification pass stops the
+   compose services before it builds.
+7. Keep the secret hygiene: credentials live in the git-ignored .env and are
+   loaded with set -a followed by sourcing .env. Never print one in full and
+   never write one into a tracked file.
+
 ## Tool-Call Hygiene
 
 The harness parses every tool call as JSON, so a raw double quote, a stray backslash
