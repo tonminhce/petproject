@@ -116,7 +116,7 @@ class ShippingOutboxRelayConnectionTest {
         OutboxEvent row = row(1L);
 
         AtomicInteger claim = new AtomicInteger();
-        when(outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING)).thenAnswer(invocation -> {
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING.name())).thenAnswer(invocation -> {
             if (claim.getAndIncrement() == 0) {
                 return Optional.of(row);
             }
@@ -167,7 +167,7 @@ class ShippingOutboxRelayConnectionTest {
         List<OutboxMessage> published = new ArrayList<>();
 
         AtomicInteger claim = new AtomicInteger();
-        when(outboxRepo.findFirstByStatusOrderByIdAsc(OutboxStatus.PENDING)).thenAnswer(invocation -> {
+        when(outboxRepo.claimOnePending(OutboxStatus.PENDING.name())).thenAnswer(invocation -> {
             int index = claim.getAndIncrement();
             if (index == 0) {
                 return Optional.of(second);
@@ -328,5 +328,4 @@ class ShippingOutboxRelayConnectionTest {
             return null;
         }
     }
-}
 }

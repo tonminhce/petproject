@@ -4,7 +4,9 @@ import com.shop.common.core.constants.OutboxStatus;
 import com.shop.common.kafka.producer.KafkaMessagePublisher;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.BatchOutcome;
 import com.shop.common.kafka.producer.KafkaMessagePublisher.OutboxMessage;
-import com.shop.promotionservice.entity.OutboxEvent;import com.shop.promotionservice.repository.OutboxEventRepository;import org.junit.jupiter.api.BeforeEach;
+import com.shop.promotionservice.entity.OutboxEvent;
+import com.shop.promotionservice.repository.OutboxEventRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -313,5 +315,4 @@ class PromotionOutboxRelayConnectionTest {
             return null;
         }
     }
-}
 }
