@@ -218,6 +218,14 @@ def mint_tokens(
         return {
             "status": "BLOCKED",
             "reason": "no access token could be minted for the load test customers",
-            "failed": len(failed),
+            "requested": len(usernames),
+            "minted": 0,
+            "failed": failed,
         }
-    return {"status": "READY", "tokens": tokens, "failed": failed, "minted": len(tokens)}
+    return {
+        "status": "READY",
+        "tokens": tokens,
+        "requested": len(usernames),
+        "minted": len(tokens),
+        "failed": failed,
+    }

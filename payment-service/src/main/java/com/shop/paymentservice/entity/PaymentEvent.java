@@ -39,7 +39,7 @@ public class PaymentEvent extends AbstractMappedEntity {
     @Column(name = "payload", nullable = false, columnDefinition = "text")
     private String payload;
 
-    @Column(name = "status", nullable = false, length = 16)
+    @Column(name = "status", nullable = false, length = 32)
     private String status;
 
     @Column(name = "retry_count", nullable = false)

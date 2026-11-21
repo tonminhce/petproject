@@ -177,3 +177,13 @@
 {"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T07:09:08Z", "type": "load_promotion-storm"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-21T07:12:05Z", "type": "load_recovery"}
 {"payload": {"file_count": 1478, "revision": "0e37c7a888df2071fa51e4d2747d1a1bf3953072"}, "timestamp": "2026-11-21T09:33:53Z", "type": "inventory"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T11:20:52Z", "type": "alerts_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T11:20:55Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T11:26:06Z", "type": "load_baseline"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T11:32:32Z", "type": "load_ramp"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T11:48:02Z", "type": "load_baseline"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T11:52:48Z", "type": "load_ramp"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T11:58:05Z", "type": "load_spike"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T12:03:00Z", "type": "load_flash-sale"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T12:07:56Z", "type": "load_promotion-storm"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T12:10:18Z", "type": "load_recovery"}

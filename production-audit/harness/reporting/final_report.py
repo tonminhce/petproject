@@ -513,6 +513,7 @@ def write_final_report(path: Path | None = None) -> Path:
                 + " req/s); đã giao: " + _rate(capacity_row.get("delivered_iterations_per_second"))
                 + " lượt lặp/giây, " + _rate(capacity_row.get("delivered_requests_per_second"))
                 + " req/s; tỷ lệ giao/nhắm " + _rate(capacity_row.get("recorded_rate_ratio"))
+                + " (mẫu số: " + str(capacity_row.get("recorded_rate_ratio_denominator")) + ")"
                 + "; thành công " + str(capacity_row.get("business_success", 0))
                 + ", thất bại " + str(capacity_row.get("business_failure", 0))
                 + ", từ chối " + str(capacity_row.get("business_refusal", 0))

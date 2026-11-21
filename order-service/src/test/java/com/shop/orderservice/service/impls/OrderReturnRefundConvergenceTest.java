@@ -84,7 +84,7 @@ class OrderReturnRefundConvergenceTest {
                 .total(new BigDecimal("2499.00"))
                 .currency("VND")
                 .build();
-        when(orderReturnRepository.findById(RETURN_ID)).thenAnswer(inv -> Optional.of(requestedReturn()));
+        when(orderReturnRepository.findOrderIdByReturnId(RETURN_ID)).thenAnswer(inv -> Optional.of(ORDER_ID));
         when(orderReturnRepository.findByOrderIdForUpdate(ORDER_ID)).thenAnswer(inv -> List.of(requestedReturn()));
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
     }

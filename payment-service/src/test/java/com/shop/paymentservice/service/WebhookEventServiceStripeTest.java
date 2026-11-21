@@ -7,8 +7,10 @@ import com.shop.paymentservice.config.PaymentStripeProperties;
 import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.entity.PaymentEvent;
+import com.shop.paymentservice.entity.PaymentRefund;
 import com.shop.paymentservice.outbox.PaymentEventPublisher;
 import com.shop.paymentservice.repository.PaymentEventRepository;
+import com.shop.paymentservice.repository.PaymentRefundRepository;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.stripe.net.Webhook;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +24,7 @@ import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,6 +52,7 @@ class WebhookEventServiceStripeTest {
 
     @Mock PaymentRepository paymentRepository;
     @Mock PaymentEventRepository eventRepository;
+    @Mock PaymentRefundRepository refundRepository;
     @Mock PaymentWriter writer;
     @Mock PaymentEventPublisher publisher;
     @Mock ReceiptService receiptService;
@@ -58,7 +62,8 @@ class WebhookEventServiceStripeTest {
     @BeforeEach
     void setUp() {
         service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(),
-                receiptService, PaymentStripeProperties.of("", STRIPE_WEBHOOK_SECRET, "2024-06-20", "", false));
+                receiptService, PaymentStripeProperties.of("", STRIPE_WEBHOOK_SECRET, "2024-06-20", "", false),
+                new ProviderRefundApplier(paymentRepository, refundRepository, writer));
         lenient().doAnswer(inv -> {
             inv.getArgument(1, PaymentEvent.class).setStatus(PaymentEvent.STATUS_PROCESSED);
             return inv.getArgument(0, Payment.class);
@@ -227,7 +232,8 @@ class WebhookEventServiceStripeTest {
     void validSignature_chargeRefunded_transitionsPaymentToRefunded() {
         byte[] raw = chargeRefundedBody("evt_ref_1", 9800, "usd");
         happyPathStubs("evt_ref_1");
-        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID))
+                .thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
 
         service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
 
@@ -304,7 +310,8 @@ class WebhookEventServiceStripeTest {
     void blankWebhookSecret_failsClosed_throwsPay5005() {
         WebhookEventService unconfigured = new WebhookEventService(paymentRepository, eventRepository, writer,
                 new ObjectMapper(), receiptService,
-                PaymentStripeProperties.of("sk_test_1", "", "2024-06-20", "", false));
+                PaymentStripeProperties.of("sk_test_1", "", "2024-06-20", "", false),
+                new ProviderRefundApplier(paymentRepository, refundRepository, writer));
         byte[] raw = stripeEventBody("evt_nosecret", "payment_intent.succeeded", 9800, "usd");
 
         assertThatThrownBy(() -> unconfigured.handleStripe(raw, signedHeader(raw, "anything")))
@@ -413,7 +420,8 @@ class WebhookEventServiceStripeTest {
     void partialChargeRefund_marksPartiallyRefunded_notRefunded() {
         byte[] raw = chargeRefundedBody("evt_part_ref_1", 9800, "usd", 3000);
         happyPathStubs("evt_part_ref_1");
-        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID))
+                .thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
 
         service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
 
@@ -431,7 +439,8 @@ class WebhookEventServiceStripeTest {
     void fullChargeRefund_marksRefunded_andRecordsTheRefundedTotal() {
         byte[] raw = chargeRefundedBody("evt_full_ref_2", 9800, "usd", 9800);
         happyPathStubs("evt_full_ref_2");
-        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID))
+                .thenReturn(Optional.of(payment(PaymentStatus.CAPTURED)));
 
         service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
 
@@ -448,7 +457,7 @@ class WebhookEventServiceStripeTest {
         byte[] raw = chargeRefundedBody("evt_over_ref_3", 9800, "usd", 9900);
         happyPathStubs("evt_over_ref_3");
         Payment captured = payment(PaymentStatus.CAPTURED);
-        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(captured));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID)).thenReturn(Optional.of(captured));
 
         assertThatCode(() -> service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET)))
                 .doesNotThrowAnyException();
@@ -458,5 +467,60 @@ class WebhookEventServiceStripeTest {
         assertThat(saveCaptor.getValue().getStatus()).isEqualTo(PaymentEvent.STATUS_FAILED_RETRYABLE);
         verify(writer, never()).completeWithEvent(any(Payment.class), any(PaymentEvent.class), anyString());
         assertThat(captured.getStatus()).isEqualTo(PaymentStatus.CAPTURED);
+    }
+
+    @Test
+    void theProviderEventThatConfirmsThePlatformRefund_doesNotCountItTwice() {
+        byte[] raw = chargeRefundedBody("evt_part_ref_4", 9800, "usd", 3000);
+        happyPathStubs("evt_part_ref_4");
+        Payment partiallyRefunded = payment(PaymentStatus.PARTIALLY_REFUNDED);
+        partiallyRefunded.setRefundedAmount(new BigDecimal("30.00"));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID)).thenReturn(Optional.of(partiallyRefunded));
+        when(refundRepository.findByPaymentId(PAYMENT_ID))
+                .thenReturn(List.of(ledgerRow(PAYMENT_ID, "9a1f0f6c-0000-0000-0000-000000000001", "30.00")));
+
+        service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
+
+        ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+        verify(writer).completeWithEvent(paymentCaptor.capture(), any(PaymentEvent.class),
+                eq("payment.partially_refunded.v1"));
+        assertThat(paymentCaptor.getValue().getRefundedAmount())
+                .as("the provider reports the cumulative refunded amount of the refund the platform already paid")
+                .isEqualByComparingTo("30.00");
+        verify(refundRepository, never()).save(any(PaymentRefund.class));
+    }
+
+    @Test
+    void theProviderEventThatRefundsMoreThanThePlatformRecorded_recordsOnlyTheDifference() {
+        byte[] raw = chargeRefundedBody("evt_part_ref_5", 9800, "usd", 5000);
+        happyPathStubs("evt_part_ref_5");
+        Payment partiallyRefunded = payment(PaymentStatus.PARTIALLY_REFUNDED);
+        partiallyRefunded.setRefundedAmount(new BigDecimal("30.00"));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID)).thenReturn(Optional.of(partiallyRefunded));
+        when(refundRepository.findByPaymentId(PAYMENT_ID))
+                .thenReturn(List.of(ledgerRow(PAYMENT_ID, "9a1f0f6c-0000-0000-0000-000000000002", "30.00")));
+
+        service.handleStripe(raw, signedHeader(raw, STRIPE_WEBHOOK_SECRET));
+
+        ArgumentCaptor<PaymentRefund> refundCaptor = ArgumentCaptor.forClass(PaymentRefund.class);
+        verify(refundRepository).save(refundCaptor.capture());
+        assertThat(refundCaptor.getValue().getAmount())
+                .as("the ledger must record the difference and not the cumulative amount of the provider")
+                .isEqualByComparingTo("20.00");
+        ArgumentCaptor<Payment> paymentCaptor = ArgumentCaptor.forClass(Payment.class);
+        verify(writer).completeWithEvent(paymentCaptor.capture(), any(PaymentEvent.class),
+                eq("payment.partially_refunded.v1"));
+        assertThat(paymentCaptor.getValue().getRefundedAmount()).isEqualByComparingTo("50.00");
+    }
+
+    private PaymentRefund ledgerRow(UUID paymentId, String refundReference, String amount) {
+        return PaymentRefund.builder()
+                .paymentId(paymentId)
+                .refundReference(refundReference)
+                .amount(new BigDecimal(amount))
+                .currency("USD")
+                .provider("stripe")
+                .providerEventId("evt_platform_refund")
+                .build();
     }
 }

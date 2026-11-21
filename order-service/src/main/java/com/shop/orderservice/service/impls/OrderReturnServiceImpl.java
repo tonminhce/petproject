@@ -146,7 +146,12 @@ public class OrderReturnServiceImpl implements OrderReturnService {
     @Override
     @Transactional
     public OrderReturnResponse reviewReturn(UUID returnId, String adminUsername, OrderReturnReviewRequest request) {
-        OrderReturn orderReturn = orderReturnRepository.findById(returnId)
+        UUID orderId = orderReturnRepository.findOrderIdByReturnId(returnId)
+                .orElseThrow(() -> BusinessException.notFound("order.return.not.found", returnId));
+        List<OrderReturn> lockedReturns = lockReturns(orderId);
+        OrderReturn orderReturn = lockedReturns.stream()
+                .filter(candidate -> returnId.equals(candidate.getId()))
+                .findFirst()
                 .orElseThrow(() -> BusinessException.notFound("order.return.not.found", returnId));
 
         if (orderReturn.getStatus() != ReturnStatus.REQUESTED) {
@@ -168,14 +173,13 @@ public class OrderReturnServiceImpl implements OrderReturnService {
         }
 
         BigDecimal orderTotal = order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO;
-        BigDecimal remainingRefundable = orderTotal.subtract(alreadyRefundedAmount(order, orderReturn));
+        BigDecimal remainingRefundable = orderTotal.subtract(alreadyRefundedAmount(lockedReturns, orderReturn));
         if (approvedAmount.compareTo(remainingRefundable) > 0) {
             log.warn("Rejected the review of return {}: {} exceeds the remaining refundable amount {}",
                     returnId, approvedAmount, remainingRefundable);
             throw BusinessException.badRequest("order.return.refund.exceeds.total");
         }
 
-        orderReturn.setStatus(request.status());
         orderReturn.setAdminNotes(request.adminNotes());
         orderReturn.setReviewedBy(adminUsername);
         orderReturn.setReviewedAt(Instant.now());
@@ -188,6 +192,8 @@ public class OrderReturnServiceImpl implements OrderReturnService {
             }
             orderReturn.setStatus(ReturnStatus.REFUNDED);
             log.info("The refund of {} {} for return {} is {}", approvedAmount, orderCurrency, returnId, outcome);
+        } else {
+            orderReturn.setStatus(request.status());
         }
 
         OrderReturn updated = orderReturnRepository.save(orderReturn);
@@ -195,15 +201,16 @@ public class OrderReturnServiceImpl implements OrderReturnService {
         return mapToResponse(updated);
     }
 
-    private BigDecimal alreadyRefundedAmount(Order order, OrderReturn current) {
-        List<OrderReturn> orderReturns;
+    private List<OrderReturn> lockReturns(UUID orderId) {
         try {
-            orderReturns = orderReturnRepository.findByOrderIdForUpdate(order.getId());
+            return orderReturnRepository.findByOrderIdForUpdate(orderId);
         } catch (PessimisticLockingFailureException | QueryTimeoutException ex) {
-            log.warn("The returns of order {} could not be locked for the review - the review is refused",
-                    order.getId());
-            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, order.getId());
+            log.warn("The returns of order {} could not be locked for the review - the review is refused", orderId);
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, orderId);
         }
+    }
+
+    private BigDecimal alreadyRefundedAmount(List<OrderReturn> orderReturns, OrderReturn current) {
         return orderReturns.stream()
                 .filter(candidate -> !isSameReturn(candidate, current))
                 .filter(candidate -> candidate.getStatus() == ReturnStatus.APPROVED

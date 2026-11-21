@@ -32,11 +32,11 @@ public class Payment extends AbstractMappedEntity {
     private String currency;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 16)
+    @Column(name = "status", nullable = false, length = 32)
     private PaymentStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "previous_status", length = 16)
+    @Column(name = "previous_status", length = 32)
     private PaymentStatus previousStatus;
 
     @Column(name = "provider", nullable = false, length = 16)

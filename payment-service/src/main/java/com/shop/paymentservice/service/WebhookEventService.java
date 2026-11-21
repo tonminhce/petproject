@@ -56,6 +56,7 @@ public class WebhookEventService {
     private final ObjectMapper objectMapper;
     private final ReceiptService receiptService;
     private final PaymentStripeProperties stripeProperties;
+    private final ProviderRefundApplier refundApplier;
 
     public void handleStripe(byte[] rawBody, String signatureHeader) {
         String webhookSecret = stripeProperties == null ? null : stripeProperties.webhookSecret();
@@ -147,16 +148,16 @@ public class WebhookEventService {
 
     public void process(WebhookPayload payload, PaymentEvent event) {
         UUID paymentId = parsePaymentId(payload.paymentId());
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, paymentId));
         PaymentStatus target = parseStatus(payload.status());
         if (target == null) {
-            throw BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus(), payload.status());
+            throw unknownStatusFailure(paymentId, payload.status());
         }
-        if (target == PaymentStatus.PARTIALLY_REFUNDED) {
-            applyPartialRefund(payload, payment, event);
+        if (target == PaymentStatus.PARTIALLY_REFUNDED || target == PaymentStatus.REFUNDED) {
+            refundApplier.applyProviderRefund(paymentId, target, payload, event);
             return;
         }
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, paymentId));
         requireSameCurrency(payload, payment);
         if (payload.amount() == null || payment.getAmount() == null
                 || payload.amount().compareTo(payment.getAmount()) != 0) {
@@ -168,41 +169,16 @@ public class WebhookEventService {
         PaymentStatus next = PaymentStateMachine.transition(payment.getStatus(), target);
         payment.setPreviousStatus(payment.getStatus());
         payment.setStatus(next);
-        if (next == PaymentStatus.REFUNDED) {
-            BigDecimal already = payment.getRefundedAmount() == null
-                    ? BigDecimal.ZERO : payment.getRefundedAmount();
-            payment.setRefundedAmount(payment.getAmount());
-            payment.setRefundedCurrency(payment.getCurrency());
-            if (already.compareTo(payment.getAmount()) > 0) {
-                log.warn("Payment {} refunded amount {} exceeds the captured amount {}",
-                        payment.getId(), already, payment.getAmount());
-            }
-        }
         Payment saved = writer.completeWithEvent(payment, event, outboxEventType(next));
         if (next == PaymentStatus.CAPTURED) {
             attachReceipt(saved);
         }
     }
 
-    private void applyPartialRefund(WebhookPayload payload, Payment payment, PaymentEvent event) {
-        requireSameCurrency(payload, payment);
-        BigDecimal already = payment.getRefundedAmount() == null
-                ? BigDecimal.ZERO : payment.getRefundedAmount();
-        BigDecimal remaining = payment.getAmount() == null
-                ? BigDecimal.ZERO : payment.getAmount().subtract(already);
-        if (payload.amount() == null || payload.amount().signum() <= 0
-                || payload.amount().compareTo(remaining) > 0) {
-            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, payload.amount(), remaining);
-        }
-        PaymentStatus next = PaymentStateMachine.transition(payment.getStatus(),
-                PaymentStatus.PARTIALLY_REFUNDED);
-        payment.setPreviousStatus(payment.getStatus());
-        payment.setStatus(next);
-        payment.setRefundedAmount(already.add(payload.amount()));
-        payment.setRefundedCurrency(payment.getCurrency());
-        writer.completeWithEvent(payment, event, outboxEventType(next));
-        log.info("Partial refund applied to payment {}: {} of {} already refunded, {} returned now",
-                payment.getId(), already, payment.getAmount(), payload.amount());
+    private BusinessException unknownStatusFailure(UUID paymentId, String status) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, paymentId));
+        return BusinessException.of(ErrorCode.PAYMENT_INVALID_STATE, payment.getStatus(), status);
     }
 
     private void requireSameCurrency(WebhookPayload payload, Payment payment) {

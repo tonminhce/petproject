@@ -141,11 +141,16 @@ class OrderReturnServiceTest {
                 .build();
     }
 
+    private void stubLockedReturn(OrderReturn reviewed) {
+        when(orderReturnRepository.findOrderIdByReturnId(returnId)).thenReturn(Optional.of(orderId));
+        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(reviewed));
+    }
+
     @Test
     void reviewReturn_approve_refundsTheApprovedAmountInTheOrderCurrency() {
         Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
         OrderReturn existing = requestedReturn(order, BigDecimal.valueOf(100), "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        stubLockedReturn(existing);
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
                 .thenReturn(RefundOutcome.REFUNDED);
@@ -163,7 +168,7 @@ class OrderReturnServiceTest {
     void reviewReturn_approve_refundsOnlyTheApprovedAmountNotTheWholeOrder() {
         Order order = orderWithTotal(new BigDecimal("2499.00"), "VND");
         OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        stubLockedReturn(existing);
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId))
                 .thenReturn(RefundOutcome.REFUNDED);
@@ -179,7 +184,7 @@ class OrderReturnServiceTest {
     void reviewReturn_approve_refundsInTheCurrencyOfTheOrder() {
         Order order = orderWithTotal(new BigDecimal("2499.00"), "USD");
         OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "USD");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        stubLockedReturn(existing);
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "USD", returnId))
                 .thenReturn(RefundOutcome.REFUNDED);
@@ -194,8 +199,7 @@ class OrderReturnServiceTest {
     void reviewReturn_theRetryAfterATimeoutFindsTheConfirmedRefundAndMarksTheReturnRefunded() {
         Order order = orderWithTotal(new BigDecimal("2499.00"), "VND");
         OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
-        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing));
+        stubLockedReturn(existing);
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId))
                 .thenReturn(RefundOutcome.ALREADY_REFUNDED);
@@ -211,8 +215,7 @@ class OrderReturnServiceTest {
     void reviewReturn_aTimeoutOfTheRefundIsPropagatedAndTheReturnIsNotMarkedRefunded() {
         Order order = orderWithTotal(new BigDecimal("2499.00"), "VND");
         OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
-        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing));
+        stubLockedReturn(existing);
         when(paymentServiceClient.refundByOrderId(orderId, new BigDecimal("100.00"), "VND", returnId))
                 .thenThrow(BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "payment"));
 
@@ -236,8 +239,8 @@ class OrderReturnServiceTest {
                 .currency("VND")
                 .status(ReturnStatus.REFUNDED)
                 .build();
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
-        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(alreadyRefunded));
+        when(orderReturnRepository.findOrderIdByReturnId(returnId)).thenReturn(Optional.of(orderId));
+        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing, alreadyRefunded));
 
         assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
                 new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
@@ -252,7 +255,7 @@ class OrderReturnServiceTest {
     void reviewReturn_approve_rejectsWhenTheReturnCurrencyIsNotTheOrderCurrency() {
         Order order = orderWithTotal(new BigDecimal("2499.00"), "USD");
         OrderReturn existing = requestedReturn(order, new BigDecimal("100.00"), "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        stubLockedReturn(existing);
 
         assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
                 new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
@@ -267,7 +270,7 @@ class OrderReturnServiceTest {
     void reviewReturn_approve_rejectsAnApprovedAmountThatIsNotPositive() {
         Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
         OrderReturn existing = requestedReturn(order, BigDecimal.ZERO, "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
+        stubLockedReturn(existing);
 
         assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
                 new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager")))
@@ -282,8 +285,7 @@ class OrderReturnServiceTest {
     void reviewReturn_readsTheOtherReturnsOfTheOrderUnderAWriteLock() {
         Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
         OrderReturn existing = requestedReturn(order, BigDecimal.valueOf(100), "VND");
-        when(orderReturnRepository.findById(returnId)).thenReturn(Optional.of(existing));
-        when(orderReturnRepository.findByOrderIdForUpdate(orderId)).thenReturn(List.of(existing));
+        stubLockedReturn(existing);
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
         when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
                 .thenReturn(RefundOutcome.REFUNDED);
@@ -293,6 +295,53 @@ class OrderReturnServiceTest {
 
         verify(orderReturnRepository).findByOrderIdForUpdate(orderId);
         verify(orderReturnRepository, never()).findByOrderId(orderId);
+    }
+
+    @Test
+    void reviewReturn_readsTheDecisionFromTheLockedReturnsOfTheOrder() {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn existing = requestedReturn(order, BigDecimal.valueOf(100), "VND");
+        stubLockedReturn(existing);
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
+                .thenReturn(RefundOutcome.REFUNDED);
+
+        service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.APPROVED, "Approved by manager"));
+
+        verify(orderReturnRepository).findByOrderIdForUpdate(orderId);
+        verify(orderReturnRepository, never()).findById(returnId);
+        verify(orderReturnRepository, never()).findByOrderId(orderId);
+    }
+
+    @Test
+    void reviewReturn_refusesASecondDecisionOnTheSameReturn() {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn reviewed = requestedReturn(order, BigDecimal.valueOf(100), "VND");
+        reviewed.setStatus(ReturnStatus.REFUNDED);
+        stubLockedReturn(reviewed);
+
+        assertThatThrownBy(() -> service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.REJECTED, "Rejected by manager")))
+                .isInstanceOf(BusinessException.class);
+
+        verify(paymentServiceClient, never()).refundByOrderId(any(), any(), any(), any());
+        verify(orderReturnRepository, never()).save(any(OrderReturn.class));
+    }
+
+    @Test
+    void theReviewedReturnIsLockedWithTheOtherReturnsOfItsOrder() {
+        Order order = orderWithTotal(BigDecimal.valueOf(200), "VND");
+        OrderReturn existing = requestedReturn(order, BigDecimal.valueOf(100), "VND");
+        stubLockedReturn(existing);
+        when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.reviewReturn(returnId, "admin_user",
+                new OrderReturnReviewRequest(ReturnStatus.REJECTED, "Rejected by manager"));
+
+        verify(orderReturnRepository).findByOrderIdForUpdate(orderId);
+        verify(orderReturnRepository, never()).findById(returnId);
+        verify(paymentServiceClient, never()).refundByOrderId(any(), any(), any(), any());
     }
 
     @Test

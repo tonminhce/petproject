@@ -128,7 +128,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public void clearCart(UUID userId) {
-        Cart cart = cartRepository.findByUserIdAndDeletedFalse(userId)
+        Cart cart = cartRepository.findByUserIdForUpdate(userId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CART_NOT_FOUND, userId));
         cartItemRepository.deleteAll(cartItemRepository.findByCartId(cart.getId()));
         cart.markDeleted(userId.toString());

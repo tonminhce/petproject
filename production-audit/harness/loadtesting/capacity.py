@@ -23,6 +23,8 @@ CURRENT_HARNESS_FIELDS = (
     "planned_iteration_rate_per_second",
     "planned_request_rate_per_second",
     "arrival_plan",
+    "transport_failure_rate",
+    "platform_error_rate",
 )
 PEAK_RATE_MARKER = "iterations/s"
 HARNESS_PATHS = (
@@ -131,6 +133,12 @@ def _invariant_violations(invariants: dict[str, Any]) -> int:
     return total
 
 
+def _rate_ratio_denominator(document: dict[str, Any]) -> str:
+    if document.get("planned_iteration_rate_per_second"):
+        return "planned_iteration_rate_per_second"
+    return "target_requests_per_second"
+
+
 def _profile_row(directory: Path, document: dict[str, Any]) -> dict[str, Any]:
     metrics = document.get("metrics") or {}
     invariants = document.get("invariants") or {}
@@ -160,8 +168,8 @@ def _profile_row(directory: Path, document: dict[str, Any]) -> dict[str, Any]:
         "delivered_iterations_per_second": round(delivered_iterations, 4),
         "delivered_requests_per_second": round(delivered_requests, 4),
         "recorded_rate_ratio": document.get("achieved_rate_ratio"),
-        "recorded_rate_ratio_denominator": "target_requests_per_second",
-        "recorded_rate_unit": document.get("rate_unit") or "iterations per second against the request rate target",
+        "recorded_rate_ratio_denominator": _rate_ratio_denominator(document),
+        "recorded_rate_unit": document.get("rate_unit") or "iterations per second",
         "iterations": _as_int(metrics.get("iterations")),
         "requests": _as_int(metrics.get("requests")),
         "dropped_iterations": _dropped_iterations(directory),
@@ -175,6 +183,8 @@ def _profile_row(directory: Path, document: dict[str, Any]) -> dict[str, Any]:
         "invariant_failed": list(invariants.get("failed") or []),
         "business_failure_rate": document.get("business_failure_rate"),
         "shed_rate": document.get("shed_rate"),
+        "transport_failure_rate": document.get("transport_failure_rate"),
+        "platform_error_rate": document.get("platform_error_rate"),
         "measurement_valid": bool(document.get("measurement_valid")),
         "business_verdict": str(document.get("business_verdict") or ""),
         "current_harness_fields_missing": missing,
@@ -287,7 +297,7 @@ def _binding_reason(
         parts.append(
             "the recorded results do not hold the fields the current harness records ("
             + ", ".join(missing)
-            + "), so they were produced by a harness that did not plan the arrival rate in iterations per second"
+            + "), so they were produced by a harness whose measurement differs from the current one"
         )
     if harness_commits:
         parts.append(
@@ -483,13 +493,14 @@ def render_capacity_report(document: dict[str, Any]) -> str:
             + str(row["recorded_rate_ratio"]) + " | `" + str(row["result_file"]) + "`, planned peak from `"
             + _run_directory(row) + "/k6-stdout.log` |")
     add("")
-    add("| Profile | Business success | Business failure | Refusals | Shed | Business failure rate | Shed rate | Invariant violations | Invariant status | Recorded status | Source |")
-    add("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    add("| Profile | Business success | Business failure | Refusals | Shed | Business failure rate | Shed rate | Load generator failure rate | Platform error rate | Invariant violations | Invariant status | Recorded status | Source |")
+    add("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for row in rows:
         add("| " + str(row["profile"]) + " | " + str(row["business_success"]) + " | "
             + str(row["business_failure"]) + " | " + str(row["business_refusal"]) + " | "
             + str(row["shed_requests"]) + " | " + str(row["business_failure_rate"]) + " | "
-            + str(row["shed_rate"]) + " | " + str(row["invariant_violations"]) + " | "
+            + str(row["shed_rate"]) + " | " + str(row["transport_failure_rate"]) + " | "
+            + str(row["platform_error_rate"]) + " | " + str(row["invariant_violations"]) + " | "
             + str(row["invariant_status"]) + " | " + str(row["status"]) + " | `"
             + str(row["result_file"]) + "` |")
     add("")
@@ -524,8 +535,19 @@ def render_capacity_report(document: dict[str, Any]) -> str:
     add("")
     add("## 5. The unit of the recorded ratio")
     add("")
-    add("- The recorded ratio is the delivered iteration rate divided by the request rate the profile declares. "
-        "The harness that produced these results compared an iteration rate with a request target.")
+    add("- The recorded ratio is the delivered iteration rate divided by the planned iteration rate the profile "
+        "declares, so it is a ratio of iterations per second and not of requests per second.")
+    add("- The denominator of every recorded ratio:")
+    add("")
+    add("| Profile | Recorded ratio | Denominator | Rate unit |")
+    add("| --- | --- | --- | --- |")
+    for row in rows:
+        add("| " + str(row["profile"]) + " | " + str(row["recorded_rate_ratio"]) + " | `"
+            + str(row["recorded_rate_ratio_denominator"]) + "` | " + str(row["recorded_rate_unit"]) + " |")
+    add("")
+    add("- The runs that the harness produced before it planned the arrival rate in iterations per second divided "
+        "the delivered iteration rate by the request rate the profile declares, so the table above names the "
+        "denominator of every recorded ratio.")
     add("- The requests per iteration the harness declares for the scenario and the requests per iteration the "
         "recorded results show:")
     add("")

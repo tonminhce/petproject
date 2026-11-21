@@ -2,6 +2,7 @@
   "action": "validate",
   "result": {
     "blocked_checks": [
+      "ALT-07",
       "ALT-08"
     ],
     "checks": [
@@ -64,7 +65,7 @@
       {
         "detail": "no committed telegram token or live stripe key was found",
         "evidence": [
-          "tracked files scanned: 1948",
+          "tracked files scanned: 1972",
           "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
         ],
         "id": "ALT-06",
@@ -72,16 +73,16 @@
         "status": "PASS"
       },
       {
-        "detail": "telegram delivery credentials are present and valid",
+        "detail": "telegram delivery credentials are not available in this environment",
         "evidence": [
           "alerts enabled: True",
-          "bot token present: True",
-          "chat identifier present: True",
-          "ci chat identifier present: True"
+          "bot token present: False",
+          "chat identifier present: False",
+          "ci chat identifier present: False"
         ],
         "id": "ALT-07",
         "name": "DELIVERY_CREDENTIALS",
-        "status": "PASS"
+        "status": "BLOCKED"
       },
       {
         "detail": "every alerting route answered http://127.0.0.1:18091, which is not the public telegram.org bot api, so the delivery to telegram.org is still unverified",
@@ -112,5 +113,5 @@
     "failed_checks": [],
     "status": "BLOCKED"
   },
-  "updated_at": "2026-11-21T06:17:26Z"
+  "updated_at": "2026-11-21T11:20:52Z"
 }

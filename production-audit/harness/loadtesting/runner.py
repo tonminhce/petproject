@@ -18,6 +18,7 @@ from .targets import resolve_coupon_code
 from .invariants import verify
 from .profiles import (
     CUSTOMER_POOL_LIMIT,
+    CUSTOMER_POOL_SCENARIOS,
     Profile,
     arrival_plan,
     enforce_safety,
@@ -112,6 +113,8 @@ def summarise(summary: dict[str, Any]) -> dict[str, Any]:
         "business_refusal": _metric_value(metrics, "business_refusal_total", "count", default=0),
         "shed_requests": _metric_value(metrics, "shed_requests_total", "count", default=0),
         "credential_error": _metric_value(metrics, "credential_error_total", "count", default=0),
+        "unexpected_responses": _metric_value(metrics, "unexpected_response_total", "count", default=None),
+        "platform_errors": _metric_value(metrics, "platform_error_total", "count", default=None),
         "coupon_contention": _metric_value(metrics, "coupon_contention_total", "count", default=0),
         "cart_contention": _metric_value(metrics, "cart_contention_total", "count", default=0),
         "cart_failure": _metric_value(metrics, "cart_failure_total", "count", default=0),
@@ -139,6 +142,54 @@ def run_profile(
     )
     document["rate_limit_restore"] = restore_shipped_rate_limits()
     return document
+
+
+def _customer_pool(
+    profile: Profile,
+    customers: dict[str, Any],
+    minted: dict[str, Any],
+    tokens: list[str],
+) -> dict[str, Any]:
+    required = profile.scenario in CUSTOMER_POOL_SCENARIOS
+    minted_count = len(tokens)
+    return {
+        "status": customers.get("status"),
+        "required": required,
+        "customers": minted_count,
+        "customers_requested": profile.virtual_users if required else 0,
+        "mint_failures": len(minted.get("failed") or []),
+        "virtual_users": profile.virtual_users,
+        "pool_limit": CUSTOMER_POOL_LIMIT,
+        "share_factor": round(profile.virtual_users / minted_count, 4) if minted_count else 1.0,
+        "one_customer_per_virtual_user": (not required) or minted_count >= profile.virtual_users,
+    }
+
+
+def _customer_pool_violations(profile: Profile, pool: dict[str, Any]) -> list[str]:
+    if not pool.get("required"):
+        return []
+    return enforce_safety(profile, provisioned_customers=int(pool.get("customers") or 0))
+
+
+def _customer_pool_shared(document: dict[str, Any]) -> str:
+    pool = document.get("customer_pool") or {}
+    if not pool.get("required"):
+        return ""
+    virtual_users = int(pool.get("virtual_users") or 0)
+    minted = int(pool.get("customers") or 0)
+    if minted < virtual_users:
+        return (
+            "the customer pool of " + str(minted) + " customers could not give the " + str(virtual_users)
+            + " virtual users their own customer, a cart and a coupon allowance, so the run would have measured "
+            "shared customers"
+        )
+    seen = pool.get("customer_tokens_in_load_generator")
+    if isinstance(seen, int) and seen < virtual_users:
+        return (
+            "the load generator used a customer pool of " + str(seen) + " tokens for " + str(virtual_users)
+            + " virtual users, so the run measured shared customers"
+        )
+    return ""
 
 
 def _measure_profile(
@@ -203,8 +254,10 @@ def _measure_profile(
 
     customers: dict[str, Any] = {"status": "NOT_REQUIRED"}
     customer_tokens: list[str] = []
+    minted: dict[str, Any] = {"status": "NOT_REQUIRED"}
     lifetime: dict[str, Any] = {"status": "NOT_REQUIRED"}
-    if profile.scenario in ("full", "flash-sale", "promotion-storm"):
+    pool = _customer_pool(profile, customers, minted, customer_tokens)
+    if profile.scenario in CUSTOMER_POOL_SCENARIOS:
         pool_size = profile.virtual_users
         required_lifetime = int(profile.duration_seconds) + 600
         lifetime = ensure_token_lifetime(seconds=required_lifetime)
@@ -230,20 +283,39 @@ def _measure_profile(
                 "rate_limit_override": limiter,
             }
         minted = mint_tokens(customers.get("usernames", []))
+        customer_tokens = minted.get("tokens", [])
+        pool = _customer_pool(profile, customers, minted, customer_tokens)
         if minted.get("status") != "READY":
+            restore_shipped_rate_limits()
             return {
                 "status": "BLOCKED",
                 "profile": profile.name,
                 "reason": "the access tokens for the load test customers could not be minted: "
                           + str(minted.get("reason", "")),
                 "customers": customers,
+                "customer_pool": pool,
                 "rate_limit_override": limiter,
             }
-        customer_tokens = minted.get("tokens", [])
 
     (output / "customer-tokens.txt").write_text(
         "\n".join(customer_tokens) + ("\n" if customer_tokens else ""), encoding="utf-8"
     )
+
+    if profile.scenario in CUSTOMER_POOL_SCENARIOS:
+        pool_violations = _customer_pool_violations(profile, pool)
+        if pool_violations:
+            restore_shipped_rate_limits()
+            return {
+                "status": "BLOCKED",
+                "profile": profile.name,
+                "reason": "the profile places orders and every virtual user needs its own customer, a cart and a "
+                          "coupon allowance, but the customer pool could not be provisioned, so the virtual users "
+                          "would have shared a customer",
+                "violations": pool_violations,
+                "customer_pool": pool,
+                "customers": customers,
+                "rate_limit_override": limiter,
+            }
 
     plan = arrival_plan(profile)
     planned_rate = planned_iteration_rate(profile)
@@ -314,6 +386,8 @@ def _measure_profile(
         if summary:
             break
 
+    pool["customer_tokens_in_load_generator"] = summary.get("customer_tokens")
+
     document = {
         "status": "PASS" if result.returncode == 0 else "FAIL",
         "profile": profile.name,
@@ -344,17 +418,7 @@ def _measure_profile(
         "rate_limit_override": limiter,
         "gateway_traffic": traffic,
         "coupon": coupon,
-        "customer_pool": {
-            "status": customers.get("status"),
-            "customers": len(customer_tokens),
-            "virtual_users": profile.virtual_users,
-            "pool_limit": CUSTOMER_POOL_LIMIT,
-            "share_factor": round(profile.virtual_users / len(customer_tokens), 4)
-            if customer_tokens
-            else 1.0,
-            "one_customer_per_virtual_user": customers.get("status") == "NOT_REQUIRED"
-            or len(customer_tokens) >= profile.virtual_users,
-        },
+        "customer_pool": pool,
         "services": compose_services(),
         "metrics": summarise(summary),
     }
@@ -367,6 +431,10 @@ def _measure_profile(
 
 
 def _final_status(document: dict[str, Any]) -> str:
+    shared = _customer_pool_shared(document)
+    if shared:
+        document["status_detail"] = shared
+        return "BLOCKED"
     credentials = _credentials_expired(document)
     if credentials:
         document["status_detail"] = credentials
@@ -407,6 +475,45 @@ def _credentials_expired(document: dict[str, Any]) -> str:
     )
 
 
+def _reconcile_with_load_generator(metrics: dict[str, Any]) -> dict[str, Any]:
+    transport_failed = metrics.get("failed_requests")
+    unexpected = metrics.get("unexpected_responses")
+    platform_errors = metrics.get("platform_errors")
+    failure = float(metrics.get("business_failure") or 0)
+    credential = float(metrics.get("credential_error") or 0)
+    shed = float(metrics.get("shed_requests") or 0)
+    reasons: list[str] = []
+    if unexpected is not None and transport_failed is not None and float(unexpected) != float(transport_failed):
+        reasons.append(
+            "the load generator counted " + format(float(transport_failed), ".0f") + " failed requests while the "
+            "scenario counted " + format(float(unexpected), ".0f") + " responses outside the expected statuses, so "
+            "the two accountings of the same run disagree"
+        )
+    if platform_errors is not None and float(platform_errors) > failure:
+        reasons.append(
+            "the platform answered " + format(float(platform_errors), ".0f") + " requests with a server error, but "
+            "only " + format(failure, ".0f") + " business failures were booked, so a server error left the "
+            "business failure budget"
+        )
+    if unexpected is not None and float(unexpected) > failure + credential:
+        reasons.append(
+            "the scenario received " + format(float(unexpected), ".0f") + " responses outside the expected "
+            "statuses, but only " + format(failure, ".0f") + " business failures and " + format(credential, ".0f")
+            + " credential errors were booked, so a response left both budgets"
+        )
+    return {
+        "transport_failed_requests": transport_failed,
+        "unexpected_responses": unexpected,
+        "platform_errors": platform_errors,
+        "gateway_sheds": shed,
+        "business_failures": failure,
+        "credential_errors": credential,
+        "transport_failure_rate": metrics.get("failure_rate"),
+        "consistent": not reasons,
+        "reasons": reasons,
+    }
+
+
 def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
     metrics = document.get("metrics") or {}
     success = float(metrics.get("business_success") or 0)
@@ -422,6 +529,16 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
         return False
     rate = failure / attempts if attempts > 0 else 0.0
     document["business_failure_rate"] = round(rate, 6)
+    reconciliation = _reconcile_with_load_generator(metrics)
+    document["load_generator_reconciliation"] = reconciliation
+    document["transport_failure_rate"] = metrics.get("failure_rate")
+    requests = float(metrics.get("requests") or 0)
+    platform_errors = metrics.get("platform_errors")
+    if platform_errors is not None and requests > 0:
+        document["platform_error_rate"] = round(float(platform_errors) / requests, 6)
+    if not reconciliation["consistent"]:
+        document["business_verdict"] = "; ".join(reconciliation["reasons"])
+        return False
     achieved = float(metrics.get("iteration_rate_per_second") or 0)
     planned = float(document.get("planned_iteration_rate_per_second") or 0)
     document["achieved_iteration_rate_per_second"] = round(achieved, 4)

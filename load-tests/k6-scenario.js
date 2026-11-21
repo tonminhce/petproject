@@ -31,19 +31,28 @@ const businessFailure = new Counter('business_failure_total');
 const checkoutLatency = new Trend('business_checkout_latency_ms', true);
 const oversellAttempts = new Counter('oversell_attempts_total');
 const resolvedProducts = new Counter('resolved_product_total');
-http.setResponseCallback(http.expectedStatuses(200, 201, 400, 404, 409, 429));
+const expectedStatuses = [200, 201, 400, 404, 409, 429, 503];
+http.setResponseCallback(http.expectedStatuses(200, 201, 400, 404, 409, 429, 503));
 
 function isShedStatus(status) {
-  return status === 429 || status >= 500;
+  return status === 429 || status === 503;
+}
+
+function isServerError(status) {
+  return status >= 500 && status !== 503;
 }
 
 function isCredentialStatus(status) {
   return status === 401 || status === 403;
 }
 
+function isExpectedStatus(status) {
+  return expectedStatuses.indexOf(status) >= 0;
+}
+
 function isClassifiedStatus(status) {
   return status === 200 || status === 201 || status === 400 || status === 404 || status === 409
-    || isShedStatus(status);
+    || isCredentialStatus(status) || isServerError(status) || isShedStatus(status);
 }
 
 const cartFailure = new Counter('cart_failure_total');
@@ -55,9 +64,21 @@ const shedRequests = new Counter('shed_requests_total');
 const catalogFailure = new Counter('catalog_failure_total');
 const detailFailure = new Counter('detail_failure_total');
 const unresolvedProduct = new Counter('unresolved_product_total');
+const unexpectedResponse = new Counter('unexpected_response_total');
+const platformError = new Counter('platform_error_total');
 
 let cachedProductId = configuredProductId;
 let cartItemId = null;
+let resolveFailed = false;
+
+function observe(response) {
+  if (!isExpectedStatus(response.status)) {
+    unexpectedResponse.add(1);
+  }
+  if (isServerError(response.status)) {
+    platformError.add(1);
+  }
+}
 
 function stagesFor() {
   if (scenario === 'spike') {
@@ -176,17 +197,26 @@ function resolveProductId() {
   if (cachedProductId) {
     return cachedProductId;
   }
+  resolveFailed = false;
   const response = http.get(baseUrl + '/api/v1/products?page=0&size=5', { headers: authHeaders(), tags: { call: 'resolve' } });
+  observe(response);
   const id = firstProductId(response.body);
   if (id) {
     cachedProductId = id;
     resolvedProducts.add(1);
+  } else if (isCredentialStatus(response.status)) {
+    credentialError.add(1);
+    resolveFailed = true;
+  } else if (!isExpectedStatus(response.status)) {
+    businessFailure.add(1);
+    resolveFailed = true;
   }
   return cachedProductId;
 }
 
 function browse() {
   const response = http.get(baseUrl + '/api/v1/products?page=0&size=10', { headers: authHeaders(), tags: { call: 'catalog' } });
+  observe(response);
   check(response, { 'the catalog answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200) {
     businessSuccess.add(1);
@@ -205,11 +235,14 @@ function productDetail() {
   const productId = resolveProductId();
   if (!productId) {
     check(null, { 'a product id is resolvable': () => false });
-    businessFailure.add(1);
     unresolvedProduct.add(1);
+    if (!resolveFailed) {
+      businessFailure.add(1);
+    }
     return;
   }
   const response = http.get(baseUrl + '/api/v1/products/' + productId, { headers: authHeaders(), tags: { call: 'detail' } });
+  observe(response);
   check(response, { 'the product detail answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200) {
     businessSuccess.add(1);
@@ -228,6 +261,7 @@ function ensureCart(productId) {
     const update = http.put(baseUrl + '/api/v1/carts/me/items/' + cartItemId,
       JSON.stringify({ quantity: 1 }),
       { headers: authHeaders(), tags: { call: 'cart-update' } });
+    observe(update);
     if (update.status === 200 || update.status === 201) {
       return 'ready';
     }
@@ -239,11 +273,14 @@ function ensureCart(productId) {
       shedRequests.add(1);
       return 'shed';
     }
+    businessFailure.add(1);
+    cartFailure.add(1);
     cartItemId = null;
   }
   const response = http.post(baseUrl + '/api/v1/carts/me/items',
     JSON.stringify({ productId: productId, quantity: 1 }),
     { headers: authHeaders(), tags: { call: 'cart' } });
+  observe(response);
   check(response, { 'the cart answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200 || response.status === 201) {
     try {
@@ -275,7 +312,14 @@ function ensureCart(productId) {
 
 function resetCart() {
   cartItemId = null;
-  http.del(baseUrl + '/api/v1/carts/me', null, { headers: authHeaders(), tags: { call: 'cart-reset' } });
+  const response = http.del(baseUrl + '/api/v1/carts/me', null, { headers: authHeaders(), tags: { call: 'cart-reset' } });
+  observe(response);
+  if (isCredentialStatus(response.status)) {
+    credentialError.add(1);
+  } else if (!isExpectedStatus(response.status)) {
+    businessFailure.add(1);
+    cartFailure.add(1);
+  }
 }
 
 function conflictReason(response) {
@@ -300,6 +344,7 @@ function placeOrder(productId) {
   });
   const started = Date.now();
   const response = http.post(baseUrl + '/api/v1/orders', payload, { headers: authHeaders(), tags: { call: 'checkout' } });
+  observe(response);
   checkoutLatency.add(Date.now() - started);
   return response;
 }
@@ -307,7 +352,10 @@ function placeOrder(productId) {
 function checkout() {
   const productId = resolveProductId();
   if (!productId) {
-    businessFailure.add(1);
+    unresolvedProduct.add(1);
+    if (!resolveFailed) {
+      businessFailure.add(1);
+    }
     return;
   }
   const cart = ensureCart(productId);
@@ -344,9 +392,9 @@ function checkout() {
   }
   const accepted = response.status === 200 || response.status === 201;
   const reason = conflictReason(response);
-  const couponRejected = reason === 'ORD-4008' || reason === 'PRO-7006' || reason === 'PRO-7007' || reason === 'PRO-7005';
-  const stockRefused = reason === 'ORD-4007' || reason === 'ORD-4009' || reason === 'INV-4001';
   const refused = response.status === 409 || response.status === 400;
+  const couponRejected = refused && (reason === 'ORD-4008' || reason === 'PRO-7006' || reason === 'PRO-7007' || reason === 'PRO-7005');
+  const stockRefused = refused && (reason === 'ORD-4007' || reason === 'ORD-4009' || reason === 'INV-4001');
   const shed = isShedStatus(response.status);
   check(response, {
     'the checkout answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status),
@@ -404,6 +452,7 @@ export function handleSummary(data) {
     max_vus: maxVus,
     duration: duration,
     arrival_stages: arrivalStages,
+    customer_tokens: customerTokens.length,
     metrics: data.metrics,
     root_group: data.root_group,
   };

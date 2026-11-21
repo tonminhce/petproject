@@ -256,7 +256,7 @@ class CartServiceImplTest {
             .id(cartItemId).cartId(cartId).productId(productId)
             .productTitle("Widget").unitPrice(new BigDecimal("9.99")).quantity(1)
             .build();
-        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(cart));
         when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of(item));
         when(cartRepository.save(cart)).thenReturn(cart);
 
@@ -266,6 +266,33 @@ class CartServiceImplTest {
         ArgumentCaptor<Cart> captor = ArgumentCaptor.forClass(Cart.class);
         verify(cartRepository).save(captor.capture());
         assertThat(captor.getValue().isDeleted()).isTrue();
+    }
+
+    @Test
+    void clearCart_takesTheWriteLockOnTheCart() {
+        CartItem item = CartItem.builder()
+            .id(cartItemId).cartId(cartId).productId(productId)
+            .productTitle("Widget").unitPrice(new BigDecimal("9.99")).quantity(1)
+            .build();
+        when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(cart));
+        when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of(item));
+        when(cartRepository.save(cart)).thenReturn(cart);
+
+        service.clearCart(userId);
+
+        verify(cartRepository).findByUserIdForUpdate(userId);
+        verify(cartRepository, never()).findByUserIdAndDeletedFalse(userId);
+    }
+
+    @Test
+    void clearCart_refusesWhenTheCartIsMissing() {
+        when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.clearCart(userId))
+            .isInstanceOf(BusinessException.class);
+
+        verify(cartItemRepository, never()).deleteAll(any());
+        verify(cartRepository, never()).save(any(Cart.class));
     }
 
     @Test

@@ -24,6 +24,9 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturn, UUID> 
     @Query("SELECT r FROM OrderReturn r WHERE r.order.id = :orderId ORDER BY r.id")
     List<OrderReturn> findByOrderIdForUpdate(@Param("orderId") UUID orderId);
 
+    @Query("SELECT r.order.id FROM OrderReturn r WHERE r.id = :id")
+    Optional<UUID> findOrderIdByReturnId(@Param("id") UUID id);
+
     Page<OrderReturn> findByUserId(UUID userId, Pageable pageable);
 
     Optional<OrderReturn> findByIdAndUserId(UUID id, UUID userId);

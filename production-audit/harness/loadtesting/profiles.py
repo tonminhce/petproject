@@ -13,6 +13,7 @@ class SafetyLimits:
 
 
 CUSTOMER_POOL_LIMIT = 500
+CUSTOMER_POOL_SCENARIOS = ("full", "flash-sale", "promotion-storm")
 
 REQUESTS_PER_ITERATION: dict[str, int] = {
     "browse": 2,
@@ -202,7 +203,11 @@ def resolve_profile(name: str, scale: int = 1) -> Profile:
     )
 
 
-def enforce_safety(profile: Profile, limits: SafetyLimits | None = None) -> list[str]:
+def enforce_safety(
+    profile: Profile,
+    limits: SafetyLimits | None = None,
+    provisioned_customers: int | None = None,
+) -> list[str]:
     boundary = limits or SafetyLimits()
     violations: list[str] = []
     if profile.requests_per_second > boundary.max_requests_per_second:
@@ -226,6 +231,12 @@ def enforce_safety(profile: Profile, limits: SafetyLimits | None = None) -> list
             "virtual users " + str(profile.virtual_users) + " exceeds the customer pool of "
             + str(pool_limit)
             + ", so the virtual users would share a customer, a cart and a coupon quota"
+        )
+    if provisioned_customers is not None and provisioned_customers < profile.virtual_users:
+        violations.append(
+            "the customer pool of " + str(provisioned_customers) + " customers cannot give the "
+            + str(profile.virtual_users) + " virtual users of this profile their own customer, a cart and a "
+            + "coupon allowance, so the profile would measure shared customers"
         )
     total = profile.requests_per_second * profile.duration_seconds
     if total > boundary.max_total_requests:

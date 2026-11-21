@@ -8,6 +8,7 @@ import com.shop.paymentservice.entity.Payment;
 import com.shop.paymentservice.entity.PaymentEvent;
 import com.shop.paymentservice.outbox.PaymentEventPublisher;
 import com.shop.paymentservice.repository.PaymentEventRepository;
+import com.shop.paymentservice.repository.PaymentRefundRepository;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.webhook.WebhookPayload;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,7 @@ class WebhookEventServiceTest {
 
     @Mock PaymentRepository paymentRepository;
     @Mock PaymentEventRepository eventRepository;
+    @Mock PaymentRefundRepository refundRepository;
     @Mock PaymentWriter writer;
     @Mock PaymentEventPublisher publisher;
     @Mock ReceiptService receiptService;
@@ -55,7 +57,8 @@ class WebhookEventServiceTest {
     @BeforeEach
     void setUp() {
         service = new WebhookEventService(paymentRepository, eventRepository, writer, new ObjectMapper(), receiptService,
-                com.shop.paymentservice.config.PaymentStripeProperties.of("", "mock-webhook-secret", "2024-06-20", "", false));
+                com.shop.paymentservice.config.PaymentStripeProperties.of("", "mock-webhook-secret", "2024-06-20", "", false),
+                new ProviderRefundApplier(paymentRepository, refundRepository, writer));
         org.mockito.Mockito.lenient().doAnswer(inv -> {
             inv.getArgument(1, PaymentEvent.class).setStatus(PaymentEvent.STATUS_PROCESSED);
             return inv.getArgument(0, Payment.class);
