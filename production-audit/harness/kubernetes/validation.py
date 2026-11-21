@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -347,4 +348,144 @@ def validate_manifests() -> dict[str, Any]:
             str(schema.get("reason", "the schema validation could not run")),
         )
 
+    observation = load_autoscaling_observation()
+    if observation["status"] == "PASS":
+        report.add(
+            "K8S-14",
+            "AUTOSCALING_OBSERVATION",
+            "PASS",
+            "the autoscaler was observed on a real cluster to scale up under a load and to scale back down",
+            observation.get("evidence", []),
+        )
+    elif observation["status"] == "BLOCKED":
+        report.add(
+            "K8S-14",
+            "AUTOSCALING_OBSERVATION",
+            "BLOCKED",
+            observation.get("reason", "no autoscaling observation is recorded"),
+            observation.get("evidence", []),
+        )
+    else:
+        report.add(
+            "K8S-14",
+            "AUTOSCALING_OBSERVATION",
+            "FAIL",
+            observation.get("reason", "the recorded autoscaling observation does not prove the behaviour of the autoscaler"),
+            observation.get("problems", []),
+        )
+
     return report.document()
+
+
+def observation_path() -> Path:
+    return config.run_root() / "k8s-results" / "autoscaling.json"
+
+
+def _autoscaler_expectations() -> dict[str, Any]:
+    documents, _ = load_manifests()
+    expectations: dict[str, Any] = {}
+    for document in documents:
+        if document.get("kind") != "HorizontalPodAutoscaler":
+            continue
+        spec = document.get("spec") or {}
+        metrics = spec.get("metrics") or []
+        target: dict[str, Any] = {}
+        for metric in metrics:
+            if metric.get("type") == "Resource":
+                target = ((metric.get("resource") or {}).get("target")) or {}
+        expectations[_workload_name(document)] = {
+            "minReplicas": spec.get("minReplicas"),
+            "maxReplicas": spec.get("maxReplicas"),
+            "scaleTarget": (spec.get("scaleTargetRef") or {}).get("name"),
+            "averageUtilization": target.get("averageUtilization"),
+        }
+    return expectations
+
+
+def _observed_replicas(observation: dict[str, Any], phase: str) -> int | None:
+    entry = (observation.get("observations") or {}).get(phase) or {}
+    value = entry.get("replicas")
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
+def evaluate_autoscaling_observation(observation: dict[str, Any]) -> dict[str, Any]:
+    problems: list[str] = []
+    evidence: list[str] = []
+    cluster = observation.get("cluster") or {}
+    if not cluster.get("kubernetes_version"):
+        problems.append("the observation records no kubernetes version")
+    if not cluster.get("cluster_name"):
+        problems.append("the observation records no cluster name")
+    if not (observation.get("image") or {}).get("digest"):
+        problems.append("the observation records no deployed image")
+    applied = ((observation.get("autoscaler_manifest_as_applied") or {}).get("spec")) or {}
+    expectations = _autoscaler_expectations()
+    if not expectations:
+        problems.append("the manifests declare no autoscaler to compare the observation with")
+    for name, expected in expectations.items():
+        if applied.get("minReplicas") != expected.get("minReplicas"):
+            problems.append(name + " in the observation has minReplicas=" + str(applied.get("minReplicas")) + " while the manifest declares " + str(expected.get("minReplicas")))
+        if applied.get("maxReplicas") != expected.get("maxReplicas"):
+            problems.append(name + " in the observation has maxReplicas=" + str(applied.get("maxReplicas")) + " while the manifest declares " + str(expected.get("maxReplicas")))
+        if (applied.get("scaleTargetRef") or {}).get("name") != expected.get("scaleTarget"):
+            problems.append(name + " in the observation targets another deployment than the manifest declares")
+        metrics = applied.get("metrics") or []
+        applied_target: dict[str, Any] = {}
+        if metrics:
+            applied_target = (((metrics[0].get("resource") or {}).get("target")) or {})
+        if applied_target.get("averageUtilization") != expected.get("averageUtilization"):
+            problems.append(name + " in the observation targets " + str(applied_target.get("averageUtilization")) + " percent cpu while the manifest declares " + str(expected.get("averageUtilization")))
+    before = _observed_replicas(observation, "before_load")
+    under = _observed_replicas(observation, "under_load")
+    after = _observed_replicas(observation, "after_load")
+    if before is None or under is None or after is None:
+        problems.append("the observation records no complete set of replica counts")
+    else:
+        evidence.append("replicas before=" + str(before) + " under load=" + str(under) + " after load=" + str(after))
+        if under <= before:
+            problems.append("the observation shows no scale up, " + str(under) + " replicas under the load against " + str(before) + " before")
+        if after > before:
+            problems.append("the observation shows no scale down, " + str(after) + " replicas after the load against " + str(before) + " before")
+    for phase in ("before_load", "under_load", "after_load"):
+        entry = (observation.get("observations") or {}).get(phase) or {}
+        if not entry.get("observed_at"):
+            problems.append("the observation of the phase " + phase + " carries no timestamp")
+        if not isinstance(entry.get("cpu_utilization_percent"), int):
+            problems.append("the observation of the phase " + phase + " carries no cpu utilisation")
+    verdict = observation.get("verdict") or {}
+    if not verdict.get("scaled_up_under_real_load"):
+        problems.append("the verdict does not claim a scale up under a real load")
+    if not verdict.get("scaled_back_down_after_load"):
+        problems.append("the verdict does not claim a scale back down")
+    load = observation.get("load") or {}
+    if not load.get("total_requests"):
+        problems.append("the observation records no load")
+    else:
+        evidence.append("load: " + str(load.get("total_requests")) + " requests at " + str(load.get("rate_per_second")) + " per second against " + str(load.get("target")))
+    return {"status": "PASS" if not problems else "FAIL", "problems": problems, "evidence": evidence}
+
+
+def load_autoscaling_observation() -> dict[str, Any]:
+    path = observation_path()
+    if not path.exists():
+        return {
+            "status": "BLOCKED",
+            "reason": "no autoscaling observation of a real cluster is recorded at " + str(path),
+            "evidence": [],
+        }
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return {
+            "status": "FAIL",
+            "reason": "the recorded autoscaling observation could not be read: " + str(error),
+            "evidence": [],
+        }
+    result = evaluate_autoscaling_observation(document)
+    if result["status"] == "FAIL":
+        result["reason"] = "the recorded autoscaling observation does not prove that the autoscaler scaled up and scaled back down"
+    else:
+        result["reason"] = "the recorded autoscaling observation proves that the autoscaler scaled up under a real load and scaled back down"
+    return result

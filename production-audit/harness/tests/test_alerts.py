@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 
 from harness import yamlmini
@@ -145,6 +146,38 @@ class AlertmanagerRenderingTest(unittest.TestCase):
         self.assertNotIn("__TELEGRAM_CHAT_ID__", rendered)
         self.assertNotIn("__TELEGRAM_CI_CHAT_ID__", rendered)
         self.assertIn("123456789:AAEtesttesttesttesttesttesttesttesttest", rendered)
+
+    def test_the_message_template_only_uses_the_fields_of_the_alertmanager_data(self) -> None:
+        rendered = render_alertmanager_config(
+            "123456789:AAEtesttesttesttesttesttesttesttesttest", "-1001234567890", "-1009876543210")
+        allowed = {
+            "CommonLabels",
+            "CommonAnnotations",
+            "Status",
+            "Alerts",
+            "ExternalURL",
+            "Receiver",
+            "GroupLabels",
+        }
+        for match in re.finditer(r"\{\{([^}]*)\}\}", rendered):
+            expression = match.group(1).strip()
+            if expression.startswith("if ") or expression.startswith("end"):
+                continue
+            roots = re.findall(r"\.([A-Za-z][A-Za-z0-9]*)", expression)
+            if not roots:
+                continue
+            root = roots[0]
+            self.assertIn(
+                root,
+                allowed,
+                "the alertmanager template uses an unknown field: " + expression,
+            )
+
+    def test_the_started_field_is_read_from_the_alerts(self) -> None:
+        rendered = render_alertmanager_config(
+            "123456789:AAEtesttesttesttesttesttesttesttesttest", "-1001234567890", "-1009876543210")
+        self.assertNotIn("{{ .StartsAt }}", rendered)
+        self.assertIn("(index .Alerts 0).StartsAt", rendered)
 
 
 class KubernetesValidationTest(unittest.TestCase):

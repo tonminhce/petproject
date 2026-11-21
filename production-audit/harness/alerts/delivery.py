@@ -9,8 +9,14 @@ from typing import Any
 from .. import config
 from ..telegram.client import (
     CredentialError,
+    Credentials,
     DeliveryError,
+    PUBLIC_BOT_API_BASE,
+    bot_api_base,
     credentials_from_environment,
+    get_me,
+    mask_identifier,
+    redact,
     send_message,
 )
 from .messages import build_ci_alert, build_resolved_notification, build_runtime_incident
@@ -24,6 +30,19 @@ def _environment(env: dict | None) -> dict:
     return env if env is not None else dict(os.environ)
 
 
+def _masked_response(response: dict, credentials: Credentials, route: str) -> str:
+    payload = json.dumps(response, sort_keys=True, ensure_ascii=False)
+    identifiers = {
+        credentials.chat_id,
+        credentials.ci_chat_id,
+        str(credentials.destination_for(route)),
+    }
+    for identifier in identifiers:
+        if identifier:
+            payload = payload.replace(identifier, mask_identifier(identifier))
+    return redact(payload, [credentials.bot_token])
+
+
 def _deliver(
     gate: str,
     message: str,
@@ -32,30 +51,61 @@ def _deliver(
     detail: str,
 ) -> dict[str, Any]:
     source = _environment(env)
+    endpoint = bot_api_base(source)
     try:
         credentials = credentials_from_environment(source)
     except CredentialError as error:
-        evidence = {"reason": str(error), "detail": detail}
+        evidence = {"reason": str(error), "detail": detail, "bot_api_base": endpoint}
         record_alert_result(gate, "BLOCKED", evidence)
         return {"gate": gate, "status": "BLOCKED", "evidence": evidence}
     try:
-        response = send_message(message, credentials, route=route)
+        response = send_message(message, credentials, route=route, base=endpoint)
     except DeliveryError as error:
-        evidence = {"reason": str(error), "detail": detail}
+        evidence = {"reason": str(error), "detail": detail, "bot_api_base": endpoint}
         record_alert_result(gate, "FAIL", evidence)
         return {"gate": gate, "status": "FAIL", "evidence": evidence}
     result = response.get("result") or {}
     evidence = {
         "detail": detail,
         "route": route,
-        "chat_id": credentials.destination_for(route),
+        "bot_api_base": endpoint,
+        "public_bot_api": endpoint == PUBLIC_BOT_API_BASE,
+        "chat_id": mask_identifier(credentials.destination_for(route)),
         "telegram_message_id": result.get("message_id"),
-        "telegram_chat_id": result.get("chat", {}).get("id"),
+        "telegram_chat_id": mask_identifier(result.get("chat", {}).get("id")),
         "telegram_date": result.get("date"),
         "message_length": len(message),
+        "response": _masked_response(response, credentials, route),
     }
     record_alert_result(gate, "PASS", evidence)
     return {"gate": gate, "status": "PASS", "evidence": evidence}
+
+
+def run_identity_probe(env: dict | None = None) -> dict[str, Any]:
+    source = _environment(env)
+    endpoint = bot_api_base(source)
+    try:
+        credentials = credentials_from_environment(source)
+    except CredentialError as error:
+        evidence = {"reason": str(error), "detail": "the bot identity probe could not start", "bot_api_base": endpoint}
+        record_alert_result("QA-ALERT-00", "BLOCKED", evidence)
+        return {"gate": "QA-ALERT-00", "status": "BLOCKED", "evidence": evidence}
+    try:
+        result = get_me(credentials, base=endpoint)
+    except DeliveryError as error:
+        evidence = {"reason": str(error), "detail": "the bot identity probe was rejected", "bot_api_base": endpoint}
+        record_alert_result("QA-ALERT-00", "FAIL", evidence)
+        return {"gate": "QA-ALERT-00", "status": "FAIL", "evidence": evidence}
+    evidence = {
+        "detail": "the bot identity probe answered the bot api",
+        "bot_api_base": endpoint,
+        "public_bot_api": endpoint == PUBLIC_BOT_API_BASE,
+        "bot_id": result.get("id"),
+        "username": result.get("username"),
+        "response": redact(json.dumps(result, sort_keys=True, ensure_ascii=False), [credentials.bot_token]),
+    }
+    record_alert_result("QA-ALERT-00", "PASS", evidence)
+    return {"gate": "QA-ALERT-00", "status": "PASS", "evidence": evidence}
 
 
 def run_ci_alert_test(env: dict | None = None) -> dict[str, Any]:
@@ -187,8 +237,6 @@ def run_security_probe(env: dict | None = None) -> dict[str, Any]:
         impact="none, this is a controlled verification message",
         current_metric="synthetic_value=1",
     )
-    from ..telegram.client import redact
-
     redacted = redact(probe, [credentials.bot_token, credentials.chat_id])
     leaked = credentials.bot_token in redacted or credentials.chat_id in redacted
     evidence = {

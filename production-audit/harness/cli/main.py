@@ -366,10 +366,15 @@ def command_load(arguments: argparse.Namespace) -> int:
     document = run_profile(action, scale=scale, base_url=arguments.base_url)
     append_event(config.events_path(), "load_" + action, {"status": document.get("status")})
     write_json(results_root() / (action + "-latest.json"), document)
-    write_json(
-        config.state_root() / "performance-baselines.json",
-        {"profile": action, "updated_at": utc_now(), "result": document},
-    )
+    from ..loadtesting.capacity import record_capacity_limit
+
+    baselines_path = config.state_root() / "performance-baselines.json"
+    baselines = read_json(baselines_path, {}) or {}
+    baselines["profile"] = action
+    baselines["updated_at"] = utc_now()
+    baselines["result"] = document
+    write_json(baselines_path, baselines)
+    record_capacity_limit(baselines_path)
     record_suite_result(
         "performance",
         {
@@ -398,6 +403,8 @@ def command_stripe(arguments: argparse.Namespace) -> int:
     from ..stripe.sandbox import reconcile, test_payment, test_webhooks, verify_configuration
 
     action = arguments.action
+    if action == "acceptance":
+        return command_stripe_acceptance()
     if action == "verify-config":
         document = verify_configuration()
     elif action == "sandbox-smoke":
@@ -419,6 +426,45 @@ def command_stripe(arguments: argparse.Namespace) -> int:
     if document.get("status") == "BLOCKED":
         return config.EXIT_BLOCKED
     return config.EXIT_GATE_FAILED
+
+
+def command_stripe_acceptance() -> int:
+    from ..stripe.acceptance import run_acceptance, write_evidence
+    from ..verification.gates import record_suite_result
+
+    document = run_acceptance()
+    path = write_evidence(document)
+    summary = document.get("summary") or {}
+    verified = bool(document.get("verified_against_real_stripe_api"))
+    status = "PASS" if verified else "BLOCKED"
+    record_suite_result(
+        "stripe_acceptance",
+        {
+            "suite": "stripe_acceptance",
+            "status": status,
+            "exit_code": 0 if document.get("status") != "FAILED" else 1,
+            "cases": summary.get("cases", 0),
+            "proven": summary.get("proven", 0),
+            "not_proven": summary.get("not_proven", 0),
+            "failed": summary.get("failed", 0),
+            "stripe_server": (document.get("stripe_server") or {}).get("kind", ""),
+            "stripe_version": (document.get("stripe_server") or {}).get("version", ""),
+            "verified_against_real_stripe_api": verified,
+            "evidence": str(path),
+            "updated_at": utc_now(),
+        },
+        path=config.run_root() / "verification.json",
+    )
+    write_json(
+        config.run_root() / "stripe-acceptance" / "cli-result.json",
+        {"action": "acceptance", "updated_at": utc_now(), "result": document},
+    )
+    emit(document)
+    if document.get("status") == "FAILED":
+        return config.EXIT_GATE_FAILED
+    if verified:
+        return config.EXIT_OK
+    return config.EXIT_BLOCKED
 
 
 def command_alerts(arguments: argparse.Namespace) -> int:
@@ -821,7 +867,7 @@ def build_parser() -> argparse.ArgumentParser:
     stripe = subparsers.add_parser("stripe", help="real stripe sandbox verification")
     stripe.add_argument(
         "action",
-        choices=("verify-config", "sandbox-smoke", "test-payment", "test-webhooks", "reconcile"),
+        choices=("verify-config", "sandbox-smoke", "test-payment", "test-webhooks", "reconcile", "acceptance"),
     )
     stripe.set_defaults(handler=command_stripe)
 

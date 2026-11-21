@@ -246,7 +246,13 @@ def write_final_report(path: Path | None = None) -> Path:
     load_invariants = latest_load.get("invariants", {}) or {}
     build = verification.get("suites", {}).get("build", {})
     from ..inventory.scanner import source_fingerprint
+    from ..loadtesting.capacity import capacity_limit_document
 
+    capacity = capacity_limit_document()
+    capacity_limit = capacity.get("capacity_limit") or {}
+    capacity_rows = {
+        str(row.get("profile") or ""): row for row in (capacity.get("profiles") or [])
+    }
     fingerprint = source_fingerprint()
     build_fresh = evidence_is_fresh(build, fingerprint)
     build_status = str(build.get("status", "chưa chạy")) if build_fresh else "bằng chứng đã cũ"
@@ -280,6 +286,11 @@ def write_final_report(path: Path | None = None) -> Path:
         add("- **Bằng chứng tải nặng** (lần chạy mới nhất: " + str(load_result.get("profile", "")) + " — " + str(load_result.get("status", "")) + ", thư mục " + str(latest_load.get("directory", "")) + "): yêu cầu " + _metric(load_metrics.get("requests")) + ", tần suất " + _metric(load_metrics.get("request_rate_per_second"), " req/s") + ", p95 " + _metric(load_metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(load_metrics.get("failure_rate")) + ".")
     else:
         add("- **Bằng chứng tải nặng**: chưa có lần chạy tải nào được lưu trong thư mục load-results để đo.")
+    if capacity_limit:
+        add("- **Giới hạn dung lượng đo được**: " + _rate(capacity_limit.get("requests_per_second"))
+            + " req/s (" + _rate(capacity_limit.get("iterations_per_second"))
+            + " lượt lặp/giây), hồ sơ " + str(capacity_limit.get("profile", "")) + ", thư mục "
+            + str(capacity_limit.get("directory", "")) + " — xem mục 20.")
     add("- **Stripe sandbox thực**: trạng thái " + str(stripe_result.get("status", "chưa chạy")) + " — xem mục 12 và 13.")
     add("- **Cảnh báo Telegram**: " + str(len(alert_gates)) + " cổng cảnh báo đã được ghi nhận — xem mục 29, 30 và 31.")
     add("")
@@ -442,6 +453,43 @@ def write_final_report(path: Path | None = None) -> Path:
 
     add("## 20. THÔNG LƯỢNG NỀN TẢNG VS ĐỈNH (BASELINE VS PEAK THROUGHPUT)")
     add("")
+    if capacity_limit:
+        window = capacity.get("last_complete_run") or {}
+        add("- **Giới hạn dung lượng đo được (measured capacity limit)**: "
+            + _rate(capacity_limit.get("requests_per_second")) + " req/s ("
+            + _rate(capacity_limit.get("iterations_per_second")) + " lượt lặp/giây) — hồ sơ "
+            + str(capacity_limit.get("profile", "")) + ", thư mục "
+            + str(capacity_limit.get("directory", "")) + ": "
+            + str(capacity_limit.get("business_success", 0)) + " thành công, "
+            + str(capacity_limit.get("business_failure", 0)) + " thất bại, "
+            + str(capacity_limit.get("business_refusal", 0)) + " từ chối, "
+            + str(capacity_limit.get("shed_requests", 0)) + " yêu cầu bị gateway loại bỏ, "
+            + str(capacity_limit.get("invariant_violations", 0)) + " vi phạm bất biến.")
+        add("- Quy tắc suy ra (ghi trong trạng thái đã lưu): " + str(capacity.get("rule", "")) + ".")
+        add("- Lần chạy đo đầy đủ cuối cùng: " + str(window.get("window_start_utc", "")) + " đến "
+            + str(window.get("window_end_utc", "")) + ", các thư mục: "
+            + ", ".join(str(directory) for directory in window.get("directories_in_run_order", [])) + ".")
+        stops = capacity.get("stops_holding_at") or {}
+        broken = stops.get("profiles") or []
+        if broken:
+            add("- Nơi nền tảng ngừng giữ được: " + "; ".join(
+                str(row.get("profile", "")) + " ở " + _rate(row.get("delivered_requests_per_second"))
+                + " req/s với " + str(row.get("business_failure", 0)) + " thất bại nghiệp vụ, "
+                + str(row.get("business_refusal", 0)) + " từ chối, "
+                + str(row.get("shed_requests", 0)) + " yêu cầu bị gateway loại bỏ"
+                for row in broken
+            ) + ".")
+        binding = capacity.get("binding") or {}
+        if binding.get("binds_to_current_source") is False:
+            add("- **Phép đo đã ghi nhận không còn gắn với mã nguồn hiện tại** (lý do ghi trong trạng thái đã lưu): "
+                + str(binding.get("reason", "")) + ".")
+            add("- Bằng chứng đầy đủ: "
+                + str(capacity.get("source_directory", "")) + "/capacity-limit.md.")
+        add("- Nguồn của con số: " + str(capacity.get("source", "")) + ".")
+    else:
+        add("- **Chưa ghi nhận giới hạn dung lượng đo được**: "
+            + "trạng thái đã lưu không chứa phép đo nào thoả quy tắc của lần chạy đo đầy đủ cuối cùng.")
+    add("")
     latest_by_profile: dict[str, dict[str, Any]] = {}
     attempts: dict[str, int] = {}
     for row in load_rows:
@@ -457,6 +505,19 @@ def write_final_report(path: Path | None = None) -> Path:
         metrics = row.get("metrics", {})
         profile = str(row.get("profile") or row.get("directory"))
         add("- " + profile + " — kịch bản " + str(row.get("scenario")) + ", trạng thái " + str(row.get("status") or "không ghi nhận") + ": yêu cầu " + _metric(metrics.get("requests")) + ", " + _metric(metrics.get("request_rate_per_second"), " req/s") + ", lượt lặp " + _metric(metrics.get("iterations")) + ", p95 " + _metric(metrics.get("latency_p95_ms"), " ms") + ", tỷ lệ lỗi " + _rate(metrics.get("failure_rate")) + ".")
+        capacity_row = capacity_rows.get(profile, {})
+        if capacity_row:
+            add("  - Kế hoạch: " + _rate(capacity_row.get("planned_peak_iterations_per_second"))
+                + " lượt lặp/giây ("
+                + _rate(capacity_row.get("planned_peak_requests_per_second"))
+                + " req/s); đã giao: " + _rate(capacity_row.get("delivered_iterations_per_second"))
+                + " lượt lặp/giây, " + _rate(capacity_row.get("delivered_requests_per_second"))
+                + " req/s; tỷ lệ giao/nhắm " + _rate(capacity_row.get("recorded_rate_ratio"))
+                + "; thành công " + str(capacity_row.get("business_success", 0))
+                + ", thất bại " + str(capacity_row.get("business_failure", 0))
+                + ", từ chối " + str(capacity_row.get("business_refusal", 0))
+                + ", gateway loại " + str(capacity_row.get("shed_requests", 0))
+                + ", vi phạm bất biến " + str(capacity_row.get("invariant_violations", 0)) + ".")
         if row.get("business_verdict"):
             add("  - Kết luận nghiệp vụ: " + str(row.get("business_verdict")) + ".")
         if row.get("measurement_valid") is False:

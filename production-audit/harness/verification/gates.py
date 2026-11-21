@@ -176,6 +176,63 @@ def _task_state_counts() -> dict[str, int]:
     return task_status_summary(load_tasks())
 
 
+def _payment_acceptance_evidence() -> dict[str, Any]:
+    from ..stripe.acceptance import load_evidence
+
+    return load_evidence()
+
+
+def _payment_acceptance_verdict(acceptance: dict[str, Any]) -> dict[str, Any]:
+    server = acceptance.get("stripe_server") or {}
+    summary = acceptance.get("summary") or {}
+    cases = acceptance.get("cases") or []
+    credential = acceptance.get("credential") or {}
+    api_base = str(server.get("http_address_in_network", "") or "")
+    public = bool(server.get("is_public_stripe_api")) or api_base.startswith("https://api.stripe.com")
+    proven = len([case for case in cases if case.get("verdict") == "PROVEN"])
+    outstanding = [str(case.get("name", "")) for case in cases if case.get("verdict") != "PROVEN"]
+    version = str(server.get("version", "") or "")
+    evidence = [
+        "payment acceptance cases: " + str(summary.get("cases", 0)) + " (" + str(proven) + " proven)",
+        "stripe server under test: " + str(server.get("kind", "none")) + " " + version,
+        "stripe api base of record: " + (api_base or "none"),
+        "credential mode: " + str(credential.get("secret_key_mode", "none")),
+    ]
+    if not acceptance:
+        return {
+            "status": BLOCKED,
+            "detail": "no Stripe payment acceptance evidence: the payment suite alone cannot certify the payment acceptance",
+            "evidence": evidence,
+        }
+    if public and str(credential.get("secret_key_mode", "")) == "test" and not outstanding \
+            and int(summary.get("failed", 0) or 0) == 0 and int(summary.get("cases", 0) or 0) > 0:
+        return {
+            "status": PASS,
+            "detail": "the payment acceptance ran against api.stripe.com with a genuine test-mode key and every case was proven",
+            "evidence": evidence,
+        }
+    if public:
+        return {
+            "status": BLOCKED,
+            "detail": "the base address was api.stripe.com but the acceptance did not complete with a genuine test-mode key "
+                      "and every case proven; outstanding: " + (", ".join(outstanding) or "none"),
+            "evidence": evidence,
+        }
+    return {
+        "status": BLOCKED,
+        "detail": "the payment acceptance is NOT verified against the real Stripe: it ran against the official Stripe mock "
+                  + version
+                  + " ("
+                  + str(proven)
+                  + " of "
+                  + str(summary.get("cases", 0))
+                  + " cases proven; outstanding: "
+                  + (", ".join(outstanding) or "none")
+                  + "); a genuine test-mode key against api.stripe.com is still required",
+        "evidence": evidence,
+    }
+
+
 def evaluate_gates(root: Path | None = None) -> list[Gate]:
     repository = root or config.repository_root()
     gates: list[Gate] = []
@@ -251,7 +308,24 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     gates.append(Gate(id="GATE-4", name="BUSINESS_CORRECTNESS", status=suite_status("happy"), evidence=[f"suite happy: {suite_status('happy')}"]))
     gates.append(Gate(id="GATE-5", name="INVENTORY_SAFETY", status=suite_status("concurrency_inventory"), evidence=[f"suite concurrency_inventory: {suite_status('concurrency_inventory')}"]))
-    gates.append(Gate(id="GATE-6", name="PAYMENT_CORRECTNESS", status=suite_status("payment"), evidence=[f"suite payment: {suite_status('payment')}"]))
+    payment_suite = suite_status("payment")
+    acceptance = _payment_acceptance_evidence()
+    acceptance_verdict = _payment_acceptance_verdict(acceptance)
+    if payment_suite == FAIL:
+        payment_status = FAIL
+    elif acceptance_verdict["status"] == PASS:
+        payment_status = payment_suite
+    else:
+        payment_status = acceptance_verdict["status"]
+    gates.append(
+        Gate(
+            id="GATE-6",
+            name="PAYMENT_CORRECTNESS",
+            status=payment_status,
+            evidence=[f"suite payment: {payment_suite}"] + acceptance_verdict["evidence"],
+            detail=acceptance_verdict["detail"] + "; the payment suite reports " + payment_suite,
+        )
+    )
     gates.append(Gate(id="GATE-7", name="KAFKA_OUTBOX", status=suite_status("kafka"), evidence=[f"suite kafka: {suite_status('kafka')}"]))
     gates.append(Gate(id="GATE-8", name="REDIS_GATEWAY", status=suite_status("gateway"), evidence=[f"suite gateway: {suite_status('gateway')}"]))
     gates.append(Gate(id="GATE-9", name="DATABASE_INTEGRITY", status=suite_status("integration"), evidence=[f"suite integration: {suite_status('integration')}"]))
@@ -295,7 +369,43 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     gates.append(Gate(id="GATE-17", name="PERFORMANCE", status=suite_status("performance"), evidence=[f"suite performance: {suite_status('performance')}"]))
     gates.append(Gate(id="GATE-18", name="OBSERVABILITY_OPERATIONS", status=suite_status("operations"), evidence=[f"suite operations: {suite_status('operations')}"]))
     gates.append(Gate(id="GATE-23", name="ALERTING_CONFIGURATION", status=suite_status("alerts"), evidence=[f"suite alerts: {suite_status('alerts')}"]))
-    gates.append(Gate(id="GATE-24", name="KUBERNETES_MANIFESTS", status=suite_status("k8s"), evidence=[f"suite k8s: {suite_status('k8s')}"]))
+    from ..kubernetes.validation import load_autoscaling_observation
+
+    observation = load_autoscaling_observation()
+    observation_status = str(observation.get("status", BLOCKED))
+    observation_reason = str(observation.get("reason", "no autoscaling observation is recorded"))
+    manifests_status = suite_status("k8s")
+    if observation_status == FAIL:
+        kubernetes_status = FAIL
+        kubernetes_detail = "the recorded autoscaling observation does not prove the behaviour of the autoscaler"
+    elif observation_status == BLOCKED:
+        kubernetes_status = BLOCKED
+        kubernetes_detail = "the manifests validate but no autoscaling observation of a real cluster is recorded"
+    else:
+        kubernetes_status = manifests_status
+        kubernetes_detail = "the manifests validate and the autoscaler was observed on a real cluster"
+    gates.append(
+        Gate(
+            id="GATE-24",
+            name="KUBERNETES_MANIFESTS",
+            status=kubernetes_status,
+            evidence=[
+                f"suite k8s: {manifests_status}",
+                f"autoscaling observation: {observation_status}",
+                observation_reason,
+            ],
+            detail=kubernetes_detail,
+        )
+    )
+    gates.append(
+        Gate(
+            id="GATE-25",
+            name="AUTOSCALING_OBSERVATION",
+            status=observation_status,
+            evidence=[str(item) for item in observation.get("evidence", [])] or [observation_reason],
+            detail=observation_reason,
+        )
+    )
 
     reviews_root = config.run_root() / "independent-reviews"
     reviews = list(reviews_root.glob("*.md")) if reviews_root.exists() else []
@@ -442,6 +552,7 @@ def completion_predicate(gates: list[Gate]) -> dict[str, Any]:
         "GATE-22",
         "GATE-23",
         "GATE-24",
+        "GATE-25",
     ]
     gate_map = {gate.id: gate for gate in gates}
     missing = [gate_id for gate_id in required if gate_id not in gate_map]

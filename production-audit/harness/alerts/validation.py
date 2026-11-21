@@ -7,7 +7,7 @@ from typing import Any
 
 from .. import config
 from .. import yamlmini
-from ..telegram.client import BOT_TOKEN_PATTERN, credential_status
+from ..telegram.client import BOT_TOKEN_PATTERN, PUBLIC_BOT_API_BASE, credential_status
 from .metrics import rule_metric_audit
 from .render import (
     alertmanager_rules_path,
@@ -353,6 +353,105 @@ def _validate_credentials() -> tuple[dict[str, Any], list[str]]:
     )
 
 
+def _validate_delivery_verification() -> tuple[dict[str, Any], list[str]]:
+    from .state import load_alert_results
+
+    entries = {str(item.get("gate")): item for item in load_alert_results().get("results", [])}
+    evidence: list[str] = []
+    problems: list[str] = []
+    bases: list[str] = []
+    for gate, purpose in (
+        ("QA-ALERT-00", "the bot identity probe"),
+        ("QA-ALERT-01", "the continuous integration route delivery"),
+        ("QA-ALERT-02", "the runtime route delivery"),
+        ("QA-ALERT-03", "the recovery notification delivery"),
+        ("QA-ALERT-05", "the credential redaction probe"),
+    ):
+        entry = entries.get(gate)
+        if not entry:
+            problems.append(purpose + " has no recorded result")
+            continue
+        status = str(entry.get("status", "UNKNOWN"))
+        endpoint = str((entry.get("evidence") or {}).get("bot_api_base") or "")
+        evidence.append(gate + " " + purpose + ": " + status + (" against " + endpoint if endpoint else ""))
+        if status != "PASS":
+            problems.append(purpose + " did not pass")
+            continue
+        if endpoint:
+            bases.append(endpoint)
+    unique = sorted(set(bases))
+    if len(unique) > 1:
+        problems.append("the recorded deliveries answered more than one base address: " + ", ".join(unique))
+    endpoint = unique[0] if len(unique) == 1 else ""
+    if problems:
+        return (
+            _check(
+                "ALT-08",
+                "DELIVERY_VERIFICATION",
+                "BLOCKED",
+                "the alerting delivery path is not proven: " + "; ".join(problems),
+                evidence,
+            ),
+            evidence,
+        )
+    if endpoint == PUBLIC_BOT_API_BASE:
+        return (
+            _check(
+                "ALT-08",
+                "DELIVERY_VERIFICATION",
+                "PASS",
+                "every alerting route answered the public telegram.org bot api",
+                evidence,
+            ),
+            evidence,
+        )
+    return (
+        _check(
+            "ALT-08",
+            "DELIVERY_VERIFICATION",
+            "BLOCKED",
+            "every alerting route answered " + endpoint
+            + ", which is not the public telegram.org bot api, so the delivery to telegram.org is still unverified",
+            evidence,
+        ),
+        evidence,
+    )
+
+
+def _validate_alert_grouping() -> tuple[dict[str, Any], list[str]]:
+    from .state import load_alert_results
+
+    entries = {str(item.get("gate")): item for item in load_alert_results().get("results", [])}
+    evidence: list[str] = []
+    entry = entries.get("QA-ALERT-04")
+    if not entry:
+        return (
+            _check("ALT-09", "ALERT_GROUPING", "BLOCKED", "no deduplication probe has been recorded", evidence),
+            evidence,
+        )
+    payload = entry.get("evidence") or {}
+    evidence.append("submitted alerts: " + str(payload.get("submitted")))
+    evidence.append("grouped alerts: " + str(payload.get("grouped_alerts")))
+    evidence.append("alertmanager count: " + str(payload.get("alertmanager_count")))
+    evidence.append("alertmanager: " + str(payload.get("alertmanager_url")))
+    status = str(entry.get("status", "UNKNOWN"))
+    if status != "PASS":
+        return (
+            _check(
+                "ALT-09",
+                "ALERT_GROUPING",
+                "BLOCKED",
+                "the deduplication probe did not pass: " + str(payload.get("reason", status)),
+                evidence,
+            ),
+            evidence,
+        )
+    return (
+        _check("ALT-09", "ALERT_GROUPING", "PASS", "identical alerts collapse into a single grouped alert", evidence),
+        evidence,
+    )
+
+
 def validate_alerting() -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     for validator in (
@@ -363,6 +462,8 @@ def validate_alerting() -> dict[str, Any]:
         _validate_ci_workflow,
         _validate_secret_hygiene,
         _validate_credentials,
+        _validate_delivery_verification,
+        _validate_alert_grouping,
     ):
         check, _ = validator()
         checks.append(check)

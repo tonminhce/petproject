@@ -83,14 +83,14 @@ class GateEvaluationTest(unittest.TestCase):
 
     def test_completion_predicate_is_true_when_all_gates_pass(self) -> None:
         gates = [Gate(id="GATE-1", name="A", status=PASS)]
-        gates += [Gate(id=f"GATE-{index}", name="B", status=PASS) for index in range(2, 23)]
+        gates += [Gate(id=f"GATE-{index}", name="B", status=PASS) for index in range(2, 26)]
         predicate = completion_predicate(gates)
         self.assertTrue(predicate["production_ready"])
         self.assertEqual(predicate["failing_gates"], [])
 
     def test_pending_gate_blocks_completion(self) -> None:
         gates = [Gate(id="GATE-1", name="A", status=PASS)]
-        gates += [Gate(id=f"GATE-{index}", name="B", status=PASS) for index in range(2, 23)]
+        gates += [Gate(id=f"GATE-{index}", name="B", status=PASS) for index in range(2, 26)]
         gates[5].status = PENDING
         predicate = completion_predicate(gates)
         self.assertFalse(predicate["production_ready"])

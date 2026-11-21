@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -13,6 +14,7 @@ CHAT_ID_PATTERN = re.compile(r"^-?[0-9]{1,20}$")
 LIVE_TOKEN_PATTERN = re.compile(r"^sk_live_")
 LIVE_BOT_TOKEN_PATTERN = re.compile(r"^bot[0-9]{6,12}:")
 BOT_API_BASE = "https://api.telegram.org"
+PUBLIC_BOT_API_BASE = "https://api.telegram.org"
 REQUEST_TIMEOUT_SECONDS = 15
 MAX_MESSAGE_LENGTH = 4096
 
@@ -20,6 +22,7 @@ ENV_BOT_TOKEN = "TELEGRAM_BOT_TOKEN"
 ENV_CHAT_ID = "TELEGRAM_CHAT_ID"
 ENV_CI_CHAT_ID = "TELEGRAM_CI_CHAT_ID"
 ENV_ALERTS_ENABLED = "TELEGRAM_ALERTS_ENABLED"
+ENV_BOT_API_BASE = "TELEGRAM_BOT_API_BASE"
 
 
 class CredentialError(Exception):
@@ -46,6 +49,25 @@ def alerts_enabled(env: dict | None = None) -> bool:
     source = env if env is not None else os.environ
     raw = str(source.get(ENV_ALERTS_ENABLED, "true")).strip().lower()
     return raw not in {"false", "0", "no", "off", "disabled"}
+
+
+def bot_api_base(env: dict | None = None) -> str:
+    source = env if env is not None else os.environ
+    value = str(source.get(ENV_BOT_API_BASE, "") or "").strip()
+    if not value:
+        return BOT_API_BASE
+    return value.rstrip("/")
+
+
+def uses_public_bot_api(env: dict | None = None) -> bool:
+    return bot_api_base(env) == PUBLIC_BOT_API_BASE
+
+
+def mask_identifier(value: str | int | None) -> str:
+    text = str(value if value is not None else "").strip()
+    if not text:
+        return ""
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
 def validate_bot_token(token: str) -> None:
@@ -134,8 +156,10 @@ def send_bot_api_request(
     credentials: Credentials,
     payload: dict | None = None,
     timeout: int = REQUEST_TIMEOUT_SECONDS,
+    base: str | None = None,
 ) -> dict:
-    url = BOT_API_BASE + "/bot" + credentials.bot_token + "/" + method
+    endpoint = str(base or bot_api_base()).rstrip("/")
+    url = endpoint + "/bot" + credentials.bot_token + "/" + method
     body = urllib.parse.urlencode(payload or {}).encode("utf-8")
     request = urllib.request.Request(url, data=body, method="POST")
     request.add_header("Content-Type", "application/x-www-form-urlencoded")
@@ -145,19 +169,21 @@ def send_bot_api_request(
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
         raise DeliveryError(
-            "Telegram API returned HTTP " + str(error.code) + ": " + redact(detail, [credentials.bot_token])
+            "Telegram API at " + endpoint + " returned HTTP " + str(error.code) + ": "
+            + redact(detail, [credentials.bot_token])
         ) from error
     except urllib.error.URLError as error:
         raise DeliveryError(
-            "Telegram API is unreachable: " + redact(str(error.reason), [credentials.bot_token])
+            "Telegram API at " + endpoint + " is unreachable: " + redact(str(error.reason), [credentials.bot_token])
         ) from error
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as error:
-        raise DeliveryError("Telegram API returned a non-JSON body") from error
+        raise DeliveryError("Telegram API at " + endpoint + " returned a non-JSON body") from error
     if not parsed.get("ok"):
         raise DeliveryError(
-            "Telegram API rejected the request: " + redact(str(parsed.get("description", "unknown")), [credentials.bot_token])
+            "Telegram API at " + endpoint + " rejected the request: "
+            + redact(str(parsed.get("description", "unknown")), [credentials.bot_token])
         )
     return parsed
 
@@ -169,6 +195,7 @@ def send_message(
     parse_mode: str = "HTML",
     disable_notification: bool = False,
     timeout: int = REQUEST_TIMEOUT_SECONDS,
+    base: str | None = None,
 ) -> dict:
     destination = credentials.destination_for(route)
     body = redact(text, [credentials.bot_token])
@@ -181,9 +208,9 @@ def send_message(
         "disable_web_page_preview": "true",
         "disable_notification": "true" if disable_notification else "false",
     }
-    return send_bot_api_request("sendMessage", credentials, payload, timeout)
+    return send_bot_api_request("sendMessage", credentials, payload, timeout, base)
 
 
-def get_me(credentials: Credentials, timeout: int = REQUEST_TIMEOUT_SECONDS) -> dict:
-    response = send_bot_api_request("getMe", credentials, {}, timeout)
+def get_me(credentials: Credentials, timeout: int = REQUEST_TIMEOUT_SECONDS, base: str | None = None) -> dict:
+    response = send_bot_api_request("getMe", credentials, {}, timeout, base)
     return response.get("result", {})

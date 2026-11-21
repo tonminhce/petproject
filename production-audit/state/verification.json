@@ -22,7 +22,7 @@
           "evidence": [
             "rules: 18",
             "categories: application, database",
-            "metric audit: 863 published metrics and 113 published labels checked"
+            "metric audit: 849 published metrics and 113 published labels checked"
           ],
           "id": "ALT-02",
           "name": "RUNTIME_ALERT_RULES",
@@ -62,7 +62,7 @@
         {
           "detail": "no committed telegram token or live stripe key was found",
           "evidence": [
-            "tracked files scanned: 1916",
+            "tracked files scanned: 1948",
             "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
           ],
           "id": "ALT-06",
@@ -70,24 +70,49 @@
           "status": "PASS"
         },
         {
-          "detail": "telegram delivery credentials are not available in this environment",
+          "detail": "telegram delivery credentials are present and valid",
           "evidence": [
             "alerts enabled: True",
-            "bot token present: False",
-            "chat identifier present: False",
-            "ci chat identifier present: False"
+            "bot token present: True",
+            "chat identifier present: True",
+            "ci chat identifier present: True"
           ],
           "id": "ALT-07",
           "name": "DELIVERY_CREDENTIALS",
+          "status": "PASS"
+        },
+        {
+          "detail": "every alerting route answered http://127.0.0.1:18091, which is not the public telegram.org bot api, so the delivery to telegram.org is still unverified",
+          "evidence": [
+            "QA-ALERT-00 the bot identity probe: PASS against http://127.0.0.1:18091",
+            "QA-ALERT-01 the continuous integration route delivery: PASS against http://127.0.0.1:18091",
+            "QA-ALERT-02 the runtime route delivery: PASS against http://127.0.0.1:18091",
+            "QA-ALERT-03 the recovery notification delivery: PASS against http://127.0.0.1:18091",
+            "QA-ALERT-05 the credential redaction probe: PASS"
+          ],
+          "id": "ALT-08",
+          "name": "DELIVERY_VERIFICATION",
           "status": "BLOCKED"
+        },
+        {
+          "detail": "identical alerts collapse into a single grouped alert",
+          "evidence": [
+            "submitted alerts: 5",
+            "grouped alerts: 1",
+            "alertmanager count: 0",
+            "alertmanager: http://127.0.0.1:9094"
+          ],
+          "id": "ALT-09",
+          "name": "ALERT_GROUPING",
+          "status": "PASS"
         }
       ],
       "detail": "0 failed and 1 blocked checks",
-      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
-      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
+      "harness_fingerprint": "66444b24467f262071b18c7ffa862b5943c0971a1c9eb2daa9159a7fbba30b80",
+      "source_fingerprint": "8ac5e923589b8fc2e50632c5ae8075cfd567522709a60ad7cdc0c033510d5d82",
       "status": "BLOCKED",
       "suite": "alerts",
-      "updated_at": "2026-11-21T01:29:36Z"
+      "updated_at": "2026-11-21T06:17:26Z"
     },
     "baseline": {
       "command": "./mvnw -B -ntp -T1C clean verify",
@@ -340,14 +365,24 @@
           "id": "K8S-13",
           "name": "SCHEMA_VALIDATION",
           "status": "PASS"
+        },
+        {
+          "detail": "the autoscaler was observed on a real cluster to scale up under a load and to scale back down",
+          "evidence": [
+            "replicas before=2 under load=10 after load=2",
+            "load: 197861 requests at 600 per second against http://gateway-service.shop-system.svc.cluster.local:8080/actuator/prometheus"
+          ],
+          "id": "K8S-14",
+          "name": "AUTOSCALING_OBSERVATION",
+          "status": "PASS"
         }
       ],
       "detail": "0 kubernetes manifest checks failed",
-      "harness_fingerprint": "fc3687d7583649b7b783f3e53d67f53ebae512fadc1b6aa56871b8adfd5fe248",
-      "source_fingerprint": "f8f8de6372471a9d4feef1168d20f6ede2c2558de798a4e14fc1711397a9942b",
+      "harness_fingerprint": "66444b24467f262071b18c7ffa862b5943c0971a1c9eb2daa9159a7fbba30b80",
+      "source_fingerprint": "8ac5e923589b8fc2e50632c5ae8075cfd567522709a60ad7cdc0c033510d5d82",
       "status": "PASS",
       "suite": "k8s",
-      "updated_at": "2026-11-21T01:29:39Z"
+      "updated_at": "2026-11-21T06:18:24Z"
     },
     "kafka": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -589,5 +624,5 @@
       "updated_at": "2026-11-21T00:41:07Z"
     }
   },
-  "updated_at": "2026-11-21T01:29:40Z"
+  "updated_at": "2026-11-21T06:18:25Z"
 }

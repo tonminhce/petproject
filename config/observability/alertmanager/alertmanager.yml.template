@@ -53,7 +53,7 @@ receivers:
           <b>Environment:</b> {{ .CommonLabels.environment }}
           <b>Service:</b> {{ .CommonLabels.application }}
           <b>Issue:</b> {{ .CommonAnnotations.summary }}
-          <b>Started:</b> {{ .StartsAt }}
+          <b>Started:</b> {{ (index .Alerts 0).StartsAt }}
           <b>Impact:</b> {{ .CommonAnnotations.impact }}
           <b>Current metric:</b> {{ .CommonAnnotations.metric }}
           <b>Runbook:</b> {{ .CommonAnnotations.runbook }}
@@ -73,7 +73,7 @@ receivers:
           <b>Environment:</b> {{ .CommonLabels.environment }}
           <b>Service:</b> {{ .CommonLabels.application }}
           <b>Issue:</b> {{ .CommonAnnotations.summary }}
-          <b>Started:</b> {{ .StartsAt }}
+          <b>Started:</b> {{ (index .Alerts 0).StartsAt }}
           <b>Impact:</b> {{ .CommonAnnotations.impact }}
           <b>Current metric:</b> {{ .CommonAnnotations.metric }}
           <b>Runbook:</b> {{ .CommonAnnotations.runbook }}

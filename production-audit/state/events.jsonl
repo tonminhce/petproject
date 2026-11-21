@@ -147,3 +147,24 @@
 {"payload": {"file_count": 1454, "revision": "37014fe724f306a89b2a888643fefe7f248828cb"}, "timestamp": "2026-11-20T21:42:43Z", "type": "inventory"}
 {"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T01:29:37Z", "type": "alerts_validate"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-21T01:29:40Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T05:13:00Z", "type": "alert_test-ci"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T05:13:04Z", "type": "alert_test-runtime"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T05:13:04Z", "type": "alert_test-recovery"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T05:13:05Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T05:13:05Z", "type": "alert_test-security"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:05:02Z", "type": "alert_test-dedup"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T06:05:14Z", "type": "alerts_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:06:57Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:07:09Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:09:10Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:09:10Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:11:27Z", "type": "alert_test-dedup"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T06:11:29Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:11:53Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:11:59Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:13:13Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:14:07Z", "type": "alert_test-dedup"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:14:51Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:15:34Z", "type": "alert_test-dedup"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T06:17:26Z", "type": "alerts_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-21T06:18:25Z", "type": "k8s_validate"}
