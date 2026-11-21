@@ -533,8 +533,8 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
     document["load_generator_reconciliation"] = reconciliation
     document["transport_failure_rate"] = metrics.get("failure_rate")
     requests = float(metrics.get("requests") or 0)
-    platform_errors = metrics.get("platform_errors")
-    if platform_errors is not None and requests > 0:
+    platform_errors = metrics.get("platform_errors") or 0
+    if requests > 0:
         document["platform_error_rate"] = round(float(platform_errors) / requests, 6)
     if not reconciliation["consistent"]:
         document["business_verdict"] = "; ".join(reconciliation["reasons"])
