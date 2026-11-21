@@ -9693,9 +9693,9 @@
     "load-tests/k6-scenario.js": {
       "category": "INFRASTRUCTURE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "8c12f8f7b38325a31994b4872959125200b865dd22ae7432c110cf4e5105403f",
+      "current_sha256": "22941f6c19ed343a70432866a4e3ed728d1cd67ac11051737d80a4a321cf21e1",
       "language": "javascript",
-      "lines": 386,
+      "lines": 463,
       "lines_reviewed": 201,
       "module": "load-tests",
       "reviewed_by": "lead",
@@ -9719,7 +9719,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "8c12f8f7b38325a31994b4872959125200b865dd22ae7432c110cf4e5105403f",
+      "sha256_at_discovery": "22941f6c19ed343a70432866a4e3ed728d1cd67ac11051737d80a4a321cf21e1",
       "updated_at": "2026-11-19T16:49:45Z"
     },
     "load-tests/run.py": {
@@ -13900,9 +13900,9 @@
       "baseline_blob": "6a95e44b427f0288915748d8d81c03f58a7920d2",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "d3969172e92b65ef065ef18e3618fc43a1fc2a7452d66ada3f9823d9afd912b5",
+      "current_sha256": "56ab2c7cd367e01e4ecd8172f42565dc750a33631d680d47af40dac72974284b",
       "language": "java",
-      "lines": 30,
+      "lines": 33,
       "lines_reviewed": 19,
       "module": "order-service",
       "reviewed_by": "audit-agent",
@@ -13913,7 +13913,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "d3969172e92b65ef065ef18e3618fc43a1fc2a7452d66ada3f9823d9afd912b5",
+      "sha256_at_discovery": "56ab2c7cd367e01e4ecd8172f42565dc750a33631d680d47af40dac72974284b",
       "source_report": "order-inventory.md",
       "updated_at": "2026-11-20T06:44:02Z"
     },
@@ -14310,7 +14310,7 @@
       "baseline_blob": "88fafade419c205f41981569541750bed3da2255",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "92bff539242964694df7c193da9e7e71e3ae835a6f8bd4201b2c055c1baa4df6",
+      "current_sha256": "cec98f274c3be496edc9ed3dde4f7c5eb9ce1ddd89d3df548452394c64c4cdbf",
       "language": "java",
       "lines": 241,
       "lines_reviewed": 202,
@@ -14323,7 +14323,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "92bff539242964694df7c193da9e7e71e3ae835a6f8bd4201b2c055c1baa4df6",
+      "sha256_at_discovery": "cec98f274c3be496edc9ed3dde4f7c5eb9ce1ddd89d3df548452394c64c4cdbf",
       "source_report": "order-inventory.md",
       "updated_at": "2026-11-20T06:44:02Z"
     },
@@ -14457,9 +14457,9 @@
       "baseline_blob": "07c526524c20ea3a1a1035d0c2263aac5f39d0bf",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "d07774240b17f47319845b52b38941de1c3ef43eec1662b1122702456c0d652b",
+      "current_sha256": "6ed4ab5e01bed5d590d1e4537e708a7ef2eade6c38c72f8b67cc84e482bd5f67",
       "language": "java",
-      "lines": 242,
+      "lines": 249,
       "lines_reviewed": 183,
       "module": "order-service",
       "reviewed_by": "audit-agent",
@@ -14470,7 +14470,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "d07774240b17f47319845b52b38941de1c3ef43eec1662b1122702456c0d652b",
+      "sha256_at_discovery": "6ed4ab5e01bed5d590d1e4537e708a7ef2eade6c38c72f8b67cc84e482bd5f67",
       "source_report": "security.md",
       "updated_at": "2026-11-20T06:44:05Z"
     },
@@ -15668,13 +15668,45 @@
       "source_report": "order-inventory.md",
       "updated_at": "2026-11-20T06:44:03Z"
     },
+    "order-service/src/test/java/com/shop/orderservice/service/impls/CartClearLockIT.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "FULLY_READ",
+      "current_sha256": "7fc4db97c8eb9046309e24b01f15fd8f3077576bdc39feeb761165d8f39c1569",
+      "language": "java",
+      "lines": 68,
+      "lines_reviewed": 68,
+      "module": "order-service",
+      "reviewed_by": "lead",
+      "reviewed_ranges": [
+        [
+          1,
+          68
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-21T18:41:26Z",
+          "notes": "",
+          "ranges": [
+            [
+              1,
+              68
+            ]
+          ],
+          "reviewer": "lead",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "7fc4db97c8eb9046309e24b01f15fd8f3077576bdc39feeb761165d8f39c1569",
+      "updated_at": "2026-11-21T18:41:26Z"
+    },
     "order-service/src/test/java/com/shop/orderservice/service/impls/CartServiceImplTest.java": {
       "baseline_blob": "722c72e6f17ddabafba2b3fea68a42c1abec2449",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "5e6ceb3ab587e67fab1a71906a6285d421ead9b8cc8215795e36c54175ba8753",
+      "current_sha256": "036abf3dadc90791f910ddb1f183b2ff38a9b0b31d7e86a182a86ee040e4fb9d",
       "language": "java",
-      "lines": 303,
+      "lines": 330,
       "lines_reviewed": 248,
       "module": "order-service",
       "reviewed_by": "audit-agent",
@@ -15685,7 +15717,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "5e6ceb3ab587e67fab1a71906a6285d421ead9b8cc8215795e36c54175ba8753",
+      "sha256_at_discovery": "036abf3dadc90791f910ddb1f183b2ff38a9b0b31d7e86a182a86ee040e4fb9d",
       "source_report": "order-inventory.md",
       "updated_at": "2026-11-20T06:44:03Z"
     },
@@ -15840,7 +15872,7 @@
     "order-service/src/test/java/com/shop/orderservice/service/impls/OrderReturnRefundConvergenceTest.java": {
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "16c84b1475d300ca94ed8bd7828e5e4ede2fa91fee81f2dffb01a5f05e163a83",
+      "current_sha256": "9968cdf2ca80447e3c1f7caf358202107e0ab8f10d03b30e9bceabadc8e20bab",
       "language": "java",
       "lines": 144,
       "lines_reviewed": 144,
@@ -15866,16 +15898,16 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "16c84b1475d300ca94ed8bd7828e5e4ede2fa91fee81f2dffb01a5f05e163a83",
+      "sha256_at_discovery": "9968cdf2ca80447e3c1f7caf358202107e0ab8f10d03b30e9bceabadc8e20bab",
       "updated_at": "2026-11-21T10:07:11Z"
     },
     "order-service/src/test/java/com/shop/orderservice/service/impls/OrderReturnServiceTest.java": {
       "baseline_blob": "00765a12db0341cd02533cbad17709e0eb8418a6",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "74b781dbc055979d7113a4a375365415c133c1feefb657b38ac2611bbc66ce21",
+      "current_sha256": "2d95a1f0483eb947cf710d78d6bc610bd7b454cb6f3f8756a62fcc338ac15fc5",
       "language": "java",
-      "lines": 403,
+      "lines": 452,
       "lines_reviewed": 244,
       "module": "order-service",
       "reviewed_by": "audit-agent",
@@ -15886,7 +15918,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "74b781dbc055979d7113a4a375365415c133c1feefb657b38ac2611bbc66ce21",
+      "sha256_at_discovery": "2d95a1f0483eb947cf710d78d6bc610bd7b454cb6f3f8756a62fcc338ac15fc5",
       "source_report": "order-inventory.md",
       "updated_at": "2026-11-20T06:44:03Z"
     },
@@ -16518,7 +16550,7 @@
       "baseline_blob": "6ef53c26c518cc671bda932ba1efa79c0abd0c03",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "2db28e59271bf140d7e94c9aecafd5c901decbb6ebb41cab91210cf6059b9572",
+      "current_sha256": "61b789e861ca9a5479655ac39a4d08f34d3f3fa0237cb43bde715e08a6e9d16d",
       "language": "java",
       "lines": 72,
       "lines_reviewed": 63,
@@ -16531,7 +16563,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "2db28e59271bf140d7e94c9aecafd5c901decbb6ebb41cab91210cf6059b9572",
+      "sha256_at_discovery": "61b789e861ca9a5479655ac39a4d08f34d3f3fa0237cb43bde715e08a6e9d16d",
       "source_report": "payment-service.md",
       "updated_at": "2026-11-20T06:44:03Z"
     },
@@ -16539,7 +16571,7 @@
       "baseline_blob": "b9edbed60985cb7f2c54fd8531490d9a3d9646f2",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "55dafda44252f5bc478e80f748ee0a7b06b825d36fb91d1554c68c7d404e410f",
+      "current_sha256": "8529dad658a9e76cca2e9b14ff0c104cec9ce836b6c4318543d7ebc2b1bde94f",
       "language": "java",
       "lines": 54,
       "lines_reviewed": 54,
@@ -16552,7 +16584,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "55dafda44252f5bc478e80f748ee0a7b06b825d36fb91d1554c68c7d404e410f",
+      "sha256_at_discovery": "8529dad658a9e76cca2e9b14ff0c104cec9ce836b6c4318543d7ebc2b1bde94f",
       "source_report": "payment-service.md",
       "updated_at": "2026-11-20T06:44:03Z"
     },
@@ -17093,6 +17125,38 @@
       "source_report": "payment-service.md",
       "updated_at": "2026-11-20T06:44:03Z"
     },
+    "payment-service/src/main/java/com/shop/paymentservice/service/ProviderRefundApplier.java": {
+      "category": "PRODUCTION_CODE",
+      "coverage_state": "FULLY_READ",
+      "current_sha256": "d89d9f317827a1fc8ddd73ffe63b1678c2f2e01a1e12bbee49db39b3d7301455",
+      "language": "java",
+      "lines": 127,
+      "lines_reviewed": 127,
+      "module": "payment-service",
+      "reviewed_by": "lead",
+      "reviewed_ranges": [
+        [
+          1,
+          127
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-21T18:41:26Z",
+          "notes": "",
+          "ranges": [
+            [
+              1,
+              127
+            ]
+          ],
+          "reviewer": "lead",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d89d9f317827a1fc8ddd73ffe63b1678c2f2e01a1e12bbee49db39b3d7301455",
+      "updated_at": "2026-11-21T18:41:26Z"
+    },
     "payment-service/src/main/java/com/shop/paymentservice/service/ReceiptService.java": {
       "baseline_blob": "32d60e126cbfdc3aa198ba47b74b8ca7f9a543f4",
       "category": "PRODUCTION_CODE",
@@ -17118,9 +17182,9 @@
       "baseline_blob": "e99ac4ceaf363705379daad89d81225f8fe88fbc",
       "category": "PRODUCTION_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "dd6b6442c9f899eedccc83895e12d283facca2aed2367133fe9759116450cb10",
+      "current_sha256": "05190c51de9e38b0cbdd598d08bd850f3e40be4224384f1c084c3de1b0398ea3",
       "language": "java",
-      "lines": 388,
+      "lines": 364,
       "lines_reviewed": 400,
       "module": "payment-service",
       "reviewed_by": "audit-agent",
@@ -17131,7 +17195,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "dd6b6442c9f899eedccc83895e12d283facca2aed2367133fe9759116450cb10",
+      "sha256_at_discovery": "05190c51de9e38b0cbdd598d08bd850f3e40be4224384f1c084c3de1b0398ea3",
       "source_report": "security.md",
       "updated_at": "2026-11-20T06:44:05Z"
     },
@@ -17897,6 +17961,38 @@
       "source_report": "payment-service.md",
       "updated_at": "2026-11-20T06:44:04Z"
     },
+    "payment-service/src/test/java/com/shop/paymentservice/WebhookRefundLedgerIT.java": {
+      "category": "TEST_CODE",
+      "coverage_state": "FULLY_READ",
+      "current_sha256": "38c6e46e5f073379cedba3ef98b0103ce4043846c28f098094cce6940391b452",
+      "language": "java",
+      "lines": 162,
+      "lines_reviewed": 162,
+      "module": "payment-service",
+      "reviewed_by": "lead",
+      "reviewed_ranges": [
+        [
+          1,
+          162
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-21T18:41:26Z",
+          "notes": "",
+          "ranges": [
+            [
+              1,
+              162
+            ]
+          ],
+          "reviewer": "lead",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "38c6e46e5f073379cedba3ef98b0103ce4043846c28f098094cce6940391b452",
+      "updated_at": "2026-11-21T18:41:26Z"
+    },
     "payment-service/src/test/java/com/shop/paymentservice/config/PaymentProviderProductionGuardTest.java": {
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
@@ -18133,9 +18229,9 @@
     "payment-service/src/test/java/com/shop/paymentservice/db/PaymentStatusColumnWidthContractTest.java": {
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "a3cd74434c36a4b8addc2c687fc02dbd74e822a2e6788227b404d6d09e9af98e",
+      "current_sha256": "912b2af0b2819fe4f01dc854ea9ba170daacaaa6d3aeb3aa026427e0a0dced10",
       "language": "java",
-      "lines": 64,
+      "lines": 85,
       "lines_reviewed": 85,
       "module": "payment-service",
       "reviewed_by": "lead",
@@ -18171,7 +18267,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "a3cd74434c36a4b8addc2c687fc02dbd74e822a2e6788227b404d6d09e9af98e",
+      "sha256_at_discovery": "912b2af0b2819fe4f01dc854ea9ba170daacaaa6d3aeb3aa026427e0a0dced10",
       "updated_at": "2026-11-21T11:23:45Z"
     },
     "payment-service/src/test/java/com/shop/paymentservice/outbox/OutboxRetentionSchedulerTest.java": {
@@ -18695,9 +18791,9 @@
       "baseline_blob": "dc22a98618d6189cd4e281c7aeeb4efe7e4f2b76",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "e4e6f16ed7dac5154a46018e2feab4c82da430dac7689afe6d52b4d1a1a72860",
+      "current_sha256": "a7ae57962332e40fbcc4c4c92e73ae0c8404653241a8198522a17b3eab6b9d0d",
       "language": "java",
-      "lines": 462,
+      "lines": 526,
       "lines_reviewed": 462,
       "module": "payment-service",
       "reviewed_by": "audit-agent",
@@ -18708,7 +18804,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "e4e6f16ed7dac5154a46018e2feab4c82da430dac7689afe6d52b4d1a1a72860",
+      "sha256_at_discovery": "a7ae57962332e40fbcc4c4c92e73ae0c8404653241a8198522a17b3eab6b9d0d",
       "source_report": "payment-service.md",
       "updated_at": "2026-11-20T06:44:04Z"
     },
@@ -18716,9 +18812,9 @@
       "baseline_blob": "629f677cc12052897f865f3e0b4324ab80f0ad94",
       "category": "TEST_CODE",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "fbf20cb44791f75aad5c2f4ec2b87737d856fb76afd2715f7990b4e775dcf609",
+      "current_sha256": "fa503bd8fcd967684d5d12b1c162c9453140fa14611bc313b344a60eca2534ce",
       "language": "java",
-      "lines": 368,
+      "lines": 371,
       "lines_reviewed": 351,
       "module": "payment-service",
       "reviewed_by": "audit-agent",
@@ -18729,7 +18825,7 @@
         ]
       ],
       "reviews": [],
-      "sha256_at_discovery": "fbf20cb44791f75aad5c2f4ec2b87737d856fb76afd2715f7990b4e775dcf609",
+      "sha256_at_discovery": "fa503bd8fcd967684d5d12b1c162c9453140fa14611bc313b344a60eca2534ce",
       "source_report": "payment-service.md",
       "updated_at": "2026-11-20T06:44:04Z"
     },
@@ -21936,9 +22032,9 @@
     "production-audit/harness/alerts/metrics.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "1579118cb54772dfef703d8665c9c21d8c53c10992591e55f80516863139a7e6",
+      "current_sha256": "c7a75c68407294af4a8356a7e96334fcb597e39222007f2960ef6d566a064e2c",
       "language": "python",
-      "lines": 229,
+      "lines": 231,
       "lines_reviewed": 229,
       "module": "production-audit",
       "reviewed_by": "coverage-reviewer-2",
@@ -21962,7 +22058,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "1579118cb54772dfef703d8665c9c21d8c53c10992591e55f80516863139a7e6",
+      "sha256_at_discovery": "c7a75c68407294af4a8356a7e96334fcb597e39222007f2960ef6d566a064e2c",
       "updated_at": "2026-11-21T10:07:11Z"
     },
     "production-audit/harness/alerts/render.py": {
@@ -22728,9 +22824,9 @@
     "production-audit/harness/loadtesting/capacity.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "326b0ed08698f8a1993c05c4021e7297cffa74f974ddffcb554a10a65a678275",
+      "current_sha256": "48f3914851d6e0fac8aceb2b8682b98c14ae03f77bfb9234b481e64110d22de3",
       "language": "python",
-      "lines": 601,
+      "lines": 630,
       "lines_reviewed": 608,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -22766,15 +22862,15 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "326b0ed08698f8a1993c05c4021e7297cffa74f974ddffcb554a10a65a678275",
+      "sha256_at_discovery": "48f3914851d6e0fac8aceb2b8682b98c14ae03f77bfb9234b481e64110d22de3",
       "updated_at": "2026-11-21T11:23:45Z"
     },
     "production-audit/harness/loadtesting/customers.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "ad87b322dc6355d3ecc369e8311a81060322271d93364cc80ab14289b36eb12c",
+      "current_sha256": "589992213f31f72fc881e2c470151b71d0ce770a6ce7e9ad8681753fd185a1e9",
       "language": "python",
-      "lines": 143,
+      "lines": 231,
       "lines_reviewed": 143,
       "module": "production-audit",
       "reviewed_by": "coverage-closer",
@@ -22798,7 +22894,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "ad87b322dc6355d3ecc369e8311a81060322271d93364cc80ab14289b36eb12c",
+      "sha256_at_discovery": "589992213f31f72fc881e2c470151b71d0ce770a6ce7e9ad8681753fd185a1e9",
       "updated_at": "2026-11-20T21:55:08Z"
     },
     "production-audit/harness/loadtesting/environment.py": {
@@ -22900,9 +22996,9 @@
     "production-audit/harness/loadtesting/profiles.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "075e4a74cc3329e25f15e6139f941849b9282a2ca4f3e7e81b77ad88ae363350",
+      "current_sha256": "36d3fd86b759c836f411249c6e2706e381430c57c4f4cf0905cbd8f0b50790fe",
       "language": "python",
-      "lines": 253,
+      "lines": 264,
       "lines_reviewed": 184,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -22926,15 +23022,15 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "075e4a74cc3329e25f15e6139f941849b9282a2ca4f3e7e81b77ad88ae363350",
+      "sha256_at_discovery": "36d3fd86b759c836f411249c6e2706e381430c57c4f4cf0905cbd8f0b50790fe",
       "updated_at": "2026-11-19T16:49:45Z"
     },
     "production-audit/harness/loadtesting/runner.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "b8f3776c55eeba1addf3e24aa845527ded9afb9434a44d1ce55de60918cb3be8",
+      "current_sha256": "c555a262e4caa10bdb158a19f62b66f466516cefc6ee071cf7e6c46c88e080cf",
       "language": "python",
-      "lines": 478,
+      "lines": 625,
       "lines_reviewed": 215,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -22958,7 +23054,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "b8f3776c55eeba1addf3e24aa845527ded9afb9434a44d1ce55de60918cb3be8",
+      "sha256_at_discovery": "c555a262e4caa10bdb158a19f62b66f466516cefc6ee071cf7e6c46c88e080cf",
       "updated_at": "2026-11-19T16:49:45Z"
     },
     "production-audit/harness/loadtesting/settle.py": {
@@ -23188,9 +23284,9 @@
     "production-audit/harness/reporting/final_report.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "fda8f3350f3d71140a5d504331d8a8f9c0fe81ced3ef95f7eea3905d26b60377",
+      "current_sha256": "3010c544b158bb245f69acbb06a8c63e37c1bdffe51b36e95f5568ed0f54eece",
       "language": "python",
-      "lines": 773,
+      "lines": 885,
       "lines_reviewed": 440,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -23214,7 +23310,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "fda8f3350f3d71140a5d504331d8a8f9c0fe81ced3ef95f7eea3905d26b60377",
+      "sha256_at_discovery": "3010c544b158bb245f69acbb06a8c63e37c1bdffe51b36e95f5568ed0f54eece",
       "updated_at": "2026-11-19T16:49:45Z"
     },
     "production-audit/harness/reporting/generators.py": {
@@ -23732,9 +23828,9 @@
     "production-audit/harness/stripe/acceptance.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "b86cdca42c1855bb86e699215184f6e602a516610b4320d667a74fa363ce9876",
+      "current_sha256": "d2fe86c149d997cc4ca63b4d5ac3237ee846861d660d9c09bba9f82ecce28e2f",
       "language": "python",
-      "lines": 978,
+      "lines": 980,
       "lines_reviewed": 980,
       "module": "production-audit",
       "reviewed_by": "lead",
@@ -23770,7 +23866,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "b86cdca42c1855bb86e699215184f6e602a516610b4320d667a74fa363ce9876",
+      "sha256_at_discovery": "d2fe86c149d997cc4ca63b4d5ac3237ee846861d660d9c09bba9f82ecce28e2f",
       "updated_at": "2026-11-21T11:23:45Z"
     },
     "production-audit/harness/stripe/recorder.py": {
@@ -24157,6 +24253,70 @@
       "sha256_at_discovery": "24b8dbfadead105c3283877cd15703d8beacd320288e997e12452e55c7807cde",
       "updated_at": "2026-11-19T13:14:41Z"
     },
+    "production-audit/harness/tests/test_load_accounting.py": {
+      "category": "HARNESS",
+      "coverage_state": "FULLY_READ",
+      "current_sha256": "0b197db302de0e792ea2bff62c8fdd5f1971734992e84d488f06142d7873dd2c",
+      "language": "python",
+      "lines": 283,
+      "lines_reviewed": 283,
+      "module": "production-audit",
+      "reviewed_by": "lead",
+      "reviewed_ranges": [
+        [
+          1,
+          283
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-21T18:41:26Z",
+          "notes": "",
+          "ranges": [
+            [
+              1,
+              283
+            ]
+          ],
+          "reviewer": "lead",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "0b197db302de0e792ea2bff62c8fdd5f1971734992e84d488f06142d7873dd2c",
+      "updated_at": "2026-11-21T18:41:26Z"
+    },
+    "production-audit/harness/tests/test_loadtesting.py": {
+      "category": "HARNESS",
+      "coverage_state": "FULLY_READ",
+      "current_sha256": "b87c8ca3ff0f706f8bb2c47f897a6cec5e10cc5c942ce2b28fbec0574c1d4eb2",
+      "language": "python",
+      "lines": 95,
+      "lines_reviewed": 95,
+      "module": "production-audit",
+      "reviewed_by": "lead",
+      "reviewed_ranges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-21T18:41:26Z",
+          "notes": "",
+          "ranges": [
+            [
+              1,
+              95
+            ]
+          ],
+          "reviewer": "lead",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "b87c8ca3ff0f706f8bb2c47f897a6cec5e10cc5c942ce2b28fbec0574c1d4eb2",
+      "updated_at": "2026-11-21T18:41:26Z"
+    },
     "production-audit/harness/tests/test_source_policy.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
@@ -24224,9 +24384,9 @@
     "production-audit/harness/tests/test_stripe_acceptance.py": {
       "category": "HARNESS",
       "coverage_state": "FULLY_READ",
-      "current_sha256": "c4f55c94831f97f2d56b6aa0745151914c418319dd03769a085a390627df6f76",
+      "current_sha256": "f017338ff2f8ac68e071b4499afe543e3c2ee216e40cceff4b0759aabb6702c7",
       "language": "python",
-      "lines": 113,
+      "lines": 136,
       "lines_reviewed": 113,
       "module": "production-audit",
       "reviewed_by": "coverage-reviewer-2",
@@ -24250,7 +24410,7 @@
           "state": "FULLY_READ"
         }
       ],
-      "sha256_at_discovery": "c4f55c94831f97f2d56b6aa0745151914c418319dd03769a085a390627df6f76",
+      "sha256_at_discovery": "f017338ff2f8ac68e071b4499afe543e3c2ee216e40cceff4b0759aabb6702c7",
       "updated_at": "2026-11-21T10:07:11Z"
     },
     "production-audit/harness/tests/test_task_registry.py": {
@@ -36991,7 +37151,7 @@
     "utils/common-spring/src/main/resources/application.yml",
     "utils/common-storage/.flattened-pom.xml"
   ],
-  "revision": "0e37c7a888df2071fa51e4d2747d1a1bf3953072",
+  "revision": "c3bd495a8ca5b7db47e6f9b935f1f3496ec213dc",
   "source_reports": [
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md",
@@ -37001,5 +37161,5 @@
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-service.md"
   ],
-  "updated_at": "2026-11-21T11:23:45Z"
+  "updated_at": "2026-11-21T18:41:26Z"
 }

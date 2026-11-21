@@ -4725,6 +4725,36 @@
           "evidence": "No Telegram bot token and no chat identifier are configured in this environment, so the real delivery path for both the continuous integration route and the runtime route cannot be exercised. The alerting validation reports ALT-07 as blocked and the delivery script fails closed.",
           "from": "DISCOVERED",
           "to": "BLOCKED"
+        },
+        {
+          "at": "2026-11-21T17:35:11Z",
+          "evidence": "blocker resolved: a real BotFather-issued bot token and real chat identifiers are now configured, so the delivery path can be exercised against the real bot api",
+          "from": "BLOCKED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-21T17:35:11Z",
+          "evidence": "telegram delivery verification running against the real bot api for the ci and the runtime routes",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-21T17:35:11Z",
+          "evidence": "verification-only task: no source change required; the delivery path ran end to end with the configured real credentials",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-21T17:35:11Z",
+          "evidence": "production-audit/state/alert-results.json QA-ALERT-01 ci route and QA-ALERT-02 runtime route recorded 2026-11-21T17:23:42Z and 2026-11-21T17:23:43Z with bot_api_base https://api.telegram.org public_bot_api true and ok true responses",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-21T17:35:11Z",
+          "evidence": "real Telegram deliveries proven: ci route telegram_message_id 5 delivered to the owners private chat and runtime route telegram_message_id 6 delivered to the notify group via https://api.telegram.org; corroborated by production-audit/state/events.jsonl alert_test-ci and alert_test-runtime PASS at 2026-11-21T17:23:42Z and 2026-11-21T17:23:43Z; harness-side wire checks recorded under production-audit/runs/run-20261118-a2b6e6fc/alerts-results/",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "OBS-03",
@@ -4738,13 +4768,18 @@
       "source_evidence": [
         "production-audit/harness/alerts/delivery.py"
       ],
-      "state": "BLOCKED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Verify real Telegram delivery for the CI and runtime routes",
-      "updated_at": "2026-11-20T06:51:08Z",
+      "updated_at": "2026-11-21T17:35:11Z",
       "verification_evidence": [
-        "No Telegram bot token and no chat identifier are configured in this environment, so the real delivery path for both the continuous integration route and the runtime route cannot be exercised. The alerting validation reports ALT-07 as blocked and the delivery script fails closed."
+        "No Telegram bot token and no chat identifier are configured in this environment, so the real delivery path for both the continuous integration route and the runtime route cannot be exercised. The alerting validation reports ALT-07 as blocked and the delivery script fails closed.",
+        "blocker resolved: a real BotFather-issued bot token and real chat identifiers are now configured, so the delivery path can be exercised against the real bot api",
+        "telegram delivery verification running against the real bot api for the ci and the runtime routes",
+        "verification-only task: no source change required; the delivery path ran end to end with the configured real credentials",
+        "production-audit/state/alert-results.json QA-ALERT-01 ci route and QA-ALERT-02 runtime route recorded 2026-11-21T17:23:42Z and 2026-11-21T17:23:43Z with bot_api_base https://api.telegram.org public_bot_api true and ok true responses",
+        "real Telegram deliveries proven: ci route telegram_message_id 5 delivered to the owners private chat and runtime route telegram_message_id 6 delivered to the notify group via https://api.telegram.org; corroborated by production-audit/state/events.jsonl alert_test-ci and alert_test-runtime PASS at 2026-11-21T17:23:42Z and 2026-11-21T17:23:43Z; harness-side wire checks recorded under production-audit/runs/run-20261118-a2b6e6fc/alerts-results/"
       ]
     },
     "OBS-04": {
@@ -9283,6 +9318,36 @@
           "evidence": "The configured Stripe key is a placeholder that the live Stripe API rejects with HTTP 401 Invalid API Key, and the webhook secret is the local placeholder whsec_local_e2e_only. No genuine test mode credential exists in this environment, so no real Stripe interaction has occurred.",
           "from": "DISCOVERED",
           "to": "BLOCKED"
+        },
+        {
+          "at": "2026-11-21T18:05:23Z",
+          "evidence": "genuine test-mode credential now configured in the git-ignored env: the credential probe GET https://api.stripe.com/v1/balance returned HTTP 200 with livemode false",
+          "from": "BLOCKED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-21T18:05:23Z",
+          "evidence": "credential verification executing against the real stripe api with the key passed to the payment-service container through the environment",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-21T18:05:23Z",
+          "evidence": "verification-only task: no source change required; the fabricated local placeholder was replaced by a genuine sk_test credential that the live api accepts",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "acceptance.json credential block: secret_key_mode test with prefix sk_test_ and fingerprint a05fa4f856d89541; credential_probe endpoint https://api.stripe.com/v1/balance status 200 livemode false; webhook signing secret issued by stripe for the real endpoint of the account",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "the real api.stripe.com accepted the genuine test-mode key: balance probe HTTP 200 livemode false and all 8 acceptance cases executed on real payment intents with livemode false; evidence production-audit/runs/run-20261118-a2b6e6fc/stripe-acceptance/acceptance.json generated 2026-11-21T18:02:57Z with status PROVEN_AGAINST_REAL_STRIPE_API",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-40",
@@ -9298,13 +9363,18 @@
         ".env:143 whsec_local_e2e_only",
         "production-audit/harness/stripe/sandbox.py"
       ],
-      "state": "BLOCKED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred",
-      "updated_at": "2026-11-20T06:51:08Z",
+      "updated_at": "2026-11-21T18:05:24Z",
       "verification_evidence": [
-        "The configured Stripe key is a placeholder that the live Stripe API rejects with HTTP 401 Invalid API Key, and the webhook secret is the local placeholder whsec_local_e2e_only. No genuine test mode credential exists in this environment, so no real Stripe interaction has occurred."
+        "The configured Stripe key is a placeholder that the live Stripe API rejects with HTTP 401 Invalid API Key, and the webhook secret is the local placeholder whsec_local_e2e_only. No genuine test mode credential exists in this environment, so no real Stripe interaction has occurred.",
+        "genuine test-mode credential now configured in the git-ignored env: the credential probe GET https://api.stripe.com/v1/balance returned HTTP 200 with livemode false",
+        "credential verification executing against the real stripe api with the key passed to the payment-service container through the environment",
+        "verification-only task: no source change required; the fabricated local placeholder was replaced by a genuine sk_test credential that the live api accepts",
+        "acceptance.json credential block: secret_key_mode test with prefix sk_test_ and fingerprint a05fa4f856d89541; credential_probe endpoint https://api.stripe.com/v1/balance status 200 livemode false; webhook signing secret issued by stripe for the real endpoint of the account",
+        "the real api.stripe.com accepted the genuine test-mode key: balance probe HTTP 200 livemode false and all 8 acceptance cases executed on real payment intents with livemode false; evidence production-audit/runs/run-20261118-a2b6e6fc/stripe-acceptance/acceptance.json generated 2026-11-21T18:02:57Z with status PROVEN_AGAINST_REAL_STRIPE_API"
       ]
     },
     "PAY-41": {
@@ -9327,6 +9397,36 @@
           "evidence": "The real Stripe acceptance matrix cannot run without a genuine sk_test_ credential. The harness classifies the configured key as a placeholder and refuses to certify a placeholder webhook secret instead of reporting a pass.",
           "from": "DISCOVERED",
           "to": "BLOCKED"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "genuine test-mode credential and the real webhook signing secret are available, so the acceptance matrix can execute against api.stripe.com",
+          "from": "BLOCKED",
+          "to": "READY"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "acceptance matrix executing against the real stripe api through the payment-service-stripe-acceptance container",
+          "from": "READY",
+          "to": "IN_PROGRESS"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "verification-only task: the existing matrix ran unchanged; only the credential and the webhook signing secret became genuine",
+          "from": "IN_PROGRESS",
+          "to": "IMPLEMENTED"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "acceptance.json summary: 8 cases 8 proven 0 failed 0 not_proven; every case verdict PROVEN including declined_card_refusal currency_mismatch_refusal and capture_webhook_signature_verified against the real signing secret",
+          "from": "IMPLEMENTED",
+          "to": "VERIFYING"
+        },
+        {
+          "at": "2026-11-21T18:05:24Z",
+          "evidence": "acceptance matrix executed against https://api.stripe.com with the genuine test-mode key: status PROVEN_AGAINST_REAL_STRIPE_API 8 of 8 cases PROVEN with 0 failures; wire records capture real payment intents with livemode false and request ids from stripe; evidence production-audit/runs/run-20261118-a2b6e6fc/stripe-acceptance/acceptance.json and server.json generated 2026-11-21T18:02:57Z",
+          "from": "VERIFYING",
+          "to": "VERIFIED"
         }
       ],
       "id": "PAY-41",
@@ -9341,13 +9441,18 @@
         "production-audit/harness/stripe/sandbox.py",
         "production-audit/harness/cli/main.py"
       ],
-      "state": "BLOCKED",
+      "state": "VERIFIED",
       "target_implementation": "",
       "technical_risk": "",
       "title": "Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential",
-      "updated_at": "2026-11-20T06:51:08Z",
+      "updated_at": "2026-11-21T18:05:24Z",
       "verification_evidence": [
-        "The real Stripe acceptance matrix cannot run without a genuine sk_test_ credential. The harness classifies the configured key as a placeholder and refuses to certify a placeholder webhook secret instead of reporting a pass."
+        "The real Stripe acceptance matrix cannot run without a genuine sk_test_ credential. The harness classifies the configured key as a placeholder and refuses to certify a placeholder webhook secret instead of reporting a pass.",
+        "genuine test-mode credential and the real webhook signing secret are available, so the acceptance matrix can execute against api.stripe.com",
+        "acceptance matrix executing against the real stripe api through the payment-service-stripe-acceptance container",
+        "verification-only task: the existing matrix ran unchanged; only the credential and the webhook signing secret became genuine",
+        "acceptance.json summary: 8 cases 8 proven 0 failed 0 not_proven; every case verdict PROVEN including declined_card_refusal currency_mismatch_refusal and capture_webhook_signature_verified against the real signing secret",
+        "acceptance matrix executed against https://api.stripe.com with the genuine test-mode key: status PROVEN_AGAINST_REAL_STRIPE_API 8 of 8 cases PROVEN with 0 failures; wire records capture real payment intents with livemode false and request ids from stripe; evidence production-audit/runs/run-20261118-a2b6e6fc/stripe-acceptance/acceptance.json and server.json generated 2026-11-21T18:02:57Z"
       ]
     },
     "PERF-01": {
@@ -16722,5 +16827,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-20T21:44:38Z"
+  "updated_at": "2026-11-21T18:05:24Z"
 }

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
 
-PROMETHEUS_URL = "http://127.0.0.1:9095"
+PROMETHEUS_URL = os.environ.get("AUDIT_PROMETHEUS_URL", "http://127.0.0.1:9095")
+METRIC_AUDIT_TIMEOUT_SECONDS = int(os.environ.get("AUDIT_PROMETHEUS_TIMEOUT", "60"))
 TOKEN_PATTERN = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 LABEL_SECTION = re.compile(r"\{[^}]*\}")
 GROUPING = re.compile(r"\b(?:by|without|on|ignoring|group_left|group_right)\s*\(([^)]*)\)")
@@ -119,7 +121,7 @@ def referenced_groupings(expression: str) -> list[str]:
     return sorted(names)
 
 
-def exported_metric_names(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[list[str] | None, str]:
+def exported_metric_names(url: str = PROMETHEUS_URL, timeout: int = METRIC_AUDIT_TIMEOUT_SECONDS) -> tuple[list[str] | None, str]:
     try:
         request = urllib.request.Request(url.rstrip("/") + "/api/v1/label/__name__/values")
         with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -132,7 +134,7 @@ def exported_metric_names(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple
     return sorted(str(name) for name in names), ""
 
 
-def exported_label_names(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[list[str] | None, str]:
+def exported_label_names(url: str = PROMETHEUS_URL, timeout: int = METRIC_AUDIT_TIMEOUT_SECONDS) -> tuple[list[str] | None, str]:
     try:
         request = urllib.request.Request(url.rstrip("/") + "/api/v1/labels")
         with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -145,7 +147,7 @@ def exported_label_names(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[
     return sorted(str(name) for name in names), ""
 
 
-def scraped_applications(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[list[str] | None, str]:
+def scraped_applications(url: str = PROMETHEUS_URL, timeout: int = METRIC_AUDIT_TIMEOUT_SECONDS) -> tuple[list[str] | None, str]:
     try:
         request = urllib.request.Request(url.rstrip("/") + "/api/v1/query?query=up")
         with urllib.request.urlopen(request, timeout=timeout) as response:

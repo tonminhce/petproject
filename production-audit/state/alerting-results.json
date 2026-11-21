@@ -1,10 +1,7 @@
 {
   "action": "validate",
   "result": {
-    "blocked_checks": [
-      "ALT-07",
-      "ALT-08"
-    ],
+    "blocked_checks": [],
     "checks": [
       {
         "detail": "alertmanager template is complete and contains no committed credential",
@@ -65,7 +62,7 @@
       {
         "detail": "no committed telegram token or live stripe key was found",
         "evidence": [
-          "tracked files scanned: 1972",
+          "tracked files scanned: 2042",
           "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
         ],
         "id": "ALT-06",
@@ -73,29 +70,29 @@
         "status": "PASS"
       },
       {
-        "detail": "telegram delivery credentials are not available in this environment",
+        "detail": "telegram delivery credentials are present and valid",
         "evidence": [
           "alerts enabled: True",
-          "bot token present: False",
-          "chat identifier present: False",
-          "ci chat identifier present: False"
+          "bot token present: True",
+          "chat identifier present: True",
+          "ci chat identifier present: True"
         ],
         "id": "ALT-07",
         "name": "DELIVERY_CREDENTIALS",
-        "status": "BLOCKED"
+        "status": "PASS"
       },
       {
-        "detail": "every alerting route answered http://127.0.0.1:18091, which is not the public telegram.org bot api, so the delivery to telegram.org is still unverified",
+        "detail": "every alerting route answered the public telegram.org bot api",
         "evidence": [
-          "QA-ALERT-00 the bot identity probe: PASS against http://127.0.0.1:18091",
-          "QA-ALERT-01 the continuous integration route delivery: PASS against http://127.0.0.1:18091",
-          "QA-ALERT-02 the runtime route delivery: PASS against http://127.0.0.1:18091",
-          "QA-ALERT-03 the recovery notification delivery: PASS against http://127.0.0.1:18091",
+          "QA-ALERT-00 the bot identity probe: PASS against https://api.telegram.org",
+          "QA-ALERT-01 the continuous integration route delivery: PASS against https://api.telegram.org",
+          "QA-ALERT-02 the runtime route delivery: PASS against https://api.telegram.org",
+          "QA-ALERT-03 the recovery notification delivery: PASS against https://api.telegram.org",
           "QA-ALERT-05 the credential redaction probe: PASS"
         ],
         "id": "ALT-08",
         "name": "DELIVERY_VERIFICATION",
-        "status": "BLOCKED"
+        "status": "PASS"
       },
       {
         "detail": "identical alerts collapse into a single grouped alert",
@@ -103,7 +100,7 @@
           "submitted alerts: 5",
           "grouped alerts: 1",
           "alertmanager count: 0",
-          "alertmanager: http://127.0.0.1:9094"
+          "alertmanager: http://127.0.0.1:9093"
         ],
         "id": "ALT-09",
         "name": "ALERT_GROUPING",
@@ -111,7 +108,7 @@
       }
     ],
     "failed_checks": [],
-    "status": "BLOCKED"
+    "status": "PASS"
   },
-  "updated_at": "2026-11-21T11:20:52Z"
+  "updated_at": "2026-11-21T18:41:07Z"
 }

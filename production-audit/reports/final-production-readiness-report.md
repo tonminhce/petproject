@@ -2,7 +2,7 @@
 ## HỆ THỐNG KIẾN TRÚC VI DỊCH VỤ THƯƠNG MẠI ĐIỆN TỬ PETPROJECT PLATFORM
 ### TOÀN DIỆN 37 MỤC — SINH TỰ ĐỘNG TỪ BẰNG CHỨNG KIỂM ĐỊNH
 
-- **Thời điểm sinh báo cáo**: 2026-11-20T08:07:10Z
+- **Thời điểm sinh báo cáo**: 2026-11-21T17:47:22Z
 - **Nguồn dữ liệu**: trạng thái bền vững của harness, kết quả kiểm định, kết quả chạy tải, kết quả Stripe, kết quả Kubernetes và lịch sử phân phối Git.
 - **Nguyên tắc**: mọi khẳng định trong báo cáo này được sinh tự động từ bằng chứng đã lưu. Trường nào chưa có bằng chứng thì được ghi rõ là chưa xác minh.
 
@@ -11,20 +11,21 @@
 ## 1. TỔNG QUAN ĐIỀU HÀNH & KẾT LUẬN CUỐI CÙNG (EXECUTIVE SUMMARY)
 
 - **Quyết định nghiệm thu**: **CHƯA ĐẠT — CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT**.
-- **Cổng kiểm định**: 5/24 đạt, 2 không đạt, 17 chờ.
-- **Rà soát mã nguồn**: 97.09% (1366/1407 tập tin).
-- **Tác vụ còn mở mức HIGH**: 1 (MEDIUM: 103, LOW: 77).
+- **Cổng kiểm định**: 9/25 đạt, 6 không đạt, 9 chờ, 1 bị chặn.
+- **Rà soát mã nguồn**: 99.66% (1478/1483 tập tin).
+- **Tác vụ còn mở mức HIGH**: 2 (CRITICAL: 0, MEDIUM: 103, LOW: 77).
 - **Quyết định sản xuất theo completion predicate**: chưa đạt.
-- **Cổng đang không đạt**: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-12, GATE-13, GATE-14, GATE-15, GATE-16, GATE-17, GATE-18, GATE-21, GATE-22, GATE-23, GATE-24.
-- **Bằng chứng tải nặng**: yêu cầu không đo được, tần suất không đo được, p95 không đo được, tỷ lệ lỗi không đo được.
+- **Cổng đang không đạt**: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-13, GATE-14, GATE-15, GATE-16, GATE-18, GATE-19, GATE-21, GATE-24.
+- **Bằng chứng tải nặng** (lần chạy mới nhất: recovery — PASS, thư mục recovery-1795271066): yêu cầu 648, tần suất 5.89 req/s, p95 62.12 ms, tỷ lệ lỗi 0.0000.
+- **Giới hạn dung lượng đo được**: 13.9867 req/s (6.7581 lượt lặp/giây), hồ sơ baseline, thư mục baseline-1795269895 — xem mục 20.
 - **Stripe sandbox thực**: trạng thái BLOCKED — xem mục 12 và 13.
-- **Cảnh báo Telegram**: 1 cổng cảnh báo đã được ghi nhận — xem mục 29, 30 và 31.
+- **Cảnh báo Telegram**: 6 cổng cảnh báo đã được ghi nhận — xem mục 29, 30 và 31.
 
 ## 2. KIỂM TOÁN TOÀN BỘ MÃ NGUỒN (FULL SOURCE AUDIT)
 
-- Tổng số tập tin trong phạm vi: **1407**; đã rà soát: **1366**.
-- Tỷ lệ rà soát mã thực thi: **96.66%** (1185/1226).
-- Phân bố theo nhóm: BUILD=1, DOCUMENTATION=89, GENERATED=8, HARNESS=71, INFRASTRUCTURE=40, PRODUCTION_CODE=668, SHARED_LIBRARY=115, TEST_CODE=402, VENDORED_TOOLING=13.
+- Tổng số tập tin trong phạm vi: **1483**; đã rà soát: **1478**.
+- Tỷ lệ rà soát mã thực thi: **99.77%** (1284/1287).
+- Phân bố theo nhóm: BUILD=1, DOCUMENTATION=90, GENERATED=8, HARNESS=85, INFRASTRUCTURE=42, PRODUCTION_CODE=691, SHARED_LIBRARY=119, TEST_CODE=434, VENDORED_TOOLING=13.
 
 ## 3. KIẾN TRÚC HIỆN TẠI (CURRENT ARCHITECTURE)
 
@@ -47,23 +48,31 @@
 ## 7. PHÁT HIỆN ĐỒNG THỜI & ĐÚNG ĐẮN PHÂN TÁN (CONCURRENCY FINDINGS)
 
 - Báo cáo đầy đủ: production-audit/reports/concurrency.md và production-audit/architecture/concurrency.md.
-- Bộ kiểm thử đồng thời: PASS, 33 test.
+- Bộ kiểm thử đồng thời: STALE, 38 test.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 
 ## 8. TÍNH ĐÚNG ĐẮN KHO HÀNG (INVENTORY CORRECTNESS)
 
-- Bộ kiểm thử kho hàng: PASS, 23 test.
+- Bộ kiểm thử kho hàng: STALE, 23 test.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
+- Bất biến không vượt tồn kho (INV-01): PASS, số vi phạm: 0.
 
 ## 9. TÍNH ĐÚNG ĐẮN HẠN MỨC KHUYẾN MÃI (PROMOTION QUOTA CORRECTNESS)
 
+- INV-02 (COUPON_QUOTA_RESPECTED): PASS, vi phạm: 0.
+- INV-06 (COUPON_RESERVATION_UNIQUE): PASS, vi phạm: 0.
+- INV-08 (EXPIRED_RESERVATION_RELEASED): PASS, vi phạm: 0.
 
 ## 10. SAGA CHECKOUT & BỒI ĐỀN (CHECKOUT SAGA)
 
-- Bộ kiểm thử Kafka/Outbox: PASS, 223 test.
+- Bộ kiểm thử Kafka/Outbox: STALE, 263 test.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 - Cơ chế bồi đền được kiểm chứng trong production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-authz-compensation-fix.md.
 
 ## 11. KAFKA & TRANSACTIONAL OUTBOX
 
-- Bộ kiểm thử: PASS.
+- Bộ kiểm thử: STALE.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 - Bằng chứng rà soát: production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md và kafka-safety-fix.md.
 
 ## 12. CẤU HÌNH STRIPE SANDBOX (STRIPE SANDBOX CONFIGURATION)
@@ -75,19 +84,31 @@
 
 - **Chưa xác minh được**: the configured webhook secret is a local placeholder, so the signature check would only prove that a self signed payload round trips.
 - Không dùng khóa live-mode, không giả lập phản hồi Stripe, không dùng Stripe mock làm bằng chứng tích hợp thật.
+- Nghiệm thu thanh toán đã ghi nhận: trạng thái PROVEN_AGAINST_OFFICIAL_STRIPE_MOCK, máy chủ Stripe bị kiểm định official-stripe-mock 0.206.0 tại http://stripe-mock-acceptance:12111; tổng số 8 trường hợp, 7 proven, 0 thất bại, 1 chưa chứng minh được.
+- Các trường hợp nghiệm thu chưa được chứng minh: declined_card_refusal.
+- Cổng GATE-6 (PAYMENT_CORRECTNESS): BLOCKED — the payment acceptance is NOT verified against the real Stripe: it ran against the official Stripe mock 0.206.0 (7 of 8 cases proven; outstanding: declined_card_refusal); a genuine test-mode key against api.stripe.com is still required; the payment suite reports PENDING.
 
 ## 14. XÁC MINH WEBHOOK & HOÀN TIỀN (WEBHOOK AND REFUND VERIFICATION)
 
-- Logic xác minh chữ ký webhook được kiểm thử bằng lệnh harness stripe test-webhooks, ký HMAC-SHA256 theo đúng định dạng t/v1 của Stripe.
-- Hoàn tiền: xem bộ kiểm thử payment — PASS.
+- Lệnh harness stripe test-webhooks (ký HMAC-SHA256 theo đúng định dạng t/v1 của Stripe) **bị chặn** với lý do đã ghi nhận: the configured webhook secret is a local placeholder, so the signature check would only prove that a self signed payload round trips.
+- Trường hợp nghiệm thu chữ ký webhook đã ghi nhận: phán quyết PROVEN — the signed provider event moved the payment to CAPTURED and the event with a forged signature was refused with 401 PAY-5005.
+- Hoàn tiền: xem bộ kiểm thử payment — STALE.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 
 ## 15. XÁC MINH DOCKER COMPOSE (DOCKER COMPOSE VERIFICATION)
 
-- Bộ kiểm thử tích hợp: PASS, 347 test, hạ tầng: .
+- Bộ kiểm thử tích hợp: STALE, 357 test.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
 
 ## 16. KIẾN TRÚC KUBERNETES (KUBERNETES ARCHITECTURE)
 
-- Kết quả kiểm định manifest: PASS.
+- Hành động đã ghi nhận: validate — 14 mục kiểm tra trên các tệp manifest trong k8s/.
+- Kết quả kiểm tra tĩnh manifest tại thời điểm ghi nhận: PASS; các mục kiểm tra K8S-01 đến K8S-13 dưới đây chỉ đọc tệp manifest và không phản ánh hành vi của một cụm đang chạy.
+- Bộ kiểm thử k8s: STALE — 0 kubernetes manifest checks failed recorded against an earlier source revision.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
+- **Cấp nhân tự động đã được quan sát trên một cụm Kubernetes thật** (mục K8S-14): replicas before=2 under load=10 after load=2; load: 197861 requests at 600 per second against http://gateway-service.shop-system.svc.cluster.local:8080/actuator/prometheus.
+- Kết luận đã ghi nhận của lần quan sát: The gateway-service horizontal pod autoscaler raised the deployment from 2 to 10 replicas while a k6 load of 600 requests per second hit the gateway actuator endpoint, and returned it to 2 replicas after the load stopped.
+- Theo trạng thái đã lưu, cụm dùng để quan sát đã bị xóa sau lần chạy, nên hiện không còn cụm nào đang chạy để kiểm chứng lại trực tiếp.
   - K8S-01 MANIFEST_PARSING: PASS — every manifest parses
   - K8S-02 RESOURCE_COVERAGE: PASS — the required resource kinds are present
   - K8S-03 HEALTH_PROBES: PASS — every container declares startup, readiness and liveness probes
@@ -101,15 +122,18 @@
   - K8S-11 NAMESPACE_CONSISTENCY: PASS — every namespaced manifest uses shop-system
   - K8S-12 INGRESS_TLS: PASS — every ingress declares tls
   - K8S-13 SCHEMA_VALIDATION: PASS — kubeconform validated the manifests that have a published kubernetes schema
+  - K8S-14 AUTOSCALING_OBSERVATION: PASS — the autoscaler was observed on a real cluster to scale up under a load and to scale back down
 
 ## 17. KẾT QUẢ HPA (HPA SCALING RESULTS)
 
-- HPA được cấu hình cho gateway-service trong k8s/gateway-service.yaml.
-- **Chưa xác minh cấp nhân tự động trên cụm thật**: không có cụm Kubernetes chạy được trong môi trường này. Lệnh harness k8s hpa-status trả về BLOCKED với lý do rõ ràng.
+- HPA được cấu hình cho gateway-service trong k8s/gateway-service.yaml; mục kiểm tra K8S-07 AUTOSCALING trên manifest đã ghi nhận: PASS — every autoscaler targets a declared deployment with bounded replicas and metrics.
+- **HPA đã được quan sát trên cụm thật theo bằng chứng đã lưu**: replicas before=2 under load=10 after load=2; load: 197861 requests at 600 per second against http://gateway-service.shop-system.svc.cluster.local:8080/actuator/prometheus.
+- Cổng GATE-24 (KUBERNETES_MANIFESTS): PENDING — the manifests validate and the autoscaler was observed on a real cluster.
+- Cổng GATE-25 (AUTOSCALING_OBSERVATION): PASS — the recorded autoscaling observation proves that the autoscaler scaled up under a real load and scaled back down.
 
 ## 18. KẾT QUẢ KEDA (KEDA SCALING RESULTS)
 
-- **Chưa triển khai**: không có ScaledObject KEDA nào trong k8s/. Đây là khoảng trống đã biết và đã ghi nhận trong sổ tay tác vụ.
+- **Chưa triển khai**: danh sách kind đã ghi nhận trong kiểm tra K8S-02 (kinds present: ConfigMap, Deployment, HorizontalPodAutoscaler, Ingress, Namespace, PodDisruptionBudget, PrometheusRule, Secret, Service, ServiceAccount) không chứa ScaledObject của KEDA. Đây là khoảng trống đã biết và đã ghi nhận trong sổ tay tác vụ.
 
 ## 19. HỒ SƠ CHIẾU TẢI BLACK FRIDAY (BLACK FRIDAY WORKLOAD PROFILES)
 
@@ -119,51 +143,76 @@
 
 ## 20. THÔNG LƯỢNG NỀN TẢNG VS ĐỈNH (BASELINE VS PEAK THROUGHPUT)
 
-- baseline — kịch bản browse, trạng thái PASS: yêu cầu 18380, 108.01 req/s, lượt lặp 9180, p95 41.06 ms, tỷ lệ lỗi 0.00.
-  - Kết luận nghiệp vụ: the business failure rate 0.0047 is within the limit 0.0500.
-  - Số lần chạy đã lưu cho hồ sơ này: 7; bảng trên là lần chạy cuối cùng.
-- flash-sale — kịch bản flash-sale, trạng thái FAIL: yêu cầu 123052, 723.79 req/s, lượt lặp 61526, p95 603.40 ms, tỷ lệ lỗi 0.67.
-- promotion-storm — kịch bản promotion-storm, trạng thái FAIL: yêu cầu 76965, 452.61 req/s, lượt lặp 76965, p95 816.66 ms, tỷ lệ lỗi 0.69.
-  - **Phép đo không hợp lệ**: máy chủ đo bị nhiễu, kết quả không dùng để kết luận.
-- ramp — kịch bản full, trạng thái PASS: yêu cầu 52313, 227.30 req/s, lượt lặp 17421, p95 252.95 ms, tỷ lệ lỗi 0.00.
-  - Kết luận nghiệp vụ: the business failure rate 0.0032 is within the limit 0.0500.
-  - Số lần chạy đã lưu cho hồ sơ này: 2; bảng trên là lần chạy cuối cùng.
-- recovery — kịch bản browse, trạng thái PASS: yêu cầu 5376, 48.79 req/s, lượt lặp 2683, p95 29.63 ms, tỷ lệ lỗi 0.00.
-  - Kết luận nghiệp vụ: the business failure rate 0.0047 is within the limit 0.0500.
-  - Số lần chạy đã lưu cho hồ sơ này: 2; bảng trên là lần chạy cuối cùng.
-- spike — kịch bản full, trạng thái PASS: yêu cầu 43604, 256.33 req/s, lượt lặp 14468, p95 961.98 ms, tỷ lệ lỗi 0.01.
-  - Kết luận nghiệp vụ: the business failure rate 0.0106 is within the limit 0.0500.
-  - Số lần chạy đã lưu cho hồ sơ này: 2; bảng trên là lần chạy cuối cùng.
+- **Giới hạn dung lượng đo được (measured capacity limit)**: 13.9867 req/s (6.7581 lượt lặp/giây) — hồ sơ baseline, thư mục baseline-1795269895: 2298 thành công, 0 thất bại, 0 từ chối, 0 yêu cầu bị gateway loại bỏ, 0 vi phạm bất biến.
+- Quy tắc suy ra (ghi trong trạng thái đã lưu): the highest rate the platform delivered in the last complete measured run with zero business failures and zero invariant violations.
+- Lần chạy đo đầy đủ cuối cùng: 2026-11-21T11:58:06Z đến 2026-11-21T14:24:26Z, các thư mục: flash-sale-1795262286, spike-1795268516, promotion-storm-1795269071, baseline-1795269895, ramp-1795270107, recovery-1795271066.
+- Nơi nền tảng ngừng giữ được: flash-sale ở 21.5188 req/s với 791 thất bại nghiệp vụ, 0 từ chối, 783 yêu cầu bị gateway loại bỏ; promotion-storm ở 11.2870 req/s với 1261 thất bại nghiệp vụ, 0 từ chối, 0 yêu cầu bị gateway loại bỏ; ramp ở 12.5141 req/s với 29 thất bại nghiệp vụ, 0 từ chối, 742 yêu cầu bị gateway loại bỏ; spike ở 10.1242 req/s với 32 thất bại nghiệp vụ, 0 từ chối, 68 yêu cầu bị gateway loại bỏ.
+- **Phép đo đã ghi nhận không còn gắn với mã nguồn hiện tại** (lý do ghi trong trạng thái đã lưu): the recorded results do not hold the fields the current harness records (platform_error_rate, transport_failure_rate), so they were produced by a harness whose measurement differs from the current one.
+- Bằng chứng đầy đủ: production-audit/runs/run-20261118-a2b6e6fc/load-results/capacity-limit.md.
+- Nguồn của con số: recorded state production-audit/state/performance-baselines.json.
+
+- baseline — kịch bản browse, trạng thái PASS: yêu cầu 2378, 13.99 req/s, lượt lặp 1149, p95 42.98 ms, tỷ lệ lỗi 0.0000.
+  - Kế hoạch: 10.0000 lượt lặp/giây (20.0000 req/s); đã giao: 6.7581 lượt lặp/giây, 13.9867 req/s; tỷ lệ giao/nhắm 0.8510 (mẫu số: planned_iteration_rate_per_second); thành công 2298, thất bại 0, từ chối 0, gateway loại 0, vi phạm bất biến 0.
+  - Kết luận nghiệp vụ: the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.85 of the planned 7.94 iterations per second.
+  - Số lần chạy đã lưu cho hồ sơ này: 28; bảng trên là lần chạy cuối cùng.
+- flash-sale — kịch bản flash-sale, trạng thái FAIL: yêu cầu 4447, 21.52 req/s, lượt lặp 1168, p95 39576.87 ms, tỷ lệ lỗi 0.0160.
+  - Kế hoạch: 50.0000 lượt lặp/giây (150.0000 req/s); đã giao: 5.6519 lượt lặp/giây, 21.5188 req/s; tỷ lệ giao/nhắm 0.1423 (mẫu số: planned_iteration_rate_per_second); thành công 397, thất bại 791, từ chối 0, gateway loại 783, vi phạm bất biến 0.
+  - Kết luận nghiệp vụ: the business failure rate 0.6658 exceeds the limit 0.0500.
+  - Số lần chạy đã lưu cho hồ sơ này: 16; bảng trên là lần chạy cuối cùng.
+- promotion-storm — kịch bản promotion-storm, trạng thái BLOCKED: yêu cầu 1942, 11.29 req/s, lượt lặp 1942, p95 60574.17 ms, tỷ lệ lỗi 0.5299.
+  - Kế hoạch: 60.0000 lượt lặp/giây (120.0000 req/s); đã giao: 11.2870 lượt lặp/giây, 11.2870 req/s; tỷ lệ giao/nhắm không đo được (mẫu số: planned_iteration_rate_per_second); thành công 0, thất bại 1261, từ chối 0, gateway loại 0, vi phạm bất biến 0.
+  - Số lần chạy đã lưu cho hồ sơ này: 21; bảng trên là lần chạy cuối cùng.
+- ramp — kịch bản full, trạng thái BLOCKED: yêu cầu 3257, 12.51 req/s, lượt lặp 757, p95 39436.19 ms, tỷ lệ lỗi 0.1197.
+  - Kế hoạch: 12.0000 lượt lặp/giây (48.0000 req/s); đã giao: 2.9086 lượt lặp/giây, 12.5141 req/s; tỷ lệ giao/nhắm không đo được (mẫu số: planned_iteration_rate_per_second); thành công 825, thất bại 29, từ chối 0, gateway loại 742, vi phạm bất biến 0.
+  - Số lần chạy đã lưu cho hồ sơ này: 21; bảng trên là lần chạy cuối cùng.
+- recovery — kịch bản browse, trạng thái PASS: yêu cầu 648, 5.89 req/s, lượt lặp 319, p95 62.12 ms, tỷ lệ lỗi 0.0000.
+  - Kế hoạch: 5.0000 lượt lặp/giây (10.0000 req/s); đã giao: 2.9000 lượt lặp/giây, 5.8909 req/s; tỷ lệ giao/nhắm 0.8861 (mẫu số: planned_iteration_rate_per_second); thành công 638, thất bại 0, từ chối 0, gateway loại 0, vi phạm bất biến 0.
+  - Kết luận nghiệp vụ: the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.89 of the planned 3.27 iterations per second.
+  - Số lần chạy đã lưu cho hồ sơ này: 16; bảng trên là lần chạy cuối cùng.
+- spike — kịch bản full, trạng thái FAIL: yêu cầu 2031, 10.12 req/s, lượt lặp 185, p95 31317.32 ms, tỷ lệ lỗi 0.0153.
+  - Kế hoạch: 50.0000 lượt lặp/giây (200.0000 req/s); đã giao: 0.9222 lượt lặp/giây, 10.1242 req/s; tỷ lệ giao/nhắm 0.0232 (mẫu số: planned_iteration_rate_per_second); thành công 722, thất bại 32, từ chối 0, gateway loại 68, vi phạm bất biến 0.
+  - Kết luận nghiệp vụ: the business failure rate 0.0424 is within the limit 0.0500 but the platform shed 0.0827 of the requests, which exceeds the limit 0.0100.
+  - Số lần chạy đã lưu cho hồ sơ này: 16; bảng trên là lần chạy cuối cùng.
+- Lần chạy đã lưu (mới nhất): hồ sơ recovery, 10 req/s nhắm, 10 VU, trạng thái PASS, thư mục recovery-1795271066.
+- **Tính hợp lệ của phép đo**: hợp lệ.
 
 ## 21. ĐỘ TRỄ & TỶ LỆ LỖI (LATENCY AND ERROR RATES)
 
-- p50 không đo được, p90 không đo được, p95 không đo được, p99 không đo được, trung bình không đo được, lớn nhất không đo được.
-- Tỷ lệ lỗi HTTP: không đo được (không đo được yêu cầu lỗi).
-- Tỷ lệ kiểm tra nghiệp vụ đạt: không đo được.
+- Nguồn: lần chạy mới nhất recovery — PASS, thư mục recovery-1795271066.
+- p50 15.35 ms, p90 45.42 ms, p95 62.12 ms, p99 không đo được, trung bình 23.32 ms, lớn nhất 269.10 ms.
+- Tỷ lệ lỗi HTTP: 0.0000 (0 yêu cầu lỗi).
+- Tỷ lệ kiểm tra nghiệp vụ đạt: 1.0000.
 
 ## 22. BÃO HÒA TÀI NGUYÊN (RESOURCE SATURATION)
 
-- Máy đo: ? lõi, tải trung bình None.
-- HikariCP, CPU, bộ nhớ, Kafka lag và Redis: xem production-audit/reports/build-and-tests.md và trạng thái cổng kiểm định.
+- Máy đo: 10 lõi, tải trung bình [11.74, 14.48, 14.95].
+- Phép đo của lần chạy mới nhất (recovery) là hợp lệ.
+- HikariCP, CPU, bộ nhớ, Kafka lag và Redis: lần chạy tải không ghi nhận các chỉ số này, xem trạng thái cổng kiểm định tại production-audit/state/verification.json.
 
 ## 23. KẾT QUẢ FLASH-SALE TRÊN KHO HÀNG (FLASH-SALE INVENTORY RESULTS)
 
 - Kịch bản flash-sale hướng mọi VU vào cùng một SKU hạn chế; bất biến kiểm tra sau mỗi lần chạy bằng lệnh harness load flash-sale.
-- Kết quả chạy cụ thể: chưa có lần chạy flash-sale được lưu trong phiên này.
+- Lần chạy flash-sale đã lưu: flash-sale-1795262286 — trạng thái FAIL, yêu cầu 4447, 21.52 req/s, p95 39576.87 ms, tỷ lệ lỗi 0.0160.
 
 ## 24. KẾT QUẢ PROMOTION-STORM (PROMOTION-STORM RESULTS)
 
 - Kịch bản promotion-storm áp dụng cùng một mã giảm giá cho mọi VU; bất biến hạn mức được kiểm tra sau mỗi lần chạy.
+- Lần chạy promotion-storm đã lưu: promotion-storm-1795269071 — trạng thái BLOCKED, yêu cầu 1942, 11.29 req/s, p95 60574.17 ms, tỷ lệ lỗi 0.5299.
+- Bất biến hạn mức khuyến mãi của lần chạy này: PASS — 8 bất biến, 8 đạt, 0 không đạt, 0 bỏ qua, 0 vi phạm.
 
 ## 25. KIỂM THỬ KHÔI PHỤC & LỖI (RECOVERY AND FAILURE TESTING)
 
 - Hồ sơ recovery và failure-during-peak đã được hiện thực trong harness.
-- Chi tiết: production-audit/reports/e2e.md và production-audit/state/performance-baselines.json.
+- Lần chạy recovery đã lưu: recovery-1795271066 — trạng thái PASS, yêu cầu 648, p95 62.12 ms, tỷ lệ lỗi 0.0000.
+- Chi tiết: production-audit/reports/e2e.md và các lần chạy đã lưu tại production-audit/runs/run-20261118-a2b6e6fc/load-results/.
 
 ## 26. BẰNG CHỨNG TRUY VẾT PHÂN TÁN (DISTRIBUTED TRACE EVIDENCE)
 
 - Tempo và OpenTelemetry Collector đang chạy trong cụm Compose; cấu hình tại config/observability/tempo.yaml và config/observability/otel-collector-config.yaml.
-- Cổng kiểm định quan sát: PASS.
+- Cổng kiểm định quan sát: STALE — 7 of 7 observability checks passed recorded against an earlier source revision.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
+- Chưa xác minh theo bộ kiểm thử quan sát: OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically.
+- Chưa xác minh theo bộ kiểm thử quan sát: OBS-05 a controlled failure is visible in the backends but the check is not automated.
 
 ## 27. NHẬT KÝ TẬP TRUNG (CENTRALIZED LOGS)
 
@@ -175,69 +224,102 @@
 
 ## 29. KẾT QUẢ CẢNH BÁO TELEGRAM CI (CI TELEGRAM ALERT RESULTS)
 
-- Chưa có lần chạy kiểm thử giao hàng CI trong phiên này.
+- QA-ALERT-01: PASS — controlled CI failure notification delivered to the CI destination 
 - Đường dẫn CI: .github/workflows/ci.yml (job notify-telegram, điều kiện failure()), kịch bản scripts/notify-telegram.sh.
 
 ## 30. KẾT QUẢ CẢNH BÁO TELEGRAM RUNTIME (RUNTIME TELEGRAM ALERT RESULTS)
 
+- Cổng kiểm định cảnh báo (GATE-23): PASS — 0 failed and 0 blocked checks.
+- QA-ALERT-02: PASS — controlled runtime incident delivered to the runtime destination 
+- QA-ALERT-03: PASS — recovery notification delivered 
 - QA-ALERT-04: PASS — identical alerts must collapse into a single grouped alert 
+  - Số cảnh báo đã gửi: 5; số nhóm cảnh báo Alertmanager trả về: 1; số cảnh báo Alertmanager đếm được: 0.
+  - **Alertmanager không đếm được cảnh báo nào (0/5)**: kiểm tra giao hàng chấp nhận cả 0 lẫn 5, nên trạng thái PASS không chứng minh được việc gom cảnh báo đã thực sự xảy ra; phải chạy lại khi Alertmanager nhận đủ 5 cảnh báo.
+- QA-ALERT-05: PASS — the redaction path must remove credentials before delivery 
 - Cấu hình: config/observability/alertmanager/alertmanager.yml.template, quy tắc config/observability/alertmanager/rules/runtime-alerts.yml.
 
 ## 31. SẴN SÀNG CẢNH BÁO PRODUCTION (PRODUCTION ALERTING READINESS)
 
-- Trạng thái kiểm định cấu hình cảnh báo: BLOCKED.
+- Trạng thái kiểm định cấu hình cảnh báo: PASS.
+- Thông tin xác thực giao hàng theo kiểm tra ALT-07 đã ghi nhận: PASS — telegram delivery credentials are present and valid.
+- Các cổng giao hàng đã ghi nhận trả lời thành công qua Telegram Bot API công khai: QA-ALERT-00, QA-ALERT-01, QA-ALERT-02, QA-ALERT-03.
 - Đường dẫn cấu hình: Prometheus đánh giá quy tắc trong config/observability/alertmanager/rules, Alertmanager gom nhóm và chống lặp trong config/observability/alertmanager, tuyến giao hàng CI là scripts/notify-telegram.sh và tuyến runtime là Telegram Bot API.
-- **Giao hàng thật trong môi trường production chưa được xác minh** vì không có quyền truy cập production và không có thông tin xác thực bot.
+- **Giao hàng cảnh báo trong môi trường production chưa được xác minh**: các lần giao đã ghi nhận đều diễn ra trong môi trường kiểm định của lần chạy này; không có sự kiện production được phép để xác minh.
 
 ## 32. BUILD & KIỂM THỬ HỒI QUY (BUILD AND REGRESSION TESTS)
 
-- alerts: STALE — 0 failed and 1 blocked checks recorded against an earlier source revision
+- alerts: PASS — 0 failed and 0 blocked checks
 - baseline: STALE — 1913 test recorded against an earlier source revision
-- build: STALE — recorded against an earlier source revision
+- build: PASS
 - comments: STALE — recorded against an earlier source revision
-- concurrency: STALE — 33 test recorded against an earlier source revision
+- concurrency: STALE — 38 test recorded against an earlier source revision
 - concurrency_inventory: STALE — 23 test recorded against an earlier source revision
-- e2e: STALE — end to end run state FAILED recorded against an earlier source revision
-- edge: STALE — 37 test recorded against an earlier source revision
-- gateway: STALE — 136 test recorded against an earlier source revision
-- happy: STALE — 1878 test recorded against an earlier source revision
-- integration: STALE — 347 test recorded against an earlier source revision
+- e2e: STALE — 2 end to end collections completed the run recorded against an earlier source revision
+- edge: FAIL — 33 test
+- gateway: STALE — 141 test recorded against an earlier source revision
+- happy: FAIL — 497 test
+- integration: STALE — 357 test recorded against an earlier source revision
 - k8s: STALE — 0 kubernetes manifest checks failed recorded against an earlier source revision
-- kafka: STALE — 223 test recorded against an earlier source revision
+- kafka: STALE — 263 test recorded against an earlier source revision
 - operations: STALE — 7 of 7 observability checks passed recorded against an earlier source revision
-- payment: STALE — 261 test recorded against an earlier source revision
-- performance: STALE — 1656 test recorded against an earlier source revision
+- payment: STALE — 308 test recorded against an earlier source revision
+- performance: PASS
 - security: STALE — 153 test recorded against an earlier source revision
-- unit: STALE — 1878 test recorded against an earlier source revision
-- Lệnh build: ./mvnw -B -ntp -T 1 clean verify, mã thoát 0, ? test, ? module, thời gian 876.197 giây.
+- unit: PASS — 2030 test
+- Lệnh build: ./mvnw -B -ntp -T 1 clean verify, mã thoát 0, thời gian 880.881 giây, ghi nhận lúc 2026-11-21T14:42:33Z tại revision c3bd495a8ca5.
 
 ## 33. PHÁN QUYẾT QA ĐỘC LẬP (INDEPENDENT QA VERDICTS)
 
-- PAY-15-30-psp-integration-review-2.md (41084 byte).
-- PAY-15-30-psp-integration-review-3.md (13571 byte).
-- PAY-15-psp-integration-review.md (33342 byte).
-- final-change-review.md (43648 byte).
-- high-batch-acceptance-criteria.md (88525 byte).
-- orchestrator-change-review.md (62068 byte).
+- PAY-15-30-psp-integration-review-2.md (41084 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
+- PAY-15-30-psp-integration-review-3.md (13571 byte) — phán quyết đã ghi nhận trong văn bản: PASS.
+- PAY-15-psp-integration-review.md (33342 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
+- final-candidate-review.md (39103 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
+- final-change-review.md (43648 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
+- high-batch-acceptance-criteria.md (88525 byte) — phán quyết đã ghi nhận trong văn bản: PASS.
+- orchestrator-change-review.md (62068 byte) — phán quyết đã ghi nhận trong văn bản: FAIL.
+- Cổng GATE-19 (INDEPENDENT_REVIEW): FAIL — 5 of 7 independent reviews report a failing verdict (2 đạt, 5 không đạt, 0 không có phán quyết rõ).
+- **Có bản đánh giá độc lập ghi phán quyết không đạt**: cổng GATE-19 đang không đạt nên báo cáo này không thể kết luận nghiệm thu.
 
 ## 34. COMMIT & KẾT QUẢ PUSH (GIT COMMITS AND PUSH OUTCOMES)
 
-- b14dde9282e0 —  — push: .
-- b14dde9282e0 —  — push: .
-- cc25eb8b2de9 —  — push: .
-- cc25eb8b2de9 —  — push: .
-- 7a3f72e92f79 —  — push: .
-- 7a3f72e92f79 —  — push: .
-- ff6e578e5ecc —  — push: .
-- ff6e578e5ecc —  — push: .
+- Tổng số bản ghi phân phối: **49** (COMMITTED: **23**, PUSHED: **9**, PUSH_BLOCKED: **1**, REJECTED_BY_GATES: **16**).
+- **Bị cổng kiểm định từ chối**: 16 bản ghi.
+  - 2026-11-18T14:15:59Z — commit — git add failed: The following paths are ignored by one of your .gitignore files: production-audit hint: Use -f if you really want to add them. hint: Turn this message off by runnin
+  - 2026-11-18T14:16:25Z — commit — unexpected staged paths: ['production-audit/README.md', 'production-audit/architecture/adrs/ADR-001-payment-provider-outcome.md', 'production-audit/architecture/adrs/ADR-002-no-sil
+  - 2026-11-18T14:16:55Z — commit — paths outside allow-list: ['production-audit']
+  - 2026-11-18T14:17:02Z — commit — secret detected in staged diff
+  - 2026-11-18T14:18:28Z — commit — secret detected in staged content: ['production-audit/config/secret-scan-exceptions.json']
+  - 2026-11-18T14:18:59Z — commit — secret detected in staged content: ['payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java']
+  - 2026-11-18T14:19:04Z — commit — secret detected in staged content: ['payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java']
+  - 2026-11-18T14:20:11Z — commit — secret detected in staged content: ['payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceStripeTest.java', 'payment-service/src/test/java/com/shop/paym
+  - 2026-11-18T14:20:56Z — commit — secret scan failed: ['auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java', 'media-service/src/test/java/com/shop/mediaservice/controll
+  - 2026-11-18T14:22:08Z — commit — secret scan failed: ['auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java', 'media-service/src/test/java/com/shop/mediaservice/controll
+  - 2026-11-18T14:24:10Z — commit — secret detected in staged content: ['production-audit/harness/tests/test_git_delivery.py']
+  - 2026-11-18T14:24:20Z — commit — secret detected in staged content: ['production-audit/harness/tests/test_git_delivery.py']
+  - 2026-11-19T06:32:48Z — commit — git add failed: fatal: pathspec 'harness/e2e/environment.py' did not match any files
+  - 2026-11-19T06:32:52Z — commit — secret scan failed: ['production-audit/harness/e2e/collection_contract.py']
+  - 2026-11-19T06:37:57Z — commit — secret scan failed: ['production-audit/config/secret-scan-exceptions.json', 'production-audit/harness/e2e/collection_contract.py']
+  - 2026-11-19T15:54:26Z — commit — secret scan failed: ['docker-compose.yml']
+- **Bị chặn khi đẩy**: 1 bản ghi.
+  - 2026-11-18T14:22:53Z — push — remote: error: GH013: Repository rule violations found for refs/heads/audit/production-hardening-run-20261118-a2b6e6fc.         remote:  remote: - GITHUB PUSH PROTECTION         re
+- Các lần phân phối gần nhất:
+  - 2026-11-19T16:03:00Z — b14dde9282e0 — COMMITTED — chore(inventory): synchronize manifest revision with HEAD commit 2c1279bc
+  - 2026-11-19T16:03:06Z — b14dde9282e0 — PUSHED — 
+  - 2026-11-19T16:03:25Z — cc25eb8b2de9 — COMMITTED — chore(harness): finalize gates and delivery state verification
+  - 2026-11-19T16:03:31Z — cc25eb8b2de9 — PUSHED — 
+  - 2026-11-19T16:06:52Z — 7a3f72e92f79 — COMMITTED — docs(report): deliver comprehensive 36-section production readiness report
+  - 2026-11-19T16:06:57Z — 7a3f72e92f79 — PUSHED — 
+  - 2026-11-19T16:07:23Z — ff6e578e5ecc — COMMITTED — chore(harness): clean sync of verification evidence and delivery logs
+  - 2026-11-19T16:07:31Z — ff6e578e5ecc — PUSHED — 
 
 ## 35. TỒN ĐỌNG CÒN LẠI (REMAINING BLOCKERS)
 
 ### 35.1 Mức HIGH
 
-| Mã | Mức | Nội dung |
-| --- | --- | --- |
-| CAT-05 | HIGH | No currency on any money field in the fleet |
+| Mã | Mức | Trạng thái | Nội dung |
+| --- | --- | --- | --- |
+| PAY-40 | HIGH | BLOCKED | The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred |
+| PAY-41 | HIGH | BLOCKED | Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential |
 
 ### 35.2 Mức MEDIUM
 
@@ -355,24 +437,25 @@
 
 ### 36.1 ĐÃ XÁC MINH BẰNG BẰNG CHỨNG
 
-- Rà soát mã nguồn đầy đủ: 1366/1407 tập tin.
-- Chính sách không chú thích: PASS.
-- Build reactor: bằng chứng đã cũ.
-- Bất biến nghiệp vụ dưới tải: chưa chạy với 0 bất biến kiểm tra.
+- Rà soát mã nguồn: 1478/1483 tập tin đã được rà soát; 5 tập tin chưa rà soát (cổng GATE-1 chưa đạt: 5 files not yet fully reviewed).
+- Chính sách không chú thích: STALE — recorded against an earlier source revision.
+- Bằng chứng của bộ kiểm thử này được ghi nhận ở một phiên bản mã nguồn cũ hơn mã nguồn hiện tại, phải chạy lại và ghi nhận lại bằng chứng ở HEAD thì cổng kiểm định tương ứng mới được coi là đạt.
+- Build reactor: PASS.
+- Bất biến nghiệp vụ dưới tải (lần chạy recovery — PASS): PASS — 8 bất biến kiểm tra, 8 đạt, 0 không đạt, 0 bỏ qua, 0 vi phạm.
 
 ### 36.2 CHƯA XÁC MINH
 
-- Tích hợp Stripe sandbox thật: BLOCKED — khóa sk_test_ bị Stripe từ chối và bí mật ký webhook là giá trị cục bộ.
-- Giao hàng Telegram thật: chưa có thông tin xác thực bot trong môi trường này.
-- Cấp nhân tự động HPA và KEDA trên cụm thật: không có cụm Kubernetes chạy được.
+- Tích hợp Stripe sandbox thật (api.stripe.com với khóa test thật): cổng GATE-6 đang BLOCKED — the payment acceptance is NOT verified against the real Stripe: it ran against the official Stripe mock 0.206.0 (7 of 8 cases proven; outstanding: declined_card_refusal); a genuine test-mode key against api.stripe.com is still required; the payment suite reports PENDING; nghiệm thu đã ghi nhận chạy trên official-stripe-mock tại http://stripe-mock-acceptance:12111.
+- Giao hàng Telegram thật trong môi trường production: các cổng QA-ALERT-00, QA-ALERT-01, QA-ALERT-02, QA-ALERT-03 đã giao thành công qua Telegram Bot API công khai trong môi trường kiểm định; việc giao hàng trong production vẫn chưa được xác minh.
+- Cấp nhân tự động HPA trên cụm thật: đã quan sát và ghi nhận (mục 17); KEDA thì chưa triển khai (mục 18), nên cấp nhân theo KEDA trên cụm thật chưa thể xác minh.
 - Thông lượng thanh toán cấp nhà cung cấp: phụ thuộc giới hạn tần suất của Stripe và cấu hình tài khoản.
 - Giao hàng cảnh báo trong production: chỉ có thể xác minh bằng sự kiện production được cho phép.
 
 ## 37. QUYẾT ĐỊNH SẴN SÀNG TRIỂN KHAI SẢN XUẤT (PRODUCTION READINESS DECISION)
 
 - **Quyết định**: CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT.
-- Các cổng chưa đạt: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-12, GATE-13, GATE-14, GATE-15, GATE-16, GATE-17, GATE-18, GATE-21, GATE-22, GATE-23, GATE-24
-- Số tác vụ HIGH đang mở: 1; MEDIUM: 103; LOW: 77.
-- Trạng thái tổng hợp tác vụ: BLOCKED=3, DISCOVERED=8, FAILED_VERIFICATION=0, IMPLEMENTED=0, IN_PROGRESS=0, NORMALIZED=0, READY=173, REOPENED=0, REQUIREMENT_CONFLICT=0, VERIFIED=84, VERIFYING=0.
+- Các cổng chưa đạt: GATE-1, GATE-4, GATE-5, GATE-6, GATE-7, GATE-8, GATE-9, GATE-10, GATE-13, GATE-14, GATE-15, GATE-16, GATE-18, GATE-19, GATE-21, GATE-24.
+- Số tác vụ HIGH đang mở: 2 (CRITICAL: 0); MEDIUM: 103; LOW: 77.
+- Trạng thái tổng hợp tác vụ: BLOCKED=2, DISCOVERED=8, FAILED_VERIFICATION=0, IMPLEMENTED=0, IN_PROGRESS=0, NORMALIZED=0, READY=172, REOPENED=0, REQUIREMENT_CONFLICT=0, VERIFIED=86, VERIFYING=0.
 - Báo cáo được sinh tự động tại /Users/tonminh-mac/IdeaProjects/untitled5/production-audit/reports/final-production-readiness-report.md.
 

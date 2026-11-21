@@ -9,7 +9,7 @@ from .. import config
 from ..inventory.coverage import coverage_summary, load_coverage
 from ..persistence.store import read_json, utc_now
 from ..task_registry.registry import load_tasks, task_status_summary
-from ..verification.gates import completion_predicate, evaluate_gates, evidence_is_fresh
+from ..verification.gates import _review_verdict, completion_predicate, evaluate_gates, evidence_is_fresh
 
 OPEN_TASK_STATES = (
     "DISCOVERED",
@@ -257,6 +257,20 @@ def write_final_report(path: Path | None = None) -> Path:
     build_fresh = evidence_is_fresh(build, fingerprint)
     build_status = str(build.get("status", "chưa chạy")) if build_fresh else "bằng chứng đã cũ"
 
+    from ..kubernetes.validation import load_autoscaling_observation, observation_path
+    from ..stripe.acceptance import load_evidence
+
+    observation = load_autoscaling_observation()
+    observation_status = str(observation.get("status", "BLOCKED"))
+    observation_reason = str(observation.get("reason", ""))
+    observation_evidence = [str(item) for item in observation.get("evidence", [])]
+    observation_record = read_json(observation_path(), {}) or {}
+    gate_by_id = {gate.id: gate for gate in gates}
+    acceptance = load_evidence()
+    acceptance_server = acceptance.get("stripe_server") or {}
+    acceptance_summary = acceptance.get("summary") or {}
+    acceptance_cases = acceptance.get("cases") or []
+
     lines: list[str] = []
     add = lines.append
 
@@ -275,7 +289,14 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     decision = "CHƯA ĐẠT — CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT" if not predicate.get("production_ready") else "SẴN SÀNG TRIỂN KHAI SẢN XUẤT"
     add("- **Quyết định nghiệm thu**: **" + decision + "**.")
-    add("- **Cổng kiểm định**: " + str(len(passed)) + "/" + str(len(gates)) + " đạt, " + str(len(failed)) + " không đạt, " + str(len(pending)) + " chờ.")
+    blocked_gates = [gate for gate in gates if gate.status == "BLOCKED"]
+    insufficient_gates = [gate for gate in gates if gate.status == "INSUFFICIENT_EVIDENCE"]
+    gate_line = "- **Cổng kiểm định**: " + str(len(passed)) + "/" + str(len(gates)) + " đạt, " + str(len(failed)) + " không đạt, " + str(len(pending)) + " chờ"
+    if blocked_gates:
+        gate_line += ", " + str(len(blocked_gates)) + " bị chặn"
+    if insufficient_gates:
+        gate_line += ", " + str(len(insufficient_gates)) + " thiếu bằng chứng"
+    add(gate_line + ".")
     add("- **Rà soát mã nguồn**: " + _metric(coverage.get("percent_reviewed"), "%") + " (" + str(coverage.get("reviewed_files")) + "/" + str(coverage.get("total_files")) + " tập tin).")
     add("- **Tác vụ còn mở mức HIGH**: " + str(len(open_high)) + " (CRITICAL: " + str(len(open_critical)) + ", MEDIUM: " + str(len(open_medium)) + ", LOW: " + str(len(open_low)) + ").")
     add("- **Quyết định sản xuất theo completion predicate**: " + ("đạt" if predicate.get("production_ready") else "chưa đạt") + ".")
@@ -395,11 +416,28 @@ def write_final_report(path: Path | None = None) -> Path:
             if finding.get("check") in {"api_authentication", "webhook_secret", "secret_key_mode"}:
                 add("- Kiểm định " + str(finding.get("check")) + ": " + str(finding.get("status")) + " — " + str(finding.get("detail")) + ".")
         add("- Không dùng khóa live-mode, không giả lập phản hồi Stripe, không dùng Stripe mock làm bằng chứng tích hợp thật.")
+    if acceptance:
+        add("- Nghiệm thu thanh toán đã ghi nhận: trạng thái " + str(acceptance.get("status", "chưa chạy")) + ", máy chủ Stripe bị kiểm định " + str(acceptance_server.get("kind", "không rõ")) + " " + str(acceptance_server.get("version", "")) + " tại " + (str(acceptance_server.get("http_address_in_network")) or "không ghi nhận địa chỉ") + "; tổng số " + str(acceptance_summary.get("cases", 0)) + " trường hợp, " + str(acceptance_summary.get("proven", 0)) + " proven, " + str(acceptance_summary.get("failed", 0)) + " thất bại, " + str(acceptance_summary.get("not_proven", 0)) + " chưa chứng minh được.")
+        outstanding_cases = [str(case.get("name")) for case in acceptance_cases if str(case.get("verdict")) != "PROVEN"]
+        if outstanding_cases:
+            add("- Các trường hợp nghiệm thu chưa được chứng minh: " + ", ".join(outstanding_cases) + ".")
+    else:
+        add("- Chưa có bằng chứng nghiệm thu thanh toán Stripe nào được lưu.")
+    gate6 = gate_by_id.get("GATE-6")
+    if gate6 is not None:
+        add("- Cổng GATE-6 (PAYMENT_CORRECTNESS): " + gate6.status + " — " + gate6.detail + ".")
     add("")
 
     add("## 14. XÁC MINH WEBHOOK & HOÀN TIỀN (WEBHOOK AND REFUND VERIFICATION)")
     add("")
-    add("- Logic xác minh chữ ký webhook được kiểm thử bằng lệnh harness stripe test-webhooks, ký HMAC-SHA256 theo đúng định dạng t/v1 của Stripe.")
+    stripe_test_status = str(stripe_result.get("status", "chưa chạy"))
+    if stripe_test_status == "BLOCKED" and stripe_result.get("reason"):
+        add("- Lệnh harness stripe test-webhooks (ký HMAC-SHA256 theo đúng định dạng t/v1 của Stripe) **bị chặn** với lý do đã ghi nhận: " + str(stripe_result.get("reason")) + ".")
+    else:
+        add("- Logic xác minh chữ ký webhook được kiểm thử bằng lệnh harness stripe test-webhooks, ký HMAC-SHA256 theo đúng định dạng t/v1 của Stripe: trạng thái đã ghi nhận " + stripe_test_status + ".")
+    webhook_case = next((case for case in acceptance_cases if str(case.get("name")) == "capture_webhook_signature_verified"), {})
+    if webhook_case:
+        add("- Trường hợp nghiệm thu chữ ký webhook đã ghi nhận: phán quyết " + str(webhook_case.get("verdict")) + " — " + str(webhook_case.get("detail")) + ".")
     payment_status, _ = _suite_status(verification, "payment", fingerprint)
     add("- Hoàn tiền: xem bộ kiểm thử payment — " + payment_status + ".")
     if payment_status == "STALE":
@@ -422,26 +460,53 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     kubernetes_checks = kubernetes_result.get("checks", [])
     k8s_status, k8s_detail = _suite_status(verification, "k8s", fingerprint)
-    add("- Hành động đã ghi nhận: " + str(kubernetes.get("action", "không rõ")) + " — " + str(len(kubernetes_checks)) + " mục kiểm tra tĩnh trên các tệp manifest trong k8s/.")
-    add("- Kết quả kiểm tra tĩnh manifest tại thời điểm ghi nhận: " + str(kubernetes_result.get("status", "chưa chạy")) + " — đây không phải kiểm định trên một cụm Kubernetes thật.")
+    add("- Hành động đã ghi nhận: " + str(kubernetes.get("action", "không rõ")) + " — " + str(len(kubernetes_checks)) + " mục kiểm tra trên các tệp manifest trong k8s/.")
+    add("- Kết quả kiểm tra tĩnh manifest tại thời điểm ghi nhận: " + str(kubernetes_result.get("status", "chưa chạy")) + "; các mục kiểm tra K8S-01 đến K8S-13 dưới đây chỉ đọc tệp manifest và không phản ánh hành vi của một cụm đang chạy.")
     add("- Bộ kiểm thử k8s: " + k8s_status + (" — " + k8s_detail if k8s_detail else "") + ".")
     if k8s_status == "STALE":
         add("- " + STALE_EVIDENCE_NOTE)
-    add("- **Không có cụm Kubernetes chạy được trong môi trường này**: các mục kiểm tra dưới đây chỉ đọc tệp manifest, không áp dụng lên cụm và không có phản hồi nào từ một cụm thật.")
-    add("- **Cấp nhân tự động ở thời gian chạy chưa được xác minh**: HPA và KEDA mới chỉ được kiểm tra về mặt khai báo trong manifest, chưa có bằng chứng nào từ một cụm thật.")
+    if observation_status == "PASS":
+        add("- **Cấp nhân tự động đã được quan sát trên một cụm Kubernetes thật** (mục K8S-14): " + ("; ".join(observation_evidence) if observation_evidence else observation_reason) + ".")
+        observation_verdict = (observation_record.get("verdict") or {}).get("summary", "")
+        if observation_verdict:
+            add("- Kết luận đã ghi nhận của lần quan sát: " + str(observation_verdict).rstrip(".") + ".")
+        cluster_record = observation_record.get("cluster") or {}
+        if cluster_record.get("deleted_after_the_run"):
+            add("- Theo trạng thái đã lưu, cụm dùng để quan sát đã bị xóa sau lần chạy, nên hiện không còn cụm nào đang chạy để kiểm chứng lại trực tiếp.")
+    elif observation_status == "BLOCKED":
+        add("- **Cấp nhân tự động ở thời gian chạy chưa được xác minh**: " + observation_reason + ".")
+    else:
+        add("- **Quan sát cấp nhân tự động đã ghi nhận không đạt**: " + observation_reason + ".")
     for check in kubernetes_checks:
         add("  - " + str(check.get("id")) + " " + str(check.get("name")) + ": " + str(check.get("status")) + " — " + str(check.get("detail"))[:200])
     add("")
 
     add("## 17. KẾT QUẢ HPA (HPA SCALING RESULTS)")
     add("")
-    add("- HPA được cấu hình cho gateway-service trong k8s/gateway-service.yaml.")
-    add("- **Chưa xác minh cấp nhân tự động trên cụm thật**: không có cụm Kubernetes chạy được trong môi trường này. Lệnh harness k8s hpa-status trả về BLOCKED với lý do rõ ràng.")
+    autoscaling_check = next((check for check in kubernetes_checks if str(check.get("id")) == "K8S-07"), {})
+    add("- HPA được cấu hình cho gateway-service trong k8s/gateway-service.yaml; mục kiểm tra K8S-07 AUTOSCALING trên manifest đã ghi nhận: " + str(autoscaling_check.get("status", "chưa ghi nhận")) + " — " + str(autoscaling_check.get("detail", "")) + ".")
+    if observation_status == "PASS":
+        add("- **HPA đã được quan sát trên cụm thật theo bằng chứng đã lưu**: " + ("; ".join(observation_evidence) if observation_evidence else observation_reason) + ".")
+    else:
+        add("- **Chưa xác minh cấp nhân tự động trên cụm thật**: trạng thái quan sát đã ghi nhận là " + observation_status + " — lý do: " + observation_reason + ".")
+    gate24 = gate_by_id.get("GATE-24")
+    gate25 = gate_by_id.get("GATE-25")
+    if gate24 is not None:
+        add("- Cổng GATE-24 (KUBERNETES_MANIFESTS): " + gate24.status + " — " + gate24.detail + ".")
+    if gate25 is not None:
+        add("- Cổng GATE-25 (AUTOSCALING_OBSERVATION): " + gate25.status + " — " + gate25.detail + ".")
     add("")
 
     add("## 18. KẾT QUẢ KEDA (KEDA SCALING RESULTS)")
     add("")
-    add("- **Chưa triển khai**: không có ScaledObject KEDA nào trong k8s/. Đây là khoảng trống đã biết và đã ghi nhận trong sổ tay tác vụ.")
+    k8s02_check = next((check for check in kubernetes_checks if str(check.get("id")) == "K8S-02"), {})
+    kinds_evidence = ", ".join(str(item) for item in (k8s02_check.get("evidence") or []))
+    if not k8s02_check:
+        add("- Chưa có kết quả kiểm tra manifest nào được ghi nhận để kết luận về KEDA.")
+    elif "ScaledObject" in kinds_evidence:
+        add("- Danh sách kind đã ghi nhận trong kiểm tra K8S-02 có chứa ScaledObject của KEDA: " + kinds_evidence + ".")
+    else:
+        add("- **Chưa triển khai**: danh sách kind đã ghi nhận trong kiểm tra K8S-02 (" + kinds_evidence + ") không chứa ScaledObject của KEDA. Đây là khoảng trống đã biết và đã ghi nhận trong sổ tay tác vụ.")
     add("")
 
     add("## 19. HỒ SƠ CHIẾU TẢI BLACK FRIDAY (BLACK FRIDAY WORKLOAD PROFILES)")
@@ -654,8 +719,21 @@ def write_final_report(path: Path | None = None) -> Path:
     add("## 31. SẴN SÀNG CẢNH BÁO PRODUCTION (PRODUCTION ALERTING READINESS)")
     add("")
     add("- Trạng thái kiểm định cấu hình cảnh báo: " + str(alerting_status) + ".")
+    alerting_result = alerting_document.get("result") or {}
+    for check in alerting_result.get("checks", []):
+        if str(check.get("status")) in {"FAIL", "BLOCKED"}:
+            add("- Mục kiểm tra " + str(check.get("id")) + " " + str(check.get("name")) + ": " + str(check.get("status")) + " — " + str(check.get("detail")) + ".")
+    credential_check = next((check for check in alerting_result.get("checks", []) if str(check.get("id")) == "ALT-07"), {})
+    if credential_check:
+        add("- Thông tin xác thực giao hàng theo kiểm tra ALT-07 đã ghi nhận: " + str(credential_check.get("status")) + " — " + str(credential_check.get("detail")) + ".")
+    public_deliveries = [row for row in alert_gates if (row.get("evidence") or {}).get("public_bot_api") is True]
+    local_deliveries = [row for row in alert_gates if (row.get("evidence") or {}).get("public_bot_api") is False]
+    if public_deliveries:
+        add("- Các cổng giao hàng đã ghi nhận trả lời thành công qua Telegram Bot API công khai: " + ", ".join(str(row.get("gate")) for row in public_deliveries) + ".")
+    if local_deliveries:
+        add("- Các cổng giao hàng đã ghi nhận chỉ trả lời qua bot api cục bộ (không phải api.telegram.org): " + ", ".join(str(row.get("gate")) for row in local_deliveries) + ".")
     add("- Đường dẫn cấu hình: Prometheus đánh giá quy tắc trong config/observability/alertmanager/rules, Alertmanager gom nhóm và chống lặp trong config/observability/alertmanager, tuyến giao hàng CI là scripts/notify-telegram.sh và tuyến runtime là Telegram Bot API.")
-    add("- **Giao hàng thật trong môi trường production chưa được xác minh** vì không có quyền truy cập production và không có thông tin xác thực bot.")
+    add("- **Giao hàng cảnh báo trong môi trường production chưa được xác minh**: các lần giao đã ghi nhận đều diễn ra trong môi trường kiểm định của lần chạy này; không có sự kiện production được phép để xác minh.")
     add("")
 
     add("## 32. BUILD & KIỂM THỬ HỒI QUY (BUILD AND REGRESSION TESTS)")
@@ -679,8 +757,17 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     qa_root = config.run_root() / "independent-reviews"
     if qa_root.exists():
-        for path in sorted(qa_root.glob("*.md")):
-            add("- " + path.name + " (" + str(path.stat().st_size) + " byte).")
+        qa_reviews = [(path, _review_verdict(path)) for path in sorted(qa_root.glob("*.md"))]
+        for path, verdict in qa_reviews:
+            add("- " + path.name + " (" + str(path.stat().st_size) + " byte) — phán quyết đã ghi nhận trong văn bản: " + verdict + ".")
+        qa_pass = len([item for item in qa_reviews if item[1] == "PASS"])
+        qa_fail = len([item for item in qa_reviews if item[1] == "FAIL"])
+        qa_undecided = len(qa_reviews) - qa_pass - qa_fail
+        gate19 = gate_by_id.get("GATE-19")
+        if gate19 is not None:
+            add("- Cổng GATE-19 (INDEPENDENT_REVIEW): " + gate19.status + " — " + gate19.detail + " (" + str(qa_pass) + " đạt, " + str(qa_fail) + " không đạt, " + str(qa_undecided) + " không có phán quyết rõ).")
+        if qa_fail:
+            add("- **Có bản đánh giá độc lập ghi phán quyết không đạt**: cổng GATE-19 đang không đạt nên báo cáo này không thể kết luận nghiệm thu.")
     else:
         add("- Chưa có bản đánh giá độc lập nào được lưu.")
     add("")
@@ -739,8 +826,16 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     add("### 36.1 ĐÃ XÁC MINH BẰNG BẰNG CHỨNG")
     add("")
-    add("- Rà soát mã nguồn: " + str(coverage.get("reviewed_files")) + "/" + str(coverage.get("total_files")) + " tập tin đã được rà soát; " + str(int(coverage.get("total_files") or 0) - int(coverage.get("reviewed_files") or 0)) + " tập tin chưa rà soát (cổng GATE-1 chưa đạt).")
-    add("- Chính sách không chú thích: " + str(verification.get("suites", {}).get("comments", {}).get("status", "chưa chạy")) + ".")
+    gate1 = gate_by_id.get("GATE-1")
+    if gate1 is not None:
+        gate1_note = "cổng GATE-1 đã đạt" if gate1.status == "PASS" else "cổng GATE-1 chưa đạt: " + gate1.detail
+    else:
+        gate1_note = "trạng thái cổng GATE-1 không xác định"
+    add("- Rà soát mã nguồn: " + str(coverage.get("reviewed_files")) + "/" + str(coverage.get("total_files")) + " tập tin đã được rà soát; " + str(int(coverage.get("total_files") or 0) - int(coverage.get("reviewed_files") or 0)) + " tập tin chưa rà soát (" + gate1_note + ").")
+    comments_status, comments_detail = _suite_status(verification, "comments", fingerprint)
+    add("- Chính sách không chú thích: " + comments_status + (" — " + comments_detail if comments_detail else "") + ".")
+    if comments_status == "STALE":
+        add("- " + STALE_EVIDENCE_NOTE)
     add("- Build reactor: " + build_status + ".")
     if load_invariants:
         total, ok, bad, skipped, violations = _invariant_counts(load_invariants)
@@ -750,11 +845,27 @@ def write_final_report(path: Path | None = None) -> Path:
     add("")
     add("### 36.2 CHƯA XÁC MINH")
     add("")
-    add("- Tích hợp Stripe sandbox thật: " + str(stripe_result.get("status", "chưa chạy")) + " — khóa sk_test_ bị Stripe từ chối và bí mật ký webhook là giá trị cục bộ.")
-    add("- Giao hàng Telegram thật: chưa có thông tin xác thực bot trong môi trường này.")
-    add("- Cấp nhân tự động HPA và KEDA trên cụm thật: không có cụm Kubernetes chạy được.")
+    gate6 = gate_by_id.get("GATE-6")
+    if gate6 is None or gate6.status != "PASS":
+        stripe_claim = "- Tích hợp Stripe sandbox thật (api.stripe.com với khóa test thật): cổng GATE-6 "
+        stripe_claim += ("đang " + gate6.status + " — " + gate6.detail) if gate6 is not None else "không xác định"
+        if acceptance:
+            stripe_claim += "; nghiệm thu đã ghi nhận chạy trên " + str(acceptance_server.get("kind", "không rõ")) + " tại " + (str(acceptance_server.get("http_address_in_network")) or "không ghi nhận địa chỉ")
+        add(stripe_claim + ".")
+    if public_deliveries:
+        add("- Giao hàng Telegram thật trong môi trường production: các cổng " + ", ".join(str(row.get("gate")) for row in public_deliveries) + " đã giao thành công qua Telegram Bot API công khai trong môi trường kiểm định; việc giao hàng trong production vẫn chưa được xác minh.")
+    else:
+        add("- Giao hàng Telegram thật: chưa có lần giao nào qua Telegram Bot API công khai được ghi nhận trong trạng thái đã lưu.")
+    if observation_status == "PASS":
+        add("- Cấp nhân tự động HPA trên cụm thật: đã quan sát và ghi nhận (mục 17); KEDA thì chưa triển khai (mục 18), nên cấp nhân theo KEDA trên cụm thật chưa thể xác minh.")
+    else:
+        add("- Cấp nhân tự động HPA và KEDA trên cụm thật: trạng thái quan sát đã ghi nhận là " + observation_status + " — " + observation_reason + ".")
     add("- Thông lượng thanh toán cấp nhà cung cấp: phụ thuộc giới hạn tần suất của Stripe và cấu hình tài khoản.")
-    add("- Giao hàng cảnh báo trong production: chỉ có thể xác minh bằng sự kiện production được cho phép.")
+    alt08 = next((check for check in (alerting_document.get("result") or {}).get("checks", []) if str(check.get("id")) == "ALT-08"), {})
+    if alt08 and str(alt08.get("status")) == "BLOCKED":
+        add("- Giao hàng cảnh báo trong production: chỉ có thể xác minh bằng sự kiện production được cho phép; mục kiểm tra ALT-08 đang bị chặn — " + str(alt08.get("detail")) + ".")
+    else:
+        add("- Giao hàng cảnh báo trong production: chỉ có thể xác minh bằng sự kiện production được cho phép.")
     add("")
 
     add("## 37. QUYẾT ĐỊNH SẴN SÀNG TRIỂN KHAI SẢN XUẤT (PRODUCTION READINESS DECISION)")
@@ -763,7 +874,7 @@ def write_final_report(path: Path | None = None) -> Path:
         add("- **Quyết định**: SẴN SÀNG TRIỂN KHAI SẢN XUẤT.")
     else:
         add("- **Quyết định**: CHƯA SẴN SÀNG TRIỂN KHAI SẢN XUẤT.")
-        add("- Các cổng chưa đạt: " + ", ".join(failing) if failing else "- Không xác định được cổng chưa đạt.")
+        add(("- Các cổng chưa đạt: " + ", ".join(failing) + ".") if failing else "- Không xác định được cổng chưa đạt.")
     add("- Số tác vụ HIGH đang mở: " + str(len(open_high)) + " (CRITICAL: " + str(len(open_critical)) + "); MEDIUM: " + str(len(open_medium)) + "; LOW: " + str(len(open_low)) + ".")
     add("- Trạng thái tổng hợp tác vụ: " + ", ".join(name + "=" + str(count) for name, count in sorted(summary.items())) + ".")
     add("- Báo cáo được sinh tự động tại " + str(target) + ".")

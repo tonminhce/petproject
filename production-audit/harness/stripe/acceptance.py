@@ -37,7 +37,7 @@ PLATFORM_ISSUER = "http://keycloak:8080/realms/ecommerce"
 PAYMENT_API = "/api/v1/payments"
 WEBHOOK_API = "/api/v1/webhooks/payments/stripe"
 PAYMENT_CURRENCY = "USD"
-DECLINE_PAYMENT_METHOD = "pm_card_chargeDeclined"
+DECLINE_PAYMENT_METHOD = "pm_card_visa_chargeDeclined"
 TIMEOUT_SECONDS = 90
 
 MATRIX_CASES: tuple[dict[str, str], ...] = (
@@ -122,6 +122,45 @@ def _dotenv(path: Path) -> dict[str, str]:
         name, value = stripped.split("=", 1)
         values[name.strip()] = value.strip().strip('"').strip("'")
     return values
+
+
+def resolve_credential(values: dict[str, str]) -> dict[str, str]:
+    api_base = str(values.get("SHOP_PAYMENT_STRIPE_API_BASE", "") or "").strip().rstrip("/")
+    secret_key = str(values.get("SHOP_PAYMENT_STRIPE_SECRET_KEY", "") or "").strip()
+    webhook_secret = str(
+        os.environ.get("SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET", "")
+        or values.get("SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET", "")
+        or ""
+    ).strip()
+    mode = "real-test" if api_base == PUBLIC_STRIPE_API and secret_key.startswith("sk_test_") else "generated-mock"
+    if mode == "real-test" and not webhook_secret:
+        mode = "real-missing-webhook-secret"
+    return {
+        "mode": mode,
+        "api_base": api_base,
+        "secret_key": secret_key,
+        "webhook_secret": webhook_secret,
+    }
+
+
+def probe_credential(secret_key: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        PUBLIC_STRIPE_API + "/v1/balance",
+        headers={"Authorization": "Bearer " + secret_key},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            document = json.loads(response.read().decode("utf-8"))
+            return {
+                "endpoint": PUBLIC_STRIPE_API + "/v1/balance",
+                "status": response.status,
+                "livemode": bool(document.get("livemode")),
+                "api_version": str(response.headers.get("Stripe-Version", "")),
+            }
+    except urllib.error.HTTPError as error:
+        return {"endpoint": PUBLIC_STRIPE_API + "/v1/balance", "status": error.code}
+    except OSError as error:
+        return {"endpoint": PUBLIC_STRIPE_API + "/v1/balance", "status": 0, "error": str(error)[:120]}
 
 
 def stripe_mock_version(container: str = STRIPE_MOCK_CONTAINER) -> str:
@@ -563,11 +602,60 @@ def _mock_request_count(lines: list[str]) -> int:
 def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
     identifier = run_id or config.run_identifier()
     values = _dotenv(config.repository_root() / ".env")
-    secret_key = "sk_" + "test_" + _random_suffix(32)
-    webhook_secret = "whsec_" + _random_suffix(40)
-    server = ensure_stripe_mock()
+    credential = resolve_credential(values)
+    real_api = credential["mode"] == "real-test"
+    secret_key = credential["secret_key"] if real_api else "sk_" + "test_" + _random_suffix(32)
+    webhook_secret = credential["webhook_secret"] if real_api else "whsec_" + _random_suffix(40)
+    probe: dict[str, Any] = {}
+    if real_api:
+        probe = probe_credential(secret_key)
+        if probe.get("status") != 200 or probe.get("livemode") is not False:
+            document: dict[str, Any] = {
+                "generated_at": utc_now(),
+                "run_id": identifier,
+                "stripe_server": {
+                    "kind": "real-stripe-api",
+                    "is_public_stripe_api": True,
+                    "http_address_in_network": PUBLIC_STRIPE_API,
+                    "ready": False,
+                },
+                "platform": {"state": "not started"},
+                "compose": {"services": [], "state": "not checked"},
+                "credential": {
+                    "secret_key_mode": "test",
+                    "secret_key_fingerprint": _fingerprint(secret_key),
+                    "webhook_secret_fingerprint": _fingerprint(webhook_secret),
+                    "credential_probe": probe,
+                },
+                "cases": [],
+                "supplementary": [],
+                "summary": {"cases": 0, "proven": 0, "failed": 0, "not_proven": 0, "supplementary": 0},
+                "verified_against_real_stripe_api": False,
+                "stripe_api_base_of_record": PUBLIC_STRIPE_API,
+                "status": "BLOCKED",
+                "reason": "the real Stripe credential was not accepted by api.stripe.com as a genuine test-mode key: "
+                + json.dumps(probe)[:200],
+            }
+            return document
+    if real_api:
+        server: dict[str, Any] = {
+            "kind": "real-stripe-api",
+            "image": "",
+            "version": str(probe.get("api_version", "")),
+            "container": "",
+            "network": COMPOSE_NETWORK,
+            "http_address_in_network": PUBLIC_STRIPE_API,
+            "http_address_on_host": PUBLIC_STRIPE_API,
+            "state_directory": "",
+            "ready": True,
+            "is_public_stripe_api": True,
+        }
+        recorder_upstream = PUBLIC_STRIPE_API
+    else:
+        server = ensure_stripe_mock()
+        recorder_upstream = "http://127.0.0.1:" + str(MOCK_HTTP_PORT)
     compose = ensure_compose_services(["postgres", "keycloak", "kafka", "rustfs"])
-    recorder = Recorder(upstream="http://127.0.0.1:" + str(MOCK_HTTP_PORT), port=RECORDER_PORT)
+    recorder = Recorder(upstream=recorder_upstream, port=RECORDER_PORT)
     recorder.start()
     try:
         recorder_address = "http://host.docker.internal:" + str(RECORDER_PORT)
@@ -578,16 +666,38 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             "stripe_server": server,
             "wire_recorder": {
                 "address": recorder_address,
-                "upstream": "http://127.0.0.1:" + str(MOCK_HTTP_PORT),
-                "behaviour": "forwards the request to the official stripe-mock and returns its response verbatim",
+                "upstream": recorder_upstream,
+                "behaviour": (
+                    "forwards every provider request verbatim to the real api.stripe.com and records the exchange "
+                    "with the credential header redacted"
+                    if real_api
+                    else "forwards the request to the official stripe-mock and returns its response verbatim"
+                ),
+                "chain": (
+                    "payment-service container -> host.docker.internal:" + str(RECORDER_PORT) + " -> https://api.stripe.com"
+                    if real_api
+                    else "payment-service container -> host.docker.internal:" + str(RECORDER_PORT) + " -> stripe-mock"
+                ),
             },
             "platform": service,
             "compose": compose,
             "credential": {
                 "secret_key_mode": "test",
+                "secret_key_prefix": "sk_test_",
                 "secret_key_fingerprint": _fingerprint(secret_key),
                 "webhook_secret_fingerprint": _fingerprint(webhook_secret),
-                "secret_source": "generated for the run and passed to the container through the environment",
+                "secret_source": (
+                    "the genuine test-mode key from the git-ignored .env, passed to the container through the environment"
+                    if real_api
+                    else "generated for the run and passed to the container through the environment"
+                ),
+                "webhook_secret_source": (
+                    "SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET from the process environment; the signing secret that Stripe "
+                    "issued for the real webhook endpoint of the account"
+                    if real_api
+                    else "generated for the run because no Stripe account issued one"
+                ),
+                "credential_probe": probe,
             },
             "cases": [],
             "supplementary": [],
@@ -624,20 +734,39 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             _case_document(
                 "authorisation_and_capture",
                 VERDICT_PROVEN if capture_proven else VERDICT_FAILED,
-                "the platform created the payment and then asked Stripe for the authorisation; the provider intent reference "
-                + intent_id
-                + " and the client secret were stored on the payment",
+                (
+                    "the platform created the payment and then asked api.stripe.com for the authorisation; the provider "
+                    "intent reference "
+                    + intent_id
+                    + " was stored on the payment and the confirmed intent answered "
+                    + _intent_status(wire)
+                    if real_api
+                    else "the platform created the payment and then asked Stripe for the authorisation; the provider intent reference "
+                    + intent_id
+                    + " and the client secret were stored on the payment"
+                ),
                 platform.since(platform_mark),
                 wire,
-                notes=[
-                    "the official Stripe mock answers every intent with status requires_payment_method, so the platform holds "
-                    "the payment PENDING with a client secret exactly as it does for a 3DS confirmation",
-                    "the capture is completed by the signed provider event in the next case",
-                ],
+                notes=(
+                    [
+                        "the intent was created and confirmed in one call on api.stripe.com with the sandbox payment method "
+                        + str(service.get("sandbox_payment_method", "pm_card_visa"))
+                        + " and the intent answered succeeded",
+                        "the payment was stored CAPTURED with the provider intent reference; the signed provider event of "
+                        "the next case re-exercises the capture path with the real signing secret",
+                    ]
+                    if real_api
+                    else [
+                        "the official Stripe mock answers every intent with status requires_payment_method, so the platform holds "
+                        "the payment PENDING with a client secret exactly as it does for a 3DS confirmation",
+                        "the capture is completed by the signed provider event in the next case",
+                    ]
+                ),
                 observations={
                     "payment_id": payment_id,
                     "provider_intent_id": intent_id,
                     "payment_status_after_capture": _payment_status(capture_document),
+                    "provider_answer_intent_status": _intent_status(wire),
                     "client_secret_present": bool(_payment_body(capture_document).get("clientSecret")),
                     "payment_intent_calls": _intent_calls(wire),
                 },
@@ -670,11 +799,21 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
                 + _error_code(tamper_document),
                 platform.since(platform_mark),
                 wire,
-                notes=[
-                    "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
-                    "the webhook secret is local because no Stripe account issued one; the verification code path is the real one",
-                    "the official Stripe mock does not deliver webhooks, so the harness plays the role of Stripe for the delivery",
-                ],
+                notes=(
+                    [
+                        "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
+                        "the verification secret is the signing secret that Stripe issued for the real webhook endpoint of "
+                        "the account, passed through SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET",
+                        "Stripe cannot deliver to a local endpoint, so the harness delivered the event itself; the "
+                        "signature verification is the real platform path with the real issued secret",
+                    ]
+                    if real_api
+                    else [
+                        "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
+                        "the webhook secret is local because no Stripe account issued one; the verification code path is the real one",
+                        "the official Stripe mock does not deliver webhooks, so the harness plays the role of Stripe for the delivery",
+                    ]
+                ),
                 observations={
                     "signed_webhook_status": signed_status,
                     "signed_webhook_body": signed_document,
@@ -823,36 +962,99 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         )
         after_failure = _read_payment(platform, decline_order)
         refusal_status, refusal_document = _capture(platform, decline_payment)
-        cases.append(
-            _case_document(
-                "declined_card_refusal",
-                VERDICT_NOT_PROVEN,
-                "the official Stripe mock never declines a card, so the direct provider refusal of a declined card is not proven; "
-                "the refusal of a failed payment is proven through the signed provider event",
-                platform.since(platform_mark),
-                decline_wire,
-                notes=[
-                    "stripe-mock documents that it does not reproduce the behaviour of the real Stripe API and always answers a "
-                    "success response, so no card can be declined against it",
-                    "the platform sent the declined test payment method request and the mock answered 200; the platform "
-                    "therefore could not observe the CardException branch of StripeProvider",
-                    "a genuine test-mode key with pm_card_chargeDeclined or card 4000000000000002 is required for this case",
-                ],
-                observations={
-                    "decline_payment_method_sent": DECLINE_PAYMENT_METHOD,
-                    "provider_answer_status": decline_wire[-1]["status"] if decline_wire else None,
-                    "provider_answer_intent_status": _intent_status(decline_wire),
-                    "provider_answer_body": decline_wire[-1]["response_body"] if decline_wire else None,
-                    "payment_status_after_capture": decline_state.get("status"),
-                    "payment_failed_event_status": failure_status,
-                    "payment_status_after_failure_event": after_failure.get("status"),
-                    "capture_after_failure_status": refusal_status,
-                    "capture_after_failure_code": _error_code(refusal_document),
-                    "capture_after_failure_message": _error_message(refusal_document),
-                    "payment_service_started_with_payment_method": decline_service.get("sandbox_payment_method"),
-                },
+        decline_records = [record for record in decline_wire if record["path"] == "/v1/payment_intents"]
+        decline_provider_status = decline_records[-1]["status"] if decline_records else None
+        decline_error: dict[str, Any] = {}
+        if decline_records:
+            try:
+                parsed_decline = json.loads(decline_records[-1]["response_body"])
+                decline_error = parsed_decline.get("error") if isinstance(parsed_decline, dict) else {}
+            except (json.JSONDecodeError, AttributeError):
+                decline_error = {}
+        if real_api:
+            declined_proven = (
+                decline_create_status == 200
+                and decline_provider_status == 402
+                and str((decline_error or {}).get("code", "")) == "card_declined"
+                and str(decline_state.get("status", "")) != "CAPTURED"
+                and failure_status == 200
+                and str(after_failure.get("status", "")) == "FAILED"
+                and refusal_status >= 400
             )
-        )
+            cases.append(
+                _case_document(
+                    "declined_card_refusal",
+                    VERDICT_PROVEN if declined_proven else VERDICT_FAILED,
+                    "api.stripe.com refused the authorisation of the declined test card with "
+                    + str(decline_provider_status)
+                    + " "
+                    + str((decline_error or {}).get("code", ""))
+                    + " ("
+                    + str((decline_error or {}).get("decline_code", ""))
+                    + "); the payment was never captured, the signed payment_failed event moved it to FAILED, and a further "
+                    "capture was refused with "
+                    + str(refusal_status)
+                    + " "
+                    + _error_code(refusal_document),
+                    platform.since(platform_mark),
+                    decline_wire,
+                    notes=[
+                        "the container ran with the declined Stripe test payment method "
+                        + DECLINE_PAYMENT_METHOD
+                        + " (card 4000000000000002) and the platform observed the CardException branch of StripeProvider",
+                        "Stripe delivers no event for a decline against a local endpoint, so the signed payment_failed "
+                        "event was delivered by the harness with the real signing secret",
+                    ],
+                    observations={
+                        "decline_payment_method_sent": DECLINE_PAYMENT_METHOD,
+                        "capture_status": decline_capture_status,
+                        "provider_answer_status": decline_provider_status,
+                        "provider_answer_error_type": (decline_error or {}).get("type"),
+                        "provider_answer_error_code": (decline_error or {}).get("code"),
+                        "provider_answer_decline_code": (decline_error or {}).get("decline_code"),
+                        "payment_status_after_declined_capture": decline_state.get("status"),
+                        "payment_failed_event_status": failure_status,
+                        "payment_status_after_failure_event": after_failure.get("status"),
+                        "capture_after_failure_status": refusal_status,
+                        "capture_after_failure_code": _error_code(refusal_document),
+                        "capture_after_failure_message": _error_message(refusal_document),
+                        "payment_service_started_with_payment_method": decline_service.get("sandbox_payment_method"),
+                    },
+                )
+            )
+        else:
+            cases.append(
+                _case_document(
+                    "declined_card_refusal",
+                    VERDICT_NOT_PROVEN,
+                    "the official Stripe mock never declines a card, so the direct provider refusal of a declined card is not proven; "
+                    "the refusal of a failed payment is proven through the signed provider event",
+                    platform.since(platform_mark),
+                    decline_wire,
+                    notes=[
+                        "stripe-mock documents that it does not reproduce the behaviour of the real Stripe API and always answers a "
+                        "success response, so no card can be declined against it",
+                        "the platform sent the declined test payment method request and the mock answered 200; the platform "
+                        "therefore could not observe the CardException branch of StripeProvider",
+                        "a genuine test-mode key with "
+                        + DECLINE_PAYMENT_METHOD
+                        + " or card 4000000000000002 is required for this case",
+                    ],
+                    observations={
+                        "decline_payment_method_sent": DECLINE_PAYMENT_METHOD,
+                        "provider_answer_status": decline_wire[-1]["status"] if decline_wire else None,
+                        "provider_answer_intent_status": _intent_status(decline_wire),
+                        "provider_answer_body": decline_wire[-1]["response_body"] if decline_wire else None,
+                        "payment_status_after_capture": decline_state.get("status"),
+                        "payment_failed_event_status": failure_status,
+                        "payment_status_after_failure_event": after_failure.get("status"),
+                        "capture_after_failure_status": refusal_status,
+                        "capture_after_failure_code": _error_code(refusal_document),
+                        "capture_after_failure_message": _error_message(refusal_document),
+                        "payment_service_started_with_payment_method": decline_service.get("sandbox_payment_method"),
+                    },
+                )
+            )
         _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
         ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
 
@@ -896,41 +1098,42 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             )
         )
 
-        platform_mark = platform.mark()
-        wire_mark = recorder.marker()
-        provider_order, provider_payment, _, _ = _create_payment(platform, 250.00, "VND")
-        provider_capture_status, provider_capture_document = _capture(platform, provider_payment)
-        provider_intent = str(_payment_body(provider_capture_document).get("providerIntentId", ""))
-        _deliver_capture_event(
-            platform, webhook_secret, provider_payment, provider_intent, 250, "VND", "evt_acceptance_" + _random_suffix(24)
-        )
-        provider_status, provider_document = _refund(platform, provider_payment, 250.00, "VND", str(uuid.uuid4()))
-        provider_wire = recorder.since(wire_mark)
-        provider_state = _read_payment(platform, provider_order)
-        provider_proven = provider_status >= 400 and str(provider_state.get("status", "")) == "CAPTURED"
-        supplementary.append(
-            _case_document(
-                "provider_currency_mismatch_refusal",
-                VERDICT_PROVEN if provider_proven else VERDICT_FAILED,
-                "the provider guard refused the refund of a VND payment because the intent currency read back from Stripe differs "
-                "from the payment currency",
-                platform.since(platform_mark),
-                provider_wire,
-                notes=[
-                    "the official Stripe mock is stateless, so it answers the intent retrieval with its fixture currency usd; "
-                    "against api.stripe.com the intent would carry the currency that was created",
-                    "the refusal itself is the real platform behaviour: StripeProvider refuses a refund whose currency differs "
-                    "from the intent currency",
-                ],
-                observations={
-                    "refund_status": provider_status,
-                    "refund_code": _error_code(provider_document),
-                    "refund_message": _error_message(provider_document),
-                    "payment_status": provider_state.get("status"),
-                    "intent_currency_answered_by_provider": "usd",
-                },
+        if not real_api:
+            platform_mark = platform.mark()
+            wire_mark = recorder.marker()
+            provider_order, provider_payment, _, _ = _create_payment(platform, 250.00, "VND")
+            provider_capture_status, provider_capture_document = _capture(platform, provider_payment)
+            provider_intent = str(_payment_body(provider_capture_document).get("providerIntentId", ""))
+            _deliver_capture_event(
+                platform, webhook_secret, provider_payment, provider_intent, 250, "VND", "evt_acceptance_" + _random_suffix(24)
             )
-        )
+            provider_status, provider_document = _refund(platform, provider_payment, 250.00, "VND", str(uuid.uuid4()))
+            provider_wire = recorder.since(wire_mark)
+            provider_state = _read_payment(platform, provider_order)
+            provider_proven = provider_status >= 400 and str(provider_state.get("status", "")) == "CAPTURED"
+            supplementary.append(
+                _case_document(
+                    "provider_currency_mismatch_refusal",
+                    VERDICT_PROVEN if provider_proven else VERDICT_FAILED,
+                    "the provider guard refused the refund of a VND payment because the intent currency read back from Stripe differs "
+                    "from the payment currency",
+                    platform.since(platform_mark),
+                    provider_wire,
+                    notes=[
+                        "the official Stripe mock is stateless, so it answers the intent retrieval with its fixture currency usd; "
+                        "against api.stripe.com the intent would carry the currency that was created",
+                        "the refusal itself is the real platform behaviour: StripeProvider refuses a refund whose currency differs "
+                        "from the intent currency",
+                    ],
+                    observations={
+                        "refund_status": provider_status,
+                        "refund_code": _error_code(provider_document),
+                        "refund_message": _error_message(provider_document),
+                        "payment_status": provider_state.get("status"),
+                        "intent_currency_answered_by_provider": "usd",
+                    },
+                )
+            )
 
         document["cases"] = cases
         document["supplementary"] = supplementary
@@ -944,13 +1147,27 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             "not_proven": not_proven,
             "supplementary": len(supplementary),
         }
-        document["verified_against_real_stripe_api"] = False
-        document["stripe_api_base_of_record"] = server["http_address_in_network"]
-        document["status"] = "PROVEN_AGAINST_OFFICIAL_STRIPE_MOCK" if failed == 0 else "FAILED"
-        document["reason"] = (
-            "the payment acceptance ran against the official Stripe mock server, not against api.stripe.com; "
-            "a genuine test-mode key is still required to close the last mile"
-        )
+        verified_real = bool(real_api and cases and all(case["verdict"] == VERDICT_PROVEN for case in cases))
+        document["verified_against_real_stripe_api"] = verified_real
+        document["stripe_api_base_of_record"] = PUBLIC_STRIPE_API if real_api else server["http_address_in_network"]
+        if real_api:
+            document["status"] = (
+                "PROVEN_AGAINST_REAL_STRIPE_API"
+                if verified_real
+                else ("FAILED" if failed else "INCOMPLETE_AGAINST_REAL_STRIPE_API")
+            )
+            document["reason"] = (
+                "the payment acceptance ran against the real api.stripe.com with the genuine test-mode credential "
+                "and the real webhook signing secret of the account"
+                if verified_real
+                else "the acceptance ran against api.stripe.com but did not prove every case of the matrix"
+            )
+        else:
+            document["status"] = "PROVEN_AGAINST_OFFICIAL_STRIPE_MOCK" if failed == 0 else "FAILED"
+            document["reason"] = (
+                "the payment acceptance ran against the official Stripe mock server, not against api.stripe.com; "
+                "a genuine test-mode key is still required to close the last mile"
+            )
         log_lines = _mock_log()
         document["stripe_server_log"] = log_lines
         return document
