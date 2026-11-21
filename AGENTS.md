@@ -72,6 +72,27 @@ everything else on it. These rules keep the footprint small enough to work in.
    loaded with set -a followed by sourcing .env. Never print one in full and
    never write one into a tracked file.
 
+
+## Parallel Work With Subagents
+
+Up to five subagents may run at the same time, and one of them must always be
+reserved for an independent review of the result before it is declared done.
+
+1. Split the work by module or by gate, never by file, so two agents never edit
+   the same file.
+2. State the write scope of every agent in its prompt: the exact directories it may
+   edit and nothing else.
+3. Tell every agent explicitly not to run a maven build and not to recreate
+   containers unless its task is the one that owns them, because a build and a load
+   profile cannot share the machine with each other.
+4. Tell every agent explicitly not to commit. The lead commits once, after the
+   review, so the evidence and the commit describe the same revision.
+5. Require each agent to run the impact analysis of every symbol it changes and to
+   report the callers and the risk.
+6. Reserve the fifth agent for the independent review. It must be read only, it
+   must write its verdict as the first line of its report, and a verdict of FAIL
+   must be answered by fixes and a new review rather than by argument.
+
 ## Tool-Call Hygiene
 
 The harness parses every tool call as JSON, so a raw double quote, a stray backslash
