@@ -37,6 +37,10 @@ function isShedStatus(status) {
   return status === 429 || status >= 500;
 }
 
+function isCredentialStatus(status) {
+  return status === 401 || status === 403;
+}
+
 function isClassifiedStatus(status) {
   return status === 200 || status === 201 || status === 400 || status === 404 || status === 409
     || isShedStatus(status);
@@ -46,6 +50,7 @@ const cartFailure = new Counter('cart_failure_total');
 const cartContention = new Counter('cart_contention_total');
 const couponContention = new Counter('coupon_contention_total');
 const businessRefusal = new Counter('business_refusal_total');
+const credentialError = new Counter('credential_error_total');
 const shedRequests = new Counter('shed_requests_total');
 const catalogFailure = new Counter('catalog_failure_total');
 const detailFailure = new Counter('detail_failure_total');
@@ -185,6 +190,8 @@ function browse() {
   check(response, { 'the catalog answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200) {
     businessSuccess.add(1);
+  } else if (isCredentialStatus(response.status)) {
+    credentialError.add(1);
   } else if (isShedStatus(response.status)) {
     shedRequests.add(1);
   } else {
@@ -206,6 +213,8 @@ function productDetail() {
   check(response, { 'the product detail answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200) {
     businessSuccess.add(1);
+  } else if (isCredentialStatus(response.status)) {
+    credentialError.add(1);
   } else if (isShedStatus(response.status)) {
     shedRequests.add(1);
   } else {
@@ -221,6 +230,10 @@ function ensureCart(productId) {
       { headers: authHeaders(), tags: { call: 'cart-update' } });
     if (update.status === 200 || update.status === 201) {
       return 'ready';
+    }
+    if (isCredentialStatus(update.status)) {
+      credentialError.add(1);
+      return 'credential';
     }
     if (isShedStatus(update.status)) {
       shedRequests.add(1);
@@ -247,6 +260,10 @@ function ensureCart(productId) {
       cartItemId = null;
     }
     return 'ready';
+  }
+  if (isCredentialStatus(response.status)) {
+    credentialError.add(1);
+    return 'credential';
   }
   if (isShedStatus(response.status)) {
     shedRequests.add(1);
@@ -299,6 +316,10 @@ function checkout() {
       cartItemId = null;
       return;
     }
+    if (cart === 'credential') {
+      credentialError.add(1);
+      return;
+    }
     businessFailure.add(1);
     return;
   }
@@ -309,6 +330,10 @@ function checkout() {
     const retry = ensureCart(productId);
     if (retry === 'shed') {
       cartItemId = null;
+      return;
+    }
+    if (retry === 'credential') {
+      credentialError.add(1);
       return;
     }
     if (retry !== 'ready') {
@@ -339,6 +364,9 @@ function checkout() {
     resetCart();
     cartFailure.add(1);
     businessRefusal.add(1);
+  } else if (isCredentialStatus(response.status)) {
+    credentialError.add(1);
+    resetCart();
   } else if (shed) {
     shedRequests.add(1);
     resetCart();

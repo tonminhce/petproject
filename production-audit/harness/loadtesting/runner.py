@@ -12,7 +12,7 @@ from typing import Any
 from .. import config
 from .environment import compose_services, host_snapshot
 from .limits import apply_load_test_rate_limits, restore_shipped_rate_limits, wait_for_gateway_traffic
-from .customers import mint_tokens, provision_customers
+from .customers import ensure_token_lifetime, mint_tokens, provision_customers, restore_token_lifetime
 from .settle import wait_for_quiet_host
 from .targets import resolve_coupon_code
 from .invariants import verify
@@ -111,6 +111,7 @@ def summarise(summary: dict[str, Any]) -> dict[str, Any]:
         "business_failure": _metric_value(metrics, "business_failure_total", "count", default=0),
         "business_refusal": _metric_value(metrics, "business_refusal_total", "count", default=0),
         "shed_requests": _metric_value(metrics, "shed_requests_total", "count", default=0),
+        "credential_error": _metric_value(metrics, "credential_error_total", "count", default=0),
         "coupon_contention": _metric_value(metrics, "coupon_contention_total", "count", default=0),
         "cart_contention": _metric_value(metrics, "cart_contention_total", "count", default=0),
         "cart_failure": _metric_value(metrics, "cart_failure_total", "count", default=0),
@@ -202,8 +203,21 @@ def _measure_profile(
 
     customers: dict[str, Any] = {"status": "NOT_REQUIRED"}
     customer_tokens: list[str] = []
+    lifetime: dict[str, Any] = {"status": "NOT_REQUIRED"}
     if profile.scenario in ("full", "flash-sale", "promotion-storm"):
         pool_size = profile.virtual_users
+        required_lifetime = int(profile.duration_seconds) + 600
+        lifetime = ensure_token_lifetime(seconds=required_lifetime)
+        if lifetime.get("status") != "READY":
+            restore_shipped_rate_limits()
+            return {
+                "status": "BLOCKED",
+                "profile": profile.name,
+                "reason": "the lifetime of the customer tokens could not be set, so a long profile would measure "
+                          "expired credentials instead of the platform: " + str(lifetime.get("reason", "")),
+                "token_lifetime": lifetime,
+                "rate_limit_override": limiter,
+            }
         customers = provision_customers(pool_size)
         if customers.get("status") != "READY":
             return {
@@ -353,6 +367,10 @@ def _measure_profile(
 
 
 def _final_status(document: dict[str, Any]) -> str:
+    credentials = _credentials_expired(document)
+    if credentials:
+        document["status_detail"] = credentials
+        return "BLOCKED"
     outcome_acceptable = _business_outcome_is_acceptable(document)
     if not outcome_acceptable:
         document["status_detail"] = document.get("business_verdict", "")
@@ -375,6 +393,18 @@ def _final_status(document: dict[str, Any]) -> str:
         if invariants.get("status") == "BLOCKED":
             return "BLOCKED"
     return "PASS"
+
+
+def _credentials_expired(document: dict[str, Any]) -> str:
+    metrics = document.get("metrics") or {}
+    expired = float(metrics.get("credential_error") or 0)
+    if expired <= 0:
+        return ""
+    return (
+        "the customer credentials expired during the run: " + str(int(expired)) + " requests were refused with "
+        "a status of unauthorised or forbidden, so the run measured the lifetime of the tokens and not the "
+        "platform. The lifetime of the customer tokens must cover the whole profile."
+    )
 
 
 def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:

@@ -10,6 +10,7 @@ from typing import Any
 DEFAULT_PREFIX = "loadtest"
 DEFAULT_REALM = "ecommerce"
 PASSWORD_VARIABLE = "LOAD_TEST_CUSTOMER_PASSWORD"
+DEFAULT_TOKEN_LIFETIME_SECONDS = 300
 
 
 def _admin_password() -> str:
@@ -52,6 +53,80 @@ def _admin_token(realm: str) -> str:
 def _admin_base(realm: str) -> str:
     base = str(os.environ.get("KEYCLOAK_ADMIN_URL", "http://localhost:9090")).strip()
     return f"{base}/admin/realms/{realm}"
+
+
+def _realm_representation(realm: str, token: str) -> dict[str, Any] | None:
+    request = urllib.request.Request(_admin_base(realm))
+    request.add_header("Authorization", "Bearer " + token)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read())
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+
+
+def _write_realm(realm: str, token: str, representation: dict[str, Any]) -> bool:
+    request = urllib.request.Request(
+        _admin_base(realm),
+        data=json.dumps(representation).encode(),
+        method="PUT",
+    )
+    request.add_header("Authorization", "Bearer " + token)
+    request.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            response.read()
+        return True
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+def ensure_token_lifetime(realm: str = DEFAULT_REALM, seconds: int = DEFAULT_TOKEN_LIFETIME_SECONDS) -> dict[str, Any]:
+    token = _admin_token(realm)
+    if not token:
+        return {
+            "status": "BLOCKED",
+            "reason": "the keycloak admin token could not be minted, so the lifetime of the customer tokens "
+                      "cannot be set and a long profile would measure expired credentials instead of the platform",
+        }
+    representation = _realm_representation(realm, token)
+    if representation is None:
+        return {
+            "status": "BLOCKED",
+            "reason": "the realm could not be read, so the lifetime of the customer tokens cannot be set",
+        }
+    original = int(representation.get("accessTokenLifespan") or DEFAULT_TOKEN_LIFETIME_SECONDS)
+    if original >= seconds:
+        return {"status": "READY", "lifespan_seconds": original, "changed": False, "original_seconds": original}
+    representation["accessTokenLifespan"] = int(seconds)
+    if not _write_realm(realm, token, representation):
+        return {
+            "status": "BLOCKED",
+            "reason": "the realm could not be written, so the lifetime of the customer tokens cannot be set and a "
+                      "long profile would measure expired credentials instead of the platform",
+        }
+    return {
+        "status": "READY",
+        "lifespan_seconds": int(seconds),
+        "changed": True,
+        "original_seconds": original,
+    }
+
+
+def restore_token_lifetime(
+    original_seconds: int,
+    realm: str = DEFAULT_REALM,
+) -> dict[str, Any]:
+    token = _admin_token(realm)
+    if not token:
+        return {"status": "BLOCKED", "reason": "the keycloak admin token could not be minted"}
+    representation = _realm_representation(realm, token)
+    if representation is None:
+        return {"status": "BLOCKED", "reason": "the realm could not be read"}
+    representation["accessTokenLifespan"] = int(original_seconds)
+    if not _write_realm(realm, token, representation):
+        return {"status": "BLOCKED", "reason": "the realm could not be written"}
+    return {"status": "READY", "lifespan_seconds": int(original_seconds)}
 
 
 def provision_customers(
@@ -116,6 +191,7 @@ def mint_tokens(
     client_id: str = "ecommerce-client",
 ) -> dict[str, Any]:
     tokens: list[str] = []
+    failed: list[str] = []
     for username in usernames:
         data = urllib.parse.urlencode(
             {
@@ -131,13 +207,17 @@ def mint_tokens(
             with urllib.request.urlopen(request, timeout=30) as response:
                 payload = json.loads(response.read())
         except (urllib.error.URLError, OSError, ValueError):
+            failed.append(username)
             continue
         access_token = str(payload.get("access_token", "")).strip()
         if access_token:
             tokens.append(access_token)
+        else:
+            failed.append(username)
     if not tokens:
         return {
             "status": "BLOCKED",
             "reason": "no access token could be minted for the load test customers",
+            "failed": len(failed),
         }
-    return {"status": "READY", "tokens": tokens}
+    return {"status": "READY", "tokens": tokens, "failed": failed, "minted": len(tokens)}
