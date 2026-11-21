@@ -302,7 +302,7 @@ class CartServiceImplTest {
             .productTitle("Widget").unitPrice(new BigDecimal("9.99")).quantity(1)
             .build();
         when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(cart));
-        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        lenient().when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
         when(productClient.getProduct(productId)).thenReturn(snapshot);
         when(cartItemRepository.findByCartIdAndProductId(cartId, productId)).thenReturn(Optional.empty());
         when(cartItemRepository.findById(cartItemId)).thenReturn(Optional.of(item));

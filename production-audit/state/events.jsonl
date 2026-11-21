@@ -187,3 +187,5 @@
 {"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T12:03:00Z", "type": "load_flash-sale"}
 {"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T12:07:56Z", "type": "load_promotion-storm"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-21T12:10:18Z", "type": "load_recovery"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-21T12:25:37Z", "type": "load_baseline"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-21T12:31:40Z", "type": "load_ramp"}
