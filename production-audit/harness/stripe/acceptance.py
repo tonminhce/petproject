@@ -569,391 +569,393 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
     compose = ensure_compose_services(["postgres", "keycloak", "kafka", "rustfs"])
     recorder = Recorder(upstream="http://127.0.0.1:" + str(MOCK_HTTP_PORT), port=RECORDER_PORT)
     recorder.start()
-    recorder_address = "http://host.docker.internal:" + str(RECORDER_PORT)
-    service = ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
-    document: dict[str, Any] = {
-        "generated_at": utc_now(),
-        "run_id": identifier,
-        "stripe_server": server,
-        "wire_recorder": {
-            "address": recorder_address,
-            "upstream": "http://127.0.0.1:" + str(MOCK_HTTP_PORT),
-            "behaviour": "forwards the request to the official stripe-mock and returns its response verbatim",
-        },
-        "platform": service,
-        "compose": compose,
-        "credential": {
-            "secret_key_mode": "test",
-            "secret_key_fingerprint": _fingerprint(secret_key),
-            "webhook_secret_fingerprint": _fingerprint(webhook_secret),
-            "secret_source": "generated for the run and passed to the container through the environment",
-        },
-        "cases": [],
-        "supplementary": [],
-    }
-    if service.get("state") != "running":
-        document["status"] = "BLOCKED"
-        document["reason"] = "the payment service did not start against the Stripe endpoint under test"
-        return document
     try:
-        token = mint_token(values)
-    except Exception as error:
-        document["status"] = "BLOCKED"
-        document["reason"] = "the platform identity provider did not issue a token: " + str(error)[:200]
+        recorder_address = "http://host.docker.internal:" + str(RECORDER_PORT)
+        service = ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
+        document: dict[str, Any] = {
+            "generated_at": utc_now(),
+            "run_id": identifier,
+            "stripe_server": server,
+            "wire_recorder": {
+                "address": recorder_address,
+                "upstream": "http://127.0.0.1:" + str(MOCK_HTTP_PORT),
+                "behaviour": "forwards the request to the official stripe-mock and returns its response verbatim",
+            },
+            "platform": service,
+            "compose": compose,
+            "credential": {
+                "secret_key_mode": "test",
+                "secret_key_fingerprint": _fingerprint(secret_key),
+                "webhook_secret_fingerprint": _fingerprint(webhook_secret),
+                "secret_source": "generated for the run and passed to the container through the environment",
+            },
+            "cases": [],
+            "supplementary": [],
+        }
+        if service.get("state") != "running":
+            document["status"] = "BLOCKED"
+            document["reason"] = "the payment service did not start against the Stripe endpoint under test"
+            return document
+        try:
+            token = mint_token(values)
+        except Exception as error:
+            document["status"] = "BLOCKED"
+            document["reason"] = "the platform identity provider did not issue a token: " + str(error)[:200]
+            return document
+        platform = Platform(service["host_address"], token)
+        cases: list[dict[str, Any]] = []
+        supplementary: list[dict[str, Any]] = []
+
+        order_id, payment_id, create_status, create_document = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        capture_status, capture_document = _capture(platform, payment_id)
+        wire = recorder.since(wire_mark)
+        intent_id = str(_payment_body(capture_document).get("providerIntentId", ""))
+        intent_call = [record for record in wire if record["path"] == "/v1/payment_intents"]
+        capture_proven = (
+            create_status == 200
+            and capture_status == 200
+            and bool(intent_id)
+            and bool(intent_call)
+            and intent_call[-1]["status"] == 200
+        )
+        cases.append(
+            _case_document(
+                "authorisation_and_capture",
+                VERDICT_PROVEN if capture_proven else VERDICT_FAILED,
+                "the platform created the payment and then asked Stripe for the authorisation; the provider intent reference "
+                + intent_id
+                + " and the client secret were stored on the payment",
+                platform.since(platform_mark),
+                wire,
+                notes=[
+                    "the official Stripe mock answers every intent with status requires_payment_method, so the platform holds "
+                    "the payment PENDING with a client secret exactly as it does for a 3DS confirmation",
+                    "the capture is completed by the signed provider event in the next case",
+                ],
+                observations={
+                    "payment_id": payment_id,
+                    "provider_intent_id": intent_id,
+                    "payment_status_after_capture": _payment_status(capture_document),
+                    "client_secret_present": bool(_payment_body(capture_document).get("clientSecret")),
+                    "payment_intent_calls": _intent_calls(wire),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        event_id = "evt_acceptance_" + _random_suffix(24)
+        signed_status, signed_document = _deliver_capture_event(
+            platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, event_id
+        )
+        tamper_status, tamper_document = _deliver_capture_event(
+            platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, event_id + "_forged", tamper=True
+        )
+        state = _read_payment(platform, order_id)
+        wire = recorder.since(wire_mark)
+        webhook_proven = (
+            signed_status == 200
+            and tamper_status >= 400
+            and str(state.get("status", "")) == "CAPTURED"
+        )
+        cases.append(
+            _case_document(
+                "capture_webhook_signature_verified",
+                VERDICT_PROVEN if webhook_proven else VERDICT_FAILED,
+                "the signed provider event moved the payment to CAPTURED and the event with a forged signature was refused with "
+                + str(tamper_status)
+                + " "
+                + _error_code(tamper_document),
+                platform.since(platform_mark),
+                wire,
+                notes=[
+                    "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
+                    "the webhook secret is local because no Stripe account issued one; the verification code path is the real one",
+                    "the official Stripe mock does not deliver webhooks, so the harness plays the role of Stripe for the delivery",
+                ],
+                observations={
+                    "signed_webhook_status": signed_status,
+                    "signed_webhook_body": signed_document,
+                    "forged_signature_status": tamper_status,
+                    "forged_signature_body": tamper_document,
+                    "payment_status": state.get("status"),
+                    "provider_intent_id": state.get("providerIntentId"),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        refund_reference = str(uuid.uuid4())
+        refund_status, refund_document = _refund(platform, payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
+        wire = recorder.since(wire_mark)
+        refunded = _payment_body(refund_document)
+        refund_proven = refund_status == 200 and str(refunded.get("status", "")) == "REFUNDED"
+        cases.append(
+            _case_document(
+                "refund",
+                VERDICT_PROVEN if refund_proven else VERDICT_FAILED,
+                "the platform refunded the captured amount against the provider intent and the payment reached REFUNDED with "
+                "refundedAmount "
+                + str(refunded.get("refundedAmount")),
+                platform.since(platform_mark),
+                wire,
+                observations={
+                    "payment_status": refunded.get("status"),
+                    "refunded_amount": refunded.get("refundedAmount"),
+                    "refund_calls": _refund_calls(wire),
+                    "payment_intent_calls": _intent_calls(wire),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        replay_status, replay_document = _refund(platform, payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
+        wire = recorder.since(wire_mark)
+        replayed = _payment_body(replay_document)
+        replay_proven = (
+            replay_status == 200
+            and str(replayed.get("status", "")) == "REFUNDED"
+            and _refund_calls(wire) == 0
+        )
+        cases.append(
+            _case_document(
+                "refund_idempotent_replay",
+                VERDICT_PROVEN if replay_proven else VERDICT_FAILED,
+                "the replay of the same refund reference returned the same refund and issued no further refund call to the "
+                "provider",
+                platform.since(platform_mark),
+                wire,
+                notes=["the platform answers the replay from its own refund ledger, so no money can move twice"],
+                observations={
+                    "replay_status": replay_status,
+                    "replay_payment_status": replayed.get("status"),
+                    "replay_refunded_amount": replayed.get("refundedAmount"),
+                    "provider_refund_calls_during_replay": _refund_calls(wire),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        order_id, payment_id, create_status, create_document = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
+        capture_status, capture_document = _capture(platform, payment_id)
+        intent_id = str(_payment_body(capture_document).get("providerIntentId", ""))
+        _deliver_capture_event(
+            platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, "evt_acceptance_" + _random_suffix(24)
+        )
+        first_reference = str(uuid.uuid4())
+        partial_status, partial_document = _refund(platform, payment_id, 50.00, PAYMENT_CURRENCY, first_reference)
+        wire = recorder.since(wire_mark)
+        partial = _payment_body(partial_document)
+        partial_proven = partial_status == 200 and str(partial.get("status", "")) == "PARTIALLY_REFUNDED"
+        cases.append(
+            _case_document(
+                "partial_refund",
+                VERDICT_PROVEN if partial_proven else VERDICT_FAILED,
+                "the partial refund moved 50.00 of the 249.99 total and the payment stayed PARTIALLY_REFUNDED",
+                platform.since(platform_mark),
+                wire,
+                observations={
+                    "payment_status": partial.get("status"),
+                    "refunded_amount": partial.get("refundedAmount"),
+                    "previous_status": partial.get("previousStatus"),
+                    "provider_refund_calls": _refund_calls(wire),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        second_reference = str(uuid.uuid4())
+        second_status, second_document = _refund(platform, payment_id, 25.00, PAYMENT_CURRENCY, second_reference)
+        wire = recorder.since(wire_mark)
+        second = _payment_body(second_document)
+        second_proven = (
+            second_status == 200
+            and str(second.get("status", "")) == "PARTIALLY_REFUNDED"
+            and float(second.get("refundedAmount", 0)) == 75.00
+        )
+        cases.append(
+            _case_document(
+                "second_partial_refund",
+                VERDICT_PROVEN if second_proven else VERDICT_FAILED,
+                "the second partial refund of 25.00 accumulated on the first one and the refunded amount reached 75.00",
+                platform.since(platform_mark),
+                wire,
+                observations={
+                    "payment_status": second.get("status"),
+                    "refunded_amount": second.get("refundedAmount"),
+                    "previous_status": second.get("previousStatus"),
+                    "provider_refund_calls": _refund_calls(wire),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
+        decline_service = ensure_payment_service(
+            values, secret_key, webhook_secret, recorder_address, DECLINE_PAYMENT_METHOD
+        )
+        decline_order, decline_payment, decline_create_status, decline_create_document = _create_payment(
+            platform, 40.00, PAYMENT_CURRENCY
+        )
+        decline_capture_status, decline_capture_document = _capture(platform, decline_payment)
+        decline_wire = recorder.since(wire_mark)
+        decline_intent = str(_payment_body(decline_capture_document).get("providerIntentId", ""))
+        decline_state = _read_payment(platform, decline_order)
+        failure_event = stripe_event(
+            "evt_acceptance_" + _random_suffix(24),
+            "payment_intent.payment_failed",
+            decline_intent,
+            4000,
+            PAYMENT_CURRENCY,
+            decline_payment,
+        )
+        raw = json.dumps(failure_event).encode("utf-8")
+        timestamp = int(time.time())
+        failure_status, failure_document = platform.webhook(
+            failure_event, stripe_signature(raw, webhook_secret, timestamp)
+        )
+        after_failure = _read_payment(platform, decline_order)
+        refusal_status, refusal_document = _capture(platform, decline_payment)
+        cases.append(
+            _case_document(
+                "declined_card_refusal",
+                VERDICT_NOT_PROVEN,
+                "the official Stripe mock never declines a card, so the direct provider refusal of a declined card is not proven; "
+                "the refusal of a failed payment is proven through the signed provider event",
+                platform.since(platform_mark),
+                decline_wire,
+                notes=[
+                    "stripe-mock documents that it does not reproduce the behaviour of the real Stripe API and always answers a "
+                    "success response, so no card can be declined against it",
+                    "the platform sent the declined test payment method request and the mock answered 200; the platform "
+                    "therefore could not observe the CardException branch of StripeProvider",
+                    "a genuine test-mode key with pm_card_chargeDeclined or card 4000000000000002 is required for this case",
+                ],
+                observations={
+                    "decline_payment_method_sent": DECLINE_PAYMENT_METHOD,
+                    "provider_answer_status": decline_wire[-1]["status"] if decline_wire else None,
+                    "provider_answer_intent_status": _intent_status(decline_wire),
+                    "provider_answer_body": decline_wire[-1]["response_body"] if decline_wire else None,
+                    "payment_status_after_capture": decline_state.get("status"),
+                    "payment_failed_event_status": failure_status,
+                    "payment_status_after_failure_event": after_failure.get("status"),
+                    "capture_after_failure_status": refusal_status,
+                    "capture_after_failure_code": _error_code(refusal_document),
+                    "capture_after_failure_message": _error_message(refusal_document),
+                    "payment_service_started_with_payment_method": decline_service.get("sandbox_payment_method"),
+                },
+            )
+        )
+        _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
+        ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        mismatch_order, mismatch_payment, _, _ = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
+        mismatch_capture_status, mismatch_capture_document = _capture(platform, mismatch_payment)
+        mismatch_intent = str(_payment_body(mismatch_capture_document).get("providerIntentId", ""))
+        _deliver_capture_event(
+            platform,
+            webhook_secret,
+            mismatch_payment,
+            mismatch_intent,
+            24999,
+            PAYMENT_CURRENCY,
+            "evt_acceptance_" + _random_suffix(24),
+        )
+        mismatch_status, mismatch_document = _refund(
+            platform, mismatch_payment, 10.00, "VND", str(uuid.uuid4())
+        )
+        mismatch_wire = recorder.since(wire_mark)
+        mismatch_proven = mismatch_status >= 400 and _refund_calls(mismatch_wire) == 0
+        cases.append(
+            _case_document(
+                "currency_mismatch_refusal",
+                VERDICT_PROVEN if mismatch_proven else VERDICT_FAILED,
+                "the refund that asked for a currency other than the captured currency was refused with "
+                + str(mismatch_status)
+                + " "
+                + _error_code(mismatch_document)
+                + " and no refund call reached the provider",
+                platform.since(platform_mark),
+                mismatch_wire,
+                notes=["the refusal happens at the platform boundary before any provider call"],
+                observations={
+                    "refund_status": mismatch_status,
+                    "refund_code": _error_code(mismatch_document),
+                    "refund_message": _error_message(mismatch_document),
+                    "provider_refund_calls": _refund_calls(mismatch_wire),
+                },
+            )
+        )
+
+        platform_mark = platform.mark()
+        wire_mark = recorder.marker()
+        provider_order, provider_payment, _, _ = _create_payment(platform, 250.00, "VND")
+        provider_capture_status, provider_capture_document = _capture(platform, provider_payment)
+        provider_intent = str(_payment_body(provider_capture_document).get("providerIntentId", ""))
+        _deliver_capture_event(
+            platform, webhook_secret, provider_payment, provider_intent, 250, "VND", "evt_acceptance_" + _random_suffix(24)
+        )
+        provider_status, provider_document = _refund(platform, provider_payment, 250.00, "VND", str(uuid.uuid4()))
+        provider_wire = recorder.since(wire_mark)
+        provider_state = _read_payment(platform, provider_order)
+        provider_proven = provider_status >= 400 and str(provider_state.get("status", "")) == "CAPTURED"
+        supplementary.append(
+            _case_document(
+                "provider_currency_mismatch_refusal",
+                VERDICT_PROVEN if provider_proven else VERDICT_FAILED,
+                "the provider guard refused the refund of a VND payment because the intent currency read back from Stripe differs "
+                "from the payment currency",
+                platform.since(platform_mark),
+                provider_wire,
+                notes=[
+                    "the official Stripe mock is stateless, so it answers the intent retrieval with its fixture currency usd; "
+                    "against api.stripe.com the intent would carry the currency that was created",
+                    "the refusal itself is the real platform behaviour: StripeProvider refuses a refund whose currency differs "
+                    "from the intent currency",
+                ],
+                observations={
+                    "refund_status": provider_status,
+                    "refund_code": _error_code(provider_document),
+                    "refund_message": _error_message(provider_document),
+                    "payment_status": provider_state.get("status"),
+                    "intent_currency_answered_by_provider": "usd",
+                },
+            )
+        )
+
+        document["cases"] = cases
+        document["supplementary"] = supplementary
+        proven = len([case for case in cases if case["verdict"] == VERDICT_PROVEN])
+        failed = len([case for case in cases if case["verdict"] == VERDICT_FAILED])
+        not_proven = len([case for case in cases if case["verdict"] == VERDICT_NOT_PROVEN])
+        document["summary"] = {
+            "cases": len(cases),
+            "proven": proven,
+            "failed": failed,
+            "not_proven": not_proven,
+            "supplementary": len(supplementary),
+        }
+        document["verified_against_real_stripe_api"] = False
+        document["stripe_api_base_of_record"] = server["http_address_in_network"]
+        document["status"] = "PROVEN_AGAINST_OFFICIAL_STRIPE_MOCK" if failed == 0 else "FAILED"
+        document["reason"] = (
+            "the payment acceptance ran against the official Stripe mock server, not against api.stripe.com; "
+            "a genuine test-mode key is still required to close the last mile"
+        )
+        log_lines = _mock_log()
+        document["stripe_server_log"] = log_lines
         return document
-    platform = Platform(service["host_address"], token)
-    cases: list[dict[str, Any]] = []
-    supplementary: list[dict[str, Any]] = []
-
-    order_id, payment_id, create_status, create_document = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    capture_status, capture_document = _capture(platform, payment_id)
-    wire = recorder.since(wire_mark)
-    intent_id = str(_payment_body(capture_document).get("providerIntentId", ""))
-    intent_call = [record for record in wire if record["path"] == "/v1/payment_intents"]
-    capture_proven = (
-        create_status == 200
-        and capture_status == 200
-        and bool(intent_id)
-        and bool(intent_call)
-        and intent_call[-1]["status"] == 200
-    )
-    cases.append(
-        _case_document(
-            "authorisation_and_capture",
-            VERDICT_PROVEN if capture_proven else VERDICT_FAILED,
-            "the platform created the payment and then asked Stripe for the authorisation; the provider intent reference "
-            + intent_id
-            + " and the client secret were stored on the payment",
-            platform.since(platform_mark),
-            wire,
-            notes=[
-                "the official Stripe mock answers every intent with status requires_payment_method, so the platform holds "
-                "the payment PENDING with a client secret exactly as it does for a 3DS confirmation",
-                "the capture is completed by the signed provider event in the next case",
-            ],
-            observations={
-                "payment_id": payment_id,
-                "provider_intent_id": intent_id,
-                "payment_status_after_capture": _payment_status(capture_document),
-                "client_secret_present": bool(_payment_body(capture_document).get("clientSecret")),
-                "payment_intent_calls": _intent_calls(wire),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    event_id = "evt_acceptance_" + _random_suffix(24)
-    signed_status, signed_document = _deliver_capture_event(
-        platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, event_id
-    )
-    tamper_status, tamper_document = _deliver_capture_event(
-        platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, event_id + "_forged", tamper=True
-    )
-    state = _read_payment(platform, order_id)
-    wire = recorder.since(wire_mark)
-    webhook_proven = (
-        signed_status == 200
-        and tamper_status >= 400
-        and str(state.get("status", "")) == "CAPTURED"
-    )
-    cases.append(
-        _case_document(
-            "capture_webhook_signature_verified",
-            VERDICT_PROVEN if webhook_proven else VERDICT_FAILED,
-            "the signed provider event moved the payment to CAPTURED and the event with a forged signature was refused with "
-            + str(tamper_status)
-            + " "
-            + _error_code(tamper_document),
-            platform.since(platform_mark),
-            wire,
-            notes=[
-                "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
-                "the webhook secret is local because no Stripe account issued one; the verification code path is the real one",
-                "the official Stripe mock does not deliver webhooks, so the harness plays the role of Stripe for the delivery",
-            ],
-            observations={
-                "signed_webhook_status": signed_status,
-                "signed_webhook_body": signed_document,
-                "forged_signature_status": tamper_status,
-                "forged_signature_body": tamper_document,
-                "payment_status": state.get("status"),
-                "provider_intent_id": state.get("providerIntentId"),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    refund_reference = str(uuid.uuid4())
-    refund_status, refund_document = _refund(platform, payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
-    wire = recorder.since(wire_mark)
-    refunded = _payment_body(refund_document)
-    refund_proven = refund_status == 200 and str(refunded.get("status", "")) == "REFUNDED"
-    cases.append(
-        _case_document(
-            "refund",
-            VERDICT_PROVEN if refund_proven else VERDICT_FAILED,
-            "the platform refunded the captured amount against the provider intent and the payment reached REFUNDED with "
-            "refundedAmount "
-            + str(refunded.get("refundedAmount")),
-            platform.since(platform_mark),
-            wire,
-            observations={
-                "payment_status": refunded.get("status"),
-                "refunded_amount": refunded.get("refundedAmount"),
-                "refund_calls": _refund_calls(wire),
-                "payment_intent_calls": _intent_calls(wire),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    replay_status, replay_document = _refund(platform, payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
-    wire = recorder.since(wire_mark)
-    replayed = _payment_body(replay_document)
-    replay_proven = (
-        replay_status == 200
-        and str(replayed.get("status", "")) == "REFUNDED"
-        and _refund_calls(wire) == 0
-    )
-    cases.append(
-        _case_document(
-            "refund_idempotent_replay",
-            VERDICT_PROVEN if replay_proven else VERDICT_FAILED,
-            "the replay of the same refund reference returned the same refund and issued no further refund call to the "
-            "provider",
-            platform.since(platform_mark),
-            wire,
-            notes=["the platform answers the replay from its own refund ledger, so no money can move twice"],
-            observations={
-                "replay_status": replay_status,
-                "replay_payment_status": replayed.get("status"),
-                "replay_refunded_amount": replayed.get("refundedAmount"),
-                "provider_refund_calls_during_replay": _refund_calls(wire),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    order_id, payment_id, create_status, create_document = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
-    capture_status, capture_document = _capture(platform, payment_id)
-    intent_id = str(_payment_body(capture_document).get("providerIntentId", ""))
-    _deliver_capture_event(
-        platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, "evt_acceptance_" + _random_suffix(24)
-    )
-    first_reference = str(uuid.uuid4())
-    partial_status, partial_document = _refund(platform, payment_id, 50.00, PAYMENT_CURRENCY, first_reference)
-    wire = recorder.since(wire_mark)
-    partial = _payment_body(partial_document)
-    partial_proven = partial_status == 200 and str(partial.get("status", "")) == "PARTIALLY_REFUNDED"
-    cases.append(
-        _case_document(
-            "partial_refund",
-            VERDICT_PROVEN if partial_proven else VERDICT_FAILED,
-            "the partial refund moved 50.00 of the 249.99 total and the payment stayed PARTIALLY_REFUNDED",
-            platform.since(platform_mark),
-            wire,
-            observations={
-                "payment_status": partial.get("status"),
-                "refunded_amount": partial.get("refundedAmount"),
-                "previous_status": partial.get("previousStatus"),
-                "provider_refund_calls": _refund_calls(wire),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    second_reference = str(uuid.uuid4())
-    second_status, second_document = _refund(platform, payment_id, 25.00, PAYMENT_CURRENCY, second_reference)
-    wire = recorder.since(wire_mark)
-    second = _payment_body(second_document)
-    second_proven = (
-        second_status == 200
-        and str(second.get("status", "")) == "PARTIALLY_REFUNDED"
-        and float(second.get("refundedAmount", 0)) == 75.00
-    )
-    cases.append(
-        _case_document(
-            "second_partial_refund",
-            VERDICT_PROVEN if second_proven else VERDICT_FAILED,
-            "the second partial refund of 25.00 accumulated on the first one and the refunded amount reached 75.00",
-            platform.since(platform_mark),
-            wire,
-            observations={
-                "payment_status": second.get("status"),
-                "refunded_amount": second.get("refundedAmount"),
-                "previous_status": second.get("previousStatus"),
-                "provider_refund_calls": _refund_calls(wire),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
-    decline_service = ensure_payment_service(
-        values, secret_key, webhook_secret, recorder_address, DECLINE_PAYMENT_METHOD
-    )
-    decline_order, decline_payment, decline_create_status, decline_create_document = _create_payment(
-        platform, 40.00, PAYMENT_CURRENCY
-    )
-    decline_capture_status, decline_capture_document = _capture(platform, decline_payment)
-    decline_wire = recorder.since(wire_mark)
-    decline_intent = str(_payment_body(decline_capture_document).get("providerIntentId", ""))
-    decline_state = _read_payment(platform, decline_order)
-    failure_event = stripe_event(
-        "evt_acceptance_" + _random_suffix(24),
-        "payment_intent.payment_failed",
-        decline_intent,
-        4000,
-        PAYMENT_CURRENCY,
-        decline_payment,
-    )
-    raw = json.dumps(failure_event).encode("utf-8")
-    timestamp = int(time.time())
-    failure_status, failure_document = platform.webhook(
-        failure_event, stripe_signature(raw, webhook_secret, timestamp)
-    )
-    after_failure = _read_payment(platform, decline_order)
-    refusal_status, refusal_document = _capture(platform, decline_payment)
-    cases.append(
-        _case_document(
-            "declined_card_refusal",
-            VERDICT_NOT_PROVEN,
-            "the official Stripe mock never declines a card, so the direct provider refusal of a declined card is not proven; "
-            "the refusal of a failed payment is proven through the signed provider event",
-            platform.since(platform_mark),
-            decline_wire,
-            notes=[
-                "stripe-mock documents that it does not reproduce the behaviour of the real Stripe API and always answers a "
-                "success response, so no card can be declined against it",
-                "the platform sent the declined test payment method request and the mock answered 200; the platform "
-                "therefore could not observe the CardException branch of StripeProvider",
-                "a genuine test-mode key with pm_card_chargeDeclined or card 4000000000000002 is required for this case",
-            ],
-            observations={
-                "decline_payment_method_sent": DECLINE_PAYMENT_METHOD,
-                "provider_answer_status": decline_wire[-1]["status"] if decline_wire else None,
-                "provider_answer_intent_status": _intent_status(decline_wire),
-                "provider_answer_body": decline_wire[-1]["response_body"] if decline_wire else None,
-                "payment_status_after_capture": decline_state.get("status"),
-                "payment_failed_event_status": failure_status,
-                "payment_status_after_failure_event": after_failure.get("status"),
-                "capture_after_failure_status": refusal_status,
-                "capture_after_failure_code": _error_code(refusal_document),
-                "capture_after_failure_message": _error_message(refusal_document),
-                "payment_service_started_with_payment_method": decline_service.get("sandbox_payment_method"),
-            },
-        )
-    )
-    _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
-    ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    mismatch_order, mismatch_payment, _, _ = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
-    mismatch_capture_status, mismatch_capture_document = _capture(platform, mismatch_payment)
-    mismatch_intent = str(_payment_body(mismatch_capture_document).get("providerIntentId", ""))
-    _deliver_capture_event(
-        platform,
-        webhook_secret,
-        mismatch_payment,
-        mismatch_intent,
-        24999,
-        PAYMENT_CURRENCY,
-        "evt_acceptance_" + _random_suffix(24),
-    )
-    mismatch_status, mismatch_document = _refund(
-        platform, mismatch_payment, 10.00, "VND", str(uuid.uuid4())
-    )
-    mismatch_wire = recorder.since(wire_mark)
-    mismatch_proven = mismatch_status >= 400 and _refund_calls(mismatch_wire) == 0
-    cases.append(
-        _case_document(
-            "currency_mismatch_refusal",
-            VERDICT_PROVEN if mismatch_proven else VERDICT_FAILED,
-            "the refund that asked for a currency other than the captured currency was refused with "
-            + str(mismatch_status)
-            + " "
-            + _error_code(mismatch_document)
-            + " and no refund call reached the provider",
-            platform.since(platform_mark),
-            mismatch_wire,
-            notes=["the refusal happens at the platform boundary before any provider call"],
-            observations={
-                "refund_status": mismatch_status,
-                "refund_code": _error_code(mismatch_document),
-                "refund_message": _error_message(mismatch_document),
-                "provider_refund_calls": _refund_calls(mismatch_wire),
-            },
-        )
-    )
-
-    platform_mark = platform.mark()
-    wire_mark = recorder.marker()
-    provider_order, provider_payment, _, _ = _create_payment(platform, 250.00, "VND")
-    provider_capture_status, provider_capture_document = _capture(platform, provider_payment)
-    provider_intent = str(_payment_body(provider_capture_document).get("providerIntentId", ""))
-    _deliver_capture_event(
-        platform, webhook_secret, provider_payment, provider_intent, 250, "VND", "evt_acceptance_" + _random_suffix(24)
-    )
-    provider_status, provider_document = _refund(platform, provider_payment, 250.00, "VND", str(uuid.uuid4()))
-    provider_wire = recorder.since(wire_mark)
-    provider_state = _read_payment(platform, provider_order)
-    provider_proven = provider_status >= 400 and str(provider_state.get("status", "")) == "CAPTURED"
-    supplementary.append(
-        _case_document(
-            "provider_currency_mismatch_refusal",
-            VERDICT_PROVEN if provider_proven else VERDICT_FAILED,
-            "the provider guard refused the refund of a VND payment because the intent currency read back from Stripe differs "
-            "from the payment currency",
-            platform.since(platform_mark),
-            provider_wire,
-            notes=[
-                "the official Stripe mock is stateless, so it answers the intent retrieval with its fixture currency usd; "
-                "against api.stripe.com the intent would carry the currency that was created",
-                "the refusal itself is the real platform behaviour: StripeProvider refuses a refund whose currency differs "
-                "from the intent currency",
-            ],
-            observations={
-                "refund_status": provider_status,
-                "refund_code": _error_code(provider_document),
-                "refund_message": _error_message(provider_document),
-                "payment_status": provider_state.get("status"),
-                "intent_currency_answered_by_provider": "usd",
-            },
-        )
-    )
-
-    document["cases"] = cases
-    document["supplementary"] = supplementary
-    proven = len([case for case in cases if case["verdict"] == VERDICT_PROVEN])
-    failed = len([case for case in cases if case["verdict"] == VERDICT_FAILED])
-    not_proven = len([case for case in cases if case["verdict"] == VERDICT_NOT_PROVEN])
-    document["summary"] = {
-        "cases": len(cases),
-        "proven": proven,
-        "failed": failed,
-        "not_proven": not_proven,
-        "supplementary": len(supplementary),
-    }
-    document["verified_against_real_stripe_api"] = False
-    document["stripe_api_base_of_record"] = server["http_address_in_network"]
-    document["status"] = "PROVEN_AGAINST_OFFICIAL_STRIPE_MOCK" if failed == 0 else "FAILED"
-    document["reason"] = (
-        "the payment acceptance ran against the official Stripe mock server, not against api.stripe.com; "
-        "a genuine test-mode key is still required to close the last mile"
-    )
-    log_lines = _mock_log()
-    document["stripe_server_log"] = log_lines
-    return document
-
+    finally:
+        recorder.stop()
 
 def evidence_directory(run_id: str | None = None) -> Path:
     identifier = run_id or config.run_identifier()

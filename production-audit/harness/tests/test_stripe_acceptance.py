@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import inspect
+import socket
 import unittest
 
-from harness.stripe.acceptance import MATRIX_CASES, stripe_event, stripe_signature
-from harness.stripe.recorder import redact
+from harness.stripe.acceptance import MATRIX_CASES, run_acceptance, stripe_event, stripe_signature
+from harness.stripe.recorder import Recorder, redact
 from harness.verification.gates import BLOCKED, PASS, _payment_acceptance_verdict
 
 
@@ -111,3 +113,24 @@ class RecorderRedactionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecorderLifecycleTest(unittest.TestCase):
+    def test_the_recorder_releases_its_socket_when_it_is_stopped(self) -> None:
+        recorder = Recorder(upstream="http://127.0.0.1:1", port=0)
+        port = recorder.server.server_address[1]
+        recorder.start()
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                probe.settimeout(2)
+                self.assertEqual(probe.connect_ex(("127.0.0.1", port)), 0)
+        finally:
+            recorder.stop()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(2)
+            self.assertNotEqual(probe.connect_ex(("127.0.0.1", port)), 0)
+
+    def test_the_acceptance_releases_the_recorder_on_every_path(self) -> None:
+        source = inspect.getsource(run_acceptance)
+        self.assertIn("finally:", source)
+        self.assertIn("recorder.stop()", source)

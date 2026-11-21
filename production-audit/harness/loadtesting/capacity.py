@@ -544,9 +544,13 @@ def render_capacity_report(document: dict[str, Any]) -> str:
     add("")
     add("## 6. Does the recorded run still bind to the current source")
     add("")
-    add("**No.**")
+    if binding.get("binds_to_current_source"):
+        add("**Yes.** The measurement was taken with the harness and the services of the current revision.")
+    else:
+        add("**No.**")
     add("")
-    add("- Reason: " + str(binding.get("reason", "")) + ".")
+    reason = str(binding.get("reason", "")).strip()
+    add("- Reason: " + (reason if reason else "none recorded") + ".")
     if binding.get("harness_commits_after_the_measurement"):
         add("- The load harness and the load generator changed after the measurement:")
         for commit in binding["harness_commits_after_the_measurement"]:
@@ -555,21 +559,24 @@ def render_capacity_report(document: dict[str, Any]) -> str:
         add("- The services changed after the measurement:")
         for commit in binding["service_commits_after_the_measurement"]:
             add("  - `" + str(commit["commit"]) + "` " + str(commit["date"]) + " — " + str(commit["subject"]))
-    add("- The recorded results do not hold the fields the current harness writes into every run: "
-        + ", ".join(str(name) for name in binding.get("current_harness_fields_missing_from_the_recorded_results", []))
-        + ".")
-    add("- The load generator of the recorded run was given the request rate of the profile as an iteration rate, "
-        "so it offered more traffic than the current harness plans for the same profile.")
+    missing = [str(name) for name in binding.get("current_harness_fields_missing_from_the_recorded_results", [])]
+    if missing:
+        add("- The recorded results do not hold the fields the current harness writes into every run: "
+            + ", ".join(missing)
+            + ".")
     add("")
-    add("## 7. The run that must be repeated")
-    add("")
-    add("The whole sweep of this run must be repeated with the harness at the current revision, because the "
-        "measurement itself changed: the profiles are now planned in iterations per second, the planned rate is "
-        "recorded beside the delivered rate, a run that delivers less than the accepted ratio of the planned rate "
-        "fails, a request the gateway shed is booked as shedding and not as a business failure, and every virtual "
-        "user gets its own customer.")
-    add("")
-    add("The runs to repeat are these six, in the order they were measured:")
+    if binding.get("binds_to_current_source"):
+        add("## 7. The runs of this sweep")
+    else:
+        add("## 7. The run that must be repeated")
+        add("")
+        add("The whole sweep of this run must be repeated with the harness at the current revision, because the "
+            "measurement itself changed: the profiles are now planned in iterations per second, the planned rate is "
+            "recorded beside the delivered rate, a run that delivers less than the accepted ratio of the planned rate "
+            "fails, a request the gateway shed is booked as shedding and not as a business failure, and every virtual "
+            "user gets its own customer.")
+        add("")
+        add("The runs to repeat are these six, in the order they were measured:")
     add("")
     for directory in window.get("directories_in_run_order", window.get("directories", [])):
         add("- `" + str(directory) + "`")

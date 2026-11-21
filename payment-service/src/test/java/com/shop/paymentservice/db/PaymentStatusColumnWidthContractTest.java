@@ -17,24 +17,45 @@ class PaymentStatusColumnWidthContractTest {
     private static final Pattern STATUS_COLUMN = Pattern.compile(
         "name:\\s*status\\s*,\\s*type:\\s*varchar\\((\\d+)\\)");
 
+    private static final Pattern WIDENING = Pattern.compile(
+        "alter\\s+column\\s+(?:status|previous_status)\\s+type\\s+varchar\\((\\d+)\\)",
+        Pattern.CASE_INSENSITIVE);
+
     @Test
     @DisplayName("every status column is wide enough for the longest payment status")
     void everyStatusColumnIsWideEnoughForTheLongestPaymentStatus() throws IOException {
         int longest = longestPaymentStatusLength();
         Path changelog = Path.of("src/main/resources/db/changelog");
+        int widened = widestAppliedWidth(changelog);
         try (var files = Files.list(changelog)) {
             for (Path file : files.filter(path -> path.toString().endsWith(".yaml")).toList()) {
                 String source = Files.readString(file);
                 Matcher matcher = STATUS_COLUMN.matcher(source);
                 while (matcher.find()) {
                     int width = Integer.parseInt(matcher.group(1));
-                    assertThat(width)
+                    int effective = Math.max(width, widened);
+                    assertThat(effective)
                         .as("the status column declared in " + file.getFileName()
-                            + " must hold the longest payment status, which is " + longest + " characters")
+                            + " ends up " + effective + " characters wide after every change set"
+                            + " and must hold the longest payment status, which is " + longest + " characters")
                         .isGreaterThanOrEqualTo(longest);
                 }
             }
         }
+    }
+
+    private int widestAppliedWidth(Path changelog) throws IOException {
+        int widest = 0;
+        try (var files = Files.list(changelog)) {
+            for (Path file : files.filter(path -> path.toString().endsWith(".yaml")).toList()) {
+                String source = Files.readString(file);
+                Matcher matcher = WIDENING.matcher(source);
+                while (matcher.find()) {
+                    widest = Math.max(widest, Integer.parseInt(matcher.group(1)));
+                }
+            }
+        }
+        return widest;
     }
 
     @Test
@@ -53,7 +74,7 @@ class PaymentStatusColumnWidthContractTest {
     private int longestPaymentStatusLength() throws IOException {
         Path source = Path.of("src/main/java/com/shop/paymentservice/constant/PaymentStatus.java");
         String text = Files.readString(source);
-        Matcher matcher = Pattern.compile("^\\s*([A-Z_]+)\\s*[,;(]", Pattern.MULTILINE).matcher(text);
+        Matcher matcher = Pattern.compile("\\b([A-Z][A-Z_]{2,})\\b").matcher(text);
         int longest = 0;
         while (matcher.find()) {
             longest = Math.max(longest, matcher.group(1).length());
