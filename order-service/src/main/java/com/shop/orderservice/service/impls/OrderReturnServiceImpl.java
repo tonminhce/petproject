@@ -17,6 +17,8 @@ import com.shop.orderservice.repository.OrderReturnRepository;
 import com.shop.orderservice.service.OrderReturnService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -178,7 +180,8 @@ public class OrderReturnServiceImpl implements OrderReturnService {
         orderReturn.setReviewedAt(Instant.now());
 
         if (request.status() == ReturnStatus.APPROVED || request.status() == ReturnStatus.REFUNDED) {
-            boolean refunded = paymentServiceClient.refundByOrderId(order.getId(), approvedAmount, orderCurrency);
+            boolean refunded = paymentServiceClient.refundByOrderId(order.getId(), approvedAmount, orderCurrency,
+                    orderReturn.getId());
             if (!refunded) {
                 throw BusinessException.badRequest("order.return.refund.gateway.failed");
             }
@@ -191,7 +194,15 @@ public class OrderReturnServiceImpl implements OrderReturnService {
     }
 
     private BigDecimal alreadyRefundedAmount(Order order, OrderReturn current) {
-        return orderReturnRepository.findByOrderId(order.getId()).stream()
+        List<OrderReturn> orderReturns;
+        try {
+            orderReturns = orderReturnRepository.findByOrderIdForUpdate(order.getId());
+        } catch (PessimisticLockingFailureException | QueryTimeoutException ex) {
+            log.warn("The returns of order {} could not be locked for the review - the review is refused",
+                    order.getId());
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, order.getId());
+        }
+        return orderReturns.stream()
                 .filter(candidate -> !isSameReturn(candidate, current))
                 .filter(candidate -> candidate.getStatus() == ReturnStatus.APPROVED
                         || candidate.getStatus() == ReturnStatus.REFUNDED)

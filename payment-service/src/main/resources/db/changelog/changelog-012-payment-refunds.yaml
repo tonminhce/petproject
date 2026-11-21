@@ -1,0 +1,43 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 012-create-payment-refunds
+      author: production-audit
+      changes:
+        - createTable:
+            tableName: payment_refunds
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: payment_id,          type: uuid,            constraints: { nullable: false } }
+              - column: { name: refund_reference,   type: varchar(64),     constraints: { nullable: false } }
+              - column: { name: amount,             type: "numeric(19,2)", constraints: { nullable: false } }
+              - column: { name: currency,           type: varchar(3),      constraints: { nullable: false } }
+              - column: { name: provider,           type: varchar(16),     constraints: { nullable: false } }
+              - column: { name: provider_event_id,  type: varchar(128) }
+              - column: { name: created_at, type: timestamptz, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz, defaultValueComputed: "CURRENT_TIMESTAMP", constraints: { nullable: false } }
+              - column: { name: created_by, type: varchar(100) }
+              - column: { name: updated_by, type: varchar(100) }
+              - column: { name: deleted,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: deleted_at, type: timestamptz }
+              - column: { name: deleted_by, type: varchar(255) }
+
+        - sql:
+            sql: CREATE UNIQUE INDEX uk_payment_refunds_payment_reference ON payment_refunds (payment_id, refund_reference)
+
+        - sql:
+            sql: CREATE INDEX idx_payment_refunds_payment_id ON payment_refunds (payment_id)
+
+        - sql:
+            dbms: postgresql
+            sql: >-
+              INSERT INTO payment_refunds (id, payment_id, refund_reference, amount, currency, provider,
+              provider_event_id, created_at, updated_at, deleted)
+              SELECT gen_random_uuid(), id, 'legacy-' || id::text, refunded_amount, refunded_currency, provider,
+              NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, false
+              FROM payments WHERE refunded_amount > 0

@@ -126,7 +126,7 @@ public class StripeProvider implements PaymentProvider {
                 return ProviderResult.rejected("currency-mismatch");
             }
             long refundMinorUnits = toMinorUnits(amount, currency);
-            String refundKey = "refund-" + idempotencyKey + "-" + amount.toPlainString();
+            String refundKey = idempotencyKey;
             RefundCreateParams params = RefundCreateParams.builder()
                     .setPaymentIntent(original.getId())
                     .setAmount(refundMinorUnits)

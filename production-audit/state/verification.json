@@ -1,5 +1,5 @@
 {
-  "revision": "",
+  "revision": "781f46c999249933346414b558d0f155cc444fcc",
   "suites": {
     "alerts": {
       "checks": [
@@ -105,15 +105,16 @@
     },
     "build": {
       "command": "./mvnw -B -ntp -T 1 clean verify",
-      "duration_seconds": 978.018,
+      "duration_seconds": 991.412,
       "exit_code": 0,
+      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
       "mode": "clean-verify",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "revision": "781f46c999249933346414b558d0f155cc444fcc",
+      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
       "status": "PASS",
       "suite": "build",
-      "updated_at": "2026-11-20T21:01:18Z"
+      "updated_at": "2026-11-20T22:16:22Z"
     },
     "comments": {
       "prohibited_comments": 0,
@@ -164,18 +165,19 @@
     "edge": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Edge*Test,*Negative*Test,*Validation*Test,*Boundary*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "edge and negative scenarios",
-      "duration_seconds": 10.769,
+      "duration_seconds": 10.914,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/edge.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "781f46c999249933346414b558d0f155cc444fcc",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
       "status": "PASS",
       "suite": "edge",
       "tests_run": 41,
-      "updated_at": "2026-11-20T21:10:26Z"
+      "updated_at": "2026-11-20T22:28:42Z"
     },
     "gateway": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl gateway-service -am",
@@ -196,18 +198,19 @@
     "happy": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=!*Edge*,!*Negative*,!*Concurrency*,!*Race*,*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "happy path business scenarios",
-      "duration_seconds": 263.289,
+      "duration_seconds": 259.285,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "781f46c999249933346414b558d0f155cc444fcc",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
+      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
       "status": "PASS",
       "suite": "happy",
       "tests_run": 1926,
-      "updated_at": "2026-11-20T21:10:14Z"
+      "updated_at": "2026-11-20T22:28:30Z"
     },
     "integration": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -562,19 +565,20 @@
     "unit": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "surefire unit tests",
-      "duration_seconds": 104.174,
-      "errors": 2,
-      "exit_code": 1,
+      "duration_seconds": 279.667,
+      "errors": 0,
+      "exit_code": 0,
       "failures": 0,
+      "harness_fingerprint": "468e3f97173ed261d8af1303175a61de4905ea256e9ab4adf6920472c377cd2d",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/unit.log",
-      "revision": "37014fe724f306a89b2a888643fefe7f248828cb",
+      "revision": "781f46c999249933346414b558d0f155cc444fcc",
       "skipped": 0,
-      "source_fingerprint": "6632226fcfe3b1004ccc5a7c1f89704bd9366f22bc13590a44118e349fd8156a",
-      "status": "FAIL",
+      "source_fingerprint": "64503628c359d9096aea0b0fcf432331631b9c8387e985a5dbab43bb823e020b",
+      "status": "PASS",
       "suite": "unit",
-      "tests_run": 328,
-      "updated_at": "2026-11-20T21:05:50Z"
+      "tests_run": 1942,
+      "updated_at": "2026-11-20T22:24:11Z"
     }
   },
-  "updated_at": "2026-11-20T21:41:42Z"
+  "updated_at": "2026-11-20T22:28:42Z"
 }

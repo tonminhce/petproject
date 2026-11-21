@@ -15,13 +15,13 @@ public interface PaymentService {
 
     PaymentResponse capture(UUID id);
 
-    PaymentResponse refund(UUID id);
-
-    PaymentResponse refund(UUID id, BigDecimal amount, String currency);
+    PaymentResponse refund(UUID id, BigDecimal amount, String currency, UUID refundReference);
 
     Page<PaymentResponse> findAllByOrderId(UUID orderId, Pageable pageable);
 
     Optional<PaymentResponse> findCapturedByOrderId(UUID orderId);
+
+    Optional<PaymentResponse> findRefundableByOrderId(UUID orderId);
 
     PaymentResponse findById(UUID id);
 }

@@ -16,11 +16,18 @@ from .customers import mint_tokens, provision_customers
 from .settle import wait_for_quiet_host
 from .targets import resolve_coupon_code
 from .invariants import verify
-from .profiles import Profile, enforce_safety, resolve_profile
+from .profiles import (
+    CUSTOMER_POOL_LIMIT,
+    Profile,
+    arrival_plan,
+    enforce_safety,
+    planned_iteration_rate,
+    requests_per_iteration,
+    resolve_profile,
+)
 
 DEFAULT_NETWORK = "untitled5_ecommerce-network"
 DEFAULT_BASE_URL = "http://gateway-service:8080"
-CUSTOMER_POOL_LIMIT = 128
 RATE_SHORTFALL_RATIO = 0.8
 K6_RUN_TIMEOUT_SECONDS = 2400
 
@@ -106,6 +113,7 @@ def summarise(summary: dict[str, Any]) -> dict[str, Any]:
         "shed_requests": _metric_value(metrics, "shed_requests_total", "count", default=0),
         "coupon_contention": _metric_value(metrics, "coupon_contention_total", "count", default=0),
         "cart_contention": _metric_value(metrics, "cart_contention_total", "count", default=0),
+        "cart_failure": _metric_value(metrics, "cart_failure_total", "count", default=0),
         "oversell_responses": _metric_value(metrics, "oversell_attempts_total", "count", default=0),
         "iterations": _metric_value(metrics, "iterations", "count"),
         "iteration_rate_per_second": _metric_value(metrics, "iterations", "rate"),
@@ -195,7 +203,7 @@ def _measure_profile(
     customers: dict[str, Any] = {"status": "NOT_REQUIRED"}
     customer_tokens: list[str] = []
     if profile.scenario in ("full", "flash-sale", "promotion-storm"):
-        pool_size = min(profile.virtual_users, CUSTOMER_POOL_LIMIT)
+        pool_size = profile.virtual_users
         customers = provision_customers(pool_size)
         if customers.get("status") != "READY":
             return {
@@ -223,6 +231,11 @@ def _measure_profile(
         "\n".join(customer_tokens) + ("\n" if customer_tokens else ""), encoding="utf-8"
     )
 
+    plan = arrival_plan(profile)
+    planned_rate = planned_iteration_rate(profile)
+    per_iteration = requests_per_iteration(profile.scenario)
+    peak_iteration_rate = max(int(stage["target"]) for stage in plan)
+
     command = [
         "docker",
         "compose",
@@ -236,7 +249,9 @@ def _measure_profile(
         "-e",
         "SCENARIO=" + profile.scenario,
         "-e",
-        "RATE=" + str(profile.requests_per_second),
+        "RATE=" + str(peak_iteration_rate),
+        "-e",
+        "STAGES=" + json.dumps(plan, separators=(",", ":")),
         "-e",
         "VUS=" + str(profile.virtual_users),
         "-e",
@@ -306,12 +321,25 @@ def _measure_profile(
         "max_shed_rate": profile.max_shed_rate,
         "target_requests_per_second": profile.requests_per_second,
         "target_virtual_users": profile.virtual_users,
+        "rate_unit": "iterations per second",
+        "requests_per_iteration": per_iteration,
+        "target_iterations_per_second": peak_iteration_rate,
+        "planned_iteration_rate_per_second": round(planned_rate, 4),
+        "planned_request_rate_per_second": round(planned_rate * per_iteration, 4),
+        "arrival_plan": plan,
         "rate_limit_override": limiter,
         "gateway_traffic": traffic,
         "coupon": coupon,
         "customer_pool": {
             "status": customers.get("status"),
             "customers": len(customer_tokens),
+            "virtual_users": profile.virtual_users,
+            "pool_limit": CUSTOMER_POOL_LIMIT,
+            "share_factor": round(profile.virtual_users / len(customer_tokens), 4)
+            if customer_tokens
+            else 1.0,
+            "one_customer_per_virtual_user": customers.get("status") == "NOT_REQUIRED"
+            or len(customer_tokens) >= profile.virtual_users,
         },
         "services": compose_services(),
         "metrics": summarise(summary),
@@ -326,6 +354,9 @@ def _measure_profile(
 
 def _final_status(document: dict[str, Any]) -> str:
     outcome_acceptable = _business_outcome_is_acceptable(document)
+    if not outcome_acceptable:
+        document["status_detail"] = document.get("business_verdict", "")
+        return "FAIL"
     if document.get("k6_exit_code") != 0:
         document["status_detail"] = (
             "the load generator reported that a threshold was crossed, so the measured run did not meet its "
@@ -333,9 +364,10 @@ def _final_status(document: dict[str, Any]) -> str:
         )
         return "FAIL"
     if not document.get("measurement_valid"):
+        document["status_detail"] = (
+            "the measurement was taken while the host was busy, so it does not describe the platform"
+        )
         return "BLOCKED"
-    if not outcome_acceptable:
-        return "FAIL"
     invariants = document.get("invariants") or {}
     if invariants:
         if invariants.get("status") == "FAIL":
@@ -361,9 +393,18 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
     rate = failure / attempts if attempts > 0 else 0.0
     document["business_failure_rate"] = round(rate, 6)
     achieved = float(metrics.get("iteration_rate_per_second") or 0)
-    target = float(document.get("target_requests_per_second") or 0)
-    if target > 0:
-        document["achieved_rate_ratio"] = round(achieved / target, 4)
+    planned = float(document.get("planned_iteration_rate_per_second") or 0)
+    document["achieved_iteration_rate_per_second"] = round(achieved, 4)
+    document["accepted_rate_ratio"] = RATE_SHORTFALL_RATIO
+    if planned > 0:
+        document["achieved_rate_ratio"] = round(achieved / planned, 4)
+    recorded_metrics = document.get("metrics")
+    if isinstance(recorded_metrics, dict):
+        recorded_metrics["achieved_rate_ratio"] = document.get("achieved_rate_ratio")
+        recorded_metrics["rate_unit"] = "iterations per second"
+        recorded_metrics["planned_iteration_rate_per_second"] = document.get(
+            "planned_iteration_rate_per_second"
+        )
     served = success + failure + refusals + shed
     shed_rate = shed / served if served > 0 else 0.0
     document["shed_rate"] = round(shed_rate, 6)
@@ -404,6 +445,18 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
             + format(shed_limit, ".4f")
         )
         return False
+    if planned > 0 and achieved / planned < RATE_SHORTFALL_RATIO:
+        document["rate_shortfall"] = True
+        document["business_verdict"] = (
+            "the platform delivered only "
+            + format(achieved / planned, ".2f")
+            + " of the planned "
+            + format(planned, ".2f")
+            + " iterations per second, which is below the accepted "
+            + format(RATE_SHORTFALL_RATIO, ".2f")
+            + ", so it did not sustain the requested rate"
+        )
+        return False
     document["business_verdict"] = (
         "the business failure rate "
         + format(rate, ".4f")
@@ -413,13 +466,13 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
         + format(shed_rate, ".4f")
         + " of the requests"
     )
-    if target > 0 and achieved > 0 and achieved / target < RATE_SHORTFALL_RATIO:
+    if planned > 0:
         document["business_verdict"] = (
             document["business_verdict"]
-            + ", but the platform delivered only "
-            + format(achieved / target, ".2f")
-            + " of the requested "
-            + format(target, ".0f")
-            + " iterations per second, so it did not sustain the requested rate"
+            + " and the platform delivered "
+            + format(achieved / planned, ".2f")
+            + " of the planned "
+            + format(planned, ".2f")
+            + " iterations per second"
         )
     return True

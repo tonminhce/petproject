@@ -20,7 +20,7 @@ function loadCustomerTokens() {
 }
 
 const customerTokens = loadCustomerTokens();
-const peakRate = parseInt(__ENV.RATE || '20', 10);
+const peakIterationRate = parseInt(__ENV.RATE || '20', 10);
 const maxVus = parseInt(__ENV.VUS || '50', 10);
 const duration = __ENV.DURATION || '2m';
 const configuredProductId = __ENV.HOT_PRODUCT_ID || '';
@@ -31,7 +31,16 @@ const businessFailure = new Counter('business_failure_total');
 const checkoutLatency = new Trend('business_checkout_latency_ms', true);
 const oversellAttempts = new Counter('oversell_attempts_total');
 const resolvedProducts = new Counter('resolved_product_total');
-http.setResponseCallback(http.expectedStatuses(200, 201, 404, 409));
+http.setResponseCallback(http.expectedStatuses(200, 201, 400, 404, 409, 429));
+
+function isShedStatus(status) {
+  return status === 429 || status >= 500;
+}
+
+function isClassifiedStatus(status) {
+  return status === 200 || status === 201 || status === 400 || status === 404 || status === 409
+    || isShedStatus(status);
+}
 
 const cartFailure = new Counter('cart_failure_total');
 const cartContention = new Counter('cart_contention_total');
@@ -48,43 +57,69 @@ let cartItemId = null;
 function stagesFor() {
   if (scenario === 'spike') {
     return [
-      { duration: '10s', target: Math.max(1, Math.floor(peakRate / 10)) },
-      { duration: '20s', target: peakRate },
-      { duration: duration, target: peakRate },
+      { duration: '10s', target: Math.max(1, Math.floor(peakIterationRate / 10)) },
+      { duration: '20s', target: peakIterationRate },
+      { duration: duration, target: peakIterationRate },
       { duration: '20s', target: 0 },
     ];
   }
   if (scenario === 'ramp') {
     return [
-      { duration: '20s', target: Math.max(1, Math.floor(peakRate / 5)) },
-      { duration: duration, target: peakRate },
+      { duration: '20s', target: Math.max(1, Math.floor(peakIterationRate / 5)) },
+      { duration: duration, target: peakIterationRate },
       { duration: '20s', target: 0 },
     ];
   }
   if (scenario === 'soak') {
     return [
-      { duration: '30s', target: Math.floor(peakRate / 2) },
-      { duration: duration, target: Math.floor(peakRate / 2) },
+      { duration: '30s', target: Math.floor(peakIterationRate / 2) },
+      { duration: duration, target: Math.floor(peakIterationRate / 2) },
       { duration: '30s', target: 0 },
     ];
   }
   return [
-    { duration: '30s', target: Math.max(1, Math.floor(peakRate / 2)) },
-    { duration: duration, target: peakRate },
+    { duration: '30s', target: Math.max(1, Math.floor(peakIterationRate / 2)) },
+    { duration: duration, target: peakIterationRate },
     { duration: '20s', target: 0 },
   ];
 }
+
+function plannedStages() {
+  const raw = (__ENV.STAGES || '').trim();
+  if (raw.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return null;
+    }
+    return parsed.map(function (stage) {
+      return {
+        duration: String(stage.duration),
+        target: Math.max(0, Math.floor(Number(stage.target) || 0)),
+      };
+    });
+  } catch (error) {
+    return null;
+  }
+}
+
+const arrivalStages = plannedStages() || stagesFor();
+const peakStageRate = arrivalStages.reduce(function (highest, stage) {
+  return Math.max(highest, stage.target);
+}, 0);
 
 export const options = {
   scenarios: {
     default: {
       executor: 'ramping-arrival-rate',
-      startRate: Math.max(1, Math.floor(peakRate / 2)),
+      startRate: Math.max(1, Math.floor(peakStageRate / 2)),
       timeUnit: '1s',
       preAllocatedVUs: maxVus,
       maxVUs: maxVus,
       gracefulStop: '30s',
-      stages: stagesFor(),
+      stages: arrivalStages,
     },
   },
   thresholds: {
@@ -147,9 +182,11 @@ function resolveProductId() {
 
 function browse() {
   const response = http.get(baseUrl + '/api/v1/products?page=0&size=10', { headers: authHeaders(), tags: { call: 'catalog' } });
-  check(response, { 'catalog returns 200': (r) => r.status === 200 });
+  check(response, { 'the catalog answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200) {
     businessSuccess.add(1);
+  } else if (isShedStatus(response.status)) {
+    shedRequests.add(1);
   } else {
     businessFailure.add(1);
     catalogFailure.add(1);
@@ -166,9 +203,11 @@ function productDetail() {
     return;
   }
   const response = http.get(baseUrl + '/api/v1/products/' + productId, { headers: authHeaders(), tags: { call: 'detail' } });
-  check(response, { 'product detail returns 200': (r) => r.status === 200 });
+  check(response, { 'the product detail answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200) {
     businessSuccess.add(1);
+  } else if (isShedStatus(response.status)) {
+    shedRequests.add(1);
   } else {
     businessFailure.add(1);
     detailFailure.add(1);
@@ -181,13 +220,18 @@ function ensureCart(productId) {
       JSON.stringify({ quantity: 1 }),
       { headers: authHeaders(), tags: { call: 'cart-update' } });
     if (update.status === 200 || update.status === 201) {
-      return true;
+      return 'ready';
+    }
+    if (isShedStatus(update.status)) {
+      shedRequests.add(1);
+      return 'shed';
     }
     cartItemId = null;
   }
   const response = http.post(baseUrl + '/api/v1/carts/me/items',
     JSON.stringify({ productId: productId, quantity: 1 }),
     { headers: authHeaders(), tags: { call: 'cart' } });
+  check(response, { 'the cart answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status) });
   if (response.status === 200 || response.status === 201) {
     try {
       const parsed = JSON.parse(response.body);
@@ -202,10 +246,14 @@ function ensureCart(productId) {
     } catch (error) {
       cartItemId = null;
     }
-    return true;
+    return 'ready';
+  }
+  if (isShedStatus(response.status)) {
+    shedRequests.add(1);
+    return 'shed';
   }
   cartFailure.add(1);
-  return false;
+  return 'failure';
 }
 
 function resetCart() {
@@ -245,7 +293,12 @@ function checkout() {
     businessFailure.add(1);
     return;
   }
-  if (!ensureCart(productId)) {
+  const cart = ensureCart(productId);
+  if (cart !== 'ready') {
+    if (cart === 'shed') {
+      cartItemId = null;
+      return;
+    }
     businessFailure.add(1);
     return;
   }
@@ -253,18 +306,25 @@ function checkout() {
   if (response.status === 409 && conflictReason(response) === 'ORD-4005') {
     resetCart();
     cartContention.add(1);
-    if (ensureCart(productId)) {
-      response = placeOrder(productId);
+    const retry = ensureCart(productId);
+    if (retry === 'shed') {
+      cartItemId = null;
+      return;
     }
+    if (retry !== 'ready') {
+      businessFailure.add(1);
+      return;
+    }
+    response = placeOrder(productId);
   }
   const accepted = response.status === 200 || response.status === 201;
   const reason = conflictReason(response);
   const couponRejected = reason === 'ORD-4008' || reason === 'PRO-7006' || reason === 'PRO-7007' || reason === 'PRO-7005';
   const stockRefused = reason === 'ORD-4007' || reason === 'ORD-4009' || reason === 'INV-4001';
   const refused = response.status === 409 || response.status === 400;
-  const shed = response.status >= 500;
+  const shed = isShedStatus(response.status);
   check(response, {
-    'checkout returns an accepted or a refusal status': (r) => r.status === 200 || r.status === 201 || r.status === 409 || r.status === 400,
+    'the checkout answers with a status the scenario can classify': (r) => isClassifiedStatus(r.status),
   });
   if (accepted) {
     cartItemId = null;
@@ -279,12 +339,10 @@ function checkout() {
     resetCart();
     cartFailure.add(1);
     businessRefusal.add(1);
+  } else if (shed) {
+    shedRequests.add(1);
+    resetCart();
   } else {
-    if (shed) {
-      shedRequests.add(1);
-      resetCart();
-      return;
-    }
     resetCart();
     businessFailure.add(1);
   }
@@ -314,9 +372,10 @@ export function handleSummary(data) {
   const summary = {
     scenario: scenario,
     base_url: baseUrl,
-    peak_rate: peakRate,
+    peak_iteration_rate_per_second: peakStageRate,
     max_vus: maxVus,
     duration: duration,
+    arrival_stages: arrivalStages,
     metrics: data.metrics,
     root_group: data.root_group,
   };

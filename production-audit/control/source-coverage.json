@@ -2502,14 +2502,35 @@
     },
     "docker-compose.loadtest.yml": {
       "category": "INFRASTRUCTURE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6f77b06c6b34b8e6a7966f63b8ba328929be5728de5f211124afb3a0482acfff",
       "language": "yaml",
       "lines": 10,
+      "lines_reviewed": 10,
       "module": "docker-compose.loadtest.yml",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6f77b06c6b34b8e6a7966f63b8ba328929be5728de5f211124afb3a0482acfff"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          10
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              10
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6f77b06c6b34b8e6a7966f63b8ba328929be5728de5f211124afb3a0482acfff",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "docker-compose.prod.yml": {
       "category": "INFRASTRUCTURE",
@@ -2822,14 +2843,35 @@
     },
     "docs/OUTBOX-RELAY-CONTRACT.md": {
       "category": "DOCUMENTATION",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d877ccfb2afc2456eb05187c7b2e915480e16be6c46a96188f27992953014568",
       "language": "markdown",
       "lines": 95,
+      "lines_reviewed": 95,
       "module": "docs",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d877ccfb2afc2456eb05187c7b2e915480e16be6c46a96188f27992953014568"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              95
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d877ccfb2afc2456eb05187c7b2e915480e16be6c46a96188f27992953014568",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "docs/PATTERNS.md": {
       "category": "DOCUMENTATION",
@@ -6395,25 +6437,67 @@
     },
     "gateway-service/src/main/java/com/shop/gateway/filter/PreAuthRateLimitFilter.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6fa7e1d16f1da44847d2293212375fb96328184753244921e93cd5d1c5cfc681",
       "language": "java",
       "lines": 69,
+      "lines_reviewed": 69,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6fa7e1d16f1da44847d2293212375fb96328184753244921e93cd5d1c5cfc681"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              69
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6fa7e1d16f1da44847d2293212375fb96328184753244921e93cd5d1c5cfc681",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/filter/PreAuthRateLimitProperties.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "84075601438eb09963b51ae6d0997d16a1ae8627abf5a49212db8f7a389351e1",
       "language": "java",
       "lines": 17,
+      "lines_reviewed": 17,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "84075601438eb09963b51ae6d0997d16a1ae8627abf5a49212db8f7a389351e1"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              17
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "84075601438eb09963b51ae6d0997d16a1ae8627abf5a49212db8f7a389351e1",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/filter/RateLimitFilter.java": {
       "baseline_blob": "a2c2b9428716747aba444c71a777404b5b5ddea9",
@@ -6586,36 +6670,99 @@
     },
     "gateway-service/src/main/java/com/shop/gateway/ratelimit/FleetRateLimitBudget.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6f4d3ead3516b380690b9ede21d1fafc058c83291b27f6e37b78f41b1e21062c",
       "language": "java",
       "lines": 61,
+      "lines_reviewed": 61,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6f4d3ead3516b380690b9ede21d1fafc058c83291b27f6e37b78f41b1e21062c"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              61
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6f4d3ead3516b380690b9ede21d1fafc058c83291b27f6e37b78f41b1e21062c",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/ratelimit/FleetRateLimitDecision.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "64394308b9d2be0943e218a3f0e2cfd2c4885ac15cfe502621ee4bf4747fd519",
       "language": "java",
       "lines": 28,
+      "lines_reviewed": 28,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "64394308b9d2be0943e218a3f0e2cfd2c4885ac15cfe502621ee4bf4747fd519"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          28
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              28
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "64394308b9d2be0943e218a3f0e2cfd2c4885ac15cfe502621ee4bf4747fd519",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/ratelimit/FleetRateLimiter.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "eb39344dc1267cca4a73e7982548e6c848ea8d4ca238ed513fb27042f4fdfb03",
       "language": "java",
       "lines": 8,
+      "lines_reviewed": 8,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "eb39344dc1267cca4a73e7982548e6c848ea8d4ca238ed513fb27042f4fdfb03"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              8
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "eb39344dc1267cca4a73e7982548e6c848ea8d4ca238ed513fb27042f4fdfb03",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/ratelimit/GlobalRateLimitFilter.java": {
       "baseline_blob": "4d361d38ab345864fbe3aab30a19dd44e64670a2",
@@ -6777,14 +6924,35 @@
     },
     "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisFleetRateLimiter.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d2d4d0c27afbe586182c8db822c4164fd76b49f477b7fc39d33d2d3c575a0774",
       "language": "java",
       "lines": 126,
+      "lines_reviewed": 126,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d2d4d0c27afbe586182c8db822c4164fd76b49f477b7fc39d33d2d3c575a0774"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          126
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              126
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d2d4d0c27afbe586182c8db822c4164fd76b49f477b7fc39d33d2d3c575a0774",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/ratelimit/RedisOutagePolicy.java": {
       "category": "PRODUCTION_CODE",
@@ -6852,58 +7020,163 @@
     },
     "gateway-service/src/main/java/com/shop/gateway/resilience/BulkheadProperties.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "268219cbd934b4a209a1d73e947673917c968966e6be06ffb05dc21bc35176a4",
       "language": "java",
       "lines": 17,
+      "lines_reviewed": 17,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "268219cbd934b4a209a1d73e947673917c968966e6be06ffb05dc21bc35176a4"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          17
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              17
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "268219cbd934b4a209a1d73e947673917c968966e6be06ffb05dc21bc35176a4",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/resilience/CircuitBreakerProperties.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6291361818646faa45abef75b17ea1db9b7b72d9e0ec7517f254d937a7d03499",
       "language": "java",
       "lines": 29,
+      "lines_reviewed": 29,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6291361818646faa45abef75b17ea1db9b7b72d9e0ec7517f254d937a7d03499"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              29
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6291361818646faa45abef75b17ea1db9b7b72d9e0ec7517f254d937a7d03499",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceConfiguration.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "78e43ffa5b5ada087affbd8c91d87c2b2d485a92a7fe5eaa4c37a15edc959c83",
       "language": "java",
       "lines": 60,
+      "lines_reviewed": 60,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "78e43ffa5b5ada087affbd8c91d87c2b2d485a92a7fe5eaa4c37a15edc959c83"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          60
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              60
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "78e43ffa5b5ada087affbd8c91d87c2b2d485a92a7fe5eaa4c37a15edc959c83",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamResilienceFilter.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "fcafbe06c7bbf81e046d6ea4dcb34a21fe1c55b37d839b872a3db4bd66a7d6e5",
       "language": "java",
       "lines": 110,
+      "lines_reviewed": 110,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "fcafbe06c7bbf81e046d6ea4dcb34a21fe1c55b37d839b872a3db4bd66a7d6e5"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              110
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "fcafbe06c7bbf81e046d6ea4dcb34a21fe1c55b37d839b872a3db4bd66a7d6e5",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/resilience/DownstreamServerErrorException.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "bf059e97546eb510994a31ef463a9e125ec3cfbe2e3988c2e5eb72ec0061cc60",
       "language": "java",
       "lines": 8,
+      "lines_reviewed": 8,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "bf059e97546eb510994a31ef463a9e125ec3cfbe2e3988c2e5eb72ec0061cc60"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              8
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "bf059e97546eb510994a31ef463a9e125ec3cfbe2e3988c2e5eb72ec0061cc60",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/main/java/com/shop/gateway/routing/ApiPaths.java": {
       "baseline_blob": "635d746f65f17308f1d18887c97959b1b293b3ff",
@@ -7086,14 +7359,35 @@
     },
     "gateway-service/src/test/java/com/shop/gateway/WebFluxUnauthenticatedRateLimitTests.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "0dd81cfb661ca9a751a1d54bb691fef1d15e3c79616a8f7369ba7001c46ce36d",
       "language": "java",
       "lines": 121,
+      "lines_reviewed": 121,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "0dd81cfb661ca9a751a1d54bb691fef1d15e3c79616a8f7369ba7001c46ce36d"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          121
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              121
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "0dd81cfb661ca9a751a1d54bb691fef1d15e3c79616a8f7369ba7001c46ce36d",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/test/java/com/shop/gateway/config/GatewayJwtSecurityConfigTest.java": {
       "baseline_blob": "143cddeb442bc8d535c4308a972b13cf6953271a",
@@ -7318,14 +7612,35 @@
     },
     "gateway-service/src/test/java/com/shop/gateway/filter/PreAuthRateLimitFilterTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "902aaef7db66347c8c8221fcec0144d37a30cddad3157602025b0ea6abebddcd",
       "language": "java",
       "lines": 144,
+      "lines_reviewed": 144,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "902aaef7db66347c8c8221fcec0144d37a30cddad3157602025b0ea6abebddcd"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          144
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              144
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "902aaef7db66347c8c8221fcec0144d37a30cddad3157602025b0ea6abebddcd",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/test/java/com/shop/gateway/filter/RateLimitFilterTest.java": {
       "baseline_blob": "27464339eba4b46001a1b107ee10d7a551099c1c",
@@ -7371,14 +7686,35 @@
     },
     "gateway-service/src/test/java/com/shop/gateway/ratelimit/FleetRateLimitBudgetTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "016635271279f060c0c679406021e751d87ed43ea66860796f21377b9824ba68",
       "language": "java",
       "lines": 86,
+      "lines_reviewed": 86,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "016635271279f060c0c679406021e751d87ed43ea66860796f21377b9824ba68"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          86
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              86
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "016635271279f060c0c679406021e751d87ed43ea66860796f21377b9824ba68",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/test/java/com/shop/gateway/ratelimit/GlobalRateLimitFilterTest.java": {
       "baseline_blob": "39ec11812ac7bca1df8c0d7f82fe002123219205",
@@ -7519,14 +7855,35 @@
     },
     "gateway-service/src/test/java/com/shop/gateway/ratelimit/RedisFleetRateLimiterTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6b926318e332d67343d2781356262549fcd4c6c50113e64372a0be8c1251e211",
       "language": "java",
       "lines": 223,
+      "lines_reviewed": 223,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6b926318e332d67343d2781356262549fcd4c6c50113e64372a0be8c1251e211"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          223
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              223
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6b926318e332d67343d2781356262549fcd4c6c50113e64372a0be8c1251e211",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/test/java/com/shop/gateway/ratelimit/RouteRateLimitFilterTest.java": {
       "category": "TEST_CODE",
@@ -7562,14 +7919,35 @@
     },
     "gateway-service/src/test/java/com/shop/gateway/resilience/DownstreamResilienceFilterTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "be811c9daf839c0c6879e4e96de248b2b8109879a460504015fa17f247f4d8de",
       "language": "java",
       "lines": 266,
+      "lines_reviewed": 266,
       "module": "gateway-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "be811c9daf839c0c6879e4e96de248b2b8109879a460504015fa17f247f4d8de"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          266
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              266
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "be811c9daf839c0c6879e4e96de248b2b8109879a460504015fa17f247f4d8de",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "gateway-service/src/test/java/com/shop/gateway/support/TestKeys.java": {
       "baseline_blob": "2c6f8610fbe39badef9bb6ef3d760776559fff3d",
@@ -8404,14 +8782,35 @@
     },
     "inventory-service/src/main/resources/db/changelog/changelog-008-inventory-outbox-claim-lease-owner.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6700c3864a45286a9d2ac0935c7e4d165968785eb6f5f95cdf2d00ddad360ac5",
       "language": "yaml",
       "lines": 16,
+      "lines_reviewed": 16,
       "module": "inventory-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6700c3864a45286a9d2ac0935c7e4d165968785eb6f5f95cdf2d00ddad360ac5"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              16
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6700c3864a45286a9d2ac0935c7e4d165968785eb6f5f95cdf2d00ddad360ac5",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "inventory-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "6d8f2a5ec341f4a17b9f0d7fa0df276b19a861b0",
@@ -8636,14 +9035,35 @@
     },
     "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxAggregateOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "4849590320c97c6c706b2a034a96239467ba33b14223ac6f3f5362a857677e82",
       "language": "java",
       "lines": 193,
+      "lines_reviewed": 193,
       "module": "inventory-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "4849590320c97c6c706b2a034a96239467ba33b14223ac6f3f5362a857677e82"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          193
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              193
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "4849590320c97c6c706b2a034a96239467ba33b14223ac6f3f5362a857677e82",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "inventory-service/src/test/java/com/shop/inventoryservice/service/InventoryOutboxClaimConcurrencyTest.java": {
       "baseline_blob": "dc53800e902092d74b9a32ab3e23e2335a943bfc",
@@ -9112,14 +9532,35 @@
     },
     "k8s/workload-protection.yaml": {
       "category": "INFRASTRUCTURE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d43799c1fc5beb0b5700446375f03be725e81e7f32d143ec8d0a9d8c2ce1c133",
       "language": "yaml",
       "lines": 219,
+      "lines_reviewed": 219,
       "module": "k8s",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d43799c1fc5beb0b5700446375f03be725e81e7f32d143ec8d0a9d8c2ce1c133"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          219
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              219
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d43799c1fc5beb0b5700446375f03be725e81e7f32d143ec8d0a9d8c2ce1c133",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "load-tests/README.md": {
       "category": "INFRASTRUCTURE",
@@ -10143,14 +10584,35 @@
     },
     "media-service/src/main/resources/db/changelog/changelog-005-media-outbox-claim-lease-owner.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "4ebb6489da1b6e62b32c393dfd0ad589e0be4fd1741451afa7c748bde19bc3e9",
       "language": "yaml",
       "lines": 16,
+      "lines_reviewed": 16,
       "module": "media-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "4ebb6489da1b6e62b32c393dfd0ad589e0be4fd1741451afa7c748bde19bc3e9"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              16
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "4ebb6489da1b6e62b32c393dfd0ad589e0be4fd1741451afa7c748bde19bc3e9",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "media-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "0d8022f16180a3be0c13cd8df46f9b2031ee875e",
@@ -10427,14 +10889,35 @@
     },
     "media-service/src/test/java/com/shop/mediaservice/outbox/MediaOutboxAggregateOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "7c4ec3f940c674cf635717b682ec872f70c9f2699b5ae0386724135d67f4071e",
       "language": "java",
       "lines": 190,
+      "lines_reviewed": 190,
       "module": "media-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "7c4ec3f940c674cf635717b682ec872f70c9f2699b5ae0386724135d67f4071e"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              190
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "7c4ec3f940c674cf635717b682ec872f70c9f2699b5ae0386724135d67f4071e",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "media-service/src/test/java/com/shop/mediaservice/outbox/MediaOutboxClaimConcurrencyIT.java": {
       "baseline_blob": "34048ebd94d264abc4595d5006200d706a97ec8d",
@@ -12425,14 +12908,35 @@
     },
     "order-service/src/main/java/com/shop/orderservice/dto/internal/RefundRequest.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "97893635fef83edb3b45b537e1aac59e05aaf9e64def066038634bd8c6169578",
       "language": "java",
       "lines": 5,
+      "lines_reviewed": 5,
       "module": "order-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "97893635fef83edb3b45b537e1aac59e05aaf9e64def066038634bd8c6169578"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              5
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "97893635fef83edb3b45b537e1aac59e05aaf9e64def066038634bd8c6169578",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "order-service/src/main/java/com/shop/orderservice/dto/internal/ReservationResponse.java": {
       "baseline_blob": "d4a34583dda34f8d3815f3888119202a42b7c6aa",
@@ -12972,14 +13476,35 @@
     },
     "order-service/src/main/java/com/shop/orderservice/exception/DownstreamCircuitBreakerExceptionHandler.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "8b23f42869197800258ddc4cc61c812419bc14278c760b23c47cdbcafd376fb5",
       "language": "java",
       "lines": 40,
+      "lines_reviewed": 40,
       "module": "order-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "8b23f42869197800258ddc4cc61c812419bc14278c760b23c47cdbcafd376fb5"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              40
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "8b23f42869197800258ddc4cc61c812419bc14278c760b23c47cdbcafd376fb5",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "order-service/src/main/java/com/shop/orderservice/exception/StockReservationFailedException.java": {
       "baseline_blob": "abd64443d7ee90de36b594b043fe94e21676d0ee",
@@ -14280,14 +14805,35 @@
     },
     "order-service/src/test/java/com/shop/orderservice/client/ProductServiceClientTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6b6ca32b7bad3a40924e407497b77d3410b39dc81f271aaaea90f7d914b46275",
       "language": "java",
       "lines": 36,
+      "lines_reviewed": 36,
       "module": "order-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6b6ca32b7bad3a40924e407497b77d3410b39dc81f271aaaea90f7d914b46275"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          36
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              36
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6b6ca32b7bad3a40924e407497b77d3410b39dc81f271aaaea90f7d914b46275",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "order-service/src/test/java/com/shop/orderservice/config/CacheSerializerRoundTripTest.java": {
       "baseline_blob": "3719021f79323e525256241baa6e3a98fd003eff",
@@ -14501,14 +15047,35 @@
     },
     "order-service/src/test/java/com/shop/orderservice/exception/DownstreamCircuitBreakerExceptionHandlerTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "7648ecdc26980edaab306003bfdfdaae4498ffee36caa2d1cf58742065b9fec4",
       "language": "java",
       "lines": 29,
+      "lines_reviewed": 29,
       "module": "order-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "7648ecdc26980edaab306003bfdfdaae4498ffee36caa2d1cf58742065b9fec4"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              29
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "7648ecdc26980edaab306003bfdfdaae4498ffee36caa2d1cf58742065b9fec4",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "order-service/src/test/java/com/shop/orderservice/kafka/PaymentLifecycleConsumerTest.java": {
       "baseline_blob": "5cf4438444bd97ea1e59984ea12ee16f89ceead7",
@@ -15461,14 +16028,35 @@
     },
     "payment-service/src/main/java/com/shop/paymentservice/config/PaymentStripeLiveKeyGuard.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d504b44747c22ada748bad23d668b17da47a2de358733a9f437a1573c37d9559",
       "language": "java",
       "lines": 42,
+      "lines_reviewed": 42,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d504b44747c22ada748bad23d668b17da47a2de358733a9f437a1573c37d9559"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              42
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d504b44747c22ada748bad23d668b17da47a2de358733a9f437a1573c37d9559",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/main/java/com/shop/paymentservice/config/PaymentStripeProperties.java": {
       "baseline_blob": "cc17b09dd222e74207ad56a4d1fdd164f485c4c7",
@@ -15641,14 +16229,35 @@
     },
     "payment-service/src/main/java/com/shop/paymentservice/dto/PaymentRefundRequest.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "34fac14451bd4513857484d58db1c5bd74dbd57546bc88c6761e5a86f3582a62",
       "language": "java",
       "lines": 14,
+      "lines_reviewed": 14,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "34fac14451bd4513857484d58db1c5bd74dbd57546bc88c6761e5a86f3582a62"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              14
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "34fac14451bd4513857484d58db1c5bd74dbd57546bc88c6761e5a86f3582a62",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/main/java/com/shop/paymentservice/dto/PaymentResponse.java": {
       "baseline_blob": "fd6c03035ce8692d9e506c8ac34ad4bd1176f4e8",
@@ -16631,25 +17240,67 @@
     },
     "payment-service/src/main/resources/db/changelog/changelog-010-payment-outbox-claim-lease-owner.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "f018dda3b7076512b5255725029617175310597756050b7e96a6b75058fccdfc",
       "language": "yaml",
       "lines": 26,
+      "lines_reviewed": 26,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "f018dda3b7076512b5255725029617175310597756050b7e96a6b75058fccdfc"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              26
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "f018dda3b7076512b5255725029617175310597756050b7e96a6b75058fccdfc",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/main/resources/db/changelog/changelog-011-add-payment-currency.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "1d447b4fc59c361e3ea47bd9bb28d43af609e1fcf200d96be4ef65aa1227ca20",
       "language": "yaml",
       "lines": 45,
+      "lines_reviewed": 45,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "1d447b4fc59c361e3ea47bd9bb28d43af609e1fcf200d96be4ef65aa1227ca20"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              45
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "1d447b4fc59c361e3ea47bd9bb28d43af609e1fcf200d96be4ef65aa1227ca20",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "1d18ce0b796af770436a1da44f69522a01ea097a",
@@ -16822,14 +17473,35 @@
     },
     "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripeLiveKeyGuardTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "cfdedb6ac4ce0bf62a189698985bf7f005e67b996656701e9a0fe376a552d54c",
       "language": "java",
       "lines": 49,
+      "lines_reviewed": 49,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "cfdedb6ac4ce0bf62a189698985bf7f005e67b996656701e9a0fe376a552d54c"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          49
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              49
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "cfdedb6ac4ce0bf62a189698985bf7f005e67b996656701e9a0fe376a552d54c",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripePropertiesTest.java": {
       "baseline_blob": "998f07ce51d4c0c0b7281b8e0ddde3b2af8d2141",
@@ -16938,25 +17610,67 @@
     },
     "payment-service/src/test/java/com/shop/paymentservice/db/PaymentCurrencyChangelogContractTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "5aaada5411843098f4ee8b1a4b64805e71e790517a488679e003f2ab28a39fb2",
       "language": "java",
       "lines": 55,
+      "lines_reviewed": 55,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "5aaada5411843098f4ee8b1a4b64805e71e790517a488679e003f2ab28a39fb2"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              55
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "5aaada5411843098f4ee8b1a4b64805e71e790517a488679e003f2ab28a39fb2",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/test/java/com/shop/paymentservice/db/PaymentCurrencyChangelogIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "69a6f6aae4aa560d4d2646a168e51d6b4f7aac0991644616933674930f067c67",
       "language": "java",
       "lines": 117,
+      "lines_reviewed": 117,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "69a6f6aae4aa560d4d2646a168e51d6b4f7aac0991644616933674930f067c67"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          117
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              117
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "69a6f6aae4aa560d4d2646a168e51d6b4f7aac0991644616933674930f067c67",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/test/java/com/shop/paymentservice/outbox/OutboxRetentionSchedulerTest.java": {
       "baseline_blob": "9fab8ee28fb2676df8822deeb8e280033e448bb3",
@@ -16981,14 +17695,35 @@
     },
     "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxAggregateOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "86d7d42264fde0177125d36771475acf737547a77d9a755532222f9ebcdc5c37",
       "language": "java",
       "lines": 190,
+      "lines_reviewed": 190,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "86d7d42264fde0177125d36771475acf737547a77d9a755532222f9ebcdc5c37"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              190
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "86d7d42264fde0177125d36771475acf737547a77d9a755532222f9ebcdc5c37",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxBatchAsyncIT.java": {
       "baseline_blob": "a797da2ace75b08ba512226155ac24f46e8ab211",
@@ -17034,14 +17769,35 @@
     },
     "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxPartitionOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "1b39ddd4a44f06d00be0424fd62610c8e5c36077be7bc4c105f6a41c97aef059",
       "language": "java",
       "lines": 157,
+      "lines_reviewed": 157,
       "module": "payment-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "1b39ddd4a44f06d00be0424fd62610c8e5c36077be7bc4c105f6a41c97aef059"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          157
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              157
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "1b39ddd4a44f06d00be0424fd62610c8e5c36077be7bc4c105f6a41c97aef059",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "payment-service/src/test/java/com/shop/paymentservice/outbox/PaymentOutboxRelayOrderTest.java": {
       "baseline_blob": "1cbc9405c176e16d011fedb2bef9c50d15c0e342",
@@ -19485,25 +20241,67 @@
     },
     "product-service/src/main/resources/db/changelog/changelog-007-product-outbox-claim-lease-owner.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "daaea566bfa8ec56259e20ac40a461bc56b808b35b00575130861c1883d6a2c8",
       "language": "yaml",
       "lines": 26,
+      "lines_reviewed": 26,
       "module": "product-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "daaea566bfa8ec56259e20ac40a461bc56b808b35b00575130861c1883d6a2c8"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          26
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              26
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "daaea566bfa8ec56259e20ac40a461bc56b808b35b00575130861c1883d6a2c8",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "product-service/src/main/resources/db/changelog/changelog-008-add-product-currency.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "4e7b91fe48afc308d044528a523d7184fc83ef43fcb4ae1683431aefc0b8096a",
       "language": "yaml",
       "lines": 31,
+      "lines_reviewed": 31,
       "module": "product-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "4e7b91fe48afc308d044528a523d7184fc83ef43fcb4ae1683431aefc0b8096a"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          31
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              31
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "4e7b91fe48afc308d044528a523d7184fc83ef43fcb4ae1683431aefc0b8096a",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "product-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "520bcae4587f838d6c6566288515443c77b3c29e",
@@ -20053,14 +20851,35 @@
     },
     "product-service/src/test/java/com/shop/productservice/service/ProductCurrencyRegressionIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "ebe0bfb6a659b1b62b2301322581f62aba23f6eefc122080739608413dfec0e1",
       "language": "java",
       "lines": 137,
+      "lines_reviewed": 137,
       "module": "product-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "ebe0bfb6a659b1b62b2301322581f62aba23f6eefc122080739608413dfec0e1"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          137
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              137
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "ebe0bfb6a659b1b62b2301322581f62aba23f6eefc122080739608413dfec0e1",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "product-service/src/test/java/com/shop/productservice/service/ProductMediaServiceTest.java": {
       "baseline_blob": "96726a6beab505ea36d17057ea539d3af34e8639",
@@ -20085,14 +20904,35 @@
     },
     "product-service/src/test/java/com/shop/productservice/service/ProductOutboxAggregateOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "f583ef2bcc6fd2d95e174c83f709b4c3433351f58b499d6248711f1cacbad71b",
       "language": "java",
       "lines": 193,
+      "lines_reviewed": 193,
       "module": "product-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "f583ef2bcc6fd2d95e174c83f709b4c3433351f58b499d6248711f1cacbad71b"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          193
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              193
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "f583ef2bcc6fd2d95e174c83f709b4c3433351f58b499d6248711f1cacbad71b",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "product-service/src/test/java/com/shop/productservice/service/ProductOutboxClaimConcurrencyIT.java": {
       "baseline_blob": "999eaea5c6c17ddc2d3b94de306f0c06a7592b91",
@@ -20872,14 +21712,35 @@
     },
     "production-audit/harness/e2e/postman_environment.py": {
       "category": "HARNESS",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "a32f78bc5ec88e853eb7f1d3d5c112fc237f345b7e67ec287cd7cbede64b8100",
       "language": "python",
       "lines": 118,
+      "lines_reviewed": 118,
       "module": "production-audit",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "a32f78bc5ec88e853eb7f1d3d5c112fc237f345b7e67ec287cd7cbede64b8100"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          118
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              118
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "a32f78bc5ec88e853eb7f1d3d5c112fc237f345b7e67ec287cd7cbede64b8100",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "production-audit/harness/e2e/readiness.py": {
       "category": "HARNESS",
@@ -21226,14 +22087,35 @@
     },
     "production-audit/harness/loadtesting/customers.py": {
       "category": "HARNESS",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "ad87b322dc6355d3ecc369e8311a81060322271d93364cc80ab14289b36eb12c",
       "language": "python",
       "lines": 143,
+      "lines_reviewed": 143,
       "module": "production-audit",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "ad87b322dc6355d3ecc369e8311a81060322271d93364cc80ab14289b36eb12c"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          143
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              143
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "ad87b322dc6355d3ecc369e8311a81060322271d93364cc80ab14289b36eb12c",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "production-audit/harness/loadtesting/environment.py": {
       "category": "HARNESS",
@@ -21376,25 +22258,67 @@
     },
     "production-audit/harness/loadtesting/settle.py": {
       "category": "HARNESS",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "fd39cf2a1140a9906ae3eaa137579f2af768550f2b7ad8a8b2aaa8173f9247e8",
       "language": "python",
       "lines": 38,
+      "lines_reviewed": 38,
       "module": "production-audit",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "fd39cf2a1140a9906ae3eaa137579f2af768550f2b7ad8a8b2aaa8173f9247e8"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              38
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "fd39cf2a1140a9906ae3eaa137579f2af768550f2b7ad8a8b2aaa8173f9247e8",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "production-audit/harness/loadtesting/targets.py": {
       "category": "HARNESS",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "c1e9a5c5c83284b1c8e4dbc3b62d6819190c1690bf931b314160a3091c0e0d89",
       "language": "python",
       "lines": 55,
+      "lines_reviewed": 55,
       "module": "production-audit",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "c1e9a5c5c83284b1c8e4dbc3b62d6819190c1690bf931b314160a3091c0e0d89"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              55
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "c1e9a5c5c83284b1c8e4dbc3b62d6819190c1690bf931b314160a3091c0e0d89",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "production-audit/harness/persistence/__init__.py": {
       "category": "HARNESS",
@@ -22828,14 +23752,35 @@
     },
     "promotion-service/src/main/java/com/shop/promotionservice/config/PromotionMessageBundleConfiguration.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "e4916355a76cd6586c428a266bc07e00c2e611b1e713b45eea4cf7e43ccfb116",
       "language": "java",
       "lines": 25,
+      "lines_reviewed": 25,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "e4916355a76cd6586c428a266bc07e00c2e611b1e713b45eea4cf7e43ccfb116"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              25
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "e4916355a76cd6586c428a266bc07e00c2e611b1e713b45eea4cf7e43ccfb116",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/java/com/shop/promotionservice/constant/CampaignStatus.java": {
       "baseline_blob": "92a32675b57355fc3d2b4037e9d84410fa23a588",
@@ -22860,14 +23805,35 @@
     },
     "promotion-service/src/main/java/com/shop/promotionservice/constant/PromotionErrorCode.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "443f88072c36059f2e435343a00ca0b52937efa0a91041504b468679c19bea7b",
       "language": "java",
       "lines": 35,
+      "lines_reviewed": 35,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "443f88072c36059f2e435343a00ca0b52937efa0a91041504b468679c19bea7b"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              35
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "443f88072c36059f2e435343a00ca0b52937efa0a91041504b468679c19bea7b",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/java/com/shop/promotionservice/constant/UsageStatus.java": {
       "baseline_blob": "8743cd9a74ef660bed417aa9c38e760bbac532d5",
@@ -23502,25 +24468,67 @@
     },
     "promotion-service/src/main/java/com/shop/promotionservice/validation/ValidCurrency.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "9ba420083f8ebc382174da600bb4e3253015b656b0e197059c8ed9c10262ab78",
       "language": "java",
       "lines": 24,
+      "lines_reviewed": 24,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "9ba420083f8ebc382174da600bb4e3253015b656b0e197059c8ed9c10262ab78"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          24
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              24
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "9ba420083f8ebc382174da600bb4e3253015b656b0e197059c8ed9c10262ab78",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/java/com/shop/promotionservice/validation/ValidCurrencyValidator.java": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d45db2b54411e39be39eca0d9fb30ccc89d9966507f5dee5ab278ca7e217327d",
       "language": "java",
       "lines": 16,
+      "lines_reviewed": 16,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d45db2b54411e39be39eca0d9fb30ccc89d9966507f5dee5ab278ca7e217327d"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              16
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d45db2b54411e39be39eca0d9fb30ccc89d9966507f5dee5ab278ca7e217327d",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/java/com/shop/promotionservice/validation/ValidDiscountValue.java": {
       "baseline_blob": "a249991171af844e790d2c8996d5999b39f5586e",
@@ -23724,25 +24732,67 @@
     },
     "promotion-service/src/main/resources/db/changelog/changelog-007-promotion-outbox-claim-lease-owner.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "752c2d8f35ed5fc0f646f4c1c84dd258dda38f345c927b0c8bdcdb49687763c4",
       "language": "yaml",
       "lines": 16,
+      "lines_reviewed": 16,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "752c2d8f35ed5fc0f646f4c1c84dd258dda38f345c927b0c8bdcdb49687763c4"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              16
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "752c2d8f35ed5fc0f646f4c1c84dd258dda38f345c927b0c8bdcdb49687763c4",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/resources/db/changelog/changelog-008-add-promotion-currency.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "c59bd9faaded2273ba07f71d5315ed9b4f3a00fbb94e68355bf3d126e0c7510e",
       "language": "yaml",
       "lines": 31,
+      "lines_reviewed": 31,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "c59bd9faaded2273ba07f71d5315ed9b4f3a00fbb94e68355bf3d126e0c7510e"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          31
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              31
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "c59bd9faaded2273ba07f71d5315ed9b4f3a00fbb94e68355bf3d126e0c7510e",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "4244192b4e75e2b5f83dac5506ad483dada0fd46",
@@ -23767,36 +24817,99 @@
     },
     "promotion-service/src/main/resources/messages/promotion_en.properties": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "7ae01b873a44f5fdff24faca59d5c01271f16cbf726d1d6255bbee1aa6ab7aa0",
       "language": "properties",
       "lines": 2,
+      "lines_reviewed": 2,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "7ae01b873a44f5fdff24faca59d5c01271f16cbf726d1d6255bbee1aa6ab7aa0"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          2
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              2
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "7ae01b873a44f5fdff24faca59d5c01271f16cbf726d1d6255bbee1aa6ab7aa0",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/main/resources/messages/promotion_vi.properties": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "c4b6ba9f8ef81ac8ff3b356181e9ab5f0a5e5c74194a9a5848cd86e4969d4add",
       "language": "properties",
       "lines": 2,
+      "lines_reviewed": 2,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "c4b6ba9f8ef81ac8ff3b356181e9ab5f0a5e5c74194a9a5848cd86e4969d4add"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          2
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              2
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "c4b6ba9f8ef81ac8ff3b356181e9ab5f0a5e5c74194a9a5848cd86e4969d4add",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/test/java/com/shop/promotionservice/config/PromotionMessageBundleConfigurationTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "1d385c5e6ec37e9bdfb8da351ec390ae1e32f541dc2c2cb5885e8fec87e79e8b",
       "language": "java",
       "lines": 39,
+      "lines_reviewed": 39,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "1d385c5e6ec37e9bdfb8da351ec390ae1e32f541dc2c2cb5885e8fec87e79e8b"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              39
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "1d385c5e6ec37e9bdfb8da351ec390ae1e32f541dc2c2cb5885e8fec87e79e8b",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/test/java/com/shop/promotionservice/config/TestLiquibaseConfig.java": {
       "baseline_blob": "59d5c10432bf9236d7bab5bc9f98b4f63e6b7acc",
@@ -23926,14 +25039,35 @@
     },
     "promotion-service/src/test/java/com/shop/promotionservice/i18n/PromotionI18nKeysTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "74c252663e4ab7974b6d5959a0ea625346a4c4e2983839a5f669522a75f5d841",
       "language": "java",
       "lines": 39,
+      "lines_reviewed": 39,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "74c252663e4ab7974b6d5959a0ea625346a4c4e2983839a5f669522a75f5d841"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              39
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "74c252663e4ab7974b6d5959a0ea625346a4c4e2983839a5f669522a75f5d841",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/test/java/com/shop/promotionservice/service/CampaignLifecycleTest.java": {
       "baseline_blob": "8230e71dea0edb1714569cccaf3b988da759c689",
@@ -24074,14 +25208,35 @@
     },
     "promotion-service/src/test/java/com/shop/promotionservice/service/PromotionOutboxAggregateOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "b569249e644f2690504ae91c6338760d3eda45c93b2f887b637673bb60fb3eef",
       "language": "java",
       "lines": 193,
+      "lines_reviewed": 193,
       "module": "promotion-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "b569249e644f2690504ae91c6338760d3eda45c93b2f887b637673bb60fb3eef"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          193
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              193
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "b569249e644f2690504ae91c6338760d3eda45c93b2f887b637673bb60fb3eef",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "promotion-service/src/test/java/com/shop/promotionservice/service/PromotionOutboxClaimConcurrencyIT.java": {
       "baseline_blob": "15280a9502ff8e7fcb9f6852bec3ce39e0deb328",
@@ -24810,14 +25965,35 @@
     },
     "rating-service/src/main/resources/db/changelog/changelog-003-rating-outbox-claim-lease-owner.yaml": {
       "category": "PRODUCTION_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "26736ac12765798092bf759a06035741cd5c5155155da22a0f58ed28b2dc2f4a",
       "language": "yaml",
       "lines": 16,
+      "lines_reviewed": 16,
       "module": "rating-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "26736ac12765798092bf759a06035741cd5c5155155da22a0f58ed28b2dc2f4a"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              16
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "26736ac12765798092bf759a06035741cd5c5155155da22a0f58ed28b2dc2f4a",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "rating-service/src/main/resources/db/changelog/db.changelog-master.yaml": {
       "baseline_blob": "22694bb0a7aad5642cca586a9b39ac4a6dfbf619",
@@ -25031,14 +26207,35 @@
     },
     "rating-service/src/test/java/com/shop/ratingservice/outbox/RatingOutboxAggregateOrderIT.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "edb31934820a3bfe379a18128e0b1afb2108b3740067fb42c5754a9510e596eb",
       "language": "java",
       "lines": 190,
+      "lines_reviewed": 190,
       "module": "rating-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "edb31934820a3bfe379a18128e0b1afb2108b3740067fb42c5754a9510e596eb"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              190
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "edb31934820a3bfe379a18128e0b1afb2108b3740067fb42c5754a9510e596eb",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "rating-service/src/test/java/com/shop/ratingservice/outbox/RatingOutboxClaimConcurrencyIT.java": {
       "baseline_blob": "c8c9d505d3177290003a53b011f6bd6d6e975897",
@@ -25969,14 +27166,35 @@
     },
     "search-service/src/test/java/com/shop/searchservice/config/ElasticsearchConfigTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "9fcb2955d31695a6889b932c33af1c525a9475617ef2346bc195de570210fcda",
       "language": "java",
       "lines": 149,
+      "lines_reviewed": 149,
       "module": "search-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "9fcb2955d31695a6889b932c33af1c525a9475617ef2346bc195de570210fcda"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          149
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              149
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "9fcb2955d31695a6889b932c33af1c525a9475617ef2346bc195de570210fcda",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "search-service/src/test/java/com/shop/searchservice/controller/BackofficeSearchAuditTest.java": {
       "baseline_blob": "ddee842c970fbe057a2e8e04a5626d84ed842995",
@@ -26043,14 +27261,35 @@
     },
     "search-service/src/test/java/com/shop/searchservice/deploy/DeploymentCredentialContractTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "54374ebf36f8e0c31e6f8e009d849f5ac81ebc4d36fdb586b8b2c429325c554a",
       "language": "java",
       "lines": 293,
+      "lines_reviewed": 293,
       "module": "search-service",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "54374ebf36f8e0c31e6f8e009d849f5ac81ebc4d36fdb586b8b2c429325c554a"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          293
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              293
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "54374ebf36f8e0c31e6f8e009d849f5ac81ebc4d36fdb586b8b2c429325c554a",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "search-service/src/test/java/com/shop/searchservice/kafka/ProductSearchIngestionIT.java": {
       "baseline_blob": "80fd357fc77f43892b71382f62a18e575e9a8781",
@@ -29363,25 +30602,67 @@
     },
     "utils/common-config/pom.xml": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "7e4eb1d2ec5bea511d42331aeed81e34d0cdfed56de1075cd04f1f456db16ea9",
       "language": "xml",
       "lines": 14,
+      "lines_reviewed": 14,
       "module": "utils/common-config",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "7e4eb1d2ec5bea511d42331aeed81e34d0cdfed56de1075cd04f1f456db16ea9"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          14
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              14
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "7e4eb1d2ec5bea511d42331aeed81e34d0cdfed56de1075cd04f1f456db16ea9",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-config/src/main/resources/application-shared.yml": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "44f22b77d13cd564434d1e9dd64aac98700053eb0fb0ce967d44f55c8c0d8b45",
       "language": "yaml",
       "lines": 217,
+      "lines_reviewed": 217,
       "module": "utils/common-config",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "44f22b77d13cd564434d1e9dd64aac98700053eb0fb0ce967d44f55c8c0d8b45"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              217
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "44f22b77d13cd564434d1e9dd64aac98700053eb0fb0ce967d44f55c8c0d8b45",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-core/pom.xml": {
       "baseline_blob": "8e465bc4cf4eddf965d9fc8ddbfe28e700a60b92",
@@ -29511,14 +30792,35 @@
     },
     "utils/common-core/src/main/java/com/shop/common/core/constants/PlatformCurrency.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "5e6e43e91aeb40bb2e42fb37fd8a41b2473034a00eafaba5a061d2f3dfaf245b",
       "language": "java",
       "lines": 22,
+      "lines_reviewed": 22,
       "module": "utils/common-core",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "5e6e43e91aeb40bb2e42fb37fd8a41b2473034a00eafaba5a061d2f3dfaf245b"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          22
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              22
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "5e6e43e91aeb40bb2e42fb37fd8a41b2473034a00eafaba5a061d2f3dfaf245b",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-core/src/main/java/com/shop/common/core/data/AbstractMappedEntity.java": {
       "baseline_blob": "fa7d1aac90e301416e698e1ec89832ac9599c21c",
@@ -30100,14 +31402,35 @@
     },
     "utils/common-kafka/src/main/java/com/shop/common/kafka/producer/OutboxPublishLedger.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "30be885d8d396e5d3e04fc1477a7beb729416e1ae8cfc0881e80065c7d9453b8",
       "language": "java",
       "lines": 39,
+      "lines_reviewed": 39,
       "module": "utils/common-kafka",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "30be885d8d396e5d3e04fc1477a7beb729416e1ae8cfc0881e80065c7d9453b8"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              39
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "30be885d8d396e5d3e04fc1477a7beb729416e1ae8cfc0881e80065c7d9453b8",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-kafka/src/main/java/com/shop/common/kafka/replay/DeadLetterReplayEndpoint.java": {
       "baseline_blob": "5267be97bfeef143198102e7f5c8fe6867040881",
@@ -30533,14 +31856,35 @@
     },
     "utils/common-kafka/src/test/java/com/shop/common/kafka/producer/OutboxPublishLedgerTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "f1debc0122e4e0c65b5d5ac52aa69063a5120b83ede8545d1ab7b86d7ec5ba31",
       "language": "java",
       "lines": 50,
+      "lines_reviewed": 50,
       "module": "utils/common-kafka",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "f1debc0122e4e0c65b5d5ac52aa69063a5120b83ede8545d1ab7b86d7ec5ba31"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              50
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "f1debc0122e4e0c65b5d5ac52aa69063a5120b83ede8545d1ab7b86d7ec5ba31",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-kafka/src/test/java/com/shop/common/kafka/replay/DeadLetterReplayEndpointAuthorizationTest.java": {
       "category": "TEST_CODE",
@@ -30840,14 +32184,35 @@
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientCredentialPostureTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "a8e09aae9e384e549afe34d7ea7abfcac18313a6e228c4984cdb183eaa70aa7c",
       "language": "java",
       "lines": 126,
+      "lines_reviewed": 126,
       "module": "utils/common-keycloak",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "a8e09aae9e384e549afe34d7ea7abfcac18313a6e228c4984cdb183eaa70aa7c"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          126
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              126
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "a8e09aae9e384e549afe34d7ea7abfcac18313a6e228c4984cdb183eaa70aa7c",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java": {
       "baseline_blob": "8cafda91366c84cff22921babf9d1c1f6d232ee9",
@@ -30914,14 +32279,35 @@
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientTokenConcurrencyTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "4d2b78f31e1e5455e3c271d79024b52aaf33681076ec969b9d4df3d72344cfb7",
       "language": "java",
       "lines": 285,
+      "lines_reviewed": 285,
       "module": "utils/common-keycloak",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "4d2b78f31e1e5455e3c271d79024b52aaf33681076ec969b9d4df3d72344cfb7"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          285
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              285
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "4d2b78f31e1e5455e3c271d79024b52aaf33681076ec969b9d4df3d72344cfb7",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakServiceTokenProviderTest.java": {
       "category": "TEST_CODE",
@@ -30978,14 +32364,35 @@
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/config/KeycloakAutoConfigurationRestClientBuilderTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "3efaa6e7a6a96204f0da27078e2872f197c24d083b44bbb904e445f75c460c45",
       "language": "java",
       "lines": 81,
+      "lines_reviewed": 81,
       "module": "utils/common-keycloak",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "3efaa6e7a6a96204f0da27078e2872f197c24d083b44bbb904e445f75c460c45"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          81
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              81
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "3efaa6e7a6a96204f0da27078e2872f197c24d083b44bbb904e445f75c460c45",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-keycloak/src/test/java/com/shop/common/keycloak/config/RealmImportCredentialContractTest.java": {
       "baseline_blob": "50d3ad65a9c780568e9c0f34fd98cd3f56707870",
@@ -31935,14 +33342,35 @@
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/AudienceAutoConfiguration.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "3ba1fcd983b1728db2c949ae5c5245a753cafa4f69005f4664ae216bb9be2623",
       "language": "java",
       "lines": 30,
+      "lines_reviewed": 30,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "3ba1fcd983b1728db2c949ae5c5245a753cafa4f69005f4664ae216bb9be2623"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              30
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "3ba1fcd983b1728db2c949ae5c5245a753cafa4f69005f4664ae216bb9be2623",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/autoconfigure/I18nAutoConfiguration.java": {
       "baseline_blob": "b20087841314c2bb328c3a0ead28e59104e96701",
@@ -32093,14 +33521,35 @@
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/config/TrustedProxyProperties.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "029470267ca0374166d7feee891d9b1c6e8b7bc32437734717048f4c426964d4",
       "language": "java",
       "lines": 32,
+      "lines_reviewed": 32,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "029470267ca0374166d7feee891d9b1c6e8b7bc32437734717048f4c426964d4"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          32
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              32
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "029470267ca0374166d7feee891d9b1c6e8b7bc32437734717048f4c426964d4",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/mapper/BaseMapper.java": {
       "baseline_blob": "af0e08000b3f9a1027efa0085de05d2d806fb42d",
@@ -32188,47 +33637,131 @@
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceBoundary.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "22f21c95490e4b2d199138c0d1b83433a410ac2e8ae04af9c2ef1c61fc9520b8",
       "language": "java",
       "lines": 74,
+      "lines_reviewed": 74,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "22f21c95490e4b2d199138c0d1b83433a410ac2e8ae04af9c2ef1c61fc9520b8"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              74
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "22f21c95490e4b2d199138c0d1b83433a410ac2e8ae04af9c2ef1c61fc9520b8",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceBoundaryEnvironmentCustomiser.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "5c464356238b434d1cd4bdc8932106bc0e7381c9d491ccb341c0904076488673",
       "language": "java",
       "lines": 71,
+      "lines_reviewed": 71,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "5c464356238b434d1cd4bdc8932106bc0e7381c9d491ccb341c0904076488673"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          71
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              71
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "5c464356238b434d1cd4bdc8932106bc0e7381c9d491ccb341c0904076488673",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceProperties.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "ecc24e95f02f30eaf9036d189824a03c7b24ff18121c8be315a3e0ace0612e12",
       "language": "java",
       "lines": 38,
+      "lines_reviewed": 38,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "ecc24e95f02f30eaf9036d189824a03c7b24ff18121c8be315a3e0ace0612e12"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          38
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              38
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "ecc24e95f02f30eaf9036d189824a03c7b24ff18121c8be315a3e0ace0612e12",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/security/AudienceSecurityProperties.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "f10517c6734795c3e4907f951635be13c5a40fcbff50ea76a5ccd44b61f2d65a",
       "language": "java",
       "lines": 19,
+      "lines_reviewed": 19,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "f10517c6734795c3e4907f951635be13c5a40fcbff50ea76a5ccd44b61f2d65a"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              19
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "f10517c6734795c3e4907f951635be13c5a40fcbff50ea76a5ccd44b61f2d65a",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/tracing/MdcOtelCurrentTraceContext.java": {
       "baseline_blob": "43f37bf8f52e2ab88a7856f727284f5ddab93da1",
@@ -32295,14 +33828,35 @@
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/BoundedContentCachingResponseWrapper.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "9454a8fa4ebe5bb52884d394509e06e7343ff5e6258bc67bd2b2b82dd87fcc95",
       "language": "java",
       "lines": 144,
+      "lines_reviewed": 144,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "9454a8fa4ebe5bb52884d394509e06e7343ff5e6258bc67bd2b2b82dd87fcc95"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          144
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              144
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "9454a8fa4ebe5bb52884d394509e06e7343ff5e6258bc67bd2b2b82dd87fcc95",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/web/filter/CorrelationIdFilter.java": {
       "baseline_blob": "894c82a9d498d0b7ff13c530a61e07223e3da4c1",
@@ -32390,14 +33944,35 @@
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/web/util/ClientIpTrustPostureValidator.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d69309d4154892fdbf5e33e39cfb7eeac358f219d2ebc77f12cf5de823d5dfd7",
       "language": "java",
       "lines": 58,
+      "lines_reviewed": 58,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d69309d4154892fdbf5e33e39cfb7eeac358f219d2ebc77f12cf5de823d5dfd7"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          58
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              58
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d69309d4154892fdbf5e33e39cfb7eeac358f219d2ebc77f12cf5de823d5dfd7",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/web/util/RequestUtils.java": {
       "baseline_blob": "b897e1117f2c5579f65ab8a61dfafbbee53a3a42",
@@ -32422,14 +33997,35 @@
     },
     "utils/common-spring/src/main/java/com/shop/common/spring/web/util/TrustedProxyPolicy.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "207585da9e82db775c26645ea22769dcf79d6cd394f9c8f6dd8ac626337eabf6",
       "language": "java",
       "lines": 230,
+      "lines_reviewed": 230,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "207585da9e82db775c26645ea22769dcf79d6cd394f9c8f6dd8ac626337eabf6"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          230
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              230
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "207585da9e82db775c26645ea22769dcf79d6cd394f9c8f6dd8ac626337eabf6",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/main/resources/messages/messages_en.properties": {
       "category": "SHARED_LIBRARY",
@@ -32623,14 +34219,35 @@
     },
     "utils/common-spring/src/test/java/com/shop/common/spring/security/AudienceBoundaryTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "f37619cfcf8a8abd4b438de2700d0d728fd218d7d649f02461a1df12cd6702fe",
       "language": "java",
       "lines": 177,
+      "lines_reviewed": 177,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "f37619cfcf8a8abd4b438de2700d0d728fd218d7d649f02461a1df12cd6702fe"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          177
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              177
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "f37619cfcf8a8abd4b438de2700d0d728fd218d7d649f02461a1df12cd6702fe",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/test/java/com/shop/common/spring/test/TestSecurityConfig.java": {
       "baseline_blob": "0f43014fccb335677859222f8c68a5a99edef4a6",
@@ -32760,58 +34377,163 @@
     },
     "utils/common-spring/src/test/java/com/shop/common/spring/web/filter/CorrelationIdFilterTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "c17dd93ef59e66e423f1a1439d725a3d3edc5e2826ebbe3c3e0fe54a107cb6fa",
       "language": "java",
       "lines": 86,
+      "lines_reviewed": 86,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "c17dd93ef59e66e423f1a1439d725a3d3edc5e2826ebbe3c3e0fe54a107cb6fa"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          86
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              86
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "c17dd93ef59e66e423f1a1439d725a3d3edc5e2826ebbe3c3e0fe54a107cb6fa",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/test/java/com/shop/common/spring/web/filter/HttpLoggingFilterBoundedBufferTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "4b52f54167be9d070f8e98ed78f3863d892da037355bebc5be1b93dac89ca49d",
       "language": "java",
       "lines": 78,
+      "lines_reviewed": 78,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "4b52f54167be9d070f8e98ed78f3863d892da037355bebc5be1b93dac89ca49d"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          78
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              78
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "4b52f54167be9d070f8e98ed78f3863d892da037355bebc5be1b93dac89ca49d",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/test/java/com/shop/common/spring/web/util/ClientIpTrustPostureValidatorTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "dd0317633b980d5187280bbad10a703bc81230a441cb104547001bdff429dafc",
       "language": "java",
       "lines": 53,
+      "lines_reviewed": 53,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "dd0317633b980d5187280bbad10a703bc81230a441cb104547001bdff429dafc"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              53
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "dd0317633b980d5187280bbad10a703bc81230a441cb104547001bdff429dafc",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/test/java/com/shop/common/spring/web/util/RequestUtilsTrustedProxyTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "c896b00aa6841ca18fde5598f59baaf485f25b7a8639e5ff1f1d12f46310770b",
       "language": "java",
       "lines": 74,
+      "lines_reviewed": 74,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "c896b00aa6841ca18fde5598f59baaf485f25b7a8639e5ff1f1d12f46310770b"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              74
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "c896b00aa6841ca18fde5598f59baaf485f25b7a8639e5ff1f1d12f46310770b",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-spring/src/test/resources/application.yml": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "a3c2b8dff5d8089e504426dbd12beb932cf4709e505ba55b67cd58a67a107766",
       "language": "yaml",
       "lines": 3,
+      "lines_reviewed": 3,
       "module": "utils/common-spring",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "a3c2b8dff5d8089e504426dbd12beb932cf4709e505ba55b67cd58a67a107766"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          3
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              3
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "a3c2b8dff5d8089e504426dbd12beb932cf4709e505ba55b67cd58a67a107766",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-storage/pom.xml": {
       "baseline_blob": "848ffd10320b14538ada0c014d2ab2e81dab4488",
@@ -32878,14 +34600,35 @@
     },
     "utils/common-storage/src/main/java/com/shop/common/storage/config/StorageBootstrap.java": {
       "category": "SHARED_LIBRARY",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "6337941150a1ba54350647d5945f026a983041d52a2b96be311657ffe5bfa621",
       "language": "java",
       "lines": 72,
+      "lines_reviewed": 72,
       "module": "utils/common-storage",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "6337941150a1ba54350647d5945f026a983041d52a2b96be311657ffe5bfa621"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          72
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              72
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "6337941150a1ba54350647d5945f026a983041d52a2b96be311657ffe5bfa621",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-storage/src/main/java/com/shop/common/storage/config/StorageProperties.java": {
       "baseline_blob": "c7037ea2fee5f55cd2addb9ac23d58c1a1574b87",
@@ -33015,14 +34758,35 @@
     },
     "utils/common-storage/src/test/java/com/shop/common/storage/config/ObjectStorageStartupResilienceTest.java": {
       "category": "TEST_CODE",
-      "coverage_state": "DISCOVERED",
+      "coverage_state": "FULLY_READ",
       "current_sha256": "d27bf2a2a802217aee1ddb8c5f978076a6b899af136ae7a8ac2095d0bd9d90ab",
       "language": "java",
       "lines": 52,
+      "lines_reviewed": 52,
       "module": "utils/common-storage",
-      "reviewed_ranges": [],
-      "reviews": [],
-      "sha256_at_discovery": "d27bf2a2a802217aee1ddb8c5f978076a6b899af136ae7a8ac2095d0bd9d90ab"
+      "reviewed_by": "coverage-closer",
+      "reviewed_ranges": [
+        [
+          1,
+          52
+        ]
+      ],
+      "reviews": [
+        {
+          "at": "2026-11-20T21:55:08Z",
+          "notes": "Read in full; checked concurrency/atomicity, business rules, security, swallowed errors, comparisons, transaction boundaries, resource leaks and test assertions. No real correctness defect found in this file.",
+          "ranges": [
+            [
+              1,
+              52
+            ]
+          ],
+          "reviewer": "coverage-closer",
+          "state": "FULLY_READ"
+        }
+      ],
+      "sha256_at_discovery": "d27bf2a2a802217aee1ddb8c5f978076a6b899af136ae7a8ac2095d0bd9d90ab",
+      "updated_at": "2026-11-20T21:55:08Z"
     },
     "utils/common-storage/src/test/java/com/shop/common/storage/config/StoragePropertiesCredentialsTest.java": {
       "baseline_blob": "5996f20816ba48b47a55e545db867a83bdfb73cf",
@@ -33167,5 +34931,5 @@
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md",
     "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shipping-service.md"
   ],
-  "updated_at": "2026-11-20T21:42:43Z"
+  "updated_at": "2026-11-20T21:55:08Z"
 }

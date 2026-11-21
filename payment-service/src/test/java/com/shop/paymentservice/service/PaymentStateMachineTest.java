@@ -95,6 +95,19 @@ class PaymentStateMachineTest {
     }
 
     @Test
+    void partiallyRefundedToPartiallyRefundedIsLegal() {
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED,
+                PaymentStateMachine.transition(PaymentStatus.PARTIALLY_REFUNDED,
+                        PaymentStatus.PARTIALLY_REFUNDED));
+    }
+
+    @Test
+    void partiallyRefundedToRefundedIsLegal() {
+        assertEquals(PaymentStatus.REFUNDED,
+                PaymentStateMachine.transition(PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED));
+    }
+
+    @Test
     void refundedToRefundedIsIdempotent() {
         assertEquals(PaymentStatus.REFUNDED,
                 PaymentStateMachine.transition(PaymentStatus.REFUNDED, PaymentStatus.REFUNDED));

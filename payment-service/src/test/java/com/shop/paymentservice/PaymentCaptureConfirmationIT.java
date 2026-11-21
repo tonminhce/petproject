@@ -83,7 +83,8 @@ class PaymentCaptureConfirmationIT extends AbstractIntegrationTest {
         UUID paymentId = createPayment(SCRIPTED);
         paymentService.capture(paymentId);
 
-        PaymentResponse response = paymentService.refund(paymentId);
+        PaymentResponse response = paymentService.refund(paymentId, new BigDecimal("100.00"), "USD",
+                UUID.randomUUID());
 
         assertThat(response.status()).isEqualTo(PaymentStatus.REFUNDED);
         Payment row = reload(paymentId);
@@ -160,7 +161,8 @@ class PaymentCaptureConfirmationIT extends AbstractIntegrationTest {
         paymentService.capture(paymentId);
         setProvider(paymentId, "stripe");
 
-        assertThatThrownBy(() -> paymentService.refund(paymentId))
+        assertThatThrownBy(() -> paymentService.refund(paymentId, new BigDecimal("100.00"), "USD",
+                UUID.randomUUID()))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.PAYMENT_PROVIDER_REJECTED.getCode()));

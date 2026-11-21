@@ -58,8 +58,17 @@ class IdempotencyClaimIT extends AbstractOrderServiceIT {
                     if (idempotencyService.begin(key, actor, hash).isEmpty()) {
                         owners.incrementAndGet();
                     }
-                } catch (Exception expected) {
+                } catch (com.shop.common.core.exception.BusinessException expected) {
+                    assertThat(expected.getErrorCode())
+                        .as("the caller that lost the race must be rejected as a duplicate request")
+                        .isEqualTo(com.shop.common.core.exception.ErrorCode.ORDER_DUPLICATE_REQUEST.getCode());
                     rejected.incrementAndGet();
+                } catch (Throwable failure) {
+                    throw new AssertionError(
+                        "the race must only be decided by the duplicate request rule, not by a failure of the "
+                            + "database or of the code under test",
+                        failure
+                    );
                 }
             };
             Thread first = new Thread(task, "idempotency-race-a-" + i);

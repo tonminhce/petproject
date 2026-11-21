@@ -15,11 +15,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -28,8 +30,15 @@ import java.util.UUID;
 public class PaymentServiceClient {
 
     private static final String STATUS_CAPTURED = "CAPTURED";
+    private static final String STATUS_PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED";
+
+    private static final Set<String> REFUNDABLE_STATUSES =
+            Set.of(STATUS_CAPTURED, STATUS_PARTIALLY_REFUNDED);
 
     private static final ParameterizedTypeReference<ApiResponse<PaymentStatusSnapshot>> SNAPSHOT_TYPE =
+        new ParameterizedTypeReference<>() {};
+
+    private static final ParameterizedTypeReference<ApiResponse<Void>> ERROR_BODY =
         new ParameterizedTypeReference<>() {};
 
     private final ShopServicesProperties props;
@@ -45,9 +54,21 @@ public class PaymentServiceClient {
 
     @CircuitBreaker(name = "paymentService")
     public Optional<PaymentStatusSnapshot> findCapturedByOrderId(UUID orderId) {
+        return lookupPayment(orderId, "/api/v1/payments/by-order/{orderId}/captured",
+                Set.of(STATUS_CAPTURED));
+    }
+
+    @CircuitBreaker(name = "paymentService")
+    public Optional<PaymentStatusSnapshot> findRefundableByOrderId(UUID orderId) {
+        return lookupPayment(orderId, "/api/v1/payments/by-order/{orderId}/refundable",
+                REFUNDABLE_STATUSES);
+    }
+
+    private Optional<PaymentStatusSnapshot> lookupPayment(UUID orderId, String uriTemplate,
+            Set<String> acceptedStatuses) {
         try {
             ApiResponse<PaymentStatusSnapshot> resp = restClient.get()
-                .uri("/api/v1/payments/by-order/{orderId}/captured", orderId)
+                .uri(uriTemplate, orderId)
                 .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
                 .retrieve()
                 .body(SNAPSHOT_TYPE);
@@ -55,7 +76,7 @@ public class PaymentServiceClient {
                 return Optional.empty();
             }
             PaymentStatusSnapshot payment = resp.data();
-            return STATUS_CAPTURED.equals(payment.status()) ? Optional.of(payment) : Optional.empty();
+            return acceptedStatuses.contains(payment.status()) ? Optional.of(payment) : Optional.empty();
         } catch (HttpClientErrorException.NotFound ex) {
             return Optional.empty();
         } catch (RestClientException ex) {
@@ -66,45 +87,59 @@ public class PaymentServiceClient {
 
     @CircuitBreaker(name = "paymentService")
     public boolean refundByOrderId(UUID orderId) {
-        return refund(orderId, null, null);
+        return refund(orderId, null, null, orderId);
     }
 
     @CircuitBreaker(name = "paymentService")
-    public boolean refundByOrderId(UUID orderId, BigDecimal amount, String currency) {
-        return refund(orderId, amount, currency);
+    public boolean refundByOrderId(UUID orderId, BigDecimal amount, String currency, UUID refundReference) {
+        return refund(orderId, amount, currency, refundReference);
     }
 
-    private boolean refund(UUID orderId, BigDecimal amount, String currency) {
+    private boolean refund(UUID orderId, BigDecimal amount, String currency, UUID refundReference) {
         if (!isEnabled()) {
             return true;
         }
-        Optional<PaymentStatusSnapshot> captured = findCapturedByOrderId(orderId);
-        if (captured.isEmpty()) {
+        Optional<PaymentStatusSnapshot> refundable = findRefundableByOrderId(orderId);
+        if (refundable.isEmpty()) {
             return false;
         }
-        PaymentStatusSnapshot payment = captured.get();
-        BigDecimal refundAmount = amount != null ? amount : payment.amount();
+        PaymentStatusSnapshot payment = refundable.get();
+        BigDecimal refundAmount = amount != null ? amount : remainingRefundableAmount(payment);
         String refundCurrency = currency != null ? currency : payment.currency();
-        if (amount != null) {
-            requireWithinRemainingRefundableAmount(payment, refundAmount);
-            requireRefundCurrencyMatchesPayment(payment, refundCurrency);
-        }
+        requireWithinRemainingRefundableAmount(payment, refundAmount);
+        requireRefundCurrencyMatchesPayment(payment, refundCurrency);
         UUID paymentId = payment.id();
         try {
-            RestClient.RequestBodySpec request = restClient.post()
+            restClient.post()
                 .uri("/api/v1/payments/{id}/refund", paymentId)
-                .header("Authorization", "Bearer " + serviceTokenProvider.getToken());
-            if (refundAmount != null) {
-                request.body(new RefundRequest(refundAmount, refundCurrency));
-            }
-            request.retrieve().toBodilessEntity();
+                .header("Authorization", "Bearer " + serviceTokenProvider.getToken())
+                .body(new RefundRequest(refundAmount, refundCurrency, refundReference))
+                .retrieve()
+                .toBodilessEntity();
             log.info("Successfully triggered refund of {} {} for payment {} on order {}",
                 refundAmount, refundCurrency, paymentId, orderId);
             return true;
+        } catch (HttpClientErrorException ex) {
+            log.warn("Payment service refused the refund of payment {} on order {}: {}",
+                paymentId, orderId, ex.getMessage());
+            throw remoteBusinessException(ex);
+        } catch (HttpServerErrorException ex) {
+            log.error("Payment service failed the refund of payment {} on order {}", paymentId, orderId, ex);
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "payment");
         } catch (RestClientException ex) {
             log.error("Failed to trigger refund for payment {} on order {}", paymentId, orderId, ex);
-            return false;
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "payment");
         }
+    }
+
+    private BigDecimal remainingRefundableAmount(PaymentStatusSnapshot payment) {
+        if (payment.amount() == null) {
+            return null;
+        }
+        BigDecimal alreadyRefunded = payment.refundedAmount() != null
+            ? payment.refundedAmount()
+            : BigDecimal.ZERO;
+        return payment.amount().subtract(alreadyRefunded);
     }
 
     private void requireWithinRemainingRefundableAmount(PaymentStatusSnapshot payment, BigDecimal amount) {
@@ -132,5 +167,21 @@ public class PaymentServiceClient {
                 refundCurrency, payment.id(), paymentCurrency);
             throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, refundCurrency, paymentCurrency);
         }
+    }
+
+    private BusinessException remoteBusinessException(HttpClientErrorException ex) {
+        try {
+            ApiResponse<Void> error = ex.getResponseBodyAs(ERROR_BODY);
+            if (error != null && error.code() != null) {
+                for (ErrorCode candidate : ErrorCode.values()) {
+                    if (candidate.getCode().equals(error.code())) {
+                        return BusinessException.of(candidate);
+                    }
+                }
+            }
+        } catch (Exception parseFailure) {
+            log.debug("Could not parse the payment error body", parseFailure);
+        }
+        return BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "payment");
     }
 }

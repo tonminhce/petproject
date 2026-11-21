@@ -58,13 +58,11 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     @Audited(action = "payment.refund", resourceType = "payment")
     public ApiResponse<PaymentResponse> refund(@PathVariable UUID id,
-            @Valid @RequestBody(required = false) PaymentRefundRequest request) {
+            @Valid @RequestBody PaymentRefundRequest request) {
 
         serviceCallerGuard.requireCaller("order-service");
-        if (request == null) {
-            return ApiResponse.ok(paymentService.refund(id));
-        }
-        return ApiResponse.ok(paymentService.refund(id, request.amount(), request.currency()));
+        return ApiResponse.ok(paymentService.refund(id, request.amount(), request.currency(),
+                request.refundReference()));
     }
 
     @GetMapping
@@ -85,6 +83,14 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
     public ApiResponse<PaymentResponse> findCapturedByOrderId(@PathVariable UUID orderId) {
         return paymentService.findCapturedByOrderId(orderId)
+                .map(ApiResponse::ok)
+                .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, orderId));
+    }
+
+    @GetMapping("/by-order/{orderId}/refundable")
+    @PreAuthorize("hasAnyRole('SERVICE','ADMIN')")
+    public ApiResponse<PaymentResponse> findRefundableByOrderId(@PathVariable UUID orderId) {
+        return paymentService.findRefundableByOrderId(orderId)
                 .map(ApiResponse::ok)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, orderId));
     }

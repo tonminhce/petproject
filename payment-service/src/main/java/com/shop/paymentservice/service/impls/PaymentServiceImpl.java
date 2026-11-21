@@ -7,15 +7,20 @@ import com.shop.paymentservice.constant.PaymentStatus;
 import com.shop.paymentservice.dto.CreatePaymentRequest;
 import com.shop.paymentservice.dto.PaymentResponse;
 import com.shop.paymentservice.entity.Payment;
+import com.shop.paymentservice.entity.PaymentRefund;
 import com.shop.paymentservice.provider.PaymentProvider;
 import com.shop.paymentservice.provider.PaymentProvider.ProviderResult;
 import com.shop.paymentservice.provider.PaymentProviderFactory;
+import com.shop.paymentservice.repository.PaymentRefundRepository;
 import com.shop.paymentservice.repository.PaymentRepository;
 import com.shop.paymentservice.service.PaymentService;
+import com.shop.paymentservice.service.PaymentStateMachine;
 import com.shop.paymentservice.service.PaymentWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,22 +36,29 @@ import java.util.UUID;
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final List<PaymentStatus> REFUNDABLE_STATUSES =
+            List.of(PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED);
+
     private final PaymentRepository repository;
+    private final PaymentRefundRepository refundRepository;
     private final PaymentWriter writer;
     private final PaymentProvider defaultProvider;
     private final PaymentProviderFactory providerFactory;
 
     @Autowired
-    public PaymentServiceImpl(PaymentRepository repository, PaymentWriter writer, PaymentProvider defaultProvider,
+    public PaymentServiceImpl(PaymentRepository repository, PaymentRefundRepository refundRepository,
+                              PaymentWriter writer, PaymentProvider defaultProvider,
                               @Autowired(required = false) PaymentProviderFactory providerFactory) {
         this.repository = repository;
+        this.refundRepository = refundRepository;
         this.writer = writer;
         this.defaultProvider = defaultProvider;
         this.providerFactory = providerFactory;
     }
 
-    public PaymentServiceImpl(PaymentRepository repository, PaymentWriter writer, PaymentProvider defaultProvider) {
-        this(repository, writer, defaultProvider, null);
+    public PaymentServiceImpl(PaymentRepository repository, PaymentRefundRepository refundRepository,
+                              PaymentWriter writer, PaymentProvider defaultProvider) {
+        this(repository, refundRepository, writer, defaultProvider, null);
     }
 
     private PaymentProvider resolveProviderForNewPayment(String requestedProvider) {
@@ -172,29 +184,29 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public PaymentResponse refund(UUID id) {
-        Payment payment = requirePayment(id);
-        return refund(payment, payment.getAmount(), payment.getCurrency());
+    public PaymentResponse refund(UUID id, BigDecimal requestedAmount, String requestedCurrency,
+            UUID refundReference) {
+        Payment payment = requirePaymentForUpdate(id);
+        return refund(payment, requestedAmount, requestedCurrency, refundReference);
     }
 
-    @Override
-    @Transactional
-    public PaymentResponse refund(UUID id, BigDecimal requestedAmount, String requestedCurrency) {
-        Payment payment = requirePayment(id);
-        return refund(payment, requestedAmount, requestedCurrency);
-    }
-
-    private PaymentResponse refund(Payment payment, BigDecimal requestedAmount, String requestedCurrency) {
-        if (payment.getStatus() != PaymentStatus.CAPTURED) {
-            throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, payment.getStatus());
+    private PaymentResponse refund(Payment payment, BigDecimal requestedAmount, String requestedCurrency,
+            UUID refundReference) {
+        if (refundReference == null) {
+            throw BusinessException.of(ErrorCode.BAD_REQUEST, refundReference);
+        }
+        String reference = refundReference.toString();
+        if (refundRepository.findByPaymentIdAndRefundReference(payment.getId(), reference).isPresent()) {
+            return PaymentResponse.from(payment);
+        }
+        PaymentStatus currentStatus = payment.getStatus();
+        if (currentStatus != PaymentStatus.CAPTURED && currentStatus != PaymentStatus.PARTIALLY_REFUNDED) {
+            throw BusinessException.of(ErrorCode.REFUND_INVALID_STATE, currentStatus);
         }
         if (requestedAmount == null || requestedAmount.signum() <= 0) {
             throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, requestedAmount);
         }
-        String currency = PlatformCurrency.normalize(requestedCurrency);
-        if (!currency.equals(PlatformCurrency.normalize(payment.getCurrency()))) {
-            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, payment.getCurrency(), currency);
-        }
+        String currency = resolveRefundCurrency(requestedCurrency, payment);
         BigDecimal alreadyRefunded = payment.getRefundedAmount() == null
                 ? BigDecimal.ZERO
                 : payment.getRefundedAmount();
@@ -204,29 +216,60 @@ public class PaymentServiceImpl implements PaymentService {
         }
         PaymentProvider provider = resolveRegisteredProvider(payment.getProvider());
         ProviderResult result = provider.refund(payment.getId(), requestedAmount, currency,
-                payment.getIdempotencyKey(), payment.getProviderIntentId());
+                refundProviderKey(reference), payment.getProviderIntentId());
         return switch (result.outcome()) {
-            case CONFIRMED -> refundConfirmed(payment, requestedAmount, currency);
+            case CONFIRMED -> refundConfirmed(payment, requestedAmount, currency, reference,
+                    result.providerEventId());
             case INDETERMINATE -> throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, result.providerEventId());
             case REQUIRES_CONFIRMATION, REJECTED ->
                     throw BusinessException.of(ErrorCode.PAYMENT_PROVIDER_REJECTED, result.providerEventId());
         };
     }
 
-    private PaymentResponse refundConfirmed(Payment payment, BigDecimal requestedAmount, String currency) {
-        BigDecimal alreadyRefunded = payment.getRefundedAmount() == null
-                ? BigDecimal.ZERO
-                : payment.getRefundedAmount();
-        BigDecimal refunded = alreadyRefunded.add(requestedAmount);
-        payment.setPreviousStatus(PaymentStatus.CAPTURED);
+    private String resolveRefundCurrency(String requestedCurrency, Payment payment) {
+        String currency = PlatformCurrency.normalize(requestedCurrency);
+        if (!PlatformCurrency.isSupported(currency)) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_UNSUPPORTED, requestedCurrency);
+        }
+        if (!currency.equals(PlatformCurrency.normalize(payment.getCurrency()))) {
+            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, payment.getCurrency(), currency);
+        }
+        return currency;
+    }
+
+    private String refundProviderKey(String refundReference) {
+        return "refund-" + refundReference;
+    }
+
+    private PaymentResponse refundConfirmed(Payment payment, BigDecimal requestedAmount, String currency,
+            String refundReference, String providerEventId) {
+        BigDecimal refunded = confirmedRefundedAmount(payment.getId()).add(requestedAmount);
+        refundRepository.save(PaymentRefund.builder()
+                .paymentId(payment.getId())
+                .refundReference(refundReference)
+                .amount(requestedAmount)
+                .currency(currency)
+                .provider(payment.getProvider())
+                .providerEventId(providerEventId)
+                .build());
+        PaymentStatus previousStatus = payment.getStatus();
+        PaymentStatus nextStatus = refunded.compareTo(payment.getAmount()) == 0
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.PARTIALLY_REFUNDED;
+        payment.setPreviousStatus(previousStatus);
         payment.setRefundedAmount(refunded);
         payment.setRefundedCurrency(currency);
-        payment.setStatus(refunded.compareTo(payment.getAmount()) == 0
-                ? PaymentStatus.REFUNDED
-                : PaymentStatus.PARTIALLY_REFUNDED);
+        payment.setStatus(PaymentStateMachine.transition(previousStatus, nextStatus));
         Payment saved = writer.save(payment);
         writer.publishLifecycleEvent(saved, "payment.refunded.v1");
         return PaymentResponse.from(saved);
+    }
+
+    private BigDecimal confirmedRefundedAmount(UUID paymentId) {
+        return refundRepository.findByPaymentId(paymentId).stream()
+                .map(PaymentRefund::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Override
@@ -250,6 +293,17 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<PaymentResponse> findRefundableByOrderId(UUID orderId) {
+        if (orderId == null) {
+            return Optional.empty();
+        }
+        return repository.findRefundableByOrderId(orderId, REFUNDABLE_STATUSES).stream()
+                .findFirst()
+                .map(PaymentResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PaymentResponse findById(UUID id) {
         return PaymentResponse.from(requirePayment(id));
     }
@@ -257,5 +311,15 @@ public class PaymentServiceImpl implements PaymentService {
     private Payment requirePayment(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, id));
+    }
+
+    private Payment requirePaymentForUpdate(UUID id) {
+        try {
+            return repository.findByIdForUpdate(id)
+                    .orElseThrow(() -> BusinessException.of(ErrorCode.PAYMENT_NOT_FOUND, id));
+        } catch (PessimisticLockingFailureException | QueryTimeoutException ex) {
+            log.warn("The payment row {} could not be locked for the refund - the refund is refused", id);
+            throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, id);
+        }
     }
 }

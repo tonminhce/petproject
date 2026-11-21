@@ -1,5 +1,7 @@
 package com.shop.orderservice.dto.internal;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
-public record RefundRequest(BigDecimal amount, String currency) {}
+public record RefundRequest(BigDecimal amount, String currency, UUID refundReference) {
+}

@@ -11,6 +11,7 @@ PROMETHEUS_URL = "http://127.0.0.1:9095"
 TOKEN_PATTERN = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 LABEL_SECTION = re.compile(r"\{[^}]*\}")
 GROUPING = re.compile(r"\b(?:by|without|on|ignoring|group_left|group_right)\s*\(([^)]*)\)")
+NAME_MATCHER = re.compile(r"__name__\s*=~\s*\"([^\"]*)\"")
 LABEL_NAME = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 PROMQL_FUNCTIONS = {
     "abs",
@@ -86,9 +87,14 @@ def _strip_labels(expression: str) -> str:
     return LABEL_SECTION.sub(" ", expression)
 
 
+def _strip_groupings(expression: str) -> str:
+    return GROUPING.sub(" ", expression)
+
+
 def referenced_metrics(expression: str) -> list[str]:
     candidates: set[str] = set()
-    for token in TOKEN_PATTERN.findall(_strip_labels(expression)):
+    body = _strip_groupings(_strip_labels(expression))
+    for token in TOKEN_PATTERN.findall(body):
         lowered = token.lower()
         if lowered in PROMQL_FUNCTIONS or lowered in PROMQL_KEYWORDS:
             continue
@@ -96,6 +102,10 @@ def referenced_metrics(expression: str) -> list[str]:
             continue
         candidates.add(token)
     return sorted(candidates)
+
+
+def name_matchers(expression: str) -> list[str]:
+    return sorted(set(NAME_MATCHER.findall(expression)))
 
 
 def referenced_groupings(expression: str) -> list[str]:
@@ -158,6 +168,14 @@ def scraped_applications(url: str = PROMETHEUS_URL, timeout: int = 25) -> tuple[
     return sorted(applications), ""
 
 
+def _matcher_matches(matcher: str, known: set[str]) -> bool:
+    try:
+        pattern = re.compile(matcher)
+    except re.error:
+        return False
+    return any(pattern.fullmatch(name) for name in known)
+
+
 def rule_metric_audit(rules_path: Any, url: str = PROMETHEUS_URL) -> dict[str, Any]:
     from .. import yamlmini
 
@@ -185,13 +203,16 @@ def rule_metric_audit(rules_path: Any, url: str = PROMETHEUS_URL) -> dict[str, A
             name = str(rule.get("alert", ""))
             expression = str(rule.get("expr", ""))
             unknown = [metric for metric in referenced_metrics(expression) if metric not in known]
+            matchers = name_matchers(expression)
+            unmatched = [matcher for matcher in matchers if not _matcher_matches(matcher, known)]
             groupings = referenced_groupings(expression)
             unknown_labels = [label for label in groupings if label not in known_labels]
             audit.append(
                 {
                     "alert": name,
                     "referenced": referenced_metrics(expression),
-                    "unknown": unknown,
+                    "name_matchers": matchers,
+                    "unknown": unknown + unmatched,
                     "groupings": groupings,
                     "unknown_groupings": unknown_labels,
                 }

@@ -88,7 +88,7 @@ def apply_load_test_rate_limits(repository: Path | None = None) -> dict[str, Any
 
     from ..e2e.readiness import wait_for_healthy
 
-    readiness = wait_for_healthy(services=[GATEWAY_SERVICE])
+    readiness = wait_for_healthy(services=[GATEWAY_SERVICE], root=root)
     if readiness.get("status") != "READY":
         return {
             "status": "ERROR",
@@ -121,7 +121,7 @@ def restore_shipped_rate_limits(repository: Path | None = None) -> dict[str, Any
     )
     from ..e2e.readiness import wait_for_healthy
 
-    readiness = wait_for_healthy(services=[GATEWAY_SERVICE])
+    readiness = wait_for_healthy(services=[GATEWAY_SERVICE], root=root)
     return {
         "status": "OK" if restored.get("status") == "OK" and readiness.get("status") == "READY" else "ERROR",
         "readiness": readiness,

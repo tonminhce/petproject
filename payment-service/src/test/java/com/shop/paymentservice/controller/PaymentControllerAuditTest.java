@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.core.authority.AuthorityUtils.createAuthorityList;
@@ -56,7 +57,7 @@ class PaymentControllerAuditTest {
     @Test
     void refund_emitsAuditLineWithAnnotatedActionAndResourceId() throws Exception {
         UUID paymentId = UUID.fromString("00000000-0000-0000-0000-00000000d001");
-        when(paymentService.refund(paymentId))
+        when(paymentService.refund(eq(paymentId), eq(new BigDecimal("49.90")), eq("USD"), any(UUID.class)))
             .thenReturn(PaymentResponse.from(Payment.builder()
                 .id(paymentId)
                 .orderId(UUID.fromString("00000000-0000-0000-0000-00000000d002"))
@@ -71,7 +72,10 @@ class PaymentControllerAuditTest {
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(jwt().jwt(j -> j.subject("00000000-0000-0000-0000-00000000d003"))
-                    .authorities(createAuthorityList("ROLE_ADMIN"))))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"amount":49.90,"currency":"USD","refundReference":"00000000-0000-0000-0000-00000000d007"}"""))
             .andExpect(status().isOk());
 
         ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);

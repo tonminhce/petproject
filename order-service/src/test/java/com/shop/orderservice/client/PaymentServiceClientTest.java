@@ -12,7 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.ResponseCreator;
+import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
@@ -37,8 +40,13 @@ class PaymentServiceClientTest {
 
     private static final UUID ORDER_ID = UUID.randomUUID();
     private static final UUID PAYMENT_CAPTURED = UUID.fromString("00000000-0000-0000-0000-0000000000bb");
+    private static final UUID REFUND_REFERENCE = UUID.fromString("00000000-0000-0000-0000-0000000000cc");
     private static final String CAPTURED_URL =
             "http://payment.test/api/v1/payments/by-order/" + ORDER_ID + "/captured";
+    private static final String REFUNDABLE_URL =
+            "http://payment.test/api/v1/payments/by-order/" + ORDER_ID + "/refundable";
+    private static final String REFUND_URL =
+            "http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund";
     private static final BigDecimal CAPTURED_AMOUNT = new BigDecimal("2499.00");
 
     @Mock
@@ -61,9 +69,17 @@ class PaymentServiceClientTest {
     }
 
     private static String capturedJson() {
-        return """
-            {"success":true,"code":"OK","data":{"id":"%s","orderId":"%s","status":"CAPTURED","amount":2499.00,"currency":"VND"}}
-            """.formatted(PAYMENT_CAPTURED, ORDER_ID);
+        return "{\"success\":true,\"code\":\"OK\",\"data\":{\"id\":\"%s\",\"orderId\":\"%s\",\"status\":\"CAPTURED\",\"amount\":2499.00,\"currency\":\"VND\"}}".formatted(PAYMENT_CAPTURED, ORDER_ID);
+    }
+
+    private static String partiallyRefundedJson() {
+        return "{\"success\":true,\"code\":\"OK\",\"data\":{\"id\":\"%s\",\"orderId\":\"%s\",\"status\":\"PARTIALLY_REFUNDED\",\"amount\":2499.00,\"currency\":\"VND\",\"refundedAmount\":1000.00}}".formatted(PAYMENT_CAPTURED, ORDER_ID);
+    }
+
+    private static ResponseCreator errorResponse(HttpStatus status, String code) {
+        return MockRestResponseCreators.withStatus(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"success\":false,\"code\":\"%s\",\"message\":\"refused\"}".formatted(code));
     }
 
     @Test
@@ -142,11 +158,24 @@ class PaymentServiceClientTest {
     }
 
     @Test
-    void theRefundPathFindsTheCapturedPaymentThroughTheSameEndpoint() {
+    void aPartiallyRefundedPaymentIsRefundable() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
+            .andRespond(withSuccess(partiallyRefundedJson(), MediaType.APPLICATION_JSON));
+
+        Optional<PaymentStatusSnapshot> snapshot = client.findRefundableByOrderId(ORDER_ID);
+
+        assertThat(snapshot).isPresent();
+        assertThat(snapshot.get().status()).isEqualTo("PARTIALLY_REFUNDED");
+        assertThat(snapshot.get().refundedAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
+    }
+
+    @Test
+    void theRefundPathFindsTheRefundablePaymentThroughTheRefundableEndpoint() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund"))
+        server.expect(requestTo(REFUND_URL))
             .andExpect(method(HttpMethod.POST))
             .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
@@ -156,9 +185,9 @@ class PaymentServiceClientTest {
     }
 
     @Test
-    void theRefundPathDoesNotRefundAnOrderWithoutACapturedPayment() {
+    void theRefundPathDoesNotRefundAnOrderWithoutARefundablePayment() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         assertThat(client.refundByOrderId(ORDER_ID)).isFalse();
@@ -167,13 +196,14 @@ class PaymentServiceClientTest {
     }
 
     @Test
-    void theFullRefundDeclaresTheCapturedAmountAndCurrency() {
+    void theFullRefundDeclaresTheCapturedAmountCurrencyAndTheApprovalReference() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund"))
+        server.expect(requestTo(REFUND_URL))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(content().json("{\"amount\":2499.00,\"currency\":\"VND\"}"))
+            .andExpect(content().json("{\"amount\":2499.00,\"currency\":\"VND\",\"refundReference\":\"%s\"}"
+                    .formatted(ORDER_ID)))
             .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
         assertThat(client.refundByOrderId(ORDER_ID)).isTrue();
@@ -182,16 +212,17 @@ class PaymentServiceClientTest {
     }
 
     @Test
-    void theRefundPathSendsTheApprovedAmountAndCurrency() {
+    void theRefundPathSendsTheApprovedAmountCurrencyAndApprovalReference() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
-        server.expect(requestTo("http://payment.test/api/v1/payments/" + PAYMENT_CAPTURED + "/refund"))
+        server.expect(requestTo(REFUND_URL))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(content().json("{\"amount\":100.00,\"currency\":\"VND\"}"))
+            .andExpect(content().json("{\"amount\":100.00,\"currency\":\"VND\",\"refundReference\":\"%s\"}"
+                    .formatted(REFUND_REFERENCE)))
             .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        assertThat(client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND")).isTrue();
+        assertThat(client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND", REFUND_REFERENCE)).isTrue();
 
         server.verify();
     }
@@ -199,10 +230,11 @@ class PaymentServiceClientTest {
     @Test
     void theRefundPathRefusesAnAmountAboveTheRemainingRefundableAmount() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("3000.00"), "VND"))
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("3000.00"), "VND",
+                REFUND_REFERENCE))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
 
@@ -212,10 +244,10 @@ class PaymentServiceClientTest {
     @Test
     void theRefundPathRefusesANonPositiveAmount() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, BigDecimal.ZERO, "VND"))
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, BigDecimal.ZERO, "VND", REFUND_REFERENCE))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5007"));
 
@@ -225,12 +257,45 @@ class PaymentServiceClientTest {
     @Test
     void theRefundPathRefusesACurrencyThatIsNotThePaymentCurrency() {
         stubToken();
-        server.expect(requestTo(CAPTURED_URL))
+        server.expect(requestTo(REFUNDABLE_URL))
             .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "USD"))
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "USD",
+                REFUND_REFERENCE))
             .isInstanceOfSatisfying(BusinessException.class,
                 ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5010"));
+
+        server.verify();
+    }
+
+    @Test
+    void theRefundPathPropagatesTheRefusalOfThePaymentService() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_URL))
+            .andRespond(withSuccess(partiallyRefundedJson(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(REFUND_URL))
+            .andRespond(errorResponse(HttpStatus.CONFLICT, "PAY-5006"));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5006"));
+
+        server.verify();
+    }
+
+    @Test
+    void aFailedPaymentServiceIsReportedAsServiceUnavailable() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(REFUND_URL))
+            .andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(BusinessException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("ERR-0503"));
 
         server.verify();
     }

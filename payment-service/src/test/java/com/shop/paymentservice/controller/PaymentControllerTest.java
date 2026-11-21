@@ -94,6 +94,11 @@ class PaymentControllerTest {
             {"orderId":"%s","amount":98.00,"currency":"USD","idempotencyKey":"idem-9001"}""".formatted(orderId);
     }
 
+    private String refundBody() {
+        return """
+            {"amount":49.00,"currency":"USD","refundReference":"00000000-0000-0000-0000-000000009004"}""";
+    }
+
 
     @Test
     void create_noAuth_returns401() throws Exception {
@@ -130,6 +135,9 @@ class PaymentControllerTest {
     @Test
     void refund_userRole_returns403() throws Exception {
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"amount":10.00,"currency":"VND","refundReference":"%s"}""".formatted(UUID.randomUUID()))
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("alice"))
                     .authorities(createAuthorityList("ROLE_USER"))))
@@ -211,17 +219,63 @@ class PaymentControllerTest {
 
     @Test
     void refund_serviceRole_returns200WithPayment() throws Exception {
-        when(paymentService.refund(paymentId)).thenReturn(capturedPayment());
+        when(paymentService.refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"), any(UUID.class)))
+                .thenReturn(capturedPayment());
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
-                    .authorities(createAuthorityList("ROLE_SERVICE"))))
+                    .authorities(createAuthorityList("ROLE_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(refundBody()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.id").value(paymentId.toString()));
 
-        verify(paymentService).refund(paymentId);
+        verify(paymentService).refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"),
+                eq(UUID.fromString("00000000-0000-0000-0000-000000009004")));
+    }
+
+    @Test
+    void refund_withoutABody_returns400AndThePaymentIsNotRefunded() throws Exception {
+        mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE"))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false));
+
+        verify(paymentService, never()).refund(any(UUID.class), any(), any(), any());
+    }
+
+    @Test
+    void refund_withACurrencyOutsideTheSupportedSet_returns400AndThePaymentIsNotRefunded() throws Exception {
+        mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"amount":49.00,"currency":"EUR","refundReference":"00000000-0000-0000-0000-000000009004"}"""))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false));
+
+        verify(paymentService, never()).refund(any(UUID.class), any(), any(), any());
+    }
+
+    @Test
+    void refund_withoutTheApprovalReference_returns400AndThePaymentIsNotRefunded() throws Exception {
+        mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
+                .with(SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(j -> j.subject("order-service").claim("azp", "order-service"))
+                    .authorities(createAuthorityList("ROLE_SERVICE")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"amount":49.00,"currency":"USD"}"""))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false));
+
+        verify(paymentService, never()).refund(any(UUID.class), any(), any(), any());
     }
 
 
@@ -241,18 +295,21 @@ class PaymentControllerTest {
 
     @Test
     void refund_adminRole_returns200WithPayment() throws Exception {
-        when(paymentService.refund(paymentId)).thenReturn(capturedPayment());
+        when(paymentService.refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"), any(UUID.class)))
+                .thenReturn(capturedPayment());
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("admin"))
-                    .authorities(createAuthorityList("ROLE_ADMIN"))))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(refundBody()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.id").value(paymentId.toString()))
             .andExpect(jsonPath("$.data.status").value("CAPTURED"));
 
-        verify(paymentService).refund(paymentId);
+        verify(paymentService).refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"), any(UUID.class));
     }
 
     @Test
@@ -332,13 +389,15 @@ class PaymentControllerTest {
 
     @Test
     void refund_notCaptured_returns409WithPay5006() throws Exception {
-        when(paymentService.refund(paymentId))
+        when(paymentService.refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"), any(UUID.class)))
             .thenThrow(BusinessException.of(ErrorCode.REFUND_INVALID_STATE, "PENDING"));
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("admin"))
-                    .authorities(createAuthorityList("ROLE_ADMIN"))))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(refundBody()))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.code").value("PAY-5006"));
     }
@@ -355,15 +414,18 @@ class PaymentControllerTest {
     }
 
     @Test
-    void refund_byAdmin_isAllowed() throws Exception {
-        when(paymentService.refund(paymentId)).thenReturn(pendingPayment());
+    void refund_byAdmin_isAllowedOnlyWithAnApprovedAmount() throws Exception {
+        when(paymentService.refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"), any(UUID.class)))
+                .thenReturn(pendingPayment());
 
         mockMvc.perform(post("/api/v1/payments/{id}/refund", paymentId)
                 .with(SecurityMockMvcRequestPostProcessors.jwt()
                     .jwt(j -> j.subject("admin-1"))
-                    .authorities(createAuthorityList("ROLE_ADMIN"))))
+                    .authorities(createAuthorityList("ROLE_ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(refundBody()))
             .andExpect(status().isOk());
 
-        verify(paymentService).refund(paymentId);
+        verify(paymentService).refund(eq(paymentId), eq(new BigDecimal("49.00")), eq("USD"), any(UUID.class));
     }
 }

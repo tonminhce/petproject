@@ -12,6 +12,18 @@ class SafetyLimits:
     max_total_requests: int = 5_000_000
 
 
+CUSTOMER_POOL_LIMIT = 500
+
+REQUESTS_PER_ITERATION: dict[str, int] = {
+    "browse": 2,
+    "full": 4,
+    "flash-sale": 3,
+    "promotion-storm": 2,
+}
+
+DEFAULT_REQUESTS_PER_ITERATION = 4
+
+
 @dataclass(frozen=True)
 class Profile:
     name: str
@@ -22,7 +34,6 @@ class Profile:
     description: str
     reaches_payment_provider: bool = False
     max_business_failure_rate: float = 0.05
-    max_shed_rate: float = 0.01
     max_shed_rate: float = 0.01
     tags: tuple[str, ...] = field(default_factory=tuple)
 
@@ -123,6 +134,50 @@ PROFILES: dict[str, Profile] = {
 ALLOWED_SCALES = (1, 3, 5, 10)
 
 
+def requests_per_iteration(scenario: str) -> int:
+    return REQUESTS_PER_ITERATION.get(scenario, DEFAULT_REQUESTS_PER_ITERATION)
+
+
+def arrival_plan(profile: Profile) -> list[dict[str, Any]]:
+    peak = profile.requests_per_second
+    duration = profile.duration_seconds
+    if profile.scenario == "spike":
+        stages = [(10, peak // 10), (20, peak), (duration, peak)]
+        tail = 20
+    elif profile.scenario == "ramp":
+        stages = [(20, peak // 5), (duration, peak)]
+        tail = 20
+    elif profile.scenario == "soak":
+        stages = [(30, peak // 2), (duration, peak // 2)]
+        tail = 30
+    else:
+        stages = [(30, peak // 2), (duration, peak)]
+        tail = 20
+    per_iteration = requests_per_iteration(profile.scenario)
+    plan: list[dict[str, Any]] = []
+    for seconds, request_rate in stages:
+        plan.append(
+            {
+                "duration": str(seconds) + "s",
+                "target": max(1, request_rate // per_iteration),
+            }
+        )
+    plan.append({"duration": str(tail) + "s", "target": 0})
+    return plan
+
+
+def planned_iteration_rate(profile: Profile) -> float:
+    weighted = 0.0
+    seconds_total = 0
+    for stage in arrival_plan(profile):
+        seconds = int(stage["duration"].removesuffix("s"))
+        weighted += float(stage["target"]) * seconds
+        seconds_total += seconds
+    if seconds_total <= 0:
+        return 0.0
+    return weighted / seconds_total
+
+
 def profile_names() -> list[str]:
     return sorted(PROFILES)
 
@@ -165,6 +220,13 @@ def enforce_safety(profile: Profile, limits: SafetyLimits | None = None) -> list
             "duration " + str(profile.duration_seconds) + "s exceeds the safety cap "
             + str(boundary.max_duration_seconds) + "s"
         )
+    pool_limit = min(CUSTOMER_POOL_LIMIT, boundary.max_virtual_users)
+    if profile.virtual_users > pool_limit:
+        violations.append(
+            "virtual users " + str(profile.virtual_users) + " exceeds the customer pool of "
+            + str(pool_limit)
+            + ", so the virtual users would share a customer, a cart and a coupon quota"
+        )
     total = profile.requests_per_second * profile.duration_seconds
     if total > boundary.max_total_requests:
         violations.append(
@@ -184,6 +246,8 @@ def describe_profiles() -> list[dict[str, Any]]:
             "duration_seconds": profile.duration_seconds,
             "description": profile.description,
             "reaches_payment_provider": profile.reaches_payment_provider,
+            "requests_per_iteration": requests_per_iteration(profile.scenario),
+            "planned_iteration_rate_per_second": round(planned_iteration_rate(profile), 4),
         }
         for profile in (PROFILES[name] for name in profile_names())
     ]

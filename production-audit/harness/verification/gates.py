@@ -120,13 +120,14 @@ def save_verification(document: dict[str, Any], path: Any = None) -> Path:
 
 
 def record_suite_result(suite: str, result: dict[str, Any], path: Any = None) -> dict[str, Any]:
-    from ..inventory.scanner import source_fingerprint
+    from ..inventory.scanner import harness_fingerprint, source_fingerprint
 
     document = load_verification(path)
     suites = document.setdefault("suites", {})
     suites[suite] = {
         "updated_at": utc_now(),
         "source_fingerprint": source_fingerprint(),
+        "harness_fingerprint": harness_fingerprint(),
         **result,
     }
     document["revision"] = result.get("revision", "")

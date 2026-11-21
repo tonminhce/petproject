@@ -48,7 +48,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartResponse addItem(UUID userId, CartItemAddRequest request) {
-        Cart cart = getOrCreateCart(userId);
+        Cart cart = getOrCreateCartForUpdate(userId);
         ProductSnapshot snapshot = productClient.getProduct(request.productId());
         if (snapshot == null) throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, request.productId());
         String currency = resolveCurrency(snapshot);
@@ -89,7 +89,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartResponse updateItem(UUID userId, UUID cartItemId, CartItemUpdateRequest request) {
-        Cart cart = getOrCreateCart(userId);
+        Cart cart = getOrCreateCartForUpdate(userId);
         CartItem item = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId));
         if (!item.getCartId().equals(cart.getId())) {
@@ -113,7 +113,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public void removeItem(UUID userId, UUID cartItemId) {
-        Cart cart = getOrCreateCart(userId);
+        Cart cart = getOrCreateCartForUpdate(userId);
         CartItem item = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> BusinessException.of(ErrorCode.CART_ITEM_NOT_FOUND, cartItemId));
         if (!item.getCartId().equals(cart.getId())) {
@@ -150,7 +150,7 @@ public class CartServiceImpl implements CartService {
         if (guestItems.isEmpty()) {
             return getMyCart(userId);
         }
-        Cart userCart = getOrCreateCart(userId);
+        Cart userCart = getOrCreateCartForUpdate(userId);
         for (CartItem guestItem : guestItems) {
             Optional<CartItem> existingUserItem = cartItemRepository.findByCartIdAndProductId(userCart.getId(), guestItem.getProductId());
             if (existingUserItem.isPresent()) {
@@ -196,6 +196,13 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new IllegalStateException(
                     "Cart race: PK conflict but row not found", ex));
         }
+    }
+
+    private Cart getOrCreateCartForUpdate(UUID userId) {
+        Optional<Cart> locked = cartRepository.findByUserIdForUpdate(userId);
+        if (locked.isPresent()) return locked.get();
+        Cart created = getOrCreateCart(userId);
+        return cartRepository.findByUserIdForUpdate(userId).orElse(created);
     }
 
     private String resolveCurrency(ProductSnapshot snapshot) {

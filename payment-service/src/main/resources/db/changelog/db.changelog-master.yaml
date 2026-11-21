@@ -32,3 +32,9 @@ databaseChangeLog:
   - include:
       file: changelog-011-add-payment-currency.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changelog-012-payment-refunds.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changelog-013-widen-payment-status-columns.yaml
+      relativeToChangelogFile: true

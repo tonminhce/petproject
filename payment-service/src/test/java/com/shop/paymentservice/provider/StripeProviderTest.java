@@ -200,7 +200,7 @@ class StripeProviderTest {
     }
 
     @Test
-    void refundSucceeds_withRefundIdempotencyKeyDerivedFromPaymentKey() throws Exception {
+    void refundSucceeds_withTheRefundKeyItWasGiven() throws Exception {
         PaymentIntent original = intent("pi_orig", "succeeded");
         PaymentIntentSearchResult matches = new PaymentIntentSearchResult();
         matches.setData(List.of(original));
@@ -226,7 +226,8 @@ class StripeProviderTest {
         refundStatic.verify(() -> Refund.create(params.capture(), opts.capture()));
         assertThat(params.getValue().getPaymentIntent()).isEqualTo("pi_orig");
         assertThat(params.getValue().getAmount()).isEqualTo(9800L);
-        assertThat(opts.getValue().getIdempotencyKey()).isEqualTo("refund-" + IDEMPOTENCY_KEY + "-98.00");
+        assertThat(opts.getValue().getIdempotencyKey()).isEqualTo(IDEMPOTENCY_KEY);
+        assertThat(opts.getValue().getIdempotencyKey()).doesNotContain("98.00");
     }
 
     @Test

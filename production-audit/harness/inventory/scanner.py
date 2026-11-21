@@ -264,7 +264,7 @@ def build_inventory(root: Path | None = None, include_harness: bool = True) -> d
 def source_fingerprint(root: Path | None = None) -> str:
     repository = root or config.repository_root()
     digest = hashlib.sha256()
-    for path in sorted(collect_files(repository), key=lambda item: item.as_posix()):
+    for path in sorted(_fingerprint_files(repository), key=lambda item: item.as_posix()):
         if path.name in SECRET_BEARING_NAMES or path.name.startswith(".env"):
             continue
         try:
@@ -274,7 +274,18 @@ def source_fingerprint(root: Path | None = None) -> str:
         digest.update(path.relative_to(repository).as_posix().encode("utf-8"))
         digest.update(b"\x00")
         digest.update(hashlib.sha256(payload).digest())
-    for path in sorted(_audit_configuration_files(repository), key=lambda item: item.as_posix()):
+    return digest.hexdigest()
+
+
+def harness_fingerprint(root: Path | None = None) -> str:
+    repository = root or config.repository_root()
+    digest = hashlib.sha256()
+    harness_root = repository / "production-audit" / "harness"
+    if not harness_root.is_dir():
+        return ""
+    for path in sorted(harness_root.rglob("*.py"), key=lambda item: item.as_posix()):
+        if path.name.startswith(".") or "__pycache__" in path.parts:
+            continue
         try:
             payload = path.read_bytes()
         except OSError:
@@ -283,6 +294,24 @@ def source_fingerprint(root: Path | None = None) -> str:
         digest.update(b"\x00")
         digest.update(hashlib.sha256(payload).digest())
     return digest.hexdigest()
+
+
+def _fingerprint_files(repository: Path) -> list[Path]:
+    files = [
+        path for path in collect_files(repository)
+        if not _is_harness_path(path, repository)
+    ]
+    files.extend(_audit_configuration_files(repository))
+    return files
+
+
+def _is_harness_path(path: Path, repository: Path) -> bool:
+    try:
+        relative = path.relative_to(repository)
+    except ValueError:
+        return False
+    parts = relative.parts
+    return len(parts) >= 3 and parts[0] == "production-audit" and parts[1] == "harness"
 
 
 def _audit_configuration_files(repository: Path) -> list[Path]:

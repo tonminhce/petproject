@@ -3,19 +3,29 @@ from __future__ import annotations
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
+
+from .. import config
 
 READY_TIMEOUT_SECONDS = 600
 POLL_SECONDS = 5
 RUNNING_PREFIXES = ("Up ", "Up(")
 
 
-def _running_services() -> list[tuple[str, str]]:
+def _compose_project(root: Path | None) -> Path:
+    if root is not None:
+        return root
+    return config.repository_root()
+
+
+def _running_services(root: Path | None = None) -> list[tuple[str, str]]:
     if shutil.which("docker") is None:
         return []
     try:
         result = subprocess.run(
             ["docker", "compose", "ps", "--format", "{{.Service}}|{{.Status}}"],
+            cwd=str(_compose_project(root)),
             capture_output=True,
             text=True,
             check=False,
@@ -34,7 +44,7 @@ def _running_services() -> list[tuple[str, str]]:
     return services
 
 
-def _expected_services(services: list[str] | None) -> list[str] | None:
+def _expected_services(services: list[str] | None, root: Path | None = None) -> list[str] | None:
     if services is not None:
         return list(services)
     if shutil.which("docker") is None:
@@ -42,6 +52,7 @@ def _expected_services(services: list[str] | None) -> list[str] | None:
     try:
         result = subprocess.run(
             ["docker", "compose", "config", "--services"],
+            cwd=str(_compose_project(root)),
             capture_output=True,
             text=True,
             check=False,
@@ -70,13 +81,14 @@ def wait_for_healthy(
     services: list[str] | None = None,
     timeout_seconds: int = READY_TIMEOUT_SECONDS,
     poll_seconds: int = POLL_SECONDS,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     deadline = time.time() + timeout_seconds
     last: list[tuple[str, str]] = []
-    expected = _expected_services(services)
+    expected = _expected_services(services, root)
     missing: list[str] = []
     while time.time() < deadline:
-        last = _running_services()
+        last = _running_services(root)
         if last:
             present = {service for service, _ in last}
             missing = sorted(service for service in (expected or []) if service not in present)

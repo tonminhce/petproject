@@ -267,4 +267,37 @@ class CartServiceImplTest {
         verify(cartRepository).save(captor.capture());
         assertThat(captor.getValue().isDeleted()).isTrue();
     }
+
+    @Test
+    void everyMutationOfTheCartTakesTheWriteLock() throws Exception {
+        CartItem item = CartItem.builder()
+            .id(cartItemId).cartId(cartId).productId(productId)
+            .productTitle("Widget").unitPrice(new BigDecimal("9.99")).quantity(1)
+            .build();
+        when(cartRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(cart));
+        when(cartRepository.findByUserIdAndDeletedFalse(userId)).thenReturn(Optional.of(cart));
+        when(productClient.getProduct(productId)).thenReturn(snapshot);
+        when(cartItemRepository.findByCartIdAndProductId(cartId, productId)).thenReturn(Optional.empty());
+        when(cartItemRepository.findById(cartItemId)).thenReturn(Optional.of(item));
+        when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of(item));
+        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+        when(cartMapper.toResponse(any(Cart.class), any())).thenReturn(emptyResponse());
+
+        service.addItem(userId, new CartItemAddRequest(productId, 1));
+        service.updateItem(userId, cartItemId, new CartItemUpdateRequest(2));
+        service.removeItem(userId, cartItemId);
+        service.clearCart(userId);
+
+        verify(cartRepository, atLeastOnce()).findByUserIdForUpdate(userId);
+    }
+
+    @Test
+    void theWriteLockOfTheCartIsAPessimisticWriteLock() throws Exception {
+        var method = CartRepository.class.getMethod("findByUserIdForUpdate", UUID.class);
+
+        var lock = method.getAnnotation(org.springframework.data.jpa.repository.Lock.class);
+
+        assertThat(lock).isNotNull();
+        assertThat(lock.value()).isEqualTo(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+    }
 }
