@@ -1,0 +1,16 @@
+=== BASELINE 2026-11-21T05:04:01Z ===
+NAME                  REFERENCE                    TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+gateway-service-hpa   Deployment/gateway-service   cpu: 3%/75%   2         10        2          135m
+
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS        IMAGES                        SELECTOR
+gateway-service   2/2     2            2           135m   gateway-service   shop/gateway-service:latest   app=gateway-service
+
+NAME                             READY   STATUS    RESTARTS   AGE     IP            NODE                       NOMINATED NODE   READINESS GATES
+gateway-service-bc885c79-nb2sg   1/1     Running   0          3m21s   10.244.0.11   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-p2z9q   1/1     Running   0          3m      10.244.0.12   shop-audit-control-plane   <none>           <none>
+redis-65cb7b955c-chb9d           1/1     Running   0          134m    10.244.0.10   shop-audit-control-plane   <none>           <none>
+
+NAME                             CPU(cores)   MEMORY(bytes)   
+gateway-service-bc885c79-nb2sg   20m          187Mi           
+gateway-service-bc885c79-p2z9q   17m          187Mi           
+redis-65cb7b955c-chb9d           10m          5Mi             

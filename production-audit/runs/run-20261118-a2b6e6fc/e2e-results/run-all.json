@@ -18,7 +18,7 @@
     }
   ],
   "executed_collections": 2,
-  "generated_at": "2026-11-20T10:15:39Z",
+  "generated_at": "2026-11-21T18:39:20Z",
   "reason": "at least one collection that owns a folder for this scope failed",
   "scenario_inventory": [
     {

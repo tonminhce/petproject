@@ -1,0 +1,26 @@
+=== UNDER LOAD (load job completing) 2026-11-21T05:13:38Z ===
+NAME                  REFERENCE                    TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+gateway-service-hpa   Deployment/gateway-service   cpu: 3%/75%   2         10        10         144m
+
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS        IMAGES                        SELECTOR
+gateway-service   6/6     6            6           144m   gateway-service   shop/gateway-service:latest   app=gateway-service
+
+NAME                             READY   STATUS    RESTARTS   AGE     IP            NODE                       NOMINATED NODE   READINESS GATES
+gateway-service-bc885c79-chnl5   1/1     Running   0          6m46s   10.244.0.18   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-fgrl5   1/1     Running   0          6m31s   10.244.0.20   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-j77rq   1/1     Running   0          6m15s   10.244.0.23   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-l7mk2   1/1     Running   0          6m31s   10.244.0.22   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-p2z9q   1/1     Running   0          12m     10.244.0.12   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-vh6cx   1/1     Running   0          6m46s   10.244.0.17   shop-audit-control-plane   <none>           <none>
+
+NAME                             CPU(cores)   MEMORY(bytes)   
+gateway-service-bc885c79-chnl5   13m          190Mi           
+gateway-service-bc885c79-fgrl5   32m          187Mi           
+gateway-service-bc885c79-j77rq   25m          192Mi           
+gateway-service-bc885c79-l7mk2   17m          199Mi           
+gateway-service-bc885c79-p2z9q   8m           393Mi           
+gateway-service-bc885c79-vh6cx   13m          189Mi           
+redis-65cb7b955c-chb9d           11m          5Mi             
+
+NAME              STATUS     COMPLETIONS   DURATION   AGE
+k6-gateway-load   Complete   1/1           6m3s       7m17s

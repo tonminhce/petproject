@@ -1,0 +1,27 @@
+Name:                                                  gateway-service-hpa
+Namespace:                                             shop-system
+Labels:                                                <none>
+Annotations:                                           <none>
+CreationTimestamp:                                     Sat, 21 Nov 2026 09:48:52 +0700
+Reference:                                             Deployment/gateway-service
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  1% (8m) / 75%
+Min replicas:                                          2
+Max replicas:                                          10
+Deployment pods:                                       2 current / 2 desired
+Conditions:
+  Type            Status  Reason            Message
+  ----            ------  ------            -------
+  AbleToScale     True    ReadyForNewScale  recommended size matches current size
+  ScalingActive   True    ValidMetricFound  the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  True    TooFewReplicas    the desired replica count is less than the minimum replica count
+Events:
+  Type    Reason             Age                  From                       Message
+  ----    ------             ----                 ----                       -------
+  Normal  SuccessfulRescale  57m                  horizontal-pod-autoscaler  New size: 4; reason: cpu resource utilization (percentage of request) above target
+  Normal  SuccessfulRescale  57m                  horizontal-pod-autoscaler  New size: 8; reason: cpu resource utilization (percentage of request) above target
+  Normal  SuccessfulRescale  56m                  horizontal-pod-autoscaler  New size: 10; reason:
+  Normal  SuccessfulRescale  50m                  horizontal-pod-autoscaler  New size: 6; reason: All metrics below target
+  Normal  SuccessfulRescale  47m                  horizontal-pod-autoscaler  New size: 5; reason: All metrics below target
+  Normal  SuccessfulRescale  46m                  horizontal-pod-autoscaler  New size: 4; reason: All metrics below target
+  Normal  SuccessfulRescale  46m (x2 over 3h10m)  horizontal-pod-autoscaler  New size: 2; reason: All metrics below target

@@ -1,0 +1,188 @@
+{
+  "metrics": {
+    "http_req_duration": {
+      "max": 19378.592995,
+      "p(90)": 8556.436041500001,
+      "p(95)": 9905.686003699999,
+      "avg": 4389.940629572784,
+      "min": 0.774833,
+      "med": 4015.253057
+    },
+    "business_refusal_total": {
+      "count": 43,
+      "rate": 0.23525226113995107
+    },
+    "shed_requests_total": {
+      "count": 1031,
+      "rate": 5.640583284541617
+    },
+    "detail_failure_total": {
+      "count": 573,
+      "rate": 3.134873154260278
+    },
+    "vus": {
+      "value": 0,
+      "min": 0,
+      "max": 400
+    },
+    "oversell_attempts_total": {
+      "count": 978,
+      "rate": 5.350621195229585
+    },
+    "http_req_connecting": {
+      "avg": 0.031075295479679275,
+      "min": 0,
+      "med": 0,
+      "max": 35.796583,
+      "p(90)": 0,
+      "p(95)": 0
+    },
+    "iteration_duration": {
+      "avg": 14134.1935713489,
+      "min": 3.626875,
+      "med": 12028.596588,
+      "max": 53768.919941,
+      "p(90)": 28028.8021122,
+      "p(95)": 31107.658697900002
+    },
+    "cart_contention_total": {
+      "count": 210,
+      "rate": 1.1489063916137146
+    },
+    "resolved_product_total": {
+      "count": 400,
+      "rate": 2.1883931268832657
+    },
+    "checks": {
+      "passes": 5063,
+      "fails": 1672,
+      "thresholds": {
+        "rate>0.90": true
+      },
+      "value": 0.7517446176688939
+    },
+    "http_req_blocked": {
+      "med": 0.009208,
+      "max": 877.171709,
+      "p(90)": 0.05317930000000001,
+      "p(95)": 0.23131424999999928,
+      "avg": 0.6555667986591064,
+      "min": 0.000708
+    },
+    "cart_failure_total": {
+      "count": 2570,
+      "rate": 14.060425840224982
+    },
+    "http_req_tls_handshaking": {
+      "avg": 0,
+      "min": 0,
+      "med": 0,
+      "max": 0,
+      "p(90)": 0,
+      "p(95)": 0
+    },
+    "vus_max": {
+      "value": 400,
+      "min": 400,
+      "max": 400
+    },
+    "iterations": {
+      "count": 4615,
+      "rate": 25.248585701415678
+    },
+    "http_req_failed": {
+      "passes": 4953,
+      "fails": 9515,
+      "thresholds": {
+        "rate<0.05": true
+      },
+      "value": 0.34234171965717447
+    },
+    "http_reqs": {
+      "count": 14468,
+      "rate": 79.15417939936772
+    },
+    "http_req_receiving": {
+      "avg": 62.47038622601583,
+      "min": 0.012833,
+      "med": 0.4998955,
+      "max": 9199.348504,
+      "p(90)": 85.69161240000008,
+      "p(95)": 228.37507104999983
+    },
+    "business_success_total": {
+      "count": 4042,
+      "rate": 22.1137125471554
+    },
+    "business_checkout_latency_ms": {
+      "max": 13092,
+      "p(90)": 8767.6,
+      "p(95)": 10284,
+      "avg": 4652.032201914709,
+      "min": 13,
+      "med": 4437.5
+    },
+    "data_sent": {
+      "count": 24465060,
+      "rate": 133847.92288196678
+    },
+    "business_failure_total": {
+      "count": 3136,
+      "rate": 17.157002114764804
+    },
+    "http_req_duration{expected_response:true}": {
+      "max": 19378.592995,
+      "p(90)": 9230.6418796,
+      "p(95)": 10374.8945153,
+      "avg": 4697.917247919926,
+      "min": 2.278625,
+      "med": 4353.618835
+    },
+    "http_req_waiting": {
+      "avg": 4322.173874188332,
+      "min": 0.741334,
+      "med": 3964.0714115,
+      "max": 13981.094159,
+      "p(90)": 8418.9561481,
+      "p(95)": 9778.589200499999
+    },
+    "data_received": {
+      "count": 14154450,
+      "rate": 77438.7527370321
+    },
+    "http_req_sending": {
+      "p(90)": 0.5144500000000001,
+      "p(95)": 3.9634431999999973,
+      "avg": 5.296369158418586,
+      "min": 0,
+      "med": 0.055166,
+      "max": 8694.127796
+    },
+    "dropped_iterations": {
+      "rate": 68.885144651468,
+      "count": 12591
+    }
+  },
+  "root_group": {
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": {},
+    "checks": {
+      "product detail returns 200": {
+        "passes": 4042,
+        "fails": 573,
+        "name": "product detail returns 200",
+        "path": "::product detail returns 200",
+        "id": "9daad55a5a84fd2a0364a6f709fad9e2"
+      },
+      "checkout returns an accepted or a refusal status": {
+        "id": "2ef37a20cd8daf940f13433e838647ef",
+        "passes": 1021,
+        "fails": 1099,
+        "name": "checkout returns an accepted or a refusal status",
+        "path": "::checkout returns an accepted or a refusal status"
+      }
+    },
+    "name": "",
+    "path": ""
+  }
+}

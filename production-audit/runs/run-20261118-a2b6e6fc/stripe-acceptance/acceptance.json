@@ -1,0 +1,1374 @@
+{
+  "cases": [
+    {
+      "detail": "the platform created the payment and then asked api.stripe.com for the authorisation; the provider intent reference pi_3UeJCM00k8Tlns6n0g0WNB94 was stored on the payment and the confirmed intent answered succeeded",
+      "mandate": "the authorisation and the capture",
+      "name": "authorisation_and_capture",
+      "notes": [
+        "the intent was created and confirmed in one call on api.stripe.com with the sandbox payment method pm_card_visa and the intent answered succeeded",
+        "the payment was stored CAPTURED with the provider intent reference; the signed provider event of the next case re-exercises the capture path with the real signing secret"
+      ],
+      "observations": {
+        "client_secret_present": false,
+        "payment_id": "8d5a3e38-1015-408a-b266-0d4c17bddf30",
+        "payment_intent_calls": 1,
+        "payment_status_after_capture": "CAPTURED",
+        "provider_answer_intent_status": "succeeded",
+        "provider_intent_id": "pi_3UeJCM00k8Tlns6n0g0WNB94"
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": null,
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:41.460071Z",
+              "currency": "USD",
+              "id": "8d5a3e38-1015-408a-b266-0d4c17bddf30",
+              "orderId": "73f24f2e-a8e3-4aac-a269-966a208408c6",
+              "previousStatus": "PENDING",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+              "receiptKey": null,
+              "refundedAmount": 0.0,
+              "refundedCurrency": "USD",
+              "refundedReference": null,
+              "status": "CAPTURED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:42.847402042Z",
+            "traceId": "a32c350c83d13a2a847db6116476b08d"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/8d5a3e38-1015-408a-b266-0d4c17bddf30/capture"
+        }
+      ],
+      "proves": "the platform creates the authorisation on Stripe and stores the provider intent reference",
+      "stripe_call_count": 1,
+      "stripe_wire": [
+        {
+          "method": "POST",
+          "path": "/v1/payment_intents",
+          "request_body": "confirm=true&amount=24999&metadata[payment_id]=8d5a3e38-1015-408a-b266-0d4c17bddf30&metadata[idempotency_key]=acceptance-0e842ee6-fc6d-4518-8dfa-f6d675e1a2d5&return_url=https%3A%2F%2Fshop.example.com%2Fcheckout%2Fcomplete&currency=usd&payment_method=pm_card_visa",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "262",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "acceptance-0e842ee6-fc6d-4518-8dfa-f6d675e1a2d5",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_ODeOu7xUv6hTyg\",\"request_duration_ms\":295}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"pi_3UeJCM00k8Tlns6n0g0WNB94\",\n  \"object\": \"payment_intent\",\n  \"allowed_payment_method_types\": null,\n  \"amount\": 24999,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 24999,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": {\n    \"allow_redirects\": \"always\",\n    \"enabled\": true\n  },\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3UeJCM00k8Tlns6n0g0WNB94_secret_0QYO9NmMX8DQeF0r2llgNDDWh\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1795286382,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"description\": null,\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": \"ch_3UeJCM00k8Tlns6n0Rpy5HBh\",\n  \"livemode\": false,\n  \"managed_payments\": {\n    \"enabled\": false\n  },\n  \"metadata\": {\n    \"idempotency_key\": \"acceptance-0e842ee6-fc6d-4518-8dfa-f6d675e1a2d5\",\n    \"payment_id\": \"8d5a3e38-1015-408a-b266-0d4c17bddf30\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1UeJCL00k8Tlns6npDkgcaYt\",\n  \"payment_method_configuration_details\": {\n    \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n    \"parent\": null\n  },\n  \"payment_method_options\": {\n    \"affirm\": {},\n    \"amazon_pay\": {\n      \"express_checkout_element_session_id\": null\n    },\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    },\n    \"cashapp\": {},\n    \"klarna\": {\n      \"preferred_locale\": null\n    },\n    \"link\": {\n      \"persistent_token\": null\n    }\n  },\n  \"payment_method_types\": [\n    \"card\",\n    \"klarna\",\n    \"link\",\n    \"affirm\",\n    \"cashapp\",\n    \"amazon_pay\"\n  ],\n  \"payment_record\": null,\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shared_payment_granted_token\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "2133",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=wwLfYhGiJL_7oRwpgZe8V16vejOTZA4CphNbVHFrxR8dsB-4GboXkmQkQAd2iqL0wzAT51y4CyJ_GawV; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:42 GMT",
+            "idempotency-key": "acceptance-0e842ee6-fc6d-4518-8dfa-f6d675e1a2d5",
+            "original-request": "req_FIELD2ZOftWzKs",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=wwLfYhGiJL_7oRwpgZe8V16vejOTZA4CphNbVHFrxR8dsB-4GboXkmQkQAd2iqL0wzAT51y4CyJ_GawV&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=wwLfYhGiJL_7oRwpgZe8V16vejOTZA4CphNbVHFrxR8dsB-4GboXkmQkQAd2iqL0wzAT51y4CyJ_GawV&t=1\"",
+            "request-id": "req_FIELD2ZOftWzKs",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        }
+      ],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "the signed provider event moved the payment to CAPTURED and the event with a forged signature was refused with 401 PAY-5005",
+      "mandate": "the webhook of the capture with the signature verified",
+      "name": "capture_webhook_signature_verified",
+      "notes": [
+        "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
+        "the verification secret is the signing secret that Stripe issued for the real webhook endpoint of the account, passed through SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET",
+        "Stripe cannot deliver to a local endpoint, so the harness delivered the event itself; the signature verification is the real platform path with the real issued secret"
+      ],
+      "observations": {
+        "forged_signature_body": {
+          "code": "PAY-5005",
+          "message": "Webhook signature is invalid",
+          "path": "/api/v1/webhooks/payments/stripe",
+          "success": false,
+          "timestamp": "2026-11-21T18:39:43.041791417Z",
+          "traceId": "bb45076b73bf520b9c2b22acb7141971"
+        },
+        "forged_signature_status": 401,
+        "payment_status": "CAPTURED",
+        "provider_intent_id": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+        "signed_webhook_body": {
+          "code": "OK",
+          "message": "accepted",
+          "success": true,
+          "timestamp": "2026-11-21T18:39:43.021064792Z",
+          "traceId": "68a753d9eb9938efca91c3e1c4e18d52"
+        },
+        "signed_webhook_status": 200
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "api_version": "2024-06-20",
+            "created": 1795286382,
+            "data": {
+              "object": {
+                "amount": 24999,
+                "currency": "usd",
+                "id": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+                "livemode": false,
+                "metadata": {
+                  "payment_id": "8d5a3e38-1015-408a-b266-0d4c17bddf30"
+                },
+                "object": "payment_intent",
+                "status": "succeeded"
+              }
+            },
+            "id": "evt_acceptance_cvkzORiZflGxSqMh4TzYqzdg",
+            "object": "event",
+            "type": "payment_intent.succeeded"
+          },
+          "response_body": {
+            "code": "OK",
+            "message": "accepted",
+            "success": true,
+            "timestamp": "2026-11-21T18:39:43.021064792Z",
+            "traceId": "68a753d9eb9938efca91c3e1c4e18d52"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/webhooks/payments/stripe"
+        },
+        {
+          "method": "POST",
+          "request_body": {
+            "api_version": "2024-06-20",
+            "created": 1795286383,
+            "data": {
+              "object": {
+                "amount": 24999,
+                "currency": "usd",
+                "id": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+                "livemode": false,
+                "metadata": {
+                  "payment_id": "8d5a3e38-1015-408a-b266-0d4c17bddf30"
+                },
+                "object": "payment_intent",
+                "status": "succeeded"
+              }
+            },
+            "id": "evt_acceptance_cvkzORiZflGxSqMh4TzYqzdg_forged",
+            "object": "event",
+            "type": "payment_intent.succeeded"
+          },
+          "response_body": {
+            "code": "PAY-5005",
+            "message": "Webhook signature is invalid",
+            "path": "/api/v1/webhooks/payments/stripe",
+            "success": false,
+            "timestamp": "2026-11-21T18:39:43.041791417Z",
+            "traceId": "bb45076b73bf520b9c2b22acb7141971"
+          },
+          "status": 401,
+          "url": "http://127.0.0.1:18085/api/v1/webhooks/payments/stripe"
+        },
+        {
+          "method": "GET",
+          "request_body": null,
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "content": [
+                {
+                  "amount": 249.99,
+                  "clientSecret": null,
+                  "createdAt": "2026-11-21T18:39:41.460071Z",
+                  "currency": "USD",
+                  "id": "8d5a3e38-1015-408a-b266-0d4c17bddf30",
+                  "orderId": "73f24f2e-a8e3-4aac-a269-966a208408c6",
+                  "previousStatus": "CAPTURED",
+                  "provider": "stripe",
+                  "providerIntentId": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+                  "receiptKey": "receipts/8d5a3e38-1015-408a-b266-0d4c17bddf30.json",
+                  "refundedAmount": 0.0,
+                  "refundedCurrency": "USD",
+                  "refundedReference": null,
+                  "status": "CAPTURED"
+                }
+              ],
+              "first": true,
+              "last": true,
+              "page": 0,
+              "size": 10,
+              "totalElements": 1,
+              "totalPages": 1
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:43.058177750Z",
+            "traceId": "e8443fa1c113233455fd211e6dcd9c33"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments?orderId=73f24f2e-a8e3-4aac-a269-966a208408c6"
+        }
+      ],
+      "proves": "the payment is captured only from a signed provider event and a forged signature is refused",
+      "stripe_call_count": 0,
+      "stripe_wire": [],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "the platform refunded the captured amount against the provider intent and the payment reached REFUNDED with refundedAmount 249.99",
+      "mandate": "the refund",
+      "name": "refund",
+      "notes": [],
+      "observations": {
+        "payment_intent_calls": 1,
+        "payment_status": "REFUNDED",
+        "refund_calls": 1,
+        "refunded_amount": 249.99
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 249.99,
+            "currency": "USD",
+            "refundReference": "db8a4c9c-86f4-4e15-869b-8142d368070d"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:41.460071Z",
+              "currency": "USD",
+              "id": "8d5a3e38-1015-408a-b266-0d4c17bddf30",
+              "orderId": "73f24f2e-a8e3-4aac-a269-966a208408c6",
+              "previousStatus": "CAPTURED",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+              "receiptKey": "receipts/8d5a3e38-1015-408a-b266-0d4c17bddf30.json",
+              "refundedAmount": 249.99,
+              "refundedCurrency": "USD",
+              "refundedReference": "db8a4c9c-86f4-4e15-869b-8142d368070d",
+              "status": "REFUNDED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:44.743540209Z",
+            "traceId": "e68db6a8feb7137c147e1e984ec3e6b6"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/8d5a3e38-1015-408a-b266-0d4c17bddf30/refund"
+        }
+      ],
+      "proves": "the platform refunds against the provider intent and records the refunded amount",
+      "stripe_call_count": 2,
+      "stripe_wire": [
+        {
+          "method": "GET",
+          "path": "/v1/payment_intents/pi_3UeJCM00k8Tlns6n0g0WNB94",
+          "request_body": "",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Host": "host.docker.internal:12113",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_FIELD2ZOftWzKs\",\"request_duration_ms\":1199,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"pi_3UeJCM00k8Tlns6n0g0WNB94\",\n  \"object\": \"payment_intent\",\n  \"allowed_payment_method_types\": null,\n  \"amount\": 24999,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 24999,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": {\n    \"allow_redirects\": \"always\",\n    \"enabled\": true\n  },\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3UeJCM00k8Tlns6n0g0WNB94_secret_0QYO9NmMX8DQeF0r2llgNDDWh\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1795286382,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"description\": null,\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": \"ch_3UeJCM00k8Tlns6n0Rpy5HBh\",\n  \"livemode\": false,\n  \"managed_payments\": {\n    \"enabled\": false\n  },\n  \"metadata\": {\n    \"idempotency_key\": \"acceptance-0e842ee6-fc6d-4518-8dfa-f6d675e1a2d5\",\n    \"payment_id\": \"8d5a3e38-1015-408a-b266-0d4c17bddf30\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1UeJCL00k8Tlns6npDkgcaYt\",\n  \"payment_method_configuration_details\": {\n    \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n    \"parent\": null\n  },\n  \"payment_method_options\": {\n    \"affirm\": {},\n    \"amazon_pay\": {\n      \"express_checkout_element_session_id\": null\n    },\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    },\n    \"cashapp\": {},\n    \"klarna\": {\n      \"preferred_locale\": null\n    },\n    \"link\": {\n      \"persistent_token\": null\n    }\n  },\n  \"payment_method_types\": [\n    \"card\",\n    \"klarna\",\n    \"link\",\n    \"affirm\",\n    \"cashapp\",\n    \"amazon_pay\"\n  ],\n  \"payment_record\": null,\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shared_payment_granted_token\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "2133",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=oYZOV5e0Wb6xo2tRqBdtRhqtIResh1kHp013Ao0wBZOxOGf2qBdGzQf7OSIyFWZQzpO-g_rQzpzLXGoa; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:43 GMT",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=oYZOV5e0Wb6xo2tRqBdtRhqtIResh1kHp013Ao0wBZOxOGf2qBdGzQf7OSIyFWZQzpO-g_rQzpzLXGoa&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=oYZOV5e0Wb6xo2tRqBdtRhqtIResh1kHp013Ao0wBZOxOGf2qBdGzQf7OSIyFWZQzpO-g_rQzpzLXGoa&t=1\"",
+            "request-id": "req_oJPjXFubZVzFJA",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/v1/refunds",
+          "request_body": "amount=24999&payment_intent=pi_3UeJCM00k8Tlns6n0g0WNB94",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "55",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "refund-db8a4c9c-86f4-4e15-869b-8142d368070d",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_oJPjXFubZVzFJA\",\"request_duration_ms\":381,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"re_3UeJCM00k8Tlns6n0BC5uKfU\",\n  \"object\": \"refund\",\n  \"amount\": 24999,\n  \"application\": null,\n  \"balance_transaction\": \"txn_3UeJCM00k8Tlns6n0jaGoKBc\",\n  \"charge\": \"ch_3UeJCM00k8Tlns6n0Rpy5HBh\",\n  \"created\": 1795286383,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"destination_details\": {\n    \"card\": {\n      \"reference_status\": \"pending\",\n      \"reference_type\": \"acquirer_reference_number\",\n      \"type\": \"refund\"\n    },\n    \"type\": \"card\"\n  },\n  \"metadata\": {},\n  \"payment_intent\": \"pi_3UeJCM00k8Tlns6n0g0WNB94\",\n  \"payment_method\": \"pm_1UeJCL00k8Tlns6npDkgcaYt\",\n  \"reason\": null,\n  \"receipt_number\": null,\n  \"source_transfer_reversal\": null,\n  \"status\": \"succeeded\",\n  \"transfer_reversal\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "738",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=zLqyz_xia2uNPJM8eI0UTWyNAc_dg14WGEi9BqBLbv7E3_J1IIIvJ4epUaEyAeSJ2CJD6UjO1Zc910Vh; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:44 GMT",
+            "idempotency-key": "refund-db8a4c9c-86f4-4e15-869b-8142d368070d",
+            "original-request": "req_gqw1fEFuibtnkt",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=zLqyz_xia2uNPJM8eI0UTWyNAc_dg14WGEi9BqBLbv7E3_J1IIIvJ4epUaEyAeSJ2CJD6UjO1Zc910Vh&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=zLqyz_xia2uNPJM8eI0UTWyNAc_dg14WGEi9BqBLbv7E3_J1IIIvJ4epUaEyAeSJ2CJD6UjO1Zc910Vh&t=1\"",
+            "request-id": "req_gqw1fEFuibtnkt",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        }
+      ],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "the replay of the same refund reference returned the same refund and issued no further refund call to the provider",
+      "mandate": "the idempotent replay of the refund",
+      "name": "refund_idempotent_replay",
+      "notes": [
+        "the platform answers the replay from its own refund ledger, so no money can move twice"
+      ],
+      "observations": {
+        "provider_refund_calls_during_replay": 0,
+        "replay_payment_status": "REFUNDED",
+        "replay_refunded_amount": 249.99,
+        "replay_status": 200
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 249.99,
+            "currency": "USD",
+            "refundReference": "db8a4c9c-86f4-4e15-869b-8142d368070d"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:41.460071Z",
+              "currency": "USD",
+              "id": "8d5a3e38-1015-408a-b266-0d4c17bddf30",
+              "orderId": "73f24f2e-a8e3-4aac-a269-966a208408c6",
+              "previousStatus": "CAPTURED",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJCM00k8Tlns6n0g0WNB94",
+              "receiptKey": "receipts/8d5a3e38-1015-408a-b266-0d4c17bddf30.json",
+              "refundedAmount": 249.99,
+              "refundedCurrency": "USD",
+              "refundedReference": "db8a4c9c-86f4-4e15-869b-8142d368070d",
+              "status": "REFUNDED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:44.760976668Z",
+            "traceId": "a0efa31b04b9509719ef950bec8557d2"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/8d5a3e38-1015-408a-b266-0d4c17bddf30/refund"
+        }
+      ],
+      "proves": "replaying the same refund reference does not move money twice",
+      "stripe_call_count": 0,
+      "stripe_wire": [],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "the partial refund moved 50.00 of the 249.99 total and the payment stayed PARTIALLY_REFUNDED",
+      "mandate": "the partial refund",
+      "name": "partial_refund",
+      "notes": [],
+      "observations": {
+        "payment_status": "PARTIALLY_REFUNDED",
+        "previous_status": "CAPTURED",
+        "provider_refund_calls": 1,
+        "refunded_amount": 50.0
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 249.99,
+            "currency": "USD",
+            "idempotencyKey": "acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad",
+            "orderId": "ec71d471-b77a-41d2-a2a3-7d7bdcc8bdcd"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:44.769998459Z",
+              "currency": "USD",
+              "id": "64ccb1be-e84e-4faa-9995-de945d6b10e9",
+              "orderId": "ec71d471-b77a-41d2-a2a3-7d7bdcc8bdcd",
+              "previousStatus": null,
+              "provider": "stripe",
+              "providerIntentId": null,
+              "receiptKey": null,
+              "refundedAmount": 0,
+              "refundedCurrency": "USD",
+              "refundedReference": null,
+              "status": "PENDING"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:44.771711376Z",
+            "traceId": "6a5da9211c63f12159f6a8c399babe1b"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments"
+        },
+        {
+          "method": "POST",
+          "request_body": null,
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:44.769998Z",
+              "currency": "USD",
+              "id": "64ccb1be-e84e-4faa-9995-de945d6b10e9",
+              "orderId": "ec71d471-b77a-41d2-a2a3-7d7bdcc8bdcd",
+              "previousStatus": "PENDING",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJCP00k8Tlns6n1VLRUBX7",
+              "receiptKey": null,
+              "refundedAmount": 0.0,
+              "refundedCurrency": "USD",
+              "refundedReference": null,
+              "status": "CAPTURED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:46.136737627Z",
+            "traceId": "3043323d6b39ab49a729ba736c3725d7"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/64ccb1be-e84e-4faa-9995-de945d6b10e9/capture"
+        },
+        {
+          "method": "POST",
+          "request_body": {
+            "api_version": "2024-06-20",
+            "created": 1795286386,
+            "data": {
+              "object": {
+                "amount": 24999,
+                "currency": "usd",
+                "id": "pi_3UeJCP00k8Tlns6n1VLRUBX7",
+                "livemode": false,
+                "metadata": {
+                  "payment_id": "64ccb1be-e84e-4faa-9995-de945d6b10e9"
+                },
+                "object": "payment_intent",
+                "status": "succeeded"
+              }
+            },
+            "id": "evt_acceptance_cQlzwZ9KHD2TiCqvsxFVN6he",
+            "object": "event",
+            "type": "payment_intent.succeeded"
+          },
+          "response_body": {
+            "code": "OK",
+            "message": "accepted",
+            "success": true,
+            "timestamp": "2026-11-21T18:39:46.497871085Z",
+            "traceId": "4dacd6c006bd2fb59fc9dd95d7136220"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/webhooks/payments/stripe"
+        },
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 50.0,
+            "currency": "USD",
+            "refundReference": "6b1902a4-f9ca-44de-a6a0-d9905f9fde36"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:44.769998Z",
+              "currency": "USD",
+              "id": "64ccb1be-e84e-4faa-9995-de945d6b10e9",
+              "orderId": "ec71d471-b77a-41d2-a2a3-7d7bdcc8bdcd",
+              "previousStatus": "CAPTURED",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJCP00k8Tlns6n1VLRUBX7",
+              "receiptKey": "receipts/64ccb1be-e84e-4faa-9995-de945d6b10e9.json",
+              "refundedAmount": 50.0,
+              "refundedCurrency": "USD",
+              "refundedReference": "6b1902a4-f9ca-44de-a6a0-d9905f9fde36",
+              "status": "PARTIALLY_REFUNDED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:48.159262544Z",
+            "traceId": "576598173f6b7116fc0e4905c4eef5bd"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/64ccb1be-e84e-4faa-9995-de945d6b10e9/refund"
+        }
+      ],
+      "proves": "a partial refund moves part of the amount and leaves the payment partially refunded",
+      "stripe_call_count": 3,
+      "stripe_wire": [
+        {
+          "method": "POST",
+          "path": "/v1/payment_intents",
+          "request_body": "confirm=true&amount=24999&metadata[payment_id]=64ccb1be-e84e-4faa-9995-de945d6b10e9&metadata[idempotency_key]=acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad&return_url=https%3A%2F%2Fshop.example.com%2Fcheckout%2Fcomplete&currency=usd&payment_method=pm_card_visa",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "262",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_gqw1fEFuibtnkt\",\"request_duration_ms\":1160,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7\",\n  \"object\": \"payment_intent\",\n  \"allowed_payment_method_types\": null,\n  \"amount\": 24999,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 24999,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": {\n    \"allow_redirects\": \"always\",\n    \"enabled\": true\n  },\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7_secret_NuBdENxqXdIJyZLUk2QtxXqyF\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1795286385,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"description\": null,\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": \"ch_3UeJCP00k8Tlns6n1u6681JN\",\n  \"livemode\": false,\n  \"managed_payments\": {\n    \"enabled\": false\n  },\n  \"metadata\": {\n    \"idempotency_key\": \"acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad\",\n    \"payment_id\": \"64ccb1be-e84e-4faa-9995-de945d6b10e9\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1UeJCP00k8Tlns6npWo5EDgs\",\n  \"payment_method_configuration_details\": {\n    \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n    \"parent\": null\n  },\n  \"payment_method_options\": {\n    \"affirm\": {},\n    \"amazon_pay\": {\n      \"express_checkout_element_session_id\": null\n    },\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    },\n    \"cashapp\": {},\n    \"klarna\": {\n      \"preferred_locale\": null\n    },\n    \"link\": {\n      \"persistent_token\": null\n    }\n  },\n  \"payment_method_types\": [\n    \"card\",\n    \"klarna\",\n    \"link\",\n    \"affirm\",\n    \"cashapp\",\n    \"amazon_pay\"\n  ],\n  \"payment_record\": null,\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shared_payment_granted_token\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "2133",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Pb8-BkqPaHI44sz0hO5F8gh5aI59npXkG-ujExvrsvA_roRhIk9D1cBOZxuc8o5slJGoIEKOlXlWleyd; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:46 GMT",
+            "idempotency-key": "acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad",
+            "original-request": "req_CcA3f5GeDifZes",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=Pb8-BkqPaHI44sz0hO5F8gh5aI59npXkG-ujExvrsvA_roRhIk9D1cBOZxuc8o5slJGoIEKOlXlWleyd&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=Pb8-BkqPaHI44sz0hO5F8gh5aI59npXkG-ujExvrsvA_roRhIk9D1cBOZxuc8o5slJGoIEKOlXlWleyd&t=1\"",
+            "request-id": "req_CcA3f5GeDifZes",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/payment_intents/pi_3UeJCP00k8Tlns6n1VLRUBX7",
+          "request_body": "",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Host": "host.docker.internal:12113",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_CcA3f5GeDifZes\",\"request_duration_ms\":1255,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7\",\n  \"object\": \"payment_intent\",\n  \"allowed_payment_method_types\": null,\n  \"amount\": 24999,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 24999,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": {\n    \"allow_redirects\": \"always\",\n    \"enabled\": true\n  },\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7_secret_NuBdENxqXdIJyZLUk2QtxXqyF\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1795286385,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"description\": null,\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": \"ch_3UeJCP00k8Tlns6n1u6681JN\",\n  \"livemode\": false,\n  \"managed_payments\": {\n    \"enabled\": false\n  },\n  \"metadata\": {\n    \"idempotency_key\": \"acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad\",\n    \"payment_id\": \"64ccb1be-e84e-4faa-9995-de945d6b10e9\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1UeJCP00k8Tlns6npWo5EDgs\",\n  \"payment_method_configuration_details\": {\n    \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n    \"parent\": null\n  },\n  \"payment_method_options\": {\n    \"affirm\": {},\n    \"amazon_pay\": {\n      \"express_checkout_element_session_id\": null\n    },\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    },\n    \"cashapp\": {},\n    \"klarna\": {\n      \"preferred_locale\": null\n    },\n    \"link\": {\n      \"persistent_token\": null\n    }\n  },\n  \"payment_method_types\": [\n    \"card\",\n    \"klarna\",\n    \"link\",\n    \"affirm\",\n    \"cashapp\",\n    \"amazon_pay\"\n  ],\n  \"payment_record\": null,\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shared_payment_granted_token\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "2133",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=_hjfoGxMHIVzPkm73aGOSZIBNOapcYRUXOrtwdPZ8mt0FoA4fJOzI_spq3hF220T-QjgpvfcifmdIoIi; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:47 GMT",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=_hjfoGxMHIVzPkm73aGOSZIBNOapcYRUXOrtwdPZ8mt0FoA4fJOzI_spq3hF220T-QjgpvfcifmdIoIi&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=_hjfoGxMHIVzPkm73aGOSZIBNOapcYRUXOrtwdPZ8mt0FoA4fJOzI_spq3hF220T-QjgpvfcifmdIoIi&t=1\"",
+            "request-id": "req_zBUytvN0lcythB",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/v1/refunds",
+          "request_body": "amount=5000&payment_intent=pi_3UeJCP00k8Tlns6n1VLRUBX7",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "54",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "refund-6b1902a4-f9ca-44de-a6a0-d9905f9fde36",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_zBUytvN0lcythB\",\"request_duration_ms\":381,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"re_3UeJCP00k8Tlns6n1nU6mEY6\",\n  \"object\": \"refund\",\n  \"amount\": 5000,\n  \"application\": null,\n  \"balance_transaction\": \"txn_3UeJCP00k8Tlns6n12u8g3hj\",\n  \"charge\": \"ch_3UeJCP00k8Tlns6n1u6681JN\",\n  \"created\": 1795286387,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"destination_details\": {\n    \"card\": {\n      \"reference_status\": \"pending\",\n      \"reference_type\": \"acquirer_reference_number\",\n      \"type\": \"refund\"\n    },\n    \"type\": \"card\"\n  },\n  \"metadata\": {},\n  \"payment_intent\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7\",\n  \"payment_method\": \"pm_1UeJCP00k8Tlns6npWo5EDgs\",\n  \"reason\": null,\n  \"receipt_number\": null,\n  \"source_transfer_reversal\": null,\n  \"status\": \"succeeded\",\n  \"transfer_reversal\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "737",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=WvrTswYIwt7HCeXrrXo9ulR-wB5LGq8YLVqgpzM6fMZRgCRTHYI77Ie29QdMdlZUbAkH-S2Lz8d40hAm; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:48 GMT",
+            "idempotency-key": "refund-6b1902a4-f9ca-44de-a6a0-d9905f9fde36",
+            "original-request": "req_wvCMQEpFKl1bLc",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=WvrTswYIwt7HCeXrrXo9ulR-wB5LGq8YLVqgpzM6fMZRgCRTHYI77Ie29QdMdlZUbAkH-S2Lz8d40hAm&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=WvrTswYIwt7HCeXrrXo9ulR-wB5LGq8YLVqgpzM6fMZRgCRTHYI77Ie29QdMdlZUbAkH-S2Lz8d40hAm&t=1\"",
+            "request-id": "req_wvCMQEpFKl1bLc",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        }
+      ],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "the second partial refund of 25.00 accumulated on the first one and the refunded amount reached 75.00",
+      "mandate": "the second partial refund",
+      "name": "second_partial_refund",
+      "notes": [],
+      "observations": {
+        "payment_status": "PARTIALLY_REFUNDED",
+        "previous_status": "PARTIALLY_REFUNDED",
+        "provider_refund_calls": 1,
+        "refunded_amount": 75.0
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 25.0,
+            "currency": "USD",
+            "refundReference": "5d8ffdb2-de1e-4317-bb26-b16855fa7bbc"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:39:44.769998Z",
+              "currency": "USD",
+              "id": "64ccb1be-e84e-4faa-9995-de945d6b10e9",
+              "orderId": "ec71d471-b77a-41d2-a2a3-7d7bdcc8bdcd",
+              "previousStatus": "PARTIALLY_REFUNDED",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJCP00k8Tlns6n1VLRUBX7",
+              "receiptKey": "receipts/64ccb1be-e84e-4faa-9995-de945d6b10e9.json",
+              "refundedAmount": 75.0,
+              "refundedCurrency": "USD",
+              "refundedReference": "5d8ffdb2-de1e-4317-bb26-b16855fa7bbc",
+              "status": "PARTIALLY_REFUNDED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:39:49.676999837Z",
+            "traceId": "d9b574ac6e70f4a9a5c8f2a4211cd8db"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/64ccb1be-e84e-4faa-9995-de945d6b10e9/refund"
+        }
+      ],
+      "proves": "a second partial refund accumulates on the first one",
+      "stripe_call_count": 2,
+      "stripe_wire": [
+        {
+          "method": "GET",
+          "path": "/v1/payment_intents/pi_3UeJCP00k8Tlns6n1VLRUBX7",
+          "request_body": "",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Host": "host.docker.internal:12113",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_wvCMQEpFKl1bLc\",\"request_duration_ms\":1112,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7\",\n  \"object\": \"payment_intent\",\n  \"allowed_payment_method_types\": null,\n  \"amount\": 24999,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 24999,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": {\n    \"allow_redirects\": \"always\",\n    \"enabled\": true\n  },\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7_secret_NuBdENxqXdIJyZLUk2QtxXqyF\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1795286385,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"description\": null,\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": \"ch_3UeJCP00k8Tlns6n1u6681JN\",\n  \"livemode\": false,\n  \"managed_payments\": {\n    \"enabled\": false\n  },\n  \"metadata\": {\n    \"idempotency_key\": \"acceptance-8dada081-e5e9-425a-8200-f196ee66c4ad\",\n    \"payment_id\": \"64ccb1be-e84e-4faa-9995-de945d6b10e9\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1UeJCP00k8Tlns6npWo5EDgs\",\n  \"payment_method_configuration_details\": {\n    \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n    \"parent\": null\n  },\n  \"payment_method_options\": {\n    \"affirm\": {},\n    \"amazon_pay\": {\n      \"express_checkout_element_session_id\": null\n    },\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    },\n    \"cashapp\": {},\n    \"klarna\": {\n      \"preferred_locale\": null\n    },\n    \"link\": {\n      \"persistent_token\": null\n    }\n  },\n  \"payment_method_types\": [\n    \"card\",\n    \"klarna\",\n    \"link\",\n    \"affirm\",\n    \"cashapp\",\n    \"amazon_pay\"\n  ],\n  \"payment_record\": null,\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shared_payment_granted_token\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "2133",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=IgFJrUIdA09-MWo5CS5red-UnPw5HH7e_oFX7cp4j78M8IRXjOnUiifrQIJ-OdSx37VMB_gFysRg7lnr; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:48 GMT",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=IgFJrUIdA09-MWo5CS5red-UnPw5HH7e_oFX7cp4j78M8IRXjOnUiifrQIJ-OdSx37VMB_gFysRg7lnr&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=IgFJrUIdA09-MWo5CS5red-UnPw5HH7e_oFX7cp4j78M8IRXjOnUiifrQIJ-OdSx37VMB_gFysRg7lnr&t=1\"",
+            "request-id": "req_bBl0L68YWGyVEx",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/v1/refunds",
+          "request_body": "amount=2500&payment_intent=pi_3UeJCP00k8Tlns6n1VLRUBX7",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "54",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "refund-5d8ffdb2-de1e-4317-bb26-b16855fa7bbc",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_bBl0L68YWGyVEx\",\"request_duration_ms\":301,\"usage\":[\"stripe_client\"]}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"re_3UeJCP00k8Tlns6n1Mhxg0Q6\",\n  \"object\": \"refund\",\n  \"amount\": 2500,\n  \"application\": null,\n  \"balance_transaction\": \"txn_3UeJCP00k8Tlns6n16IfomYu\",\n  \"charge\": \"ch_3UeJCP00k8Tlns6n1u6681JN\",\n  \"created\": 1795286388,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"destination_details\": {\n    \"card\": {\n      \"reference_status\": \"pending\",\n      \"reference_type\": \"acquirer_reference_number\",\n      \"type\": \"refund\"\n    },\n    \"type\": \"card\"\n  },\n  \"metadata\": {},\n  \"payment_intent\": \"pi_3UeJCP00k8Tlns6n1VLRUBX7\",\n  \"payment_method\": \"pm_1UeJCP00k8Tlns6npWo5EDgs\",\n  \"reason\": null,\n  \"receipt_number\": null,\n  \"source_transfer_reversal\": null,\n  \"status\": \"succeeded\",\n  \"transfer_reversal\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "737",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=20aIPJTYJeVNEcWyL_y8-UL2PRsJONMbrkYhK8pNWJ5b1mdipQAGO5lmvw-4Ex5Nq7K86aJVV18QBQ-A; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:39:49 GMT",
+            "idempotency-key": "refund-5d8ffdb2-de1e-4317-bb26-b16855fa7bbc",
+            "original-request": "req_wzK3mDAcWrFMfw",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=20aIPJTYJeVNEcWyL_y8-UL2PRsJONMbrkYhK8pNWJ5b1mdipQAGO5lmvw-4Ex5Nq7K86aJVV18QBQ-A&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=20aIPJTYJeVNEcWyL_y8-UL2PRsJONMbrkYhK8pNWJ5b1mdipQAGO5lmvw-4Ex5Nq7K86aJVV18QBQ-A&t=1\"",
+            "request-id": "req_wzK3mDAcWrFMfw",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        }
+      ],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "api.stripe.com refused the authorisation of the declined test card with 402 card_declined (generic_decline); the payment was never captured, the signed payment_failed event moved it to FAILED, and a further capture was refused with 409 PAY-5004",
+      "mandate": "the refusal of a card that is declined",
+      "name": "declined_card_refusal",
+      "notes": [
+        "the container ran with the declined Stripe test payment method pm_card_visa_chargeDeclined (card 4000000000000002) and the platform observed the CardException branch of StripeProvider",
+        "Stripe delivers no event for a decline against a local endpoint, so the signed payment_failed event was delivered by the harness with the real signing secret"
+      ],
+      "observations": {
+        "capture_after_failure_code": "PAY-5004",
+        "capture_after_failure_message": "Payment FAILED is in invalid state",
+        "capture_after_failure_status": 409,
+        "capture_status": 502,
+        "decline_payment_method_sent": "pm_card_visa_chargeDeclined",
+        "payment_failed_event_status": 200,
+        "payment_service_started_with_payment_method": "pm_card_visa_chargeDeclined",
+        "payment_status_after_declined_capture": "PENDING",
+        "payment_status_after_failure_event": "FAILED",
+        "provider_answer_decline_code": "generic_decline",
+        "provider_answer_error_code": "card_declined",
+        "provider_answer_error_type": "card_error",
+        "provider_answer_status": 402
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 40.0,
+            "currency": "USD",
+            "idempotencyKey": "acceptance-d312dee0-b57d-42bf-acd6-012556dfe25c",
+            "orderId": "4f68bd2d-f5ba-4bc8-b3ad-fe3189022f74"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 40.0,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:40:07.073347428Z",
+              "currency": "USD",
+              "id": "a763bc77-0fcc-49bc-ac1b-b8c85bb6b064",
+              "orderId": "4f68bd2d-f5ba-4bc8-b3ad-fe3189022f74",
+              "previousStatus": null,
+              "provider": "stripe",
+              "providerIntentId": null,
+              "receiptKey": null,
+              "refundedAmount": 0,
+              "refundedCurrency": "USD",
+              "refundedReference": null,
+              "status": "PENDING"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:40:07.118957137Z",
+            "traceId": "230b0f94b9968b20ae84ba30625db9b5"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments"
+        },
+        {
+          "method": "POST",
+          "request_body": null,
+          "response_body": {
+            "code": "PAY-5008",
+            "message": "Payment provider rejected the request: card_declined",
+            "path": "/api/v1/payments/a763bc77-0fcc-49bc-ac1b-b8c85bb6b064/capture",
+            "success": false,
+            "timestamp": "2026-11-21T18:40:08.472500512Z",
+            "traceId": "3f499dcc303ead98f22a3a636898fa4b"
+          },
+          "status": 502,
+          "url": "http://127.0.0.1:18085/api/v1/payments/a763bc77-0fcc-49bc-ac1b-b8c85bb6b064/capture"
+        },
+        {
+          "method": "GET",
+          "request_body": null,
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "content": [
+                {
+                  "amount": 40.0,
+                  "clientSecret": null,
+                  "createdAt": "2026-11-21T18:40:07.073347Z",
+                  "currency": "USD",
+                  "id": "a763bc77-0fcc-49bc-ac1b-b8c85bb6b064",
+                  "orderId": "4f68bd2d-f5ba-4bc8-b3ad-fe3189022f74",
+                  "previousStatus": null,
+                  "provider": "stripe",
+                  "providerIntentId": null,
+                  "receiptKey": null,
+                  "refundedAmount": 0.0,
+                  "refundedCurrency": "USD",
+                  "refundedReference": null,
+                  "status": "PENDING"
+                }
+              ],
+              "first": true,
+              "last": true,
+              "page": 0,
+              "size": 10,
+              "totalElements": 1,
+              "totalPages": 1
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:40:08.519331721Z",
+            "traceId": "3d8eeb033dd3e9916c25f46370514453"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments?orderId=4f68bd2d-f5ba-4bc8-b3ad-fe3189022f74"
+        },
+        {
+          "method": "POST",
+          "request_body": {
+            "api_version": "2024-06-20",
+            "created": 1795286408,
+            "data": {
+              "object": {
+                "amount": 4000,
+                "currency": "usd",
+                "id": "",
+                "livemode": false,
+                "metadata": {
+                  "payment_id": "a763bc77-0fcc-49bc-ac1b-b8c85bb6b064"
+                },
+                "object": "payment_intent",
+                "status": "canceled"
+              }
+            },
+            "id": "evt_acceptance_6erCgGH9IfTh9xvqeZMbQArh",
+            "object": "event",
+            "type": "payment_intent.payment_failed"
+          },
+          "response_body": {
+            "code": "OK",
+            "message": "accepted",
+            "success": true,
+            "timestamp": "2026-11-21T18:40:08.651309721Z",
+            "traceId": "a87dcb9653b6daf22a3ee720975e7c16"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/webhooks/payments/stripe"
+        },
+        {
+          "method": "GET",
+          "request_body": null,
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "content": [
+                {
+                  "amount": 40.0,
+                  "clientSecret": null,
+                  "createdAt": "2026-11-21T18:40:07.073347Z",
+                  "currency": "USD",
+                  "id": "a763bc77-0fcc-49bc-ac1b-b8c85bb6b064",
+                  "orderId": "4f68bd2d-f5ba-4bc8-b3ad-fe3189022f74",
+                  "previousStatus": "PENDING",
+                  "provider": "stripe",
+                  "providerIntentId": null,
+                  "receiptKey": null,
+                  "refundedAmount": 0.0,
+                  "refundedCurrency": "USD",
+                  "refundedReference": null,
+                  "status": "FAILED"
+                }
+              ],
+              "first": true,
+              "last": true,
+              "page": 0,
+              "size": 10,
+              "totalElements": 1,
+              "totalPages": 1
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:40:08.660216679Z",
+            "traceId": "e1141feee1ade1123c832a7eef7a970d"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments?orderId=4f68bd2d-f5ba-4bc8-b3ad-fe3189022f74"
+        },
+        {
+          "method": "POST",
+          "request_body": null,
+          "response_body": {
+            "code": "PAY-5004",
+            "message": "Payment FAILED is in invalid state",
+            "path": "/api/v1/payments/a763bc77-0fcc-49bc-ac1b-b8c85bb6b064/capture",
+            "success": false,
+            "timestamp": "2026-11-21T18:40:08.669179762Z",
+            "traceId": "4e80283b3454954830e15dd1fcdb1a09"
+          },
+          "status": 409,
+          "url": "http://127.0.0.1:18085/api/v1/payments/a763bc77-0fcc-49bc-ac1b-b8c85bb6b064/capture"
+        }
+      ],
+      "proves": "a refused card must leave the payment unpaid and never captured",
+      "stripe_call_count": 1,
+      "stripe_wire": [
+        {
+          "method": "POST",
+          "path": "/v1/payment_intents",
+          "request_body": "confirm=true&amount=4000&metadata[payment_id]=a763bc77-0fcc-49bc-ac1b-b8c85bb6b064&metadata[idempotency_key]=acceptance-d312dee0-b57d-42bf-acd6-012556dfe25c&return_url=https%3A%2F%2Fshop.example.com%2Fcheckout%2Fcomplete&currency=usd&payment_method=pm_card_visa_chargeDeclined",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "276",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "acceptance-d312dee0-b57d-42bf-acd6-012556dfe25c",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_8jb0D9JeCey1v9\",\"request_duration_ms\":299}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"error\": {\n    \"advice_code\": \"try_again_later\",\n    \"charge\": \"ch_3UeJCl00k8Tlns6n06YquJeH\",\n    \"code\": \"card_declined\",\n    \"decline_code\": \"generic_decline\",\n    \"doc_url\": \"https://stripe.com/docs/error-codes/card-declined\",\n    \"message\": \"Your card was declined.\",\n    \"network_decline_code\": \"01\",\n    \"payment_intent\": {\n      \"id\": \"pi_3UeJCl00k8Tlns6n0r7Ebf9F\",\n      \"object\": \"payment_intent\",\n      \"allowed_payment_method_types\": null,\n      \"amount\": 4000,\n      \"amount_capturable\": 0,\n      \"amount_details\": {\n        \"tip\": {}\n      },\n      \"amount_received\": 0,\n      \"application\": null,\n      \"application_fee_amount\": null,\n      \"automatic_payment_methods\": {\n        \"allow_redirects\": \"always\",\n        \"enabled\": true\n      },\n      \"canceled_at\": null,\n      \"cancellation_reason\": null,\n      \"capture_method\": \"automatic\",\n      \"client_secret\": \"pi_3UeJCl00k8Tlns6n0r7Ebf9F_secret_tnvp71S903RI92MctSB4b3R0h\",\n      \"confirmation_method\": \"automatic\",\n      \"created\": 1795286407,\n      \"currency\": \"usd\",\n      \"customer\": null,\n      \"customer_account\": null,\n      \"description\": null,\n      \"excluded_payment_method_types\": null,\n      \"invoice\": null,\n      \"last_payment_error\": {\n        \"advice_code\": \"try_again_later\",\n        \"charge\": \"ch_3UeJCl00k8Tlns6n06YquJeH\",\n        \"code\": \"card_declined\",\n        \"decline_code\": \"generic_decline\",\n        \"doc_url\": \"https://stripe.com/docs/error-codes/card-declined\",\n        \"message\": \"Your card was declined.\",\n        \"network_decline_code\": \"01\",\n        \"payment_method\": {\n          \"id\": \"pm_1UeJCl00k8Tlns6nRluEDc0F\",\n          \"object\": \"payment_method\",\n          \"allow_redisplay\": \"unspecified\",\n          \"billing_details\": {\n            \"address\": {\n              \"city\": null,\n              \"country\": null,\n              \"line1\": null,\n              \"line2\": null,\n              \"postal_code\": null,\n              \"state\": null\n            },\n            \"email\": null,\n            \"name\": null,\n            \"phone\": null,\n            \"tax_id\": null\n          },\n          \"card\": {\n            \"brand\": \"visa\",\n            \"checks\": {\n              \"address_line1_check\": null,\n              \"address_postal_code_check\": null,\n              \"cvc_check\": \"pass\"\n            },\n            \"country\": \"US\",\n            \"display_brand\": \"visa\",\n            \"exp_month\": 11,\n            \"exp_year\": 2027,\n            \"fingerprint\": \"gODrk3kL8zsxcPuM\",\n            \"funding\": \"credit\",\n            \"generated_from\": null,\n            \"last4\": \"0002\",\n            \"networks\": {\n              \"available\": [\n                \"visa\"\n              ],\n              \"preferred\": null\n            },\n            \"regulated_status\": \"unregulated\",\n            \"three_d_secure_usage\": {\n              \"supported\": true\n            },\n            \"wallet\": null\n          },\n          \"created\": 1795286407,\n          \"customer\": null,\n          \"customer_account\": null,\n          \"livemode\": false,\n          \"metadata\": {},\n          \"shared_payment_granted_token\": null,\n          \"type\": \"card\"\n        },\n        \"payment_method_type\": \"card\",\n        \"type\": \"card_error\"\n      },\n      \"latest_charge\": \"ch_3UeJCl00k8Tlns6n06YquJeH\",\n      \"livemode\": false,\n      \"managed_payments\": {\n        \"enabled\": false\n      },\n      \"metadata\": {\n        \"idempotency_key\": \"acceptance-d312dee0-b57d-42bf-acd6-012556dfe25c\",\n        \"payment_id\": \"a763bc77-0fcc-49bc-ac1b-b8c85bb6b064\"\n      },\n      \"next_action\": null,\n      \"on_behalf_of\": null,\n      \"payment_method\": null,\n      \"payment_method_configuration_details\": {\n        \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n        \"parent\": null\n      },\n      \"payment_method_options\": {\n        \"affirm\": {},\n        \"amazon_pay\": {\n          \"express_checkout_element_session_id\": null\n        },\n        \"card\": {\n          \"installments\": null,\n          \"mandate_options\": null,\n          \"network\": null,\n          \"request_three_d_secure\": \"automatic\"\n        },\n        \"cashapp\": {},\n        \"klarna\": {\n          \"preferred_locale\": null\n        },\n        \"link\": {\n          \"persistent_token\": null\n        }\n      },\n      \"payment_method_types\": [\n        \"card\",\n        \"klarna\",\n        \"link\",\n        \"affirm\",\n        \"cashapp\",\n        \"amazon_pay\"\n      ],\n      \"payment_record\": null,\n      \"processing\": null,\n      \"receipt_email\": null,\n      \"review\": null,\n      \"setup_future_usage\": null,\n      \"shared_payment_granted_token\": null,\n      \"shipping\": null,\n      \"source\": null,\n      \"statement_descriptor\": null,\n      \"statement_descriptor_suffix\": null,\n      \"status\": \"requires_payment_method\",\n      \"transfer_data\": null,\n      \"transfer_group\": null\n    },\n    \"payment_method\": {\n      \"id\": \"pm_1UeJCl00k8Tlns6nRluEDc0F\",\n      \"object\": \"payment_method\",\n      \"allow_redisplay\": \"unspecified\",\n      \"billing_details\": {\n        \"address\": {\n          \"city\": null,\n          \"country\": null,\n          \"line1\": null,\n          \"line2\": null,\n          \"postal_code\": null,\n          \"state\": null\n        },\n        \"email\": null,\n        \"name\": null,\n        \"phone\": null,\n        \"tax_id\": null\n      },\n      \"card\": {\n        \"brand\": \"visa\",\n        \"checks\": {\n          \"address_line1_check\": null,\n          \"address_postal_code_check\": null,\n          \"cvc_check\": \"pass\"\n        },\n        \"country\": \"US\",\n        \"display_brand\": \"visa\",\n        \"exp_month\": 11,\n        \"exp_year\": 2027,\n        \"fingerprint\": \"gODrk3kL8zsxcPuM\",\n        \"funding\": \"credit\",\n        \"generated_from\": null,\n        \"last4\": \"0002\",\n        \"networks\": {\n          \"available\": [\n            \"visa\"\n          ],\n          \"preferred\": null\n        },\n        \"regulated_status\": \"unregulated\",\n        \"three_d_secure_usage\": {\n          \"supported\": true\n        },\n        \"wallet\": null\n      },\n      \"created\": 1795286407,\n      \"customer\": null,\n      \"customer_account\": null,\n      \"livemode\": false,\n      \"metadata\": {},\n      \"shared_payment_granted_token\": null,\n      \"type\": \"card\"\n    },\n    \"request_log_url\": \"https://dashboard.stripe.com/acct_1Ue1Hp00k8Tlns6n/test/workbench/logs?object=req_eSmbsfKjGzIibl\",\n    \"type\": \"card_error\"\n  }\n}\n",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "6253",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=T_Mb7_UIdqrrdRyrdF184D647FwcAKtbueKrInie3T8ASrKGdWnSZ3sZuQSVbYa5eGEiakug_QGrCVCa; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:40:08 GMT",
+            "idempotency-key": "acceptance-d312dee0-b57d-42bf-acd6-012556dfe25c",
+            "original-request": "req_eSmbsfKjGzIibl",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=T_Mb7_UIdqrrdRyrdF184D647FwcAKtbueKrInie3T8ASrKGdWnSZ3sZuQSVbYa5eGEiakug_QGrCVCa&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=T_Mb7_UIdqrrdRyrdF184D647FwcAKtbueKrInie3T8ASrKGdWnSZ3sZuQSVbYa5eGEiakug_QGrCVCa&t=1\"",
+            "request-id": "req_eSmbsfKjGzIibl",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 402
+        }
+      ],
+      "verdict": "PROVEN"
+    },
+    {
+      "detail": "the refund that asked for a currency other than the captured currency was refused with 400 PAY-5010 and no refund call reached the provider",
+      "mandate": "the currency mismatch",
+      "name": "currency_mismatch_refusal",
+      "notes": [
+        "the refusal happens at the platform boundary before any provider call"
+      ],
+      "observations": {
+        "provider_refund_calls": 0,
+        "refund_code": "PAY-5010",
+        "refund_message": "Payment currency USD does not match the expected currency VND",
+        "refund_status": 400
+      },
+      "platform_exchange": [
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 249.99,
+            "currency": "USD",
+            "idempotencyKey": "acceptance-e5fbc510-7b42-4ea9-a2dc-badd8708508e",
+            "orderId": "e66a1000-b38d-4126-b9bd-828c0d8356a8"
+          },
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:40:24.730157964Z",
+              "currency": "USD",
+              "id": "aeafc9dd-6c6f-4e9c-a990-f260b7dc5033",
+              "orderId": "e66a1000-b38d-4126-b9bd-828c0d8356a8",
+              "previousStatus": null,
+              "provider": "stripe",
+              "providerIntentId": null,
+              "receiptKey": null,
+              "refundedAmount": 0,
+              "refundedCurrency": "USD",
+              "refundedReference": null,
+              "status": "PENDING"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:40:24.764867506Z",
+            "traceId": "1912613a5c9ec9ffbc50b8238fd75035"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments"
+        },
+        {
+          "method": "POST",
+          "request_body": null,
+          "response_body": {
+            "code": "OK",
+            "data": {
+              "amount": 249.99,
+              "clientSecret": null,
+              "createdAt": "2026-11-21T18:40:24.730158Z",
+              "currency": "USD",
+              "id": "aeafc9dd-6c6f-4e9c-a990-f260b7dc5033",
+              "orderId": "e66a1000-b38d-4126-b9bd-828c0d8356a8",
+              "previousStatus": "PENDING",
+              "provider": "stripe",
+              "providerIntentId": "pi_3UeJD300k8Tlns6n1ax4LSLe",
+              "receiptKey": null,
+              "refundedAmount": 0.0,
+              "refundedCurrency": "USD",
+              "refundedReference": null,
+              "status": "CAPTURED"
+            },
+            "success": true,
+            "timestamp": "2026-11-21T18:40:26.608928090Z",
+            "traceId": "cd336035dad624d746ed2d7162831687"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/payments/aeafc9dd-6c6f-4e9c-a990-f260b7dc5033/capture"
+        },
+        {
+          "method": "POST",
+          "request_body": {
+            "api_version": "2024-06-20",
+            "created": 1795286426,
+            "data": {
+              "object": {
+                "amount": 24999,
+                "currency": "usd",
+                "id": "pi_3UeJD300k8Tlns6n1ax4LSLe",
+                "livemode": false,
+                "metadata": {
+                  "payment_id": "aeafc9dd-6c6f-4e9c-a990-f260b7dc5033"
+                },
+                "object": "payment_intent",
+                "status": "succeeded"
+              }
+            },
+            "id": "evt_acceptance_tZFgyzMgLFxYMp8W2TsvNwba",
+            "object": "event",
+            "type": "payment_intent.succeeded"
+          },
+          "response_body": {
+            "code": "OK",
+            "message": "accepted",
+            "success": true,
+            "timestamp": "2026-11-21T18:40:26.957942923Z",
+            "traceId": "4af12982ec268ec621f60fc1f8d33a9c"
+          },
+          "status": 200,
+          "url": "http://127.0.0.1:18085/api/v1/webhooks/payments/stripe"
+        },
+        {
+          "method": "POST",
+          "request_body": {
+            "amount": 10.0,
+            "currency": "VND",
+            "refundReference": "a01856d5-7dd6-4cc3-bea3-d553b59bf4bb"
+          },
+          "response_body": {
+            "code": "PAY-5010",
+            "message": "Payment currency USD does not match the expected currency VND",
+            "path": "/api/v1/payments/aeafc9dd-6c6f-4e9c-a990-f260b7dc5033/refund",
+            "success": false,
+            "timestamp": "2026-11-21T18:40:27.129733715Z",
+            "traceId": "d4c42f01d7170e360a3816bdac638145"
+          },
+          "status": 400,
+          "url": "http://127.0.0.1:18085/api/v1/payments/aeafc9dd-6c6f-4e9c-a990-f260b7dc5033/refund"
+        }
+      ],
+      "proves": "a refund whose currency differs from the captured currency is refused",
+      "stripe_call_count": 1,
+      "stripe_wire": [
+        {
+          "method": "POST",
+          "path": "/v1/payment_intents",
+          "request_body": "confirm=true&amount=24999&metadata[payment_id]=aeafc9dd-6c6f-4e9c-a990-f260b7dc5033&metadata[idempotency_key]=acceptance-e5fbc510-7b42-4ea9-a2dc-badd8708508e&return_url=https%3A%2F%2Fshop.example.com%2Fcheckout%2Fcomplete&currency=usd&payment_method=pm_card_visa",
+          "request_headers": {
+            "Accept": "application/json",
+            "Accept-Charset": "UTF-8",
+            "Authorization": "[redacted]",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Length": "262",
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "Host": "host.docker.internal:12113",
+            "Idempotency-Key": "acceptance-e5fbc510-7b42-4ea9-a2dc-badd8708508e",
+            "Pragma": "no-cache",
+            "Stripe-Version": "2023-10-16",
+            "User-Agent": "Stripe/v1 JavaBindings/24.24.0",
+            "X-Stripe-Client-Telemetry": "{\"last_request_metrics\":{\"request_id\":\"req_2hWtJ4ybqHe1Jf\",\"request_duration_ms\":311}}",
+            "X-Stripe-Client-User-Agent": "{\"java.vendor\":\"Eclipse Adoptium\",\"java.version\":\"25.0.5.1\",\"java.vm.version\":\"25.0.5.1+2-LTS\",\"os.arch\":\"aarch64\",\"os.name\":\"Linux\",\"publisher\":\"Stripe\",\"java.vm.vendor\":\"Eclipse Adoptium\",\"lang\":\"Java\",\"os.version\":\"7.0.12-linuxkit\",\"bindings.version\":\"24.24.0\"}"
+          },
+          "response_body": "{\n  \"id\": \"pi_3UeJD300k8Tlns6n1ax4LSLe\",\n  \"object\": \"payment_intent\",\n  \"allowed_payment_method_types\": null,\n  \"amount\": 24999,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 24999,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": {\n    \"allow_redirects\": \"always\",\n    \"enabled\": true\n  },\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3UeJD300k8Tlns6n1ax4LSLe_secret_iVuB9KJOrPlmNuH7WoOVVpr3l\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1795286425,\n  \"currency\": \"usd\",\n  \"customer\": null,\n  \"customer_account\": null,\n  \"description\": null,\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": \"ch_3UeJD300k8Tlns6n1OMtY3fy\",\n  \"livemode\": false,\n  \"managed_payments\": {\n    \"enabled\": false\n  },\n  \"metadata\": {\n    \"idempotency_key\": \"acceptance-e5fbc510-7b42-4ea9-a2dc-badd8708508e\",\n    \"payment_id\": \"aeafc9dd-6c6f-4e9c-a990-f260b7dc5033\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1UeJD300k8Tlns6nFiDdI5Ra\",\n  \"payment_method_configuration_details\": {\n    \"id\": \"pmc_1Ue1IL00k8Tlns6nf8ntS8aL\",\n    \"parent\": null\n  },\n  \"payment_method_options\": {\n    \"affirm\": {},\n    \"amazon_pay\": {\n      \"express_checkout_element_session_id\": null\n    },\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    },\n    \"cashapp\": {},\n    \"klarna\": {\n      \"preferred_locale\": null\n    },\n    \"link\": {\n      \"persistent_token\": null\n    }\n  },\n  \"payment_method_types\": [\n    \"card\",\n    \"klarna\",\n    \"link\",\n    \"affirm\",\n    \"cashapp\",\n    \"amazon_pay\"\n  ],\n  \"payment_record\": null,\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shared_payment_granted_token\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}",
+          "response_headers": {
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required",
+            "access-control-max-age": "300",
+            "cache-control": "no-cache, no-store",
+            "connection": "close",
+            "content-length": "2133",
+            "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=zLqyz_xia2uNPJM8eI0UTWyNAc_dg14WGEi9BqBLbv7E3_J1IIIvJ4epUaEyAeSJ2CJD6UjO1Zc910Vh; report-to csp",
+            "content-type": "application/json",
+            "date": "Sat, 21 Nov 2026 18:40:26 GMT",
+            "idempotency-key": "acceptance-e5fbc510-7b42-4ea9-a2dc-badd8708508e",
+            "original-request": "req_vkMX2gslkaGi7z",
+            "report-to": "{\"group\":\"csp\",\"max_age\":8640,\"endpoints\":[{\"url\":\"https://q.stripe.com/csp-report-v2?q=zLqyz_xia2uNPJM8eI0UTWyNAc_dg14WGEi9BqBLbv7E3_J1IIIvJ4epUaEyAeSJ2CJD6UjO1Zc910Vh&t=1\"}],\"include_subdomains\":true}",
+            "reporting-endpoints": "csp=\"https://q.stripe.com/csp-report-v2?q=zLqyz_xia2uNPJM8eI0UTWyNAc_dg14WGEi9BqBLbv7E3_J1IIIvJ4epUaEyAeSJ2CJD6UjO1Zc910Vh&t=1\"",
+            "request-id": "req_vkMX2gslkaGi7z",
+            "server": "nginx",
+            "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+            "stripe-notice": "You are using an outdated API version (2023-10-16). We recommend upgrading to the latest API version, 2026-10-28.endive. See https://docs.stripe.com/upgrades",
+            "stripe-should-retry": "false",
+            "stripe-version": "2023-10-16",
+            "vary": "Origin",
+            "x-stripe-priority-routing-enabled": "true",
+            "x-stripe-routing-context-priority-tier": "api-testmode",
+            "x-wc": "3c3"
+          },
+          "status": 200
+        }
+      ],
+      "verdict": "PROVEN"
+    }
+  ],
+  "compose": {
+    "services": [
+      "postgres",
+      "keycloak",
+      "kafka",
+      "rustfs"
+    ],
+    "state": "already running"
+  },
+  "credential": {
+    "credential_probe": {
+      "api_version": "2026-11-18.endive",
+      "endpoint": "https://api.stripe.com/v1/balance",
+      "livemode": false,
+      "status": 200
+    },
+    "secret_key_fingerprint": "a05fa4f856d89541",
+    "secret_key_mode": "test",
+    "secret_key_prefix": "sk_test_",
+    "secret_source": "the genuine test-mode key from the git-ignored .env, passed to the container through the environment",
+    "webhook_secret_fingerprint": "6145764cc5809c30",
+    "webhook_secret_source": "SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET from the process environment; the signing secret that Stripe issued for the real webhook endpoint of the account"
+  },
+  "generated_at": "2026-11-21T18:39:41Z",
+  "platform": {
+    "container": "payment-service-stripe-acceptance",
+    "exit_code": 0,
+    "host_address": "http://127.0.0.1:18085",
+    "image": "payment-service:latest",
+    "provider": "stripe",
+    "sandbox_payment_method": "pm_card_visa",
+    "state": "running",
+    "stripe_api_base": "http://host.docker.internal:12113"
+  },
+  "reason": "the payment acceptance ran against the real api.stripe.com with the genuine test-mode credential and the real webhook signing secret of the account",
+  "run_id": "run-20261118-a2b6e6fc",
+  "status": "PROVEN_AGAINST_REAL_STRIPE_API",
+  "stripe_api_base_of_record": "https://api.stripe.com",
+  "stripe_server": {
+    "container": "",
+    "http_address_in_network": "https://api.stripe.com",
+    "http_address_on_host": "https://api.stripe.com",
+    "image": "",
+    "is_public_stripe_api": true,
+    "kind": "real-stripe-api",
+    "network": "untitled5_ecommerce-network",
+    "ready": true,
+    "state_directory": "",
+    "version": "2026-11-18.endive"
+  },
+  "stripe_server_log": [],
+  "summary": {
+    "cases": 8,
+    "failed": 0,
+    "not_proven": 0,
+    "proven": 8,
+    "supplementary": 0
+  },
+  "supplementary": [],
+  "verified_against_real_stripe_api": true,
+  "wire_recorder": {
+    "address": "http://host.docker.internal:12113",
+    "behaviour": "forwards every provider request verbatim to the real api.stripe.com and records the exchange with the credential header redacted",
+    "chain": "payment-service container -> host.docker.internal:12113 -> https://api.stripe.com",
+    "upstream": "https://api.stripe.com"
+  }
+}

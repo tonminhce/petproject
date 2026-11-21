@@ -1,0 +1,159 @@
+{
+  "bot_api_base": "http://127.0.0.1:18081",
+  "findings": [
+    {
+      "impact": "the official server cannot close the delivery gate without a real bot token and a real chat identifier",
+      "note": "the api id and hash pair of the public tdlib test build was accepted by the data centre, the bot token was not",
+      "observed": "the official server opened an MTProto session to the Telegram data centre 149.154.175.52:443 and answered ACCESS_TOKEN_INVALID for the locally registered token",
+      "severity": "INFO",
+      "title": "The official Telegram Bot API server accepts only a token that Telegram issued"
+    }
+  ],
+  "gate_statuses": {
+    "QA-ALERT-00": "FAIL",
+    "QA-ALERT-01": "FAIL",
+    "QA-ALERT-02": "FAIL",
+    "QA-ALERT-03": "FAIL",
+    "QA-ALERT-04": "PASS",
+    "QA-ALERT-05": "PASS"
+  },
+  "generated_at": "2026-11-21T06:17:14Z",
+  "public_bot_api": false,
+  "recorded_alert_results": [
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "the bot identity probe was rejected",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-00",
+      "recorded_at": "2026-11-21T06:17:14Z",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "controlled CI failure notification delivered to the CI destination",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-01",
+      "recorded_at": "2026-11-21T06:17:14Z",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "controlled runtime incident delivered to the runtime destination",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-02",
+      "recorded_at": "2026-11-21T06:17:14Z",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "recovery notification delivered",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-03",
+      "recorded_at": "2026-11-21T06:17:14Z",
+      "status": "FAIL"
+    },
+    {
+      "evidence": {
+        "alertmanager_count": 0,
+        "alertmanager_url": "http://127.0.0.1:9094",
+        "detail": "identical alerts must collapse into a single grouped alert",
+        "grouped_alerts": 1,
+        "submitted": 5
+      },
+      "gate": "QA-ALERT-04",
+      "recorded_at": "2026-11-21T06:17:14Z",
+      "status": "PASS"
+    },
+    {
+      "evidence": {
+        "detail": "the redaction path must remove credentials before delivery",
+        "redacted_length": 559,
+        "token_leaked": false
+      },
+      "gate": "QA-ALERT-05",
+      "recorded_at": "2026-11-21T06:17:14Z",
+      "status": "PASS"
+    }
+  ],
+  "run_id": "run-20261118-a2b6e6fc",
+  "server": {
+    "name": "official Telegram Bot API server (aiogram/telegram-bot-api image)",
+    "notes": "This is the official Telegram Bot API server, not the telegram.org service. It authenticates the bot against the Telegram data centres, so it accepts only a token that BotFather issued.",
+    "public_telegram_org": false,
+    "role": "the official Telegram Bot API server binary running on this host in --local mode on 127.0.0.1:18081",
+    "version": "Bot API 10.4, image digest sha256:2d74d06c2834d50debabbc7c2d76e166da8abfe3a54568c59a2b58a955c375d8"
+  },
+  "steps": [
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "the bot identity probe was rejected",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-00",
+      "status": "FAIL",
+      "step": "identity-probe"
+    },
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "controlled CI failure notification delivered to the CI destination",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-01",
+      "status": "FAIL",
+      "step": "ci-route"
+    },
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "controlled runtime incident delivered to the runtime destination",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-02",
+      "status": "FAIL",
+      "step": "runtime-route"
+    },
+    {
+      "evidence": {
+        "bot_api_base": "http://127.0.0.1:18081",
+        "detail": "recovery notification delivered",
+        "reason": "Telegram API at http://127.0.0.1:18081 returned HTTP 401: {\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}"
+      },
+      "gate": "QA-ALERT-03",
+      "status": "FAIL",
+      "step": "recovery-notification"
+    },
+    {
+      "evidence": {
+        "alertmanager_count": 0,
+        "alertmanager_url": "http://127.0.0.1:9094",
+        "detail": "identical alerts must collapse into a single grouped alert",
+        "grouped_alerts": 1,
+        "submitted": 5
+      },
+      "gate": "QA-ALERT-04",
+      "status": "PASS",
+      "step": "deduplication"
+    },
+    {
+      "evidence": {
+        "detail": "the redaction path must remove credentials before delivery",
+        "redacted_length": 559,
+        "token_leaked": false
+      },
+      "gate": "QA-ALERT-05",
+      "status": "PASS",
+      "step": "security-probe"
+    }
+  ],
+  "telegram_org_verified": false
+}

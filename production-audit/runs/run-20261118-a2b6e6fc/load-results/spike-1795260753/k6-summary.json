@@ -1,0 +1,160 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "the catalog answers with a status the scenario can classify": {
+                "name": "the catalog answers with a status the scenario can classify",
+                "path": "::the catalog answers with a status the scenario can classify",
+                "id": "68eb303d79f60af7442420b420084104",
+                "passes": 42,
+                "fails": 223
+            },
+            "a product id is resolvable": {
+                "id": "d9099f7c5deb4f40f6e0e5b97b880b9c",
+                "passes": 0,
+                "fails": 169,
+                "name": "a product id is resolvable",
+                "path": "::a product id is resolvable"
+            }
+        }
+    },
+    "metrics": {
+        "http_req_duration": {
+            "min": 334.546126,
+            "med": 2038.540557,
+            "max": 39492.071782,
+            "p(90)": 2832.1040305,
+            "p(95)": 3767.392951899997,
+            "avg": 2601.7199501552327
+        },
+        "http_req_tls_handshaking": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0
+        },
+        "http_reqs": {
+            "rate": 9.720995057068768,
+            "count": 554
+        },
+        "http_req_sending": {
+            "avg": 0.24330262996389918,
+            "min": 0.011541,
+            "med": 0.083292,
+            "max": 24.487041,
+            "p(90)": 0.37906249999999997,
+            "p(95)": 0.6975812499999993
+        },
+        "http_req_failed": {
+            "passes": 512,
+            "fails": 42,
+            "thresholds": {
+                "rate<0.05": true
+            },
+            "value": 0.924187725631769
+        },
+        "vus": {
+            "value": 400,
+            "min": 1,
+            "max": 400
+        },
+        "vus_max": {
+            "value": 400,
+            "min": 400,
+            "max": 400
+        },
+        "data_sent": {
+            "rate": 27144.632865368047,
+            "count": 1546974
+        },
+        "data_received": {
+            "count": 390031,
+            "rate": 6843.843724013697
+        },
+        "http_req_connecting": {
+            "avg": 0.6178474675090249,
+            "min": -12.359264,
+            "med": 0,
+            "max": 23.507125,
+            "p(90)": 1.3720833000000001,
+            "p(95)": 2.4312040499999963
+        },
+        "http_req_duration{expected_response:true}": {
+            "med": 2675.3277855,
+            "max": 10953.697588,
+            "p(90)": 3990.8431731,
+            "p(95)": 8081.274893149993,
+            "avg": 3187.934118666666,
+            "min": 1795.629334
+        },
+        "http_req_waiting": {
+            "avg": 2590.9519038935,
+            "min": 334.229917,
+            "med": 2038.2356395000002,
+            "max": 38202.306531,
+            "p(90)": 2831.5935928,
+            "p(95)": 3716.2926667
+        },
+        "http_req_blocked": {
+            "avg": 1.0408841083032485,
+            "min": 0,
+            "med": 0.087896,
+            "max": 46.588625,
+            "p(90)": 2.0928249,
+            "p(95)": 4.103188049999999
+        },
+        "http_req_receiving": {
+            "min": 0.044208,
+            "med": 0.28975,
+            "max": 1289.693376,
+            "p(90)": 2.344153900000002,
+            "p(95)": 5.256081249999995,
+            "avg": 10.524743631768953
+        },
+        "unresolved_product_total": {
+            "count": 169,
+            "rate": 2.9654299000805446
+        },
+        "business_failure_total": {
+            "count": 510,
+            "rate": 8.948930467698684
+        },
+        "iteration_duration": {
+            "p(90)": 7576.4397579,
+            "p(95)": 18180.7695896,
+            "avg": 7652.169931083334,
+            "min": 2737.860418,
+            "med": 6342.492024,
+            "max": 46266.035605
+        },
+        "dropped_iterations": {
+            "rate": 2.9829768225662283,
+            "count": 170
+        },
+        "checks": {
+            "passes": 42,
+            "fails": 392,
+            "thresholds": {
+                "rate>0.90": true
+            },
+            "value": 0.0967741935483871
+        },
+        "catalog_failure_total": {
+            "count": 223,
+            "rate": 3.912963714307464
+        },
+        "iterations": {
+            "count": 120,
+            "rate": 2.1056306982820434
+        },
+        "shed_requests_total": {
+            "count": 42,
+            "rate": 0.7369707443987152
+        }
+    }
+}

@@ -1,0 +1,111 @@
+# Telegram alerting delivery verification
+
+- generated at: 2026-11-21T06:17:19Z
+- run: run-20261118-a2b6e6fc
+- bot api base address: http://127.0.0.1:18091
+- server under test: local Telegram Bot API protocol server (harness verification stand-in)
+- server version: harness local implementation of the published Bot API wire protocol, its error envelope was cross checked against the responses of the official server
+- server role: local stand-in on 127.0.0.1:18091 that accepts a token registered on this host
+- server notes: Not the telegram.org service and not the official binary. It exists only to accept a locally registered token so that the harness side of the wire can be exercised end to end. The official server answers the same requests with HTTP 401 for the same token.
+- is the public telegram.org service: False
+- telegram.org delivery verified: False
+
+The bot token and the chat identifiers were read from the environment and are not recorded in this file.
+Every chat identifier below is a sha256 fingerprint of the identifier that was used.
+
+## Steps
+
+### identity-probe (QA-ALERT-00) - PASS
+
+- bot_api_base: http://127.0.0.1:18091
+- bot_id: 424242424
+- detail: the bot identity probe answered the bot api
+- public_bot_api: False
+- response:
+
+~~~json
+{"can_connect_to_business": false, "can_join_groups": true, "can_read_all_group_messages": false, "first_name": "Harness Alert Verifier", "has_main_web_app": false, "id": 424242424, "is_bot": true, "supports_inline_queries": false, "username": "harness_alert_verifier_bot"}
+~~~
+
+- username: harness_alert_verifier_bot
+
+### ci-route (QA-ALERT-01) - PASS
+
+- bot_api_base: http://127.0.0.1:18091
+- chat_id: sha256:a93db84276be677c
+- detail: controlled CI failure notification delivered to the CI destination
+- message_length: 650
+- public_bot_api: False
+- response:
+
+~~~json
+{"ok": true, "result": {"chat": {"first_name": "harness-verification", "id": sha256:a93db84276be677c, "type": "private"}, "date": 1795241839, "entities": [{"length": 3, "offset": 0, "type": "b"}, {"length": 4, "offset": 13, "type": "b"}, {"length": 3, "offset": 18, "type": "b"}, {"length": 4, "offset": 30, "type": "b"}, {"length": 3, "offset": 44, "type": "b"}, {"length": 4, "offset": 59, "type": "b"}, {"length": 3, "offset": 85, "type": "b"}, {"length": 4, "offset": 96, "type": "b"}, {"length": 3, "offset": 135, "type": "b"}, {"length": 4, "offset": 145, "type": "b"}, {"length": 3, "offset": 177, "type": "b"}, {"length": 4, "offset": 191, "type": "b"}, {"length": 3, "offset": 215, "type": "b"}, {"length": 4, "offset": 227, "type": "b"}, {"length": 3, "offset": 255, "type": "b"}, {"length": 4, "offset": 262, "type": "b"}, {"length": 3, "offset": 282, "type": "b"}, {"length": 4, "offset": 298, "type": "b"}, {"length": 3, "offset": 326, "type": "b"}, {"length": 4, "offset": 346, "type": "b"}, {"length": 3, "offset": 374, "type": "b"}, {"length": 4, "offset": 387, "type": "b"}, {"length": 3, "offset": 413, "type": "b"}, {"length": 4, "offset": 424, "type": "b"}, {"length": 3, "offset": 451, "type": "b"}, {"length": 4, "offset": 461, "type": "b"}, {"length": 3, "offset": 541, "type": "b"}, {"length": 4, "offset": 549, "type": "b"}, {"length": 3, "offset": 629, "type": "b"}, {"length": 4, "offset": 639, "type": "b"}], "from": {"can_connect_to_business": false, "can_join_groups": true, "can_read_all_group_messages": false, "first_name": "Harness Alert Verifier", "has_main_web_app": false, "id": 424242424, "is_bot": true, "supports_inline_queries": false, "username": "harness_alert_verifier_bot"}, "message_id": 2, "text": "<b>CI FAILURE</b>\n<b>Severity:</b> Critical\n<b>Environment:</b> harness-verification\n<b>Project:</b> petproject-microservices-platform\n<b>Branch:</b> audit/production-hardening\n<b>Commit SHA:</b> local-verification\n<b>Workflow:</b> harness alerts test-ci\n<b>Job:</b> harness-alerts\n<b>Failed stage:</b> harness alerts test-ci\n<b>Failure category:</b> ControlledVerification\n<b>Timestamp:</b> 2026-11-21T06:17:19Z\n<b>Task ID:</b> run-20261118-a2b6e6fc\n<b>CI run:</b> https://github.com/petproject/petproject/actions/runs/harness-verification\n<b>Logs:</b> https://github.com/petproject/petproject/actions/runs/harness-verification\n<b>Status:</b> firing"}}
+~~~
+
+- route: ci
+- telegram_chat_id: sha256:a93db84276be677c
+- telegram_date: 1795241839
+- telegram_message_id: 2
+
+### runtime-route (QA-ALERT-02) - PASS
+
+- bot_api_base: http://127.0.0.1:18091
+- chat_id: sha256:150aae61cb00611f
+- detail: controlled runtime incident delivered to the runtime destination
+- message_length: 576
+- public_bot_api: False
+- response:
+
+~~~json
+{"ok": true, "result": {"chat": {"first_name": "harness-verification", "id": sha256:150aae61cb00611f, "type": "private"}, "date": 1795241839, "entities": [{"length": 3, "offset": 0, "type": "b"}, {"length": 4, "offset": 19, "type": "b"}, {"length": 3, "offset": 24, "type": "b"}, {"length": 4, "offset": 36, "type": "b"}, {"length": 3, "offset": 50, "type": "b"}, {"length": 4, "offset": 65, "type": "b"}, {"length": 3, "offset": 91, "type": "b"}, {"length": 4, "offset": 102, "type": "b"}, {"length": 3, "offset": 130, "type": "b"}, {"length": 4, "offset": 139, "type": "b"}, {"length": 3, "offset": 208, "type": "b"}, {"length": 4, "offset": 219, "type": "b"}, {"length": 3, "offset": 245, "type": "b"}, {"length": 4, "offset": 255, "type": "b"}, {"length": 3, "offset": 308, "type": "b"}, {"length": 4, "offset": 326, "type": "b"}, {"length": 3, "offset": 349, "type": "b"}, {"length": 4, "offset": 360, "type": "b"}, {"length": 3, "offset": 445, "type": "b"}, {"length": 4, "offset": 456, "type": "b"}, {"length": 3, "offset": 483, "type": "b"}, {"length": 4, "offset": 491, "type": "b"}, {"length": 3, "offset": 518, "type": "b"}, {"length": 4, "offset": 528, "type": "b"}, {"length": 3, "offset": 555, "type": "b"}, {"length": 4, "offset": 565, "type": "b"}], "from": {"can_connect_to_business": false, "can_join_groups": true, "can_read_all_group_messages": false, "first_name": "Harness Alert Verifier", "has_main_web_app": false, "id": 424242424, "is_bot": true, "supports_inline_queries": false, "username": "harness_alert_verifier_bot"}, "message_id": 3, "text": "<b>RUNTIME INCIDENT</b>\n<b>Severity:</b> Critical\n<b>Environment:</b> harness-verification\n<b>Service:</b> harness-alert-verifier\n<b>Issue:</b> Controlled runtime alert fired by the harness to prove delivery\n<b>Started:</b> 2026-11-21T06:17:19Z\n<b>Impact:</b> none, this is a controlled verification message\n<b>Current metric:</b> synthetic_value=1\n<b>Runbook:</b> https://github.com/petproject/petproject/blob/main/docs/PRODUCTION-READINESS.md\n<b>Grafana:</b> http://localhost:3000\n<b>Logs:</b> http://localhost:3100\n<b>Traces:</b> http://localhost:3200\n<b>Status:</b> firing"}}
+~~~
+
+- route: runtime
+- telegram_chat_id: sha256:150aae61cb00611f
+- telegram_date: 1795241839
+- telegram_message_id: 3
+
+### recovery-notification (QA-ALERT-03) - PASS
+
+- bot_api_base: http://127.0.0.1:18091
+- chat_id: sha256:150aae61cb00611f
+- detail: recovery notification delivered
+- message_length: 344
+- public_bot_api: False
+- response:
+
+~~~json
+{"ok": true, "result": {"chat": {"first_name": "harness-verification", "id": sha256:150aae61cb00611f, "type": "private"}, "date": 1795241839, "entities": [{"length": 3, "offset": 0, "type": "b"}, {"length": 4, "offset": 28, "type": "b"}, {"length": 3, "offset": 33, "type": "b"}, {"length": 4, "offset": 45, "type": "b"}, {"length": 3, "offset": 59, "type": "b"}, {"length": 4, "offset": 74, "type": "b"}, {"length": 3, "offset": 100, "type": "b"}, {"length": 4, "offset": 111, "type": "b"}, {"length": 3, "offset": 139, "type": "b"}, {"length": 4, "offset": 148, "type": "b"}, {"length": 3, "offset": 217, "type": "b"}, {"length": 4, "offset": 228, "type": "b"}, {"length": 3, "offset": 254, "type": "b"}, {"length": 4, "offset": 266, "type": "b"}, {"length": 3, "offset": 292, "type": "b"}, {"length": 4, "offset": 304, "type": "b"}, {"length": 3, "offset": 321, "type": "b"}, {"length": 4, "offset": 331, "type": "b"}], "from": {"can_connect_to_business": false, "can_join_groups": true, "can_read_all_group_messages": false, "first_name": "Harness Alert Verifier", "has_main_web_app": false, "id": 424242424, "is_bot": true, "supports_inline_queries": false, "username": "harness_alert_verifier_bot"}, "message_id": 4, "text": "<b>RUNTIME INCIDENT RESOLVED</b>\n<b>Severity:</b> Critical\n<b>Environment:</b> harness-verification\n<b>Service:</b> harness-alert-verifier\n<b>Issue:</b> Controlled runtime alert fired by the harness to prove delivery\n<b>Started:</b> 2026-01-01T00:00:00Z\n<b>Resolved:</b> 2026-11-21T06:17:19Z\n<b>Duration:</b> 0.0 minutes\n<b>Status:</b> resolved"}}
+~~~
+
+- route: runtime
+- telegram_chat_id: sha256:150aae61cb00611f
+- telegram_date: 1795241839
+- telegram_message_id: 4
+
+### deduplication (QA-ALERT-04) - PASS
+
+- alertmanager_count: 0
+- alertmanager_url: http://127.0.0.1:9094
+- detail: identical alerts must collapse into a single grouped alert
+- grouped_alerts: 1
+- submitted: 5
+
+### security-probe (QA-ALERT-05) - PASS
+
+- detail: the redaction path must remove credentials before delivery
+- redacted_length: 559
+- token_leaked: False
+
+## Findings
+
+### The committed alertmanager notification template cannot be rendered
+
+- expression: {{ .StartsAt }}
+- file: config/observability/alertmanager/alertmanager.yml.template
+- impact: every runtime incident notification fails before it reaches the bot api, so the runtime route never delivers
+- note: the template is outside the harness directories, this verification did not change it
+- observed: prometheus/alertmanager 0.35.0 refused to notify: template: :6:19: executing "" at <.StartsAt>: can't evaluate field StartsAt in type *template.Data
+- proof: the same alertmanager with {{ (index .Alerts 0).StartsAt }} rendered the notification and delivered it to the local bot api server
+- severity: HIGH
+

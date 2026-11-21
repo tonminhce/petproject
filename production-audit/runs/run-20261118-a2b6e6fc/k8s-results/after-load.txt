@@ -1,0 +1,15 @@
+=== AFTER LOAD 2026-11-21T06:04:06Z ===
+NAME                  REFERENCE                    TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+gateway-service-hpa   Deployment/gateway-service   cpu: 1%/75%   2         10        2          3h15m
+
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS        IMAGES                        SELECTOR
+gateway-service   2/2     2            2           3h15m   gateway-service   shop/gateway-service:latest   app=gateway-service
+
+NAME                             READY   STATUS    RESTARTS   AGE   IP            NODE                       NOMINATED NODE   READINESS GATES
+gateway-service-bc885c79-chnl5   1/1     Running   0          57m   10.244.0.18   shop-audit-control-plane   <none>           <none>
+gateway-service-bc885c79-j77rq   1/1     Running   0          56m   10.244.0.23   shop-audit-control-plane   <none>           <none>
+
+NAME                             CPU(cores)   MEMORY(bytes)   
+gateway-service-bc885c79-chnl5   9m           205Mi           
+gateway-service-bc885c79-j77rq   8m           211Mi           
+redis-65cb7b955c-chb9d           9m           6Mi             

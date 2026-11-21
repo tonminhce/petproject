@@ -1,15 +1,15 @@
 {
   "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Concurrency*Test,*Concurrency*IT,*Reservation*Test,*Reservation*IT,*Stock*Test,*Stock*IT -Dfailsafe.failIfNoSpecifiedTests=false -pl inventory-service -am",
   "description": "inventory reservation safety under concurrency",
-  "duration_seconds": 35.065,
+  "duration_seconds": 28.336,
   "errors": 0,
   "exit_code": 0,
   "failures": 0,
   "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/concurrency_inventory.log",
-  "revision": "af002c36cab33c56a3b0739943fa232fb69d1295",
+  "revision": "7e18740b48f41f91e6a94bf9a13976c4e8f28b90",
   "skipped": 0,
   "status": "PASS",
   "suite": "concurrency_inventory",
   "tests_run": 23,
-  "updated_at": "2026-11-20T06:23:22Z"
+  "updated_at": "2026-11-21T18:23:31Z"
 }

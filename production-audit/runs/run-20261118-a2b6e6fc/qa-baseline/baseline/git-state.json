@@ -1,0 +1,36 @@
+{
+  "runId": "run-20261122-f242158",
+  "capturedAt": "2026-11-22T01:41+07:00",
+  "gitRoot": "/Users/tonminh-mac/IdeaProjects/untitled5",
+  "repository": "petproject (shop-microservices)",
+  "headRevision": "f242158265163d65ef73d378331d2bd7a92479ee",
+  "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+  "workingTree": {
+    "modifiedFiles": 14,
+    "untrackedPaths": 86,
+    "nonProductionAuditChanges": 0,
+    "note": "All dirty paths are inside production-audit/ (prior harness artifacts). First-party application source is clean at HEAD."
+  },
+  "buildSystem": {
+    "tool": "Maven 3.9.16 via ./mvnw wrapper",
+    "javaTarget": "25",
+    "jdkInstalled": "OpenJDK 26.0.1 (build 26.0.1+8-34)",
+    "springBootParent": "4.1.1",
+    "springCloud": "2025.1.0",
+    "rootArtifact": "com.shop.microservices:shop-microservices:1.0-SNAPSHOT"
+  },
+  "mavenModules": {
+    "services": ["auth-service", "product-service", "order-service", "payment-service", "inventory-service", "shipping-service", "notification-service", "rating-service", "search-service", "promotion-service", "tax-service", "favourite-service", "media-service", "gateway-service"],
+    "sharedLibs": ["common-config", "common-core", "common-security", "common-logging", "common-keycloak", "common-kafka", "common-spring", "common-storage"],
+    "discrepancies": ["common-patterns directory exists under utils/ but is NOT listed in utils/pom.xml <modules> (verification pending)"]
+  },
+  "javaFileCounts": { "total": 1106, "main": 676, "test": 430 },
+  "runtimeEnvironment": {
+    "docker": "29.7.2",
+    "composeStackUp": true,
+    "containers": ["gateway-service", "auth-service", "product-service", "order-service", "payment-service", "payment-service-stripe-acceptance", "shipping-service", "inventory-service", "favourite-service", "media-service", "notification-service", "promotion-service", "rating-service", "search-service", "tax-service", "postgres", "kafka", "redis", "keycloak", "rustfs", "elasticsearch", "prometheus", "grafana", "loki", "tempo", "otel-collector", "alloy", "alertmanager"],
+    "containerImagesBuiltAt": "2026-11-21T18:00-18:41Z (same day as audit start)",
+    "kubernetes": { "kubectlClient": "v1.36.2", "currentContext": null, "note": "No cluster context configured - K8s runtime behavior cannot be verified; manifests only" }
+  },
+  "stripeCredentials": { "testModeKeysPresentInDotEnv": true, "keyTypeObserved": "sk_test_* (redacted)" }
+}

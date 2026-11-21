@@ -1,0 +1,22 @@
+{
+  "container": "",
+  "generated_at": "2026-11-21T18:39:41Z",
+  "http_address_in_network": "https://api.stripe.com",
+  "http_address_on_host": "https://api.stripe.com",
+  "image": "",
+  "is_public_stripe_api": true,
+  "kind": "real-stripe-api",
+  "network": "untitled5_ecommerce-network",
+  "ready": true,
+  "state_directory": "",
+  "stripe_api_base_of_record": "https://api.stripe.com",
+  "summary": {
+    "cases": 8,
+    "failed": 0,
+    "not_proven": 0,
+    "proven": 8,
+    "supplementary": 0
+  },
+  "verified_against_real_stripe_api": true,
+  "version": "2026-11-18.endive"
+}

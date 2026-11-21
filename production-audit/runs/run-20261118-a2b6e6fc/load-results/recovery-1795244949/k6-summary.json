@@ -1,0 +1,148 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "med": 0.047813,
+            "max": 52.789667,
+            "p(90)": 0.17678780000000002,
+            "p(95)": 0.26101469999999977,
+            "avg": 0.20966454769230775,
+            "min": 0.008875
+        },
+        "http_req_waiting": {
+            "med": 19.899208,
+            "max": 702.930084,
+            "p(90)": 70.0030923,
+            "p(95)": 98.77821089999995,
+            "avg": 33.29281623846155,
+            "min": 4.954292
+        },
+        "vus": {
+            "min": 0,
+            "max": 3,
+            "value": 0
+        },
+        "checks": {
+            "passes": 640,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "http_req_duration": {
+            "min": 5.040459,
+            "med": 20.687479500000002,
+            "max": 703.859959,
+            "p(90)": 70.80065030000002,
+            "p(95)": 99.11016644999992,
+            "avg": 34.1246031753846
+        },
+        "data_sent": {
+            "count": 888430,
+            "rate": 8043.393247120288
+        },
+        "iterations": {
+            "count": 320,
+            "rate": 2.897117205720757
+        },
+        "vus_max": {
+            "max": 10,
+            "value": 10,
+            "min": 10
+        },
+        "iteration_duration": {
+            "p(90)": 343.24657859999996,
+            "p(95)": 435.3746249999999,
+            "avg": 274.858666890625,
+            "min": 217.936583,
+            "med": 248.0975425,
+            "max": 923.628501
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 34.1246031753846,
+            "min": 5.040459,
+            "med": 20.687479500000002,
+            "max": 703.859959,
+            "p(90)": 70.80065030000002,
+            "p(95)": 99.11016644999992
+        },
+        "http_req_failed": {
+            "fails": 650,
+            "passes": 0,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_receiving": {
+            "avg": 0.6221223892307691,
+            "min": 0.052375,
+            "med": 0.22620849999999998,
+            "max": 20.432209,
+            "p(90)": 1.0547042,
+            "p(95)": 2.0187963499999992
+        },
+        "business_success_total": {
+            "count": 640,
+            "rate": 5.794234411441514
+        },
+        "data_received": {
+            "count": 1242027,
+            "rate": 11244.680598967921
+        },
+        "http_req_connecting": {
+            "max": 2.328542,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.013401540000000002,
+            "min": 0,
+            "med": 0
+        },
+        "resolved_product_total": {
+            "count": 10,
+            "rate": 0.09053491267877366
+        },
+        "http_reqs": {
+            "count": 650,
+            "rate": 5.884769324120287
+        },
+        "http_req_tls_handshaking": {
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0
+        },
+        "http_req_blocked": {
+            "med": 0.0170415,
+            "max": 7.25725,
+            "p(90)": 0.07001220000000001,
+            "p(95)": 0.18138124999999988,
+            "avg": 0.0890118492307693,
+            "min": 0.002292
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+            "the catalog answers with a status the scenario can classify": {
+                "path": "::the catalog answers with a status the scenario can classify",
+                "id": "68eb303d79f60af7442420b420084104",
+                "passes": 320,
+                "fails": 0,
+                "name": "the catalog answers with a status the scenario can classify"
+            },
+            "the product detail answers with a status the scenario can classify": {
+                "id": "8dcbe419e979e080785d1ed2a0a34db8",
+                "passes": 320,
+                "fails": 0,
+                "name": "the product detail answers with a status the scenario can classify",
+                "path": "::the product detail answers with a status the scenario can classify"
+            }
+        }
+    }
+}

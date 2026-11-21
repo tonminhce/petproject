@@ -1,0 +1,148 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "p(90)": 0.04855010000000002,
+            "p(95)": 0.07054994999999993,
+            "avg": 0.037293522087483814,
+            "min": 0.005584,
+            "med": 0.022417,
+            "max": 13.426
+        },
+        "data_received": {
+            "count": 11288147,
+            "rate": 66396.18302274955
+        },
+        "vus_max": {
+            "max": 20,
+            "value": 20,
+            "min": 20
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 4618,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "data_sent": {
+            "count": 6312566,
+            "rate": 37130.12308213085
+        },
+        "http_req_duration": {
+            "med": 7.1733545,
+            "max": 212.900375,
+            "p(90)": 18.728441800000002,
+            "p(95)": 27.457277599999987,
+            "avg": 10.435736012559564,
+            "min": 2.127125
+        },
+        "http_req_tls_handshaking": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0
+        },
+        "http_req_waiting": {
+            "avg": 10.235270355132116,
+            "min": 2.092458,
+            "med": 7.0184999999999995,
+            "max": 212.681333,
+            "p(90)": 18.4914661,
+            "p(95)": 27.002806149999994
+        },
+        "http_reqs": {
+            "count": 4618,
+            "rate": 27.162790597877354
+        },
+        "resolved_product_total": {
+            "count": 20,
+            "rate": 0.11763876395789238
+        },
+        "vus": {
+            "value": 0,
+            "min": 0,
+            "max": 6
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 27.457277599999987,
+            "avg": 10.435736012559564,
+            "min": 2.127125,
+            "med": 7.1733545,
+            "max": 212.900375,
+            "p(90)": 18.728441800000002
+        },
+        "http_req_blocked": {
+            "p(95)": 0.023929449999999984,
+            "avg": 0.011410771329579876,
+            "min": 0.001125,
+            "med": 0.005834,
+            "max": 1.206208,
+            "p(90)": 0.0155
+        },
+        "business_success_total": {
+            "rate": 27.045151833919462,
+            "count": 4598
+        },
+        "http_req_receiving": {
+            "avg": 0.16317213533997413,
+            "min": 0.017417,
+            "med": 0.08125,
+            "max": 21.726209,
+            "p(90)": 0.24980860000000002,
+            "p(95)": 0.3798876
+        },
+        "iteration_duration": {
+            "med": 217.176375,
+            "max": 531.26375,
+            "p(90)": 238.0557756,
+            "p(95)": 253.4378076999999,
+            "avg": 222.77026479077827,
+            "min": 207.431666
+        },
+        "checks": {
+            "passes": 4598,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.90": false
+            },
+            "value": 1
+        },
+        "iterations": {
+            "count": 2299,
+            "rate": 13.522575916959731
+        },
+        "http_req_connecting": {
+            "avg": 0.0010591435686444347,
+            "min": 0,
+            "med": 0,
+            "max": 0.568333,
+            "p(90)": 0,
+            "p(95)": 0
+        }
+    },
+    "root_group": {
+        "checks": {
+            "catalog returns 200": {
+                "name": "catalog returns 200",
+                "path": "::catalog returns 200",
+                "id": "c52c153c79a7b882f6216c456d8374cd",
+                "passes": 2299,
+                "fails": 0
+            },
+            "product detail returns 200": {
+                "passes": 2299,
+                "fails": 0,
+                "name": "product detail returns 200",
+                "path": "::product detail returns 200",
+                "id": "9daad55a5a84fd2a0364a6f709fad9e2"
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

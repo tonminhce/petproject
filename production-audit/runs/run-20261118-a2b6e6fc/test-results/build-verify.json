@@ -1,11 +1,11 @@
 {
   "command": "./mvnw -B -ntp -T 1 clean verify",
-  "duration_seconds": 907.023,
+  "duration_seconds": 764.01,
   "exit_code": 0,
   "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
   "mode": "clean-verify",
-  "revision": "af002c36cab33c56a3b0739943fa232fb69d1295",
+  "revision": "7e18740b48f41f91e6a94bf9a13976c4e8f28b90",
   "status": "PASS",
   "suite": "build",
-  "updated_at": "2026-11-20T10:10:49Z"
+  "updated_at": "2026-11-21T18:00:08Z"
 }

@@ -1,15 +1,15 @@
 {
   "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
   "description": "integration tests against real infrastructure",
-  "duration_seconds": 725.856,
+  "duration_seconds": 674.551,
   "errors": 0,
   "exit_code": 0,
   "failures": 0,
   "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/integration.log",
-  "revision": "af002c36cab33c56a3b0739943fa232fb69d1295",
+  "revision": "f242158265163d65ef73d378331d2bd7a92479ee",
   "skipped": 0,
   "status": "PASS",
   "suite": "integration",
-  "tests_run": 347,
-  "updated_at": "2026-11-20T06:39:49Z"
+  "tests_run": 362,
+  "updated_at": "2026-11-21T19:54:46Z"
 }

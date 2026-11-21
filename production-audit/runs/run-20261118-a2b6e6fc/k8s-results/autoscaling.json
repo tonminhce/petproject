@@ -1,0 +1,284 @@
+{
+  "run_id": "run-20261118-a2b6e6fc",
+  "recorded_at": "2026-11-21T06:10:00Z",
+  "subject": "horizontal pod autoscaler of the gateway service observed on a real kubernetes cluster",
+  "verdict": {
+    "scaled_up_under_real_load": true,
+    "scaled_back_down_after_load": true,
+    "summary": "The gateway-service horizontal pod autoscaler raised the deployment from 2 to 10 replicas while a k6 load of 600 requests per second hit the gateway actuator endpoint, and returned it to 2 replicas after the load stopped.",
+    "evidence_gap": null
+  },
+  "cluster": {
+    "tool": "kind",
+    "cluster_name": "shop-audit",
+    "kube_context": "kind-shop-audit",
+    "kubernetes_version": "v1.36.1",
+    "kubectl_version": "v1.36.2",
+    "kind_version": "v0.32.0",
+    "node_image": "kindest/node:v1.36.1",
+    "nodes": [
+      {
+        "name": "shop-audit-control-plane",
+        "roles": "control-plane",
+        "status": "Ready",
+        "kubernetes_version": "v1.36.1",
+        "allocatable_cpu": "10",
+        "allocatable_memory": "11975248Ki",
+        "container_runtime": "containerd://2.3.1",
+        "os_image": "Debian GNU/Linux 13 (trixie)"
+      }
+    ],
+    "metrics_server": {
+      "installed": true,
+      "image": "registry.k8s.io/metrics-server/metrics-server:v0.9.1",
+      "source_manifest": "https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml",
+      "namespace": "kube-system",
+      "local_adjustment": "the deployment args were patched with --kubelet-insecure-tls because the kind kubelet serves a self signed certificate",
+      "metrics_api_available": true,
+      "verification": "kubectl top nodes and kubectl top pods returned values for the gateway pods"
+    },
+    "manifests_applied": [
+      "k8s/namespace.yaml",
+      "k8s/gateway-service.yaml",
+      "k8s/workload-protection.yaml (the shop-system service account and the gateway-service pod disruption budget only)"
+    ],
+    "auxiliary_dependency": {
+      "name": "redis",
+      "reason": "the gateway edge rate limiter calls redis and fails closed with 503 when redis is unreachable",
+      "source": "uncommitted auxiliary manifest applied from /tmp, not part of the audited k8s directory",
+      "image": "redis:7-alpine"
+    },
+    "secrets": {
+      "template": "k8s/secrets.template.yaml",
+      "secret_name": "shop-system-secrets",
+      "namespace": "shop-system",
+      "keys": [
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "JWT_SECRET",
+        "KEYCLOAK_ADMIN_PASSWORD",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "VNPAY_HASH_SECRET"
+      ],
+      "values": "random local only values generated outside the repository, the template file keeps its placeholders and no real value was committed"
+    },
+    "deleted_after_the_run": true
+  },
+  "image": {
+    "reference": "shop/gateway-service:latest",
+    "digest": "sha256:abec09210b07c368d24eff189575c2bf8c513e90cfc53eeeaafca1de709a4005",
+    "dockerfile": "gateway-service/Dockerfile",
+    "base_image": "eclipse-temurin:25-jre-alpine",
+    "maven_command": "./mvnw -B -ntp -T 1 -pl gateway-service -am package -DskipTests",
+    "artifact": "gateway-service/target/gateway-service-1.0-SNAPSHOT.jar",
+    "docker_build_command": "docker build -t shop/gateway-service:latest gateway-service/",
+    "cluster_load_command": "kind load docker-image shop/gateway-service:latest --name shop-audit"
+  },
+  "autoscaler_manifest_as_applied": {
+    "apiVersion": "autoscaling/v2",
+    "kind": "HorizontalPodAutoscaler",
+    "metadata": {
+      "name": "gateway-service-hpa",
+      "namespace": "shop-system",
+      "creationTimestamp": "2026-11-21T02:48:52Z"
+    },
+    "spec": {
+      "scaleTargetRef": {
+        "apiVersion": "apps/v1",
+        "kind": "Deployment",
+        "name": "gateway-service"
+      },
+      "minReplicas": 2,
+      "maxReplicas": 10,
+      "metrics": [
+        {
+          "type": "Resource",
+          "resource": {
+            "name": "cpu",
+            "target": {
+              "type": "Utilization",
+              "averageUtilization": 75
+            }
+          }
+        }
+      ]
+    },
+    "status_at_the_end_of_the_observation": {
+      "currentReplicas": 2,
+      "desiredReplicas": 2,
+      "lastScaleTime": "2026-11-21T05:17:55Z",
+      "currentMetrics": [
+        {
+          "type": "Resource",
+          "resource": {
+            "name": "cpu",
+            "current": {
+              "averageUtilization": 1,
+              "averageValue": "8m"
+            }
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "type": "AbleToScale",
+          "status": "True",
+          "reason": "ReadyForNewScale"
+        },
+        {
+          "type": "ScalingActive",
+          "status": "True",
+          "reason": "ValidMetricFound"
+        },
+        {
+          "type": "ScalingLimited",
+          "status": "True",
+          "reason": "TooFewReplicas"
+        }
+      ]
+    },
+    "raw_yaml": "apiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata:\n  annotations:\n    kubectl.kubernetes.io/last-applied-configuration: |\n      {\"apiVersion\":\"autoscaling/v2\",\"kind\":\"HorizontalPodAutoscaler\",\"metadata\":{\"annotations\":{},\"name\":\"gateway-service-hpa\",\"namespace\":\"shop-system\"},\"spec\":{\"maxReplicas\":10,\"metrics\":[{\"resource\":{\"name\":\"cpu\",\"target\":{\"averageUtilization\":75,\"type\":\"Utilization\"}},\"type\":\"Resource\"}],\"minReplicas\":2,\"scaleTargetRef\":{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"name\":\"gateway-service\"}}}\n  creationTimestamp: \"2026-11-21T02:48:52Z\"\n  name: gateway-service-hpa\n  namespace: shop-system\n  resourceVersion: \"18454\"\n  uid: 96c4cf84-52b4-49b7-aec3-09c567f70ea7\nspec:\n  maxReplicas: 10\n  metrics:\n  - resource:\n      name: cpu\n      target:\n        averageUtilization: 75\n        type: Utilization\n    type: Resource\n  minReplicas: 2\n  scaleTargetRef:\n    apiVersion: apps/v1\n    kind: Deployment\n    name: gateway-service\nstatus:\n  conditions:\n  - lastTransitionTime: \"2026-11-21T02:49:07Z\"\n    message: recommended size matches current size\n    reason: ReadyForNewScale\n    status: \"True\"\n    type: AbleToScale\n  - lastTransitionTime: \"2026-11-21T05:01:37Z\"\n    message: the HPA was able to successfully calculate a replica count from cpu resource\n      utilization (percentage of request)\n    reason: ValidMetricFound\n    status: \"True\"\n    type: ScalingActive\n  - lastTransitionTime: \"2026-11-21T05:17:55Z\"\n    message: the desired replica count is less than the minimum replica count\n    reason: TooFewReplicas\n    status: \"True\"\n    type: ScalingLimited\n  currentMetrics:\n  - resource:\n      current:\n        averageUtilization: 1\n        averageValue: 8m\n      name: cpu\n    type: Resource\n  currentReplicas: 2\n  desiredReplicas: 2\n  lastScaleTime: \"2026-11-21T05:17:55Z\"\n"
+  },
+  "workload": {
+    "deployment": "shop-system/gateway-service",
+    "image_pull_policy": "IfNotPresent",
+    "cpu_request": "500m",
+    "cpu_limit": "2000m",
+    "memory_request": "512Mi",
+    "memory_limit": "1024Mi",
+    "declared_replicas_in_the_manifest": 3,
+    "load_profile_environment": {
+      "GATEWAY_RATE_LIMIT_REPLENISH_RATE": "60000",
+      "GATEWAY_RATE_LIMIT_BURST_CAPACITY": "60000",
+      "GATEWAY_GLOBAL_RATE_LIMIT_REPLENISH_RATE": "60000",
+      "GATEWAY_GLOBAL_RATE_LIMIT_BURST_CAPACITY": "120000",
+      "GATEWAY_EDGE_RATE_LIMIT_SEARCH_RPM": "60000",
+      "GATEWAY_EDGE_RATE_LIMIT_BACKOFFICE_RPM": "60000",
+      "GATEWAY_PRE_AUTH_RATE_LIMIT_RPM": "600000",
+      "source": "the load test profile of the repository, docker-compose.loadtest.yml",
+      "reason": "the committed rate limits of 50 requests per second per client would have capped the load below the autoscaling threshold",
+      "applied_with": "kubectl set env deployment/gateway-service, applied before the baseline snapshot and the rolling restart was allowed to settle"
+    }
+  },
+  "load": {
+    "generator": "k6 v2.4.0 (grafana/k6 image) running as a job inside the cluster",
+    "scenario": "constant arrival rate against the public actuator endpoint of the gateway",
+    "target": "http://gateway-service.shop-system.svc.cluster.local:8080/actuator/prometheus",
+    "rate_per_second": 600,
+    "duration": "6m",
+    "started_at": "2026-11-21T05:06:52Z",
+    "finished_at": "2026-11-21T05:12:52Z",
+    "total_requests": 197861,
+    "achieved_requests_per_second": 549.6,
+    "failed_requests": 0,
+    "error_rate": "0.00%",
+    "http_duration_p95_ms": 916.34,
+    "http_duration_max_ms": 7600,
+    "dropped_iterations": 18140,
+    "note": "the dropped iterations show that the gateway was the bottleneck of the run, the load was not limited by the generator"
+  },
+  "observations": {
+    "before_load": {
+      "observed_at": "2026-11-21T05:04:01Z",
+      "replicas": 2,
+      "deployment_ready": "2/2",
+      "hpa_replicas": 2,
+      "hpa_target": "cpu: 3%/75%",
+      "pod_cpu_millicores": {
+        "gateway-service-bc885c79-nb2sg": "20m",
+        "gateway-service-bc885c79-p2z9q": "17m"
+      },
+      "cpu_utilization_percent": 3,
+      "note": "the autoscaler had already moved the deployment from the 3 replicas of the manifest down to its minimum of 2"
+    },
+    "under_load": {
+      "observed_at": "2026-11-21T05:07:47Z",
+      "first_observation_at": "2026-11-21T05:06:52Z",
+      "last_observation_at": "2026-11-21T05:12:53Z",
+      "replicas": 10,
+      "deployment_ready": "10/10",
+      "hpa_replicas": 10,
+      "hpa_target_at_peak": "cpu: 206%/75%",
+      "cpu_utilization_percent": 206,
+      "peak_cpu_utilization_percent": 206,
+      "observed_at_all_pods_ready": "2026-11-21T05:08:36Z",
+      "cpu_utilization_percent_when_all_ten_pods_were_ready": 68,
+      "pod_cpu_millicores_peak": {
+        "gateway-service-bc885c79-nb2sg": "1970m",
+        "gateway-service-bc885c79-p2z9q": "1336m",
+        "gateway-service-bc885c79-29hb8": "1073m",
+        "gateway-service-bc885c79-j77rq": "1009m"
+      },
+      "cpu_limit_millicores": "2000m",
+      "note": "the load was concentrated on the pods that already held the client connections, the horizontal pod autoscaler reacted to the average utilisation of the deployment"
+    },
+    "after_load": {
+      "scale_down_started_at": "2026-11-21T05:13:39Z",
+      "observed_at": "2026-11-21T05:18:14Z",
+      "confirmed_stable_at": "2026-11-21T06:04:06Z",
+      "replicas": 2,
+      "deployment_ready": "2/2",
+      "hpa_replicas": 2,
+      "hpa_target": "cpu: 1%/75%",
+      "pod_cpu_millicores": {
+        "gateway-service-bc885c79-chnl5": "9m",
+        "gateway-service-bc885c79-j77rq": "8m"
+      },
+      "cpu_utilization_percent": 1,
+      "scale_down_path": [
+        10,
+        6,
+        5,
+        4,
+        2
+      ],
+      "note": "the scale down ran through the default 300 second stabilisation window and ended at the minimum of 2 replicas"
+    }
+  },
+  "hpa_events": [
+    {
+      "message": "New size: 4; reason: cpu resource utilization (percentage of request) above target",
+      "direction": "up"
+    },
+    {
+      "message": "New size: 8; reason: cpu resource utilization (percentage of request) above target",
+      "direction": "up"
+    },
+    {
+      "message": "New size: 10; reason:",
+      "direction": "up"
+    },
+    {
+      "message": "New size: 6; reason: All metrics below target",
+      "direction": "down"
+    },
+    {
+      "message": "New size: 5; reason: All metrics below target",
+      "direction": "down"
+    },
+    {
+      "message": "New size: 4; reason: All metrics below target",
+      "direction": "down"
+    },
+    {
+      "message": "New size: 2; reason: All metrics below target",
+      "direction": "down"
+    }
+  ],
+  "raw_evidence": [
+    "hpa-timeline.log",
+    "baseline.txt",
+    "under-load.txt",
+    "after-load.txt",
+    "hpa-applied.yaml",
+    "hpa-events.txt",
+    "k6-load.log"
+  ],
+  "event_driven_autoscaling": {
+    "declared_in_the_manifests": false,
+    "observation": "none",
+    "detail": "the k8s directory declares no event driven autoscaler, the only autoscaler is the horizontal pod autoscaler of the gateway in k8s/gateway-service.yaml, and there is no KEDA ScaledObject or equivalent",
+    "verdict": "not verified, the platform declares no event driven autoscaler to verify"
+  }
+}
