@@ -1,0 +1,15 @@
+{
+  "runId": "run-20261122-f242158",
+  "capturedAt": "2026-11-22T01:41+07:00",
+  "gitRoot": "/Users/tonminh-mac/IdeaProjects/untitled5",
+  "repository": "petproject (shop-microservices)",
+  "headRevision": "f242158265163d65ef73d378331d2bd7a92479ee",
+  "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+  "revisionDrift": {"currentHead": "def2ffd8dac482fdc834604ba14958f1f5a10756", "commitsAfterAudit": ["564e1297 fix(audit): answer the final review - manifest gate, rate fields, restored race test", "def2ffd8 fix(audit): keep reviewer working snapshot out of tracked tree"], "appSourceImpact": "ONLY order-service/src/test/.../OrderReturnServiceTest.java; all other changes are production-audit/ harness state"},
+  "workingTree": {"modifiedFiles": 0, "untrackedPaths": 0, "nonProductionAuditChanges": 0, "note": "External operator reverted harness dirty state and committed; first-party source clean"},
+  "buildSystem": {"tool": "Maven 3.9.16 via ./mvnw wrapper", "javaTarget": "25", "jdkInstalled": "OpenJDK 26.0.1", "springBootParent": "4.1.1", "springCloud": "2025.1.0", "rootArtifact": "com.shop.microservices:shop-microservices:1.0-SNAPSHOT", "reactorModules": 24},
+  "mavenModules": {"services": ["auth-service","product-service","order-service","payment-service","inventory-service","shipping-service","notification-service","rating-service","search-service","promotion-service","tax-service","favourite-service","media-service","gateway-service"], "sharedLibs": ["common-config","common-core","common-security","common-logging","common-keycloak","common-kafka","common-spring","common-storage"], "discrepancies": ["common-patterns: ghost dir, deleted in commit 5d6ba251, untracked residue only; README.md:612 still advertises it"]},
+  "javaFileCounts": {"total": 1106, "main": 676, "test": 430},
+  "runtimeEnvironment": {"docker": "29.7.2", "composeStackWasUp": true, "containers": "14 services + postgres/kafka/redis/keycloak/rustfs/elasticsearch + observability profile (prometheus,grafana,loki,tempo,otel-collector,alloy,alertmanager)", "containerImagesBuiltAt": "2026-11-21T18:00-18:41Z", "kubernetes": {"kubectlClient": "v1.36.2", "currentContext": null, "note": "NO cluster - K8s runtime behavior cannot be verified; manifests only"}, "externalOperator": "Another session actively recreates containers, runs k6 bursts, wiped the audit tree twice (~02:00 and ~03:00 local) and advanced git HEAD"},
+  "stripeCredentials": {"testModeKeysPresentInDotEnv": true, "keyTypeObserved": "sk_test_* (redacted)", "apiBase": "https://api.stripe.com"}
+}

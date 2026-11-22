@@ -4,24 +4,24 @@
       "binds_to_current_source": true,
       "current_harness_fields_missing_from_the_recorded_results": [],
       "harness_commits_after_the_measurement": [],
-      "measurement_window_utc": "2026-11-21T19:18:30Z",
+      "measurement_window_utc": "2026-11-21T23:37:26Z",
       "reason": "",
       "service_commits_after_the_measurement": []
     },
     "capacity_limit": {
       "business_failure": 0,
       "business_refusal": 0,
-      "business_success": 3916,
-      "directory": "ramp-1795288710",
+      "business_success": 3937,
+      "directory": "ramp-1795304246",
       "invariant_status": "PASS",
       "invariant_violations": 0,
-      "iterations_per_second": 8.3432,
+      "iterations_per_second": 8.3418,
       "planned_peak_iterations_per_second": 12.0,
       "planned_peak_requests_per_second": 48.0,
       "profile": "ramp",
-      "recorded_rate_ratio": 0.8201,
-      "requests_per_second": 42.2466,
-      "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/ramp-1795288710/result.json",
+      "recorded_rate_ratio": 0.8199,
+      "requests_per_second": 42.1481,
+      "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/ramp-1795304246/result.json",
       "scenario": "full",
       "shed_requests": 0,
       "status": "PASS"
@@ -29,20 +29,20 @@
     "last_complete_run": {
       "complete": false,
       "directories": [
-        "baseline-1795269895",
+        "baseline-1795293129",
         "flash-sale-1795287844",
         "promotion-storm-1795288244",
-        "ramp-1795288710",
-        "recovery-1795271066",
-        "spike-1795286910"
+        "ramp-1795304246",
+        "recovery-1795294477",
+        "spike-1795293675"
       ],
       "directories_in_run_order": [
-        "baseline-1795269895",
-        "recovery-1795271066",
-        "spike-1795286910",
         "flash-sale-1795287844",
         "promotion-storm-1795288244",
-        "ramp-1795288710"
+        "baseline-1795293129",
+        "spike-1795293675",
+        "recovery-1795294477",
+        "ramp-1795304246"
       ],
       "profiles": [
         "baseline",
@@ -53,20 +53,22 @@
         "spike"
       ],
       "recorded_results_in_window": [
-        "baseline-1795269895",
+        "baseline-1795293129",
         "flash-sale-1795287844",
         "promotion-storm-1795288244",
-        "ramp-1795270107",
-        "ramp-1795286502",
         "ramp-1795288710",
-        "recovery-1795271066",
-        "spike-1795286910"
+        "ramp-1795293340",
+        "ramp-1795297485",
+        "ramp-1795299875",
+        "ramp-1795304246",
+        "recovery-1795294477",
+        "spike-1795293675"
       ],
       "selection": "the newest recorded result of every profile that has a recorded result",
-      "window_end_stamp": 1795288710,
-      "window_end_utc": "2026-11-21T19:18:30Z",
-      "window_start_stamp": 1795269895,
-      "window_start_utc": "2026-11-21T14:04:55Z"
+      "window_end_stamp": 1795304246,
+      "window_end_utc": "2026-11-21T23:37:26Z",
+      "window_start_stamp": 1795287844,
+      "window_start_utc": "2026-11-21T19:04:04Z"
     },
     "measured": true,
     "profiles": [
@@ -77,9 +79,9 @@
         "business_success": 2298,
         "business_verdict": "the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.85 of the planned 7.94 iterations per second",
         "current_harness_fields_missing": [],
-        "delivered_iterations_per_second": 6.7581,
-        "delivered_requests_per_second": 13.9867,
-        "directory": "baseline-1795269895",
+        "delivered_iterations_per_second": 6.7587,
+        "delivered_requests_per_second": 13.9879,
+        "directory": "baseline-1795293129",
         "dropped_iterations": 0,
         "invariant_failed": [],
         "invariant_status": "PASS",
@@ -91,13 +93,13 @@
         "planned_peak_requests_per_second": 20.0,
         "platform_error_rate": 0.0,
         "profile": "baseline",
-        "recorded_rate_ratio": 0.851,
+        "recorded_rate_ratio": 0.8511,
         "recorded_rate_ratio_denominator": "planned_iteration_rate_per_second",
         "recorded_rate_unit": "iterations per second",
         "requests": 2378,
         "requests_per_iteration_declared": 2,
         "requests_per_iteration_observed": 2.0696,
-        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/baseline-1795269895/result.json",
+        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/baseline-1795293129/result.json",
         "scenario": "browse",
         "shed_rate": 0.0,
         "shed_requests": 0,
@@ -176,12 +178,12 @@
         "business_failure": 0,
         "business_failure_rate": 0.0,
         "business_refusal": 0,
-        "business_success": 3916,
+        "business_success": 3937,
         "business_verdict": "the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.82 of the planned 10.17 iterations per second",
         "current_harness_fields_missing": [],
-        "delivered_iterations_per_second": 8.3432,
-        "delivered_requests_per_second": 42.2466,
-        "directory": "ramp-1795288710",
+        "delivered_iterations_per_second": 8.3418,
+        "delivered_requests_per_second": 42.1481,
+        "directory": "ramp-1795304246",
         "dropped_iterations": 0,
         "invariant_failed": [],
         "invariant_status": "PASS",
@@ -193,13 +195,13 @@
         "planned_peak_requests_per_second": 48.0,
         "platform_error_rate": 0.0,
         "profile": "ramp",
-        "recorded_rate_ratio": 0.8201,
+        "recorded_rate_ratio": 0.8199,
         "recorded_rate_ratio_denominator": "planned_iteration_rate_per_second",
         "recorded_rate_unit": "iterations per second",
-        "requests": 9717,
+        "requests": 9696,
         "requests_per_iteration_declared": 4,
-        "requests_per_iteration_observed": 5.0636,
-        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/ramp-1795288710/result.json",
+        "requests_per_iteration_observed": 5.0526,
+        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/ramp-1795304246/result.json",
         "scenario": "full",
         "shed_rate": 0.0,
         "shed_requests": 0,
@@ -210,79 +212,79 @@
         "business_failure": 0,
         "business_failure_rate": 0.0,
         "business_refusal": 0,
-        "business_success": 638,
-        "business_verdict": "the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.89 of the planned 3.27 iterations per second",
+        "business_success": 640,
+        "business_verdict": "the business failure rate 0.0000 is within the limit 0.0500 and the platform shed 0.0000 of the requests and the platform delivered 0.82 of the planned 3.27 iterations per second",
         "current_harness_fields_missing": [],
-        "delivered_iterations_per_second": 2.9,
-        "delivered_requests_per_second": 5.8909,
-        "directory": "recovery-1795271066",
+        "delivered_iterations_per_second": 2.6833,
+        "delivered_requests_per_second": 5.4504,
+        "directory": "recovery-1795294477",
         "dropped_iterations": 0,
         "invariant_failed": [],
         "invariant_status": "PASS",
         "invariant_violations": 0,
-        "iterations": 319,
+        "iterations": 320,
         "k6_exit_code": 0,
-        "measurement_valid": true,
+        "measurement_valid": false,
         "planned_peak_iterations_per_second": 5.0,
         "planned_peak_requests_per_second": 10.0,
         "platform_error_rate": 0.0,
         "profile": "recovery",
-        "recorded_rate_ratio": 0.8861,
+        "recorded_rate_ratio": 0.8199,
         "recorded_rate_ratio_denominator": "planned_iteration_rate_per_second",
         "recorded_rate_unit": "iterations per second",
-        "requests": 648,
+        "requests": 650,
         "requests_per_iteration_declared": 2,
-        "requests_per_iteration_observed": 2.0313,
-        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/recovery-1795271066/result.json",
+        "requests_per_iteration_observed": 2.0312,
+        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/recovery-1795294477/result.json",
         "scenario": "browse",
         "shed_rate": 0.0,
         "shed_requests": 0,
-        "status": "PASS",
+        "status": "BLOCKED",
         "transport_failure_rate": 0
       },
       {
-        "business_failure": 6059,
-        "business_failure_rate": null,
+        "business_failure": 146,
+        "business_failure_rate": 0.049374,
         "business_refusal": 0,
-        "business_success": 460,
-        "business_verdict": "",
+        "business_success": 2811,
+        "business_verdict": "the business failure rate 0.0494 is within the limit 0.0500 but the platform shed 0.1907 of the requests, which exceeds the limit 0.0100",
         "current_harness_fields_missing": [],
-        "delivered_iterations_per_second": 25.7597,
-        "delivered_requests_per_second": 80.61,
-        "directory": "spike-1795286910",
-        "dropped_iterations": 1364,
+        "delivered_iterations_per_second": 7.6725,
+        "delivered_requests_per_second": 38.6372,
+        "directory": "spike-1795293675",
+        "dropped_iterations": 4298,
         "invariant_failed": [],
         "invariant_status": "PASS",
         "invariant_violations": 0,
-        "iterations": 4385,
-        "k6_exit_code": 99,
-        "measurement_valid": true,
+        "iterations": 1452,
+        "k6_exit_code": 0,
+        "measurement_valid": false,
         "planned_peak_iterations_per_second": 50.0,
         "planned_peak_requests_per_second": 200.0,
-        "platform_error_rate": 0.0,
+        "platform_error_rate": 0.013676,
         "profile": "spike",
-        "recorded_rate_ratio": null,
+        "recorded_rate_ratio": 0.1932,
         "recorded_rate_ratio_denominator": "planned_iteration_rate_per_second",
         "recorded_rate_unit": "iterations per second",
-        "requests": 13722,
+        "requests": 7312,
         "requests_per_iteration_declared": 4,
-        "requests_per_iteration_observed": 3.1293,
-        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/spike-1795286910/result.json",
+        "requests_per_iteration_observed": 5.0358,
+        "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/spike-1795293675/result.json",
         "scenario": "full",
-        "shed_rate": null,
-        "shed_requests": 1922,
-        "status": "BLOCKED",
-        "transport_failure_rate": 0.5075790701063985
+        "shed_rate": 0.19075,
+        "shed_requests": 697,
+        "status": "FAIL",
+        "transport_failure_rate": 0.013949671772428883
       }
     ],
-    "recorded_at": "2026-11-21T19:23:06Z",
+    "recorded_at": "2026-11-21T23:42:06Z",
     "rule": "the highest rate the platform delivered in the last complete measured run with zero business failures and zero invariant violations",
     "run_id": "run-20261118-a2b6e6fc",
     "source_directory": "production-audit/runs/run-20261118-a2b6e6fc/load-results",
     "stops_holding_at": {
-      "highest_broken_iterations_per_second": 25.7597,
+      "highest_broken_iterations_per_second": 7.6725,
       "highest_broken_profile": "spike",
-      "highest_broken_requests_per_second": 80.61,
+      "highest_broken_requests_per_second": 38.6372,
       "profiles": [
         {
           "business_failure": 281,
@@ -353,38 +355,38 @@
           "transport_failure_rate": 0.6580389768574909
         },
         {
-          "business_failure": 6059,
-          "business_failure_rate": null,
+          "business_failure": 146,
+          "business_failure_rate": 0.049374,
           "business_refusal": 0,
-          "business_success": 460,
-          "business_verdict": "",
+          "business_success": 2811,
+          "business_verdict": "the business failure rate 0.0494 is within the limit 0.0500 but the platform shed 0.1907 of the requests, which exceeds the limit 0.0100",
           "current_harness_fields_missing": [],
-          "delivered_iterations_per_second": 25.7597,
-          "delivered_requests_per_second": 80.61,
-          "directory": "spike-1795286910",
-          "dropped_iterations": 1364,
+          "delivered_iterations_per_second": 7.6725,
+          "delivered_requests_per_second": 38.6372,
+          "directory": "spike-1795293675",
+          "dropped_iterations": 4298,
           "invariant_failed": [],
           "invariant_status": "PASS",
           "invariant_violations": 0,
-          "iterations": 4385,
-          "k6_exit_code": 99,
-          "measurement_valid": true,
+          "iterations": 1452,
+          "k6_exit_code": 0,
+          "measurement_valid": false,
           "planned_peak_iterations_per_second": 50.0,
           "planned_peak_requests_per_second": 200.0,
-          "platform_error_rate": 0.0,
+          "platform_error_rate": 0.013676,
           "profile": "spike",
-          "recorded_rate_ratio": null,
+          "recorded_rate_ratio": 0.1932,
           "recorded_rate_ratio_denominator": "planned_iteration_rate_per_second",
           "recorded_rate_unit": "iterations per second",
-          "requests": 13722,
+          "requests": 7312,
           "requests_per_iteration_declared": 4,
-          "requests_per_iteration_observed": 3.1293,
-          "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/spike-1795286910/result.json",
+          "requests_per_iteration_observed": 5.0358,
+          "result_file": "production-audit/runs/run-20261118-a2b6e6fc/load-results/spike-1795293675/result.json",
           "scenario": "full",
-          "shed_rate": null,
-          "shed_requests": 1922,
-          "status": "BLOCKED",
-          "transport_failure_rate": 0.5075790701063985
+          "shed_rate": 0.19075,
+          "shed_requests": 697,
+          "status": "FAIL",
+          "transport_failure_rate": 0.013949671772428883
         }
       ]
     }
@@ -392,8 +394,8 @@
   "profile": "ramp",
   "result": {
     "accepted_rate_ratio": 0.8,
-    "achieved_iteration_rate_per_second": 8.3432,
-    "achieved_rate_ratio": 0.8201,
+    "achieved_iteration_rate_per_second": 8.3418,
+    "achieved_rate_ratio": 0.8199,
     "arrival_plan": [
       {
         "duration": "30s",
@@ -428,7 +430,7 @@
       "virtual_users": 200
     },
     "duration_seconds": 180,
-    "elapsed_seconds": 232.59,
+    "elapsed_seconds": 233.74,
     "gateway_traffic": {
       "last_status": 200,
       "status": "READY"
@@ -444,7 +446,7 @@
           "detail": "",
           "id": "INV-01",
           "name": "NO_OVERSELLING",
-          "population": 15,
+          "population": 24,
           "status": "PASS",
           "violations": 0
         },
@@ -455,7 +457,7 @@
           "detail": "",
           "id": "INV-02",
           "name": "COUPON_QUOTA_RESPECTED",
-          "population": 15,
+          "population": 24,
           "status": "PASS",
           "violations": 0
         },
@@ -466,7 +468,7 @@
           "detail": "",
           "id": "INV-03",
           "name": "ORDER_STATUS_VALID",
-          "population": 1012,
+          "population": 1411,
           "status": "PASS",
           "violations": 0
         },
@@ -477,7 +479,7 @@
           "detail": "",
           "id": "INV-04",
           "name": "SINGLE_TERMINAL_PAYMENT",
-          "population": 66,
+          "population": 90,
           "status": "PASS",
           "violations": 0
         },
@@ -488,7 +490,7 @@
           "detail": "",
           "id": "INV-05",
           "name": "PAYMENT_IDEMPOTENCY_UNIQUE",
-          "population": 66,
+          "population": 90,
           "status": "PASS",
           "violations": 0
         },
@@ -510,7 +512,7 @@
           "detail": "",
           "id": "INV-07",
           "name": "PAYMENT_ORDER_CONSISTENCY",
-          "population": 11,
+          "population": 19,
           "status": "PASS",
           "violations": 0
         },
@@ -558,25 +560,25 @@
       "contaminated": false,
       "cpu_count": 10,
       "host_settle": {
-        "load_per_cpu": 0.97,
+        "load_per_cpu": 0.7,
         "status": "QUIET",
         "waited_seconds": 0.0
       },
       "load_average": [
-        9.79,
-        15.44,
-        16.18
+        7.33,
+        7.6,
+        8.32
       ],
-      "load_per_cpu": 0.98,
+      "load_per_cpu": 0.73,
       "platform": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
       "reasons": []
     },
     "measurement_valid": true,
     "metrics": {
-      "achieved_rate_ratio": 0.8201,
+      "achieved_rate_ratio": 0.8199,
       "business_failure": 0,
       "business_refusal": 0,
-      "business_success": 3916,
+      "business_success": 3937,
       "cart_contention": 0,
       "cart_failure": 0,
       "check_rate": 1,
@@ -584,27 +586,27 @@
       "credential_error": 0,
       "failed_requests": 0,
       "failure_rate": 0,
-      "iteration_rate_per_second": 8.343231500910571,
+      "iteration_rate_per_second": 8.3418174203266,
       "iterations": 1919,
-      "latency_avg_ms": 48.85308594041386,
-      "latency_max_ms": 1353.858876,
-      "latency_min_ms": 2.208625,
-      "latency_p50_ms": 13.390833,
-      "latency_p90_ms": 132.99614160000002,
-      "latency_p95_ms": 227.7563841999998,
+      "latency_avg_ms": 32.92606715511555,
+      "latency_max_ms": 2224.664751,
+      "latency_min_ms": 2.70625,
+      "latency_p50_ms": 13.0038545,
+      "latency_p90_ms": 61.6481045,
+      "latency_p95_ms": 113.15215649999998,
       "latency_p99_ms": null,
-      "oversell_responses": 1841,
+      "oversell_responses": 1820,
       "planned_iteration_rate_per_second": 10.1739,
       "platform_errors": null,
       "rate_unit": "iterations per second",
-      "request_rate_per_second": 42.24657659945181,
-      "requests": 9717,
+      "request_rate_per_second": 42.14813012375545,
+      "requests": 9696,
       "shed_requests": 0,
-      "successful_requests": 9717,
+      "successful_requests": 9696,
       "unexpected_responses": null
     },
     "network": "untitled5_ecommerce-network",
-    "output": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/load-results/ramp-1795288710",
+    "output": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/load-results/ramp-1795304246",
     "planned_iteration_rate_per_second": 10.1739,
     "planned_request_rate_per_second": 40.6957,
     "platform_error_rate": 0.0,
@@ -615,115 +617,123 @@
         "services": [
           {
             "service": "alertmanager",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "alloy",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "auth-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 34 minutes (healthy)"
           },
           {
             "service": "elasticsearch",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "favourite-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "gateway-service",
-            "status": "Up 5 seconds (healthy)"
+            "status": "Up 10 seconds (healthy)"
           },
           {
             "service": "grafana",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "inventory-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "kafka",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "keycloak",
-            "status": "Up 5 minutes (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "loki",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "media-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "notification-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "order-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "otel-collector",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "payment-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "postgres",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
+          },
+          {
+            "service": "postgres-exporter",
+            "status": "Up 3 hours"
           },
           {
             "service": "product-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "prometheus",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "promotion-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "rating-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "redis",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
+          },
+          {
+            "service": "redis-exporter",
+            "status": "Up 3 hours"
           },
           {
             "service": "rustfs",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "search-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 34 minutes (healthy)"
           },
           {
             "service": "shipping-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "tax-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 38 minutes (healthy)"
           },
           {
             "service": "tempo",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           }
         ],
         "status": "READY",
-        "waited_seconds": 5.5
+        "waited_seconds": 10.9
       },
       "reason": "the shipped per client rate limit would throttle the measured traffic, so the gateway was recreated with the load test limits and the run started only after it reported healthy",
       "status": "APPLIED"
@@ -734,23 +744,23 @@
         "services": [
           {
             "service": "alertmanager",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "alloy",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "auth-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 39 minutes (healthy)"
           },
           {
             "service": "elasticsearch",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "favourite-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "gateway-service",
@@ -758,91 +768,99 @@
           },
           {
             "service": "grafana",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "inventory-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "kafka",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "keycloak",
-            "status": "Up 9 minutes (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "loki",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "media-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "notification-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "order-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "otel-collector",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "payment-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "postgres",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
+          },
+          {
+            "service": "postgres-exporter",
+            "status": "Up 3 hours"
           },
           {
             "service": "product-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "prometheus",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           },
           {
             "service": "promotion-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "rating-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "redis",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
+          },
+          {
+            "service": "redis-exporter",
+            "status": "Up 3 hours"
           },
           {
             "service": "rustfs",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "search-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 39 minutes (healthy)"
           },
           {
             "service": "shipping-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "tax-service",
-            "status": "Up About an hour (healthy)"
+            "status": "Up 42 minutes (healthy)"
           },
           {
             "service": "tempo",
-            "status": "Up 2 hours (healthy)"
+            "status": "Up 3 hours (healthy)"
           }
         ],
         "status": "READY",
-        "waited_seconds": 11.8
+        "waited_seconds": 10.9
       },
       "status": "OK"
     },
@@ -855,27 +873,27 @@
       {
         "service": "alertmanager",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       },
       {
         "service": "alloy",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       },
       {
         "service": "auth-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 39 minutes (healthy)"
       },
       {
         "service": "elasticsearch",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "favourite-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "gateway-service",
@@ -885,107 +903,117 @@
       {
         "service": "grafana",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       },
       {
         "service": "inventory-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "kafka",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "keycloak",
         "state": "running",
-        "status": "Up 9 minutes (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "loki",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       },
       {
         "service": "media-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "notification-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "order-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "otel-collector",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       },
       {
         "service": "payment-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "postgres",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
+      },
+      {
+        "service": "postgres-exporter",
+        "state": "running",
+        "status": "Up 3 hours"
       },
       {
         "service": "product-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "prometheus",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       },
       {
         "service": "promotion-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "rating-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "redis",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
+      },
+      {
+        "service": "redis-exporter",
+        "state": "running",
+        "status": "Up 3 hours"
       },
       {
         "service": "rustfs",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "search-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 38 minutes (healthy)"
       },
       {
         "service": "shipping-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "tax-service",
         "state": "running",
-        "status": "Up About an hour (healthy)"
+        "status": "Up 42 minutes (healthy)"
       },
       {
         "service": "tempo",
         "state": "running",
-        "status": "Up 2 hours (healthy)"
+        "status": "Up 3 hours (healthy)"
       }
     ],
     "shed_rate": 0.0,
@@ -996,5 +1024,5 @@
     "transport_failure_rate": 0,
     "virtual_users": 200
   },
-  "updated_at": "2026-11-21T19:23:06Z"
+  "updated_at": "2026-11-21T23:42:06Z"
 }

@@ -88,7 +88,8 @@ class PaymentProviderProductionGuardTest {
     void stripeWithoutASecretKeyIsRejectedInProductionMode() {
         contextRunner.withPropertyValues(
                         "shop.payment.production-mode=true",
-                        "shop.payment.provider=stripe")
+                        "shop.payment.provider=stripe",
+                        "shop.payment.stripe.secret-key=")
                 .run(ctx -> {
                     assertThat(ctx).hasFailed();
                     assertThat(ctx.getStartupFailure()).hasStackTraceContaining("stripe");

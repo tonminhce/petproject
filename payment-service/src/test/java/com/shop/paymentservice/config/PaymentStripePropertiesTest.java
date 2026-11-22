@@ -32,7 +32,11 @@ class PaymentStripePropertiesTest {
 
     @Test
     void defaultsAreBlankKeysAndPinnedVersionAndNoConnect() {
-        contextRunner.run(ctx -> {
+        contextRunner.withPropertyValues(
+                        "shop.payment.stripe.secret-key=",
+                        "shop.payment.stripe.webhook-secret=",
+                        "shop.payment.stripe.api-base=")
+                .run(ctx -> {
             PaymentStripeProperties props = ctx.getBean(PaymentStripeProperties.class);
             assertThat(props.secretKey()).isEmpty();
             assertThat(props.webhookSecret()).isEmpty();

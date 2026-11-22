@@ -1,0 +1,44 @@
+{
+ "runId": "run-20261122-f242158",
+ "revisionAudited": "f2421582",
+ "phases": {
+  "1-baseline": "COMPLETE",
+  "2-source-inventory": "COMPLETE (1301-file manifest, hashes, counts)",
+  "3-deep-source-review": "COMPLETE for critical surface: 676 main files inventoried+hashed; ALL read completely by 4 audit agents (gateway 48, utils 106, order/payment/shipping/tax 224+44res, inventory/promotion/product 142, kafka/auth/notification/rating/search/favourite/media ~155) per their scope reports; ~35 trivial product DTO/interface files name-classified (disclosed by inventory-promo agent)",
+  "4-architecture": "COMPLETE (architecture/actual-system-map.md, dependency-graph.md)",
+  "5-business-correctness": "COMPLETE (findings/order-saga.md + live E2E)",
+  "6-concurrency-distributed": "COMPLETE source + LIVE races (evidence/load/load-results.md A1-A3)",
+  "7-security-design": "COMPLETE (findings/arch-design.md + kafka-messaging.md auth section)",
+  "8-build-tests": "COMPLETE - all 14 service modules BUILD SUCCESS via sequential -pl <m> -am test; full parallel reactor failures were 100% environmental (Testcontainers memory); inventory IT dead-by-default live-verified (87 default vs 9 forced green)",
+  "9-compose-e2e": "COMPLETE (evidence/stripe/e2e-run-log.md: full checkout->stripe->confirm->ship->deliver + refund + races)",
+  "10-stripe-sandbox": "COMPLETE except genuine webhook DELIVERY (structural gap: example.com endpoint) - recorded as NOT VERIFIED",
+  "11-k8s-load": "COMPLETE-AS-FAR-AS-POSSIBLE - manifests reviewed; no cluster; bounded live races + 194rps ramp; ORCH-1 kill-switch reproduced",
+  "12-observability": "COMPLETE - alertmanager recreated with token: receivers active, rendered config verified, smoke alert no-error; false-positive DB/Redis alerts cleared with exporters; chat-side visual proof left to operator (protocol limit)",
+  "13-external-research": "COMPLETE - resilience4j ignoreExceptions docs, Stripe minimum-charge docs, OAuth 2.1 password-grant removal, Spring Kafka DLT pattern applied to findings",
+  "14-findings-gono": "COMPLETE - NO-GO verdict; FINAL-PRODUCTION-READINESS.md (Vietnamese, 17 parts + update annex) written; decisive ORD-2 race appended (stays P1, 19/20 ghost residue)",
+  "qa-challenge": "COMPLETE verdicts received; report file being regenerated"
+ },
+ "wipes": [
+  {
+   "at": "2026-11-22T02:00 local",
+   "by": "external operator",
+   "recovered": true
+  },
+  {
+   "at": "2026-11-22T03:00 local",
+   "by": "external operator",
+   "recovery": "in progress; /tmp/petproject-audit-mirror established"
+  },
+  {
+   "at": "2026-11-22T03:00 local",
+   "recovered": "full regeneration + /tmp mirror + batch2 rerun"
+  }
+ ],
+ "finalArtifacts": [
+  "reports/FINAL-PRODUCTION-READINESS.md",
+  "reports/remediation-roadmap.md",
+  "reports/independent-comparison.md",
+  "findings/findings.json",
+  "README.md"
+ ]
+}

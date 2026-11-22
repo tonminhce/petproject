@@ -35,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -459,7 +460,7 @@ class OrderReturnServiceTest {
         java.util.concurrent.CountDownLatch bothEntered = new java.util.concurrent.CountDownLatch(2);
         stubLockedReturnWithLock(shared, databaseLock, bothEntered);
         when(orderReturnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
+        lenient().when(paymentServiceClient.refundByOrderId(orderId, BigDecimal.valueOf(100), "VND", returnId))
                 .thenAnswer(invocation -> {
                     Thread.sleep(120);
                     return RefundOutcome.REFUNDED;
@@ -483,8 +484,12 @@ class OrderReturnServiceTest {
             }
             assertThat(decided).as("exactly one review decision is applied").isEqualTo(1);
             assertThat(failures).as("the other decision is refused with a business failure").hasSize(1);
-            verify(paymentServiceClient, times(1)).refundByOrderId(any(), any(), any(), any());
-            assertThat(shared.getStatus()).isEqualTo(ReturnStatus.REFUNDED);
+            if (shared.getStatus() == ReturnStatus.REFUNDED) {
+                verify(paymentServiceClient, times(1)).refundByOrderId(any(), any(), any(), any());
+            } else {
+                assertThat(shared.getStatus()).isEqualTo(ReturnStatus.REJECTED);
+                verify(paymentServiceClient, never()).refundByOrderId(any(), any(), any(), any());
+            }
         } finally {
             pool.shutdownNow();
         }
