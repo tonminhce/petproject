@@ -1,5 +1,5 @@
 {
-  "revision": "def2ffd8dac482fdc834604ba14958f1f5a10756",
+  "revision": "e8e30b24007207314a22a8d648f21bcf9ccffd2b",
   "suites": {
     "alerts": {
       "checks": [
@@ -131,16 +131,16 @@
     },
     "build": {
       "command": "./mvnw -B -ntp -T 1 clean verify",
-      "duration_seconds": 1315.987,
+      "duration_seconds": 1196.213,
       "exit_code": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
       "mode": "clean-verify",
-      "revision": "def2ffd8dac482fdc834604ba14958f1f5a10756",
-      "source_fingerprint": "6c70c52c09c2a7f68e471612e51280a151884d3ad0ec491663bf4134ae12a684",
+      "revision": "e8e30b24007207314a22a8d648f21bcf9ccffd2b",
+      "source_fingerprint": "ccc72e6cd000460f6395d18e84674e97f84e5fd0c7959e5f28344ba558baf0c7",
       "status": "PASS",
       "suite": "build",
-      "updated_at": "2026-11-21T22:58:57Z"
+      "updated_at": "2026-11-22T00:32:06Z"
     },
     "comments": {
       "prohibited_comments": 0,
@@ -228,19 +228,19 @@
     "happy": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=!*Edge*,!*Negative*,!*Concurrency*,!*Race*,*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "happy path business scenarios",
-      "duration_seconds": 171.654,
-      "errors": 1,
-      "exit_code": 1,
+      "duration_seconds": 270.892,
+      "errors": 0,
+      "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
-      "revision": "def2ffd8dac482fdc834604ba14958f1f5a10756",
+      "revision": "e8e30b24007207314a22a8d648f21bcf9ccffd2b",
       "skipped": 0,
-      "source_fingerprint": "6c70c52c09c2a7f68e471612e51280a151884d3ad0ec491663bf4134ae12a684",
-      "status": "FAIL",
+      "source_fingerprint": "ccc72e6cd000460f6395d18e84674e97f84e5fd0c7959e5f28344ba558baf0c7",
+      "status": "PASS",
       "suite": "happy",
-      "tests_run": 816,
-      "updated_at": "2026-11-21T23:11:19Z"
+      "tests_run": 2015,
+      "updated_at": "2026-11-22T00:11:56Z"
     },
     "integration": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -638,5 +638,5 @@
       "updated_at": "2026-11-21T23:08:27Z"
     }
   },
-  "updated_at": "2026-11-22T00:05:23Z"
+  "updated_at": "2026-11-22T00:32:07Z"
 }

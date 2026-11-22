@@ -148,39 +148,34 @@ public class OrderCreateSaga {
         Cart cart = initial.cart();
         List<CartItem> items = initial.items();
         Order order = initial.order();
-
-        PricingBreakdown pricing;
-        try {
-            pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
-        } catch (Exception ex) {
-            executeInTxWithoutResult(() -> orderRepository.delete(order));
-            throw ex;
-        }
-
-        order.setSubtotal(pricing.subtotal());
-        order.setTaxAmount(pricing.taxAmount());
-        order.setDiscountAmount(pricing.discountAmount());
-        order.setTotal(pricing.total());
-        order.setCurrency(pricing.currency());
-        order.setPromotionReservationId(pricing.promotionReservationId());
-
         List<OrderItem> orderItems = new ArrayList<>();
-        for (CartItem item : items) {
-            ProductSnapshot snapshot = pricing.snapshots().get(item.getProductId());
-            OrderItem orderItem = OrderItem.builder()
-                .orderId(order.getId())
-                .productId(item.getProductId())
-                .productTitle(snapshot.title())
-                .quantity(item.getQuantity())
-                .unitPrice(snapshot.unitPrice())
-                .lineTotal(snapshot.unitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .currency(pricing.currency())
-                .build();
-            orderItems.add(orderItem);
-        }
-
         List<OrderItem> reserved = new ArrayList<>();
+        boolean reserving = false;
         try {
+            PricingBreakdown pricing = pricingService.calculate(order.getId(), userId, items, request.couponCode());
+
+            order.setSubtotal(pricing.subtotal());
+            order.setTaxAmount(pricing.taxAmount());
+            order.setDiscountAmount(pricing.discountAmount());
+            order.setTotal(pricing.total());
+            order.setCurrency(pricing.currency());
+            order.setPromotionReservationId(pricing.promotionReservationId());
+
+            for (CartItem item : items) {
+                ProductSnapshot snapshot = pricing.snapshots().get(item.getProductId());
+                OrderItem orderItem = OrderItem.builder()
+                    .orderId(order.getId())
+                    .productId(item.getProductId())
+                    .productTitle(snapshot.title())
+                    .quantity(item.getQuantity())
+                    .unitPrice(snapshot.unitPrice())
+                    .lineTotal(snapshot.unitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .currency(pricing.currency())
+                    .build();
+                orderItems.add(orderItem);
+            }
+
+            reserving = true;
             for (OrderItem orderItem : orderItems) {
                 UUID reservationId = stockReservationService.reserve(
                     orderItem.getProductId(),
@@ -188,38 +183,75 @@ public class OrderCreateSaga {
                 orderItem.setReservationId(reservationId);
                 reserved.add(orderItem);
             }
+
+            executeInTxWithoutResult(() -> {
+                orderRepository.save(order);
+                orderItemRepository.saveAll(orderItems);
+                cartItemRepository.deleteAll(items);
+                cart.markDeleted(userId.toString());
+                cartRepository.save(cart);
+                orderEventPublisher.publishCreated(order, orderItems);
+            });
         } catch (Exception ex) {
-            releaseAllReservations(order.getId(), reserved);
-            if (order.getPromotionReservationId() != null) {
-                try {
-                    promotionClient.release(order.getPromotionReservationId());
-                } catch (Exception pex) {
-                    log.error("Failed to release promotion reservation {} — TTL sweep covers",
-                        order.getPromotionReservationId(), pex);
+            compensateLostCheckout(order, reserved);
+            if (reserving) {
+                if (ex instanceof StockReservationFailedException sfe) {
+                    throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, sfe.getProductId());
                 }
+                if (ex instanceof BusinessException be) {
+                    throw (RuntimeException) be;
+                }
+                throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getMessage());
             }
-            executeInTxWithoutResult(() -> orderRepository.delete(order));
-            if (ex instanceof StockReservationFailedException sfe) {
-                throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, sfe.getProductId());
-            }
-            if (ex instanceof BusinessException be) {
-                throw be;
+            if (ex instanceof RuntimeException re) {
+                throw re;
             }
             throw BusinessException.of(ErrorCode.ORDER_RESERVATION_FAILED, ex.getMessage());
         }
 
-        executeInTxWithoutResult(() -> {
-            orderRepository.save(order);
-            orderItemRepository.saveAll(orderItems);
-            cartItemRepository.deleteAll(items);
-            cart.markDeleted(userId.toString());
-            cartRepository.save(cart);
-            orderEventPublisher.publishCreated(order, orderItems);
-        });
-
         OrderResponse response = orderMapper.toResponse(order, orderItems);
         idempotencyService.complete(idempotencyKey, userId.toString(), response, 201);
         return response;
+    }
+
+    private void compensateLostCheckout(Order order, List<OrderItem> reserved) {
+        releaseAllReservations(order.getId(), reserved);
+        releasePromotionReservation(order);
+        removeGhostOrder(order.getId());
+    }
+
+    private void releasePromotionReservation(Order order) {
+        UUID promotionReservationId = order.getPromotionReservationId();
+        if (promotionReservationId == null) {
+            return;
+        }
+        try {
+            promotionClient.release(promotionReservationId);
+        } catch (Exception pex) {
+            log.error("Failed to release promotion reservation {} — TTL sweep covers",
+                promotionReservationId, pex);
+        }
+    }
+
+    private void removeGhostOrder(UUID orderId) {
+        try {
+            executeInTxWithoutResult(() -> {
+                Order ghost = orderRepository.findById(orderId).orElse(null);
+                if (ghost == null) {
+                    return;
+                }
+                if (ghost.getStatus() != OrderStatus.PENDING) {
+                    log.warn("Checkout compensation left order {} untouched: state {} is no longer pending",
+                        orderId, ghost.getStatus());
+                    return;
+                }
+                orderItemRepository.deleteAll(orderItemRepository.findByOrderId(orderId));
+                orderRepository.delete(ghost);
+            });
+        } catch (Exception dex) {
+            log.error("Failed to remove the ghost order {} during checkout compensation — the reconciliation sweep covers it",
+                orderId, dex);
+        }
     }
 
     private void releaseAllReservations(UUID orderId, List<OrderItem> reserved) {

@@ -7,6 +7,7 @@ import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
 import com.shop.orderservice.dto.internal.RefundRequest;
+import com.shop.orderservice.exception.PaymentOperationRejectedException;
 import com.shop.orderservice.security.ServiceTokenProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -192,7 +193,7 @@ public class PaymentServiceClient {
 
     private void requireWithinRemainingRefundableAmount(PaymentStatusSnapshot payment, BigDecimal amount) {
         if (amount == null || amount.signum() <= 0) {
-            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, amount);
+            throw new PaymentOperationRejectedException(ErrorCode.AMOUNT_MISMATCH, amount);
         }
         BigDecimal alreadyRefunded = payment.refundedAmount() != null
             ? payment.refundedAmount()
@@ -203,7 +204,7 @@ public class PaymentServiceClient {
         if (remaining == null || amount.compareTo(remaining) > 0) {
             log.warn("Rejected refund of {} for payment {}: only {} of the captured amount is still refundable",
                 amount, payment.id(), remaining);
-            throw BusinessException.of(ErrorCode.AMOUNT_MISMATCH, amount, remaining);
+            throw new PaymentOperationRejectedException(ErrorCode.AMOUNT_MISMATCH, amount, remaining);
         }
     }
 
@@ -213,23 +214,23 @@ public class PaymentServiceClient {
         if (paymentCurrency == null || refundCurrency == null || !paymentCurrency.equals(refundCurrency)) {
             log.warn("Rejected refund in {} for payment {}: the payment is in {}",
                 refundCurrency, payment.id(), paymentCurrency);
-            throw BusinessException.of(ErrorCode.PAYMENT_CURRENCY_MISMATCH, refundCurrency, paymentCurrency);
+            throw new PaymentOperationRejectedException(ErrorCode.PAYMENT_CURRENCY_MISMATCH, refundCurrency, paymentCurrency);
         }
     }
 
-    private BusinessException remoteBusinessException(HttpClientErrorException ex) {
+    private PaymentOperationRejectedException remoteBusinessException(HttpClientErrorException ex) {
         try {
             ApiResponse<Void> error = ex.getResponseBodyAs(ERROR_BODY);
             if (error != null && error.code() != null) {
                 for (ErrorCode candidate : ErrorCode.values()) {
                     if (candidate.getCode().equals(error.code())) {
-                        return BusinessException.of(candidate);
+                        return new PaymentOperationRejectedException(candidate);
                     }
                 }
             }
         } catch (Exception parseFailure) {
             log.debug("Could not parse the payment error body", parseFailure);
         }
-        return BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "payment");
+        return new PaymentOperationRejectedException(ErrorCode.SERVICE_UNAVAILABLE, "payment");
     }
 }

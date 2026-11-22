@@ -7,6 +7,7 @@ import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.PromotionReserveRequest;
 import com.shop.orderservice.dto.internal.PromotionReserveResponse;
 import com.shop.orderservice.dto.internal.ReservationStateResponse;
+import com.shop.orderservice.exception.PromotionApplicationRejectedException;
 import com.shop.orderservice.security.ServiceTokenProvider;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,7 @@ public class PromotionServiceClient {
             return resp.data();
         } catch (HttpClientErrorException ex) {
             log.warn("Promotion reserve rejected for {}: {}", request.code(), ex.getMessage());
-            throw BusinessException.of(ErrorCode.ORDER_PROMOTION_INVALID, request.code());
+            throw new PromotionApplicationRejectedException(request.code());
         } catch (HttpServerErrorException ex) {
             log.error("Promotion service 5xx — failing closed", ex);
             throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "promotion");

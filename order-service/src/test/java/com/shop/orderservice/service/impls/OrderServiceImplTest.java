@@ -117,6 +117,32 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void createOrder_requiresAnIdempotencyKey() {
+        OrderCreateRequest req = new OrderCreateRequest(null, null);
+
+        assertThatThrownBy(() -> service.createOrder(userId, req, null))
+            .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.createOrder(userId, req, "   "))
+            .isInstanceOf(BusinessException.class);
+
+        verifyNoInteractions(idempotencyService, orderCreateSaga);
+    }
+
+    @Test
+    void createOrder_doesNotAbortAClaimItNeverMade() throws Exception {
+        OrderCreateRequest req = new OrderCreateRequest(null, null);
+        lenient().when(objectMapper.writeValueAsBytes(any())).thenReturn("{}".getBytes());
+        when(idempotencyService.begin(eq("taken-key"), eq(userId.toString()), any()))
+            .thenThrow(BusinessException.of(ErrorCode.ORDER_DUPLICATE_REQUEST, "taken-key"));
+
+        assertThatThrownBy(() -> service.createOrder(userId, req, "taken-key"))
+            .isInstanceOf(BusinessException.class);
+
+        verify(idempotencyService, never()).abort(any(), any(), any());
+        verify(orderCreateSaga, never()).execute(any(), any(), any());
+    }
+
+    @Test
     void createOrder_returnsCachedResponseOnReplay() throws Exception {
         OrderCreateRequest req = new OrderCreateRequest(null, null);
         OrderResponse cached = new OrderResponse(orderId, userId, OrderStatus.PENDING, List.of(),

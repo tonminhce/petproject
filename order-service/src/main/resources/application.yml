@@ -90,3 +90,22 @@ order:
     claim-lease-seconds: ${ORDER_COMPENSATION_CLAIM_LEASE_SECONDS:120}
     max-attempts: ${ORDER_COMPENSATION_MAX_ATTEMPTS:5}
     batch-size: ${ORDER_COMPENSATION_BATCH_SIZE:50}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      inventoryService:
+        ignore-exceptions:
+          - com.shop.orderservice.exception.StockReservationFailedException
+      productService:
+        ignore-exceptions:
+          - com.shop.orderservice.exception.ProductLookupRejectedException
+      paymentService:
+        ignore-exceptions:
+          - com.shop.orderservice.exception.PaymentOperationRejectedException
+      taxService:
+        ignore-exceptions:
+          - com.shop.orderservice.exception.TaxCalculationRejectedException
+      promotionService:
+        ignore-exceptions:
+          - com.shop.orderservice.exception.PromotionApplicationRejectedException

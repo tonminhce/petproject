@@ -3,6 +3,7 @@ package com.shop.orderservice.client;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.PaymentStatusSnapshot;
+import com.shop.orderservice.exception.PaymentOperationRejectedException;
 import com.shop.orderservice.security.ServiceTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -409,6 +410,49 @@ class PaymentServiceClientTest {
 
         server.verify();
         refundServer.verify();
+    }
+
+    @Test
+    void aRefusedRefundableLookupSurfacesAsAPaymentOperationRejectionAndNotAGenericFailure() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(errorResponse(HttpStatus.CONFLICT, "PAY-5006"));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(PaymentOperationRejectedException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5006"));
+
+        server.verify();
+    }
+
+    @Test
+    void aRefusedRefundSurfacesAsAPaymentOperationRejectionAndNotAGenericFailure() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withSuccess(partiallyRefundedJson(), MediaType.APPLICATION_JSON));
+        refundServer.expect(requestTo(REFUND_URL))
+            .andRespond(errorResponse(HttpStatus.CONFLICT, "PAY-5006"));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("100.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOfSatisfying(PaymentOperationRejectedException.class,
+                ex -> assertThat(ex.getErrorCode()).isEqualTo("PAY-5006"));
+
+        refundServer.verify();
+    }
+
+    @Test
+    void aLocalRefundAmountRejectionSurfacesAsAPaymentOperationRejectionToo() {
+        stubToken();
+        server.expect(requestTo(REFUNDABLE_WITH_REFERENCE_URL))
+            .andRespond(withSuccess(capturedJson(), MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.refundByOrderId(ORDER_ID, new BigDecimal("3000.00"), "VND",
+                REFUND_REFERENCE))
+            .isInstanceOf(PaymentOperationRejectedException.class);
+
+        server.verify();
     }
 
     private Optional<PaymentStatusSnapshot> findFailingClosed() {

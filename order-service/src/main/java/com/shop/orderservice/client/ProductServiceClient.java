@@ -1,9 +1,8 @@
 package com.shop.orderservice.client;
 
-import com.shop.common.core.exception.BusinessException;
-import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.orderservice.dto.internal.ProductSnapshot;
+import com.shop.orderservice.exception.ProductLookupRejectedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -35,7 +34,7 @@ public class ProductServiceClient {
                 .retrieve()
                 .body(RESPONSE_TYPE);
         } catch (HttpClientErrorException.NotFound ex) {
-            throw BusinessException.of(ErrorCode.PRODUCT_NOT_FOUND, productId);
+            throw new ProductLookupRejectedException(productId);
         }
         return resp.data();
     }

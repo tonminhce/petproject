@@ -6,6 +6,7 @@ import com.shop.common.core.viewmodel.ApiResponse;
 import com.shop.orderservice.config.ShopServicesProperties;
 import com.shop.orderservice.dto.internal.TaxCalculateRequest;
 import com.shop.orderservice.dto.internal.TaxCalculateResponse;
+import com.shop.orderservice.exception.TaxCalculationRejectedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +49,7 @@ public class TaxServiceClient {
             throw BusinessException.of(ErrorCode.SERVICE_UNAVAILABLE, "tax");
         } catch (HttpClientErrorException ex) {
             log.warn("Tax calculation rejected: {}", ex.getMessage());
-            throw BusinessException.of(ErrorCode.ORDER_TAX_CALCULATION_FAILED, ex.getMessage());
+            throw new TaxCalculationRejectedException(ex.getMessage());
         }
     }
 }

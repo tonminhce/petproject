@@ -4,6 +4,7 @@ import com.shop.common.kafka.contract.KafkaTopicContract;
 import com.shop.common.core.exception.BusinessException;
 import com.shop.common.core.exception.ErrorCode;
 import com.shop.common.kafka.consumer.BaseKafkaConsumer;
+import com.shop.orderservice.service.LateCaptureRefundHandler;
 import com.shop.orderservice.service.OrderService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.MessageHeaders;
@@ -12,10 +13,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaymentLifecycleConsumer extends BaseKafkaConsumer<String, PaymentLifecycleEvent> {
 
-    private final OrderService orderService;
+    static final String EVENT_TYPE_CAPTURED = "payment.captured.v1";
 
-    public PaymentLifecycleConsumer(OrderService orderService) {
+    private final OrderService orderService;
+    private final LateCaptureRefundHandler lateCaptureRefundHandler;
+
+    public PaymentLifecycleConsumer(OrderService orderService, LateCaptureRefundHandler lateCaptureRefundHandler) {
         this.orderService = orderService;
+        this.lateCaptureRefundHandler = lateCaptureRefundHandler;
     }
 
     @KafkaListener(
@@ -28,13 +33,13 @@ public class PaymentLifecycleConsumer extends BaseKafkaConsumer<String, PaymentL
     }
 
     private void handle(PaymentLifecycleEvent event) {
-        if (event != null && "payment.captured.v1".equals(event.eventType())) {
-            log.info("Processing payment.captured.v1 for orderId={}, paymentId={}", event.orderId(), event.paymentId());
+        if (event != null && EVENT_TYPE_CAPTURED.equals(event.eventType())) {
+            log.info("Processing {} for orderId={}, paymentId={}", event.eventType(), event.orderId(), event.paymentId());
             try {
                 orderService.confirmOrder(event.orderId(), "system:payment-consumer", "payment-confirm-" + event.paymentId());
             } catch (BusinessException ex) {
                 if (ErrorCode.ORDER_INVALID_STATE_TRANSITION.getCode().equals(ex.getErrorCode())) {
-                    log.info("Order {} already transitioned beyond PENDING — skipping redundant payment confirmation", event.orderId());
+                    lateCaptureRefundHandler.refundCapturedCancelledOrder(event.orderId(), event.paymentId());
                     return;
                 }
                 throw ex;

@@ -146,6 +146,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse createOrder(UUID userId, OrderCreateRequest request, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw BusinessException.badRequest("order.idempotency.key.required");
+        }
         String requestHash = hash(request);
         Optional<OrderResponse> cached = idempotencyService.begin(idempotencyKey, userId.toString(), requestHash);
         if (cached.isPresent()) return cached.get();
