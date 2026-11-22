@@ -1,5 +1,5 @@
 {
-  "revision": "e8e30b24007207314a22a8d648f21bcf9ccffd2b",
+  "revision": "dfc392177a7f607df976996a5c8a2b94fd3c749d",
   "suites": {
     "alerts": {
       "checks": [
@@ -131,16 +131,16 @@
     },
     "build": {
       "command": "./mvnw -B -ntp -T 1 clean verify",
-      "duration_seconds": 1196.213,
-      "exit_code": 0,
+      "duration_seconds": 397.819,
+      "exit_code": 1,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
       "mode": "clean-verify",
-      "revision": "e8e30b24007207314a22a8d648f21bcf9ccffd2b",
-      "source_fingerprint": "ccc72e6cd000460f6395d18e84674e97f84e5fd0c7959e5f28344ba558baf0c7",
-      "status": "PASS",
+      "revision": "dfc392177a7f607df976996a5c8a2b94fd3c749d",
+      "source_fingerprint": "eab43e761c8c16c5884fac9c2870a9a8e2f6520ba649acebe08eecf19c4ebb9f",
+      "status": "FAIL",
       "suite": "build",
-      "updated_at": "2026-11-22T00:32:06Z"
+      "updated_at": "2026-11-22T01:22:44Z"
     },
     "comments": {
       "prohibited_comments": 0,
@@ -623,20 +623,20 @@
     "unit": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "surefire unit tests",
-      "duration_seconds": 273.416,
+      "duration_seconds": 318.556,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/unit.log",
-      "revision": "def2ffd8dac482fdc834604ba14958f1f5a10756",
+      "revision": "dfc392177a7f607df976996a5c8a2b94fd3c749d",
       "skipped": 0,
-      "source_fingerprint": "6c70c52c09c2a7f68e471612e51280a151884d3ad0ec491663bf4134ae12a684",
+      "source_fingerprint": "1f55f180174c2c1118157489042b000500f8ddcc5eee033fdd673810e3e4b5af",
       "status": "PASS",
       "suite": "unit",
-      "tests_run": 2031,
-      "updated_at": "2026-11-21T23:08:27Z"
+      "tests_run": 2061,
+      "updated_at": "2026-11-22T01:34:06Z"
     }
   },
-  "updated_at": "2026-11-22T00:32:07Z"
+  "updated_at": "2026-11-22T01:34:06Z"
 }
