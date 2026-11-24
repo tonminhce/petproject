@@ -6,12 +6,12 @@
     "GENERATED": 8,
     "HARNESS": 85,
     "INFRASTRUCTURE": 47,
-    "PRODUCTION_CODE": 691,
+    "PRODUCTION_CODE": 696,
     "SHARED_LIBRARY": 119,
-    "TEST_CODE": 434,
+    "TEST_CODE": 439,
     "VENDORED_TOOLING": 13
   },
-  "file_count": 1511,
+  "file_count": 1521,
   "files": [
     {
       "bytes": 4632,
@@ -4148,392 +4148,392 @@
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "5bc6a6f52e01af97f9a44000b2a23be407a276a2",
       "language": "markdown",
       "lines": 22,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/README.md",
       "reviewed_lines": [],
       "sha256": "2d48c82c003a2e25bbbe4118514aab85cd1149e6c65a2a96566f0553cd7173a3",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 13878,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "49dc0e011c11d615026ebbc16367d56bc6096e1e",
       "language": "markdown",
       "lines": 200,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/architecture/actual-system-map.md",
       "reviewed_lines": [],
       "sha256": "0aa51b5583448e492768bf33beef32281a6f8fec2a778573d8a7bd725d89fd71",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 9293,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "00704bff6ac04772ce52c66ab9021dcba90c5d00",
       "language": "markdown",
       "lines": 118,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/architecture/dependency-graph.md",
       "reviewed_lines": [],
       "sha256": "e6aefc7540fba26d51f15a39a0eefd78f6ed655470dcc644473f7ad248551e9e",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 2567,
       "category": "INFRASTRUCTURE",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "ee6a989bc38b23c8003987da449e56763fb7841e",
       "language": "json",
       "lines": 15,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/baseline/git-state.json",
       "reviewed_lines": [],
       "sha256": "c95e3ee2592e36f8c9335b19b546c3c2d7b0427003975f1bd533b93070fff745",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 286493,
       "category": "INFRASTRUCTURE",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "d5d64c95627bb514ce4674bc585af777bf1af747",
       "language": "json",
       "lines": 7738,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/baseline/source-manifest.json",
       "reviewed_lines": [],
       "sha256": "885a25fd3bff2054fb5b02a325f446f79e697856bb8d1aebecbe7f750fe0faf8",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 2056,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "709a80d9dd6ec7d67ebbc772358f47874e9df864",
       "language": "markdown",
       "lines": 19,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/k8s/k8s-manifest-review.md",
       "reviewed_lines": [],
       "sha256": "69291699d83e3c115c80d35f8ee6dbbc8093d95b7e10630d6ce5bb654e09eb7a",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 4327,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "1d8b98d5ac15689f965969b803af5de1c4d70a29",
       "language": "markdown",
       "lines": 37,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/load/breaker-incident.md",
       "reviewed_lines": [],
       "sha256": "53e93785d851ea5472fb696e7d3ab4e3f823de6e021f7507f768bf393fe7409e",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 5513,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "79d534f3ee819136a4e4eae79bfefb02635873fe",
       "language": "markdown",
       "lines": 45,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/load/load-results.md",
       "reviewed_lines": [],
       "sha256": "82ecef09a7cc7754716131b0e4a514282c540fb9dbeebdd0b58f1af8ef52b385",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 10914,
       "category": "INFRASTRUCTURE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "c0832469f142c3d8bc414f75421e810c2fa7819d",
       "language": "python",
       "lines": 254,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/load/load_runner.py",
       "reviewed_lines": [],
       "sha256": "1f9e9ca7586940b00145869017baeba0a28ba809112802005a5d9a7d0d12c7ee",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 4911,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "ccaf1ddc3a803535764449401cf726ee158a1dbd",
       "language": "markdown",
       "lines": 34,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/obs/observability-run-log.md",
       "reviewed_lines": [],
       "sha256": "69905325df784445f4a878723bb56a9a9c626929accde57bfa90977db9e40fba",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 32100,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "bc62d2eeef817313511075cef35a30299122b173",
       "language": "markdown",
       "lines": 527,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/qa/test-inventory.md",
       "reviewed_lines": [],
       "sha256": "65598f38ecf08b65c32d2551358ddc890da19b62e3ea442fa01a98a4dabc5837",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 4383,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "1b811c8ce8276fb1d89576ab2797e19f368907c5",
       "language": "markdown",
       "lines": 40,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/evidence/stripe/e2e-run-log.md",
       "reviewed_lines": [],
       "sha256": "0ed1035cc0619fa31ed7a5f865ae965fafdc89baeb795b6eb930b05b3e9f59bd",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 48485,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "86db34475bfc60879783f4274c36c752ea363ebc",
       "language": "markdown",
       "lines": 619,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/arch-design.md",
       "reviewed_lines": [],
       "sha256": "ceb3b7871e6763648c0e1b26efd03c23ff688ddb1d3891e0e24f6660458c3a44",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 6651,
       "category": "INFRASTRUCTURE",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "57796720975fca14ca555535c5e484c8efcc098a",
       "language": "json",
       "lines": 59,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/findings.json",
       "reviewed_lines": [],
       "sha256": "cb686b924726bf9ebe7a926bfd8e5ef03d8cdfe65ff950b9eeb66b20e03ce9db",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 54607,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "a1c23f056dc1203960d0b0e80f1720cec36edb0b",
       "language": "markdown",
       "lines": 330,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/inventory-promo.md",
       "reviewed_lines": [],
       "sha256": "3586896d314333f4dbc0f66434e123dad2262e88dd60c0402d1bf1093fc90ed7",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 60741,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "b140b7b18d40b17b1c92e17d8f8656eb55cddbcc",
       "language": "markdown",
       "lines": 386,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/kafka-messaging.md",
       "reviewed_lines": [],
       "sha256": "34c800e6e1178f750bff5434fbf2ddadca7cefce1a10f1b126d49b0047b07f60",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 61703,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "c6993e336c7d77b6929ac5a2dc419b81d0b3c68d",
       "language": "markdown",
       "lines": 329,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/order-saga.md",
       "reviewed_lines": [],
       "sha256": "8348d87e1a2af4313c0e2a2e3d55c3e52a042ab3f90dd45ac93d808e6db98d3b",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 44845,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "7a277425e19a1027947e890f3aeeb9528abd8d98",
       "language": "markdown",
       "lines": 303,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/qa-challenge.md",
       "reviewed_lines": [],
       "sha256": "6265dfe3fb2fb1d18422ddec065f4db144b8b8c4b71b67b7788a72c946516ee2",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 29091,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "b37e75bdf6f7ae0cf603f4e29388ec8cc2a49530",
       "language": "markdown",
       "lines": 314,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/findings/qa-test-forensics.md",
       "reviewed_lines": [],
       "sha256": "d001f29fd3116200073c3dfee4d61f11e12e33771290a2249175cafed9a7ea2c",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 2865,
       "category": "INFRASTRUCTURE",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "936ef9ed1f914b2828213f15701b7ff868c5f316",
       "language": "json",
       "lines": 44,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/independent-review-state.json",
       "reviewed_lines": [],
       "sha256": "6ce938b92f20332562f91b4fee3f9d24bca795deb22173678b4726fccab96d93",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 14780,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "2118196e80a114fc57a1e9bc6cf688f1ec5b1d2b",
       "language": "markdown",
       "lines": 129,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/FINAL-PRODUCTION-READINESS.md",
       "reviewed_lines": [],
       "sha256": "3bcc0caa81847e3a3469246aacfd4fbd291d0a4479028d8bfe69bea81c995e8d",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 3826,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "6764eeb4d3cda6b357da242872dd740879b13f4d",
       "language": "markdown",
       "lines": 22,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/business-correctness.md",
       "reviewed_lines": [],
       "sha256": "29668b2f68c52595ed9472c6a0b3088fa5d9a463680fd999052b87cd984c1096",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 3956,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "8a72d9c2ddf07d9c065bd813ca771d9e5a79ea1f",
       "language": "markdown",
       "lines": 27,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/distributed-consistency.md",
       "reviewed_lines": [],
       "sha256": "019ce64611eb7564db17d9d02b4c90a1184f12e5ae9012706f18324d5b78633e",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 4991,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "fbe43a7850178b51b2143fc0e75a6e55005b1fdb",
       "language": "markdown",
       "lines": 30,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/independent-comparison.md",
       "reviewed_lines": [],
       "sha256": "6a446f86603e79a41d76d18db38ad67f3a93fad9bcccd1f3408f3949d22195e1",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 2295,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "92aeca123f61426378598ef9d4187123332e08ca",
       "language": "markdown",
       "lines": 19,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/observability.md",
       "reviewed_lines": [],
       "sha256": "ebe102a796965254b8e9579fd18352d426c5757c30d863c2a7f01f07c172cedc",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 2478,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "7407764db0233de2f8597fe2d57223e29398471c",
       "language": "markdown",
       "lines": 14,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/performance-kubernetes.md",
       "reviewed_lines": [],
       "sha256": "e2f53deb2c53d7b1ed2d09e1882d880af1f45e4bc6b845a09abf873cb1be9f35",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 6796,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "e4eeba089587103a72e2ebc6eb45e4a6a2b115b9",
       "language": "markdown",
       "lines": 51,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/remediation-roadmap.md",
       "reviewed_lines": [],
       "sha256": "dc9b689d984f2a81e018420942aff442bc27e7a92992db0da34f22cf5e81f43c",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 3608,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": null,
+      "git_blob": "3c1ec8c9d991c3fb514d042ac0a8995b1f93c128",
       "language": "markdown",
       "lines": 21,
       "module": "independent-review",
       "path": "independent-review/run-20261122-f242158/reports/security.md",
       "reviewed_lines": [],
       "sha256": "ba0bf3884750458a7bdd83ec8f579ba8bf32b1b578347e829c02230a807fae90",
-      "tracked": false
+      "tracked": true
     },
     {
       "bytes": 4703,
@@ -7350,45 +7350,45 @@
       "tracked": true
     },
     {
-      "bytes": 10878,
+      "bytes": 11053,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "8ecd51b0cc7fdcfb1a1067b7ae7c0fa9cc44018c",
+      "git_blob": "018692888bd58fc327ea1e64fc0e54d57fa94319",
       "language": "java",
-      "lines": 235,
+      "lines": 236,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/client/PaymentServiceClient.java",
       "reviewed_lines": [],
-      "sha256": "8bcba98b192a7cd169a4103cd33e7421283a5c85bb49a08b72e40614d99bc0f6",
+      "sha256": "ec7464863db7b421ee9354ce2871059938d8570063e957cca8871e75ecefa393",
       "tracked": true
     },
     {
-      "bytes": 1607,
+      "bytes": 1557,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "56571dc968a03db6bb615d8cdff080e467321fa7",
+      "git_blob": "b8154cbb3edbc5a783e69d4f49467805e98bb20a",
       "language": "java",
-      "lines": 42,
+      "lines": 41,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/client/ProductServiceClient.java",
       "reviewed_lines": [],
-      "sha256": "888a85d37c9fdd417d9cdc60b7129f88026b3f5ca735078721771142ea2531c8",
+      "sha256": "28ed765902bc79871e1fee27aa3e47e7f5ce02039a84e5af6ce4782bbef6479c",
       "tracked": true
     },
     {
-      "bytes": 5813,
+      "bytes": 5877,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "86f43dcebe04a70cc851c3602e6b41e6bf35cbe0",
+      "git_blob": "9cf044129cd5860f4999860110cf1085fdaae0a2",
       "language": "java",
-      "lines": 131,
+      "lines": 132,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/client/PromotionServiceClient.java",
       "reviewed_lines": [],
-      "sha256": "1e8d597b64428a8f646948725ddf6b73fd0c397f61040ad0c7a7100c18383c1a",
+      "sha256": "fa1e0d5b943cea03eae22e3e0b72345b6ccc83a8d80339f04cd0c1e5b36af4a7",
       "tracked": true
     },
     {
@@ -7406,17 +7406,17 @@
       "tracked": true
     },
     {
-      "bytes": 2224,
+      "bytes": 2271,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "63761b2c36716b1de69d0c718f080e97249cd54a",
+      "git_blob": "55ea73008edd7c0bc1206bad4b01094eeb0297d1",
       "language": "java",
-      "lines": 54,
+      "lines": 55,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/client/TaxServiceClient.java",
       "reviewed_lines": [],
-      "sha256": "50622e49c2c93cf2c4b7671acf4f0644ef33122674ced05fc9dd50cefa2f2de0",
+      "sha256": "5bb47ac12611f747794341808b8cd8641ccd61716cee987363cda094bacd0cc6",
       "tracked": true
     },
     {
@@ -8064,6 +8064,48 @@
       "tracked": true
     },
     {
+      "bytes": 381,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "5b8bac2011ff4a84818c6cd87841ba04f6e490b8",
+      "language": "java",
+      "lines": 11,
+      "module": "order-service",
+      "path": "order-service/src/main/java/com/shop/orderservice/exception/PaymentOperationRejectedException.java",
+      "reviewed_lines": [],
+      "sha256": "2e94e6820867e6d4edb46fb526ea594b139045c5faceb950a0e5db74ca2548f2",
+      "tracked": true
+    },
+    {
+      "bytes": 391,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "359180a802ab80dc34ba78f35db58560f84cdd71",
+      "language": "java",
+      "lines": 13,
+      "module": "order-service",
+      "path": "order-service/src/main/java/com/shop/orderservice/exception/ProductLookupRejectedException.java",
+      "reviewed_lines": [],
+      "sha256": "94b4e05cc7427d0c6b5994ccd3125efaa2bea38daafe9ca503fc84abe27b218c",
+      "tracked": true
+    },
+    {
+      "bytes": 391,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "65ceb92d851998afaa15459cef892f84abd6d68b",
+      "language": "java",
+      "lines": 11,
+      "module": "order-service",
+      "path": "order-service/src/main/java/com/shop/orderservice/exception/PromotionApplicationRejectedException.java",
+      "reviewed_lines": [],
+      "sha256": "d1fe83837d90f9212fadad18e350f5f5ab0d63a30fb99cfac11ee48e9f6df9f9",
+      "tracked": true
+    },
+    {
       "bytes": 400,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
@@ -8078,17 +8120,31 @@
       "tracked": true
     },
     {
-      "bytes": 1891,
+      "bytes": 376,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "55f4c29ee516f4a9891ffc9d66e5bf06a695d1df",
+      "git_blob": "f15564893da6cab0e8b8f65c4e5531a1e10d0944",
       "language": "java",
-      "lines": 44,
+      "lines": 11,
+      "module": "order-service",
+      "path": "order-service/src/main/java/com/shop/orderservice/exception/TaxCalculationRejectedException.java",
+      "reviewed_lines": [],
+      "sha256": "564a5c6a4a56178f20471f9ddcd92aec2ac6fd4b814c84135a73d1da0fb2cc64",
+      "tracked": true
+    },
+    {
+      "bytes": 2182,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "20bea5c6a885f2221693bd8837823b89790359de",
+      "language": "java",
+      "lines": 49,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/kafka/PaymentLifecycleConsumer.java",
       "reviewed_lines": [],
-      "sha256": "1cbf9af3fa05fbc1500a067ba34d4359ede303bad78289063e200d77f1d41248",
+      "sha256": "5a7ca75c559fbb1ef2dbb9c07ff7547720be37dc0019f936c617c7c33fe3bc1a",
       "tracked": true
     },
     {
@@ -8372,6 +8428,20 @@
       "tracked": true
     },
     {
+      "bytes": 1945,
+      "category": "PRODUCTION_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "a71e50a9ec704d1aedfb03d56a04271df532e01c",
+      "language": "java",
+      "lines": 47,
+      "module": "order-service",
+      "path": "order-service/src/main/java/com/shop/orderservice/service/LateCaptureRefundHandler.java",
+      "reviewed_lines": [],
+      "sha256": "2218c1b2749b1a970a515a499dcc95dcc258499e1d20adf2880731b1b45be2cd",
+      "tracked": true
+    },
+    {
       "bytes": 7061,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
@@ -8582,17 +8652,17 @@
       "tracked": true
     },
     {
-      "bytes": 10953,
+      "bytes": 12355,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "1945d079cb2b618129a1ad031e1cbc25cc33fc68",
+      "git_blob": "fa38e8f26fbc1583593adf7afb955497ff35716b",
       "language": "java",
-      "lines": 241,
+      "lines": 273,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OrderCreateSaga.java",
       "reviewed_lines": [],
-      "sha256": "907803dfb7646c242d6a878e93ae5e8ab423d688d96bc2aeb07ce2add21c6dff",
+      "sha256": "424a2e4ea407468af443e4ef18ed38a6d4810485dce534b91e42374ca1d20ff7",
       "tracked": true
     },
     {
@@ -8638,17 +8708,17 @@
       "tracked": true
     },
     {
-      "bytes": 23455,
+      "bytes": 23613,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "5bdedede0030c519d413f9457326fcb08050a4b6",
+      "git_blob": "c4f1db41fff7e8182349621a9a7ae52d278017da",
       "language": "java",
-      "lines": 502,
+      "lines": 505,
       "module": "order-service",
       "path": "order-service/src/main/java/com/shop/orderservice/service/impls/OrderServiceImpl.java",
       "reviewed_lines": [],
-      "sha256": "6b6c495a26a1af82e18b61d5ad54ff6d838f6fd2324b1a4b07c87a0567380a68",
+      "sha256": "091dfa4cfbb44617924f096ebc136aefbc0b3e886090120d05e10d2f54e142bf",
       "tracked": true
     },
     {
@@ -8708,17 +8778,17 @@
       "tracked": true
     },
     {
-      "bytes": 2633,
+      "bytes": 3313,
       "category": "PRODUCTION_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "5aba6e66fed72787c4a45d78e1bf45b1ddd36eb2",
+      "git_blob": "fe570a2c187f8590b0c55f3b201289be76fd02f6",
       "language": "yaml",
-      "lines": 92,
+      "lines": 111,
       "module": "order-service",
       "path": "order-service/src/main/resources/application.yml",
       "reviewed_lines": [],
-      "sha256": "875c21d29c1b83b3120903b0a6ffb74ce9b1c40b536fc0f38fb13e84a63ff1fa",
+      "sha256": "b2c828499e3d524210b15d8380e40fe0b7d332b6f0b157ce92900d9652fcb850",
       "tracked": true
     },
     {
@@ -8904,31 +8974,87 @@
       "tracked": true
     },
     {
-      "bytes": 17772,
+      "bytes": 8339,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "6c4d2e1e513ce8109ae01e312d11958896554bfe",
+      "git_blob": "12032ce747a05a3ae9aa70ff48f03a49a3e2c446",
       "language": "java",
-      "lines": 421,
+      "lines": 179,
       "module": "order-service",
-      "path": "order-service/src/test/java/com/shop/orderservice/client/PaymentServiceClientTest.java",
+      "path": "order-service/src/test/java/com/shop/orderservice/client/CircuitBreakerIgnoreExceptionsTest.java",
       "reviewed_lines": [],
-      "sha256": "af7474dfb0819ae0824e3c86b9daa18f40304115a2c325d54dac68527f308307",
+      "sha256": "5904da9f71efc590fcfe7c087f6fdb2dbfa1cf214525f479d5ef69a1d0d5459a",
       "tracked": true
     },
     {
-      "bytes": 1418,
+      "bytes": 4201,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "da8796732c4a0b1ed02c9be8497f86310cf6bfbb",
+      "git_blob": "0ef8fbef555aa44e9c68564833ad0dd82aa0152a",
       "language": "java",
-      "lines": 36,
+      "lines": 105,
+      "module": "order-service",
+      "path": "order-service/src/test/java/com/shop/orderservice/client/InventoryServiceClientTest.java",
+      "reviewed_lines": [],
+      "sha256": "1c57cfbd8caa0fdfb40754c93e7ede32d9c20cb13a4189c4e20757fee3a22ced",
+      "tracked": true
+    },
+    {
+      "bytes": 19646,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "416b8ee7bc28d0f1346e60b460b0b86365af1a40",
+      "language": "java",
+      "lines": 465,
+      "module": "order-service",
+      "path": "order-service/src/test/java/com/shop/orderservice/client/PaymentServiceClientTest.java",
+      "reviewed_lines": [],
+      "sha256": "d80d339aa961ab51f70624aacb41db3cfdf0e5ec2b6af91e1e01d1f0ed98c458",
+      "tracked": true
+    },
+    {
+      "bytes": 2693,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "44cd2bdf6743a4a0934a5cd55db7130942d31e90",
+      "language": "java",
+      "lines": 60,
       "module": "order-service",
       "path": "order-service/src/test/java/com/shop/orderservice/client/ProductServiceClientTest.java",
       "reviewed_lines": [],
-      "sha256": "6b6ca32b7bad3a40924e407497b77d3410b39dc81f271aaaea90f7d914b46275",
+      "sha256": "bcacf195717ff1f2bb6b9daa7399fbd3ca9dc96ef386bfaf36bc71205eaad184",
+      "tracked": true
+    },
+    {
+      "bytes": 4406,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "67daa0f2a63782822c7b2ff39466f73a52aa1528",
+      "language": "java",
+      "lines": 104,
+      "module": "order-service",
+      "path": "order-service/src/test/java/com/shop/orderservice/client/PromotionServiceClientTest.java",
+      "reviewed_lines": [],
+      "sha256": "5360a655c8961373250b5ba5e90b3fb05d0e53f61b5131292cdfd8843fb1ce07",
+      "tracked": true
+    },
+    {
+      "bytes": 3662,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "b45f380b70181f55d046b942d5e4fc2167ca4623",
+      "language": "java",
+      "lines": 86,
+      "module": "order-service",
+      "path": "order-service/src/test/java/com/shop/orderservice/client/TaxServiceClientTest.java",
+      "reviewed_lines": [],
+      "sha256": "53ad69b910bd1e6ef6cf8d817167f12c5955952a818826e170b61d34856c0f0b",
       "tracked": true
     },
     {
@@ -9100,17 +9226,17 @@
       "tracked": true
     },
     {
-      "bytes": 4323,
+      "bytes": 7908,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "5cf4438444bd97ea1e59984ea12ee16f89ceead7",
+      "git_blob": "c294e1eb354d42ffc1ba1bb884a028f8d2b44847",
       "language": "java",
-      "lines": 108,
+      "lines": 171,
       "module": "order-service",
       "path": "order-service/src/test/java/com/shop/orderservice/kafka/PaymentLifecycleConsumerTest.java",
       "reviewed_lines": [],
-      "sha256": "383a7422c673480c1067b5807e0b4cb34efde1fd7c90bbd99e0bb2a2ac91ad2a",
+      "sha256": "0daf1cacde23c624ae861880e609c4ec1245c351bffbf66953bf63687a8b8f22",
       "tracked": true
     },
     {
@@ -9265,6 +9391,20 @@
       "path": "order-service/src/test/java/com/shop/orderservice/service/IdempotencyClaimIT.java",
       "reviewed_lines": [],
       "sha256": "b1e105dc215cfddd6e473da4d6482918abaf9387bdadc6e50137f2a79166bb90",
+      "tracked": true
+    },
+    {
+      "bytes": 6321,
+      "category": "TEST_CODE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "a0bbbe248c7a04a18f18c8cbbeef4ced2227df7b",
+      "language": "java",
+      "lines": 132,
+      "module": "order-service",
+      "path": "order-service/src/test/java/com/shop/orderservice/service/LateCaptureRefundHandlerTest.java",
+      "reviewed_lines": [],
+      "sha256": "dea4101e07189b38d4f4298997edb4ac8430e159b0d450fd9f11829d5f0289c8",
       "tracked": true
     },
     {
@@ -9436,17 +9576,17 @@
       "tracked": true
     },
     {
-      "bytes": 9959,
+      "bytes": 19902,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "ca5833e50cf40aed758299e0ef6868763b5356cf",
+      "git_blob": "9c1cc9632de81cbd54569dab63f8c05af502c0b7",
       "language": "java",
-      "lines": 202,
+      "lines": 404,
       "module": "order-service",
       "path": "order-service/src/test/java/com/shop/orderservice/service/impls/OrderCreateSagaTest.java",
       "reviewed_lines": [],
-      "sha256": "ba784b91edece819a85d88edb13f5e6bea2e8845afc0cbf914036728ba4425f0",
+      "sha256": "8e6a41d0d52ba1aaa46ac190737f6d11102b938317efc875cd7903741acc38ad",
       "tracked": true
     },
     {
@@ -9506,17 +9646,17 @@
       "tracked": true
     },
     {
-      "bytes": 24153,
+      "bytes": 24411,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "0ad1fdc60d1fd6f1f1f39f04e2a3c6e0c1fb7a85",
+      "git_blob": "ad938bfd1c8cbf9e2548e20812382e10322452f5",
       "language": "java",
-      "lines": 510,
+      "lines": 515,
       "module": "order-service",
       "path": "order-service/src/test/java/com/shop/orderservice/service/impls/OrderReturnServiceTest.java",
       "reviewed_lines": [],
-      "sha256": "8563558d8a685746bc8cfa5503a6cd3b0fb399f46aebb13472930ba839f27058",
+      "sha256": "0c3693789948a643ab11d4d3d0c3e92f9bdb5017f2907f5d2313ea9bf8c90a4e",
       "tracked": true
     },
     {
@@ -9534,17 +9674,17 @@
       "tracked": true
     },
     {
-      "bytes": 27517,
+      "bytes": 28679,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "6aa3a8614e87ae58d2bc640ddabdab4295bed1cc",
+      "git_blob": "d52a30746d7bb3f68f154a81a43ef1efd32ce6a6",
       "language": "java",
-      "lines": 617,
+      "lines": 643,
       "module": "order-service",
       "path": "order-service/src/test/java/com/shop/orderservice/service/impls/OrderServiceImplTest.java",
       "reviewed_lines": [],
-      "sha256": "bc5ea118aecade245aaa1b4059b966c12e73023bded78b7aaa1ef79287276bde",
+      "sha256": "ca6f65b77351b79560d8092e32cba1114226e15514349276afbc2f141de71ca2",
       "tracked": true
     },
     {
@@ -10682,17 +10822,17 @@
       "tracked": true
     },
     {
-      "bytes": 15784,
+      "bytes": 15848,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
       "git_blob": "313955cc125210566625082172e11f48c813b4f0",
       "language": "java",
-      "lines": 370,
+      "lines": 371,
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/StripeWebhookIT.java",
       "reviewed_lines": [],
-      "sha256": "f06be11ec36d8bae73277bbfc5163966d1b79a88442a573dd0522bf1f24f8e76",
+      "sha256": "8926f8713f7170582d07b070451ae738d553c96c6986c5c925f351dd7219078e",
       "tracked": true
     },
     {
@@ -10710,17 +10850,17 @@
       "tracked": true
     },
     {
-      "bytes": 4075,
+      "bytes": 4134,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "e61362758b579f3bc5443eeed10820a834393363",
+      "git_blob": "d37fd6d513bd7f2c0ddcb18ec70a609fb8459443",
       "language": "java",
-      "lines": 97,
+      "lines": 98,
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/config/PaymentProviderProductionGuardTest.java",
       "reviewed_lines": [],
-      "sha256": "72af66f671acd3ff00314df9cad5547f47eb3f11ed5b901958c87b3a38f58301",
+      "sha256": "23ac17d8829a46d1117a3f65e8cbe3142c49bd1a9920b8989ae2b8dd553d73b9",
       "tracked": true
     },
     {
@@ -10738,17 +10878,17 @@
       "tracked": true
     },
     {
-      "bytes": 3881,
+      "bytes": 4097,
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "b7704ca5029af5207f937f323b1ad2429da08a7e",
+      "git_blob": "a9f176bbb2f22d5b4d02b611c67ad20cdebda4de",
       "language": "java",
-      "lines": 86,
+      "lines": 90,
       "module": "payment-service",
       "path": "payment-service/src/test/java/com/shop/paymentservice/config/PaymentStripePropertiesTest.java",
       "reviewed_lines": [],
-      "sha256": "09ea8e002cc4335c7204c365683c7a59ab6572e4a34e54f627045438d96e44cb",
+      "sha256": "ab70085434f60e95a64d23942376f81ed0b4b0d9d38f7c12ed5f04485e8b4656",
       "tracked": true
     },
     {
@@ -21168,10 +21308,10 @@
       "tracked": true
     }
   ],
-  "generated_at": "2026-11-21T21:50:04Z",
+  "generated_at": "2026-11-22T06:43:40Z",
   "language_summary": {
     "html": 8,
-    "java": 1106,
+    "java": 1116,
     "javascript": 5,
     "json": 13,
     "markdown": 118,
@@ -21211,7 +21351,7 @@
     "media-service": 75,
     "mock-services": 2,
     "notification-service": 46,
-    "order-service": 167,
+    "order-service": 177,
     "payment-service": 118,
     "plan.md": 1,
     "pom.xml": 1,
@@ -21237,7 +21377,7 @@
     "utils/pom.xml": 1
   },
   "repository_root": "/Users/tonminh-mac/IdeaProjects/untitled5",
-  "revision": "def2ffd8dac482fdc834604ba14958f1f5a10756",
-  "source_fingerprint": "33edb20b66992b5b987713af7bc289a3ae82f6c4c2fc8f4e312faae7fed748f6",
-  "total_lines": 233942
+  "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+  "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+  "total_lines": 235072
 }

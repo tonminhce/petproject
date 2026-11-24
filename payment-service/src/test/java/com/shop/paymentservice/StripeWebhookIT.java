@@ -100,6 +100,7 @@ class StripeWebhookIT {
         registry.add("shop.payment.provider", () -> "stripe");
         registry.add("shop.payment.webhook.secret", () -> "it-webhook-secret");
         registry.add("shop.payment.stripe.secret-key", () -> "sk_test_it_no_network");
+        registry.add("shop.payment.stripe.api-base", () -> "");
         registry.add("shop.payment.stripe.webhook-secret", () -> STRIPE_WHSEC);
     }
 

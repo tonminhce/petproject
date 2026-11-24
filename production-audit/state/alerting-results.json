@@ -62,7 +62,7 @@
       {
         "detail": "no committed telegram token or live stripe key was found",
         "evidence": [
-          "tracked files scanned: 2129",
+          "tracked files scanned: 2187",
           "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
         ],
         "id": "ALT-06",
@@ -110,5 +110,5 @@
     "failed_checks": [],
     "status": "PASS"
   },
-  "updated_at": "2026-11-21T23:36:22Z"
+  "updated_at": "2026-11-22T06:43:51Z"
 }
