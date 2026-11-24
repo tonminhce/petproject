@@ -670,6 +670,10 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{userToken}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "e2e-place-order-{{$timestamp}}"
                   }
                 ],
                 "url": "{{orderUrl}}/api/v1/orders",

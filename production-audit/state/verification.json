@@ -1,5 +1,5 @@
 {
-  "revision": "",
+  "revision": "113c27976598d1f1550f8efc78ac2083d10686b3",
   "suites": {
     "alerts": {
       "checks": [
@@ -245,19 +245,19 @@
     "integration": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "integration tests against real infrastructure",
-      "duration_seconds": 1794.879,
-      "errors": 25,
-      "exit_code": 1,
+      "duration_seconds": 681.865,
+      "errors": 0,
+      "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/integration.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "113c27976598d1f1550f8efc78ac2083d10686b3",
       "skipped": 0,
       "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
-      "status": "FAIL",
+      "status": "PASS",
       "suite": "integration",
-      "tests_run": 236,
-      "updated_at": "2026-11-22T06:14:24Z"
+      "tests_run": 362,
+      "updated_at": "2026-11-24T12:08:35Z"
     },
     "k8s": {
       "checks": [
@@ -625,5 +625,5 @@
       "updated_at": "2026-11-22T05:17:45Z"
     }
   },
-  "updated_at": "2026-11-22T06:43:51Z"
+  "updated_at": "2026-11-24T12:08:35Z"
 }

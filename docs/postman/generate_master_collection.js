@@ -287,7 +287,7 @@ if (res.data && res.data.id) pm.collectionVariables.set("cartItemId", res.data.i
       "4.3 Place Order from Cart (User)",
       "POST",
       "{{orderUrl}}/api/v1/orders",
-      { "Content-Type": "application/json", "Authorization": "Bearer {{userToken}}" },
+      { "Content-Type": "application/json", "Authorization": "Bearer {{userToken}}", "Idempotency-Key": "e2e-place-order-{{$timestamp}}" },
       {
         recipientName: "Test Customer",
         phoneNumber: "{{customerPhone}}",
