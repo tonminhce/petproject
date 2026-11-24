@@ -1,5 +1,5 @@
 {
-  "revision": "",
+  "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
   "suites": {
     "alerts": {
       "checks": [
@@ -131,16 +131,16 @@
     },
     "build": {
       "command": "./mvnw -B -ntp -T 1 clean verify",
-      "duration_seconds": 880.189,
+      "duration_seconds": 815.541,
       "exit_code": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/build-verify.log",
       "mode": "clean-verify",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "build",
-      "updated_at": "2026-11-22T05:08:04Z"
+      "updated_at": "2026-11-24T13:01:42Z"
     },
     "comments": {
       "prohibited_comments": 0,
@@ -194,53 +194,53 @@
     "edge": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Edge*Test,*Negative*Test,*Validation*Test,*Boundary*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "edge and negative scenarios",
-      "duration_seconds": 13.837,
+      "duration_seconds": 9.488,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/edge.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
       "skipped": 0,
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "edge",
       "tests_run": 41,
-      "updated_at": "2026-11-22T05:22:44Z"
+      "updated_at": "2026-11-24T13:11:47Z"
     },
     "gateway": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*RateLimit*Test,*RateLimiter*Test,*Gateway*Test,*Route*Test,*Filter*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl gateway-service -am",
       "description": "gateway routing, rate limiting and redis behaviour",
-      "duration_seconds": 32.715,
+      "duration_seconds": 20.433,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/gateway.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
       "skipped": 0,
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "gateway",
       "tests_run": 141,
-      "updated_at": "2026-11-22T05:27:01Z"
+      "updated_at": "2026-11-24T13:15:09Z"
     },
     "happy": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=!*Edge*,!*Negative*,!*Concurrency*,!*Race*,*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "happy path business scenarios",
-      "duration_seconds": 283.478,
+      "duration_seconds": 218.466,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/happy.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
       "skipped": 0,
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "happy",
       "tests_run": 2045,
-      "updated_at": "2026-11-22T05:22:30Z"
+      "updated_at": "2026-11-24T13:11:37Z"
     },
     "integration": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*IT -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*IT -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -535,19 +535,19 @@
     "payment": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl payment-service -am",
       "description": "payment capture, refund, provider adapters and webhook handling",
-      "duration_seconds": 88.503,
+      "duration_seconds": 65.863,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/payment.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
       "skipped": 0,
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "payment",
       "tests_run": 310,
-      "updated_at": "2026-11-22T05:26:27Z"
+      "updated_at": "2026-11-24T13:14:48Z"
     },
     "performance": {
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
@@ -593,37 +593,37 @@
     "security": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
       "description": "authentication, authorisation and token handling",
-      "duration_seconds": 133.059,
+      "duration_seconds": 113.815,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/security.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
       "skipped": 0,
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "security",
       "tests_run": 153,
-      "updated_at": "2026-11-22T05:24:58Z"
+      "updated_at": "2026-11-24T13:13:42Z"
     },
     "unit": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Test -Dsurefire.failIfNoSpecifiedTests=false",
       "description": "surefire unit tests",
-      "duration_seconds": 316.45,
+      "duration_seconds": 239.986,
       "errors": 0,
       "exit_code": 0,
       "failures": 0,
       "harness_fingerprint": "7a601fc3dc93308d00ead796e611414fec2e392b662d68927f6e3cf0a61e3c70",
       "log": "/Users/tonminh-mac/IdeaProjects/untitled5/production-audit/runs/run-20261118-a2b6e6fc/test-results/unit.log",
-      "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
+      "revision": "130afa6cc3f92203dc724c74cef4b2c1f247f245",
       "skipped": 0,
-      "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
+      "source_fingerprint": "40955f3765a00fe45b2496308ad6fd325b9e7912c2ee950797a951c39c389e29",
       "status": "PASS",
       "suite": "unit",
       "tests_run": 2061,
-      "updated_at": "2026-11-22T05:17:45Z"
+      "updated_at": "2026-11-24T13:07:58Z"
     }
   },
-  "updated_at": "2026-11-24T12:46:56Z"
+  "updated_at": "2026-11-24T13:15:10Z"
 }
