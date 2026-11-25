@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from typing import Any
 
-CONTAMINATION_LOAD_PER_CPU = 1.5
+CONTAMINATION_LOAD_PER_CPU = 0.6
 
 
 def cpu_count() -> int:

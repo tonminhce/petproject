@@ -315,3 +315,13 @@
 {"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T07:22:48Z", "type": "load_ramp"}
 {"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T07:31:05Z", "type": "load_ramp"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T07:37:56Z", "type": "load_ramp"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T07:42:06Z", "type": "load_baseline"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T07:47:09Z", "type": "load_ramp"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T07:51:42Z", "type": "load_spike"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T07:57:24Z", "type": "load_flash-sale"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T08:03:00Z", "type": "load_promotion-storm"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T08:05:35Z", "type": "load_recovery"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T08:17:26Z", "type": "load_sustained-peak"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T08:22:06Z", "type": "load_kafka-backlog"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T08:25:53Z", "type": "load_failure-during-peak"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T08:47:33Z", "type": "load_soak"}

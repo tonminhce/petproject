@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import config
+from ..persistence.store import read_json, utc_now
 from .environment import compose_services, host_snapshot
 from .limits import apply_load_test_rate_limits, restore_shipped_rate_limits, wait_for_gateway_traffic
 from .customers import ensure_token_lifetime, mint_tokens, provision_customers, restore_token_lifetime
@@ -311,6 +312,75 @@ def _acquire_admin_token() -> str:
     return str(payload.get("access_token", ""))
 
 
+def _load_baseline_file() -> Path:
+    return results_root() / "load-baseline-state.json"
+
+
+def _capture_load_baseline() -> dict[str, Any]:
+    """Capture the seeded stock and the promotion state before the first profile runs."""
+    from .invariants import psql
+
+    ok, rows = psql(
+        "inventoryservice",
+        "SELECT product_id || '|' || available_quantity || '|' || reserved_quantity FROM inventory "
+        "WHERE deleted = false ORDER BY product_id",
+    )
+    inventory = []
+    for row in rows:
+        parts = str(row).split("|")
+        if len(parts) != 3:
+            continue
+        inventory.append(parts)
+    campaigns_ok, campaigns = psql(
+        "promotionservice",
+        "SELECT code || '|' || used_count FROM campaign WHERE deleted = false ORDER BY code",
+    )
+    return {
+        "captured_at": utc_now(),
+        "inventory": inventory,
+        "campaigns": [str(row) for row in campaigns] if campaigns_ok else [],
+    }
+
+
+def _restore_load_baseline() -> dict[str, Any]:
+    """Restore the stock and the promotion state before a profile runs.
+
+    The profiles share one catalogue, so the stock that a hot profile consumed would starve the
+    profile that runs after it and the coupon that a storm redeemed would refuse every later
+    attempt. Every profile therefore starts from the state the platform was seeded with.
+    """
+    from .invariants import psql
+
+    path = _load_baseline_file()
+    if not path.exists():
+        baseline = _capture_load_baseline()
+        path.write_text(json.dumps(baseline, indent=2, default=str), encoding="utf-8")
+        return {"state": "captured", "products": len(baseline["inventory"])}
+    baseline = read_json(path, {})
+    restored = 0
+    for row in baseline.get("inventory") or []:
+        parts = str(row).split("|")
+        if len(parts) != 3:
+            continue
+        ok, _ = psql(
+            "inventoryservice",
+            "UPDATE inventory SET available_quantity = " + parts[1] + ", reserved_quantity = " + parts[2]
+            + " WHERE product_id = '" + parts[0] + "'",
+        )
+        if ok:
+            restored += 1
+    psql("inventoryservice", "DELETE FROM reservations")
+    psql("promotionservice", "DELETE FROM coupon_usage_reservation")
+    for row in baseline.get("campaigns") or []:
+        parts = str(row).split("|")
+        if len(parts) != 2:
+            continue
+        psql(
+            "promotionservice",
+            "UPDATE campaign SET used_count = " + parts[1] + " WHERE code = '" + parts[0] + "'",
+        )
+    return {"state": "restored", "products": restored}
+
 def _switch_payment_provider(provider: str, timeout: int = 300) -> dict[str, Any]:
     """Run the payment service with the given provider and report what changed.
 
@@ -507,6 +577,7 @@ def _measure_profile(
 
     provider_state = _switch_payment_provider("mock")
     admin_token = _acquire_admin_token()
+    baseline_state = _restore_load_baseline()
 
     command = [
         "docker",
@@ -561,6 +632,7 @@ def _measure_profile(
                 "output": str(output),
             }
     elapsed = time.time() - started
+    host_after = host_snapshot()
 
     (output / "k6-stdout.log").write_text(result.stdout[-200000:], encoding="utf-8")
     (output / "k6-stderr.log").write_text(result.stderr[-200000:], encoding="utf-8")
@@ -594,6 +666,7 @@ def _measure_profile(
         "elapsed_seconds": round(elapsed, 2),
         "output": str(output),
         "measurement_host": environment,
+        "measurement_host_after_run": host_after,
         "measurement_valid": not environment.get("contaminated")
         and environment.get("host_settle", {}).get("status") == "QUIET",
         "max_business_failure_rate": profile.max_business_failure_rate,
@@ -612,6 +685,7 @@ def _measure_profile(
         "coupon": coupon,
         "customer_pool": pool,
         "payment_provider": provider_state,
+        "load_baseline_state": baseline_state,
         "admin_token_present": bool(admin_token),
         "services": compose_services(),
         "metrics": summarise(summary),
