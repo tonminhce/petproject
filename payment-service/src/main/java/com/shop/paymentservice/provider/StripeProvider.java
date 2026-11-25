@@ -76,8 +76,6 @@ public class StripeProvider implements PaymentProvider {
                     .setConfirm(true)
                     .setReturnUrl(properties.returnUrl());
         } else {
-            // Stripe rejects a return url on an intent that is not confirmed yet, so the url travels
-            // with the response instead and the client hands it to the confirmation call.
             paramsBuilder.setConfirm(false)
                     .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                             .setEnabled(true)

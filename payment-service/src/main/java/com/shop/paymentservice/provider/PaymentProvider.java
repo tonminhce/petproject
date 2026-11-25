@@ -55,11 +55,6 @@ public interface PaymentProvider {
             return new ProviderResult(providerEventId, Outcome.REQUIRES_CONFIRMATION, clientSecret, null);
         }
 
-        /**
-         * Stripe refuses every confirmation that carries no return url while the dashboard offers a
-         * redirect based payment method, so the provider hands the configured return url to the
-         * caller that confirms the intent.
-         */
         public static ProviderResult requiresConfirmation(String providerEventId, String clientSecret,
                 String returnUrl) {
             return new ProviderResult(providerEventId, Outcome.REQUIRES_CONFIRMATION, clientSecret, returnUrl);

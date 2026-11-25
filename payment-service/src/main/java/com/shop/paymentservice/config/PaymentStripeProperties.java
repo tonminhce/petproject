@@ -53,10 +53,6 @@ public record PaymentStripeProperties(
         }
     }
 
-    /**
-     * Stripe refuses to confirm a PaymentIntent that was created with automatic payment methods
-     * unless the intent carries a return url, so every intent carries one.
-     */
     public static final String DEFAULT_RETURN_URL = "https://shop.example.com/checkout/complete";
 
     public boolean isConfigured() {
