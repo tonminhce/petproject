@@ -15,11 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
-/**
- * Stripe refuses a return url on a PaymentIntent that is not confirmed yet and it refuses every
- * later confirmation that carries no return url, so the provider has to attach the url to the
- * intent it confirms itself and hand it to the caller that confirms the rest.
- */
 class StripeProviderReturnUrlTest {
 
     private static final String RETURN_URL = "https://shop.test/checkout/complete";

@@ -1,5 +1,5 @@
 {
-  "revision": "313f55cd9a026c096dd3af8f0a1acd4657b411fb",
+  "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
   "suites": {
     "alerts": {
       "checks": [
@@ -413,14 +413,14 @@
       "updated_at": "2026-11-25T06:14:08Z"
     },
     "load_baseline": {
-      "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "invariants": "PASS",
       "measurement_valid": true,
       "metrics": {
-        "achieved_rate_ratio": 0.8511,
+        "achieved_rate_ratio": 0.8507,
         "business_failure": 0,
         "business_refusal": 0,
-        "business_success": 2298,
+        "business_success": 2300,
         "cart_contention": 0,
         "cart_failure": 0,
         "check_rate": 1,
@@ -428,31 +428,31 @@
         "credential_error": 0,
         "failed_requests": 0,
         "failure_rate": 0,
-        "iteration_rate_per_second": 6.758659224060376,
-        "iterations": 1149,
-        "latency_avg_ms": 10.160547032380137,
-        "latency_max_ms": 141.919375,
-        "latency_min_ms": 2.4695,
-        "latency_p50_ms": 8.8391875,
-        "latency_p90_ms": 16.8806668,
-        "latency_p95_ms": 19.75690805,
+        "iteration_rate_per_second": 6.75547043092194,
+        "iterations": 1150,
+        "latency_avg_ms": 10.02813615420167,
+        "latency_max_ms": 78.8495,
+        "latency_min_ms": 2.2685,
+        "latency_p50_ms": 9.100895999999999,
+        "latency_p90_ms": 16.379395799999998,
+        "latency_p95_ms": 18.46633095,
         "latency_p99_ms": null,
         "oversell_responses": 0,
         "planned_iteration_rate_per_second": 7.9412,
         "platform_errors": null,
         "rate_unit": "iterations per second",
-        "request_rate_per_second": 13.987895243529655,
-        "requests": 2378,
+        "request_rate_per_second": 13.980886630951492,
+        "requests": 2380,
         "shed_requests": 0,
-        "successful_requests": 2378,
+        "successful_requests": 2380,
         "unexpected_responses": null
       },
       "profile": "baseline",
-      "revision": "313f55cd9a026c096dd3af8f0a1acd4657b411fb",
+      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
       "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
       "status": "PASS",
       "suite": "load_baseline",
-      "updated_at": "2026-11-25T08:52:18Z"
+      "updated_at": "2026-11-25T10:06:42Z"
     },
     "load_failure-during-peak": {
       "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
@@ -620,14 +620,14 @@
       "updated_at": "2026-11-25T09:10:01Z"
     },
     "load_ramp": {
-      "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "invariants": "PASS",
       "measurement_valid": true,
       "metrics": {
-        "achieved_rate_ratio": 0.8196,
+        "achieved_rate_ratio": 0.8201,
         "business_failure": 0,
         "business_refusal": 0,
-        "business_success": 3840,
+        "business_success": 3838,
         "cart_contention": 0,
         "cart_failure": 0,
         "check_rate": 1,
@@ -635,31 +635,31 @@
         "credential_error": 0,
         "failed_requests": 0,
         "failure_rate": 0,
-        "iteration_rate_per_second": 8.338148801404024,
-        "iterations": 1920,
-        "latency_avg_ms": 6.198114127653093,
-        "latency_max_ms": 99.121042,
-        "latency_min_ms": 1.655792,
-        "latency_p50_ms": 5.024458,
-        "latency_p90_ms": 10.5789622,
-        "latency_p95_ms": 12.775253849999997,
+        "iteration_rate_per_second": 8.343149079963789,
+        "iterations": 1919,
+        "latency_avg_ms": 9.016124135273106,
+        "latency_max_ms": 714.094001,
+        "latency_min_ms": 1.790708,
+        "latency_p50_ms": 5.229667,
+        "latency_p90_ms": 12.1440914,
+        "latency_p95_ms": 16.206412599999993,
         "latency_p99_ms": null,
-        "oversell_responses": 1920,
+        "oversell_responses": 1919,
         "planned_iteration_rate_per_second": 10.1739,
         "platform_errors": null,
         "rate_unit": "iterations per second",
-        "request_rate_per_second": 42.55930117383304,
-        "requests": 9800,
+        "request_rate_per_second": 42.58527630966405,
+        "requests": 9795,
         "shed_requests": 0,
-        "successful_requests": 9800,
+        "successful_requests": 9795,
         "unexpected_responses": null
       },
       "profile": "ramp",
-      "revision": "313f55cd9a026c096dd3af8f0a1acd4657b411fb",
+      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
       "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
       "status": "PASS",
       "suite": "load_ramp",
-      "updated_at": "2026-11-25T08:58:31Z"
+      "updated_at": "2026-11-25T10:11:26Z"
     },
     "load_recovery": {
       "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
@@ -746,7 +746,7 @@
       "updated_at": "2026-11-25T09:54:21Z"
     },
     "load_spike": {
-      "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "invariants": "PASS",
       "measurement_valid": true,
       "metrics": {
@@ -761,31 +761,31 @@
         "credential_error": 0,
         "failed_requests": 0,
         "failure_rate": 0,
-        "iteration_rate_per_second": 33.81470683803945,
+        "iteration_rate_per_second": 33.814126567073004,
         "iterations": 5749,
-        "latency_avg_ms": 4.559772056167427,
-        "latency_max_ms": 207.080333,
-        "latency_min_ms": 1.167541,
-        "latency_p50_ms": 3.114125,
-        "latency_p90_ms": 7.8071498,
-        "latency_p95_ms": 10.340341799999997,
+        "latency_avg_ms": 5.753511098370233,
+        "latency_max_ms": 378.583375,
+        "latency_min_ms": 1.215417,
+        "latency_p50_ms": 3.425875,
+        "latency_p90_ms": 9.723192000000001,
+        "latency_p95_ms": 14.156750399999993,
         "latency_p99_ms": null,
         "oversell_responses": 5749,
         "planned_iteration_rate_per_second": 39.7059,
         "platform_errors": null,
         "rate_unit": "iterations per second",
-        "request_rate_per_second": 171.42627079399193,
+        "request_rate_per_second": 171.42332906546227,
         "requests": 29145,
         "shed_requests": 0,
         "successful_requests": 29145,
         "unexpected_responses": null
       },
       "profile": "spike",
-      "revision": "313f55cd9a026c096dd3af8f0a1acd4657b411fb",
+      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
       "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
       "status": "PASS",
       "suite": "load_spike",
-      "updated_at": "2026-11-25T09:02:23Z"
+      "updated_at": "2026-11-25T10:15:16Z"
     },
     "load_sustained-peak": {
       "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
@@ -922,14 +922,14 @@
       "updated_at": "2026-11-25T06:05:01Z"
     },
     "performance": {
-      "detail": "profile soak finished PASS; aggregate report required",
-      "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
+      "detail": "profile spike finished PASS; aggregate report required",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "profile": "pending",
-      "revision": "313f55cd9a026c096dd3af8f0a1acd4657b411fb",
+      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
       "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
       "status": "PENDING",
       "suite": "performance",
-      "updated_at": "2026-11-25T09:54:21Z"
+      "updated_at": "2026-11-25T10:15:16Z"
     },
     "security": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -968,5 +968,5 @@
       "updated_at": "2026-11-25T05:57:57Z"
     }
   },
-  "updated_at": "2026-11-25T09:54:21Z"
+  "updated_at": "2026-11-25T10:15:16Z"
 }

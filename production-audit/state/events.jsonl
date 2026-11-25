@@ -335,3 +335,6 @@
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T09:28:57Z", "type": "load_kafka-backlog"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T09:32:37Z", "type": "load_failure-during-peak"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T09:54:20Z", "type": "load_soak"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T10:06:41Z", "type": "load_baseline"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T10:11:25Z", "type": "load_ramp"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T10:15:15Z", "type": "load_spike"}
