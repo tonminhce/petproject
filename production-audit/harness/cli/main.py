@@ -558,6 +558,8 @@ def command_stripe(arguments: argparse.Namespace) -> int:
     action = arguments.action
     if action == "acceptance":
         return command_stripe_acceptance()
+    if action == "webhook-setup":
+        return command_stripe_webhook_setup()
     if action == "verify-config":
         document = verify_configuration()
     elif action == "sandbox-smoke":
@@ -579,6 +581,16 @@ def command_stripe(arguments: argparse.Namespace) -> int:
     if document.get("status") == "BLOCKED":
         return config.EXIT_BLOCKED
     return config.EXIT_GATE_FAILED
+
+
+def command_stripe_webhook_setup() -> int:
+    from ..stripe.webhook_setup import setup_webhook
+
+    document = setup_webhook()
+    print(json.dumps(document, indent=2, default=str))
+    if document.get("state") == "ready":
+        return 0
+    return config.EXIT_BLOCKED
 
 
 def command_stripe_acceptance() -> int:
@@ -1062,7 +1074,15 @@ def build_parser() -> argparse.ArgumentParser:
     stripe = subparsers.add_parser("stripe", help="real stripe sandbox verification")
     stripe.add_argument(
         "action",
-        choices=("verify-config", "sandbox-smoke", "test-payment", "test-webhooks", "reconcile", "acceptance"),
+        choices=(
+            "verify-config",
+            "sandbox-smoke",
+            "test-payment",
+            "test-webhooks",
+            "reconcile",
+            "acceptance",
+            "webhook-setup",
+        ),
     )
     stripe.set_defaults(handler=command_stripe)
 

@@ -75,7 +75,16 @@ The endpoint verifies the `Stripe-Signature` header with the signing secret
 supported events are `payment_intent.succeeded`, `payment_intent.payment_failed` and
 `charge.refunded`.
 
-The endpoint has to be reachable from the public internet, so a local deployment needs a tunnel:
+The endpoint has to be reachable from the public internet, so a local deployment needs a tunnel.
+The audit harness opens one, registers the endpoint against it and writes the issued signing secret
+into the git ignored `.env`:
+
+```bash
+python3 production-audit/bin/harness stripe webhook-setup
+```
+
+The command prints the endpoint id, the public url and the fact that the payment service has to be
+restarted so that it reads the new signing secret. The equivalent manual steps are:
 
 ```bash
 cloudflared tunnel --url http://localhost:8083

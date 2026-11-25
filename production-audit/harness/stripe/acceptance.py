@@ -728,6 +728,23 @@ def _read_payment(platform: Platform, order_id: str) -> dict[str, Any]:
     return {}
 
 
+
+def _wait_for_captured(platform: Platform, order_id: str, timeout_seconds: int = 90) -> dict[str, Any]:
+    """Wait for the payment to reach CAPTURED on its own.
+
+    When the Stripe webhook endpoint of the account can reach this service, Stripe delivers the
+    capture event itself and the payment moves to CAPTURED without the harness delivering anything.
+    """
+    deadline = time.time() + timeout_seconds
+    state: dict[str, Any] = {}
+    while time.time() < deadline:
+        state = _read_payment(platform, order_id)
+        if str(state.get("status", "")) == "CAPTURED":
+            return state
+        time.sleep(3)
+    return state
+
+
 def _mock_log(container: str = STRIPE_MOCK_CONTAINER) -> list[str]:
     code, out, _ = _docker(["logs", container], timeout=60)
     if code != 0:
@@ -981,6 +998,8 @@ def _run_acceptance(
             webhook_service.get("sandbox_payment_method", "pm_card_visa"),
         ) if real_api else (200, {})
         event_id = "evt_acceptance_" + _random_suffix(24)
+        real_delivery_state = _wait_for_captured(platform, order_id)
+        real_delivery_observed = str(real_delivery_state.get("status", "")) == "CAPTURED"
         signed_status, signed_document = _deliver_capture_event(
             platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, event_id
         )
@@ -1009,8 +1028,17 @@ def _run_acceptance(
         cases.append(
             _case_document(
                 "capture_webhook_signature_verified",
-                VERDICT_NOT_PROVEN if real_api else (VERDICT_PROVEN if webhook_proven else VERDICT_FAILED),
-                "the harness-signed event moved the payment to CAPTURED and the event with a forged signature was refused with "
+                (
+                    VERDICT_PROVEN
+                    if real_api and real_delivery_observed and webhook_proven
+                    else (VERDICT_NOT_PROVEN if real_api else (VERDICT_PROVEN if webhook_proven else VERDICT_FAILED))
+                ),
+                (
+                    "Stripe delivered the capture event to the webhook endpoint of the account and the payment "
+                    "moved to CAPTURED on its own, and the event with a forged signature was refused with "
+                    if real_api and real_delivery_observed
+                    else "the harness-signed event moved the payment to CAPTURED and the event with a forged signature was refused with "
+                )
                 + str(tamper_status)
                 + " "
                 + _error_code(tamper_document),
@@ -1021,8 +1049,12 @@ def _run_acceptance(
                         "the signature is verified by stripe-java Webhook.constructEvent with the HMAC-SHA256 t/v1 format",
                         "the verification secret is the signing secret that Stripe issued for the real webhook endpoint of "
                         "the account, passed through SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET",
-                        "Stripe cannot deliver to a local endpoint, so the harness delivered the event itself; the "
-                        "signature verification is the real platform path with the real issued secret",
+                        "Stripe delivered the capture event to the webhook endpoint of the account and the payment "
+                        "moved to CAPTURED without the harness delivering anything; the signature verification is "
+                        "the real platform path with the real issued secret"
+                        if real_delivery_observed
+                        else "Stripe could not reach the webhook endpoint of the account, so the harness delivered the "
+                        "event itself; the signature verification is the real platform path with the real issued secret",
                     ]
                     if real_api
                     else [
@@ -1037,8 +1069,8 @@ def _run_acceptance(
                     "forged_signature_status": tamper_status,
                     "forged_signature_body": tamper_document,
                     "payment_status_before_webhook": before_state.get("status"),
-                    "actual_stripe_delivery": False,
-                    "delivery_source": "harness-signed",
+                    "actual_stripe_delivery": bool(real_api and real_delivery_observed),
+                    "delivery_source": "stripe" if real_delivery_observed else "harness-signed",
                     "provider_confirm_status": confirm_status,
                     "provider_confirm_response": confirm_document,
                     "payment_status": state.get("status"),
