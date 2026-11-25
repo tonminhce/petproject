@@ -1,6 +1,6 @@
 # Refactoring Roadmap
 
-Generated: 2026-11-19T22:33:06Z
+Generated: 2026-11-25T02:55:43Z
 
 The roadmap is ordered by business risk. Every entry names the design pattern that
 resolves it and the evidence that justifies it.

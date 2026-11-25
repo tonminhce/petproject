@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import re
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from harness import yamlmini
 from harness.alerts.messages import (
@@ -11,7 +16,12 @@ from harness.alerts.messages import (
     contains_forbidden_field,
 )
 from harness.alerts.render import render_alertmanager_config
-from harness.kubernetes.validation import validate_manifests
+from harness.kubernetes.validation import (
+    evaluate_autoscaling_observation,
+    load_autoscaling_observation,
+    manifest_fingerprint,
+    validate_manifests,
+)
 from harness.telegram.client import (
     CredentialError,
     credential_status,
@@ -192,3 +202,179 @@ class KubernetesValidationTest(unittest.TestCase):
         for check in document["checks"]:
             self.assertTrue(check["id"])
             self.assertIn(check["status"], {"PASS", "FAIL", "BLOCKED"})
+
+
+class AutoscalingManifestEvidenceTest(unittest.TestCase):
+    manifest = """apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway-service-hpa
+  namespace: shop-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+"""
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.manifest_path = self.root / "k8s" / "gateway-service.yaml"
+        self.manifest_path.parent.mkdir()
+        self.manifest_path.write_text(self.manifest, encoding="utf-8")
+        repository_root = patch("harness.kubernetes.validation.config.repository_root", return_value=self.root)
+        repository_root.start()
+        self.addCleanup(repository_root.stop)
+
+    def _observation(self) -> dict:
+        return {
+            "manifest_fingerprint": manifest_fingerprint(),
+            "revision": "ancestor-revision",
+            "source_fingerprint": "old-source-fingerprint",
+            "harness_fingerprint": "old-harness-fingerprint",
+            "cluster": {"kubernetes_version": "v1.36.1", "cluster_name": "test-cluster"},
+            "image": {"digest": "sha256:test-image"},
+            "autoscaler_manifest_as_applied": {
+                "metadata": {"name": "gateway-service-hpa", "namespace": "shop-system"},
+                "spec": {
+                    "scaleTargetRef": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "gateway-service"},
+                    "minReplicas": 2,
+                    "maxReplicas": 10,
+                    "metrics": [
+                        {
+                            "type": "Resource",
+                            "resource": {
+                                "name": "cpu",
+                                "target": {"type": "Utilization", "averageUtilization": 75},
+                            },
+                        }
+                    ],
+                },
+                "raw_yaml": self.manifest,
+                "raw_yaml_sha256": hashlib.sha256(self.manifest.encode("utf-8")).hexdigest(),
+            },
+            "observations": {
+                "before_load": {"replicas": 2, "observed_at": "2026-11-21T05:04:01Z", "cpu_utilization_percent": 3},
+                "under_load": {"replicas": 10, "observed_at": "2026-11-21T05:07:47Z", "cpu_utilization_percent": 206},
+                "after_load": {"replicas": 2, "observed_at": "2026-11-21T05:18:14Z", "cpu_utilization_percent": 1},
+            },
+            "verdict": {"scaled_up_under_real_load": True, "scaled_back_down_after_load": True},
+            "load": {"total_requests": 1000, "rate_per_second": 100, "target": "gateway"},
+        }
+
+    def _load(self, observation: dict) -> dict:
+        path = self.root / "run" / "k8s-results" / "autoscaling.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(observation), encoding="utf-8")
+        with patch("harness.kubernetes.validation.observation_path", return_value=path):
+            return load_autoscaling_observation()
+
+    def test_fingerprint_is_deterministic_and_covers_manifest_paths_and_content(self) -> None:
+        original = manifest_fingerprint()
+        self.assertEqual(original, manifest_fingerprint())
+
+        self.manifest_path.write_text(self.manifest + "# changed\n", encoding="utf-8")
+        self.assertNotEqual(original, manifest_fingerprint())
+        self.manifest_path.write_text(self.manifest, encoding="utf-8")
+        self.assertEqual(original, manifest_fingerprint())
+
+        additional = self.manifest_path.parent / "nested" / "config.yaml"
+        additional.parent.mkdir()
+        additional.write_text("kind: ConfigMap\n", encoding="utf-8")
+        self.assertNotEqual(original, manifest_fingerprint())
+        additional.rename(additional.parent / "renamed.yaml")
+        self.assertNotEqual(original, manifest_fingerprint())
+        (additional.parent / "renamed.yaml").unlink()
+        self.assertEqual(original, manifest_fingerprint())
+        yml = self.manifest_path.parent / "nested" / "config.yml"
+        yml.write_text("kind: ConfigMap\n", encoding="utf-8")
+        self.assertNotEqual(original, manifest_fingerprint())
+        yml.unlink()
+        self.assertEqual(original, manifest_fingerprint())
+
+    def test_matching_fingerprint_accepts_an_ancestor_revision_and_ignores_non_k8s_changes(self) -> None:
+        observation = self._observation()
+        original = observation["manifest_fingerprint"]
+        source = self.root / "gateway-service" / "src" / "Main.java"
+        source.parent.mkdir(parents=True)
+        source.write_text("class Main {}\n", encoding="utf-8")
+        harness = self.root / "production-audit" / "harness" / "kubernetes" / "validation.py"
+        harness.parent.mkdir(parents=True)
+        harness.write_text("# changed harness\n", encoding="utf-8")
+
+        self.assertEqual(original, manifest_fingerprint())
+        result = evaluate_autoscaling_observation(observation)
+        self.assertEqual(result["status"], "PASS")
+        self.assertIn("manifest fingerprint: " + original, result["evidence"])
+
+    def test_missing_fingerprint_blocks_direct_evaluation_and_loading(self) -> None:
+        observation = self._observation()
+        del observation["manifest_fingerprint"]
+
+        direct = evaluate_autoscaling_observation(observation)
+        loaded = self._load(observation)
+        for result in (direct, loaded):
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertIn("manifest_fingerprint", result["reason"])
+
+    def test_manifest_change_blocks_an_old_observation_with_a_refresh_reason(self) -> None:
+        observation = self._observation()
+        old_fingerprint = observation["manifest_fingerprint"]
+        self.manifest_path.write_text(self.manifest.replace("maxReplicas: 10", "maxReplicas: 12"), encoding="utf-8")
+
+        result = self._load(observation)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertIn(old_fingerprint, result["reason"])
+        self.assertIn(manifest_fingerprint(), result["reason"])
+        self.assertIn("record a fresh observation", result["reason"])
+
+    def test_boolean_and_string_values_cannot_prove_load_scaling(self) -> None:
+        observation = self._observation()
+        observation["observations"]["under_load"]["cpu_utilization_percent"] = True
+        observation["verdict"]["scaled_up_under_real_load"] = "false"
+        observation["load"]["total_requests"] = True
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+
+    def test_raw_yaml_must_parse_and_match_the_applied_object(self) -> None:
+        observation = self._observation()
+        raw = "not yaml: ["
+        observation["autoscaler_manifest_as_applied"]["raw_yaml"] = raw
+        observation["autoscaler_manifest_as_applied"]["raw_yaml_sha256"] = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+
+    def test_wrong_controller_or_metric_spec_is_rejected(self) -> None:
+        observation = self._observation()
+        observation["autoscaler_manifest_as_applied"]["metadata"]["name"] = "other-hpa"
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+        observation = self._observation()
+        observation["autoscaler_manifest_as_applied"]["spec"]["metrics"][0]["resource"]["name"] = "memory"
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+
+    def test_replica_bounds_timestamps_and_raw_hash_are_enforced(self) -> None:
+        observation = self._observation()
+        observation["observations"]["under_load"]["replicas"] = 11
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+        observation = self._observation()
+        observation["observations"]["under_load"]["observed_at"] = "2026-11-21T04:00:00Z"
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+        observation = self._observation()
+        observation["autoscaler_manifest_as_applied"]["raw_yaml_sha256"] = "bad"
+        self.assertEqual(evaluate_autoscaling_observation(observation)["status"], "FAIL")
+
+    def test_matching_fingerprint_does_not_bypass_observation_checks(self) -> None:
+        observation = self._observation()
+        observation["verdict"]["scaled_up_under_real_load"] = False
+        result = evaluate_autoscaling_observation(observation)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertIn("does not claim a scale up", " ".join(result["problems"]))

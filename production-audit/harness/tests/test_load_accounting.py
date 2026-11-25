@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import http
+import json
 import re
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from harness import config
-from harness.loadtesting.capacity import _rate_ratio_denominator, render_capacity_report
+from harness.loadtesting.capacity import _rate_ratio_denominator, capacity_limit_document, render_capacity_report
 from harness.loadtesting.profiles import resolve_profile
 from harness.loadtesting.runner import (
     _business_outcome_is_acceptable,
@@ -194,6 +197,38 @@ class CustomerPoolTest(unittest.TestCase):
         self.assertFalse(pool["required"])
         self.assertEqual(_customer_pool_violations(profile, pool), [])
         self.assertEqual(_customer_pool_shared({"customer_pool": pool}), "")
+
+
+class CapacityFreshnessTest(unittest.TestCase):
+    def test_recorded_snapshot_is_not_trusted_over_canonical_results(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = root / "baseline-1"
+            run.mkdir()
+            (run / "result.json").write_text(
+                json.dumps(
+                    {
+                        "profile": "baseline",
+                        "status": "PASS",
+                        "metrics": {"business_success": 1, "requests": 2, "iterations": 1},
+                        "invariants": {"status": "PASS"},
+                        "measurement_valid": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            state = root / "state.json"
+            state.write_text(
+                json.dumps({"capacity_limit": {"measured": True, "binding": {"binds_to_current_source": True}}}),
+                encoding="utf-8",
+            )
+            evidence = {"revision": "revision", "source_fingerprint": "source", "harness_fingerprint": "harness"}
+            with patch("harness.loadtesting.capacity.current_evidence", return_value=evidence), patch(
+                "harness.loadtesting.capacity._revision_is_contained", return_value=True
+            ):
+                document = capacity_limit_document(state, root)
+            self.assertFalse(document["binding"]["binds_to_current_source"])
+            self.assertEqual(document["binding"]["stale_profiles"], ["baseline"])
 
 
 class RecordedRateRatioTest(unittest.TestCase):

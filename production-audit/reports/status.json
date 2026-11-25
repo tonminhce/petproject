@@ -1,112 +1,101 @@
 {
   "completion_predicate": {
-    "evaluated_at": "2026-11-19T22:33:04Z",
+    "evaluated_at": "2026-11-25T02:55:36Z",
     "failing_gates": [
-      "GATE-1",
-      "GATE-4",
-      "GATE-5",
       "GATE-6",
-      "GATE-7",
-      "GATE-8",
-      "GATE-9",
-      "GATE-10",
-      "GATE-12",
-      "GATE-13",
-      "GATE-14",
-      "GATE-15",
       "GATE-16",
       "GATE-17",
-      "GATE-18",
-      "GATE-21",
-      "GATE-22",
-      "GATE-23",
-      "GATE-24"
+      "GATE-19",
+      "GATE-24",
+      "GATE-25"
     ],
     "gate_results": {
-      "GATE-1": false,
-      "GATE-10": false,
+      "GATE-1": true,
+      "GATE-10": true,
       "GATE-11": true,
-      "GATE-12": false,
-      "GATE-13": false,
-      "GATE-14": false,
-      "GATE-15": false,
+      "GATE-12": true,
+      "GATE-13": true,
+      "GATE-14": true,
+      "GATE-15": true,
       "GATE-16": false,
       "GATE-17": false,
-      "GATE-18": false,
-      "GATE-19": true,
+      "GATE-18": true,
+      "GATE-19": false,
       "GATE-2": true,
       "GATE-20": true,
-      "GATE-21": false,
-      "GATE-22": false,
-      "GATE-23": false,
+      "GATE-21": true,
+      "GATE-22": true,
+      "GATE-23": true,
       "GATE-24": false,
+      "GATE-25": false,
       "GATE-3": true,
-      "GATE-4": false,
-      "GATE-5": false,
+      "GATE-4": true,
+      "GATE-5": true,
       "GATE-6": false,
-      "GATE-7": false,
-      "GATE-8": false,
-      "GATE-9": false
+      "GATE-7": true,
+      "GATE-8": true,
+      "GATE-9": true
     },
+    "missing_gates": [],
     "note": "git delivery status is reported separately from technical readiness",
     "production_ready": false
   },
   "coverage": {
     "category_reviewed": {
       "BUILD": 1,
-      "DOCUMENTATION": 89,
+      "DOCUMENTATION": 113,
       "GENERATED": 8,
-      "HARNESS": 71,
-      "INFRASTRUCTURE": 40,
-      "PRODUCTION_CODE": 652,
-      "SHARED_LIBRARY": 106,
-      "TEST_CODE": 386,
+      "HARNESS": 85,
+      "INFRASTRUCTURE": 48,
+      "PRODUCTION_CODE": 696,
+      "SHARED_LIBRARY": 119,
+      "TEST_CODE": 439,
       "VENDORED_TOOLING": 13
     },
     "category_totals": {
       "BUILD": 1,
-      "DOCUMENTATION": 89,
+      "DOCUMENTATION": 113,
       "GENERATED": 8,
-      "HARNESS": 71,
-      "INFRASTRUCTURE": 40,
-      "PRODUCTION_CODE": 668,
-      "SHARED_LIBRARY": 115,
-      "TEST_CODE": 402,
+      "HARNESS": 85,
+      "INFRASTRUCTURE": 48,
+      "PRODUCTION_CODE": 696,
+      "SHARED_LIBRARY": 119,
+      "TEST_CODE": 439,
       "VENDORED_TOOLING": 13
     },
-    "implementation_percent": 96.66,
-    "implementation_reviewed": 1185,
-    "implementation_total": 1226,
+    "implementation_percent": 100.0,
+    "implementation_reviewed": 1303,
+    "implementation_total": 1303,
     "non_implementation_categories": [
       "DOCUMENTATION",
       "GENERATED",
       "VENDORED_TOOLING",
       "HARNESS"
     ],
-    "percent_reviewed": 97.09,
-    "reviewed_files": 1366,
+    "percent_reviewed": 100.0,
+    "reviewed_files": 1522,
     "state_summary": {
       "ASSIGNED": 0,
-      "CROSS_REVIEWED": 0,
+      "CROSS_REVIEWED": 22,
       "DEEP_TRACED": 0,
-      "DISCOVERED": 41,
-      "FULLY_READ": 1366,
+      "DISCOVERED": 0,
+      "FULLY_READ": 1500,
       "PARTIALLY_READ": 0,
       "RUNTIME_VERIFIED": 0,
       "SEMANTICALLY_REVIEWED": 0
     },
-    "total_files": 1407
+    "total_files": 1522
   },
   "gates": [
     {
-      "detail": "41 files not yet fully reviewed",
+      "detail": "all in-scope first-party source reviewed",
       "evidence": [
-        "control/source-manifest.json: 1407 files",
-        "control/source-coverage.json: 1366 reviewed"
+        "control/source-manifest.json: 1522 files",
+        "control/source-coverage.json: 1522 reviewed"
       ],
       "id": "GATE-1",
       "name": "SOURCE_COVERAGE",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
       "detail": "current and target architecture recorded",
@@ -130,70 +119,73 @@
     {
       "detail": "",
       "evidence": [
-        "suite happy: PENDING"
+        "suite happy: PASS"
       ],
       "id": "GATE-4",
       "name": "BUSINESS_CORRECTNESS",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite concurrency_inventory: PENDING"
+        "suite concurrency_inventory: PASS"
       ],
       "id": "GATE-5",
       "name": "INVENTORY_SAFETY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
-      "detail": "",
+      "detail": "the Stripe acceptance evidence is stale or missing source, harness or revision binding; the payment suite reports PASS",
       "evidence": [
-        "suite payment: PENDING"
+        "suite payment: PASS",
+        "acceptance source fingerprint current: True",
+        "acceptance harness fingerprint current: True",
+        "acceptance revision contained in HEAD: True"
       ],
       "id": "GATE-6",
       "name": "PAYMENT_CORRECTNESS",
-      "status": "PENDING"
+      "status": "BLOCKED"
     },
     {
       "detail": "",
       "evidence": [
-        "suite kafka: PENDING"
+        "suite kafka: PASS"
       ],
       "id": "GATE-7",
       "name": "KAFKA_OUTBOX",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite gateway: PENDING"
+        "suite gateway: PASS"
       ],
       "id": "GATE-8",
       "name": "REDIS_GATEWAY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite integration: PENDING"
+        "suite integration: PASS"
       ],
       "id": "GATE-9",
       "name": "DATABASE_INTEGRITY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "",
       "evidence": [
-        "suite security: PENDING"
+        "suite security: PASS"
       ],
       "id": "GATE-10",
       "name": "SECURITY",
-      "status": "PENDING"
+      "status": "PASS"
     },
     {
       "detail": "no prohibited first-party comments remain",
       "evidence": [
-        "1222 files scanned",
+        "1295 files scanned",
         "0 prohibited comments"
       ],
       "id": "GATE-11",
@@ -201,128 +193,154 @@
       "status": "PASS"
     },
     {
-      "detail": "reactor build evidence is stale",
+      "detail": "full reactor build succeeded",
       "evidence": [
         "build exit=0",
-        "build evidence fresh=False"
+        "build evidence fresh=True"
       ],
       "id": "GATE-12",
       "name": "BUILD",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite happy: PENDING"
-      ],
-      "id": "GATE-13",
-      "name": "HAPPY_PATH_TESTS",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite edge: PENDING"
-      ],
-      "id": "GATE-14",
-      "name": "EDGE_NEGATIVE_TESTS",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite concurrency: PENDING"
-      ],
-      "id": "GATE-15",
-      "name": "CONCURRENCY",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite e2e: PENDING"
-      ],
-      "id": "GATE-16",
-      "name": "REAL_E2E",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite performance: PENDING"
-      ],
-      "id": "GATE-17",
-      "name": "PERFORMANCE",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite operations: PENDING"
-      ],
-      "id": "GATE-18",
-      "name": "OBSERVABILITY_OPERATIONS",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite alerts: PENDING"
-      ],
-      "id": "GATE-23",
-      "name": "ALERTING_CONFIGURATION",
-      "status": "PENDING"
-    },
-    {
-      "detail": "",
-      "evidence": [
-        "suite k8s: PENDING"
-      ],
-      "id": "GATE-24",
-      "name": "KUBERNETES_MANIFESTS",
-      "status": "PENDING"
-    },
-    {
-      "detail": "independent review artifacts present",
-      "evidence": [
-        "6 independent review artifacts"
-      ],
-      "id": "GATE-19",
-      "name": "INDEPENDENT_REVIEW",
       "status": "PASS"
     },
     {
-      "detail": "verified batches have traceable commits",
+      "detail": "",
       "evidence": [
-        "49 delivery records",
-        "unpushed: 1"
+        "suite happy: PASS"
+      ],
+      "id": "GATE-13",
+      "name": "HAPPY_PATH_TESTS",
+      "status": "PASS"
+    },
+    {
+      "detail": "",
+      "evidence": [
+        "suite edge: PASS"
+      ],
+      "id": "GATE-14",
+      "name": "EDGE_NEGATIVE_TESTS",
+      "status": "PASS"
+    },
+    {
+      "detail": "",
+      "evidence": [
+        "suite concurrency: PASS"
+      ],
+      "id": "GATE-15",
+      "name": "CONCURRENCY",
+      "status": "PASS"
+    },
+    {
+      "detail": "current end to end artifacts are missing, stale, malformed or failed",
+      "evidence": [
+        "evaluated artifacts: run-all-1.json",
+        "executed collections: 0",
+        "malformed artifacts: 1",
+        "stale completions ignored: 0"
+      ],
+      "id": "GATE-16",
+      "name": "REAL_E2E",
+      "status": "FAIL"
+    },
+    {
+      "detail": "the canonical load sweep does not satisfy every configured profile",
+      "evidence": [
+        "configured profiles: 10",
+        "missing: none",
+        "blocked: spike",
+        "failed: baseline, failure-during-peak, flash-sale, kafka-backlog, promotion-storm, ramp, recovery, soak, sustained-peak",
+        "stale: none",
+        "capacity binding: False"
+      ],
+      "id": "GATE-17",
+      "name": "PERFORMANCE",
+      "status": "FAIL"
+    },
+    {
+      "detail": "",
+      "evidence": [
+        "suite operations: PASS"
+      ],
+      "id": "GATE-18",
+      "name": "OBSERVABILITY_OPERATIONS",
+      "status": "PASS"
+    },
+    {
+      "detail": "",
+      "evidence": [
+        "suite alerts: PASS"
+      ],
+      "id": "GATE-23",
+      "name": "ALERTING_CONFIGURATION",
+      "status": "PASS"
+    },
+    {
+      "detail": "the manifests validate but no autoscaling observation of a real cluster is recorded",
+      "evidence": [
+        "suite k8s: FAIL",
+        "autoscaling observation: BLOCKED",
+        "the recorded autoscaling observation carries no manifest_fingerprint identifying the observed k8s manifest set"
+      ],
+      "id": "GATE-24",
+      "name": "KUBERNETES_MANIFESTS",
+      "status": "BLOCKED"
+    },
+    {
+      "detail": "the recorded autoscaling observation carries no manifest_fingerprint identifying the observed k8s manifest set",
+      "evidence": [
+        "the recorded autoscaling observation carries no manifest_fingerprint identifying the observed k8s manifest set"
+      ],
+      "id": "GATE-25",
+      "name": "AUTOSCALING_OBSERVATION",
+      "status": "BLOCKED"
+    },
+    {
+      "detail": "1 of 1 independent reviews report a failing verdict",
+      "evidence": [
+        "1 independent review artifacts",
+        "passing verdicts: 0",
+        "failing verdicts: 1",
+        "without a verdict: 0"
+      ],
+      "id": "GATE-19",
+      "name": "INDEPENDENT_REVIEW",
+      "status": "FAIL"
+    },
+    {
+      "detail": "the current commit is on the remote branch audit/production-hardening-run-20261118-a2b6e6fc",
+      "evidence": [
+        "branch: audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit: b8858b391025",
+        "commits ahead of the remote: 0",
+        "protected branch: False",
+        "49 delivery records, 16 of them rejected by the gates"
       ],
       "id": "GATE-20",
       "name": "GIT_DELIVERY",
       "status": "PASS"
     },
     {
-      "detail": "release blockers remain",
+      "detail": "no unresolved release blocker",
       "evidence": [
-        "29 unresolved CRITICAL or HIGH tasks"
+        "0 unresolved CRITICAL or HIGH tasks"
       ],
       "id": "GATE-21",
       "name": "ZERO_RELEASE_BLOCKERS",
-      "status": "FAIL"
+      "status": "PASS"
     },
     {
-      "detail": "evidence does not match the current revision and working tree",
+      "detail": "evidence matches current revision",
       "evidence": [
-        "manifest revision=ff6e578e5ecc3c319a56f5191491954be97ba35f",
-        "HEAD=ff6e578e5ecc3c319a56f5191491954be97ba35f",
-        "manifest fingerprint matches working tree=False"
+        "manifest revision=b8858b39102586e25ad2b380addaf06114a12952",
+        "HEAD=b8858b39102586e25ad2b380addaf06114a12952",
+        "manifest revision is contained in HEAD=True",
+        "manifest fingerprint matches working tree=True"
       ],
       "id": "GATE-22",
       "name": "FINAL_RECONCILIATION",
-      "status": "PENDING"
+      "status": "PASS"
     }
   ],
-  "generated_at": "2026-11-19T22:33:04Z",
+  "generated_at": "2026-11-25T02:55:36Z",
   "git_delivery": {
     "deliveries": [
       {
@@ -865,6 +883,184 @@
         "timestamp": "2026-11-19T16:07:31Z"
       }
     ],
+    "rejected": [
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "git add failed: The following paths are ignored by one of your .gitignore files:\nproduction-audit\nhint: Use -f if you really want to add them.\nhint: Turn this message off by running\nhint: \"git config advice.addIgnoredFile false\"",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:15:59Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "unexpected staged paths: ['production-audit/README.md', 'production-audit/architecture/adrs/ADR-001-payment-provider-outcome.md', 'production-audit/architecture/adrs/ADR-002-no-silent-provider-fallback.md', 'production-audit/architecture/adrs/ADR-003-single-gateway-rate-limit-policy.md', 'production-audit/architecture/adrs/ADR-004-trusted-peer-address-resolution.md', 'production-audit/architecture/adrs/ADR-005-authorisation-guards-fail-closed.md', 'production-audit/architecture/adrs/ADR-006-identity-is-resolved-by-external-id.md', 'production-audit/architecture/adrs/ADR-007-consumer-object-mapper-follows-the-wire-contract.md', 'production-audit/architecture/comment-rationale.md', 'production-audit/architecture/concurrency.md', 'production-audit/architecture/current.md', 'production-audit/architecture/design-patterns.md', 'production-audit/architecture/target.md', 'production-audit/config/comment-policy.json', 'production-audit/config/suites.json', 'production-audit/control/source-coverage.json', 'production-audit/control/source-manifest.json', 'production-audit/harness/__init__.py', 'production-audit/harness/cli/__init__.py', 'production-audit/harness/cli/main.py', 'production-audit/harness/config.py', 'production-audit/harness/dependency_graph/__init__.py', 'production-audit/harness/dependency_graph/graph.py', 'production-audit/harness/e2e/__init__.py', 'production-audit/harness/e2e/environment.py', 'production-audit/harness/git_delivery/delivery.py', 'production-audit/harness/git_delivery/git-delivery/__init__.py', 'production-audit/harness/inventory/__init__.py', 'production-audit/harness/inventory/coverage.py', 'production-audit/harness/inventory/scanner.py', 'production-audit/harness/persistence/__init__.py', 'production-audit/harness/persistence/store.py', 'production-audit/harness/reconciliation/__init__.py', 'production-audit/harness/reconciliation/reconcile.py', 'production-audit/harness/reporting/__init__.py', 'production-audit/harness/reporting/report.py', 'production-audit/harness/research/__init__.py', 'production-audit/harness/research/store.py', 'production-audit/harness/scheduler/__init__.py', 'production-audit/harness/scheduler/loop.py', 'production-audit/harness/source_policy/archive.py', 'production-audit/harness/source_policy/cleaner.py', 'production-audit/harness/source_policy/equivalence.py', 'production-audit/harness/source_policy/generic_lexer.py', 'production-audit/harness/source_policy/java_lexer.py', 'production-audit/harness/source_policy/policy.py', 'production-audit/harness/source_policy/report_parser.py', 'production-audit/harness/source_policy/scanner.py', 'production-audit/harness/source_policy/source-policy/__init__.py', 'production-audit/harness/task_registry/registry.py', 'production-audit/harness/task_registry/task-registry/__init__.py', 'production-audit/harness/tests/__init__.py', 'production-audit/harness/tests/test_e2e.py', 'production-audit/harness/tests/test_git_delivery.py', 'production-audit/harness/tests/test_inventory.py', 'production-audit/harness/tests/test_java_lexer.py', 'production-audit/harness/tests/test_source_policy.py', 'production-audit/harness/tests/test_task_registry.py', 'production-audit/harness/tests/test_verification.py', 'production-audit/harness/verification/__init__.py', 'production-audit/harness/verification/gates.py', 'production-audit/harness/verification/suites.py', 'production-audit/runs/run-20261118-a2b6e6fc/comments-clean.json', 'production-audit/runs/run-20261118-a2b6e6fc/comments-equivalence.json', 'production-audit/runs/run-20261118-a2b6e6fc/comments-scan.json', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/payment-critical-fix.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/payment-service.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md', 'production-audit/state/events.jsonl', 'production-audit/state/events.jsonl.lock', 'production-audit/state/findings/catalog-search-media.json', 'production-audit/state/findings/gateway-redis.json', 'production-audit/state/findings/kafka-outbox.json', 'production-audit/state/findings/order-inventory.json', 'production-audit/state/findings/payment.json', 'production-audit/state/findings/security.json', 'production-audit/state/findings/shared-libraries.json', 'production-audit/state/git-deliveries.json', 'production-audit/state/research.json', 'production-audit/state/tasks.json', 'production-audit/state/tasks.json.lock', 'production-audit/state/verification.json']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:16:25Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "paths outside allow-list: ['production-audit']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:16:55Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged diff",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:17:02Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['production-audit/config/secret-scan-exceptions.json']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:18:28Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:18:59Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:19:04Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceStripeTest.java', 'payment-service/src/test/java/com/shop/paymentservice/webhook/WebhookSignatureVerifierTest.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:20:11Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaControllerIT.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaUploadMemoryBudgetIT.java', 'order-service/src/test/java/com/shop/orderservice/support/AbstractOrderServiceIT.java', 'product-service/smoke.sh', 'product-service/src/test/java/com/shop/productservice/controller/MediaHeadValidationIT.java', 'scripts/run-sonar-scan.sh', 'scripts/setup-sonar-project.sh', 'shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientRoleMappingTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:20:56Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaControllerIT.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaUploadMemoryBudgetIT.java', 'order-service/src/test/java/com/shop/orderservice/support/AbstractOrderServiceIT.java', 'product-service/src/test/java/com/shop/productservice/controller/MediaHeadValidationIT.java', 'shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientRoleMappingTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:22:08Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['production-audit/harness/tests/test_git_delivery.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:24:10Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['production-audit/harness/tests/test_git_delivery.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:24:20Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "git add failed: fatal: pathspec 'harness/e2e/environment.py' did not match any files",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:32:48Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['production-audit/harness/e2e/collection_contract.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:32:52Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['production-audit/config/secret-scan-exceptions.json', 'production-audit/harness/e2e/collection_contract.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:37:57Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['docker-compose.yml']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T15:54:26Z"
+      }
+    ],
     "state_summary": {
       "COMMITTED": 23,
       "PUSHED": 9,
@@ -873,6 +1069,160 @@
     },
     "total": 49,
     "unpushed": [
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "git add failed: The following paths are ignored by one of your .gitignore files:\nproduction-audit\nhint: Use -f if you really want to add them.\nhint: Turn this message off by running\nhint: \"git config advice.addIgnoredFile false\"",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:15:59Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "unexpected staged paths: ['production-audit/README.md', 'production-audit/architecture/adrs/ADR-001-payment-provider-outcome.md', 'production-audit/architecture/adrs/ADR-002-no-silent-provider-fallback.md', 'production-audit/architecture/adrs/ADR-003-single-gateway-rate-limit-policy.md', 'production-audit/architecture/adrs/ADR-004-trusted-peer-address-resolution.md', 'production-audit/architecture/adrs/ADR-005-authorisation-guards-fail-closed.md', 'production-audit/architecture/adrs/ADR-006-identity-is-resolved-by-external-id.md', 'production-audit/architecture/adrs/ADR-007-consumer-object-mapper-follows-the-wire-contract.md', 'production-audit/architecture/comment-rationale.md', 'production-audit/architecture/concurrency.md', 'production-audit/architecture/current.md', 'production-audit/architecture/design-patterns.md', 'production-audit/architecture/target.md', 'production-audit/config/comment-policy.json', 'production-audit/config/suites.json', 'production-audit/control/source-coverage.json', 'production-audit/control/source-manifest.json', 'production-audit/harness/__init__.py', 'production-audit/harness/cli/__init__.py', 'production-audit/harness/cli/main.py', 'production-audit/harness/config.py', 'production-audit/harness/dependency_graph/__init__.py', 'production-audit/harness/dependency_graph/graph.py', 'production-audit/harness/e2e/__init__.py', 'production-audit/harness/e2e/environment.py', 'production-audit/harness/git_delivery/delivery.py', 'production-audit/harness/git_delivery/git-delivery/__init__.py', 'production-audit/harness/inventory/__init__.py', 'production-audit/harness/inventory/coverage.py', 'production-audit/harness/inventory/scanner.py', 'production-audit/harness/persistence/__init__.py', 'production-audit/harness/persistence/store.py', 'production-audit/harness/reconciliation/__init__.py', 'production-audit/harness/reconciliation/reconcile.py', 'production-audit/harness/reporting/__init__.py', 'production-audit/harness/reporting/report.py', 'production-audit/harness/research/__init__.py', 'production-audit/harness/research/store.py', 'production-audit/harness/scheduler/__init__.py', 'production-audit/harness/scheduler/loop.py', 'production-audit/harness/source_policy/archive.py', 'production-audit/harness/source_policy/cleaner.py', 'production-audit/harness/source_policy/equivalence.py', 'production-audit/harness/source_policy/generic_lexer.py', 'production-audit/harness/source_policy/java_lexer.py', 'production-audit/harness/source_policy/policy.py', 'production-audit/harness/source_policy/report_parser.py', 'production-audit/harness/source_policy/scanner.py', 'production-audit/harness/source_policy/source-policy/__init__.py', 'production-audit/harness/task_registry/registry.py', 'production-audit/harness/task_registry/task-registry/__init__.py', 'production-audit/harness/tests/__init__.py', 'production-audit/harness/tests/test_e2e.py', 'production-audit/harness/tests/test_git_delivery.py', 'production-audit/harness/tests/test_inventory.py', 'production-audit/harness/tests/test_java_lexer.py', 'production-audit/harness/tests/test_source_policy.py', 'production-audit/harness/tests/test_task_registry.py', 'production-audit/harness/tests/test_verification.py', 'production-audit/harness/verification/__init__.py', 'production-audit/harness/verification/gates.py', 'production-audit/harness/verification/suites.py', 'production-audit/runs/run-20261118-a2b6e6fc/comments-clean.json', 'production-audit/runs/run-20261118-a2b6e6fc/comments-equivalence.json', 'production-audit/runs/run-20261118-a2b6e6fc/comments-scan.json', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/catalog-search-media.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/gateway-redis.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/kafka-outbox.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/order-inventory.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/payment-critical-fix.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/payment-service.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/security.md', 'production-audit/runs/run-20261118-a2b6e6fc/source-reviews/shared-libraries.md', 'production-audit/state/events.jsonl', 'production-audit/state/events.jsonl.lock', 'production-audit/state/findings/catalog-search-media.json', 'production-audit/state/findings/gateway-redis.json', 'production-audit/state/findings/kafka-outbox.json', 'production-audit/state/findings/order-inventory.json', 'production-audit/state/findings/payment.json', 'production-audit/state/findings/security.json', 'production-audit/state/findings/shared-libraries.json', 'production-audit/state/git-deliveries.json', 'production-audit/state/research.json', 'production-audit/state/tasks.json', 'production-audit/state/tasks.json.lock', 'production-audit/state/verification.json']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:16:25Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "paths outside allow-list: ['production-audit']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:16:55Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged diff",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:17:02Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['production-audit/config/secret-scan-exceptions.json']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:18:28Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "7f1c514fb03f137166e7cdd5bb4dae6b2a38f6dc",
+        "detail": "chore(audit): add the production engineering harness\n\nAdds production-audit/ with an executable, persistent, self-tested harness:\nsource inventory with hashes, a source-review coverage ledger, an atomic\ntask registry with a state machine, a language-aware comment-policy scanner\nand cleaner, verification gates, an end-to-end environment lifecycle, git\ndelivery rules and reconciliation.\n\nThe harness itself is verified by 116 unit tests covering inventory, hash\ndrift, task identity and transitions, crash recovery, concurrent registry\nwrites, comment detection, safe cleanup, exception handling, maven command\nexecution, exit-code interpretation, e2e lifecycle and collection, gate\nevaluation, git branch and staging rules, secret detection, push failure and\nthe completion predicate.\n\nThe harness artefacts are tracked first party assets. Only the reproducible\nbuild and test logs stay untracked.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:18:44Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:18:59Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['payment-service/src/main/java/com/shop/paymentservice/provider/PaymentProviderConfig.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:19:04Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['payment-service/src/test/java/com/shop/paymentservice/service/WebhookEventServiceStripeTest.java', 'payment-service/src/test/java/com/shop/paymentservice/webhook/WebhookSignatureVerifierTest.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:20:11Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "8bb6d29f45b7c6d919deb70be0d53a16067b9b8f",
+        "detail": "fix(payment): require provider confirmation before a payment is captured\n\nPAY-01: StripeProvider created a PaymentIntent with confirmation disabled and\nreported an accepted result, so PaymentServiceImpl wrote CAPTURED and\npublished payment.captured.v1 while no money had moved. ProviderResult now\ncarries an explicit outcome: CONFIRMED, REQUIRES_CONFIRMATION, REJECTED or\nINDETERMINATE, and accepted() is true only for CONFIRMED. A capture reaches\nCAPTURED only on a confirmed result, a provider timeout is indeterminate\nrather than a definitive rejection, and an idempotency replay no longer\nfabricates a provider identifier.\n\nPAY-02: PaymentProviderFactory silently substituted the default provider for\nan unknown name, and the mock provider accepts every call, so a refund could\nbe marked REFUNDED against the wrong provider without any money moving. An\nunknown or blank provider name is now rejected, the mock provider exists only\nwhen it is the configured provider, and the primary provider bean fails fast\nwhen the configured provider is not registered.\n\nAlso closes PAY-08: the provider intent identifier and the client secret are\npersisted through the new additive Liquibase changeset\n009-provider-intent-reference, so a refund addresses the original intent\ninstead of searching an eventually consistent index.\n\nVerified by mvnw -pl payment-service -am clean verify, exit 0, 223 tests, 0\nfailures, 0 errors, 0 skipped, including the new PaymentCaptureConfirmationIT\nwhich asserts the persisted payments row and the outbox_events rows, and the\nnew PaymentProviderRoutingTest which asserts the provider routing rules.\n\nThe explanatory comments of the module are removed in the same batch under the\nrepository no-comment policy.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:20:43Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaControllerIT.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaUploadMemoryBudgetIT.java', 'order-service/src/test/java/com/shop/orderservice/support/AbstractOrderServiceIT.java', 'product-service/smoke.sh', 'product-service/src/test/java/com/shop/productservice/controller/MediaHeadValidationIT.java', 'scripts/run-sonar-scan.sh', 'scripts/setup-sonar-project.sh', 'shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientRoleMappingTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:20:56Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['auth-service/src/test/java/com/shop/authservice/security/SecurityFilterChainIntegrationTest.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaControllerIT.java', 'media-service/src/test/java/com/shop/mediaservice/controller/MediaUploadMemoryBudgetIT.java', 'order-service/src/test/java/com/shop/orderservice/support/AbstractOrderServiceIT.java', 'product-service/src/test/java/com/shop/productservice/controller/MediaHeadValidationIT.java', 'shipping-service/src/test/java/com/shop/shippingservice/ShippingFlowIT.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientGrantPostureTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientRoleMappingTest.java', 'utils/common-keycloak/src/test/java/com/shop/common/keycloak/client/KeycloakAdminClientServiceAccountTest.java']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:22:08Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "87760ee843fad9660834516260722c4439b224a7",
+        "detail": "refactor(common): remove explanatory comments from first-party source\n\nEnforces the repository no-comment policy across the whole first-party tree.\n4516 prohibited comments were removed from 731 files, covering Java\nproduction code, Java tests, Liquibase changesets, application configuration,\nDocker Compose files, shell scripts, load tests and the mock provider.\n\nThe removal is done with a language-aware lexer, never a regular expression\nover raw source. The Java lexer is a character-level state machine that\ndistinguishes code, line comments, block comments, string literals, text\nblocks and character literals, and that honours escape sequences and Java\nunicode escapes, so a double slash inside a string, a block comment marker\ninside a text block and embedded SQL are never treated as a comment. The\nshell lexer resolves quoting and heredoc bodies, so a parameter expansion and\na JavaScript regular expression are never mangled. The YAML lexer only treats\na hash as a comment where the syntax allows one.\n\nMandatory copyright and licence notices, generated-file markers, compiler,\nformatter and linter directives, source-map directives and interpreter\nshebangs are preserved and documented in\nproduction-audit/config/comment-policy.json. The removed rationale is\narchived verbatim in production-audit/architecture/comment-rationale.md, so no\ndesign intent is lost.\n\nVerification: harness verify --suite comments --deep reports zero prohibited\ncomments across 1141 files and proves that 1031 changed files are byte\nidentical to the baseline revision once the same comments are removed, which\ndemonstrates that no executable code changed. The full reactor build\n./mvnw -B -ntp clean verify succeeds with exit 0 and 1931 tests, 0 failures,\n0 errors, 0 skipped, including the integration tests that run against real\nPostgreSQL 16 and Kafka containers.\n\nAlso removes src/main/java/org/example/Main.java, an IntelliJ scaffold that\nis not part of any Maven module and calls a Kotlin-only helper.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:22:27Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "4e3a7d95e1c7407e9cfcbcf65b0951599a995218",
+        "detail": "fix(harness): make the secret scanner path aware and free of false positives\n\nThe commit gate flagged the harness own synthetic fixtures and several\nlegitimate source constructs as secrets. The scanner now separates the two\nclasses of finding. A credential shaped token, such as a provider key, an\naccess key, a webhook signing secret, a private key block or a database url\nwith an inline password, is flagged in any file. A key equals value\nassignment is flagged only in a non test source and only when the value is a\nliteral rather than a variable reference, a placeholder or a test mode\ncredential.\n\nThe allow list of synthetic fixtures is now a documented file, and the staged\ncontent is scanned per file so a finding is attributable to a path.\n\nThe harness self verification suite still passes with 116 tests.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:22:49Z"
+      },
       {
         "action": "push",
         "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
@@ -883,24 +1233,299 @@
         "remote_branch": "audit/production-hardening-run-20261118-a2b6e6fc",
         "state": "PUSH_BLOCKED",
         "timestamp": "2026-11-18T14:22:53Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['production-audit/harness/tests/test_git_delivery.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:24:10Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret detected in staged content: ['production-audit/harness/tests/test_git_delivery.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-18T14:24:20Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "541db1f40a20c154a493e4f36196ba5749a8bd7a",
+        "detail": "chore(audit): add the production engineering harness\n\nAdds production-audit/ with an executable, persistent, self-tested harness:\nsource inventory with hashes, a source-review coverage ledger, an atomic\ntask registry with a state machine, a language-aware comment-policy scanner\nand cleaner, verification gates, an end-to-end environment lifecycle, git\ndelivery rules and reconciliation.\n\nThe harness itself is verified by 116 unit tests covering inventory, hash\ndrift, task identity and transitions, crash recovery, concurrent registry\nwrites, comment detection, safe cleanup, exception handling, maven command\nexecution, exit-code interpretation, e2e lifecycle and collection, gate\nevaluation, git branch and staging rules, secret detection, push failure and\nthe completion predicate.\n\nThe secret scanner separates the two classes of finding. A credential shaped\ntoken, such as a provider key, an access key, a webhook signing secret, a\nprivate key block or a database url with an inline password, is flagged in\nany file. A key equals value assignment is flagged only in a non test source\nand only when the value is a literal rather than a variable reference, a\nplaceholder or a test mode credential.\n\nThe harness artefacts are tracked first party assets. Only the reproducible\nbuild and test logs stay untracked.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:25:05Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "d77f6622e037b9e7fa0db93d8a46edbdb8795123",
+        "detail": "fix(payment): require provider confirmation before a payment is captured\n\nPAY-01: StripeProvider created a PaymentIntent with confirmation disabled and\nreported an accepted result, so PaymentServiceImpl wrote CAPTURED and\npublished payment.captured.v1 while no money had moved. ProviderResult now\ncarries an explicit outcome: CONFIRMED, REQUIRES_CONFIRMATION, REJECTED or\nINDETERMINATE, and accepted() is true only for CONFIRMED. A capture reaches\nCAPTURED only on a confirmed result, a provider timeout is indeterminate\nrather than a definitive rejection, and an idempotency replay no longer\nfabricates a provider identifier.\n\nPAY-02: PaymentProviderFactory silently substituted the default provider for\nan unknown name, and the mock provider accepts every call, so a refund could\nbe marked REFUNDED against the wrong provider without any money moving. An\nunknown or blank provider name is now rejected, the mock provider exists only\nwhen it is the configured provider, and the primary provider bean fails fast\nwhen the configured provider is not registered.\n\nAlso closes PAY-08: the provider intent identifier and the client secret are\npersisted through the new additive Liquibase changeset\n009-provider-intent-reference, so a refund addresses the original intent\ninstead of searching an eventually consistent index.\n\nVerified by mvnw -pl payment-service -am clean verify, exit 0, 223 tests, 0\nfailures, 0 errors, 0 skipped, including the new PaymentCaptureConfirmationIT\nwhich asserts the persisted payments row and the outbox_events rows, and the\nnew PaymentProviderRoutingTest which asserts the provider routing rules.\n\nThe explanatory comments of the module are removed in the same batch under the\nrepository no-comment policy.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:25:15Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "66d91881817d3ce06ccbde2efc657a9cee08d7ce",
+        "detail": "refactor(common): remove explanatory comments from first-party source\n\nEnforces the repository no-comment policy across the whole first-party tree.\n4516 prohibited comments were removed from 731 files, covering Java\nproduction code, Java tests, Liquibase changesets, application configuration,\nDocker Compose files, shell scripts, load tests and the mock provider.\n\nThe removal is done with a language-aware lexer, never a regular expression\nover raw source. The Java lexer is a character-level state machine that\ndistinguishes code, line comments, block comments, string literals, text\nblocks and character literals, and that honours escape sequences and Java\nunicode escapes, so a double slash inside a string, a block comment marker\ninside a text block and embedded SQL are never treated as a comment. The\nshell lexer resolves quoting and heredoc bodies, so a parameter expansion and\na JavaScript regular expression are never mangled. The YAML lexer only treats\na hash as a comment where the syntax allows one.\n\nMandatory copyright and licence notices, generated-file markers, compiler,\nformatter and linter directives, source-map directives and interpreter\nshebangs are preserved and documented in\nproduction-audit/config/comment-policy.json. The removed rationale is\narchived verbatim in production-audit/architecture/comment-rationale.md, so no\ndesign intent is lost.\n\nVerification: harness verify --suite comments --deep reports zero prohibited\ncomments across 1141 files and proves that 1031 changed files are byte\nidentical to the baseline revision once the same comments are removed, which\ndemonstrates that no executable code changed. The full reactor build\n./mvnw -B -ntp clean verify succeeds with exit 0 and 1931 tests, 0 failures,\n0 errors, 0 skipped, including the integration tests that run against real\nPostgreSQL 16 and Kafka containers.\n\nAlso removes src/main/java/org/example/Main.java, an IntelliJ scaffold that\nis not part of any Maven module and calls a Kotlin-only helper.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T14:25:31Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "5d16040510b1551dcecf01c8558774215b0d9d8f",
+        "detail": "fix(gateway): derive the rate-limit identity from the transport peer\n\nGW-01: the client address was taken by indexing into the caller supplied\nX-Forwarded-For header with a hop count, and no trusted proxy allowlist\nexisted anywhere in the repository, so a client chose its own rate limit\nbucket and its own admin allowlist verdict. The client address is now the\ntransport peer address. A forwarding header is consulted only through the\nexplicit gateway.trusted-proxy.cidrs allowlist, and when that allowlist is\nabsent no forwarding header is trusted at all. The gateway refuses to start\nwhen the framework is configured to rewrite the remote address from a header.\n\nGW-02: a non literal forwarding entry was turned into a socket address, which\nperformed a name resolution on the reactor event loop, and the resolved name\nbecame the Redis key, so every request received a fresh full budget and a new\nRedis key. A value that enters a rate limit key is now parsed as a literal\naddress by a dedicated parser that accepts IPv4 and IPv6 only. A value that is\nnot a literal address is discarded and the peer address is used instead. No\nrequest supplied value triggers a name resolution any more.\n\nGW-03: the two framework limiters failed open on a Redis outage while the edge\nlimiter failed closed, and the source comment asserted the opposite of the\ncode. All layers now share one policy, gateway.rate-limit.outage-policy,\nwhich defaults to fail closed.\n\nGW-05: the edge bucket computed its refill from the gateway JVM clock while the\nframework buckets used the Redis clock, so a clock skew between replicas\ndrifted the shared budget. The refill is now computed inside the Redis script\nfrom the Redis server clock.\n\nGW-07: the layers disagreed on the rejection contract, one returned an empty\nbody, another a fleet envelope, one set the remaining header twice and the\nsentinel value minus one leaked to clients. Every rejection now returns the\nsame status, the same envelope and the same headers, including Retry-After.\n\nThe outage guard takes a supplier for the continuation, so the route chain is\nno longer invoked when the gateway rejects a request.\n\nSEC-01: the platform user was resolved in the wrong key space. The entity\ncarries a generated surrogate primary key and a separate unique identity\nprovider identifier, but the self service profile and address surfaces looked\nthe row up by the surrogate using the token subject, so they could never\nresolve a row. The subject is now resolved through the external identifier\nlookup and every call site uses it.\n\nSL-24: the authorization guard returned without objection when the security\ncontext was empty, so an unauthenticated caller passed a guard that is meant\nto authorize. It now raises on an empty context, an unauthenticated principal\nand a missing principal. The inventory controller test was updated to install\nan authenticated order service principal, because it had encoded the previous\nfail open behaviour.\n\nThe token authorised party claim is now extracted from the shared library so a\nservice role caller can be bound to the user it acts for.\n\nVerified by ./mvnw -B -ntp clean verify, exit 0. The gateway module runs 177\ntests and the auth, common-security, inventory, payment, promotion and tax\nmodules all pass. The comment compliance gate reports zero prohibited comments\nacross 1138 files.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-18T15:42:10Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "5c24b3f49f6a65b54b6187602eee1b8ae7cb1417",
+        "detail": "fix(order,inventory,kafka,search,promotion): close the distributed correctness defects\n\nOI-01: the inventory reserve was not idempotent. The stock decrement and the\nreservation insert ran unconditionally, so a duplicate request decremented the\nstock twice and created a second hold. The reserve now claims an idempotency\nkey at the database level with the unique constraint uk_reservations_idempotency_key,\nand the reservation row is inserted and flushed before the decrement, so a\nduplicate can never touch the stock. The same key with a different product or\nquantity is a conflict, and a request without a key keeps the previous\nbehaviour. The key travels as an optional Idempotency-Key header so no request\nshape changed. The reserve response also carried a null reservation id because\nthe managed copy was discarded by the version check, which left the order side\nholding a null reservation that its compensation could not release; the reserve\nnow uses the entity returned by the save.\n\nOI-02: a failed stock release in the confirmation compensation was swallowed,\nso the stock stayed reserved forever. The failure is now recorded in the\nexisting failed_compensations ledger with the new reservation and promotion\nkinds, and a sweeper claims the due entries with one conditional update, so\nexactly one replica dispatches each entry, and the attempt count is bounded.\n\nSEC-02: the delegated order read returned the delivered order items of any\nuser to any service-role client. The endpoint now answers the eligibility\nquestion it actually exists for and returns the determination and the count,\nso no cross-user order data leaves the service, and the caller is checked\nagainst the platform service allow list. The rating service reads the new\ncontract and no longer receives another user's order lines.\n\nSL-08, SL-35, SL-34, SL-05, SL-36: the consumer wire mapper is now a Jackson 3\nmapper that tolerates an additive event field while a malformed record is still\nrejected into the dead-letter path, every listener factory has a dead-letter\nrecoverer so an exhausted record is published rather than skipped, the replay\nendpoint requires an administrative role and validates the topic against the\ntopic contract, the replay keeps its offsets so a record is published once in\ntotal, and the shared consumer configuration pins the commit semantics instead\nof inheriting a framework default.\n\nCAT-01: the search projection applied every product event unconditionally, so an\nevent describing an older state rolled the document back. The event already\ncarries the producer timestamp, and the index now writes with the external\nversion semantics, so a stale event is rejected and a redelivered event is a\nno-op. The conflict is handled on the exception type the configured transport\nactually raises, which was an unreachable branch before, so a stale event is\nignored instead of failing the index write.\n\nCAT-07: the promotion quota was enforced by a read-then-write count, so two\nconcurrent redemptions of the last coupon both won. The quota is now claimed by\nan atomic conditional statement per user and per campaign, the counters are\nreleased when the reservation is released, and the schema change is additive.\n\nThe authorization guard is now declared by its own auto-configuration, so the\nbean exists whenever the platform security classes are on the classpath and not\nonly when the web security posture is enabled.\n\nVerified by ./mvnw -B -ntp clean verify, exit 0, 2030 tests, 0 failures, 0\nerrors, 0 skipped. The comment compliance gate reports zero prohibited\ncomments across 1136 files and proves 1074 changed files byte identical to the\nbaseline once the same comments are removed.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T03:52:02Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "59ae0c05092a8b95ad2f02d6fd6c647e38240d5a",
+        "detail": "chore(e2e): make the end-to-end environment reproducible and the payment contract explicit\n\nThe compose stack could not start two of its services and the payment flow\ncould not be exercised end to end, so the environment is fixed and the\ncorrection is recorded.\n\nshipping-service declared spring-boot-restclient with test scope, which\noverrode the compile scoped dependency the shared library provides, so the\nRestClient.Builder auto configuration was absent at runtime and the service\ncould not start at all. The same wrong scope in payment-service and\nrating-service is removed. The compose stack also never supplied the GHTK\nwebhook secret that the shipping configuration requires, so the container\ncould not start as shipped. Both the secret and the new proxy and outage\nsettings are now declared in the compose file and documented in the\nenvironment templates.\n\nThe Stripe provider endpoint is configurable, so the end-to-end run can use the\nofficial Stripe test server instead of a real account. No real payment is ever\ncreated and no real credential is ever used.\n\nThe rate-limit outage policy, the trusted proxy allow list and the Stripe\nendpoint are configuration, so they are declared in the compose file and in\nboth environment templates, and the gateway refuses to start when the\nforwarding header strategy would let the framework rewrite the client address.\n\nThe payment collection encoded the contract that a capture immediately marks a\npayment captured, which was the defect the provider confirmation work removed.\nA Stripe intent that was created without confirmation is confirmed by the\nclient, and the provider then notifies the platform, so the collection now\nasserts that a capture leaves the payment pending with a client secret, adds\na scenario that delivers a signed provider webhook, and then asserts that the\npayment is captured. The webhook is signed with the Stripe scheme in the\ncollection script, so the signature verification path is exercised rather than\nbypassed.\n\nThe end-to-end run of the business flow collection is now 42 assertions with 1\nremaining failure.",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T03:52:09Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "6c8377ca1df7b52f18585b446adaeb48832b0a85",
+        "detail": "fix(rating): report an upstream purchase-verification failure as a dependency failure",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:26Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "62fe05c5f06c338b36564e8d986c62400925dda3",
+        "detail": "fix(common-keycloak): one pooled service-token provider replaces five duplicated clients",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:31Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "a65cd619fc3bcd6a94e49a2afbac1ed73152527a",
+        "detail": "fix(keycloak): give the service-account grant its own client id",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:35Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "e603e63a0f753750ca00016033b150574402ed60",
+        "detail": "fix(shipping): claim the parcel before the carrier call and harden the shipping pipeline",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:32:39Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "git add failed: fatal: pathspec 'harness/e2e/environment.py' did not match any files",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:32:48Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['production-audit/harness/e2e/collection_contract.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:32:52Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['production-audit/config/secret-scan-exceptions.json', 'production-audit/harness/e2e/collection_contract.py']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T06:37:57Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "ed6ffcac5a237c0a04d5e59a8c0353161da37615",
+        "detail": "fix(audit): replay the prerequisite folders in a scoped end-to-end run",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:38:42Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "d088f2afe7186219a1e2a71c64355465c6576a4e",
+        "detail": "chore(audit): record the verification state, the task ledger and the audit reports",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:47:26Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "c3738544408c0dd3f15cfe85da85ca01313b6757",
+        "detail": "docs(audit): record the tool-call hygiene rules for the agents in this repository",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T06:47:31Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "",
+        "detail": "secret scan failed: ['docker-compose.yml']",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "REJECTED_BY_GATES",
+        "timestamp": "2026-11-19T15:54:26Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "d99fc349a9da73e7f5ba569451e8946c33daa6ce",
+        "detail": "feat(payment): integrate real Stripe sandbox, harden health checks, and verify operations suite",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T15:54:52Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "2c1279bc30cb934e7111afbd0920a8eb040028de",
+        "detail": "feat(payment): integrate real Stripe sandbox without keys, harden health checks, and update harness state",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T16:02:47Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "b14dde9282e0e9782101d0d68d866b2287eb61f5",
+        "detail": "chore(inventory): synchronize manifest revision with HEAD commit 2c1279bc",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T16:03:00Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "cc25eb8b2de901e51e063e1cde86d5f72d7c38d1",
+        "detail": "chore(harness): finalize gates and delivery state verification",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T16:03:25Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "7a3f72e92f79988479ca02dac32549990acf6a49",
+        "detail": "docs(report): deliver comprehensive 36-section production readiness report",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T16:06:52Z"
+      },
+      {
+        "action": "commit",
+        "branch": "audit/production-hardening-run-20261118-a2b6e6fc",
+        "commit_sha": "ff6e578e5ecc3c319a56f5191491954be97ba35f",
+        "detail": "chore(harness): clean sync of verification evidence and delivery logs",
+        "exit_code": 0,
+        "remote": "",
+        "remote_branch": "",
+        "state": "COMMITTED",
+        "timestamp": "2026-11-19T16:07:23Z"
       }
     ]
   },
-  "revision": "ff6e578e5ecc3c319a56f5191491954be97ba35f",
+  "revision": "b8858b39102586e25ad2b380addaf06114a12952",
   "run_id": "run-20261118-a2b6e6fc",
   "tasks": {
     "count": 268,
     "states": {
       "BLOCKED": 0,
-      "DISCOVERED": 23,
+      "DISCOVERED": 8,
       "FAILED_VERIFICATION": 0,
       "IMPLEMENTED": 0,
       "IN_PROGRESS": 0,
       "NORMALIZED": 0,
-      "READY": 186,
+      "READY": 172,
       "REOPENED": 0,
       "REQUIREMENT_CONFLICT": 0,
-      "VERIFIED": 59,
+      "VERIFIED": 88,
       "VERIFYING": 0
     }
   }

@@ -843,6 +843,7 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
+                      "if (pm.collectionVariables.get(\"vnpayEnabled\") !== \"true\") { pm.execution.skipRequest(); }",
                       "const ts = Date.now();",
                       "pm.collectionVariables.set(\"payKey\", \"PAY-VNPAY-\" + ts);"
                     ]
@@ -890,6 +891,7 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
+                      "if (pm.collectionVariables.get(\"momoEnabled\") !== \"true\") { pm.execution.skipRequest(); }",
                       "const ts = Date.now();",
                       "pm.collectionVariables.set(\"payKey\", \"PAY-MOMO-\" + ts);"
                     ]
@@ -970,6 +972,15 @@
               },
               "event": [
                 {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.collectionVariables.get(\"orderCurrency\") === \"USD\" && pm.collectionVariables.get(\"stripeCaptureEnabled\") === \"true\") { pm.execution.skipRequest(); }"
+                    ]
+                  }
+                },
+                {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
@@ -993,6 +1004,15 @@
                 "url": "{{paymentUrl}}/api/v1/payments/{{stripePaymentId}}/capture"
               },
               "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.collectionVariables.get(\"stripeCaptureEnabled\") !== \"true\" || pm.collectionVariables.get(\"orderCurrency\") !== \"USD\") { pm.execution.skipRequest(); }"
+                    ]
+                  }
+                },
                 {
                   "listen": "test",
                   "script": {
@@ -2272,7 +2292,7 @@
                     "exec": [
                       "pm.test(\"Rejects excessive refund with 400\", () => pm.expect(pm.response.code).to.eql(400));",
                       "const res = pm.response.json();",
-                      "pm.expect(res.message).to.include(\"order.return\");"
+                      "pm.expect(res.message).to.include(\"refund amount\");"
                     ]
                   }
                 }

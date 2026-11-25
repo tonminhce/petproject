@@ -5,6 +5,7 @@ import hmac
 import json
 import os
 import secrets
+import signal
 import shutil
 import string
 import subprocess
@@ -13,11 +14,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .. import config
+from ..inventory.scanner import harness_fingerprint, source_fingerprint
 from ..persistence.store import read_json, utc_now, write_json
+from ..reconciliation.reconcile import current_revision
 from .recorder import Recorder
 
 PUBLIC_STRIPE_API = "https://api.stripe.com"
@@ -100,6 +104,76 @@ def _docker(args: list[str], timeout: int = 180) -> tuple[int, str, str]:
     return _run(["docker"] + args, timeout)
 
 
+class _StandaloneContainers:
+
+    def __init__(self) -> None:
+        self.names: list[str] = []
+
+    def add(self, container: str) -> None:
+        if container not in self.names:
+            self.names.append(container)
+
+    def cleanup(self) -> None:
+        failed: list[str] = []
+        for container in reversed(tuple(self.names)):
+            try:
+                code, _, _ = _docker(["rm", "-f", container], timeout=120)
+                if code != 0:
+                    failed.append(container)
+            except BaseException:
+                failed.append(container)
+        self.names = failed
+        if failed:
+            raise RuntimeError("standalone containers could not be removed: " + ", ".join(failed))
+
+
+@contextmanager
+def _sigterm_interrupt() -> Iterator[None]:
+    previous = signal.getsignal(signal.SIGTERM)
+
+    def interrupt(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, interrupt)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+@contextmanager
+def _recorder(upstream: str, port: int) -> Iterator[Recorder]:
+    recorder = Recorder(upstream=upstream, port=port)
+    started = False
+    try:
+        recorder.start()
+        started = True
+        yield recorder
+    except BaseException:
+        try:
+            if started:
+                recorder.stop()
+            else:
+                recorder.server.server_close()
+        except BaseException:
+            pass
+        raise
+    else:
+        if started:
+            recorder.stop()
+        else:
+            recorder.server.server_close()
+
+
+def _acceptance_binding() -> dict[str, str]:
+    repository = config.repository_root()
+    return {
+        "revision": current_revision(repository),
+        "source_fingerprint": source_fingerprint(repository),
+        "harness_fingerprint": harness_fingerprint(repository),
+    }
+
+
 def _fingerprint(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
@@ -133,8 +207,13 @@ def resolve_credential(values: dict[str, str]) -> dict[str, str]:
         or ""
     ).strip()
     mode = "real-test" if api_base == PUBLIC_STRIPE_API and secret_key.startswith("sk_test_") else "generated-mock"
-    if mode == "real-test" and not webhook_secret:
-        mode = "real-missing-webhook-secret"
+    placeholder_secret = (
+        not webhook_secret.startswith("whsec_")
+        or "local" in webhook_secret.lower()
+        or "placeholder" in webhook_secret.lower()
+    )
+    if mode == "real-test" and placeholder_secret:
+        mode = "real-test-local-webhook"
     return {
         "mode": mode,
         "api_base": api_base,
@@ -173,10 +252,11 @@ def stripe_mock_version(container: str = STRIPE_MOCK_CONTAINER) -> str:
     return ""
 
 
-def ensure_stripe_mock() -> dict[str, Any]:
+def ensure_stripe_mock(containers: _StandaloneContainers) -> dict[str, Any]:
     STATE_DIRECTORY.mkdir(parents=True, exist_ok=True)
     MOCK_STATE_DIRECTORY.mkdir(parents=True, exist_ok=True)
     _docker(["rm", "-f", STRIPE_MOCK_CONTAINER], timeout=60)
+    containers.add(STRIPE_MOCK_CONTAINER)
     _docker(
         [
             "run", "-d", "--name", STRIPE_MOCK_CONTAINER,
@@ -248,6 +328,9 @@ def ensure_payment_service(
     webhook_secret: str,
     api_base: str,
     payment_method: str = "pm_card_visa",
+    *,
+    containers: _StandaloneContainers,
+    auto_confirm: bool = True,
 ) -> dict[str, Any]:
     code, _, _ = _docker(["inspect", "-f", "{{.State.Running}}", PAYMENT_CONTAINER], timeout=60)
     if code == 0:
@@ -263,7 +346,7 @@ def ensure_payment_service(
         "SHOP_PAYMENT_STRIPE_SECRET_KEY": secret_key,
         "SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET": webhook_secret,
         "SHOP_PAYMENT_STRIPE_SANDBOX": "true",
-        "SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX": "true",
+        "SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX": "true" if auto_confirm else "false",
         "SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD": payment_method,
         "PAYMENT_WEBHOOK_SECRET": values.get("PAYMENT_WEBHOOK_SECRET", "local-webhook-secret"),
         "SHOP_KAFKA_BOOTSTRAP_SERVERS": "kafka:9092",
@@ -283,6 +366,7 @@ def ensure_payment_service(
     for name, value in environment.items():
         command.extend(["-e", name + "=" + value])
     command.append("payment-service:latest")
+    containers.add(PAYMENT_CONTAINER)
     code, out, err = _docker(command[1:], timeout=300)
     if code != 0:
         return {"state": "failed", "exit_code": code, "output": (out + err)[-2000:]}
@@ -309,6 +393,7 @@ def ensure_payment_service(
         "stripe_api_base": api_base,
         "provider": "stripe",
         "sandbox_payment_method": payment_method,
+        "auto_confirm_sandbox": auto_confirm,
         "exit_code": 0,
     }
 
@@ -493,17 +578,76 @@ def _intent_calls(wire: list[dict[str, Any]]) -> int:
     return len([record for record in wire if record["path"].startswith("/v1/payment_intents")])
 
 
-def _intent_status(wire: list[dict[str, Any]]) -> str:
+def _intent_object(wire: list[dict[str, Any]]) -> dict[str, Any]:
     for record in reversed(wire):
         body = record.get("response_body")
+        if isinstance(body, dict) and body.get("object") == "payment_intent":
+            return body
         if isinstance(body, str):
             try:
                 document = json.loads(body)
             except json.JSONDecodeError:
                 continue
             if isinstance(document, dict) and document.get("object") == "payment_intent":
-                return str(document.get("status", ""))
-    return ""
+                return document
+    return {}
+
+
+def _intent_status(wire: list[dict[str, Any]]) -> str:
+    return str(_intent_object(wire).get("status", ""))
+
+
+def _refund_requests(wire: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        record
+        for record in wire
+        if record.get("method") == "POST" and str(record.get("path", "")).startswith("/v1/refunds")
+    ]
+
+
+def _refund_objects(wire: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    objects: list[dict[str, Any]] = []
+    for record in wire:
+        if not record["path"].startswith("/v1/refunds"):
+            continue
+        body = record.get("response_body")
+        if isinstance(body, dict) and body.get("object") == "refund":
+            objects.append(body)
+        elif isinstance(body, str):
+            try:
+                document = json.loads(body)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(document, dict) and document.get("object") == "refund":
+                objects.append(document)
+    return objects
+
+
+def _confirm_provider_intent(
+    base_url: str,
+    secret_key: str,
+    intent_id: str,
+    payment_method: str,
+) -> tuple[int, Any]:
+    body = urllib.parse.urlencode(
+        {"payment_method": payment_method, "return_url": "https://shop.example.com/checkout/complete"}
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        base_url + "/v1/payment_intents/" + intent_id + "/confirm",
+        data=body,
+        method="POST",
+        headers={"Authorization": "Bearer " + secret_key, "Content-Type": "application/x-www-form-urlencoded"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        raw = error.read().decode("utf-8")
+        try:
+            document = json.loads(raw)
+        except json.JSONDecodeError:
+            document = {"raw": raw}
+        return error.code, document
 
 
 def _case_document(
@@ -600,12 +744,33 @@ def _mock_request_count(lines: list[str]) -> int:
 
 
 def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
+    binding = _acceptance_binding()
     identifier = run_id or config.run_identifier()
+    containers = _StandaloneContainers()
+    with _sigterm_interrupt():
+        try:
+            document = _run_acceptance(identifier, binding, containers)
+        except BaseException:
+            try:
+                containers.cleanup()
+            except BaseException:
+                pass
+            raise
+        containers.cleanup()
+    document.update(binding)
+    return document
+
+
+def _run_acceptance(
+    identifier: str,
+    binding: dict[str, str],
+    containers: _StandaloneContainers,
+) -> dict[str, Any]:
     values = _dotenv(config.repository_root() / ".env")
     credential = resolve_credential(values)
-    real_api = credential["mode"] == "real-test"
+    real_api = credential["mode"].startswith("real-test")
     secret_key = credential["secret_key"] if real_api else "sk_" + "test_" + _random_suffix(32)
-    webhook_secret = credential["webhook_secret"] if real_api else "whsec_" + _random_suffix(40)
+    webhook_secret = credential["webhook_secret"] if credential["mode"] == "real-test" else "whsec_" + _random_suffix(40)
     probe: dict[str, Any] = {}
     if real_api:
         probe = probe_credential(secret_key)
@@ -613,6 +778,7 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             document: dict[str, Any] = {
                 "generated_at": utc_now(),
                 "run_id": identifier,
+                **binding,
                 "stripe_server": {
                     "kind": "real-stripe-api",
                     "is_public_stripe_api": True,
@@ -652,17 +818,19 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         }
         recorder_upstream = PUBLIC_STRIPE_API
     else:
-        server = ensure_stripe_mock()
+        server = ensure_stripe_mock(containers)
         recorder_upstream = "http://127.0.0.1:" + str(MOCK_HTTP_PORT)
     compose = ensure_compose_services(["postgres", "keycloak", "kafka", "rustfs"])
-    recorder = Recorder(upstream=recorder_upstream, port=RECORDER_PORT)
-    recorder.start()
-    try:
+    with _recorder(recorder_upstream, RECORDER_PORT) as recorder:
         recorder_address = "http://host.docker.internal:" + str(RECORDER_PORT)
-        service = ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
+        recorder_host_address = "http://127.0.0.1:" + str(RECORDER_PORT)
+        service = ensure_payment_service(
+            values, secret_key, webhook_secret, recorder_address, containers=containers
+        )
         document: dict[str, Any] = {
             "generated_at": utc_now(),
             "run_id": identifier,
+            **binding,
             "stripe_server": server,
             "wire_recorder": {
                 "address": recorder_address,
@@ -694,8 +862,8 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
                 "webhook_secret_source": (
                     "SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET from the process environment; the signing secret that Stripe "
                     "issued for the real webhook endpoint of the account"
-                    if real_api
-                    else "generated for the run because no Stripe account issued one"
+                    if credential["mode"] == "real-test"
+                    else "generated locally for signature mechanics because no verifiable Stripe-issued webhook secret is available; actual delivery remains not proven"
                 ),
                 "credential_probe": probe,
             },
@@ -723,12 +891,21 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         wire = recorder.since(wire_mark)
         intent_id = str(_payment_body(capture_document).get("providerIntentId", ""))
         intent_call = [record for record in wire if record["path"] == "/v1/payment_intents"]
+        intent_object = _intent_object(wire)
+        provider_intent_proven = not real_api or (
+            intent_object.get("id") == intent_id
+            and (intent_object.get("metadata") or {}).get("payment_id") == payment_id
+            and intent_object.get("status") == "succeeded"
+            and intent_object.get("amount") == 24999
+            and str(intent_object.get("currency", "")).lower() == PAYMENT_CURRENCY.lower()
+        )
         capture_proven = (
             create_status == 200
             and capture_status == 200
             and bool(intent_id)
             and bool(intent_call)
             and intent_call[-1]["status"] == 200
+            and provider_intent_proven
         )
         cases.append(
             _case_document(
@@ -773,8 +950,36 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             )
         )
 
+        refund_payment_id = payment_id
+        refund_intent_id = intent_id
+        refund_order_id = order_id
+        _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
+        webhook_service = ensure_payment_service(
+            values,
+            secret_key,
+            webhook_secret,
+            recorder_address,
+            service.get("sandbox_payment_method", "pm_card_visa"),
+            containers=containers,
+            auto_confirm=False,
+        )
+        if webhook_service.get("state") != "running":
+            document["status"] = "BLOCKED"
+            document["reason"] = "the payment service could not start without automatic sandbox confirmation"
+            return document
+        platform = Platform(webhook_service["host_address"], token)
+        order_id, payment_id, create_status, create_document = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
+        initial_capture_status, initial_capture_document = _capture(platform, payment_id)
+        intent_id = str(_payment_body(initial_capture_document).get("providerIntentId", ""))
+        before_state = _read_payment(platform, order_id)
         platform_mark = platform.mark()
         wire_mark = recorder.marker()
+        confirm_status, confirm_document = _confirm_provider_intent(
+            recorder_host_address,
+            secret_key,
+            intent_id,
+            webhook_service.get("sandbox_payment_method", "pm_card_visa"),
+        ) if real_api else (200, {})
         event_id = "evt_acceptance_" + _random_suffix(24)
         signed_status, signed_document = _deliver_capture_event(
             platform, webhook_secret, payment_id, intent_id, 24999, PAYMENT_CURRENCY, event_id
@@ -784,16 +989,28 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         )
         state = _read_payment(platform, order_id)
         wire = recorder.since(wire_mark)
+        intent_object = _intent_object(wire)
+        provider_confirmed = not real_api or (
+            confirm_status == 200
+            and intent_object.get("status") == "succeeded"
+            and intent_object.get("amount") == 24999
+            and str(intent_object.get("currency", "")).lower() == PAYMENT_CURRENCY.lower()
+        )
         webhook_proven = (
-            signed_status == 200
+            create_status == 200
+            and initial_capture_status == 200
+            and bool(intent_id)
+            and str(before_state.get("status", "")) != "CAPTURED"
+            and provider_confirmed
+            and signed_status == 200
             and tamper_status >= 400
             and str(state.get("status", "")) == "CAPTURED"
         )
         cases.append(
             _case_document(
                 "capture_webhook_signature_verified",
-                VERDICT_PROVEN if webhook_proven else VERDICT_FAILED,
-                "the signed provider event moved the payment to CAPTURED and the event with a forged signature was refused with "
+                VERDICT_NOT_PROVEN if real_api else (VERDICT_PROVEN if webhook_proven else VERDICT_FAILED),
+                "the harness-signed event moved the payment to CAPTURED and the event with a forged signature was refused with "
                 + str(tamper_status)
                 + " "
                 + _error_code(tamper_document),
@@ -819,6 +1036,11 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
                     "signed_webhook_body": signed_document,
                     "forged_signature_status": tamper_status,
                     "forged_signature_body": tamper_document,
+                    "payment_status_before_webhook": before_state.get("status"),
+                    "actual_stripe_delivery": False,
+                    "delivery_source": "harness-signed",
+                    "provider_confirm_status": confirm_status,
+                    "provider_confirm_response": confirm_document,
                     "payment_status": state.get("status"),
                     "provider_intent_id": state.get("providerIntentId"),
                 },
@@ -828,10 +1050,27 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         platform_mark = platform.mark()
         wire_mark = recorder.marker()
         refund_reference = str(uuid.uuid4())
-        refund_status, refund_document = _refund(platform, payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
+        refund_status, refund_document = _refund(platform, refund_payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
         wire = recorder.since(wire_mark)
         refunded = _payment_body(refund_document)
-        refund_proven = refund_status == 200 and str(refunded.get("status", "")) == "REFUNDED"
+        refund_objects = _refund_objects(wire)
+        refund_requests = _refund_requests(wire)
+        provider_refund = (
+            len(refund_requests) == 1
+            and refund_requests[0].get("status") == 200
+            and len(refund_objects) == 1
+            and bool(refund_objects[0].get("id"))
+            and refund_objects[0].get("status") == "succeeded"
+            and refund_objects[0].get("amount") == 24999
+            and refund_objects[0].get("payment_intent") == refund_intent_id
+            and str(refund_objects[0].get("currency", "")).lower() == PAYMENT_CURRENCY.lower()
+        )
+        refund_proven = (
+            refund_status == 200
+            and str(refunded.get("status", "")) == "REFUNDED"
+            and float(refunded.get("refundedAmount", 0)) == 249.99
+            and provider_refund
+        )
         cases.append(
             _case_document(
                 "refund",
@@ -852,12 +1091,23 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
 
         platform_mark = platform.mark()
         wire_mark = recorder.marker()
-        replay_status, replay_document = _refund(platform, payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
+        replay_status, replay_document = _refund(platform, refund_payment_id, 249.99, PAYMENT_CURRENCY, refund_reference)
         wire = recorder.since(wire_mark)
         replayed = _payment_body(replay_document)
+        lookup_status, lookup_document = platform.call(
+            "GET",
+            PAYMENT_API + "/by-order/" + refund_order_id + "/refundable?refundReference=" + refund_reference,
+        )
+        lookup = _payment_body(lookup_document)
         replay_proven = (
             replay_status == 200
             and str(replayed.get("status", "")) == "REFUNDED"
+            and float(replayed.get("refundedAmount", 0)) == 249.99
+            and str(replayed.get("id", "")) == refund_payment_id
+            and lookup_status == 200
+            and str(lookup.get("id", "")) == refund_payment_id
+            and str(lookup.get("refundedReference", "")) == refund_reference
+            and float(lookup.get("refundedAmount", 0)) == 249.99
             and _refund_calls(wire) == 0
         )
         cases.append(
@@ -873,11 +1123,23 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
                     "replay_status": replay_status,
                     "replay_payment_status": replayed.get("status"),
                     "replay_refunded_amount": replayed.get("refundedAmount"),
+                    "replay_reference": replayed.get("refundReference"),
+                    "expected_reference": refund_reference,
+                    "replay_payment_id": replayed.get("id"),
+                    "expected_payment_id": refund_payment_id,
+                    "ledger_lookup_status": lookup_status,
+                    "ledger_lookup_reference": lookup.get("refundedReference"),
+                    "ledger_lookup_payment_id": lookup.get("id"),
                     "provider_refund_calls_during_replay": _refund_calls(wire),
                 },
             )
         )
 
+        _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
+        ensure_payment_service(
+            values, secret_key, webhook_secret, recorder_address, containers=containers
+        )
+        platform = Platform(webhook_service["host_address"], token)
         platform_mark = platform.mark()
         wire_mark = recorder.marker()
         order_id, payment_id, create_status, create_document = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
@@ -890,7 +1152,24 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         partial_status, partial_document = _refund(platform, payment_id, 50.00, PAYMENT_CURRENCY, first_reference)
         wire = recorder.since(wire_mark)
         partial = _payment_body(partial_document)
-        partial_proven = partial_status == 200 and str(partial.get("status", "")) == "PARTIALLY_REFUNDED"
+        partial_objects = _refund_objects(wire)
+        partial_requests = _refund_requests(wire)
+        provider_partial = (
+            len(partial_requests) == 1
+            and partial_requests[0].get("status") == 200
+            and len(partial_objects) == 1
+            and bool(partial_objects[0].get("id"))
+            and partial_objects[0].get("status") == "succeeded"
+            and partial_objects[0].get("amount") == 5000
+            and partial_objects[0].get("payment_intent") == intent_id
+            and str(partial_objects[0].get("currency", "")).lower() == PAYMENT_CURRENCY.lower()
+        )
+        partial_proven = (
+            partial_status == 200
+            and str(partial.get("status", "")) == "PARTIALLY_REFUNDED"
+            and float(partial.get("refundedAmount", 0)) == 50.00
+            and provider_partial
+        )
         cases.append(
             _case_document(
                 "partial_refund",
@@ -913,10 +1192,23 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         second_status, second_document = _refund(platform, payment_id, 25.00, PAYMENT_CURRENCY, second_reference)
         wire = recorder.since(wire_mark)
         second = _payment_body(second_document)
+        second_objects = _refund_objects(wire)
+        second_requests = _refund_requests(wire)
+        provider_second = (
+            len(second_requests) == 1
+            and second_requests[0].get("status") == 200
+            and len(second_objects) == 1
+            and bool(second_objects[0].get("id"))
+            and second_objects[0].get("status") == "succeeded"
+            and second_objects[0].get("amount") == 2500
+            and second_objects[0].get("payment_intent") == intent_id
+            and str(second_objects[0].get("currency", "")).lower() == PAYMENT_CURRENCY.lower()
+        )
         second_proven = (
             second_status == 200
             and str(second.get("status", "")) == "PARTIALLY_REFUNDED"
             and float(second.get("refundedAmount", 0)) == 75.00
+            and provider_second
         )
         cases.append(
             _case_document(
@@ -938,7 +1230,12 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         wire_mark = recorder.marker()
         _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
         decline_service = ensure_payment_service(
-            values, secret_key, webhook_secret, recorder_address, DECLINE_PAYMENT_METHOD
+            values,
+            secret_key,
+            webhook_secret,
+            recorder_address,
+            DECLINE_PAYMENT_METHOD,
+            containers=containers,
         )
         decline_order, decline_payment, decline_create_status, decline_create_document = _create_payment(
             platform, 40.00, PAYMENT_CURRENCY
@@ -1056,11 +1353,13 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
                 )
             )
         _docker(["rm", "-f", PAYMENT_CONTAINER], timeout=120)
-        ensure_payment_service(values, secret_key, webhook_secret, recorder_address)
+        ensure_payment_service(
+            values, secret_key, webhook_secret, recorder_address, containers=containers
+        )
 
         platform_mark = platform.mark()
         wire_mark = recorder.marker()
-        mismatch_order, mismatch_payment, _, _ = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
+        mismatch_order, mismatch_payment, mismatch_create_status, _ = _create_payment(platform, 249.99, PAYMENT_CURRENCY)
         mismatch_capture_status, mismatch_capture_document = _capture(platform, mismatch_payment)
         mismatch_intent = str(_payment_body(mismatch_capture_document).get("providerIntentId", ""))
         _deliver_capture_event(
@@ -1072,11 +1371,21 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
             PAYMENT_CURRENCY,
             "evt_acceptance_" + _random_suffix(24),
         )
+        mismatch_before_refund = _read_payment(platform, mismatch_order)
         mismatch_status, mismatch_document = _refund(
             platform, mismatch_payment, 10.00, "VND", str(uuid.uuid4())
         )
         mismatch_wire = recorder.since(wire_mark)
-        mismatch_proven = mismatch_status >= 400 and _refund_calls(mismatch_wire) == 0
+        mismatch_proven = (
+            mismatch_create_status == 200
+            and mismatch_capture_status == 200
+            and bool(mismatch_intent)
+            and mismatch_before_refund.get("status") == "CAPTURED"
+            and str(mismatch_before_refund.get("currency", "")).upper() == PAYMENT_CURRENCY
+            and _error_code(mismatch_document) in ("PAYMENT_CURRENCY_MISMATCH", "PAY-5010")
+            and "currency" in _error_message(mismatch_document).lower()
+            and _refund_calls(mismatch_wire) == 0
+        )
         cases.append(
             _case_document(
                 "currency_mismatch_refusal",
@@ -1094,6 +1403,8 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
                     "refund_code": _error_code(mismatch_document),
                     "refund_message": _error_message(mismatch_document),
                     "provider_refund_calls": _refund_calls(mismatch_wire),
+                    "payment_status_before_refund": mismatch_before_refund.get("status"),
+                    "payment_currency_before_refund": mismatch_before_refund.get("currency"),
                 },
             )
         )
@@ -1171,8 +1482,7 @@ def run_acceptance(run_id: str | None = None) -> dict[str, Any]:
         log_lines = _mock_log()
         document["stripe_server_log"] = log_lines
         return document
-    finally:
-        recorder.stop()
+
 
 def evidence_directory(run_id: str | None = None) -> Path:
     identifier = run_id or config.run_identifier()
@@ -1188,6 +1498,8 @@ def write_evidence(document: dict[str, Any], run_id: str | None = None) -> Path:
     server["summary"] = document.get("summary")
     server["verified_against_real_stripe_api"] = document.get("verified_against_real_stripe_api")
     server["stripe_api_base_of_record"] = document.get("stripe_api_base_of_record")
+    for name in ("revision", "source_fingerprint", "harness_fingerprint"):
+        server[name] = document.get(name, "")
     write_json(directory / "server.json", server)
     return directory / "acceptance.json"
 

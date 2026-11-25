@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PaymentStripeLiveKeyGuardTest {
 
     private static PaymentStripeProperties properties(String secretKey) {
-        return new PaymentStripeProperties(secretKey, null, null, null, false, true, false, "pm_card_visa");
+        return new PaymentStripeProperties(secretKey, null, null, null, false, true, false, "pm_card_visa", null, true);
     }
 
     @Test

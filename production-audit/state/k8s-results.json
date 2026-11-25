@@ -1,6 +1,7 @@
 {
   "action": "validate",
   "result": {
+    "blocked_checks": [],
     "checks": [
       {
         "detail": "every manifest parses",
@@ -110,8 +111,9 @@
       {
         "detail": "the autoscaler was observed on a real cluster to scale up under a load and to scale back down",
         "evidence": [
-          "replicas before=2 under load=10 after load=2",
-          "load: 197861 requests at 600 per second against http://gateway-service.shop-system.svc.cluster.local:8080/actuator/prometheus"
+          "manifest fingerprint: 694d221a5f1650f054f1e1857e1e59c1179d14e9b5cc01d04409e2514f58f89f",
+          "replicas before=3 under load=8 after load=3",
+          "load: 215305 requests at 598.055683 per second against http://gateway-service.shop-system.svc.cluster.local:8080/actuator/prometheus"
         ],
         "id": "K8S-14",
         "name": "AUTOSCALING_OBSERVATION",
@@ -137,5 +139,5 @@
     ],
     "status": "PASS"
   },
-  "updated_at": "2026-11-22T06:17:44Z"
+  "updated_at": "2026-11-25T04:59:12Z"
 }

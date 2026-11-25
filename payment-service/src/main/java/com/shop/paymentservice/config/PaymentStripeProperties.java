@@ -11,7 +11,9 @@ public record PaymentStripeProperties(
         boolean connect,
         boolean sandbox,
         boolean autoConfirmSandbox,
-        String sandboxPaymentMethod) {
+        String sandboxPaymentMethod,
+        String returnUrl,
+        boolean allowRedirects) {
 
     public static PaymentStripeProperties of(
             String secretKey,
@@ -19,7 +21,7 @@ public record PaymentStripeProperties(
             String apiVersion,
             String apiBase,
             boolean connect) {
-        return new PaymentStripeProperties(secretKey, webhookSecret, apiVersion, apiBase, connect, true, false, "pm_card_visa");
+        return new PaymentStripeProperties(secretKey, webhookSecret, apiVersion, apiBase, connect, true, false, "pm_card_visa", null, true);
     }
 
     public PaymentStripeProperties {
@@ -44,7 +46,18 @@ public record PaymentStripeProperties(
         if (sandboxPaymentMethod == null || sandboxPaymentMethod.isBlank()) {
             sandboxPaymentMethod = "pm_card_visa";
         }
+        if (returnUrl == null || returnUrl.isBlank()) {
+            returnUrl = DEFAULT_RETURN_URL;
+        } else {
+            returnUrl = returnUrl.trim();
+        }
     }
+
+    /**
+     * Stripe refuses to confirm a PaymentIntent that was created with automatic payment methods
+     * unless the intent carries a return url, so every intent carries one.
+     */
+    public static final String DEFAULT_RETURN_URL = "https://shop.example.com/checkout/complete";
 
     public boolean isConfigured() {
         return !secretKey.isBlank();

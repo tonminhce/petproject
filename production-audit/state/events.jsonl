@@ -286,3 +286,22 @@
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-22T06:43:38Z", "type": "load_recovery"}
 {"payload": {"file_count": 1521, "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2"}, "timestamp": "2026-11-22T06:43:40Z", "type": "inventory"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-22T06:43:51Z", "type": "alerts_validate"}
+{"payload": {"file_count": 1522, "revision": "b8858b39102586e25ad2b380addaf06114a12952"}, "timestamp": "2026-11-25T00:30:04Z", "type": "inventory"}
+{"payload": {"file_count": 1522, "revision": "b8858b39102586e25ad2b380addaf06114a12952"}, "timestamp": "2026-11-25T00:52:38Z", "type": "inventory"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T01:52:08Z", "type": "alerts_validate"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-25T01:52:10Z", "type": "k8s_validate"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T01:57:01Z", "type": "load_baseline"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:01:36Z", "type": "load_ramp"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-25T02:03:05Z", "type": "load_spike"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:14:37Z", "type": "load_sustained-peak"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:18:50Z", "type": "load_flash-sale"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:23:14Z", "type": "load_promotion-storm"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:27:54Z", "type": "load_kafka-backlog"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:31:27Z", "type": "load_failure-during-peak"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:33:47Z", "type": "load_recovery"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T02:55:21Z", "type": "load_soak"}
+{"payload": {"file_count": 1522, "revision": "b8858b39102586e25ad2b380addaf06114a12952"}, "timestamp": "2026-11-25T02:55:28Z", "type": "inventory"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T04:16:47Z", "type": "load_baseline"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T04:56:48Z", "type": "k8s_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T04:59:12Z", "type": "k8s_validate"}
+{"payload": {"file_count": 1522, "revision": "b8858b39102586e25ad2b380addaf06114a12952"}, "timestamp": "2026-11-25T05:01:32Z", "type": "inventory"}

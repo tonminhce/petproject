@@ -1,13 +1,13 @@
 # No-Comment Compliance
 
-Generated: 2026-11-19T22:33:06Z
+Generated: 2026-11-25T02:55:41Z
 
 ## Result
 
-- Files scanned: 1222
-- Total comments found: 10
+- Files scanned: 1294
+- Total comments found: 11
 - Prohibited comments remaining: 0
-- Preserved by policy: 10
+- Preserved by policy: 11
 - Files with violations: 0
 
 ## Equivalence proof

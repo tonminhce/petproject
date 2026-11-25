@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import time
 import urllib.parse
 import urllib.request
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +38,65 @@ K6_RUN_TIMEOUT_SECONDS = 2400
 
 def results_root() -> Path:
     return config.run_root() / "load-results"
+
+
+def purge_token_residue(root: Path | None = None) -> dict[str, int]:
+    base = root or results_root()
+    files = list(base.rglob("customer-tokens.txt")) if base.exists() else []
+    size = 0
+    for path in files:
+        try:
+            size += path.stat().st_size
+            path.unlink()
+        except FileNotFoundError:
+            pass
+    return {"removed": len(files), "bytes": size}
+
+
+def reset_commerce_data() -> dict[str, Any]:
+    from .invariants import psql
+
+    results: dict[str, Any] = {}
+    for database, table in (("paymentservice", "payments"), ("orderservice", "orders")):
+        ok, rows = psql(database, "TRUNCATE TABLE " + table + " CASCADE")
+        results[database] = {"ok": ok, "detail": rows[:3]}
+    return {
+        "status": "PASS" if all(item["ok"] for item in results.values()) else "FAIL",
+        "databases": results,
+    }
+
+
+@contextmanager
+def _sigterm_interrupt() -> Iterator[None]:
+    previous = signal.getsignal(signal.SIGTERM)
+
+    def interrupt(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, interrupt)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+@contextmanager
+def _customer_token_file(output: Path, tokens: list[str]) -> Iterator[Path]:
+    path = output / "customer-tokens.txt"
+    descriptor = -1
+    try:
+        path.unlink(missing_ok=True)
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.fchmod(descriptor, 0o600)
+        stream = os.fdopen(descriptor, "w", encoding="utf-8")
+        descriptor = -1
+        with stream:
+            stream.write("\n".join(tokens) + ("\n" if tokens else ""))
+        yield path
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        path.unlink(missing_ok=True)
 
 
 def _docker_network() -> str:
@@ -131,17 +193,40 @@ def run_profile(
     network: str | None = None,
     token: str | None = None,
     run_invariants: bool = True,
+    output: Path | None = None,
 ) -> dict[str, Any]:
-    document = _measure_profile(
-        name,
-        scale=scale,
-        base_url=base_url,
-        network=network,
-        token=token,
-        run_invariants=run_invariants,
-    )
-    document["rate_limit_restore"] = restore_shipped_rate_limits()
-    return document
+    lifetime_state: dict[str, Any] = {"status": "NOT_REQUIRED"}
+    document: dict[str, Any] | None = None
+    try:
+        with _sigterm_interrupt():
+            document = _measure_profile(
+                name,
+                scale=scale,
+                base_url=base_url,
+                network=network,
+                token=token,
+                run_invariants=run_invariants,
+                lifetime_state=lifetime_state,
+                output=output,
+            )
+        return document
+    finally:
+        if lifetime_state.get("changed"):
+            try:
+                lifetime_state["restore"] = restore_token_lifetime(int(lifetime_state["original_seconds"]))
+            except Exception as error:
+                lifetime_state["restore"] = {"status": "ERROR", "reason": str(error)}
+        try:
+            rate_limit_restore = restore_shipped_rate_limits()
+        except Exception as error:
+            rate_limit_restore = {"status": "ERROR", "reason": str(error)}
+        if document is not None:
+            document["token_lifetime"] = lifetime_state
+            document["rate_limit_restore"] = rate_limit_restore
+            lifetime_restore_failed = lifetime_state.get("changed") and lifetime_state.get("restore", {}).get("status") != "READY"
+            if lifetime_restore_failed or rate_limit_restore.get("status") not in ("OK", "READY"):
+                document["status"] = "FAIL"
+                document["status_detail"] = "a test setting could not be restored"
 
 
 def _customer_pool(
@@ -199,7 +284,13 @@ def _measure_profile(
     network: str | None = None,
     token: str | None = None,
     run_invariants: bool = True,
+    lifetime_state: dict[str, Any] | None = None,
+    output: Path | None = None,
 ) -> dict[str, Any]:
+    if lifetime_state is None:
+        lifetime_state = {}
+    lifetime_state.clear()
+    lifetime_state["status"] = "NOT_REQUIRED"
     try:
         profile: Profile = resolve_profile(name, scale)
     except (KeyError, ValueError) as error:
@@ -214,7 +305,13 @@ def _measure_profile(
             "violations": violations,
         }
 
-    output = results_root() / (profile.name + "-" + str(int(time.time())))
+    if output is None:
+        root = results_root()
+        stamp = int(time.time())
+        output = root / (profile.name + "-" + str(stamp))
+        while output.exists():
+            stamp += 1
+            output = root / (profile.name + "-" + str(stamp))
     output.mkdir(parents=True, exist_ok=True)
     settle = wait_for_quiet_host()
     limiter = apply_load_test_rate_limits()
@@ -261,6 +358,7 @@ def _measure_profile(
         pool_size = profile.virtual_users
         required_lifetime = int(profile.duration_seconds) + 600
         lifetime = ensure_token_lifetime(seconds=required_lifetime)
+        lifetime_state.update(lifetime)
         if lifetime.get("status") != "READY":
             restore_shipped_rate_limits()
             return {
@@ -296,10 +394,6 @@ def _measure_profile(
                 "customer_pool": pool,
                 "rate_limit_override": limiter,
             }
-
-    (output / "customer-tokens.txt").write_text(
-        "\n".join(customer_tokens) + ("\n" if customer_tokens else ""), encoding="utf-8"
-    )
 
     if profile.scenario in CUSTOMER_POOL_SCENARIOS:
         pool_violations = _customer_pool_violations(profile, pool)
@@ -353,22 +447,23 @@ def _measure_profile(
         "k6",
     ]
 
-    started = time.time()
-    try:
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=K6_RUN_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        return {
-            "status": "FAIL",
-            "profile": profile.name,
-            "reason": "the load run exceeded the harness timeout",
-            "output": str(output),
-        }
+    with _customer_token_file(output, customer_tokens):
+        started = time.time()
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=K6_RUN_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "FAIL",
+                "profile": profile.name,
+                "reason": "the load run exceeded the harness timeout",
+                "output": str(output),
+            }
     elapsed = time.time() - started
 
     (output / "k6-stdout.log").write_text(result.stdout[-200000:], encoding="utf-8")

@@ -48,6 +48,8 @@ shop:
       sandbox: ${SHOP_PAYMENT_STRIPE_SANDBOX:true}
       auto-confirm-sandbox: ${SHOP_PAYMENT_STRIPE_AUTO_CONFIRM_SANDBOX:true}
       sandbox-payment-method: ${SHOP_PAYMENT_STRIPE_SANDBOX_PAYMENT_METHOD:pm_card_visa}
+      return-url: ${SHOP_PAYMENT_STRIPE_RETURN_URL:https://shop.example.com/checkout/complete}
+      allow-redirects: ${SHOP_PAYMENT_STRIPE_ALLOW_REDIRECTS:true}
     momo:
       enabled: ${SHOP_PAYMENT_MOMO_ENABLED:false}
       base-url: ${SHOP_PAYMENT_MOMO_BASE_URL:}

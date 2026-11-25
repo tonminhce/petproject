@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -7,7 +8,7 @@ from typing import Any
 
 from .. import config
 from ..persistence.store import read_json, utc_now, write_json
-from .profiles import requests_per_iteration
+from .profiles import profile_names, requests_per_iteration
 from .runner import results_root
 
 CAPACITY_STATE_KEY = "capacity_limit"
@@ -27,29 +28,6 @@ CURRENT_HARNESS_FIELDS = (
     "platform_error_rate",
 )
 PEAK_RATE_MARKER = "iterations/s"
-HARNESS_PATHS = (
-    "production-audit/harness/loadtesting",
-    "load-tests/k6-scenario.js",
-)
-SERVICE_PATHS = (
-    "auth-service",
-    "favourite-service",
-    "gateway-service",
-    "inventory-service",
-    "media-service",
-    "notification-service",
-    "order-service",
-    "payment-service",
-    "product-service",
-    "promotion-service",
-    "rating-service",
-    "search-service",
-    "shipping-service",
-    "tax-service",
-    "utils",
-)
-
-
 def capacity_state_path() -> Path:
     return config.state_root() / "performance-baselines.json"
 
@@ -88,13 +66,6 @@ def _stamp_to_utc(stamp: int) -> str:
     if stamp <= 0:
         return ""
     return datetime.fromtimestamp(stamp, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _iso_to_epoch(text: str) -> int:
-    try:
-        return int(datetime.strptime(text.strip(), "%Y-%m-%d %H:%M:%S %z").timestamp())
-    except ValueError:
-        return 0
 
 
 def _planned_peak_iteration_rate(directory: Path) -> float | None:
@@ -139,9 +110,68 @@ def _rate_ratio_denominator(document: dict[str, Any]) -> str:
     return "target_requests_per_second"
 
 
+def _finite_nonnegative(value: Any) -> bool:
+    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+
+
+def _row_validation_problems(document: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    metrics = document.get("metrics") or {}
+    invariants = document.get("invariants") or {}
+    if document.get("status") not in ("PASS", "FAIL", "BLOCKED"):
+        problems.append("status is invalid")
+    if document.get("measurement_valid") is not True:
+        problems.append("measurement_valid is not true")
+    for name in ("requests", "iterations", "business_success", "business_failure", "business_refusal", "shed_requests"):
+        if not _finite_nonnegative(metrics.get(name)):
+            problems.append("metric " + name + " is not finite and nonnegative")
+    for name in ("request_rate_per_second", "iteration_rate_per_second", "platform_error_rate", "transport_failure_rate"):
+        if not _finite_nonnegative(document.get(name) if name in document else metrics.get(name)):
+            problems.append("rate " + name + " is not finite and nonnegative")
+    if type(document.get("k6_exit_code")) is not int or document.get("k6_exit_code") != 0:
+        problems.append("k6 exit code is not zero")
+    from .invariants import EXERCISED_BY, INVARIANTS
+
+    expected_ids = {item["id"] for item in INVARIANTS}
+    invariant_rows = invariants.get("invariants") or []
+    recorded_ids = [row.get("id") for row in invariant_rows if isinstance(row, dict)]
+    if invariants.get("status") != "PASS" or invariants.get("failed") or not invariant_rows:
+        problems.append("invariants are incomplete or failed")
+    if len(recorded_ids) != len(invariant_rows) or len(set(recorded_ids)) != len(recorded_ids) or set(recorded_ids) != expected_ids:
+        problems.append("invariant IDs do not match the exact required set")
+    for row in invariant_rows:
+        if not isinstance(row, dict):
+            problems.append("invariant row is not an object")
+            continue
+        identifier = str(row.get("id") or "")
+        violations = row.get("violations")
+        if type(violations) is not int or violations < 0:
+            problems.append("invariant " + identifier + " has an invalid violation count")
+        if row.get("status") == "PASS" and violations != 0:
+            problems.append("invariant " + identifier + " passes with violations")
+        if row.get("status") == "SKIPPED" and str(document.get("scenario") or "") in EXERCISED_BY.get(identifier, ()):
+            problems.append("invariant " + identifier + " was skipped for an exercised scenario")
+        if row.get("status") not in ("PASS", "SKIPPED"):
+            problems.append("invariant " + identifier + " is not pass or skipped")
+    passed_ids = [row.get("id") for row in invariant_rows if isinstance(row, dict) and row.get("status") == "PASS"]
+    skipped_ids = [row.get("id") for row in invariant_rows if isinstance(row, dict) and row.get("status") == "SKIPPED"]
+    if sorted(invariants.get("passed") or []) != sorted(passed_ids) or sorted(invariants.get("skipped") or []) != sorted(skipped_ids):
+        problems.append("invariant aggregate lists do not match the rows")
+    reconciliation = document.get("load_generator_reconciliation") or {}
+    if reconciliation.get("consistent") is not True:
+        problems.append("load generator reconciliation is not consistent")
+    if (document.get("rate_limit_restore") or {}).get("status") not in ("OK", "READY"):
+        problems.append("gateway rate limits were not restored")
+    lifetime = document.get("token_lifetime") or {}
+    if lifetime.get("changed") and (lifetime.get("restore") or {}).get("status") != "READY":
+        problems.append("keycloak token lifetime was not restored")
+    return problems
+
+
 def _profile_row(directory: Path, document: dict[str, Any]) -> dict[str, Any]:
     metrics = document.get("metrics") or {}
     invariants = document.get("invariants") or {}
+    validation_problems = _row_validation_problems(document)
     iterations = _as_float(metrics.get("iterations"))
     requests = _as_float(metrics.get("requests"))
     delivered_iterations = metrics.get("iteration_rate_per_second")
@@ -185,9 +215,13 @@ def _profile_row(directory: Path, document: dict[str, Any]) -> dict[str, Any]:
         "shed_rate": document.get("shed_rate"),
         "transport_failure_rate": document.get("transport_failure_rate"),
         "platform_error_rate": document.get("platform_error_rate"),
-        "measurement_valid": bool(document.get("measurement_valid")),
+        "measurement_valid": document.get("measurement_valid") is True,
         "business_verdict": str(document.get("business_verdict") or ""),
         "current_harness_fields_missing": missing,
+        "validation_problems": validation_problems,
+        "revision": str(document.get("revision") or ""),
+        "source_fingerprint": str(document.get("source_fingerprint") or ""),
+        "harness_fingerprint": str(document.get("harness_fingerprint") or ""),
     }
 
 
@@ -245,7 +279,12 @@ def _limit_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     clean = [
         row
         for row in rows
-        if row["business_failure"] == 0
+        if row["status"] == "PASS"
+        and row["measurement_valid"] is True
+        and row["invariant_status"] == "PASS"
+        and not row["current_harness_fields_missing"]
+        and not row["validation_problems"]
+        and row["business_failure"] == 0
         and row["invariant_violations"] == 0
         and row["business_success"] > 0
     ]
@@ -261,37 +300,42 @@ def _breaking_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in rows if row["business_failure"] > 0 or row["invariant_violations"] > 0]
 
 
-def _commits_after(repository: Path, paths: tuple[str, ...], after_epoch: int) -> list[dict[str, Any]]:
-    command = [
-        "git",
-        "-C",
-        str(repository),
-        "log",
-        "--format=%H%x09%ad%x09%s",
-        "--date=iso",
-        "--",
-    ] + list(paths)
+def current_evidence() -> dict[str, str]:
+    from ..inventory.scanner import harness_fingerprint, source_fingerprint
+    from ..reconciliation.reconcile import current_revision
+
+    return {
+        "revision": current_revision(config.repository_root()),
+        "source_fingerprint": source_fingerprint(config.repository_root()),
+        "harness_fingerprint": harness_fingerprint(config.repository_root()),
+    }
+
+
+def _revision_is_contained(revision: str) -> bool:
+    if not revision:
+        return False
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=60)
+        result = subprocess.run(
+            ["git", "-C", str(config.repository_root()), "merge-base", "--is-ancestor", revision, "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
     except (OSError, subprocess.TimeoutExpired):
-        return []
-    commits = []
-    for line in result.stdout.split("\n"):
-        if not line.strip():
-            continue
-        parts = line.split("\t")
-        if len(parts) < 3:
-            continue
-        if _iso_to_epoch(parts[1]) > after_epoch:
-            commits.append({"commit": parts[0], "date": parts[1], "subject": parts[2]})
-    return commits
+        return False
+    return result.returncode == 0
 
 
-def _binding_reason(
-    missing: list[str],
-    harness_commits: list[dict[str, Any]],
-    service_commits: list[dict[str, Any]],
-) -> str:
+def _row_is_current(row: dict[str, Any], evidence: dict[str, str]) -> bool:
+    return (
+        row.get("source_fingerprint") == evidence["source_fingerprint"]
+        and row.get("harness_fingerprint") == evidence["harness_fingerprint"]
+        and _revision_is_contained(str(row.get("revision") or ""))
+    )
+
+
+def _binding_reason(missing: list[str], stale_profiles: list[str]) -> str:
     parts = []
     if missing:
         parts.append(
@@ -299,35 +343,95 @@ def _binding_reason(
             + ", ".join(missing)
             + "), so they were produced by a harness whose measurement differs from the current one"
         )
-    if harness_commits:
+    if stale_profiles:
         parts.append(
-            "the load harness and the load generator changed after the measurement in "
-            + ", ".join(str(commit["commit"])[:12] for commit in harness_commits)
+            "the recorded results do not match the current source, harness or an ancestor revision: "
+            + ", ".join(stale_profiles)
         )
-    if service_commits:
-        parts.append(
-            "the services changed after the measurement in "
-            + ", ".join(str(commit["commit"])[:12] for commit in service_commits)
-        )
-    return "; ".join(parts)
+    return "; ".join(parts) or "none"
 
 
 def _binding(root: Path | None = None) -> dict[str, Any]:
     base = root if root is not None else results_root()
     window = _sweep_window(base)
-    repository = config.repository_root()
-    after = int(window.get("window_end_stamp") or 0)
-    harness_commits = _commits_after(repository, HARNESS_PATHS, after)
-    service_commits = _commits_after(repository, SERVICE_PATHS, after)
     rows = sweep_rows(base)
+    evidence = current_evidence()
     missing = sorted({name for row in rows for name in row["current_harness_fields_missing"]})
+    stale_profiles = sorted(str(row["profile"]) for row in rows if not _row_is_current(row, evidence))
     return {
-        "binds_to_current_source": not harness_commits and not service_commits and not missing,
+        "binds_to_current_source": bool(rows) and not missing and not stale_profiles,
         "measurement_window_utc": str(window.get("window_end_utc")),
-        "harness_commits_after_the_measurement": harness_commits,
-        "service_commits_after_the_measurement": service_commits,
+        "stale_profiles": stale_profiles,
+        "harness_commits_after_the_measurement": [],
+        "service_commits_after_the_measurement": [],
         "current_harness_fields_missing_from_the_recorded_results": missing,
-        "reason": _binding_reason(missing, harness_commits, service_commits),
+        "reason": _binding_reason(missing, stale_profiles),
+    }
+
+
+def sweep_verdict(
+    root: Path | None = None,
+    capacity: dict[str, Any] | None = None,
+    evidence: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    from ..verification.gates import BLOCKED, FAIL, PASS, PENDING
+
+    base = root if root is not None else results_root()
+    rows = sweep_rows(base)
+    configured = list(profile_names())
+    recorded = {str(row["profile"]): row for row in rows}
+    current = evidence or current_evidence()
+    active_path = base / "active-load.json"
+    active = read_json(active_path, {}) if active_path.exists() else {}
+    if active_path.exists() and (not isinstance(active, dict) or not active.get("profile")):
+        active = {"invalid": True}
+    token_residue = sorted(path.relative_to(base).as_posix() for path in base.rglob("customer-tokens.txt")) if base.exists() else []
+    missing = sorted((set(configured) - set(recorded)) | {name for name, row in recorded.items() if row.get("status") == "MISSING"})
+    unexpected = sorted(set(recorded) - set(configured))
+    stale = sorted(name for name, row in recorded.items() if not _row_is_current(row, current))
+    blocked = sorted(name for name, row in recorded.items() if row.get("status") == BLOCKED)
+    failed = sorted(
+        name
+        for name, row in recorded.items()
+        if row.get("status") not in (PASS, BLOCKED, "MISSING")
+    )
+    invalid = sorted(
+        name
+        for name, row in recorded.items()
+        if row.get("status") == PASS
+        and (
+            row.get("measurement_valid") is not True
+            or row.get("invariant_status") != PASS
+            or bool(row.get("current_harness_fields_missing"))
+            or bool(row.get("validation_problems"))
+        )
+    )
+    capacity_document = capacity or derive_capacity_limit(base)
+    measured = capacity_document.get("measured") is True
+    binding = (capacity_document.get("binding") or {}).get("binds_to_current_source") is True
+    if active or token_residue or failed or invalid or unexpected:
+        status = FAIL
+    elif blocked:
+        status = BLOCKED
+    elif missing or stale or not measured or not binding:
+        status = PENDING
+    else:
+        status = PASS
+    return {
+        "status": status,
+        "profiles": rows,
+        "configured_profiles": configured,
+        "missing": missing,
+        "unexpected": unexpected,
+        "blocked": blocked,
+        "failed": failed,
+        "invalid": invalid,
+        "stale": stale,
+        "active_attempt": active,
+        "token_residue": token_residue,
+        "capacity_measured": measured,
+        "capacity_binds_to_current_source": binding,
+        **current,
     }
 
 
@@ -335,8 +439,10 @@ def derive_capacity_limit(root: Path | None = None) -> dict[str, Any]:
     base = root if root is not None else results_root()
     rows = sweep_rows(base)
     window = _sweep_window(base)
-    limit = _limit_row(rows)
-    breaking = _breaking_rows(rows)
+    evidence = current_evidence()
+    current_rows = [row for row in rows if _row_is_current(row, evidence)]
+    limit = _limit_row(current_rows)
+    breaking = _breaking_rows(current_rows)
     highest_broken = None
     if breaking:
         highest_broken = max(breaking, key=lambda row: row["delivered_requests_per_second"])
@@ -402,16 +508,8 @@ def record_capacity_limit(state_path: Path | None = None, root: Path | None = No
 
 
 def capacity_limit_document(state_path: Path | None = None, root: Path | None = None) -> dict[str, Any]:
-    recorded = read_recorded_capacity_limit(state_path)
-    if recorded:
-        document = dict(recorded)
-        document["source"] = "recorded state " + _relative(state_path or capacity_state_path())
-        return document
-    document = record_capacity_limit(state_path, root)
-    document["source"] = (
-        "derived from the recorded run results and recorded into "
-        + _relative(state_path or capacity_state_path())
-    )
+    document = derive_capacity_limit(root)
+    document["source"] = "derived from the canonical recorded run results"
     return document
 
 

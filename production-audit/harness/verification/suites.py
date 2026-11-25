@@ -51,6 +51,19 @@ def _test_selector(includes: list[str], excludes: list[str]) -> str:
     return ",".join(parts)
 
 
+def _execution_evidence(root: Path, suite_name: str) -> dict[str, Any]:
+    from ..inventory.scanner import harness_fingerprint, source_fingerprint
+    from ..reconciliation.reconcile import current_revision
+    from .gates import next_suite_sequence
+
+    return {
+        "revision": current_revision(root),
+        "source_fingerprint": source_fingerprint(root),
+        "harness_fingerprint": harness_fingerprint(root),
+        "sequence": next_suite_sequence(suite_name),
+    }
+
+
 def run_suite(suite_name: str, repository: Path | None = None, run_id: str | None = None, modules: list[str] | None = None) -> dict[str, Any]:
     root = repository or config.repository_root()
     identifier = run_id or config.run_identifier()
@@ -70,6 +83,7 @@ def run_suite(suite_name: str, repository: Path | None = None, run_id: str | Non
         command = ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM), "-pl", ",".join(modules), "-am"] + command[4:]
 
     log_path = config.run_root(identifier) / "test-results" / f"{suite_name}.log"
+    evidence = _execution_evidence(root, suite_name)
     result = run_command(command, root, log_path)
     logged = ""
     try:
@@ -77,7 +91,6 @@ def run_suite(suite_name: str, repository: Path | None = None, run_id: str | Non
     except OSError:
         logged = ""
     interpretation = interpret_test_exit(result.exit_code, logged or (result.stdout_tail + result.stderr_tail))
-    revision = run_command(["git", "-C", str(root), "rev-parse", "HEAD"], root).stdout_tail.strip()
 
     document = {
         "suite": suite_name,
@@ -91,8 +104,8 @@ def run_suite(suite_name: str, repository: Path | None = None, run_id: str | Non
         "errors": interpretation["errors"],
         "skipped": interpretation["skipped"],
         "log": str(log_path),
-        "revision": revision,
         "updated_at": utc_now(),
+        **evidence,
     }
     write_json(config.run_root(identifier) / "test-results" / f"{suite_name}.json", document)
     return document
@@ -116,8 +129,8 @@ def run_build(repository: Path | None = None, run_id: str | None = None, quick: 
         command = ["./mvnw", "-B", "-ntp", "-T", str(BUILD_PARALLELISM), "-pl", ",".join(modules), "-am"] + command[4:]
     suffix = "-".join(modules) if modules else ("validate" if quick else "verify")
     log_path = config.run_root(identifier) / "test-results" / f"build-{suffix}.log"
+    evidence = _execution_evidence(root, "build")
     result = run_command(command, root, log_path)
-    revision = run_command(["git", "-C", str(root), "rev-parse", "HEAD"], root).stdout_tail.strip()
     document = {
         "suite": "build",
         "mode": ("validate" if quick else "clean-verify") + (f" [{','.join(modules)}]" if modules else ""),
@@ -126,8 +139,8 @@ def run_build(repository: Path | None = None, run_id: str | None = None, quick: 
         "command": " ".join(command),
         "duration_seconds": result.duration_seconds,
         "log": str(log_path),
-        "revision": revision,
         "updated_at": utc_now(),
+        **evidence,
     }
     write_json(config.run_root(identifier) / "test-results" / f"build-{suffix}.json", document)
     return document

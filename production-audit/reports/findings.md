@@ -2,7 +2,7 @@
 
 Every finding was produced by reading the first-party source, not the documentation.
 
-Registry size: 297 findings.
+Registry size: 332 findings.
 
 | ID | Severity | Area | Title |
 | --- | --- | --- | --- |
@@ -10,6 +10,10 @@ Registry size: 297 findings.
 | GW-02 | CRITICAL | gateway-redis | A non-literal `X-Forwarded-For` entry becomes the rate-limit key: per-request bucket bypass, unbounded Redis key growth, and blocking DNS on the event loop |
 | PAY-01 | CRITICAL | payment | Capture marks CAPTURED while no money moved; Stripe intent uses confirm=false and discards client_secret |
 | PAY-02 | CRITICAL | payment | Unknown provider name silently falls back to the default provider so a refund can succeed against the wrong PSP |
+| QA-01 | CRITICAL | qa-review-remediation | The readiness gates ignored the alerting and kubernetes suites, so a failing alerting configuration still satisfied every gate |
+| QA-02 | CRITICAL | qa-review-remediation | The final report asserted a production readiness that its own evidence contradicted |
+| QA-17 | CRITICAL | coverage-review-remediation | The audience auto configuration was never registered, so the per service client id list was never applied |
+| QA-34 | CRITICAL | measurement-evidence-remediation | The audience auto configuration was never registered, so the per service client id list was never applied |
 | SHIP-01 | CRITICAL |  | The carrier call happened before the idempotency guard, so two duplicate CONFIRMED events created two parcels |
 | CAT-01 | HIGH | catalog-search-media | Out-of-order Kafka events silently overwrite newer Elasticsearch state |
 | CAT-02 | HIGH | catalog-search-media | Elasticsearch client dependency drift |
@@ -37,6 +41,18 @@ Registry size: 297 findings.
 | PAY-08 | HIGH | payment | Stripe intent id is never persisted so refunds depend on the eventually consistent Search API |
 | PAY-09 | HIGH | payment | Provider failure mapping conflates a declined card with an unknown outcome so a Stripe timeout is reported as a definitive rejection |
 | PAY-10 | HIGH | payment | The provider call happens inside the database transaction with no client timeout |
+| QA-03 | HIGH | qa-review-remediation | Suite evidence could certify readiness against a source revision that no longer existed |
+| QA-04 | HIGH | qa-review-remediation | Thirteen alert rules referenced metrics the platform never publishes, and the validator could not see it |
+| QA-05 | HIGH | qa-review-remediation | The shared configuration never reached any service |
+| QA-06 | HIGH | qa-review-remediation | The circuit breaker state was never exported |
+| QA-07 | HIGH | qa-review-remediation | The postgres exporter published no series at all |
+| QA-18 | HIGH | coverage-review-remediation | The audience test registered the auto configuration by class name and passed while the production wiring was missing |
+| QA-19 | HIGH | coverage-review-remediation | A bulkhead rejection consumed a half open circuit breaker probe and opened the route for everyone |
+| QA-26 | HIGH | coverage-review-remediation | The end to end harness measured a booting stack and used collection credentials that no longer existed |
+| QA-27 | HIGH | coverage-review-remediation | A downstream authorisation failure was reported as an opaque server error |
+| QA-28 | HIGH | measurement-evidence-remediation | The load runner measured the startup of the gateway as a business failure |
+| QA-32 | HIGH | measurement-evidence-remediation | The end to end harness measured a booting stack and used credentials that no longer existed |
+| QA-33 | HIGH | measurement-evidence-remediation | A downstream authorisation failure was reported as an opaque server error |
 | RTG-01 | HIGH |  | An upstream purchase-verification failure was reported as the business denial RTG-11001 (403) instead of a dependency failure |
 | SEC-01 | HIGH | security | auth-service resolves the JWT subject against a DIFFERENT primary-key space |
 | SEC-02 | HIGH | security | Cross-service IDOR: `verify-purchase` accepts an arbitrary `userId` with no principal cross-check |
@@ -138,6 +154,23 @@ Registry size: 297 findings.
 | PAY-17 | MEDIUM | payment | Zero-decimal currencies silently round the amount and then fail the webhook amount check |
 | PAY-18 | MEDIUM | payment | Outbox rows parked as FAILED are never purged |
 | PAY-19 | MEDIUM | payment | No production caller creates or captures a payment |
+| QA-08 | MEDIUM | qa-review-remediation | The load runner read the wrong summary file and inverted the failure counter |
+| QA-09 | MEDIUM | qa-review-remediation | The load runner accepted a run in which every business operation failed |
+| QA-10 | MEDIUM | qa-review-remediation | Three business invariants were vacuous or used enum values that do not exist |
+| QA-11 | MEDIUM | qa-review-remediation | The telegram notification step reported success while delivering nothing |
+| QA-12 | MEDIUM | qa-review-remediation | The kubernetes manifests declared no startup probe, no pod security context and no disruption budget |
+| QA-13 | MEDIUM | qa-review-remediation | The stripe harness certified a placeholder credential |
+| QA-14 | MEDIUM | qa-review-remediation | The outbox claim dropped the per aggregate order across relay instances |
+| QA-15 | MEDIUM | qa-review-remediation | A sending row without a claim timestamp was stranded forever |
+| QA-16 | MEDIUM | qa-review-remediation | The shutdown release could publish a kafka message twice |
+| QA-20 | MEDIUM | coverage-review-remediation | The audience boundary bean was dead and bound a different property than the one the validator enforces |
+| QA-21 | MEDIUM | coverage-review-remediation | The credential contract test could not see any access key, api key or private key variable |
+| QA-22 | MEDIUM | coverage-review-remediation | The live mode Stripe guard was only proven by reading its source and did not cover the restricted key form |
+| QA-23 | MEDIUM | coverage-review-remediation | The fleet rate limiter test placed its clients on distinct lanes and could not catch the regression it claimed to guard |
+| QA-29 | MEDIUM | measurement-evidence-remediation | A counter that never fired was treated as missing evidence |
+| QA-30 | MEDIUM | measurement-evidence-remediation | The measurement host guard blamed the measurement itself for the host load |
+| QA-31 | MEDIUM | measurement-evidence-remediation | The end to end report accepted a scope in which nothing ran |
+| QA-35 | MEDIUM | measurement-evidence-remediation | No money field carried a currency |
 | RES-01 | MEDIUM | research-version | `spring-boot-starter-aop` is pinned to a 4.0.0-M2 milestone while the project runs Boot 4.1.1, and the artifact was renamed in Boot 4. |
 | RES-02 | MEDIUM | research-version | `spring-boot-starter-web` is used in three modules although Boot 4 deprecated it in favour of `spring-boot-starter-webmvc`. |
 | RES-03 | MEDIUM | research-version | Jackson 2 and Jackson 3 are both on the compile classpath while Boot 4 makes Jackson 3 the preferred JSON library; 93 source files still use `com.fasterxml.jackson`, and the hand-b |
@@ -268,6 +301,8 @@ Registry size: 297 findings.
 | PAY-22 | LOW | payment | Dead code in the webhook event service and an unreachable status value |
 | PAY-23 | LOW | payment | The Stripe api-version property is inert and always reports drift |
 | PAY-24 | LOW | payment | Unused imports in the provider classes |
+| QA-24 | LOW | coverage-review-remediation | The object storage bootstrap leaked its executor thread on every context start |
+| QA-25 | LOW | coverage-review-remediation | The payment partition order test leaked a Kafka topic and a consumer group on every run |
 | RES-24 | LOW | research-version | The circuit breaker counts business rejections as failures, and four advised methods swallow the exception so the breaker never opens. |
 | RES-25 | LOW | research-version | The retry and timelimiter Resilience4j configuration is dead (no `@Retry`/`@TimeLimiter` anywhere) and there is no bulkhead. |
 | RES-26 | LOW | research-version | No JVM memory or GC option is set, so the heap defaults to 25 % of the container limit. |

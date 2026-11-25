@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import time
 from dataclasses import asdict, dataclass, field
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .. import config
-from ..persistence.store import read_json, utc_now, write_json
+from ..persistence.store import file_lock, read_json, utc_now, write_json
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -119,19 +120,44 @@ def save_verification(document: dict[str, Any], path: Any = None) -> Path:
     return write_json(path or config.verification_path(), document)
 
 
+def next_suite_sequence(suite: str) -> int:
+    safe = re.sub(r"[^a-zA-Z0-9_.-]", "_", suite)
+    path = config.state_root() / (safe + "-sequence.json")
+    with file_lock(path):
+        document = read_json(path, {}) or {}
+        value = document.get("sequence")
+        sequence = value if type(value) is int else 0
+        sequence += 1
+        write_json(path, {"sequence": sequence})
+    return sequence
+
+
 def record_suite_result(suite: str, result: dict[str, Any], path: Any = None) -> dict[str, Any]:
     from ..inventory.scanner import harness_fingerprint, source_fingerprint
 
-    document = load_verification(path)
-    suites = document.setdefault("suites", {})
-    suites[suite] = {
-        "updated_at": utc_now(),
-        "source_fingerprint": source_fingerprint(),
-        "harness_fingerprint": harness_fingerprint(),
-        **result,
-    }
-    document["revision"] = result.get("revision", "")
-    save_verification(document, path)
+    target = path or config.verification_path()
+    with file_lock(target):
+        document = load_verification(target)
+        suites = document.setdefault("suites", {})
+        existing = suites.get(suite) or {}
+        existing_sequence = int(existing.get("sequence", 0) or 0)
+        new_sequence = int(result.get("sequence", 0) or 0) or existing_sequence
+        if existing_sequence and new_sequence < existing_sequence:
+            return document
+        status_rank = {PENDING: 0, PASS: 1, BLOCKED: 2, FAIL: 3}
+        if existing_sequence and new_sequence == existing_sequence:
+            existing_rank = status_rank.get(str(existing.get("status", "")), -1)
+            new_rank = status_rank.get(str(result.get("status", "")), -1)
+            if existing_rank > new_rank:
+                return document
+        suites[suite] = {
+            "updated_at": utc_now(),
+            "source_fingerprint": source_fingerprint(),
+            "harness_fingerprint": harness_fingerprint(),
+            **result,
+        }
+        document["revision"] = result.get("revision", "")
+        save_verification(document, target)
     return document
 
 
@@ -149,25 +175,87 @@ def _coverage_summary() -> dict[str, Any]:
 
 def _review_verdict(path: Path) -> str:
     try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
     except OSError:
         return "UNDECIDED"
-    for line in text.splitlines():
-        stripped = line.strip().lower()
-        if not stripped.startswith("verdict") and "verdict" not in stripped.split(":")[0]:
-            continue
-        if "fail" in stripped:
-            return "FAIL"
-        if "pass" in stripped or "approved" in stripped:
-            return "PASS"
-    for line in text.splitlines():
-        stripped = line.strip().lower()
-        if stripped.startswith("## verdict") or stripped.startswith("### verdict"):
-            if "fail" in stripped:
-                return "FAIL"
-            if "pass" in stripped:
-                return "PASS"
+    if not lines:
+        return "UNDECIDED"
+    first = lines[0]
+    markers = [line.strip() for line in lines if line.strip().lower().startswith("verdict:")]
+    if len(markers) != 1 or markers[0] != first:
+        return "UNDECIDED"
+    if first == "Verdict: PASS":
+        return "PASS"
+    if first == "Verdict: FAIL":
+        return "FAIL"
     return "UNDECIDED"
+
+
+def _review_candidate_revision(text: str) -> str:
+    patterns = (
+        r"Candidate reviewed:\s*HEAD\s*\**([0-9a-f]{7,40})",
+        r"candidate(?: at)?\s+HEAD\s+([0-9a-f]{7,40})",
+        r"HEAD\s+([0-9a-f]{7,40})",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return ""
+
+
+def _revision_is_ancestor(repository: Path, revision: str) -> bool:
+    if not revision:
+        return False
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repository), "merge-base", "--is-ancestor", revision, "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _head_revision(repository: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repository), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return result.stdout.strip()
+
+
+def _review_bindings_match(text: str, source: str, harness: str) -> bool:
+    source_matches = re.findall(r"^Source fingerprint:\s*([0-9a-f]{64})\s*$", text, re.MULTILINE)
+    harness_matches = re.findall(r"^Harness fingerprint:\s*([0-9a-f]{64})\s*$", text, re.MULTILINE)
+    contradictory = re.findall(r"^(?:Source|Harness) fingerprint:.*$", text, re.MULTILINE)
+    return (
+        source_matches == [source]
+        and harness_matches == [harness]
+        and len(contradictory) == 2
+    )
+
+
+def _review_is_current(
+    text: str,
+    repository: Path,
+    source_fingerprint_value: str,
+    harness_fingerprint_value: str,
+) -> bool:
+    candidate = _review_candidate_revision(text)
+    head = _head_revision(repository)
+    if not _review_bindings_match(text, source_fingerprint_value, harness_fingerprint_value):
+        return False
+    return bool(candidate) and (candidate == head or _revision_is_ancestor(repository, candidate))
 
 
 def _task_state_counts() -> dict[str, int]:
@@ -183,6 +271,8 @@ def _payment_acceptance_evidence() -> dict[str, Any]:
 
 
 def _payment_acceptance_verdict(acceptance: dict[str, Any]) -> dict[str, Any]:
+    from ..stripe.acceptance import MATRIX_CASES
+
     server = acceptance.get("stripe_server") or {}
     summary = acceptance.get("summary") or {}
     cases = acceptance.get("cases") or []
@@ -191,6 +281,21 @@ def _payment_acceptance_verdict(acceptance: dict[str, Any]) -> dict[str, Any]:
     public = bool(server.get("is_public_stripe_api")) or api_base.startswith("https://api.stripe.com")
     proven = len([case for case in cases if case.get("verdict") == "PROVEN"])
     outstanding = [str(case.get("name", "")) for case in cases if case.get("verdict") != "PROVEN"]
+    expected_names = [case["name"] for case in MATRIX_CASES]
+    recorded_names = [str(case.get("name", "")) for case in cases]
+    matrix_complete = (
+        len(recorded_names) == len(expected_names)
+        and len(set(recorded_names)) == len(recorded_names)
+        and set(recorded_names) == set(expected_names)
+    )
+    summary_complete = (
+        int(summary.get("cases", 0) or 0) == len(expected_names)
+        and int(summary.get("proven", 0) or 0) == len(expected_names)
+        and int(summary.get("failed", 0) or 0) == 0
+        and int(summary.get("not_proven", 0) or 0) == 0
+    )
+    probe = credential.get("credential_probe") or acceptance.get("credential_probe") or {}
+    credential_proven = int(probe.get("status", 0) or 0) == 200 and probe.get("livemode") is False
     version = str(server.get("version", "") or "")
     evidence = [
         "payment acceptance cases: " + str(summary.get("cases", 0)) + " (" + str(proven) + " proven)",
@@ -205,7 +310,8 @@ def _payment_acceptance_verdict(acceptance: dict[str, Any]) -> dict[str, Any]:
             "evidence": evidence,
         }
     if public and str(credential.get("secret_key_mode", "")) == "test" and not outstanding \
-            and int(summary.get("failed", 0) or 0) == 0 and int(summary.get("cases", 0) or 0) > 0:
+            and matrix_complete and summary_complete and credential_proven \
+            and acceptance.get("verified_against_real_stripe_api") is True:
         return {
             "status": PASS,
             "detail": "the payment acceptance ran against api.stripe.com with a genuine test-mode key and every case was proven",
@@ -282,16 +388,17 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     verification = load_verification()
     suites = verification.get("suites", {})
-    from ..inventory.scanner import source_fingerprint
+    from ..inventory.scanner import harness_fingerprint, source_fingerprint
 
     fingerprint = source_fingerprint(repository)
+    current_harness = harness_fingerprint(repository)
     stale_suites: list[str] = []
 
     def suite_status(name: str) -> str:
         entry = suites.get(name)
         if not entry:
             return PENDING
-        if not evidence_is_fresh(entry, fingerprint):
+        if not evidence_is_fresh(entry, fingerprint) or entry.get("harness_fingerprint") != current_harness:
             if name not in stale_suites:
                 stale_suites.append(name)
             return PENDING
@@ -310,7 +417,30 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     gates.append(Gate(id="GATE-5", name="INVENTORY_SAFETY", status=suite_status("concurrency_inventory"), evidence=[f"suite concurrency_inventory: {suite_status('concurrency_inventory')}"]))
     payment_suite = suite_status("payment")
     acceptance = _payment_acceptance_evidence()
-    acceptance_verdict = _payment_acceptance_verdict(acceptance)
+    stripe_suite = suites.get("stripe_acceptance") or {}
+    expected_acceptance_path = str(config.run_root() / "stripe-acceptance" / "acceptance.json")
+    acceptance_fresh = (
+        acceptance.get("source_fingerprint") == fingerprint
+        and acceptance.get("harness_fingerprint") == current_harness
+        and _revision_is_ancestor(repository, str(acceptance.get("revision") or ""))
+        and stripe_suite.get("status") == PASS
+        and stripe_suite.get("source_fingerprint") == fingerprint
+        and stripe_suite.get("harness_fingerprint") == current_harness
+        and _revision_is_ancestor(repository, str(stripe_suite.get("revision") or ""))
+        and stripe_suite.get("evidence") == expected_acceptance_path
+    )
+    if acceptance_fresh:
+        acceptance_verdict = _payment_acceptance_verdict(acceptance)
+    else:
+        acceptance_verdict = {
+            "status": BLOCKED,
+            "detail": "the Stripe acceptance evidence is stale or missing source, harness or revision binding",
+            "evidence": [
+                "acceptance source fingerprint current: " + str(acceptance.get("source_fingerprint") == fingerprint),
+                "acceptance harness fingerprint current: " + str(acceptance.get("harness_fingerprint") == current_harness),
+                "acceptance revision contained in HEAD: " + str(_revision_is_ancestor(repository, str(acceptance.get("revision") or ""))),
+            ],
+        }
     if payment_suite == FAIL:
         payment_status = FAIL
     elif acceptance_verdict["status"] == PASS:
@@ -347,7 +477,7 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     build_suite = suites.get("build", {})
     build_recorded = build_suite.get("status") in (PASS, "PASSED")
-    build_fresh = evidence_is_fresh(build_suite, fingerprint)
+    build_fresh = evidence_is_fresh(build_suite, fingerprint) and build_suite.get("harness_fingerprint") == current_harness
     build_pass = build_recorded and build_fresh
     gates.append(
         Gate(
@@ -365,8 +495,53 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
     gates.append(Gate(id="GATE-13", name="HAPPY_PATH_TESTS", status=suite_status("happy"), evidence=[f"suite happy: {suite_status('happy')}"]))
     gates.append(Gate(id="GATE-14", name="EDGE_NEGATIVE_TESTS", status=suite_status("edge"), evidence=[f"suite edge: {suite_status('edge')}"]))
     gates.append(Gate(id="GATE-15", name="CONCURRENCY", status=suite_status("concurrency"), evidence=[f"suite concurrency: {suite_status('concurrency')}"]))
-    gates.append(Gate(id="GATE-16", name="REAL_E2E", status=suite_status("e2e"), evidence=[f"suite e2e: {suite_status('e2e')}"]))
-    gates.append(Gate(id="GATE-17", name="PERFORMANCE", status=suite_status("performance"), evidence=[f"suite performance: {suite_status('performance')}"]))
+    from ..e2e.environment import e2e_report
+
+    try:
+        e2e_evidence = e2e_report()
+    except Exception as error:
+        e2e_evidence = {
+            "e2e_verified": False,
+            "evaluated_artifacts": [],
+            "executed_collections": 0,
+            "malformed_artifacts": [{"file": "e2e-report", "reason": str(error)}],
+        }
+    e2e_status = PASS if e2e_evidence.get("e2e_verified") and not e2e_evidence.get("malformed_artifacts") else FAIL
+    gates.append(
+        Gate(
+            id="GATE-16",
+            name="REAL_E2E",
+            status=e2e_status,
+            evidence=[
+                "evaluated artifacts: " + (", ".join(e2e_evidence.get("evaluated_artifacts", [])) or "none"),
+                "executed collections: " + str(e2e_evidence.get("executed_collections", 0)),
+                "malformed artifacts: " + str(len(e2e_evidence.get("malformed_artifacts", []))),
+                "stale completions ignored: " + str(e2e_evidence.get("ignored_stale_completed", 0)),
+            ],
+            detail="current end to end artifacts were revalidated" if e2e_status == PASS else "current end to end artifacts are missing, stale, malformed or failed",
+        )
+    )
+    from ..loadtesting.capacity import sweep_verdict
+
+    performance_report = sweep_verdict()
+    gates.append(
+        Gate(
+            id="GATE-17",
+            name="PERFORMANCE",
+            status=performance_report["status"],
+            evidence=[
+                "configured profiles: " + str(len(performance_report["configured_profiles"])),
+                "missing: " + (", ".join(performance_report["missing"]) or "none"),
+                "blocked: " + (", ".join(performance_report["blocked"]) or "none"),
+                "failed: " + (", ".join(performance_report["failed"]) or "none"),
+                "stale: " + (", ".join(performance_report["stale"]) or "none"),
+                "capacity binding: " + str(performance_report["capacity_binds_to_current_source"]),
+            ],
+            detail="the canonical newest result of every configured load profile is current and acceptable"
+            if performance_report["status"] == PASS
+            else "the canonical load sweep does not satisfy every configured profile",
+        )
+    )
     gates.append(Gate(id="GATE-18", name="OBSERVABILITY_OPERATIONS", status=suite_status("operations"), evidence=[f"suite operations: {suite_status('operations')}"]))
     gates.append(Gate(id="GATE-23", name="ALERTING_CONFIGURATION", status=suite_status("alerts"), evidence=[f"suite alerts: {suite_status('alerts')}"]))
     from ..kubernetes.validation import load_autoscaling_observation
@@ -409,10 +584,23 @@ def evaluate_gates(root: Path | None = None) -> list[Gate]:
 
     reviews_root = config.run_root() / "independent-reviews"
     reviews = list(reviews_root.glob("*.md")) if reviews_root.exists() else []
-    review_verdicts = [(review, _review_verdict(review)) for review in reviews]
-    failing_reviews = [review for review, verdict in review_verdicts if verdict == "FAIL"]
-    passing_reviews = [review for review, verdict in review_verdicts if verdict == "PASS"]
-    undecided_reviews = [review for review, verdict in review_verdicts if verdict == "UNDECIDED"]
+    failing_reviews: list[Path] = []
+    passing_reviews: list[Path] = []
+    undecided_reviews: list[Path] = []
+    for review in reviews:
+        verdict = _review_verdict(review)
+        if verdict == "FAIL":
+            failing_reviews.append(review)
+            continue
+        try:
+            text = review.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            undecided_reviews.append(review)
+            continue
+        if verdict == "PASS" and _review_is_current(text, repository, fingerprint, current_harness):
+            passing_reviews.append(review)
+        else:
+            undecided_reviews.append(review)
     if not reviews:
         review_status = PENDING
         review_detail = "no independent review artifacts"

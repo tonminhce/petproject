@@ -1,0 +1,17 @@
+{
+  "coverage_files": 1522,
+  "generated_at": "2026-11-25T05:02:28Z",
+  "hash_drift_count": 0,
+  "hash_drift_sample": [],
+  "head_revision": "b8858b39102586e25ad2b380addaf06114a12952",
+  "manifest_revision": "b8858b39102586e25ad2b380addaf06114a12952",
+  "missing_files": [],
+  "reopened_tasks": [],
+  "revision_matches": true,
+  "stable": true,
+  "task_state_summary": {
+    "DISCOVERED": 8,
+    "READY": 172,
+    "VERIFIED": 88
+  }
+}

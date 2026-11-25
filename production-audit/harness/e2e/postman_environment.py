@@ -76,9 +76,14 @@ def build_postman_environment(run_root: Path) -> dict[str, Any]:
         port = values.get(port_key, "").strip() or str(DEFAULT_PORTS[port_key])
         resolved[variable] = f"http://localhost:{port}"
 
-    webhook_secret = values.get("STRIPE_WEBHOOK_SECRET", "").strip()
+    webhook_secret = values.get("SHOP_PAYMENT_STRIPE_WEBHOOK_SECRET", "").strip() or values.get("STRIPE_WEBHOOK_SECRET", "").strip()
     if webhook_secret:
         resolved["stripeWebhookSecret"] = webhook_secret
+    resolved["vnpayEnabled"] = "true" if values.get("SHOP_PAYMENT_VNPAY_ENABLED", "").strip().lower() == "true" else "false"
+    resolved["momoEnabled"] = "true" if values.get("SHOP_PAYMENT_MOMO_ENABLED", "").strip().lower() == "true" else "false"
+    stripe_api_base = values.get("SHOP_PAYMENT_STRIPE_API_BASE", "").strip().rstrip("/")
+    stripe_key = values.get("SHOP_PAYMENT_STRIPE_SECRET_KEY", "").strip()
+    resolved["stripeCaptureEnabled"] = "true" if stripe_api_base == "https://api.stripe.com" and stripe_key.startswith("sk_test_") else "false"
 
     missing = [
         name
@@ -114,5 +119,14 @@ def write_postman_environment(run_root: Path) -> tuple[Path, dict[str, Any]]:
     document = build_postman_environment(run_root)
     path = run_root / "postman-environment.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(document["environment"], indent=2), encoding="utf-8")
+    payload = json.dumps(document["environment"], indent=2) + "\n"
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            descriptor = -1
+            handle.write(payload)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
     return path, document

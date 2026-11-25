@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +13,7 @@ from ..e2e.environment import e2e_report, e2e_run, e2e_setup, e2e_teardown, dete
 from ..git_delivery.delivery import commit_verified, delivery_report, push_verified, record_delivery, repository_status
 from ..inventory.coverage import coverage_summary, initialize_from_manifest, load_coverage, record_review
 from ..inventory.scanner import build_inventory, persist_inventory
-from ..persistence.store import append_event, read_json, utc_now, write_json
+from ..persistence.store import append_event, file_lock, read_json, utc_now, write_json
 from ..reconciliation.reconcile import reconcile
 from ..reporting.report import status_document, write_markdown_status, write_status_report
 from ..research.store import research_index, seed_research_index
@@ -20,6 +22,7 @@ from ..source_policy.policy import Policy
 from ..source_policy.scanner import scan_repository
 from ..task_registry.registry import dependency_ready, load_tasks, next_task, task_status_summary, transition, upsert_task, validate_task_id, Task
 from ..verification.gates import (
+    BLOCKED,
     FAIL,
     PASS,
     PENDING,
@@ -324,6 +327,65 @@ def command_k8s(arguments: argparse.Namespace) -> int:
     return config.EXIT_BLOCKED
 
 
+def _load_sweep_verdict(
+    root: Path,
+    capacity: dict[str, Any],
+    evidence: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    from ..loadtesting.capacity import sweep_verdict
+
+    return sweep_verdict(root, capacity, evidence)
+
+
+def _new_load_attempt(root: Path, profile: str) -> Path:
+    with file_lock(root / "load-sequence.lock"):
+        sequence_document = read_json(root / "load-sequence.json", {}) or {}
+        recorded = sequence_document.get("sequence")
+        sequence = recorded if type(recorded) is int else 0
+        directory_stamps = []
+        for path in root.glob("*-*"):
+            try:
+                directory_stamps.append(int(path.name.rsplit("-", 1)[-1]))
+            except ValueError:
+                continue
+        stamp = max([sequence, int(time.time()), *directory_stamps]) + 1
+        write_json(root / "load-sequence.json", {"sequence": stamp})
+        output = root / (profile + "-" + str(stamp))
+        output.mkdir(parents=True)
+        return output
+
+
+def _begin_load_attempt(root: Path, profile: str, evidence: dict[str, str]) -> tuple[Path, dict[str, Any]]:
+    with file_lock(root / "load-sequence.lock"):
+        active_path = root / "active-load.json"
+        if active_path.exists():
+            raise RuntimeError("another load attempt is active or did not finalize")
+        sequence_document = read_json(root / "load-sequence.json", {}) or {}
+        recorded = sequence_document.get("sequence")
+        sequence = recorded if type(recorded) is int else 0
+        directory_stamps = []
+        for path in root.glob("*-*"):
+            try:
+                directory_stamps.append(int(path.name.rsplit("-", 1)[-1]))
+            except ValueError:
+                continue
+        stamp = max([sequence, int(time.time()), *directory_stamps]) + 1
+        output = root / (profile + "-" + str(stamp))
+        active = {
+            "profile": profile,
+            "output": str(output),
+            "started_at": utc_now(),
+            **evidence,
+        }
+        with active_path.open("x", encoding="utf-8") as handle:
+            handle.write(json.dumps(active, indent=2, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        write_json(root / "load-sequence.json", {"sequence": stamp})
+        output.mkdir(parents=True)
+        return output, active
+
+
 def command_load(arguments: argparse.Namespace) -> int:
     from ..loadtesting.invariants import verify
     from ..loadtesting.profiles import describe_profiles, enforce_safety, resolve_profile
@@ -334,23 +396,58 @@ def command_load(arguments: argparse.Namespace) -> int:
     if action == "profiles":
         emit({"profiles": describe_profiles()})
         return config.EXIT_OK
+    if action == "reset-data":
+        from ..loadtesting.runner import reset_commerce_data
+
+        document = reset_commerce_data()
+        emit(document)
+        return config.EXIT_OK if document["status"] == "PASS" else config.EXIT_GATE_FAILED
     if action == "invariants":
         document = verify()
         emit(document)
         return config.EXIT_OK if document["status"] == "PASS" else config.EXIT_GATE_FAILED
     if action == "report":
+        from ..loadtesting.capacity import capacity_limit_document, record_capacity_limit
+
         collected = []
         root = results_root()
         if root.exists():
             for path in sorted(root.iterdir()):
                 summary = path / "summary.json"
                 if summary.exists():
-                    import json
-
                     document = json.loads(summary.read_text(encoding="utf-8"))
                     collected.append({"directory": path.name, "metrics": document.get("metrics", {})})
-        emit({"runs": collected})
-        return config.EXIT_OK
+        record_capacity_limit()
+        capacity = capacity_limit_document()
+        aggregate = _load_sweep_verdict(root, capacity)
+        passed = sum(1 for row in aggregate["profiles"] if row["status"] == PASS)
+        record_suite_result(
+            "performance",
+            {
+                "suite": "performance",
+                "status": aggregate["status"],
+                "profile": "all",
+                "measurement_valid": aggregate["status"] == PASS,
+                "metrics": {},
+                "invariants": PASS if not aggregate["invalid"] else FAIL,
+                "detail": (
+                    str(passed) + "/" + str(len(aggregate["profiles"])) + " load profiles passed; "
+                    "capacity binding=" + str(aggregate["capacity_binds_to_current_source"])
+                ),
+                "updated_at": utc_now(),
+                **{
+                    key: aggregate[key]
+                    for key in ("revision", "source_fingerprint", "harness_fingerprint")
+                    if aggregate.get(key)
+                },
+            },
+        )
+        emit({"runs": collected, "aggregate": aggregate, "capacity": capacity})
+        if aggregate["status"] == PASS:
+            return config.EXIT_OK
+        if aggregate["status"] in (PENDING, BLOCKED):
+            return config.EXIT_BLOCKED
+        return config.EXIT_GATE_FAILED
 
     scale = arguments.scale
     try:
@@ -358,16 +455,55 @@ def command_load(arguments: argparse.Namespace) -> int:
     except (KeyError, ValueError) as error:
         emit({"status": "FAIL", "reason": str(error)})
         return config.EXIT_USAGE
+    from ..loadtesting.capacity import current_evidence, record_capacity_limit
+
     violations = enforce_safety(profile)
-    if violations:
-        emit({"status": "BLOCKED", "profile": action, "violations": violations})
-        return config.EXIT_BLOCKED
-
-    document = run_profile(action, scale=scale, base_url=arguments.base_url)
+    evidence = current_evidence()
+    root = results_root()
+    active_path = root / "active-load.json"
+    attempt_output, active = _begin_load_attempt(root, action, evidence)
+    run_error: BaseException | None = None
+    try:
+        if violations:
+            document = {
+                "status": BLOCKED,
+                "profile": action,
+                "reason": "the safety boundary refused this plan",
+                "violations": violations,
+                **evidence,
+            }
+        else:
+            try:
+                document = {
+                    **run_profile(action, scale=scale, base_url=arguments.base_url, output=attempt_output),
+                    **evidence,
+                }
+            except BaseException as error:
+                run_error = error
+                document = {
+                    "status": FAIL,
+                    "profile": action,
+                    "reason": "the load attempt raised an exception",
+                    "error": str(error),
+                    "output": str(attempt_output),
+                    **evidence,
+                }
+    except BaseException as error:
+        run_error = error
+        document = {
+            "status": FAIL,
+            "profile": action,
+            "reason": "the load attempt raised an exception",
+            "error": str(error),
+            "output": str(attempt_output),
+            **evidence,
+        }
+    output_value = document.get("output")
+    output = Path(output_value) if output_value else attempt_output
+    output.mkdir(parents=True, exist_ok=True)
+    write_json(output / "result.json", document)
+    write_json(root / (action + "-latest.json"), document)
     append_event(config.events_path(), "load_" + action, {"status": document.get("status")})
-    write_json(results_root() / (action + "-latest.json"), document)
-    from ..loadtesting.capacity import record_capacity_limit
-
     baselines_path = config.state_root() / "performance-baselines.json"
     baselines = read_json(baselines_path, {}) or {}
     baselines["profile"] = action
@@ -376,17 +512,34 @@ def command_load(arguments: argparse.Namespace) -> int:
     write_json(baselines_path, baselines)
     record_capacity_limit(baselines_path)
     record_suite_result(
-        "performance",
+        "load_" + action,
         {
-            "suite": "performance",
-            "status": "PASS" if document.get("status") == "PASS" else "FAIL",
+            "suite": "load_" + action,
+            "status": document.get("status", FAIL),
             "profile": action,
             "measurement_valid": bool(document.get("measurement_valid")),
             "metrics": document.get("metrics"),
             "invariants": (document.get("invariants") or {}).get("status"),
             "updated_at": utc_now(),
+            **evidence,
         },
     )
+    record_suite_result(
+        "performance",
+        {
+            "suite": "performance",
+            "status": FAIL if run_error is not None else PENDING,
+            "profile": "pending",
+            "detail": "profile " + action + " finished " + str(document.get("status")) + "; aggregate report required",
+            "updated_at": utc_now(),
+            **evidence,
+        },
+    )
+    with file_lock(active_path):
+        if read_json(active_path, {}) == active:
+            active_path.unlink(missing_ok=True)
+    if run_error is not None:
+        raise run_error
     emit(document)
     if document.get("status") == "PASS":
         invariants = document.get("invariants") or {}
@@ -432,11 +585,29 @@ def command_stripe_acceptance() -> int:
     from ..stripe.acceptance import run_acceptance, write_evidence
     from ..verification.gates import record_suite_result
 
-    document = run_acceptance()
+    try:
+        document = run_acceptance()
+    except BaseException as error:
+        from ..inventory.scanner import harness_fingerprint, source_fingerprint
+        from ..reconciliation.reconcile import current_revision
+
+        repository = config.repository_root()
+        document = {
+            "generated_at": utc_now(),
+            "status": "FAILED",
+            "reason": "the Stripe acceptance attempt raised an exception",
+            "error": str(error),
+            "summary": {"cases": 0, "proven": 0, "not_proven": 0, "failed": 1},
+            "cases": [],
+            "verified_against_real_stripe_api": False,
+            "revision": current_revision(repository),
+            "source_fingerprint": source_fingerprint(repository),
+            "harness_fingerprint": harness_fingerprint(repository),
+        }
     path = write_evidence(document)
     summary = document.get("summary") or {}
     verified = bool(document.get("verified_against_real_stripe_api"))
-    status = "PASS" if verified else "BLOCKED"
+    status = "PASS" if verified else ("FAIL" if document.get("status") == "FAILED" else "BLOCKED")
     record_suite_result(
         "stripe_acceptance",
         {
@@ -452,6 +623,11 @@ def command_stripe_acceptance() -> int:
             "verified_against_real_stripe_api": verified,
             "evidence": str(path),
             "updated_at": utc_now(),
+            **{
+                key: document[key]
+                for key in ("revision", "source_fingerprint", "harness_fingerprint")
+                if document.get(key)
+            },
         },
         path=config.run_root() / "verification.json",
     )
@@ -550,6 +726,8 @@ def command_e2e(arguments: argparse.Namespace) -> int:
         document = {"components": [status.to_document() for status in detect_dependencies()]}
     else:
         document = {"error": f"unknown e2e action: {action}"}
+    if action == "report":
+        write_json(config.run_root() / "e2e-results" / "report.json", document)
     emit(document)
     record_e2e_suite(action, document)
     state = document.get("state", "")
@@ -561,6 +739,12 @@ def command_e2e(arguments: argparse.Namespace) -> int:
 def record_e2e_suite(action: str, document: dict[str, Any]) -> None:
     if action not in ("run", "report"):
         return
+    evidence = {
+        key: document[key]
+        for key in ("revision", "source_fingerprint", "harness_fingerprint")
+        if document.get(key)
+    }
+    sequence = int(document.get("sequence") or document.get("attempt") or 0)
     if action == "report":
         verified = bool(document.get("e2e_verified"))
         executed = int(document.get("executed_collections", 0) or 0)
@@ -568,13 +752,23 @@ def record_e2e_suite(action: str, document: dict[str, Any]) -> None:
         detail = (
             f"{executed} end to end collections completed the run"
             if verified and executed > 0
-            else "no end to end collection completed a run"
+            else "no current end to end collection completed a run"
         )
     else:
         state = document.get("state", "")
-        status = PASS if state == "COMPLETED" else (FAIL if state == "FAILED" else PENDING)
-        detail = f"end to end run state {state}"
-    record_suite_result("e2e", {"suite": "e2e", "status": status, "detail": detail, "updated_at": utc_now()})
+        status = FAIL if state == "FAILED" else (BLOCKED if state == "BLOCKED" else PENDING)
+        detail = f"end to end run state {state}; a reconciled report is required before pass"
+    record_suite_result(
+        "e2e",
+        {
+            "suite": "e2e",
+            "status": status,
+            "detail": detail,
+            "sequence": sequence,
+            "updated_at": utc_now(),
+            **evidence,
+        },
+    )
 
 
 def command_tasks(arguments: argparse.Namespace) -> int:
@@ -857,6 +1051,7 @@ def build_parser() -> argparse.ArgumentParser:
             "profiles",
             "invariants",
             "report",
+            "reset-data",
         ),
     )
     load.add_argument("--scale", type=int, default=1)

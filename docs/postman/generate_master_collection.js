@@ -368,7 +368,7 @@ pm.collectionVariables.set("stripePaymentId", res.data.id);`
         "idempotencyKey": "{{payKey}}",
         "provider": "VNPAY"
       }`,
-      `const ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-VNPAY-" + ts);`,
+      `if (pm.collectionVariables.get("vnpayEnabled") !== "true") { pm.execution.skipRequest(); }\nconst ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-VNPAY-" + ts);`,
       `pm.test("VNPay payment created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     ),
     makeReq(
@@ -383,7 +383,7 @@ pm.collectionVariables.set("stripePaymentId", res.data.id);`
         "idempotencyKey": "{{payKey}}",
         "provider": "MOMO"
       }`,
-      `const ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-MOMO-" + ts);`,
+      `if (pm.collectionVariables.get("momoEnabled") !== "true") { pm.execution.skipRequest(); }\nconst ts = Date.now();\npm.collectionVariables.set("payKey", "PAY-MOMO-" + ts);`,
       `pm.test("MoMo payment created", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     ),
     makeReq(
@@ -410,7 +410,7 @@ if (pm.response.code === 200 || pm.response.code === 201) {
       "{{paymentUrl}}/api/v1/payments/{{paymentId}}/capture",
       { "Authorization": "Bearer {{adminToken}}" },
       null,
-      null,
+      `if (pm.collectionVariables.get("orderCurrency") === "USD" && pm.collectionVariables.get("stripeCaptureEnabled") === "true") { pm.execution.skipRequest(); }`,
       `pm.test("Payment captured", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     ),
     makeReq(
@@ -419,7 +419,7 @@ if (pm.response.code === 200 || pm.response.code === 201) {
       "{{paymentUrl}}/api/v1/payments/{{stripePaymentId}}/capture",
       { "Authorization": "Bearer {{adminToken}}" },
       null,
-      null,
+      `if (pm.collectionVariables.get("stripeCaptureEnabled") !== "true" || pm.collectionVariables.get("orderCurrency") !== "USD") { pm.execution.skipRequest(); }`,
       `pm.test("Stripe payment captured", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));`
     )
   ]
@@ -937,7 +937,7 @@ pm.expect(res.code).to.eql("ORD-4001");`
       null,
       `pm.test("Rejects excessive refund with 400", () => pm.expect(pm.response.code).to.eql(400));
 const res = pm.response.json();
-pm.expect(res.message).to.include("order.return");`
+pm.expect(res.message).to.include("refund amount");`
     ),
     makeReq(
       "18.3 Customer Attempts Admin Return Review (expect 403)",

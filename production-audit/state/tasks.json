@@ -74,7 +74,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Out-of-order Kafka events silently overwrite newer Elasticsearch state",
-      "updated_at": "2026-11-19T03:37:01Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -153,7 +153,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Elasticsearch client dependency drift",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -336,7 +336,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "No currency on any money field in the fleet",
-      "updated_at": "2026-11-20T21:44:38Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -414,7 +414,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The compose Elasticsearch server was pinned to 8.15.0 while the managed Java client is 9.4.5, and Elasticsearch refuses a direct 8.15 to 9.4.5 upgrade",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "docker-compose.yml line 111 pins docker.elastic.co/elasticsearch/elasticsearch:9.4.5, which matches the 9.4.5 Java client, so the refused 8.15 to 9.4.5 direct upgrade no longer applies."
       ]
@@ -494,7 +494,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Promotion quotas are enforced by a racy read-then-write COUNT",
-      "updated_at": "2026-11-19T03:37:01Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -1553,7 +1553,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The trusted-proxy hop count is an index into an attacker-controlled header; the transport peer is never verified",
-      "updated_at": "2026-11-18T15:42:26Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -1631,7 +1631,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "A non-literal `X-Forwarded-For` entry becomes the rate-limit key: per-request bucket bypass, unbounded Redis key growth, and blocking DNS on the event loop",
-      "updated_at": "2026-11-18T15:42:26Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -1709,7 +1709,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Contradictory Redis-outage semantics across the three limiters, and the in-code justification is factually wrong",
-      "updated_at": "2026-11-18T15:42:27Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -1787,7 +1787,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The \"global\" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -1863,7 +1863,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The edge bucket computes its refill from the **gateway JVM clock** while the framework buckets use the **Redis server clock**",
-      "updated_at": "2026-11-18T15:42:27Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -1995,7 +1995,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Inconsistent 429 contract: empty body from L1, duplicate `X-RateLimit-Remaining`, a `-1` sentinel leaked to clients, and no `Retry-After`",
-      "updated_at": "2026-11-18T15:42:27Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -3206,7 +3206,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "No startup probe on any kubernetes workload",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "Every workload in k8s/microservices.yaml, k8s/gateway-service.yaml and k8s/debezium-cdc.yaml declares a startupProbe. kubeconform validated 53 resources with no error."
       ]
@@ -3279,7 +3279,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "No container or pod security context on any kubernetes workload",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "Every workload declares a pod securityContext with runAsNonRoot and a seccomp profile and a container securityContext that drops all capabilities. The harness kubernetes validation reports 13 of 13 checks as a pass."
       ]
@@ -3352,7 +3352,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "No pod disruption budget protects the multi replica deployments",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "k8s/workload-protection.yaml declares 15 PodDisruptionBudget resources covering the multi replica deployments."
       ]
@@ -3504,7 +3504,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "6 of 8 outbox relays serialise: a second replica publishes nothing",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -3590,7 +3590,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "payment-service relay has no per-aggregate ordering barrier",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -4627,7 +4627,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Implement the Prometheus to Alertmanager to Telegram runtime alert pipeline",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "config/observability/prometheus.yml scrapes the services and forwards to alertmanager, config/observability/alertmanager/alertmanager.yml.template routes the runtime severities to the Telegram receivers and config/observability/alertmanager/rules/runtime-alerts.yml holds the 18 rules. amtool validates the rendered configuration."
       ]
@@ -4700,7 +4700,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Add the CI Telegram notification workflow with failure grouping and secret isolation",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         ".github/workflows/ci.yml has the notify-telegram job with the if condition failure or cancelled and it calls scripts/notify-telegram.sh."
       ]
@@ -4772,7 +4772,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Verify real Telegram delivery for the CI and runtime routes",
-      "updated_at": "2026-11-21T17:35:11Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "No Telegram bot token and no chat identifier are configured in this environment, so the real delivery path for both the continuous integration route and the runtime route cannot be exercised. The alerting validation reports ALT-07 as blocked and the delivery script fails closed.",
         "blocker resolved: a real BotFather-issued bot token and real chat identifiers are now configured, so the delivery path can be exercised against the real bot api",
@@ -4883,7 +4883,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The gateway service exposed no Prometheus metrics because the micrometer registry was missing from its module",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "The gateway actuator endpoint serves 2094 metric lines including http_server_requests_seconds_bucket, and the Prometheus scrape reports a series for the gateway."
       ]
@@ -4956,7 +4956,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The Prometheus scrape configuration referenced exporter containers that did not exist, so every infrastructure rule fired spuriously",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "config/observability/prometheus.yml now targets only containers that exist: otel-collector, the fourteen services, postgres-exporter, redis-exporter and alertmanager."
       ]
@@ -5028,7 +5028,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The runtime alert rules divided by sentinel metric values and produced false positives on every service",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "The runtime rules use clamp_min on the denominator and a request rate floor, so a service with no traffic produces no alert. The alerting validation passes with the live catalogue as evidence."
       ]
@@ -5101,7 +5101,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The compose stack held three different Redis passwords across the environment file and the running containers",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "docker-compose.yml resolves REDIS_PASSWORD once with a required variable and passes that single value to the server and to every consumer."
       ]
@@ -5183,7 +5183,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The inventory `reserve` API is not idempotent: duplicate holds and 900-second orphan holds",
-      "updated_at": "2026-11-18T16:41:41Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -5267,7 +5267,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "A failed `releaseCommitted` in the confirm-compensation path is dropped: no ledger, no retry, stock permanently consumed",
-      "updated_at": "2026-11-18T16:41:41Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -6799,7 +6799,7 @@
       "target_implementation": "Either confirm the intent server-side with a configured payment method and verify the intent status, or return the client_secret to the caller and only transition to CAPTURED after a verified provider confirmation event.",
       "technical_risk": "StripePaymentIntent is created with setConfirm(false) so it stays requires_payment_method. ProviderResult carries only an id and an accepted flag, so client_secret is discarded and the intent can never be confirmed. PaymentServiceImpl sets status CAPTURED and publishes payment.captured.v1.",
       "title": "Capture marks CAPTURED while no money moved; Stripe intent uses confirm=false and discards client_secret",
-      "updated_at": "2026-11-18T14:04:41Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -6889,7 +6889,7 @@
       "target_implementation": "Reject an unknown provider with PAYMENT_PROVIDER_REJECTED. Remove the silent fallback. Make MockProvider conditional so it cannot silently back a production payment.",
       "technical_risk": "PaymentProviderFactory.getProvider returns the default provider when the requested name is unknown, so a typo, a disabled provider bean, or a provider name persisted under a previous configuration routes the PSP call to the wrong provider. PaymentServiceImpl.refund then sets REFUNDED because ProviderResult.accepted is true.",
       "title": "Unknown provider name silently falls back to the default provider so a refund can succeed against the wrong PSP",
-      "updated_at": "2026-11-18T14:04:41Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -6976,7 +6976,7 @@
       "target_implementation": "Reject identity transitions in the state machine and publish a lifecycle event only when the status actually changed.",
       "technical_risk": "The transition table includes the identity transition, and PaymentWriter publishes the lifecycle event unconditionally after every save, so the same event type is emitted again for a state that did not change.",
       "title": "State machine allows self-transitions so a re-processed webhook publishes a duplicate payment.captured.v1",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7063,7 +7063,7 @@
       "target_implementation": "Derive the dedup identity only from the signed content and the provider identity bound to the verifying secret.",
       "technical_risk": "The dedup identity is built from the request path provider segment, which is not part of the signed payload for the bare-hex providers, so the same body under a different provider label produces a different dedup key and bypasses the processed-event check.",
       "title": "Webhook dedup key includes the attacker-controlled provider path segment so one signed body replays across provider labels",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7152,7 +7152,7 @@
       "target_implementation": "Claim the rows with a lease column and a conditional update, or use SELECT FOR UPDATE SKIP LOCKED inside a transaction.",
       "technical_risk": "The retry query selects pending webhook rows without a claim or lease, unlike the outbox repository which uses a claim lease. Two replicas select the same rows and process them concurrently.",
       "title": "Webhook retry scheduler has no claim lease so two replicas replay the same event concurrently",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7238,7 +7238,7 @@
       "target_implementation": "Consume the order lifecycle topic, and on a late capture for a cancelled order emit a compensation refund.",
       "technical_risk": "The webhook handler checks no order state and there is no Kafka consumer in payment-service, so nothing reconciles a late capture against a cancelled order.",
       "title": "No Saga compensation: a webhook that arrives after order cancellation captures the payment and never refunds it",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7329,7 +7329,7 @@
       "target_implementation": "Make the unique constraint match the lookup scope, for example unique on user_id plus idempotency_key, and align the index name.",
       "technical_risk": "The base changelog creates a global unique index on idempotency_key while a later changelog adds a user id and the repository looks the key up per user. The unique constraint and the lookup scope disagree.",
       "title": "Global unique index on idempotency_key contradicts the per-user scoped repository lookup",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7415,7 +7415,7 @@
       "target_implementation": "Persist the provider intent id on the payment row at creation and use it for refunds.",
       "technical_risk": "capture returns the intent id but it is not stored on the payment row, so refund must look the intent up by metadata through the Stripe Search API, which is eventually consistent and therefore usually misses a freshly created intent.",
       "title": "Stripe intent id is never persisted so refunds depend on the eventually consistent Search API",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7502,7 +7502,7 @@
       "target_implementation": "Distinguish a definitive decline from an indeterminate outcome, and on an indeterminate outcome reconcile by idempotency key rather than inventing an identifier.",
       "technical_risk": "ApiConnectionException is mapped to accepted=false and surfaced as PAY-5008. The IdempotencyException branch returns a fabricated identifier built from the idempotency key instead of the real intent id.",
       "title": "Provider failure mapping conflates a declined card with an unknown outcome so a Stripe timeout is reported as a definitive rejection",
-      "updated_at": "2026-11-19T13:55:16Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7586,7 +7586,7 @@
       "target_implementation": "Move the provider call outside the transaction and configure explicit connect and read timeouts.",
       "technical_risk": "capture and refund are @Transactional and invoke the PSP inside the transaction. No Stripe client timeout is configured, so a stalled provider holds the connection and the transaction open.",
       "title": "The provider call happens inside the database transaction with no client timeout",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7672,7 +7672,7 @@
       "target_implementation": "Route every transition through the state machine and record refunded_amount.",
       "technical_risk": "The state machine is only consulted from the webhook path. The REST path assigns the status directly and never populates refunded_amount, which breaks partial refund accounting.",
       "title": "The REST capture and refund path bypasses the payment state machine and never sets refunded_amount",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7756,7 +7756,7 @@
       "target_implementation": "Persist the provider intent before the guarded transition and make the transition retry-safe.",
       "technical_risk": "The provider side effect is not coordinated with the optimistic version check on the payment row. A concurrent update makes the commit fail after the money already moved.",
       "title": "Optimistic lock failures after a provider side effect surface as a server error",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7841,7 +7841,7 @@
       "target_implementation": "Require a signed timestamp and enforce the tolerance on every provider branch.",
       "technical_risk": "Only the Stripe branch enforces a timestamp tolerance. The bare-hex branch compares an HMAC over the body with no freshness check and no nonce.",
       "title": "The bare-hex signature branch has no timestamp and no nonce so signed webhooks replay forever",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -7922,7 +7922,7 @@
       "target_implementation": "Configure a distinct secret per provider and bind the secret to the provider identity.",
       "technical_risk": "A single shared secret is configured for all non-Stripe providers, so the secret does not bind to a provider identity.",
       "title": "One webhook secret is shared by all non-Stripe providers",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8103,7 +8103,7 @@
       "target_implementation": "Use the currency-unit rules already present in StripeCurrencyUnits and either integrate the PSP or remove the provider from the selectable set.",
       "technical_risk": "VNPay multiplies the amount by 100 regardless of the currency while VNPay is a zero-decimal currency, and MoMo truncates with longValue. Neither provider contacts the external PSP and the redirect URL is discarded.",
       "title": "VNPay multiplies the amount by 100 unconditionally and neither provider ever contacts the PSP",
-      "updated_at": "2026-11-19T13:41:31Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8207,7 +8207,7 @@
       "target_implementation": "Validate against an explicit supported-currency set and compare currency on the webhook path.",
       "technical_risk": "No currency whitelist or normalisation exists on the create path and the webhook path compares amounts without comparing currencies.",
       "title": "No currency validation and no currency comparison on the webhook path",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8289,7 +8289,7 @@
       "target_implementation": "Compare in the same unit on both sides and define a rounding policy that is symmetric.",
       "technical_risk": "HALF_UP rounding is applied to the minor-unit conversion, and the webhook compares the rounded value against the stored amount.",
       "title": "Zero-decimal currencies silently round the amount and then fail the webhook amount check",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8370,7 +8370,7 @@
       "target_implementation": "Purge or archive failed rows once they exceed the retention window.",
       "technical_risk": "The retention scheduler removes published rows but leaves FAILED rows, which accumulate indefinitely.",
       "title": "Outbox rows parked as FAILED are never purged",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8454,7 +8454,7 @@
       "target_implementation": "Wire the checkout saga to create and capture the payment, or document the external caller contract and add the missing consumer.",
       "technical_risk": "No first-party production component calls the payment create or capture entry point, so the confirm gate can never pass.",
       "title": "No production caller creates or captures a payment",
-      "updated_at": "2026-11-19T13:55:17Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8536,7 +8536,7 @@
       "target_implementation": "Fail fast when the configured provider is not registered.",
       "technical_risk": "The primary bean falls back to all.get(0) and the factory falls back to the first entry of a ConcurrentHashMap, whose iteration order is unspecified.",
       "title": "The default provider is chosen non-deterministically when the configured provider is absent",
-      "updated_at": "2026-11-19T13:55:18Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8617,7 +8617,7 @@
       "target_implementation": "Bound the accepted body size and apply a service level rate limit.",
       "technical_risk": "The webhook path accepts a raw body of unbounded size and the service exposes no rate limit of its own.",
       "title": "The public webhook endpoint has no body size limit and no service level rate limit",
-      "updated_at": "2026-11-19T13:55:18Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -8926,7 +8926,7 @@
       "target_implementation": "A dedicated PSP callback adapter per provider that verifies the vendor signature, maps the PSP payload to the carrier payload and hands it to the existing webhook event service.",
       "technical_risk": "A payment created against a redirect provider never leaves PENDING, so the order captured-payment gate never opens and checkout cannot complete. The MoMo transaction id that a refund needs is only delivered by the callback, so a refund also fails without it.",
       "title": "The non-Stripe webhook path cannot verify a real MoMo or VNPay IPN",
-      "updated_at": "2026-11-19T13:41:35Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -9025,7 +9025,7 @@
       "target_implementation": "The verifier accepts any of the documented field set variants and rejects only a body whose signature matches none of them",
       "technical_risk": "The documented notification field set differs between the payment service provider api variants, so a legitimate callback can be rejected and the order can never complete",
       "title": "The MoMo callback verifier assumes the signed field set equals the field set the provider sent",
-      "updated_at": "2026-11-19T13:54:51Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -9114,7 +9114,7 @@
       "target_implementation": "The refund response signature is verified over the documented response field set.",
       "technical_risk": "A genuine refund response can be treated as an invalid signature, so a refund that the provider performed is reported as an unknown outcome and never confirmed",
       "title": "The MoMo refund response signature is verified over the request field set",
-      "updated_at": "2026-11-19T13:54:52Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -9201,7 +9201,7 @@
       "target_implementation": "The production deployment requires the provider to be named explicitly and the startup message names the variable to set",
       "technical_risk": "A production deployment without a provisioned payment provider takes the payment service down, so the platform cannot start and the operator is left with a crash loop instead of a guided configuration step",
       "title": "The production deployments start with the simulated provider and crash loop until one is provisioned",
-      "updated_at": "2026-11-19T13:54:52Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -9288,7 +9288,7 @@
       "target_implementation": "The canonical strings come from an independent implementation and a containerised test drives a callback through the payment service to a captured payment",
       "technical_risk": "A change of the signature convention on both the producer and the consumer side keeps the tests green while every real callback from the provider is rejected",
       "title": "The provider callback tests assert the implementation against itself and no provider end to end test exists",
-      "updated_at": "2026-11-19T13:54:52Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -9367,7 +9367,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred",
-      "updated_at": "2026-11-21T18:05:24Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "The configured Stripe key is a placeholder that the live Stripe API rejects with HTTP 401 Invalid API Key, and the webhook secret is the local placeholder whsec_local_e2e_only. No genuine test mode credential exists in this environment, so no real Stripe interaction has occurred.",
         "genuine test-mode credential now configured in the git-ignored env: the credential probe GET https://api.stripe.com/v1/balance returned HTTP 200 with livemode false",
@@ -9445,7 +9445,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential",
-      "updated_at": "2026-11-21T18:05:24Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "The real Stripe acceptance matrix cannot run without a genuine sk_test_ credential. The harness classifies the configured key as a placeholder and refuses to certify a placeholder webhook secret instead of reporting a pass.",
         "genuine test-mode credential and the real webhook signing secret are available, so the acceptance matrix can execute against api.stripe.com",
@@ -9522,7 +9522,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Load measurements taken while parallel Maven builds saturated the host produced invalid latency and throughput figures",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "The load profiles were re-run with no Maven or Surefire process on the host, and the runner records the host contamination check with each result."
       ]
@@ -9595,7 +9595,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "The harness certified readiness from stale suite evidence that predated the current source revision",
-      "updated_at": "2026-11-20T06:50:57Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "Every suite result carries a source fingerprint over the working tree and the gates only accept evidence whose fingerprint still matches, so a result recorded before an edit can no longer certify readiness."
       ]
@@ -11119,7 +11119,7 @@
       "target_implementation": "The upstream failure escapes the guarded call as BusinessException.serviceUnavailable (503 ERR-0503) with the cause preserved; the circuit breaker records it; a fallback maps an open breaker to the same dependency failure; a genuine not-eligible answer still returns 403 RTG-11001.",
       "technical_risk": "The catch swallowed the transport fault and returned false, so the orderService circuit breaker never recorded the failure and never opened.",
       "title": "An upstream purchase-verification failure was reported as the business denial RTG-11001 (403) instead of a dependency failure",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -11210,7 +11210,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "auth-service resolves the JWT subject against a DIFFERENT primary-key space",
-      "updated_at": "2026-11-18T15:42:27Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -11294,7 +11294,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Cross-service IDOR: `verify-purchase` accepts an arbitrary `userId` with no principal cross-check",
-      "updated_at": "2026-11-18T16:41:40Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -11374,7 +11374,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Committed literal credentials in `.env.example` for accounts the deployment *requires*",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -12902,7 +12902,7 @@
       "target_implementation": "The order id is claimed in a shipment_creation_tasks row before the carrier call; a partial unique index on order_id arbitrates the claim; the carrier request carries a deterministic Idempotency-Key.",
       "technical_risk": "The guard was a read that the carrier call invalidated, and the unique index fired only after the side effect.",
       "title": "The carrier call happened before the idempotency guard, so two duplicate CONFIRMED events created two parcels",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -12988,7 +12988,7 @@
       "target_implementation": "The failure is recorded on the creation task with an attempt count and a next attempt time, and a retry worker picks it up.",
       "technical_risk": "The exception escaped the consumer and nothing recorded that a parcel had to be created.",
       "title": "A carrier client exception was thrown away, so a failed shipment creation was lost",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13074,7 +13074,7 @@
       "target_implementation": "The carrier request factory declares a connect and read timeout inside a budget.",
       "technical_risk": "The request factory had no connect or read timeout.",
       "title": "The carrier client declared no HTTP timeout",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13161,7 +13161,7 @@
       "target_implementation": "A new changeset 002b widens the constraint before 003 runs; the already applied changesets 001 to 006 are untouched so their checksums stay valid.",
       "technical_risk": "The 003 backfill writes status FAILED_RETRYABLE while the CHECK created in 001 allowed only PROCESSED and FAILED.",
       "title": "changelog-003-webhook-retry violated a CHECK constraint, which blocked changesets 004, 005 and 006 from applying",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13249,7 +13249,7 @@
       "target_implementation": "The state machine owns every transition, the status setters are closed, and the sweep goes through the state machine with a per-row error boundary.",
       "technical_risk": "The status field had a public setter, so any caller could write an illegal transition.",
       "title": "The reconciliation path bypassed the shipment finite state machine",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13335,7 +13335,7 @@
       "target_implementation": "The edge is removed; an operator retry is the only way out of DELIVERY_FAILED; the webhook path uses the state machine.",
       "technical_risk": "The state machine allowed the DELIVERY_FAILED to IN_TRANSIT edge.",
       "title": "A late webhook could resurrect a DELIVERY_FAILED shipment",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13422,7 +13422,7 @@
       "target_implementation": "A conditional update claims the row with a claimed_at stamp and the claim is released on failure.",
       "technical_risk": "The scheduler selected due rows without locking them.",
       "title": "Webhook retry rows had no claim, so several instances processed the same retry",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13508,7 +13508,7 @@
       "target_implementation": "The claim selects with ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED, so a locked row is skipped.",
       "technical_risk": "The claim selected MIN(id) and then locked it, so the head of line blocked the relay.",
       "title": "The outbox relay selected its head row with MIN(id), so a locked head row blocked every other row",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13593,7 +13593,7 @@
       "target_implementation": "The index matches the due-retry predicate.",
       "technical_risk": "The status and next retry columns were not indexed.",
       "title": "The reconciliation query had no matching index",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13679,7 +13679,7 @@
       "target_implementation": "The restriction matches the partial index and the creation claim reopens the soft-deleted row.",
       "technical_risk": "The query restriction and the partial index disagreed on the deleted predicate.",
       "title": "The soft-delete restriction did not match the partial index, so a soft-deleted shipment still occupied the live key",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13764,7 +13764,7 @@
       "target_implementation": "The foreign key is added, validated for existing rows and enforced for new rows.",
       "technical_risk": "The relation was not enforced by the database.",
       "title": "Shipment events had no foreign key to their shipment",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13850,7 +13850,7 @@
       "target_implementation": "A signed payload without an event id is rejected with a bad request before any write, and an insert violation is classified by constraint name.",
       "technical_risk": "The missing id was absorbed and the insert violation was not classified by constraint.",
       "title": "A null provider event id was swallowed instead of rejected",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -13937,7 +13937,7 @@
       "target_implementation": "The exhausted row is parked as DEAD, counted by a metric, and purged by the retention scheduler.",
       "technical_risk": "The relay exhausted its retries and left the row in a retry state forever.",
       "title": "Permanently failed outbox rows were never surfaced",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -14020,7 +14020,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -14097,7 +14097,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`KeycloakAdminClient` silently falls back to the master-realm *password* grant",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -14275,7 +14275,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`DeadLetterReplayService.replay()` re-reads the whole DLT on every invocation and re-publishes already-replayed records",
-      "updated_at": "2026-11-18T16:41:42Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -14455,7 +14455,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`BaseKafkaConsumer.WIRE_MAPPER` is a bare `ObjectMapper` that rejects unknown properties",
-      "updated_at": "2026-11-18T16:41:42Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -14793,7 +14793,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`CorrelationIdFilter` trusts an unvalidated client-supplied header and writes it into the MDC",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -14869,7 +14869,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`RequestUtils.getClientIp()` trusts client-supplied proxy headers unconditionally",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -14946,7 +14946,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`HttpLoggingFilter` buffers the **entire** response body in heap per request",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -15381,7 +15381,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`ServiceCallerGuard.requireCaller()` **fails open** for an unauthenticated caller",
-      "updated_at": "2026-11-18T15:42:27Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -15594,7 +15594,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "`ObjectStorageAutoConfiguration` performs a **network call inside a `@Bean` method**",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -15892,7 +15892,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "Keycloak clients bypass the application-configured `RestClient.Builder`",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -15971,7 +15971,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "the DLT-replay actuator endpoint has no authorization",
-      "updated_at": "2026-11-18T16:41:42Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -16047,7 +16047,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "a listener factory without a recoverer silently drops records",
-      "updated_at": "2026-11-18T16:41:43Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -16123,7 +16123,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "the shared consumer configuration pins none of the commit/isolation semantics",
-      "updated_at": "2026-11-18T16:41:43Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -16200,7 +16200,7 @@
       "target_implementation": "",
       "technical_risk": "",
       "title": "the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad",
-      "updated_at": "2026-11-20T06:51:04Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "normalized from discovered",
         "acceptance criteria and source evidence present",
@@ -16723,7 +16723,7 @@
       "target_implementation": "One shared KeycloakServiceTokenProvider in common-keycloak with a pooled HttpClient, an Accept: application/json default header, a bounded retry inside a total refresh budget, automatic transport retries disabled so the policy is in one place, and a failure cooldown that collapses a refresh herd. The five service classes became thin adapters.",
       "technical_risk": "SimpleClientHttpRequestFactory opens a new connection per call with no pooling, the read timeout was 5 s, and search-service set no timeout at all.",
       "title": "Five duplicated ServiceTokenProvider classes fetched the Keycloak token over a non-pooled connection with no Accept header, no retry and, in search-service, no timeout at all",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -16813,7 +16813,7 @@
       "target_implementation": "A distinct service-account-client-id property (default ecommerce-admin) drives the client_credentials grant, while the master-realm password grant keeps admin-cli.",
       "technical_risk": "shop.keycloak.admin-client-id (default admin-cli) was used for the master-realm password grant and for the application-realm client_credentials grant, but admin-cli exists only in the master realm.",
       "title": "One Keycloak admin-client property served two different OAuth clients, so the application-realm service account could never authenticate",
-      "updated_at": "2026-11-19T06:26:36Z",
+      "updated_at": "2026-11-24T19:03:21Z",
       "verification_evidence": [
         "moved to NORMALIZED by the lead after the implementation batch",
         "moved to READY by the lead after the implementation batch",
@@ -16827,5 +16827,5 @@
       ]
     }
   },
-  "updated_at": "2026-11-21T18:05:24Z"
+  "updated_at": "2026-11-24T19:24:24Z"
 }

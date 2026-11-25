@@ -23,7 +23,7 @@ public interface PaymentProvider {
         INDETERMINATE
     }
 
-    record ProviderResult(String providerEventId, Outcome outcome, String clientSecret) {
+    record ProviderResult(String providerEventId, Outcome outcome, String clientSecret, String returnUrl) {
 
         public ProviderResult {
             if (outcome == null) {
@@ -32,11 +32,15 @@ public interface PaymentProvider {
         }
 
         public ProviderResult(String providerEventId, boolean accepted) {
-            this(providerEventId, accepted ? Outcome.CONFIRMED : Outcome.REJECTED, null);
+            this(providerEventId, accepted ? Outcome.CONFIRMED : Outcome.REJECTED, null, null);
         }
 
         public ProviderResult(String providerEventId, Outcome outcome) {
-            this(providerEventId, outcome, null);
+            this(providerEventId, outcome, null, null);
+        }
+
+        public ProviderResult(String providerEventId, Outcome outcome, String clientSecret) {
+            this(providerEventId, outcome, clientSecret, null);
         }
 
         public boolean accepted() {
@@ -48,7 +52,17 @@ public interface PaymentProvider {
         }
 
         public static ProviderResult requiresConfirmation(String providerEventId, String clientSecret) {
-            return new ProviderResult(providerEventId, Outcome.REQUIRES_CONFIRMATION, clientSecret);
+            return new ProviderResult(providerEventId, Outcome.REQUIRES_CONFIRMATION, clientSecret, null);
+        }
+
+        /**
+         * Stripe refuses every confirmation that carries no return url while the dashboard offers a
+         * redirect based payment method, so the provider hands the configured return url to the
+         * caller that confirms the intent.
+         */
+        public static ProviderResult requiresConfirmation(String providerEventId, String clientSecret,
+                String returnUrl) {
+            return new ProviderResult(providerEventId, Outcome.REQUIRES_CONFIRMATION, clientSecret, returnUrl);
         }
 
         public static ProviderResult rejected(String providerEventId) {

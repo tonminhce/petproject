@@ -5,13 +5,13 @@
     "DOCUMENTATION": 113,
     "GENERATED": 8,
     "HARNESS": 85,
-    "INFRASTRUCTURE": 47,
+    "INFRASTRUCTURE": 48,
     "PRODUCTION_CODE": 696,
     "SHARED_LIBRARY": 119,
     "TEST_CODE": 439,
     "VENDORED_TOOLING": 13
   },
-  "file_count": 1521,
+  "file_count": 1522,
   "files": [
     {
       "bytes": 4632,
@@ -1876,45 +1876,45 @@
       "tracked": true
     },
     {
-      "bytes": 42973,
+      "bytes": 43516,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "e8c3b1f989f376eedb87e802be21f4694919f082",
+      "git_blob": "e9be75a095dfb384b1f0ea2ccf86139986c50a32",
       "language": "javascript",
       "lines": 1193,
       "module": "docs",
       "path": "docs/postman/generate_master_collection.js",
       "reviewed_lines": [],
-      "sha256": "a3e908aa4e153cc8f727d9801c70498d1cadc220b03c239a94049b8de011b557",
+      "sha256": "a643bd30dffbfff926c2677d9ef85092823131388b4d1a84fe39967ec12b2880",
       "tracked": true
     },
     {
-      "bytes": 88589,
+      "bytes": 89810,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "544750700ca8fb7fe593ce867983234ecf29b62b",
+      "git_blob": "07d4a3ebcb30c5d1daf9ed1fd482f3268c3593c9",
       "language": "json",
-      "lines": 2596,
+      "lines": 2620,
       "module": "docs",
       "path": "docs/postman/petproject-comprehensive.postman_collection.json",
       "reviewed_lines": [],
-      "sha256": "ae74ac2e4eb2cedb6172374f13bfc1a9e12be713b3dd7aa8994e8aedf0dcd74f",
+      "sha256": "d3ceebc403ecad1e052bd821d361b515a1e010f8db408502d5d13aa4ad4c11be",
       "tracked": true
     },
     {
-      "bytes": 74908,
+      "bytes": 76033,
       "category": "DOCUMENTATION",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
-      "git_blob": "1afe72150da9b9f67c9f765770e7b6a8b899d3f2",
+      "git_blob": "8961632da5cec1d33eb0f3e5c87c1a911b3c1f5f",
       "language": "json",
-      "lines": 2468,
+      "lines": 2492,
       "module": "docs",
       "path": "docs/postman/petproject-e2e-business-flow.postman_collection.json",
       "reviewed_lines": [],
-      "sha256": "9d1ccf92854560801af34df9c94685a66a4ac9758ba8d44cb1432592ca80432f",
+      "sha256": "eb52d26cde5c836ec5943c1e017500bf49c5bc51f7743939f9d3a77dbcf92f28",
       "tracked": true
     },
     {
@@ -10826,7 +10826,7 @@
       "category": "TEST_CODE",
       "comment_gate": true,
       "coverage_state": "DISCOVERED",
-      "git_blob": "313955cc125210566625082172e11f48c813b4f0",
+      "git_blob": "351edeaccf344dccc9f6174f93b7d866ea9bb6f5",
       "language": "java",
       "lines": 371,
       "module": "payment-service",
@@ -13412,17 +13412,17 @@
       "tracked": true
     },
     {
-      "bytes": 40607,
+      "bytes": 48237,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "ef1d381bdb64cc84db1998216f84e604c5bab9a0",
       "language": "python",
-      "lines": 973,
+      "lines": 1168,
       "module": "production-audit",
       "path": "production-audit/harness/cli/main.py",
       "reviewed_lines": [],
-      "sha256": "97d1ec156487f69a75ceb77862127d17870d361c131083cf4cfa46475ba7bb23",
+      "sha256": "e804f34034e0aa650b6506507db6bca160f905ae98a9bac62a84e35b62c7c18b",
       "tracked": true
     },
     {
@@ -13496,31 +13496,31 @@
       "tracked": true
     },
     {
-      "bytes": 15714,
+      "bytes": 38767,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "70dbe3bc269f5c7222fc373bc6fecc4e888d7fe7",
       "language": "python",
-      "lines": 426,
+      "lines": 934,
       "module": "production-audit",
       "path": "production-audit/harness/e2e/environment.py",
       "reviewed_lines": [],
-      "sha256": "60a571a5de7eb869041d889975ac0482c6448561c32400461e3feeab3df25700",
+      "sha256": "3d02b5eac6391a4b6a4339b1eb3eb98342c162e7e077e2c650db6a52a63d5326",
       "tracked": true
     },
     {
-      "bytes": 3777,
+      "bytes": 4706,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "c550e97f600d52325d82b14f274e7e7ab6ae829e",
       "language": "python",
-      "lines": 118,
+      "lines": 132,
       "module": "production-audit",
       "path": "production-audit/harness/e2e/postman_environment.py",
       "reviewed_lines": [],
-      "sha256": "a32f78bc5ec88e853eb7f1d3d5c112fc237f345b7e67ec287cd7cbede64b8100",
+      "sha256": "dfd160e573002b10bf823a5fa67e455f3b0468878251b1e1583c2414fb321a8f",
       "tracked": true
     },
     {
@@ -13650,17 +13650,17 @@
       "tracked": true
     },
     {
-      "bytes": 21118,
+      "bytes": 26674,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "cd6ccfa6e09bf6fa3ec4210a9922b5999f550c45",
       "language": "python",
-      "lines": 491,
+      "lines": 593,
       "module": "production-audit",
       "path": "production-audit/harness/kubernetes/validation.py",
       "reviewed_lines": [],
-      "sha256": "3968af22afe2c6cf2454d92bab2df52c9b75cc6446afbce0150165ea300e32af",
+      "sha256": "9584377ab50c8622fa5cf138c75660152b5908278864b309a9ddf76612946602",
       "tracked": true
     },
     {
@@ -13678,17 +13678,17 @@
       "tracked": true
     },
     {
-      "bytes": 28894,
+      "bytes": 35071,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "11acb3ff079de2404416fc14d77c9b70838712fe",
       "language": "python",
-      "lines": 630,
+      "lines": 728,
       "module": "production-audit",
       "path": "production-audit/harness/loadtesting/capacity.py",
       "reviewed_lines": [],
-      "sha256": "48f3914851d6e0fac8aceb2b8682b98c14ae03f77bfb9234b481e64110d22de3",
+      "sha256": "f99223f59edd5a24e12f49ea5f1a3c490aefbdb203416abb504bbc65423cc6a1",
       "tracked": true
     },
     {
@@ -13762,17 +13762,17 @@
       "tracked": true
     },
     {
-      "bytes": 26330,
+      "bytes": 29921,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "af675044a01684ebed6a671a1b2dd820861e9f10",
       "language": "python",
-      "lines": 629,
+      "lines": 724,
       "module": "production-audit",
       "path": "production-audit/harness/loadtesting/runner.py",
       "reviewed_lines": [],
-      "sha256": "35627693578a9af7b250bd2a632a08f0be5fc9f7e4c5e68f6ecdf805087bcd2b",
+      "sha256": "79654a2827f0e94bc57cb6de8f42606042ae90f1811aafd74d09dff101c8c56b",
       "tracked": true
     },
     {
@@ -13846,17 +13846,17 @@
       "tracked": true
     },
     {
-      "bytes": 2256,
+      "bytes": 1871,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "3e80cc8cc9764fc7b7dae794595e35795b861686",
       "language": "python",
-      "lines": 62,
+      "lines": 50,
       "module": "production-audit",
       "path": "production-audit/harness/reconciliation/reconcile.py",
       "reviewed_lines": [],
-      "sha256": "ebc1277541063ef2141ffcb8f32513a2c70fe23eb4c68bf2960a476118e4b4f3",
+      "sha256": "e8c091f4f345ff7f0c1499f3d6ec06bdee4da31f4933f23613540d1bc990d7c4",
       "tracked": true
     },
     {
@@ -14112,17 +14112,17 @@
       "tracked": true
     },
     {
-      "bytes": 53122,
+      "bytes": 65792,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "7301c3f456462f072d7d1391cee93ba4c46bfae6",
       "language": "python",
-      "lines": 1197,
+      "lines": 1509,
       "module": "production-audit",
       "path": "production-audit/harness/stripe/acceptance.py",
       "reviewed_lines": [],
-      "sha256": "933d00cee9b425576352a8b78a800fb06910eda0d82460ca251acdf7c5a0c917",
+      "sha256": "0b975b10449c0b706a302bf2c0f0a2581879c4f94ba22bf67d8338bb0c23ac87",
       "tracked": true
     },
     {
@@ -14224,31 +14224,31 @@
       "tracked": true
     },
     {
-      "bytes": 8204,
+      "bytes": 17332,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "cfe7f2f09ff46eaf5a3cf1f7705ddc6deb17e41d",
       "language": "python",
-      "lines": 194,
+      "lines": 380,
       "module": "production-audit",
       "path": "production-audit/harness/tests/test_alerts.py",
       "reviewed_lines": [],
-      "sha256": "e5a3dba98492ce47a8d0ab20382743176a5f2fb6ccd24666adfe3d586eb474d8",
+      "sha256": "7dc9f73249dafac04307244b84e7e2f675f13cdaa2beb14e819706b9c8a4def9",
       "tracked": true
     },
     {
-      "bytes": 5309,
+      "bytes": 25221,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "d9eb1ba5e531d738e777d23277423cdd7dcc7990",
       "language": "python",
-      "lines": 142,
+      "lines": 553,
       "module": "production-audit",
       "path": "production-audit/harness/tests/test_e2e.py",
       "reviewed_lines": [],
-      "sha256": "bad70338506ebd07a8c39184f6c2b26668a10df391eeab06e8e69f8c5ef3a053",
+      "sha256": "acb4f9f38147a90ba30c647aa1adbe31ae429ea9c26f9a6ba7e927b446d90f1e",
       "tracked": true
     },
     {
@@ -14294,31 +14294,31 @@
       "tracked": true
     },
     {
-      "bytes": 11725,
+      "bytes": 13349,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "205aac2d1ec8349b99633808c2fa7791b509ee14",
       "language": "python",
-      "lines": 283,
+      "lines": 318,
       "module": "production-audit",
       "path": "production-audit/harness/tests/test_load_accounting.py",
       "reviewed_lines": [],
-      "sha256": "0b197db302de0e792ea2bff62c8fdd5f1971734992e84d488f06142d7873dd2c",
+      "sha256": "1a592f1c31069655430bc23854799935228f7199bbd051513fa9420e0e1fd02b",
       "tracked": true
     },
     {
-      "bytes": 3312,
+      "bytes": 12639,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "166c3ffce0a7ff30315aa0c92cf884e9129869c4",
       "language": "python",
-      "lines": 95,
+      "lines": 272,
       "module": "production-audit",
       "path": "production-audit/harness/tests/test_loadtesting.py",
       "reviewed_lines": [],
-      "sha256": "b87c8ca3ff0f706f8bb2c47f897a6cec5e10cc5c942ce2b28fbec0574c1d4eb2",
+      "sha256": "5cf530e9ddd1324e17990f18cf476d5940622c367abbb48304bd0b10be4648de",
       "tracked": true
     },
     {
@@ -14350,17 +14350,17 @@
       "tracked": true
     },
     {
-      "bytes": 5807,
+      "bytes": 18838,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "e08d99d1b1cc7f9d50610fdac7431b6bb8ec4580",
       "language": "python",
-      "lines": 136,
+      "lines": 438,
       "module": "production-audit",
       "path": "production-audit/harness/tests/test_stripe_acceptance.py",
       "reviewed_lines": [],
-      "sha256": "f017338ff2f8ac68e071b4499afe543e3c2ee216e40cceff4b0759aabb6702c7",
+      "sha256": "7477f4e71ead714fc210168b9877f795381382b5731de97c7a9016e6667829cd",
       "tracked": true
     },
     {
@@ -14378,17 +14378,17 @@
       "tracked": true
     },
     {
-      "bytes": 6005,
+      "bytes": 21708,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "df7e70beb9e1a6e4ab355b21a09ae934868d044c",
       "language": "python",
-      "lines": 137,
+      "lines": 457,
       "module": "production-audit",
       "path": "production-audit/harness/tests/test_verification.py",
       "reviewed_lines": [],
-      "sha256": "b1a4becdcb66789812c504d80bca1b3cd3c922dd1fbe9412e3576bd2be343f92",
+      "sha256": "7d8a3be878c420eccb48a4b119843a716ca4922c6b97ca8fa45278e1a6ad33de",
       "tracked": true
     },
     {
@@ -14406,45 +14406,45 @@
       "tracked": true
     },
     {
-      "bytes": 23511,
+      "bytes": 31350,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "a075e351ffea7b03cdd206f329316a46480bd388",
       "language": "python",
-      "lines": 573,
+      "lines": 761,
       "module": "production-audit",
       "path": "production-audit/harness/verification/gates.py",
       "reviewed_lines": [],
-      "sha256": "014300bb692f54ecc628bb4a1a450ede1925e2bd8d20f46f58927dc15c372043",
+      "sha256": "c025311fc70f2884736201251f2ee99c7b80953c57ee6744c669eb167cf0d9cb",
       "tracked": true
     },
     {
-      "bytes": 9185,
+      "bytes": 9359,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "e96c61432107849f5939d76ffa57253d97b64698",
       "language": "python",
-      "lines": 260,
+      "lines": 266,
       "module": "production-audit",
       "path": "production-audit/harness/verification/operations.py",
       "reviewed_lines": [],
-      "sha256": "e16186dabea3e16868ff37fc416111e9fc8bc2c819295dd87f67f57d242bc780",
+      "sha256": "6f1d119f64196964c9bacf25e5a1b5cb56f52f2ab196c1b20a13bc7cb43154ce",
       "tracked": true
     },
     {
-      "bytes": 5848,
+      "bytes": 6215,
       "category": "HARNESS",
       "comment_gate": false,
       "coverage_state": "DISCOVERED",
       "git_blob": "a9a99cab583b1b5a8f80aeb0a58d1c0cde7314e4",
       "language": "python",
-      "lines": 133,
+      "lines": 146,
       "module": "production-audit",
       "path": "production-audit/harness/verification/suites.py",
       "reviewed_lines": [],
-      "sha256": "dfeae3d70e9bb58fa260effeba4a442e9bfe208c43f0b6b6f5eb821751bebb1f",
+      "sha256": "91e8e8ed8292542cdcc36be6d162a74d24d963536a36498bf076927f6aba18c5",
       "tracked": true
     },
     {
@@ -16181,6 +16181,20 @@
       "path": "rating-service/src/test/java/com/shop/ratingservice/support/AbstractIntegrationTest.java",
       "reviewed_lines": [],
       "sha256": "660923546df70267cc749ab56335d33136da1eb74b788d1467acd77c42b4881a",
+      "tracked": true
+    },
+    {
+      "bytes": 4852,
+      "category": "INFRASTRUCTURE",
+      "comment_gate": true,
+      "coverage_state": "DISCOVERED",
+      "git_blob": "2df1fd42cf27151f0e758746bd190c3b2e1502f5",
+      "language": "shell",
+      "lines": 111,
+      "module": "resume-final-battery.sh",
+      "path": "resume-final-battery.sh",
+      "reviewed_lines": [],
+      "sha256": "fba0c6765de0a9da1d63c1ae742c4c275975928634e79fbf3ca823fdf1ca4aa1",
       "tracked": true
     },
     {
@@ -21308,7 +21322,7 @@
       "tracked": true
     }
   ],
-  "generated_at": "2026-11-22T06:43:40Z",
+  "generated_at": "2026-11-25T05:01:31Z",
   "language_summary": {
     "html": 8,
     "java": 1116,
@@ -21317,7 +21331,7 @@
     "markdown": 118,
     "properties": 5,
     "python": 88,
-    "shell": 10,
+    "shell": 11,
     "sql": 1,
     "xml": 27,
     "yaml": 130
@@ -21359,6 +21373,7 @@
     "production-audit": 85,
     "promotion-service": 75,
     "rating-service": 48,
+    "resume-final-battery.sh": 1,
     "scripts": 4,
     "search-service": 41,
     "shipping-service": 97,
@@ -21377,7 +21392,7 @@
     "utils/pom.xml": 1
   },
   "repository_root": "/Users/tonminh-mac/IdeaProjects/untitled5",
-  "revision": "9ef45deaa40da89128bc1853ac35b7e9327c91f2",
-  "source_fingerprint": "9cc211a0712e45fa56c6f0170bc5e284c675890f94c0c6fe6aad878077b7ee76",
-  "total_lines": 235072
+  "revision": "b8858b39102586e25ad2b380addaf06114a12952",
+  "source_fingerprint": "a1097844442e8ad73ee82108c2b36ccbac58510062b18ef44713e63052e45beb",
+  "total_lines": 238181
 }

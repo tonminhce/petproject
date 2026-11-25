@@ -179,7 +179,7 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setProviderIntentId(result.providerEventId());
         }
         payment.setClientSecret(result.clientSecret());
-        return PaymentResponse.from(writer.save(payment));
+        return PaymentResponse.from(writer.save(payment), null, result.returnUrl());
     }
 
     @Override

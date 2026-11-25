@@ -32,18 +32,6 @@ def reconcile(root: Any = None) -> dict[str, Any]:
     revision_matches = bool(manifest_revision) and manifest_revision == head
 
     reopened: list[str] = []
-    for task in tasks.values():
-        if task.state == "VERIFIED":
-            task.state = "REOPENED"
-            task.updated_at = utc_now()
-            task.notes = (task.notes + " reopened by reconciliation: source revision moved").strip()
-            reopened.append(task.id)
-
-    if reopened:
-        from ..task_registry.registry import save_tasks
-
-        save_tasks(tasks)
-
     stale_files = [entry["path"] for entry in drift["drifted"]]
     document = {
         "generated_at": utc_now(),

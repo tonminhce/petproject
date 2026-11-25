@@ -1,36 +1,20 @@
 # End-to-End Verification
 
-Generated: 2026-11-19T22:33:06Z
+Generated: 2026-11-25T02:55:43Z
 
 Run identifier: `run-20261118-a2b6e6fc`
 
 ## Artefacts
 
-- `petproject-comprehensive.postman_collection.auth.json`: state n/a
-- `petproject-comprehensive.postman_collection.catalog.json`: state n/a
-- `petproject-comprehensive.postman_collection.checkout.json`: state n/a
-- `petproject-comprehensive.postman_collection.gateway.json`: state n/a
-- `petproject-comprehensive.postman_collection.inventory.json`: state n/a
-- `petproject-comprehensive.postman_collection.json`: state n/a
-- `petproject-comprehensive.postman_collection.kafka.json`: state n/a
-- `petproject-comprehensive.postman_collection.media.json`: state n/a
-- `petproject-comprehensive.postman_collection.payment.json`: state n/a
-- `petproject-comprehensive.postman_collection.ratings.json`: state n/a
-- `petproject-comprehensive.postman_collection.refund.json`: state n/a
-- `petproject-comprehensive.postman_collection.shipping.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.auth.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.catalog.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.checkout.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.gateway.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.inventory.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.kafka.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.media.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.payment.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.ratings.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.refund.json`: state n/a
-- `petproject-e2e-business-flow.postman_collection.shipping.json`: state n/a
+- `attempt-sequence.json`: state n/a
+- `e2e-ledger.json`: state n/a
+- `newman-all-1-petproject-comprehensive.postman_collection-1795571487579336000.json`: state n/a
+- `newman-all-1-petproject-e2e-business-flow.postman_collection-1795571519271429000.json`: state n/a
+- `report.json`: state FAILED
+- `run-all-1.json`: state FAILED
+- `run-all.json`: state FAILED
 - `run-auth.json`: state COMPLETED
+- `run-business.json`: state COMPLETED
 - `run-catalog.json`: state COMPLETED
 - `run-checkout.json`: state COMPLETED
 - `run-gateway.json`: state COMPLETED
@@ -43,6 +27,7 @@ Run identifier: `run-20261118-a2b6e6fc`
 - `run-refund.json`: state COMPLETED
 - `run-shipping.json`: state COMPLETED
 - `setup.json`: state READY
+- `teardown.json`: state TORN_DOWN
 
 ## Disclosure
 

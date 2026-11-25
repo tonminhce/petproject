@@ -74,11 +74,16 @@ public class StripeProvider implements PaymentProvider {
         if (properties.autoConfirmSandbox() && properties.isSandbox()) {
             paramsBuilder.setPaymentMethod(properties.sandboxPaymentMethod())
                     .setConfirm(true)
-                    .setReturnUrl("https://shop.example.com/checkout/complete");
+                    .setReturnUrl(properties.returnUrl());
         } else {
+            // Stripe rejects a return url on an intent that is not confirmed yet, so the url travels
+            // with the response instead and the client hands it to the confirmation call.
             paramsBuilder.setConfirm(false)
                     .setAutomaticPaymentMethods(PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                             .setEnabled(true)
+                            .setAllowRedirects(properties.allowRedirects()
+                                    ? PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.ALWAYS
+                                    : PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
                             .build());
         }
         PaymentIntentCreateParams params = paramsBuilder.build();
@@ -160,7 +165,7 @@ public class StripeProvider implements PaymentProvider {
         return switch (status) {
             case "succeeded" -> confirmedCapture(intent, intentId, expectedMinorUnits, currency);
             case "requires_payment_method", "requires_confirmation", "requires_action" ->
-                    ProviderResult.requiresConfirmation(intentId, intent.getClientSecret());
+                    ProviderResult.requiresConfirmation(intentId, intent.getClientSecret(), properties.returnUrl());
             case "canceled" -> ProviderResult.rejected("intent-canceled");
             default -> ProviderResult.indeterminate("intent-status-" + intent.getStatus());
         };

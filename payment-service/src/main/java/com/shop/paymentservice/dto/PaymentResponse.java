@@ -19,6 +19,7 @@ public record PaymentResponse(
         String provider,
         String providerIntentId,
         String clientSecret,
+        String returnUrl,
         String receiptKey,
         Instant createdAt,
         String refundedReference
@@ -29,6 +30,10 @@ public record PaymentResponse(
     }
 
     public static PaymentResponse from(Payment payment, String refundedReference) {
+        return from(payment, refundedReference, null);
+    }
+
+    public static PaymentResponse from(Payment payment, String refundedReference, String returnUrl) {
         return new PaymentResponse(
                 payment.getId(),
                 payment.getOrderId(),
@@ -41,6 +46,7 @@ public record PaymentResponse(
                 payment.getProvider(),
                 payment.getProviderIntentId(),
                 payment.getClientSecret(),
+                returnUrl,
                 payment.getReceiptKey(),
                 payment.getCreatedAt(),
                 refundedReference);

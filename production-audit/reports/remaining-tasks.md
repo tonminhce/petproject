@@ -1,56 +1,27 @@
 # Remaining Tasks
 
-Generated: 2026-11-19T22:33:06Z
+Generated: 2026-11-25T02:55:41Z
 
 - Registered tasks: 268
 
 | State | Count |
 | --- | --- |
 | BLOCKED | 0 |
-| DISCOVERED | 23 |
+| DISCOVERED | 8 |
 | FAILED_VERIFICATION | 0 |
 | IMPLEMENTED | 0 |
 | IN_PROGRESS | 0 |
 | NORMALIZED | 0 |
-| READY | 186 |
+| READY | 172 |
 | REOPENED | 0 |
 | REQUIREMENT_CONFLICT | 0 |
-| VERIFIED | 59 |
+| VERIFIED | 88 |
 | VERIFYING | 0 |
 
 ## Open tasks by severity
 
 | ID | Severity | Area | Title |
 | --- | --- | --- | --- |
-| QA-01 | CRITICAL | harness | The harness certified readiness from stale suite evidence that predated the current source revision |
-| CAT-02 | HIGH |  | Elasticsearch client dependency drift |
-| CAT-05 | HIGH |  | No currency on any money field in the fleet |
-| CAT-06 | HIGH | infrastructure | The compose Elasticsearch server was pinned to 8.15.0 while the managed Java client is 9.4.5, and Elasticsearch refuses a direct 8.15 to 9.4.5 upgrade |
-| GW-04 | HIGH |  | The "global" limiter is a single, non-partitioned bucket: no fairness, and the fleet cap does not scale with replicas |
-| K8S-21 | HIGH | kubernetes | No startup probe on any kubernetes workload |
-| K8S-22 | HIGH | kubernetes | No container or pod security context on any kubernetes workload |
-| K8S-23 | HIGH | kubernetes | No pod disruption budget protects the multi replica deployments |
-| KAF-01 | HIGH |  | 6 of 8 outbox relays serialise: a second replica publishes nothing |
-| KAF-02 | HIGH |  | payment-service relay has no per-aggregate ordering barrier |
-| OBS-01 | HIGH | observability | Implement the Prometheus to Alertmanager to Telegram runtime alert pipeline |
-| OBS-02 | HIGH | ci | Add the CI Telegram notification workflow with failure grouping and secret isolation |
-| OBS-03 | HIGH | observability | Verify real Telegram delivery for the CI and runtime routes |
-| OBS-05 | HIGH | gateway-service | The gateway service exposed no Prometheus metrics because the micrometer registry was missing from its module |
-| OBS-06 | HIGH | observability | The Prometheus scrape configuration referenced exporter containers that did not exist, so every infrastructure rule fired spuriously |
-| OBS-07 | HIGH | observability | The runtime alert rules divided by sentinel metric values and produced false positives on every service |
-| OBS-08 | HIGH | infrastructure | The compose stack held three different Redis passwords across the environment file and the running containers |
-| PAY-40 | HIGH | payment-service | The Stripe sandbox credential is a fabricated local placeholder, so no genuine Stripe interaction has ever occurred |
-| PAY-41 | HIGH | payment-service | Execute the real Stripe sandbox acceptance matrix with a genuine test-mode credential |
-| PERF-01 | HIGH | harness | Load measurements taken while parallel Maven builds saturated the host produced invalid latency and throughput figures |
-| SEC-03 | HIGH |  | Committed literal credentials in `.env.example` for accounts the deployment *requires* |
-| SL-01 | HIGH |  | `KeycloakAdminClient.getAdminAccessToken()` holds a JVM monitor across a network call |
-| SL-02 | HIGH |  | `KeycloakAdminClient` silently falls back to the master-realm *password* grant |
-| SL-14 | HIGH |  | `CorrelationIdFilter` trusts an unvalidated client-supplied header and writes it into the MDC |
-| SL-15 | HIGH |  | `RequestUtils.getClientIp()` trusts client-supplied proxy headers unconditionally |
-| SL-16 | HIGH |  | `HttpLoggingFilter` buffers the **entire** response body in heap per request |
-| SL-28 | HIGH |  | `ObjectStorageAutoConfiguration` performs a **network call inside a `@Bean` method** |
-| SL-33 | HIGH |  | Keycloak clients bypass the application-configured `RestClient.Builder` |
-| SL-37 | HIGH |  | the fleet-wide `expected-client-ids` list is the platform's only horizontal-privilege boundary, and it is broad |
 | CAT-03 | MEDIUM |  | Mutable, non-volatile pagination state on a singleton scheduled bean |
 | CAT-04 | MEDIUM |  | Money stored as an IEEE-754 double in the search index |
 | CAT-08 | MEDIUM |  | Reindex lock is in-process only |

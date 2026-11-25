@@ -186,3 +186,4 @@ production-audit/runs/**/load-results/**/customer-tokens.txt
 __pycache__/
 *.pyc
 production-audit/state/*.lock
+production-audit/runs/**/*.lock

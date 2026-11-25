@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -163,13 +164,18 @@ def check_logs() -> dict[str, Any]:
 def check_privacy() -> dict[str, Any]:
     streams = _loki_query('{container=~".+"}')
     samples = [values[1] for stream in streams for values in stream.get("values", [])]
-    leaked = [sample[:120] for sample in samples if SECRET_PATTERN.search(sample)]
+    leaked = [sample for sample in samples if SECRET_PATTERN.search(sample)]
     return {
         "id": "OBS-08",
         "name": "no credential in the telemetry",
         "passed": not leaked,
         "detail": "no token, webhook secret or private key in the collected logs" if not leaked else f"{len(leaked)} leaks",
-        "evidence": {"leaked_samples": leaked[:5]},
+        "evidence": {
+            "leak_count": len(leaked),
+            "leaked_sample_sha256": [
+                hashlib.sha256(sample.encode("utf-8")).hexdigest() for sample in leaked[:5]
+            ],
+        },
     }
 
 
