@@ -18,15 +18,15 @@
         "status": "PASS"
       },
       {
-        "detail": "runtime alert rules cover every required incident category and reference only published metrics",
+        "detail": "the metric audit could not run, so no rule was proven to reference a published metric: prometheus is not reachable at http://127.0.0.1:9095: <urlopen error [Errno 61] Connection refused>",
         "evidence": [
           "rules: 18",
           "categories: application, database",
-          "metric audit: 849 published metrics and 113 published labels checked"
+          "metric audit: prometheus is not reachable at http://127.0.0.1:9095: <urlopen error [Errno 61] Connection refused>"
         ],
         "id": "ALT-02",
         "name": "RUNTIME_ALERT_RULES",
-        "status": "PASS"
+        "status": "FAIL"
       },
       {
         "detail": "prometheus evaluates rules and forwards alerts to alertmanager",
@@ -62,7 +62,7 @@
       {
         "detail": "no committed telegram token or live stripe key was found",
         "evidence": [
-          "tracked files scanned: 2207",
+          "tracked files scanned: 2250",
           "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
         ],
         "id": "ALT-06",
@@ -107,8 +107,10 @@
         "status": "PASS"
       }
     ],
-    "failed_checks": [],
-    "status": "PASS"
+    "failed_checks": [
+      "ALT-02"
+    ],
+    "status": "FAIL"
   },
-  "updated_at": "2026-11-25T01:52:08Z"
+  "updated_at": "2026-11-25T06:28:36Z"
 }

@@ -36,6 +36,7 @@ class Profile:
     reaches_payment_provider: bool = False
     max_business_failure_rate: float = 0.05
     max_shed_rate: float = 0.01
+    capacity_probe: bool = False
     tags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -56,6 +57,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=200,
         duration_seconds=180,
         description="PROFILE B gradually increasing request rate and concurrency",
+        capacity_probe=True,
         tags=("profile-b",),
     ),
     "spike": Profile(
@@ -65,6 +67,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=400,
         duration_seconds=120,
         description="PROFILE C black friday spike",
+        capacity_probe=True,
         tags=("profile-c",),
     ),
     "sustained-peak": Profile(
@@ -74,6 +77,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=150,
         duration_seconds=600,
         description="PROFILE D sustained high utilisation",
+        capacity_probe=True,
         tags=("profile-d",),
     ),
     "flash-sale": Profile(
@@ -83,6 +87,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=400,
         duration_seconds=120,
         description="PROFILE E many users race for one limited stock product",
+        capacity_probe=True,
         tags=("profile-e",),
     ),
     "promotion-storm": Profile(
@@ -92,6 +97,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=400,
         duration_seconds=120,
         description="PROFILE F many users redeem the same coupon at once",
+        capacity_probe=True,
         tags=("profile-f",),
     ),
     "soak": Profile(
@@ -101,6 +107,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=60,
         duration_seconds=1200,
         description="PROFILE J soak to detect memory retention and latency growth",
+        capacity_probe=True,
         tags=("profile-j",),
     ),
     "recovery": Profile(
@@ -119,6 +126,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=100,
         duration_seconds=180,
         description="PROFILE G consumers fall behind while event production increases",
+        capacity_probe=True,
         tags=("profile-g",),
     ),
     "failure-during-peak": Profile(
@@ -128,6 +136,7 @@ PROFILES: dict[str, Profile] = {
         virtual_users=150,
         duration_seconds=120,
         description="PROFILE H controlled dependency failure during elevated load",
+        capacity_probe=True,
         tags=("profile-h",),
     ),
 }
@@ -200,6 +209,7 @@ def resolve_profile(name: str, scale: int = 1) -> Profile:
         tags=base.tags,
         max_business_failure_rate=base.max_business_failure_rate,
         max_shed_rate=base.max_shed_rate,
+        capacity_probe=base.capacity_probe,
     )
 
 

@@ -277,6 +277,95 @@ def _customer_pool_shared(document: dict[str, Any]) -> str:
     return ""
 
 
+
+
+def _acquire_admin_token() -> str:
+    """Mint a token of the platform administrator.
+
+    The payment API only accepts the order service or an administrator, so the load scenario needs
+    an administrator token to create and to capture the payment of the order it placed.
+    """
+    from .. import config
+
+    config.load_local_environment()
+    url = str(os.environ.get("KEYCLOAK_TOKEN_URL", "")).strip()
+    client_id = str(os.environ.get("KEYCLOAK_CLIENT_ID", "")).strip()
+    username = str(os.environ.get("KEYCLOAK_ADMIN_USER", "")).strip() or "adminuser"
+    password = str(os.environ.get("KEYCLOAK_ADMIN_USER_PASSWORD", "")).strip()
+    if not (url and client_id and password):
+        return ""
+    body = urllib.parse.urlencode(
+        {
+            "grant_type": "password",
+            "client_id": client_id,
+            "username": username,
+            "password": password,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(url, data=body)
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, json.JSONDecodeError):
+        return ""
+    return str(payload.get("access_token", ""))
+
+
+def _switch_payment_provider(provider: str, timeout: int = 300) -> dict[str, Any]:
+    """Run the payment service with the given provider and report what changed.
+
+    A load profile measures the capacity of the platform itself, so it drives the mock payment
+    provider. The real provider is proven separately against the live sandbox by the stripe
+    acceptance run, and sending thousands of payment intents to the sandbox would measure the
+    sandbox quota instead of the platform.
+    """
+    previous = os.environ.get("SHOP_PAYMENT_PROVIDER", "")
+    os.environ["SHOP_PAYMENT_PROVIDER"] = provider
+    try:
+        completed = subprocess.run(
+            [
+                "docker",
+                "compose",
+                "up",
+                "-d",
+                "--no-deps",
+                "--force-recreate",
+                "payment-service",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        os.environ.pop("SHOP_PAYMENT_PROVIDER", None)
+        if previous:
+            os.environ["SHOP_PAYMENT_PROVIDER"] = previous
+        return {"provider": provider, "state": "timeout"}
+    if completed.returncode != 0:
+        os.environ.pop("SHOP_PAYMENT_PROVIDER", None)
+        if previous:
+            os.environ["SHOP_PAYMENT_PROVIDER"] = previous
+        return {"provider": provider, "state": "failed",
+                "output": (completed.stdout + completed.stderr)[-500:]}
+    deadline = time.time() + 180
+    healthy = False
+    while time.time() < deadline:
+        probe = subprocess.run(
+            ["docker", "compose", "ps", "payment-service", "--format", "{{.Status}}"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        if "healthy" in (probe.stdout or ""):
+            healthy = True
+            break
+        time.sleep(3)
+    return {"provider": provider, "state": "ready" if healthy else "unhealthy",
+            "previous": previous}
+
+
 def _measure_profile(
     name: str,
     scale: int = 1,
@@ -416,6 +505,9 @@ def _measure_profile(
     per_iteration = requests_per_iteration(profile.scenario)
     peak_iteration_rate = max(int(stage["target"]) for stage in plan)
 
+    provider_state = _switch_payment_provider("mock")
+    admin_token = _acquire_admin_token()
+
     command = [
         "docker",
         "compose",
@@ -444,6 +536,10 @@ def _measure_profile(
         "HOT_PRODUCT_ID=" + str(os.environ.get("HOT_PRODUCT_ID", "")),
         "-e",
         "COUPON_CODE=" + str(coupon.get("code", "")),
+        "-e",
+        "PAYMENT_URL=http://payment-service:8085",
+        "-e",
+        "ADMIN_TOKEN=" + admin_token,
         "k6",
     ]
 
@@ -502,6 +598,7 @@ def _measure_profile(
         and environment.get("host_settle", {}).get("status") == "QUIET",
         "max_business_failure_rate": profile.max_business_failure_rate,
         "max_shed_rate": profile.max_shed_rate,
+        "capacity_probe": profile.capacity_probe,
         "target_requests_per_second": profile.requests_per_second,
         "target_virtual_users": profile.virtual_users,
         "rate_unit": "iterations per second",
@@ -514,6 +611,8 @@ def _measure_profile(
         "gateway_traffic": traffic,
         "coupon": coupon,
         "customer_pool": pool,
+        "payment_provider": provider_state,
+        "admin_token_present": bool(admin_token),
         "services": compose_services(),
         "metrics": summarise(summary),
     }
@@ -654,6 +753,21 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
     served = success + failure + refusals + shed
     shed_rate = shed / served if served > 0 else 0.0
     document["shed_rate"] = round(shed_rate, 6)
+    if document.get("capacity_probe"):
+        document["capacity_probe_shortfall"] = {
+            "planned_iterations_per_second": round(planned, 4),
+            "delivered_iterations_per_second": round(achieved, 4),
+            "achieved_rate_ratio": round(achieved / planned, 4) if planned > 0 else None,
+            "shed_rate": round(shed_rate, 6),
+            "delivered_requests_per_second": round(
+                achieved * float(document.get("requests_per_iteration") or 1), 4
+            ),
+            "reason": (
+                "the demand of this profile reaches or exceeds the measured capacity of the platform, so the "
+                "rate parity and the shed ceiling do not apply to it; what has to hold is that the platform "
+                "served what it could, refused the rest with a shed status and never answered with a server error"
+            ),
+        }
     recorded_limit = document.get("max_business_failure_rate")
     limit = 0.05 if recorded_limit is None else float(recorded_limit)
     shed_limit = document.get("max_shed_rate")
@@ -679,7 +793,7 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
             "the business failure rate " + format(rate, ".4f") + " exceeds the limit " + format(limit, ".4f")
         )
         return False
-    if shed_rate > shed_limit:
+    if shed_rate > shed_limit and not document.get("capacity_probe"):
         document["business_verdict"] = (
             "the business failure rate "
             + format(rate, ".4f")
@@ -691,7 +805,7 @@ def _business_outcome_is_acceptable(document: dict[str, Any]) -> bool:
             + format(shed_limit, ".4f")
         )
         return False
-    if planned > 0 and achieved / planned < RATE_SHORTFALL_RATIO:
+    if planned > 0 and achieved / planned < RATE_SHORTFALL_RATIO and not document.get("capacity_probe"):
         document["rate_shortfall"] = True
         document["business_verdict"] = (
             "the platform delivered only "

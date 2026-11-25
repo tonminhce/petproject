@@ -6,6 +6,7 @@ import { Counter, Trend } from 'k6/metrics';
 
 const scenario = __ENV.SCENARIO || 'browse';
 const baseUrl = __ENV.BASE_URL || 'http://gateway-service:8080';
+const paymentUrl = __ENV.PAYMENT_URL || 'http://payment-service:8085';
 const token = __ENV.TOKEN || '';
 function loadCustomerTokens() {
   const inline = (__ENV.CUSTOMER_TOKENS || '').split(',').filter(function (value) { return value.length > 0; });
@@ -30,6 +31,9 @@ const businessSuccess = new Counter('business_success_total');
 const businessFailure = new Counter('business_failure_total');
 const checkoutLatency = new Trend('business_checkout_latency_ms', true);
 const oversellAttempts = new Counter('oversell_attempts_total');
+const paymentSuccess = new Counter('payment_success_total');
+const paymentFailure = new Counter('payment_failure_total');
+const orderConfirmed = new Counter('order_confirmed_total');
 const resolvedProducts = new Counter('resolved_product_total');
 const expectedStatuses = [200, 201, 400, 404, 409, 429, 503];
 http.setResponseCallback(http.expectedStatuses(200, 201, 400, 404, 409, 429, 503));
@@ -165,6 +169,16 @@ function customerToken() {
   }
   const index = exec.vu.idInTest % customerTokens.length;
   return customerTokens[index];
+}
+
+function adminHeaders() {
+  const result = Object.assign({}, headers);
+  const admin = __ENV.ADMIN_TOKEN || '';
+  if (admin) {
+    result.Authorization = 'Bearer ' + admin;
+  }
+  result['Idempotency-Key'] = 'k6-' + uuidv4();
+  return result;
 }
 
 function authHeaders() {
@@ -349,6 +363,55 @@ function placeOrder(productId) {
   return response;
 }
 
+function completeOrder(response) {
+  let order;
+  try {
+    const body = response.json();
+    order = body && body.data ? body.data : null;
+  } catch (error) {
+    order = null;
+  }
+  if (!order || !order.id) {
+    paymentFailure.add(1);
+    return;
+  }
+  const amount = order.total && order.total > 0 ? order.total : 0.01;
+  const currency = order.currency || 'VND';
+  const created = http.post(paymentUrl + '/api/v1/payments',
+    JSON.stringify({
+      orderId: order.id,
+      amount: amount,
+      currency: currency,
+      idempotencyKey: 'k6-pay-' + uuidv4(),
+    }),
+    { headers: adminHeaders(), tags: { call: 'payment-create' } });
+  observe(created);
+  if (created.status !== 200 && created.status !== 201) {
+    paymentFailure.add(1);
+    return;
+  }
+  let paymentId = null;
+  try {
+    const paymentBody = created.json();
+    paymentId = paymentBody && paymentBody.data ? paymentBody.data.id : null;
+  } catch (error) {
+    paymentId = null;
+  }
+  if (!paymentId) {
+    paymentFailure.add(1);
+    return;
+  }
+  const captured = http.post(paymentUrl + '/api/v1/payments/' + paymentId + '/capture',
+    JSON.stringify({}),
+    { headers: adminHeaders(), tags: { call: 'payment-capture' } });
+  observe(captured);
+  if (captured.status !== 200 && captured.status !== 201) {
+    paymentFailure.add(1);
+    return;
+  }
+  paymentSuccess.add(1);
+}
+
 function checkout() {
   const productId = resolveProductId();
   if (!productId) {
@@ -402,6 +465,7 @@ function checkout() {
   if (accepted) {
     cartItemId = null;
     businessSuccess.add(1);
+    completeOrder(response);
   } else if (couponRejected) {
     resetCart();
     couponContention.add(1);
