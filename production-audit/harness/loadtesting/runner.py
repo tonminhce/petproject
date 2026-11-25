@@ -323,14 +323,14 @@ def _capture_load_baseline() -> dict[str, Any]:
     ok, rows = psql(
         "inventoryservice",
         "SELECT product_id || '|' || available_quantity || '|' || reserved_quantity FROM inventory "
-        "WHERE deleted = false ORDER BY product_id",
+        "ORDER BY product_id",
     )
     inventory = []
     for row in rows:
         parts = str(row).split("|")
         if len(parts) != 3:
             continue
-        inventory.append(parts)
+        inventory.append("|".join(parts))
     campaigns_ok, campaigns = psql(
         "promotionservice",
         "SELECT code || '|' || used_count FROM campaign WHERE deleted = false ORDER BY code",
@@ -352,7 +352,8 @@ def _restore_load_baseline() -> dict[str, Any]:
     from .invariants import psql
 
     path = _load_baseline_file()
-    if not path.exists():
+    baseline = read_json(path, {}) if path.exists() else {}
+    if not path.exists() or not baseline.get("inventory"):
         baseline = _capture_load_baseline()
         path.write_text(json.dumps(baseline, indent=2, default=str), encoding="utf-8")
         return {"state": "captured", "products": len(baseline["inventory"])}
