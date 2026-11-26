@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -20,6 +21,9 @@ from .customers import ensure_token_lifetime, mint_tokens, provision_customers, 
 from .settle import wait_for_quiet_host
 from .targets import resolve_coupon_code
 from .invariants import verify
+
+WARM_UP_SECONDS = 30
+WARM_UP_TIMEOUT_SECONDS = 420
 from .profiles import (
     CUSTOMER_POOL_LIMIT,
     CUSTOMER_POOL_SCENARIOS,
@@ -578,7 +582,6 @@ def _measure_profile(
 
     provider_state = _switch_payment_provider("mock")
     admin_token = _acquire_admin_token()
-    baseline_state = _restore_load_baseline()
 
     command = [
         "docker",
@@ -614,6 +617,29 @@ def _measure_profile(
         "ADMIN_TOKEN=" + admin_token,
         "k6",
     ]
+
+    warm_up = list(command)
+    warm_up[warm_up.index("DURATION=" + str(profile.duration_seconds) + "s")] = "DURATION=" + str(
+        WARM_UP_SECONDS
+    ) + "s"
+    warm_up_output = output.parent / (output.name + "-warmup")
+    warm_up_output.mkdir(parents=True, exist_ok=True)
+    warm_up[warm_up.index(str(output) + ":/results")] = str(warm_up_output) + ":/results"
+    warm_up_state: dict[str, Any] = {"seconds": WARM_UP_SECONDS}
+    try:
+        warm_result = subprocess.run(
+            warm_up,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=WARM_UP_TIMEOUT_SECONDS,
+        )
+        warm_up_state["exit_code"] = warm_result.returncode
+    except subprocess.TimeoutExpired:
+        warm_up_state["exit_code"] = None
+        warm_up_state["timed_out"] = True
+    shutil.rmtree(warm_up_output, ignore_errors=True)
+    baseline_state = _restore_load_baseline()
 
     with _customer_token_file(output, customer_tokens):
         started = time.time()
@@ -687,6 +713,7 @@ def _measure_profile(
         "customer_pool": pool,
         "payment_provider": provider_state,
         "load_baseline_state": baseline_state,
+        "warm_up": warm_up_state,
         "admin_token_present": bool(admin_token),
         "services": compose_services(),
         "metrics": summarise(summary),
@@ -712,6 +739,11 @@ def _final_status(document: dict[str, Any]) -> str:
     if credentials:
         document["status_detail"] = credentials
         return "BLOCKED"
+    if not document.get("measurement_valid"):
+        document["status_detail"] = (
+            "the measurement was taken while the host was busy, so it does not describe the platform"
+        )
+        return "BLOCKED"
     outcome_acceptable = _business_outcome_is_acceptable(document)
     if not outcome_acceptable:
         document["status_detail"] = document.get("business_verdict", "")
@@ -722,11 +754,6 @@ def _final_status(document: dict[str, Any]) -> str:
             "own acceptance criteria"
         )
         return "FAIL"
-    if not document.get("measurement_valid"):
-        document["status_detail"] = (
-            "the measurement was taken while the host was busy, so it does not describe the platform"
-        )
-        return "BLOCKED"
     invariants = document.get("invariants") or {}
     if invariants:
         if invariants.get("status") == "FAIL":

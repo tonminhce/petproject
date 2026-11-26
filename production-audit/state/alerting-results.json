@@ -1,7 +1,9 @@
 {
   "action": "validate",
   "result": {
-    "blocked_checks": [],
+    "blocked_checks": [
+      "ALT-07"
+    ],
     "checks": [
       {
         "detail": "alertmanager template is complete and contains no committed credential",
@@ -18,15 +20,15 @@
         "status": "PASS"
       },
       {
-        "detail": "the metric audit could not run, so no rule was proven to reference a published metric: prometheus is not reachable at http://127.0.0.1:9095: <urlopen error [Errno 61] Connection refused>",
+        "detail": "runtime alert rules cover every required incident category and reference only published metrics",
         "evidence": [
           "rules: 18",
           "categories: application, database",
-          "metric audit: prometheus is not reachable at http://127.0.0.1:9095: <urlopen error [Errno 61] Connection refused>"
+          "metric audit: 848 published metrics and 113 published labels checked"
         ],
         "id": "ALT-02",
         "name": "RUNTIME_ALERT_RULES",
-        "status": "FAIL"
+        "status": "PASS"
       },
       {
         "detail": "prometheus evaluates rules and forwards alerts to alertmanager",
@@ -62,7 +64,7 @@
       {
         "detail": "no committed telegram token or live stripe key was found",
         "evidence": [
-          "tracked files scanned: 2250",
+          "tracked files scanned: 2342",
           "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
         ],
         "id": "ALT-06",
@@ -70,16 +72,16 @@
         "status": "PASS"
       },
       {
-        "detail": "telegram delivery credentials are present and valid",
+        "detail": "telegram delivery credentials are not available in this environment",
         "evidence": [
           "alerts enabled: True",
-          "bot token present: True",
-          "chat identifier present: True",
-          "ci chat identifier present: True"
+          "bot token present: False",
+          "chat identifier present: False",
+          "ci chat identifier present: False"
         ],
         "id": "ALT-07",
         "name": "DELIVERY_CREDENTIALS",
-        "status": "PASS"
+        "status": "BLOCKED"
       },
       {
         "detail": "every alerting route answered the public telegram.org bot api",
@@ -107,10 +109,8 @@
         "status": "PASS"
       }
     ],
-    "failed_checks": [
-      "ALT-02"
-    ],
-    "status": "FAIL"
+    "failed_checks": [],
+    "status": "BLOCKED"
   },
-  "updated_at": "2026-11-25T06:28:36Z"
+  "updated_at": "2026-11-25T17:40:12Z"
 }

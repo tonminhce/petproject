@@ -338,3 +338,8 @@
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T10:06:41Z", "type": "load_baseline"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T10:11:25Z", "type": "load_ramp"}
 {"payload": {"status": "PASS"}, "timestamp": "2026-11-25T10:15:15Z", "type": "load_spike"}
+{"payload": {"status": "BLOCKED"}, "timestamp": "2026-11-25T17:40:12Z", "type": "alerts_validate"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T17:49:36Z", "type": "k8s_validate"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T17:57:11Z", "type": "load_baseline"}
+{"payload": {"status": "PASS"}, "timestamp": "2026-11-25T18:02:26Z", "type": "load_ramp"}
+{"payload": {"status": "FAIL"}, "timestamp": "2026-11-25T18:12:14Z", "type": "load_spike"}

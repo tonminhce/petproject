@@ -1,5 +1,5 @@
 {
-  "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
+  "revision": "508bf2b8bdd83921e562d939c6e0cd5e70aa562f",
   "suites": {
     "alerts": {
       "checks": [
@@ -18,15 +18,15 @@
           "status": "PASS"
         },
         {
-          "detail": "the metric audit could not run, so no rule was proven to reference a published metric: prometheus is not reachable at http://127.0.0.1:9095: <urlopen error [Errno 61] Connection refused>",
+          "detail": "runtime alert rules cover every required incident category and reference only published metrics",
           "evidence": [
             "rules: 18",
             "categories: application, database",
-            "metric audit: prometheus is not reachable at http://127.0.0.1:9095: <urlopen error [Errno 61] Connection refused>"
+            "metric audit: 848 published metrics and 113 published labels checked"
           ],
           "id": "ALT-02",
           "name": "RUNTIME_ALERT_RULES",
-          "status": "FAIL"
+          "status": "PASS"
         },
         {
           "detail": "prometheus evaluates rules and forwards alerts to alertmanager",
@@ -62,7 +62,7 @@
         {
           "detail": "no committed telegram token or live stripe key was found",
           "evidence": [
-            "tracked files scanned: 2250",
+            "tracked files scanned: 2342",
             "scope: committed files that can carry configuration; the synthetic fixtures of the auditor own test suite are excluded"
           ],
           "id": "ALT-06",
@@ -70,16 +70,16 @@
           "status": "PASS"
         },
         {
-          "detail": "telegram delivery credentials are present and valid",
+          "detail": "telegram delivery credentials are not available in this environment",
           "evidence": [
             "alerts enabled: True",
-            "bot token present: True",
-            "chat identifier present: True",
-            "ci chat identifier present: True"
+            "bot token present: False",
+            "chat identifier present: False",
+            "ci chat identifier present: False"
           ],
           "id": "ALT-07",
           "name": "DELIVERY_CREDENTIALS",
-          "status": "PASS"
+          "status": "BLOCKED"
         },
         {
           "detail": "every alerting route answered the public telegram.org bot api",
@@ -107,12 +107,12 @@
           "status": "PASS"
         }
       ],
-      "detail": "1 failed and 0 blocked checks",
-      "harness_fingerprint": "a5a501e88f1dbf3ed142be2909f849d725d5c492f7ec9e4b6c929c4b20f83f9e",
-      "source_fingerprint": "47e0e7eabd8a5ebcb0d58656f93bb597bac41a99a397db9695248161e0f5b498",
-      "status": "FAIL",
+      "detail": "0 failed and 1 blocked checks",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
+      "status": "BLOCKED",
       "suite": "alerts",
-      "updated_at": "2026-11-25T06:28:35Z"
+      "updated_at": "2026-11-25T17:40:12Z"
     },
     "baseline": {
       "command": "./mvnw -B -ntp -T1C clean verify",
@@ -188,13 +188,13 @@
     },
     "e2e": {
       "detail": "no current end to end collection completed a run",
-      "harness_fingerprint": "a5a501e88f1dbf3ed142be2909f849d725d5c492f7ec9e4b6c929c4b20f83f9e",
-      "revision": "39a142128dfbe35798c18229319b390645537d4b",
-      "sequence": 3,
-      "source_fingerprint": "47e0e7eabd8a5ebcb0d58656f93bb597bac41a99a397db9695248161e0f5b498",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
+      "revision": "508bf2b8bdd83921e562d939c6e0cd5e70aa562f",
+      "sequence": 4,
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
       "status": "FAIL",
       "suite": "e2e",
-      "updated_at": "2026-11-25T06:28:35Z"
+      "updated_at": "2026-11-25T17:49:34Z"
     },
     "edge": {
       "command": "./mvnw -B -ntp -T 1 test -Dtest=*Edge*Test,*Negative*Test,*Validation*Test,*Boundary*Test -Dsurefire.failIfNoSpecifiedTests=false",
@@ -388,11 +388,11 @@
         }
       ],
       "detail": "0 kubernetes manifest checks failed",
-      "harness_fingerprint": "a5a501e88f1dbf3ed142be2909f849d725d5c492f7ec9e4b6c929c4b20f83f9e",
-      "source_fingerprint": "47e0e7eabd8a5ebcb0d58656f93bb597bac41a99a397db9695248161e0f5b498",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
       "status": "PASS",
       "suite": "k8s",
-      "updated_at": "2026-11-25T06:28:36Z"
+      "updated_at": "2026-11-25T17:49:36Z"
     },
     "kafka": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Kafka*Test,*Kafka*IT,*Outbox*Test,*Outbox*IT,*Consumer*Test,*Relay*Test,*DeadLetter*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -415,44 +415,44 @@
     "load_baseline": {
       "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "invariants": "PASS",
-      "measurement_valid": true,
+      "measurement_valid": false,
       "metrics": {
-        "achieved_rate_ratio": 0.8507,
-        "business_failure": 0,
+        "achieved_rate_ratio": 0.7829,
+        "business_failure": 170,
         "business_refusal": 0,
-        "business_success": 2300,
+        "business_success": 1789,
         "cart_contention": 0,
         "cart_failure": 0,
-        "check_rate": 1,
+        "check_rate": 0.9214758751182592,
         "coupon_contention": 0,
         "credential_error": 0,
-        "failed_requests": 0,
-        "failure_rate": 0,
-        "iteration_rate_per_second": 6.75547043092194,
-        "iterations": 1150,
-        "latency_avg_ms": 10.02813615420167,
-        "latency_max_ms": 78.8495,
-        "latency_min_ms": 2.2685,
-        "latency_p50_ms": 9.100895999999999,
-        "latency_p90_ms": 16.379395799999998,
-        "latency_p95_ms": 18.46633095,
+        "failed_requests": 4,
+        "failure_rate": 0.0018231540565177757,
+        "iteration_rate_per_second": 6.217225216727958,
+        "iterations": 1057,
+        "latency_avg_ms": 1160.813757690976,
+        "latency_max_ms": 37004.556628,
+        "latency_min_ms": 2.751,
+        "latency_p50_ms": 8.951,
+        "latency_p90_ms": 67.34096700000008,
+        "latency_p95_ms": 11260.136772799997,
         "latency_p99_ms": null,
         "oversell_responses": 0,
         "planned_iteration_rate_per_second": 7.9412,
-        "platform_errors": null,
+        "platform_errors": 4,
         "rate_unit": "iterations per second",
-        "request_rate_per_second": 13.980886630951492,
-        "requests": 2380,
-        "shed_requests": 0,
-        "successful_requests": 2380,
-        "unexpected_responses": null
+        "request_rate_per_second": 12.905006741249897,
+        "requests": 2194,
+        "shed_requests": 155,
+        "successful_requests": 2190,
+        "unexpected_responses": 4
       },
       "profile": "baseline",
-      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
-      "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
-      "status": "PASS",
+      "revision": "508bf2b8bdd83921e562d939c6e0cd5e70aa562f",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
+      "status": "FAIL",
       "suite": "load_baseline",
-      "updated_at": "2026-11-25T10:06:42Z"
+      "updated_at": "2026-11-25T17:57:12Z"
     },
     "load_failure-during-peak": {
       "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
@@ -635,31 +635,31 @@
         "credential_error": 0,
         "failed_requests": 0,
         "failure_rate": 0,
-        "iteration_rate_per_second": 8.343149079963789,
+        "iteration_rate_per_second": 8.343371033606266,
         "iterations": 1919,
-        "latency_avg_ms": 9.016124135273106,
-        "latency_max_ms": 714.094001,
-        "latency_min_ms": 1.790708,
-        "latency_p50_ms": 5.229667,
-        "latency_p90_ms": 12.1440914,
-        "latency_p95_ms": 16.206412599999993,
+        "latency_avg_ms": 15.835253404389983,
+        "latency_max_ms": 852.297083,
+        "latency_min_ms": 2.4365,
+        "latency_p50_ms": 9.556166,
+        "latency_p90_ms": 30.7655332,
+        "latency_p95_ms": 42.67607939999999,
         "latency_p99_ms": null,
         "oversell_responses": 1919,
         "planned_iteration_rate_per_second": 10.1739,
         "platform_errors": null,
         "rate_unit": "iterations per second",
-        "request_rate_per_second": 42.58527630966405,
+        "request_rate_per_second": 42.58640921009556,
         "requests": 9795,
         "shed_requests": 0,
         "successful_requests": 9795,
         "unexpected_responses": null
       },
       "profile": "ramp",
-      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
-      "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
+      "revision": "508bf2b8bdd83921e562d939c6e0cd5e70aa562f",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
       "status": "PASS",
       "suite": "load_ramp",
-      "updated_at": "2026-11-25T10:11:26Z"
+      "updated_at": "2026-11-25T18:02:27Z"
     },
     "load_recovery": {
       "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
@@ -748,44 +748,41 @@
     "load_spike": {
       "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "invariants": "PASS",
-      "measurement_valid": true,
+      "measurement_valid": false,
       "metrics": {
-        "achieved_rate_ratio": 0.8516,
-        "business_failure": 0,
+        "business_failure": 55,
         "business_refusal": 0,
-        "business_success": 11498,
+        "business_success": 944,
         "cart_contention": 0,
-        "cart_failure": 0,
-        "check_rate": 1,
+        "cart_failure": 25,
+        "check_rate": 0.9856115107913669,
         "coupon_contention": 0,
         "credential_error": 0,
-        "failed_requests": 0,
-        "failure_rate": 0,
-        "iteration_rate_per_second": 33.814126567073004,
-        "iterations": 5749,
-        "latency_avg_ms": 5.753511098370233,
-        "latency_max_ms": 378.583375,
-        "latency_min_ms": 1.215417,
-        "latency_p50_ms": 3.425875,
-        "latency_p90_ms": 9.723192000000001,
-        "latency_p95_ms": 14.156750399999993,
+        "failed_requests": 60,
+        "failure_rate": 0.015380671622660855,
+        "iteration_rate_per_second": 3.7769943668934225,
+        "iterations": 827,
+        "latency_avg_ms": 16653.363914454214,
+        "latency_max_ms": 95041.235502,
+        "latency_min_ms": 12.346292,
+        "latency_p50_ms": 6803.617087,
+        "latency_p90_ms": 50353.198162,
+        "latency_p95_ms": 57294.42054,
         "latency_p99_ms": null,
-        "oversell_responses": 5749,
-        "planned_iteration_rate_per_second": 39.7059,
-        "platform_errors": null,
-        "rate_unit": "iterations per second",
-        "request_rate_per_second": 171.42332906546227,
-        "requests": 29145,
-        "shed_requests": 0,
-        "successful_requests": 29145,
-        "unexpected_responses": null
+        "oversell_responses": 335,
+        "platform_errors": 1,
+        "request_rate_per_second": 17.81626967986849,
+        "requests": 3901,
+        "shed_requests": 1293,
+        "successful_requests": 3841,
+        "unexpected_responses": 57
       },
       "profile": "spike",
-      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
-      "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
-      "status": "PASS",
+      "revision": "508bf2b8bdd83921e562d939c6e0cd5e70aa562f",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
+      "status": "FAIL",
       "suite": "load_spike",
-      "updated_at": "2026-11-25T10:15:16Z"
+      "updated_at": "2026-11-25T18:12:15Z"
     },
     "load_sustained-peak": {
       "harness_fingerprint": "d0f5350c4de08d3ca1b0dd60df76d30b2677ad32fdf0ac848888de12f6b7eae6",
@@ -832,54 +829,117 @@
     "operations": {
       "checks": [
         {
-          "detail": "0 service targets up, 0 request metric series",
+          "detail": "11 service targets up, 28 request metric series",
           "evidence": {
-            "request_series": [],
-            "service_targets_up": []
+            "request_series": [
+              "favourite-service",
+              "tax-service",
+              "tax-service",
+              "tax-service",
+              "favourite-service",
+              "promotion-service",
+              "promotion-service",
+              "auth-service",
+              "auth-service",
+              "rating-service"
+            ],
+            "service_targets_up": [
+              "favourite-service:8081",
+              "media-service:8083",
+              "promotion-service:8093",
+              "search-service:8094",
+              "auth-service:8088",
+              "product-service:8086",
+              "shipping-service:8087",
+              "tax-service:8091",
+              "rating-service:8089",
+              "notification-service:8090",
+              "payment-service:8085"
+            ]
           },
           "id": "OBS-01",
           "name": "metrics",
-          "passed": false
+          "passed": true
         },
         {
-          "detail": "heap series 0, cpu series 0, thread series 0",
+          "detail": "heap series 88, cpu series 11, thread series 11",
           "id": "OBS-07",
           "name": "runtime metrics",
-          "passed": false
+          "passed": true
         },
         {
-          "detail": "0 log streams, 0 samples",
+          "detail": "1 log streams, 50 samples",
           "evidence": {
-            "containers": []
+            "containers": [
+              "media-service"
+            ]
           },
           "id": "OBS-02",
           "name": "centralized logs",
-          "passed": false
+          "passed": true
         },
         {
-          "detail": "0 traces from 0 services",
+          "detail": "16 traces from 10 services",
           "evidence": {
-            "services": [],
-            "trace_ids": []
+            "services": [
+              "<root span not yet received>",
+              "inventory-service",
+              "media-service",
+              "notification-service",
+              "order-service",
+              "payment-service",
+              "product-service",
+              "promotion-service",
+              "rating-service",
+              "shipping-service"
+            ],
+            "trace_ids": [
+              "f492b04fb42c20bef4509cd31c535d9c",
+              "45daf876164e7b9c044aff13d6332bab",
+              "4fc07dc53b6fcf9202ac13675c094797",
+              "74074305fe79962e0a87f6b466f734d1",
+              "daf0cbc22ba33c2d073c50db60c4c5ac"
+            ]
           },
           "id": "OBS-03",
           "name": "distributed traces",
-          "passed": false
+          "passed": true
         },
         {
-          "detail": "grafana search returned 0",
+          "detail": "1 dashboards provisioned, fleet overview has 8 panels",
+          "evidence": {
+            "dashboard_titles": [
+              "Fleet Overview"
+            ]
+          },
           "id": "OBS-06",
           "name": "dashboards",
-          "passed": false
+          "passed": true
         },
         {
-          "detail": "",
+          "detail": "Loki=OK, Prometheus=OK, Tempo=OK",
           "evidence": {
-            "datasources": []
+            "datasources": [
+              {
+                "name": "Loki",
+                "status": "OK",
+                "type": "loki"
+              },
+              {
+                "name": "Prometheus",
+                "status": "OK",
+                "type": "prometheus"
+              },
+              {
+                "name": "Tempo",
+                "status": "OK",
+                "type": "tempo"
+              }
+            ]
           },
           "id": "OBS-06b",
           "name": "datasources",
-          "passed": false
+          "passed": true
         },
         {
           "detail": "no token, webhook secret or private key in the collected logs",
@@ -892,16 +952,16 @@
           "passed": true
         }
       ],
-      "detail": "1 of 7 observability checks passed",
-      "harness_fingerprint": "a5a501e88f1dbf3ed142be2909f849d725d5c492f7ec9e4b6c929c4b20f83f9e",
+      "detail": "7 of 7 observability checks passed",
+      "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "not_verified": [
         "OBS-04 kafka producer and consumer spans are correlated by hand, not asserted automatically",
         "OBS-05 a controlled failure is visible in the backends but the check is not automated"
       ],
-      "source_fingerprint": "47e0e7eabd8a5ebcb0d58656f93bb597bac41a99a397db9695248161e0f5b498",
-      "status": "FAIL",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
+      "status": "PASS",
       "suite": "operations",
-      "updated_at": "2026-11-25T06:28:33Z"
+      "updated_at": "2026-11-25T17:40:11Z"
     },
     "payment": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Payment*Test,*Payment*IT,*Provider*Test,*Webhook*Test,*Refund*Test,*Psp*Test -Dfailsafe.failIfNoSpecifiedTests=false -pl payment-service -am",
@@ -922,14 +982,14 @@
       "updated_at": "2026-11-25T06:05:01Z"
     },
     "performance": {
-      "detail": "profile spike finished PASS; aggregate report required",
+      "detail": "profile spike finished FAIL; aggregate report required",
       "harness_fingerprint": "a08d284f9a90669a76ed87295eae4c1ff2fe283d8039ce02135596aee2d52846",
       "profile": "pending",
-      "revision": "a003f7de269b33c911f8e92c8b5c100ba6c0827c",
-      "source_fingerprint": "563bceceaa6a211a92851ac11cfe2829153d7173a4221e9e075b73ecce541fbb",
+      "revision": "508bf2b8bdd83921e562d939c6e0cd5e70aa562f",
+      "source_fingerprint": "652834e5d4f3844ae536d4c1d76f5619e2b40a17ebd63b3037d6db68e3b05595",
       "status": "PENDING",
       "suite": "performance",
-      "updated_at": "2026-11-25T10:15:16Z"
+      "updated_at": "2026-11-25T18:12:15Z"
     },
     "security": {
       "command": "./mvnw -B -ntp -T 1 verify -Dtest=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=*Security*Test,*Jwt*Test,*Token*Test,*Auth*Test,*Keycloak*Test,*Permission*Test,*Password*Test,*Role*Test -Dfailsafe.failIfNoSpecifiedTests=false",
@@ -968,5 +1028,5 @@
       "updated_at": "2026-11-25T05:57:57Z"
     }
   },
-  "updated_at": "2026-11-25T10:15:16Z"
+  "updated_at": "2026-11-25T18:12:16Z"
 }
